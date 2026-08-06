@@ -21,24 +21,6 @@ namespace Fdw.Services.Scheduling;
 // means the provider's gateway-backed query path is the only source.
 public class SchedulerConfigurationProvider : DefaultConfigurationProvider<SchedulerConfiguration, SchedulerConfigurationCommand>
 {
-    /// <summary>
-    /// Registers the SchedulerConfigurationProvider and interface forwardings with DI, targeting this
-    /// domain's own default location. To override, call <c>SetConfiguration</c> on the resolved singleton.
-    /// </summary>
-    public static void RegisterDomainConfiguration(IServiceCollection services)
-    {
-        services.TryAddSingleton<SchedulerConfigurationProvider>(sp =>
-            new SchedulerConfigurationProvider(
-                sp.GetService<ILogger<SchedulerConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
-
-        services.TryAddSingleton<DefaultConfigurationProvider<SchedulerConfiguration, SchedulerConfigurationCommand>>(
-            sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
-
-        services.TryAddSingleton<IServiceConfigurationProvider<SchedulerConfiguration>>(sp =>
-            sp.GetRequiredService<SchedulerConfigurationProvider>());
-    }
 
     /// <summary>Initializes a new instance of the <see cref="SchedulerConfigurationProvider"/> class.</summary>
     public SchedulerConfigurationProvider(

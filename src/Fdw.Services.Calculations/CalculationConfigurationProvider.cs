@@ -30,19 +30,6 @@ public class CalculationConfigurationProvider : DefaultConfigurationProvider<Cal
     /// Registers the CalculationConfigurationProvider with DI, targeting this domain's own default
     /// location. To override, call <c>SetConfiguration</c> on the resolved singleton.
     /// </summary>
-    public static void RegisterDomainConfiguration(IServiceCollection services)
-    {
-        services.TryAddSingleton<CalculationConfigurationProvider>(sp =>
-            new CalculationConfigurationProvider(
-                sp.GetService<ILogger<CalculationConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
-        services.TryAddSingleton<DefaultConfigurationProvider<CalculationEntityConfiguration, CalculationEntityConfigurationCommand>>(
-            sp => sp.GetRequiredService<CalculationConfigurationProvider>());
-        services.TryAddSingleton<IServiceConfigurationProvider<CalculationEntityConfiguration>>(
-            sp => sp.GetRequiredService<CalculationConfigurationProvider>());
-    }
-
     /// <summary>Initializes a new instance of the <see cref="CalculationConfigurationProvider"/> class.</summary>
     public CalculationConfigurationProvider(
         ILogger<CalculationConfigurationProvider> logger,

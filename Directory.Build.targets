@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <!--
-    SourceLink path fix: The build runs from the GitLab monorepo where source files
+    SourceLink path fix: The build runs from the monorepo where source files
     are under public/src/..., but the GitHub public repo (after subtree split) has them
     at src/... This target adds a more-specific SourceRoot for the public/ directory
     so SourceLink maps files directly to GitHub URLs without the public/ prefix.

@@ -1,6 +1,5 @@
 # Pack Fdw packages to local NuGet folder.
-# PowerShell equivalent of pack-local.sh (without the GitLab push step —
-# run push-gitlab.sh / push-gitlab.ps1 separately for that).
+# PowerShell equivalent of pack-local.sh.
 # Requires: LocalNugetFolder environment variable
 # Usage: .\pack-local.ps1 [-NoBuild] [-Configuration Release] [-ConfigName Fdw.Local.nuget.config]
 
@@ -235,4 +234,3 @@ $versions | ConvertTo-Json | Set-Content -Path $versionsPath -Encoding UTF8
 
 Write-Host "`n=== Success ===" -ForegroundColor Green
 Write-Host "$($packages.Count) packages (v$version) published to: $localNuget" -ForegroundColor Green
-Write-Host "Run .\push-gitlab.sh to also publish to the GitLab feed." -ForegroundColor Cyan

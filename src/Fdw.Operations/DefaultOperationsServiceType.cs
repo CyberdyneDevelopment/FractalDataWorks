@@ -1,12 +1,15 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Operations.Abstractions.Escalation;
 using Fdw.Operations.Abstractions.Execution;
+using Fdw.Operations.Commands;
 using Fdw.Operations.Configuration;
 using Fdw.Operations.Escalation;
 using Fdw.Operations.Execution;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Notifications;
 using Fdw.Services.Notifications.Abstractions;
@@ -38,21 +41,24 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
             "Default Operations Services",
             "Execution tracking, escalation, and escalation-policy configuration")
     {
-        // Why: EscalationPolicy options bind in the Configure phase — escalation policy config lives
-        // in ConfigurationDb.workflow, not OpsDb.
-        Configuration(builder =>
-        {
-
-            EscalationConfigurationProvider.RegisterDomainConfiguration(builder.Services, builder.Configuration);
-    
-                    return builder;
-});
-
         // Why: IExecutionTracker + IEscalationService persist execution/runtime data to OpsDb (ops
         // schema), so they take the "OpsDb" data store the collection passes in. Scoped because they
         // depend on the scoped IDataGateway.
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
         {
+            // Why here and not a Configure phase: escalation-policy config lives in
+            // ConfigurationDb.workflow and is read through IConfigurationGateway — nothing binds from
+            // IConfiguration, so this is pure DI registration with no Phase-1a concern.
+            builder.Services.TryAddSingleton<EscalationConfigurationProvider>(sp =>
+                new EscalationConfigurationProvider(
+                    sp.GetService<ILogger<EscalationConfigurationProvider>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+            builder.Services.TryAddSingleton<DefaultConfigurationProvider<EscalationPolicyConfiguration, EscalationPolicyConfigurationCommand>>(
+                sp => sp.GetRequiredService<EscalationConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<EscalationPolicyConfiguration>>(
+                sp => sp.GetRequiredService<EscalationConfigurationProvider>());
+
             builder.Services.TryAddScoped<IExecutionTracker>(sp =>
             {
                 var lf = sp.GetRequiredService<ILoggerFactory>();

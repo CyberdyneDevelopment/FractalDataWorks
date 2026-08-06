@@ -25,58 +25,6 @@ namespace Fdw.Services.Settings;
 /// </summary>
 public class SettingsConfigurationProvider
 {
-    /// <summary>
-    /// Registers the sub-providers and SettingsConfigurationProvider with DI, targeting this domain's
-    /// own default location. To override, call <c>SetConfiguration</c> on each resolved sub-provider
-    /// (they are plain <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> instances, not a
-    /// domain-specific subclass, so there is no per-domain constructor default to fall back on — the
-    /// location is this method's own literal default). Pure Phase-1b registration — no IConfiguration;
-    /// IOptions binding is a Phase-1a concern that lives in the consuming
-    /// <c>[ServiceTypeOption].Configure</c>, not here.
-    /// </summary>
-    #pragma warning disable MA0051
-    public static void RegisterDomainConfiguration(IServiceCollection services)
-    #pragma warning restore MA0051
-    {
-        const string dataStoreName = "ConfigurationDb";
-        const string pathName = "settings";
-
-        services.TryAddSingleton<DefaultConfigurationProvider<ServerSettingConfiguration, ServerSettingConfigurationCommand>>(sp =>
-            new DefaultConfigurationProvider<ServerSettingConfiguration, ServerSettingConfigurationCommand>(
-                sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<ServerSettingConfiguration, ServerSettingConfigurationCommand>>()
-                    ?? NullLogger<DefaultConfigurationProvider<ServerSettingConfiguration, ServerSettingConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                dataStoreName,
-                pathName,
-                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
-        services.TryAddSingleton<IServiceConfigurationProvider<ServerSettingConfiguration>>(sp =>
-            sp.GetRequiredService<DefaultConfigurationProvider<ServerSettingConfiguration, ServerSettingConfigurationCommand>>());
-
-        services.TryAddSingleton<DefaultConfigurationProvider<TenantSettingConfiguration, TenantSettingConfigurationCommand>>(sp =>
-            new DefaultConfigurationProvider<TenantSettingConfiguration, TenantSettingConfigurationCommand>(
-                sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<TenantSettingConfiguration, TenantSettingConfigurationCommand>>()
-                    ?? NullLogger<DefaultConfigurationProvider<TenantSettingConfiguration, TenantSettingConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                dataStoreName,
-                pathName,
-                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
-        services.TryAddSingleton<IServiceConfigurationProvider<TenantSettingConfiguration>>(sp =>
-            sp.GetRequiredService<DefaultConfigurationProvider<TenantSettingConfiguration, TenantSettingConfigurationCommand>>());
-
-        services.TryAddSingleton<DefaultConfigurationProvider<RoleSettingConfiguration, RoleSettingConfigurationCommand>>(sp =>
-            new DefaultConfigurationProvider<RoleSettingConfiguration, RoleSettingConfigurationCommand>(
-                sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<RoleSettingConfiguration, RoleSettingConfigurationCommand>>()
-                    ?? NullLogger<DefaultConfigurationProvider<RoleSettingConfiguration, RoleSettingConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                dataStoreName,
-                pathName,
-                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
-        services.TryAddSingleton<IServiceConfigurationProvider<RoleSettingConfiguration>>(sp =>
-            sp.GetRequiredService<DefaultConfigurationProvider<RoleSettingConfiguration, RoleSettingConfigurationCommand>>());
-
-        services.TryAddSingleton<SettingsConfigurationProvider>();
-    }
-
     private readonly DefaultConfigurationProvider<ServerSettingConfiguration, ServerSettingConfigurationCommand> _serverProvider;
     private readonly DefaultConfigurationProvider<TenantSettingConfiguration, TenantSettingConfigurationCommand> _tenantProvider;
     private readonly DefaultConfigurationProvider<RoleSettingConfiguration, RoleSettingConfigurationCommand> _roleProvider;

@@ -1,8 +1,6 @@
 # Building a Blazor Auto UI
 
-The canonical reference implementation of an FDW Blazor InteractiveAuto skin lives in the **reference-aui** repository:
-
-- GitLab: <https://gitlab.cyberdynedevelopment.dev/developers/reference-aui>
+The canonical reference implementation of an FDW Blazor InteractiveAuto skin lives in the **reference-aui** repository.
 
 `reference-aui/public/src/Reference.Aui.Host/Program.cs` is the authoritative shape for an InteractiveAuto skin using MudBlazor. The reference UI demonstrates:
 

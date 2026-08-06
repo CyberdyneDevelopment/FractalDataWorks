@@ -366,7 +366,7 @@ jobs:
           echo "ids=$idsJson" >> $env:GITHUB_OUTPUT
 
   # =============================================================================
-  # NUGET PUBLISHING DISABLED - Moved to GitLab CI
+  # NUGET PUBLISHING DISABLED - Moved to the upstream CI pipeline
   # Uncomment this job if you need to restore GitHub-based NuGet publishing
   # =============================================================================
   # publish-packages:

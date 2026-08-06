@@ -1,12 +1,16 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.ServiceTypes;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Scheduling.Abstractions;
+using Fdw.Services.Scheduling.Abstractions.Configuration;
+using Fdw.Services.Scheduling.Commands;
 using Fdw.Services.Scheduling.Execution;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -62,14 +66,6 @@ public sealed class DefaultSchedulerType
             return services;
         });
 
-        Configuration(builder =>
-        {
-
-            ScheduleConfigurationProvider.RegisterDomainConfiguration(builder.Services, builder.Configuration);
-    
-                    return builder;
-});
-
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
         {
 
@@ -81,7 +77,30 @@ public sealed class DefaultSchedulerType
             builder.Services.TryAddScoped<DefaultSchedulingFactory>(sp =>
                 (DefaultSchedulingFactory)sp.GetRequiredService<ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>>());
 
-            SchedulerConfigurationProvider.RegisterDomainConfiguration(builder.Services);
+            // Why both providers register here rather than behind a static on each provider: this option
+            // is the only consumer of either, so a shared entry point would be a forwarding indirection.
+            // The generated Initialize() resolves IServiceConfigurationProvider<T> via GetService to link
+            // the parent — a nullable lookup, so a missing registration fails silently rather than loudly.
+            builder.Services.TryAddSingleton<SchedulerConfigurationProvider>(sp =>
+                new SchedulerConfigurationProvider(
+                    sp.GetService<ILogger<SchedulerConfigurationProvider>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+            builder.Services.TryAddSingleton<DefaultConfigurationProvider<SchedulerConfiguration, SchedulerConfigurationCommand>>(
+                sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<SchedulerConfiguration>>(
+                sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
+
+            builder.Services.TryAddSingleton<ScheduleConfigurationProvider>(sp =>
+                new ScheduleConfigurationProvider(
+                    sp.GetService<ILogger<ScheduleConfigurationProvider>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+            builder.Services.TryAddSingleton<DefaultConfigurationProvider<ScheduleConfiguration, ScheduleConfigurationCommand>>(
+                sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ScheduleConfiguration>>(
+                sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
+
             return builder;
         });
 

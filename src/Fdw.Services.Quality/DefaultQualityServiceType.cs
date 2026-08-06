@@ -1,8 +1,11 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Quality.Configuration;
 using Fdw.Services.Quality.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,7 +45,11 @@ public sealed class DefaultQualityServiceType : QualityServiceTypeBase
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
         {
 
-            QualityConfigurationProvider.RegisterDomainConfiguration(builder.Services);
+            builder.Services.TryAddSingleton<QualityConfigurationProvider>(sp =>
+                new QualityConfigurationProvider(
+                    sp.GetService<ILogger<QualityConfigurationProvider>>() ?? NullLogger<QualityConfigurationProvider>.Instance,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
 
             builder.Services.TryAddScoped<IQualityService, QualityService>();
             builder.Services.TryAddScoped<ICatalogService, CatalogService>();

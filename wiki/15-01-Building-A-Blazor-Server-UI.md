@@ -1,8 +1,6 @@
 # Building a Blazor Server UI
 
-The canonical reference implementation of an FDW Blazor InteractiveServer skin lives in the **reference-ui** repository:
-
-- GitLab: <https://gitlab.cyberdynedevelopment.dev/developers/reference-ui>
+The canonical reference implementation of an FDW Blazor InteractiveServer skin lives in the **reference-ui** repository.
 
 `reference-ui/public/Program.cs`, `reference-ui/public/Components/Routes.razor`, and `reference-ui/public/Components/App.razor` are the authoritative shape for an InteractiveServer skin using Tailwind CSS v4. The reference UI demonstrates:
 

@@ -49,8 +49,8 @@ Both UIs:
 
 Refer to each reference repo's README for the canonical run instructions:
 
-- `reference-ui` — <https://gitlab.cyberdynedevelopment.dev/developers/reference-ui>
-- `reference-aui` — <https://gitlab.cyberdynedevelopment.dev/developers/reference-aui>
+- `reference-ui`
+- `reference-aui`
 
 Both skins require the Reference.Api backend (from the `reference-api` repository) for authentication and configuration CRUD.
 

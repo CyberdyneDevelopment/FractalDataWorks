@@ -1,8 +1,6 @@
 # 14-01 Building an API Server
 
-The canonical reference implementation of an FDW API server lives in the **reference-api** repository:
-
-- GitLab: <https://gitlab.cyberdynedevelopment.dev/developers/reference-api>
+The canonical reference implementation of an FDW API server lives in the **reference-api** repository.
 
 `reference-api/public/src/Reference.Api/Program.cs` is the authoritative shape for an FDW API server startup, including the three-phase ServiceTypeCollection registration, hosting extensions (`AddFrameworkSerilog`, `AddFrameworkOpenTelemetry`, `AddFrameworkOperations`, `AddFrameworkHealthMonitoring`, `AddFrameworkDesignerPipelines`, `AddFrameworkSignalR`, `AddFrameworkRateLimiting`, `AddFrameworkCors`, `AddFrameworkConfigurationWriters`), and FastEndpoints wiring.
 

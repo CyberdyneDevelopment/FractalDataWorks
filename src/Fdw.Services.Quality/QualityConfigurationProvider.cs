@@ -31,15 +31,6 @@ public class QualityConfigurationProvider
     /// binding from IConfiguration is a Phase-1a concern and lives in the consuming
     /// <c>[ServiceTypeOption].Configure</c>, not here.
     /// </summary>
-    public static void RegisterDomainConfiguration(IServiceCollection services)
-    {
-        services.TryAddSingleton<QualityConfigurationProvider>(sp =>
-            new QualityConfigurationProvider(
-                sp.GetService<ILogger<QualityConfigurationProvider>>() ?? NullLogger<QualityConfigurationProvider>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
-    }
-
     private readonly DefaultConfigurationProvider<QualityRuleConfiguration, QualityRuleConfigurationCommand> _qualityRuleProvider;
     private readonly DefaultConfigurationProvider<DataSetAnnotationConfiguration, DataSetAnnotationConfigurationCommand> _annotationProvider;
     private readonly DefaultConfigurationProvider<EnvironmentConfiguration, EnvironmentConfigurationCommand> _environmentProvider;

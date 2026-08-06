@@ -18,24 +18,6 @@ namespace Fdw.Services.Scheduling;
 /// <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>.</summary>
 public class ScheduleConfigurationProvider : DefaultConfigurationProvider<ScheduleConfiguration, ScheduleConfigurationCommand>
 {
-    /// <summary>
-    /// Registers the ScheduleConfigurationProvider and interface forwardings with DI, targeting this
-    /// domain's own default location. To override, call <c>SetConfiguration</c> on the resolved singleton.
-    /// </summary>
-    public static void RegisterDomainConfiguration(IServiceCollection services, IConfiguration configuration)
-    {
-
-        services.TryAddSingleton<ScheduleConfigurationProvider>(sp =>
-            new ScheduleConfigurationProvider(
-                sp.GetService<ILogger<ScheduleConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
-        services.TryAddSingleton<DefaultConfigurationProvider<ScheduleConfiguration, ScheduleConfigurationCommand>>(
-            sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
-        services.TryAddSingleton<IServiceConfigurationProvider<ScheduleConfiguration>>(sp =>
-            sp.GetRequiredService<ScheduleConfigurationProvider>());
-    }
-
     /// <summary>Initializes a new instance of the <see cref="ScheduleConfigurationProvider"/> class.</summary>
     public ScheduleConfigurationProvider(
         ILogger<ScheduleConfigurationProvider> logger,

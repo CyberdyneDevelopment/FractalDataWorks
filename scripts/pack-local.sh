@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # Pack Fdw packages to local NuGet folder.
-# To also push to the GitLab feed, run ./push-gitlab.sh afterwards.
 # Requires: LocalNugetFolder environment variable
 # Usage: ./pack-local.sh [-n|--no-build] [-c|--configuration Release] [config-name]
 
@@ -252,4 +251,3 @@ fi
 echo ""
 echo "=== Success ==="
 echo "${#PACKAGES[@]} packages (v$VERSION) published to: $LOCAL_NUGET"
-echo "Run ./push-gitlab.sh to also publish to the GitLab feed."

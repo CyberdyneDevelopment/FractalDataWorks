@@ -12,10 +12,10 @@ what prove it.
 
 | Solution | Repository | Runs on |
 |----------|-----------|---------|
-| **ApiSolution** | [reference/reference-api](https://gitlab.cyberdynedevelopment.dev/reference/reference-api) | `:5020` |
-| **EtlServer** | [reference/reference-etl](https://gitlab.cyberdynedevelopment.dev/reference/reference-etl) | `:5022` |
-| **SchedulerServer** | [reference/reference-scheduler](https://gitlab.cyberdynedevelopment.dev/reference/reference-scheduler) | `:5024` |
-| **ManagementUI** | [reference/reference-ui](https://gitlab.cyberdynedevelopment.dev/reference/reference-ui) | `:5026` |
+| **ApiSolution** | `reference-api` | `:5020` |
+| **EtlServer** | `reference-etl` | `:5022` |
+| **SchedulerServer** | `reference-scheduler` | `:5024` |
+| **ManagementUI** | `reference-ui` | `:5026` |
 
 The `ManagementUI-Tailwind` and `ManagementUI-WASM` directories were variants of the same
 management UI and moved into `reference-ui` with it.

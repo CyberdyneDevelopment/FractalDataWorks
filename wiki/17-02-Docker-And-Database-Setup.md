@@ -72,7 +72,7 @@ All configuration and ops tables follow the version-on-write pattern:
 - **`IsCurrent`** / **`IsDeleted`** — soft-delete + version flags
 - **Filtered unique indexes** — `WHERE IsCurrent = 1 AND IsDeleted = 0` enforces "one current per entity"
 
-See [`databases/DATABASE-MAP.md`](https://gitlab.cyberdynedevelopment.dev/developers/databases) for the authoritative table inventory.
+See `databases/DATABASE-MAP.md` in the `databases` repository for the authoritative table inventory.
 
 ## Connection Registration
 

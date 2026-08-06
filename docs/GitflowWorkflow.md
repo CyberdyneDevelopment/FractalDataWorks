@@ -176,7 +176,7 @@ git flow feature start my-feature
 # Publish to remote
 git flow feature publish my-feature
 
-# Create PR on GitHub/GitLab: feature/my-feature → develop
+# Open a pull request: feature/my-feature → develop
 # Wait for review and approval
 
 # After PR is merged, clean up local branch

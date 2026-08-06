@@ -1,8 +1,6 @@
 # 14-02 Building an ETL Server
 
-The canonical reference implementation of an FDW ETL server lives in the **reference-etl** repository:
-
-- GitLab: <https://gitlab.cyberdynedevelopment.dev/developers/reference-etl>
+The canonical reference implementation of an FDW ETL server lives in the **reference-etl** repository.
 
 `reference-etl/public/src/Reference.Etl.Server/Program.cs` is the authoritative shape for an FDW ETL server startup, including the three-phase ServiceTypeCollection registration (`EtlPipelineTypes`, `TransformationTypes`, plus the same connection / secret-manager / authentication / operations registrations as the API server) and the pipeline background executor (`AddFrameworkPipelineBackgroundExecutor`).
 

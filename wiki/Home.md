@@ -94,8 +94,8 @@ Welcome to the FractalDataWorks documentation. This wiki guides you through buil
 
 The reference Management UI implementations live in separate repositories:
 
-- `reference-ui` — Tailwind + InteractiveServer skin (GitLab: <https://gitlab.cyberdynedevelopment.dev/developers/reference-ui>)
-- `reference-aui` — MudBlazor + InteractiveAuto skin (GitLab: <https://gitlab.cyberdynedevelopment.dev/developers/reference-aui>)
+- `reference-ui` — Tailwind + InteractiveServer skin
+- `reference-aui` — MudBlazor + InteractiveAuto skin
 
 ## Hosting & Deployment
 

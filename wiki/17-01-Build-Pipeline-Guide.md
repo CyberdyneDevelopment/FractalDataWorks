@@ -20,7 +20,6 @@ Each reference repo pulls FDW packages from a NuGet feed (local or a published f
 | `public/scripts/pack-local.sh` | Build + pack FDW into `$LocalNugetFolder` (default Release) |
 | `public/scripts/build-all.sh` | Two-phase build: pack FDW, then build/test the framework |
 | `public/scripts/setup-local-nuget.sh` | Initializes `LocalNugetFolder` and writes `Fdw.Local.nuget.config` |
-| `public/scripts/push-gitlab.sh` | Pushes locally-packed `.nupkg` files to the GitLab NuGet feed |
 
 ## pack-local.sh
 

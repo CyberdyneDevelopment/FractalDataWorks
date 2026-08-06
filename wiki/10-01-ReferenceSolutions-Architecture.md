@@ -10,7 +10,7 @@ FDW reference applications live in their own repositories — they are not part 
 | `reference-ui` | Tailwind + InteractiveServer Blazor skin |
 | `reference-aui` | MudBlazor + InteractiveAuto Blazor skin |
 
-Each repo has its own `Directory.Packages.props` with a `<FdwVersion>` centrally pinning the FDW framework version, its own `build-all.sh` / GitLab CI pipeline, and its own deploy story (typically dotnet publish + rsync to a VM, with systemd unit files for runtime).
+Each repo has its own `Directory.Packages.props` with a `<FdwVersion>` centrally pinning the FDW framework version, its own `build-all.sh` / CI pipeline, and its own deploy story (typically dotnet publish + rsync to a VM, with systemd unit files for runtime).
 
 ## Repository Boundary
 
@@ -26,7 +26,7 @@ The reference repos consume the FDW packages and demonstrate concrete usage patt
 
 Each reference repo follows the same general shape:
 
-- `public/` — source root, mirrored to the corresponding GitHub repo via GitLab CI subtree push
+- `public/` — source root, mirrored to the corresponding GitHub repo via a CI subtree push
 - `public/src/<App>/` — entry-point project (Microsoft.NET.Sdk.Web)
 - `public/tests/<App>.Tests/` — xUnit v3 tests
 - `public/Directory.Packages.props` — central package versions, pins `<FdwVersion>`

@@ -1,8 +1,6 @@
 # 14-03 Building a Scheduler Server
 
-The canonical reference implementation of an FDW scheduler server lives in the **reference-scheduler** repository:
-
-- GitLab: <https://gitlab.cyberdynedevelopment.dev/developers/reference-scheduler>
+The canonical reference implementation of an FDW scheduler server lives in the **reference-scheduler** repository.
 
 `reference-scheduler/public/src/Reference.Scheduler.Server/Program.cs` is the authoritative shape for an FDW scheduler startup, including the three-phase ServiceTypeCollection registration (`SchedulerTypes`, plus the standard connection / secret-manager / authentication / operations registrations) and the scheduling background executor.
 
