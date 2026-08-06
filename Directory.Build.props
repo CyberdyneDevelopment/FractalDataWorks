@@ -1,0 +1,197 @@
+<Project>
+  <PropertyGroup>
+	  <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+	  <!-- Language version and framework settings -->
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <!-- Build configuration settings -->
+    <!-- Base configs: Debug, Develop, Release, Test -->
+    <!-- Local variants (-Local suffix): Use local NuGet packages -->
+    <Configurations>Debug;Debug-Local;Develop;Develop-Local;Release;Release-Local;Test;Test-Local</Configurations>
+
+    <!-- Detect if this is a -Local configuration -->
+    <IsLocalConfiguration>false</IsLocalConfiguration>
+    <IsLocalConfiguration Condition="$(Configuration.EndsWith('-Local'))">true</IsLocalConfiguration>
+    <!-- Extract base configuration name (strip -Local suffix) -->
+    <BaseConfiguration>$(Configuration)</BaseConfiguration>
+    <BaseConfiguration Condition="'$(IsLocalConfiguration)' == 'true'">$(Configuration.Replace('-Local', ''))</BaseConfiguration>
+    
+    <!-- Build settings -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
+    
+    <!-- Package settings -->
+    <!-- Default to not packable, src projects override below -->
+    <IsPackable>false</IsPackable>
+    <IsPackable Condition="$(MSBuildProjectDirectory.Contains('\src\'))">true</IsPackable>
+
+    <Authors>Fdw Team</Authors>
+    <Company>Cyberdyne Development</Company>
+    <Copyright>Copyright © $(Company) $([System.DateTime]::Now.Year)</Copyright>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/CyberdyneDevelopment/FractalDataWorks.git</RepositoryUrl>
+    <PackageDescription>Development tools and utilities for the FractalDataWorks ecosystem. Build: $(NBGV_GitCommitIdShort)</PackageDescription>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <!-- Suppress SourceLink warning when not in CI (source control info not available locally) -->
+    <WarnOnNonCIBuild Condition="'$(CI)' != 'true'">false</WarnOnNonCIBuild>
+    <!-- Disable SourceLink when not in CI to avoid warnings about missing source control info -->
+    <EnableSourceLink Condition="'$(CI)' != 'true'">false</EnableSourceLink>
+    
+    <!-- Symbol packages -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- Include README.md in NuGet packages (only if it exists) -->
+    <PackageReadmeFile Condition="Exists('$(MSBuildProjectDirectory)\README.md')">README.md</PackageReadmeFile>
+    
+    <!-- Central Package Management -->
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Exclude samples from central package management and global settings -->
+    <ManagePackageVersionsCentrally Condition="$(MSBuildProjectDirectory.Contains('\samples\'))">false</ManagePackageVersionsCentrally>
+    
+    <!-- Disable specific warnings -->
+    <!-- CA1510: Use ArgumentNullException.ThrowIfNull (new .NET feature) -->
+    <!-- CA1834: Use StringBuilder.Append(char) (performance) -->
+    <!-- MA0051: Method too long (style preference) -->
+    <!-- CA1707: Underscores in member names (allow _camelCase for private/protected) -->
+    <NoWarn>$(NoWarn);VSTHRD200;CA1716;CA1000;CA1848;CA1510;CA1834;MA0051;MA0048;CA1711;CA1707;NETSDK1195</NoWarn>
+    
+    <!-- Nerdbank.GitVersioning -->
+    <GitVersioningVersion>3.7.115</GitVersioningVersion>
+  </PropertyGroup>
+
+  <!-- Debug / Debug-Local: Minimal checks for fast development -->
+  <PropertyGroup Condition="'$(BaseConfiguration)' == 'Debug'">
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>false</Optimize>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <AnalysisLevel>none</AnalysisLevel>
+    <RunAnalyzers>false</RunAnalyzers>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- Develop / Develop-Local: Development with analyzers, warnings not errors -->
+  <PropertyGroup Condition="'$(BaseConfiguration)' == 'Develop'">
+    <DefineConstants>TRACE;DEVELOP</DefineConstants>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>false</Optimize>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <RunAnalyzers>true</RunAnalyzers>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
+    <ReportAnalyzer>true</ReportAnalyzer>
+  </PropertyGroup>
+
+  <!-- Release / Release-Local: Production ready, strict checks -->
+  <PropertyGroup Condition="'$(BaseConfiguration)' == 'Release'">
+    <DefineConstants>TRACE;RELEASE</DefineConstants>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>true</Optimize>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <RunAnalyzers>true</RunAnalyzers>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <!-- Test / Test-Local: Test builds -->
+  <PropertyGroup Condition="'$(BaseConfiguration)' == 'Test'">
+    <DefineConstants>TRACE;TEST</DefineConstants>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>false</Optimize>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <AnalysisLevel>none</AnalysisLevel>
+    <RunAnalyzers>false</RunAnalyzers>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- Target Framework for FractalDataWorks.net -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'FractalDataWorks.net'">
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <!-- IsExternalInit package for netstandard2.0 projects (required for init-only properties) -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="IsExternalInit" PrivateAssets="all">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="PolySharp" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- FrozenDictionary polyfill for netstandard2.0 Abstractions projects -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' AND $(MSBuildProjectName.Contains('Abstractions'))">
+    <PackageReference Include="System.Collections.Immutable" />
+  </ItemGroup>
+
+  <!-- Local NuGet Development Configuration -->
+  <PropertyGroup>
+    <!-- Default config filename - can be overridden in project files -->
+    <LocalNugetConfigFileName Condition="'$(LocalNugetConfigFileName)' == ''">Fdw.Local.nuget.config</LocalNugetConfigFileName>
+  </PropertyGroup>
+
+  <!-- Use local NuGet config when using a -Local configuration and LocalNugetFolder is set -->
+  <PropertyGroup Condition="'$(IsLocalConfiguration)' == 'true' AND '$(LocalNugetFolder)' != ''">
+    <RestoreConfigFile>$(LocalNugetFolder)\$(LocalNugetConfigFileName)</RestoreConfigFile>
+  </PropertyGroup>
+
+  <!-- Nerdbank.GitVersioning -->
+  <ItemGroup Condition="!$(MSBuildProjectDirectory.Contains('\samples\'))">
+    <PackageReference Include="Nerdbank.GitVersioning" PrivateAssets="all" Condition="'$(IsTestProject)' != 'true'" />
+  </ItemGroup>
+
+  <!-- Microsoft.Build.Framework for MSBuild/Roslyn workspace projects -->
+  <ItemGroup Condition="$(MSBuildProjectName.StartsWith('FractalDataWorks.Tools.')) OR $(MSBuildProjectName) == 'FractalDataWorks.Workspace.Roslyn'">
+    <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- Source Link -->
+  <ItemGroup Condition="!$(MSBuildProjectDirectory.Contains('\samples\'))">
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+  </ItemGroup>
+
+  <!-- Include README.md in package if it exists -->
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\README.md')">
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- Suppress XML documentation warnings for generated files -->
+  <PropertyGroup>
+    <!-- Add CS1570 to global NoWarn for source generator XML issues -->
+    <NoWarn Condition="'$(BaseConfiguration)' == 'Release'">$(NoWarn);CS1570</NoWarn>
+  </PropertyGroup>
+
+  <!-- Analyzers - Applied to all projects except samples -->
+  <ItemGroup Condition="'$(IsTestProject)' != 'true' AND !$(MSBuildProjectDirectory.Contains('\samples\'))">
+    <PackageReference Include="AsyncFixer" PrivateAssets="All" />
+    <PackageReference Include="Meziantou.Analyzer" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" PrivateAssets="All" />
+    <PackageReference Include="Roslynator.Analyzers" PrivateAssets="All" />
+    <PackageReference Include="SecurityCodeScan.VS2019" PrivateAssets="All" />
+  </ItemGroup>
+
+  <!-- FractalDataWorks Code Style Analyzers - Applied to all projects except samples and the analyzer itself -->
+  <ItemGroup Condition="'$(IsTestProject)' != 'true' AND !$(MSBuildProjectDirectory.Contains('\samples\')) AND '$(MSBuildProjectName)' != 'FractalDataWorks.Analyzers' AND '$(MSBuildProjectName)' != 'FractalDataWorks.CodeFixes'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\FractalDataWorks.Analyzers\FractalDataWorks.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\FractalDataWorks.CodeFixes\FractalDataWorks.CodeFixes.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>

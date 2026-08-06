@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    Fix pack when projects explicitly set TargetFramework (singular) but Directory.Build.props
+    sets a default TargetFrameworks (plural). Clear TargetFrameworks to prevent pack from
+    looking for target frameworks that weren't built.
+  -->
+  <PropertyGroup Condition="'$(TargetFramework)' != '' AND '$(TargetFrameworks)' != ''">
+    <!-- Clear TargetFrameworks when we have an explicit single TargetFramework -->
+    <TargetFrameworks></TargetFrameworks>
+  </PropertyGroup>
+</Project>

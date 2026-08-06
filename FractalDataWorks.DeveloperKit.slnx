@@ -1,0 +1,423 @@
+<Solution>
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- Solution Items                                                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="coverage.runsettings" />
+    <File Path="coverlet.runsettings" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="LICENSE" />
+    <File Path="nuget.config" />
+    <File Path="README.md" />
+    <File Path="SECURITY.md" />
+    <File Path="version.json" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Core - Foundation packages                                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Core/">
+    <Project Path="src/FractalDataWorks.Abstractions/FractalDataWorks.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Results/FractalDataWorks.Results.csproj" />
+    <Project Path="src/FractalDataWorks.Messages/FractalDataWorks.Messages.csproj" />
+    <Project Path="src/FractalDataWorks.Collections/FractalDataWorks.Collections.csproj" />
+    <Project Path="src/FractalDataWorks.Collections.Analyzers/FractalDataWorks.Collections.Analyzers.csproj" />
+    <Project Path="src/FractalDataWorks.Collections.CodeFixes/FractalDataWorks.Collections.CodeFixes.csproj" />
+    <Project Path="src/FractalDataWorks.Collections.SourceGenerators/FractalDataWorks.Collections.SourceGenerators.csproj" />
+    <Project Path="src/FractalDataWorks.Expressions/FractalDataWorks.Expressions.csproj" />
+    <Project Path="src/FractalDataWorks.SourceGenerators/FractalDataWorks.SourceGenerators.csproj" />
+    <Project Path="src/FractalDataWorks.DependencyInjection/FractalDataWorks.DependencyInjection.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Configuration - Configuration system                                          -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Configuration/">
+    <Project Path="src/FractalDataWorks.Configuration.Abstractions/FractalDataWorks.Configuration.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Configuration.Writers.Abstractions/FractalDataWorks.Configuration.Writers.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Configuration.Writers.InMemory/FractalDataWorks.Configuration.Writers.InMemory.csproj" />
+    <Project Path="src/FractalDataWorks.Configuration.Writers.MsSql/FractalDataWorks.Configuration.Writers.MsSql.csproj" />
+    <Project Path="src/FractalDataWorks.Configuration.Writers/FractalDataWorks.Configuration.Writers.csproj" />
+    <Project Path="src/FractalDataWorks.Configuration/FractalDataWorks.Configuration.csproj" />
+    <Project Path="src/FractalDataWorks.Configuration.MsSql/FractalDataWorks.Configuration.MsSql.csproj" />
+    <Project Path="src/FractalDataWorks.Configuration.UI.SourceGenerators/FractalDataWorks.Configuration.UI.SourceGenerators.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/CodeBuilder - Code analysis and generation                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/CodeBuilder/">
+    <Project Path="src/FractalDataWorks.CodeBuilder.Abstractions/FractalDataWorks.CodeBuilder.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.CodeBuilder.Analysis/FractalDataWorks.CodeBuilder.Analysis.csproj" />
+    <Project Path="src/FractalDataWorks.CodeBuilder.Analysis.CSharp/FractalDataWorks.CodeBuilder.Analysis.CSharp.csproj" />
+    <Project Path="src/FractalDataWorks.CodeBuilder.CSharp/FractalDataWorks.CodeBuilder.CSharp.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Commands - Command pattern implementations                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Commands/">
+    <Project Path="src/FractalDataWorks.Commands.Abstractions/FractalDataWorks.Commands.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Commands.Data.Abstractions/FractalDataWorks.Commands.Data.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Commands.Data/FractalDataWorks.Commands.Data.csproj" />
+    <Project Path="src/FractalDataWorks.Commands.Data.Extensions/FractalDataWorks.Commands.Data.Extensions.csproj" />
+    <Project Path="src/FractalDataWorks.Commands.Development.Abstractions/FractalDataWorks.Commands.Development.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Roslyn.Commands.Abstractions/FractalDataWorks.Roslyn.Commands.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Roslyn.Commands/FractalDataWorks.Roslyn.Commands.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Data - Data access and manipulation                                           -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Data/">
+    <Project Path="src/FractalDataWorks.Data.Abstractions/FractalDataWorks.Data.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Data/FractalDataWorks.Data.csproj" />
+    <Project Path="src/FractalDataWorks.Data.Builders/FractalDataWorks.Data.Builders.csproj" />
+    <Project Path="src/FractalDataWorks.Data.DataContainers.Abstractions/FractalDataWorks.Data.DataContainers.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Data.DataSets.Abstractions/FractalDataWorks.Data.DataSets.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Data.DataSets/FractalDataWorks.Data.DataSets.csproj" />
+    <Project Path="src/FractalDataWorks.Data.DataStores.Abstractions/FractalDataWorks.Data.DataStores.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Data.DataStores/FractalDataWorks.Data.DataStores.csproj" />
+    <Project Path="src/FractalDataWorks.Data.DataStores.FileSystem/FractalDataWorks.Data.DataStores.FileSystem.csproj" />
+    <Project Path="src/FractalDataWorks.Data.DataStores.Rest/FractalDataWorks.Data.DataStores.Rest.csproj" />
+    <Project Path="src/FractalDataWorks.Data.DataStores.SqlServer/FractalDataWorks.Data.DataStores.SqlServer.csproj" />
+    <Project Path="src/FractalDataWorks.Data.Execution/FractalDataWorks.Data.Execution.csproj" />
+    <Project Path="src/FractalDataWorks.Data.Files/FractalDataWorks.Data.Files.csproj" />
+    <Project Path="src/FractalDataWorks.Data.Http/FractalDataWorks.Data.Http.csproj" />
+    <Project Path="src/FractalDataWorks.Data.Importers.Abstractions/FractalDataWorks.Data.Importers.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Data.JsonSchema/FractalDataWorks.Data.JsonSchema.csproj" />
+    <Project Path="src/FractalDataWorks.Data.MsSql/FractalDataWorks.Data.MsSql.csproj" />
+    <Project Path="src/FractalDataWorks.Data.Rest/FractalDataWorks.Data.Rest.csproj" />
+    <Project Path="src/FractalDataWorks.Data.Serialization/FractalDataWorks.Data.Serialization.csproj" />
+    <Project Path="src/FractalDataWorks.Data.Transformations.Abstractions/FractalDataWorks.Data.Transformations.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Data.Transformers.Abstractions/FractalDataWorks.Data.Transformers.Abstractions.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/ServiceTypes - Service type system with analyzers                             -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/ServiceTypes/">
+    <Project Path="src/FractalDataWorks.ServiceTypes.Analyzers/FractalDataWorks.ServiceTypes.Analyzers.csproj" />
+    <Project Path="src/FractalDataWorks.ServiceTypes.CodeFixes/FractalDataWorks.ServiceTypes.CodeFixes.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Services - Service domain implementations                                     -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Services/">
+    <Project Path="src/FractalDataWorks.Services.Abstractions/FractalDataWorks.Services.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services/FractalDataWorks.Services.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Authentication/">
+    <Project Path="src/FractalDataWorks.Services.Authentication.Abstractions/FractalDataWorks.Services.Authentication.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Authentication/FractalDataWorks.Services.Authentication.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Authentication.Jwt/FractalDataWorks.Services.Authentication.Jwt.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Connections/">
+    <Project Path="src/FractalDataWorks.Services.Connections.Abstractions/FractalDataWorks.Services.Connections.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Connections/FractalDataWorks.Services.Connections.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Connections.Http.Abstractions/FractalDataWorks.Services.Connections.Http.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Connections.Http/FractalDataWorks.Services.Connections.Http.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Connections.MsSql/FractalDataWorks.Services.Connections.MsSql.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Data/">
+    <Project Path="src/FractalDataWorks.Services.Data.Abstractions/FractalDataWorks.Services.Data.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Data/FractalDataWorks.Services.Data.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Execution/">
+    <Project Path="src/FractalDataWorks.Services.Execution.Abstractions/FractalDataWorks.Services.Execution.Abstractions.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Notifications/">
+    <Project Path="src/FractalDataWorks.Services.Notifications.Abstractions/FractalDataWorks.Services.Notifications.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Notifications/FractalDataWorks.Services.Notifications.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Notifications.Email/FractalDataWorks.Services.Notifications.Email.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Pipelines/">
+    <Project Path="src/FractalDataWorks.Services.Pipelines.Abstractions/FractalDataWorks.Services.Pipelines.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Pipelines/FractalDataWorks.Services.Pipelines.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Quality/">
+    <Project Path="src/FractalDataWorks.Services.Quality.Abstractions/FractalDataWorks.Services.Quality.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Quality/FractalDataWorks.Services.Quality.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Scheduling/">
+    <Project Path="src/FractalDataWorks.Services.Scheduling.Abstractions/FractalDataWorks.Services.Scheduling.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Scheduling/FractalDataWorks.Services.Scheduling.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/SecretManagers/">
+    <Project Path="src/FractalDataWorks.Services.SecretManagers.Abstractions/FractalDataWorks.Services.SecretManagers.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.SecretManagers/FractalDataWorks.Services.SecretManagers.csproj" />
+    <Project Path="src/FractalDataWorks.Services.SecretManagers.AzureKeyVault/FractalDataWorks.Services.SecretManagers.AzureKeyVault.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Transformations/">
+    <Project Path="src/FractalDataWorks.Services.Transformations.Abstractions/FractalDataWorks.Services.Transformations.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Transformations/FractalDataWorks.Services.Transformations.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Transformations.DataCleaning.Abstractions/FractalDataWorks.Services.Transformations.DataCleaning.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Transformations.DataCleaning/FractalDataWorks.Services.Transformations.DataCleaning.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Workflows/">
+    <Project Path="src/FractalDataWorks.Services.Workflows.Abstractions/FractalDataWorks.Services.Workflows.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Workflows/FractalDataWorks.Services.Workflows.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Multitenancy/">
+    <Project Path="src/FractalDataWorks.Services.Multitenancy.Abstractions/FractalDataWorks.Services.Multitenancy.Abstractions.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Authorization/">
+    <Project Path="src/FractalDataWorks.Services.Authorization.Abstractions/FractalDataWorks.Services.Authorization.Abstractions.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/FractalDataWorks.Hosting.Bootstrap.Configuration/FractalDataWorks.Hosting.Bootstrap.Configuration.csproj" />
+    <Project Path="src/FractalDataWorks.Operations.Abstractions/FractalDataWorks.Operations.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Operations/FractalDataWorks.Operations.csproj" />
+    <Project Path="src/FractalDataWorks.Processors.Abstractions/FractalDataWorks.Processors.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Registration.SourceGenerators/FractalDataWorks.Registration.SourceGenerators.csproj" />
+    <Project Path="src/FractalDataWorks.Calculations.Contracts/FractalDataWorks.Calculations.Contracts.csproj" />
+    <Project Path="src/FractalDataWorks.Calculations.SignalR/FractalDataWorks.Calculations.SignalR.csproj" />
+    <Project Path="src/FractalDataWorks.Configuration.SourceGenerators/FractalDataWorks.Configuration.SourceGenerators.csproj" />
+    <Project Path="src/FractalDataWorks.Data.RowSources.Abstractions/FractalDataWorks.Data.RowSources.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Data.RowSources.DataReader.Abstractions/FractalDataWorks.Data.RowSources.DataReader.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Data.RowSources.DataReader/FractalDataWorks.Data.RowSources.DataReader.csproj" />
+    <Project Path="src/FractalDataWorks.Data.RowSources.Http.Abstractions/FractalDataWorks.Data.RowSources.Http.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Data.RowSources.Http/FractalDataWorks.Data.RowSources.Http.csproj" />
+    <Project Path="src/FractalDataWorks.Data.RowSources.Json.Abstractions/FractalDataWorks.Data.RowSources.Json.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Data.RowSources.Json/FractalDataWorks.Data.RowSources.Json.csproj" />
+    <Project Path="src/FractalDataWorks.Data.RowSources.Xml.Abstractions/FractalDataWorks.Data.RowSources.Xml.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Data.RowSources.Xml/FractalDataWorks.Data.RowSources.Xml.csproj" />
+    <Project Path="src/FractalDataWorks.Data.RowSources/FractalDataWorks.Data.RowSources.csproj" />
+    <Project Path="src/FractalDataWorks.Data.SourceGenerators/FractalDataWorks.Data.SourceGenerators.csproj" />
+    <Project Path="src/FractalDataWorks.Data.Transformations/FractalDataWorks.Data.Transformations.csproj" />
+    <Project Path="src/FractalDataWorks.Hosting.Abstractions/FractalDataWorks.Hosting.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Results.Abstractions/FractalDataWorks.Results.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Roslyn.Commands.Analysis/FractalDataWorks.Roslyn.Commands.Analysis.csproj" />
+    <Project Path="src/FractalDataWorks.Roslyn.Commands.Compilation/FractalDataWorks.Roslyn.Commands.Compilation.csproj" />
+    <Project Path="src/FractalDataWorks.Roslyn.Commands.Conventions/FractalDataWorks.Roslyn.Commands.Conventions.csproj" />
+    <Project Path="src/FractalDataWorks.Roslyn.Commands.Formatting/FractalDataWorks.Roslyn.Commands.Formatting.csproj" />
+    <Project Path="src/FractalDataWorks.Roslyn.Commands.Generation/FractalDataWorks.Roslyn.Commands.Generation.csproj" />
+    <Project Path="src/FractalDataWorks.Roslyn.Commands.Navigation/FractalDataWorks.Roslyn.Commands.Navigation.csproj" />
+    <Project Path="src/FractalDataWorks.Roslyn.Commands.Project/FractalDataWorks.Roslyn.Commands.Project.csproj" />
+    <Project Path="src/FractalDataWorks.Roslyn.Commands.Refactoring/FractalDataWorks.Roslyn.Commands.Refactoring.csproj" />
+    <Project Path="src/FractalDataWorks.Roslyn.Commands.Search/FractalDataWorks.Roslyn.Commands.Search.csproj" />
+    <Project Path="src/FractalDataWorks.Roslyn.Commands.Workspace/FractalDataWorks.Roslyn.Commands.Workspace.csproj" />
+    <Project Path="src/FractalDataWorks.Schema.Abstractions/FractalDataWorks.Schema.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Schema.Ddl.MsSql/FractalDataWorks.Schema.Ddl.MsSql.csproj" />
+    <Project Path="src/FractalDataWorks.Schema.Ddl.Tasks/FractalDataWorks.Schema.Ddl.Tasks.csproj" />
+    <Project Path="src/FractalDataWorks.Schema.Ddl/FractalDataWorks.Schema.Ddl.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Authorization/FractalDataWorks.Services.Authorization.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Data.SignalR/FractalDataWorks.Services.Data.SignalR.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Etl.Abstractions/FractalDataWorks.Services.Etl.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Etl/FractalDataWorks.Services.Etl.csproj" />
+    <Project Path="src/FractalDataWorks.Services.EtlMappers.Abstractions/FractalDataWorks.Services.EtlMappers.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.EtlMappers.Dynamic/FractalDataWorks.Services.EtlMappers.Dynamic.csproj" />
+    <Project Path="src/FractalDataWorks.Services.EtlMappers.Pooled/FractalDataWorks.Services.EtlMappers.Pooled.csproj" />
+    <Project Path="src/FractalDataWorks.Services.EtlMappers/FractalDataWorks.Services.EtlMappers.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Multitenancy.Sql/FractalDataWorks.Services.Multitenancy.Sql.csproj" />
+    <Project Path="src/FractalDataWorks.Services.RateLimiting.Abstractions/FractalDataWorks.Services.RateLimiting.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.RateLimiting/FractalDataWorks.Services.RateLimiting.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Resiliency.Abstractions/FractalDataWorks.Services.Resiliency.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Services.Resiliency/FractalDataWorks.Services.Resiliency.csproj" />
+    <Project Path="src/FractalDataWorks.Services.SecretManagers.EnvironmentVariable/FractalDataWorks.Services.SecretManagers.EnvironmentVariable.csproj" />
+    <Project Path="src/FractalDataWorks.Services.SecretManagers.UserSecrets/FractalDataWorks.Services.SecretManagers.UserSecrets.csproj" />
+    <Project Path="src/FractalDataWorks.SignalR/FractalDataWorks.SignalR.csproj" />
+    <Project Path="src/FractalDataWorks.Types.Abstractions/FractalDataWorks.Types.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Types.MsSql/FractalDataWorks.Types.MsSql.csproj" />
+  </Folder>
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Analyzers - Framework-wide code style analyzers and code fixes               -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Analyzers/">
+    <Project Path="src/FractalDataWorks.Analyzers/FractalDataWorks.Analyzers.csproj" />
+    <Project Path="src/FractalDataWorks.CodeFixes/FractalDataWorks.CodeFixes.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Calculations - Calculation engine                                             -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Calculations/">
+    <Project Path="src/FractalDataWorks.Calculations.Abstractions/FractalDataWorks.Calculations.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Calculations/FractalDataWorks.Calculations.csproj" />
+    <Project Path="src/FractalDataWorks.Calculations.Aggregations/FractalDataWorks.Calculations.Aggregations.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/ETL - Extract, Transform, Load pipelines                                      -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/ETL/">
+    <Project Path="src/FractalDataWorks.Etl.Abstractions/FractalDataWorks.Etl.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Etl.Pipelines/FractalDataWorks.Etl.Pipelines.csproj" />
+    <Project Path="src/FractalDataWorks.Etl.Scheduling/FractalDataWorks.Etl.Scheduling.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Orchestration - Workflow and pipeline orchestration                           -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Orchestration/">
+    <Project Path="src/FractalDataWorks.Orchestration.Abstractions/FractalDataWorks.Orchestration.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Orchestration/FractalDataWorks.Orchestration.csproj" />
+    <Project Path="src/FractalDataWorks.Orchestration.Pipelines.Abstractions/FractalDataWorks.Orchestration.Pipelines.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Orchestration.Pipelines/FractalDataWorks.Orchestration.Pipelines.csproj" />
+    <Project Path="src/FractalDataWorks.Orchestration.Workflows.Abstractions/FractalDataWorks.Orchestration.Workflows.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Orchestration.Workflows/FractalDataWorks.Orchestration.Workflows.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Workspace - Workspace and project management                                  -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Workspace/">
+    <Project Path="src/FractalDataWorks.Workspace.Management/FractalDataWorks.Workspace.Management.csproj" />
+    <Project Path="src/FractalDataWorks.Workspace.Roslyn/FractalDataWorks.Workspace.Roslyn.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/UI - User interface components                                                -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/UI/">
+    <Project Path="src/FractalDataWorks.UI.Abstractions/FractalDataWorks.UI.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.UI.Components/FractalDataWorks.UI.Components.csproj" />
+    <Project Path="src/FractalDataWorks.UI.Components.Blazor/FractalDataWorks.UI.Components.Blazor.csproj" />
+    <Project Path="src/FractalDataWorks.UI.Components.RazorConsole/FractalDataWorks.UI.Components.RazorConsole.csproj" />
+    <Project Path="src/FractalDataWorks.UI.Components.RazorConsole.SourceGenerators/FractalDataWorks.UI.Components.RazorConsole.SourceGenerators.csproj" />
+    <Project Path="src/FractalDataWorks.UI.Components.TUI/FractalDataWorks.UI.Components.TUI.csproj" />
+    <Project Path="src/FractalDataWorks.UI.Rendering.Spectre/FractalDataWorks.UI.Rendering.Spectre.csproj" />
+    <Project Path="src/FractalDataWorks.UI.Themes/FractalDataWorks.UI.Themes.csproj" />
+    <Project Path="src/FractalDataWorks.UI.Web.Abstractions/FractalDataWorks.UI.Web.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.TUI.Abstractions/FractalDataWorks.TUI.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.TUI.Management/FractalDataWorks.TUI.Management.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Web - Web API and HTTP                                                        -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Web/">
+    <Project Path="src/FractalDataWorks.Web.Http.Abstractions/FractalDataWorks.Web.Http.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.Web.RestEndpoints/FractalDataWorks.Web.RestEndpoints.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/MessageLogging - Structured logging                                           -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/MessageLogging/">
+    <Project Path="src/FractalDataWorks.MessageLogging.Abstractions/FractalDataWorks.MessageLogging.Abstractions.csproj" />
+    <Project Path="src/FractalDataWorks.MessageLogging.SourceGenerators/FractalDataWorks.MessageLogging.SourceGenerators.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/Core - Core library tests                                                   -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/Core/">
+    <Project Path="tests/FractalDataWorks.Results.Tests/FractalDataWorks.Results.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Messages.Tests/FractalDataWorks.Messages.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Collections.Tests/FractalDataWorks.Collections.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Collections.Analyzers.Tests/FractalDataWorks.Collections.Analyzers.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Collections.CodeFixes.Tests/FractalDataWorks.Collections.CodeFixes.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Collections.SourceGenerators.Tests/FractalDataWorks.Collections.SourceGenerators.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.DependencyInjection.Tests/FractalDataWorks.DependencyInjection.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/Configuration - Configuration tests                                         -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/Configuration/">
+    <Project Path="tests/FractalDataWorks.Configuration.Tests/FractalDataWorks.Configuration.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Configuration.Writers.Tests/FractalDataWorks.Configuration.Writers.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FractalDataWorks.Data.RowSources.Tests/FractalDataWorks.Data.RowSources.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Processors.Abstractions.Tests/FractalDataWorks.Processors.Abstractions.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Schema.Tests/FractalDataWorks.Schema.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Services.Connections.Http.Tests/FractalDataWorks.Services.Connections.Http.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Services.EtlMappers.Tests/FractalDataWorks.Services.EtlMappers.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Services.RateLimiting.Tests/FractalDataWorks.Services.RateLimiting.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Services.Resiliency.Tests/FractalDataWorks.Services.Resiliency.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Workspace.Management.Tests/FractalDataWorks.Workspace.Management.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/CodeBuilder - Code analysis and generation tests                            -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/CodeBuilder/">
+    <Project Path="tests/FractalDataWorks.CodeBuilder.Analysis.Tests/FractalDataWorks.CodeBuilder.Analysis.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.CodeBuilder.Analysis.CSharp.Tests/FractalDataWorks.CodeBuilder.Analysis.CSharp.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.CodeBuilder.CSharp.Tests/FractalDataWorks.CodeBuilder.CSharp.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/Commands - Command pattern tests                                            -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/Commands/">
+    <Project Path="tests/FractalDataWorks.Commands.Data.Tests/FractalDataWorks.Commands.Data.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Commands.Data.Extensions.Tests/FractalDataWorks.Commands.Data.Extensions.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/Data - Data access tests                                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/Data/">
+    <Project Path="tests/FractalDataWorks.Data.Builders.Tests/FractalDataWorks.Data.Builders.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Data.DataSets.Tests/FractalDataWorks.Data.DataSets.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Data.DataStores.Tests/FractalDataWorks.Data.DataStores.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Data.DataStores.FileSystem.Tests/FractalDataWorks.Data.DataStores.FileSystem.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Data.DataStores.Rest.Tests/FractalDataWorks.Data.DataStores.Rest.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Data.DataStores.SqlServer.Tests/FractalDataWorks.Data.DataStores.SqlServer.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Data.Execution.Tests/FractalDataWorks.Data.Execution.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Data.JsonSchema.Tests/FractalDataWorks.Data.JsonSchema.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Data.MsSql.Tests/FractalDataWorks.Data.MsSql.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Data.Rest.Tests/FractalDataWorks.Data.Rest.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/ServiceTypes - Service type system tests                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/ServiceTypes/">
+    <Project Path="tests/FractalDataWorks.ServiceTypes.Tests/FractalDataWorks.ServiceTypes.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.ServiceTypes.Analyzers.Tests/FractalDataWorks.ServiceTypes.Analyzers.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.ServiceTypes.CodeFixes.Tests/FractalDataWorks.ServiceTypes.CodeFixes.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/Services - Service domain tests                                             -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/Services/">
+    <Project Path="tests/FractalDataWorks.Services.Tests/FractalDataWorks.Services.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Services.Authentication.Tests/FractalDataWorks.Services.Authentication.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Services.Connections.Tests/FractalDataWorks.Services.Connections.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Services.Connections.MsSql.Tests/FractalDataWorks.Services.Connections.MsSql.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Services.Data.Tests/FractalDataWorks.Services.Data.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Services.Scheduling.Tests/FractalDataWorks.Services.Scheduling.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Services.SecretManagers.Tests/FractalDataWorks.Services.SecretManagers.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Services.SecretManagers.AzureKeyVault.Tests/FractalDataWorks.Services.SecretManagers.AzureKeyVault.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.Services.Transformations.Tests/FractalDataWorks.Services.Transformations.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/Web - Web API tests                                                         -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/Web/">
+    <Project Path="tests/FractalDataWorks.Web.RestEndpoints.Tests/FractalDataWorks.Web.RestEndpoints.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/Integration - Integration tests                                             -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/Integration/">
+    <Project Path="tests/FractalDataWorks.Integration.Tests/FractalDataWorks.Integration.Tests.csproj" />
+    <Project Path="tests/FractalDataWorks.ServiceTypes.Integration.Tests/FractalDataWorks.ServiceTypes.Integration.Tests.csproj" />
+  </Folder>
+
+</Solution>

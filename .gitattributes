@@ -1,0 +1,13 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Force specific file types to have specific line endings
+*.cs text eol=crlf
+*.js text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+
+# Treat these as binary (no line ending conversion)
+*.png binary
+*.jpg binary
+*.exe binary
