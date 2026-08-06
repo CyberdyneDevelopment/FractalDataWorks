@@ -1,0 +1,167 @@
+@namespace Fdw.Services.Notifications.Components.Settings
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Globalization
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Operations.Clients
+@using Fdw.Services.Notifications.Components.Logging
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    private Guid _previousUserId;
+
+    // ── Parameters ──────────────────────────────────────────────────────────────
+
+    [Parameter] public RenderFragment<NotificationSettingsContext>? ChildContent { get; set; }
+    [Parameter] public Guid UserId { get; set; }
+
+    // ── Injected Services ───────────────────────────────────────────────────────
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private NotificationPreferencesApiClient? _preferencesApi;
+    [Inject] private ILogger<NotificationSettingsProvider>? LoggerParam { get; set; }
+
+    private ILogger<NotificationSettingsProvider> _logger = NullLogger<NotificationSettingsProvider>.Instance;
+
+    // ── State ───────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<NotificationPreferencePayload> _preferences = [];
+    private bool _isLoading;
+    private bool _isSaving;
+    private IGenericResult? _lastResult;
+    private NotificationSettingsContext _context = new();
+
+    // ── Lifecycle ───────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _preferencesApi = new NotificationPreferencesApiClient(HttpClientFactory.CreateClient("NotificationPreferencesClient"), LoggerFactory?.CreateLogger<NotificationPreferencesApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<NotificationSettingsProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (UserId != Guid.Empty && UserId != _previousUserId)
+        {
+            _previousUserId = UserId;
+            await LoadPreferences();
+        }
+    }
+
+    // ── Public Methods ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Loads notification preferences for the current user from the API.
+    /// </summary>
+    public async Task LoadPreferences(CancellationToken ct = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        var userIdString = UserId.ToString("D", CultureInfo.InvariantCulture);
+        NotificationSettingsProviderLog.LoadStarted(_logger, userIdString);
+
+        try
+        {
+            var result = await _preferencesApi!.GetPreferences(UserId, ct);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(NotificationSettingsProviderLog.LoadFailed(_logger, userIdString));
+                _preferences = [];
+                RebuildContext();
+                StateHasChanged();
+                return;
+            }
+
+            _preferences = result.Value ?? [];
+            NotificationSettingsProviderLog.LoadCompleted(_logger, _preferences.Count, userIdString);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { NotificationSettingsProviderLog.LoadException(_logger, ex, userIdString) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _preferences = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Saves notification preferences for the current user.
+    /// </summary>
+    public async Task SavePreferences(IReadOnlyList<NotificationPreferencePayload> prefs, CancellationToken ct = default)
+    {
+        _isSaving = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        var userIdString = UserId.ToString("D", CultureInfo.InvariantCulture);
+        NotificationSettingsProviderLog.SaveStarted(_logger, prefs.Count, userIdString);
+
+        try
+        {
+            var result = await _preferencesApi!.UpdatePreferences(UserId, prefs, ct);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(NotificationSettingsProviderLog.SaveFailed(_logger, userIdString));
+                RebuildContext();
+                StateHasChanged();
+                return;
+            }
+
+            _preferences = result.Value ?? [];
+            NotificationSettingsProviderLog.SaveCompleted(_logger, userIdString);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(NotificationSettingsProviderLog.SaveException(_logger, ex, userIdString));
+        }
+        finally
+        {
+            _isSaving = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Private Helpers ─────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new NotificationSettingsContext
+        {
+            Preferences = _preferences,
+            IsLoading = _isLoading,
+            IsSaving = _isSaving,
+            LastResult = _lastResult,
+            OnLoadPreferences = () => LoadPreferences(),
+            OnSavePreferences = prefs => SavePreferences(prefs)
+        };
+    }
+}

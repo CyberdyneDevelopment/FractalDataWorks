@@ -1,0 +1,76 @@
+@namespace Fdw.Data.UI.Components.DataCommand
+@using System
+@using System.Collections.Generic
+@using System.Linq
+
+@* SET clause list editor — used by Update and Upsert skins.
+   Each row: target field dropdown → value/expression input.
+   Tailwind-only. *@
+
+<div style="display:flex;flex-direction:column;gap:8px;">
+    <div class="card-h" style="padding:0;">
+        <span class="flbl" style="margin-bottom:0;">SET Clauses</span>
+        <button class="btn btn-secondary btn-sm" @onclick="AddClause">+ Add</button>
+    </div>
+
+    @if (_clauses.Count == 0)
+    {
+        <p class="fhint mono">No clauses — add at least one field to update.</p>
+    }
+    else
+    {
+        @for (var i = 0; i < _clauses.Count; i++)
+        {
+            var idx = i;
+            var clause = _clauses[idx];
+            <div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:4px;align-items:center;">
+                @if (AvailableFields.Any())
+                {
+                    <select class="fin"
+                            value="@clause.Field"
+                            @onchange="@(e => SetField(idx, e.Value?.ToString() ?? string.Empty))">
+                        <option value="">Field...</option>
+                        @foreach (var f in AvailableFields)
+                        {
+                            <option value="@f.Name">@f.DisplayLabel</option>
+                        }
+                    </select>
+                }
+                else
+                {
+                    <input class="fin mono" placeholder="field"
+                           value="@clause.Field"
+                           @oninput="@(e => SetField(idx, e.Value?.ToString() ?? string.Empty))" />
+                }
+                <span class="mono" style="color:var(--n-500);padding:0 4px;">=</span>
+                <input class="fin mono" placeholder="value or expression"
+                       value="@clause.ValueOrExpr"
+                       @oninput="@(e => SetValue(idx, e.Value?.ToString() ?? string.Empty))" />
+                <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => RemoveClause(idx)">✕</button>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<DataFieldSummary> AvailableFields { get; set; } = [];
+    [Parameter] public IReadOnlyList<DataCommandSetClause> Clauses { get; set; } = [];
+    [Parameter] public EventCallback<IReadOnlyList<DataCommandSetClause>> ClausesChanged { get; set; }
+
+    private List<DataCommandSetClause> _clauses = [];
+
+    protected override void OnParametersSet() => _clauses = Clauses.ToList();
+
+    private async Task Notify() => await ClausesChanged.InvokeAsync(_clauses).ConfigureAwait(false);
+
+    private void AddClause() { _clauses.Add(new DataCommandSetClause()); _ = Notify(); }
+
+    private void RemoveClause(int idx)
+    {
+        if (idx >= 0 && idx < _clauses.Count) _clauses.RemoveAt(idx);
+        _ = Notify();
+    }
+
+    private void SetField(int idx, string v) { if (idx < _clauses.Count) _clauses[idx] = _clauses[idx] with { Field = v }; _ = Notify(); }
+    private void SetValue(int idx, string v) { if (idx < _clauses.Count) _clauses[idx] = _clauses[idx] with { ValueOrExpr = v }; _ = Notify(); }
+}

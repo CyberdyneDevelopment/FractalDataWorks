@@ -1,0 +1,243 @@
+@namespace Fdw.Operations.Components.Lineage
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.Operations.Clients
+@using Fdw.Operations.Clients.Models
+@using Fdw.Services.Connections.Clients
+@using Fdw.Services.Connections.Clients.Models
+@using Fdw.Services.Data.Clients
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Services.Pipelines.Clients.Abstractions
+@using Fdw.Web.Calculations.Clients.ApiClients
+@using Fdw.Web.Calculations.Clients.Models
+@using Fdw.Results
+@using Fdw.UI.Components.Logging
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    [Parameter] public RenderFragment<LineageContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private LineageApiClient? _lineageApi;
+    private ConnectionApiClient? _connectionApi;
+    private DataSetApiClient? _dataSetApi;
+    private DataStoreApiClient? _dataStoreApi;
+    private CalculationApiClient? _calculationApi;
+    [Inject] private IPipelineClient PipelineApi { get; set; } = default!;
+    [Inject] private ILogger<LineageProvider>? LoggerParam { get; set; }
+
+    private ILogger<LineageProvider> _logger = NullLogger<LineageProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private LineageGraphPayload? _currentGraph;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private LineageContext _context = new();
+    private bool _initialized;
+
+    // ── Entity Name Lists ───────────────────────────────────────────────────────
+
+    private IReadOnlyList<string> _availableConnections = [];
+    private IReadOnlyList<string> _availableDataSets = [];
+    private IReadOnlyList<string> _availablePipelines = [];
+    private IReadOnlyList<string> _availableDataStores = [];
+    private IReadOnlyList<string> _availableCalculations = [];
+    private bool _isLoadingEntityNames;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _lineageApi = new LineageApiClient(HttpClientFactory.CreateClient("LineageClient"), LoggerFactory?.CreateLogger<LineageApiClient>()!);
+        _connectionApi = new ConnectionApiClient(HttpClientFactory.CreateClient("ConnectionClient"), LoggerFactory?.CreateLogger<ConnectionApiClient>()!);
+        _dataSetApi = new DataSetApiClient(HttpClientFactory.CreateClient("DataSetClient"), LoggerFactory?.CreateLogger<DataSetApiClient>()!);
+        _dataStoreApi = new DataStoreApiClient(HttpClientFactory.CreateClient("DataStoreClient"), LoggerFactory?.CreateLogger<DataStoreApiClient>()!);
+        _calculationApi = new CalculationApiClient(HttpClientFactory.CreateClient("CalculationClient"), LoggerFactory?.CreateLogger<CalculationApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<LineageProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    // ── Methods (exposed as callbacks via LineageContext) ───────────────────────
+
+    private async Task LoadLineage(string entityType, string entityName, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _lineageApi!.GetLineage(entityType, entityName, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _currentGraph = result.Value;
+            }
+            else
+            {
+                UiProviderLog.DetailLoadFailed(_logger, "LineageProvider", "lineage", entityName);
+                _lastResult = result;
+                _currentGraph = null;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.LoadException(_logger, ex, "LineageProvider", "lineage"));
+            _currentGraph = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadColumnLineage(string entityType, string entityName, string fieldName, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var columnResult = await _lineageApi!.GetColumnLineage(entityType, entityName, fieldName, cancellationToken);
+            if (columnResult.IsSuccess)
+            {
+                _currentGraph = columnResult.Value;
+            }
+            else
+            {
+                UiProviderLog.DetailLoadFailed(_logger, "LineageProvider", "column lineage", entityName);
+                _lastResult = columnResult;
+                _currentGraph = null;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.LoadException(_logger, ex, "LineageProvider", "column lineage"));
+            _currentGraph = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Entity Name Loading ────────────────────────────────────────────────────
+
+    private async Task LoadEntityNames(string entityType, CancellationToken cancellationToken = default)
+    {
+        _isLoadingEntityNames = true;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            switch (entityType)
+            {
+                case "Connection":
+                    var connResult = await _connectionApi!.GetConnections(cancellationToken);
+                    _availableConnections = connResult.IsSuccess && connResult.Value is not null
+                        ? connResult.Value.Select(c => c.Name).ToList()
+                        : [];
+                    break;
+                case "Pipeline":
+                    var pipeResult = await PipelineApi.List(cancellationToken);
+                    _availablePipelines = pipeResult.IsSuccess && pipeResult.Value is not null
+                        ? pipeResult.Value.Select(p => p.Name).ToList()
+                        : [];
+                    break;
+                case "DataSet":
+                    var dsResult = await _dataSetApi!.GetDataSets(cancellationToken);
+                    _availableDataSets = dsResult.IsSuccess && dsResult.Value is not null
+                        ? dsResult.Value.Select(d => d.Name).ToList()
+                        : [];
+                    break;
+                case "DataStore":
+                    var storeResult = await _dataStoreApi!.GetDataStores(cancellationToken);
+                    _availableDataStores = storeResult.IsSuccess && storeResult.Value is not null
+                        ? storeResult.Value.Select(d => d.Name).ToList()
+                        : [];
+                    break;
+                case "Calculation":
+                    var calcResult = await _calculationApi!.GetCalculations(cancellationToken);
+                    _availableCalculations = calcResult.IsSuccess && calcResult.Value is not null
+                        ? calcResult.Value.Select(c => c.Name ?? string.Empty).Where(n => !string.IsNullOrEmpty(n)).ToList()
+                        : [];
+                    break;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.LoadException(_logger, ex, "LineageProvider", "entity names"));
+        }
+        finally
+        {
+            _isLoadingEntityNames = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new LineageContext
+        {
+            CurrentGraph = _currentGraph,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            AvailableConnections = _availableConnections,
+            AvailableDataSets = _availableDataSets,
+            AvailablePipelines = _availablePipelines,
+            AvailableDataStores = _availableDataStores,
+            AvailableCalculations = _availableCalculations,
+            IsLoadingEntityNames = _isLoadingEntityNames,
+            OnLoadLineage = (type, name) => LoadLineage(type, name),
+            OnLoadColumnLineage = (type, name, field) => LoadColumnLineage(type, name, field),
+            OnLoadEntityNames = type => LoadEntityNames(type)
+        };
+    }
+}

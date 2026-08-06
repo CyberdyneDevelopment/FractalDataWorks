@@ -1,0 +1,293 @@
+@namespace Fdw.Data.Components.DataStores
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Net.Http
+@using Fdw.Services.Data.Clients
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Results
+@using Fdw.UI.DrillDown
+@using Fdw.Data.Components.Logging
+
+@*
+    Domain-specific drill-down provider for DataStore detail views.
+    Loads a DataStoreDetailPayload by name, passes it to ConfigurationDrillDownProvider
+    as RootData, and wraps the configuration context with domain-specific actions.
+*@
+
+<ConfigurationDrillDownProvider ServiceCategory="DataStore"
+                                InstanceName="@DataStoreName"
+                                RootTableName="DataStore"
+                                RootData="_dataStore">
+    <ChildContent Context="configCtx">
+        @{ UpdateSelectionFromConfigContext(configCtx); }
+        @if (ChildContent is not null)
+        {
+            @ChildContent(_context)
+        }
+    </ChildContent>
+</ConfigurationDrillDownProvider>
+
+@code {
+    /// <summary>
+    /// Domain-specific provider for DataStore drill-down navigation. Loads a DataStore
+    /// by name, delegates tree building to <see cref="ConfigurationDrillDownProvider"/>,
+    /// and tracks typed selection state.
+    /// </summary>
+    /// <remarks>
+    /// Headless chain:
+    /// <list type="bullet">
+    ///   <item><description>Consumer (before): page shells with markup and ctx.OnXxx() calls</description></item>
+    ///   <item><description>This (provider): <see cref="DataStoreDetailProvider"/> — owns domain load + typed selection</description></item>
+    ///   <item><description>Inner: <see cref="ConfigurationDrillDownProvider"/> — owns metadata discovery + tree walking</description></item>
+    ///   <item><description>Context (after): <see cref="DataStoreDetailContext"/> — sealed; passed to consumer RenderFragment</description></item>
+    /// </list>
+    /// </remarks>
+
+    /// <summary>Gets or sets the DataStore name to load.</summary>
+    [Parameter] public string DataStoreName { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the child content render fragment receiving the DataStore detail context.</summary>
+    [Parameter] public RenderFragment<DataStoreDetailContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+    [Inject] private ILogger<DataStoreDetailProvider>? LoggerParam { get; set; }
+
+    private ILogger<DataStoreDetailProvider> _logger = NullLogger<DataStoreDetailProvider>.Instance;
+    private DataStoreApiClient? _dataStoreApi;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private DataStoreDetailPayload? _dataStore;
+    private DataStoreDetailContext _context = new();
+    private bool _initialized;
+
+    // Selection tracking
+    private DataStorePathPayload? _selectedPath;
+    private DataStoreContainerPayload? _selectedContainer;
+    private DataStoreFieldPayload? _selectedField;
+    private ConfigurationDrillDownContext? _lastConfigCtx;
+
+    // Add-container state
+    private string? _addContainerError;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _dataStoreApi = new DataStoreApiClient(
+            HttpClientFactory.CreateClient("DataStoreClient"),
+            LoggerFactory?.CreateLogger<DataStoreApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<DataStoreDetailProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadDataStore();
+        }
+    }
+
+    // ── Load ───────────────────────────────────────────────────────────────────
+
+    private async Task LoadDataStore(CancellationToken cancellationToken = default)
+    {
+        DataStoreDetailProviderLog.LoadingDataStore(_logger, DataStoreName);
+
+        try
+        {
+            var result = await _dataStoreApi!.GetDataStore(DataStoreName, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _dataStore = result.Value;
+
+                if (_dataStore is not null)
+                {
+                    var containerCount = _dataStore.Paths.Sum(p => p.Containers.Count);
+                    DataStoreDetailProviderLog.DataStoreLoaded(_logger, DataStoreName, _dataStore.Paths.Count, containerCount);
+
+                    if (_dataStore.Paths.Count == 0)
+                    {
+                        DataStoreDetailProviderLog.EmptyPaths(_logger, DataStoreName);
+                    }
+                }
+                else
+                {
+                    DataStoreDetailProviderLog.DataStoreNotFound(_logger, DataStoreName);
+                }
+            }
+            else
+            {
+                DataStoreDetailProviderLog.DataStoreNotFound(_logger, DataStoreName);
+                _dataStore = null;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            DataStoreDetailProviderLog.LoadFailed(_logger, ex, DataStoreName);
+            _dataStore = null;
+        }
+
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    // ── Selection Mapping ──────────────────────────────────────────────────────
+
+    private void UpdateSelectionFromConfigContext(ConfigurationDrillDownContext configCtx)
+    {
+        _lastConfigCtx = configCtx;
+
+        var selected = configCtx.SelectedNode;
+        if (selected is null)
+        {
+            _selectedPath = null;
+            _selectedContainer = null;
+            _selectedField = null;
+            RebuildContext();
+            return;
+        }
+
+        DataStoreDetailProviderLog.SelectionChanged(_logger, selected.NodeType, selected.Label);
+
+        _selectedPath = null;
+        _selectedContainer = null;
+        _selectedField = null;
+
+        if (selected.Item is DataStorePathPayload path)
+        {
+            _selectedPath = path;
+        }
+        else if (selected.Item is DataStoreContainerPayload container)
+        {
+            _selectedContainer = container;
+        }
+        else if (selected.Item is DataStoreFieldPayload field)
+        {
+            _selectedField = field;
+        }
+
+        RebuildContext();
+    }
+
+    // ── Domain Actions ─────────────────────────────────────────────────────────
+
+    private async Task ImportSchema(string connectionName, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _dataStoreApi!.GetDataStore(DataStoreName, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _dataStore = result.Value;
+                DataStoreDetailProviderLog.SchemaImported(_logger, connectionName);
+                RebuildContext();
+                StateHasChanged();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            DataStoreDetailProviderLog.ImportSchemaFailed(_logger, ex, connectionName);
+        }
+    }
+
+    private async Task SyncSchema(string connectionName, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _dataStoreApi!.GetDataStore(DataStoreName, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _dataStore = result.Value;
+                DataStoreDetailProviderLog.SchemaSynced(_logger, connectionName);
+                RebuildContext();
+                StateHasChanged();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            DataStoreDetailProviderLog.ImportSchemaFailed(_logger, ex, connectionName);
+        }
+    }
+
+    private async Task AddContainer(string pathName, string containerName, string? containerType, CancellationToken cancellationToken = default)
+    {
+        _addContainerError = null;
+        try
+        {
+            var result = await _dataStoreApi!.AddDataStoreContainer(
+                DataStoreName,
+                new AddDataStoreContainerPayload
+                {
+                    PathName = pathName,
+                    ContainerName = containerName,
+                    ContainerType = containerType
+                },
+                cancellationToken);
+
+            if (result.IsSuccess)
+            {
+                DataStoreDetailProviderLog.ContainerAdded(_logger, containerName, pathName, DataStoreName);
+                await LoadDataStore(cancellationToken);
+            }
+            else
+            {
+                _addContainerError = result.CurrentMessage ?? "Failed to add container.";
+                DataStoreDetailProviderLog.AddContainerFailed(_logger, containerName, pathName, _addContainerError);
+                RebuildContext();
+                StateHasChanged();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _addContainerError = ex.Message;
+            DataStoreDetailProviderLog.AddContainerFailed(_logger, containerName, pathName, ex.Message);
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new DataStoreDetailContext
+        {
+            ConfigurationContext = _lastConfigCtx ?? new ConfigurationDrillDownContext(),
+            DataStore = _dataStore,
+            IsReadOnly = false,
+            SelectedPath = _selectedPath,
+            SelectedContainer = _selectedContainer,
+            SelectedField = _selectedField,
+            OnImportSchema = connectionName => ImportSchema(connectionName),
+            OnSyncSchema = connectionName => SyncSchema(connectionName),
+            OnAddContainer = (pathName, containerName, containerType) => AddContainer(pathName, containerName, containerType),
+            AddContainerError = _addContainerError
+        };
+    }
+}

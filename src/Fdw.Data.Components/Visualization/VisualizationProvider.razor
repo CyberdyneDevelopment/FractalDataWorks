@@ -1,0 +1,193 @@
+@namespace Fdw.Data.Components.Visualization
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Data.Abstractions
+@using Fdw.Services.Data.Abstractions.Visualization
+@using Fdw.Web.Clients.Abstractions.Contracts
+@using Fdw.Data.Components.Logging
+@using Fdw.Results
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for visualization orchestration.
+    /// Manages visualization type selection, filter application, stat-set computation,
+    /// and calculation pipeline. Auto-computes StatSet when StatSet visualization is selected.
+    /// </summary>
+    [Parameter] public RenderFragment<VisualizationContext>? ChildContent { get; set; }
+
+    /// <summary>Gets or sets the data to visualize.</summary>
+    [Parameter] public IDataPreviewResponse? Data { get; set; }
+
+    /// <summary>Gets or sets the available visualization types.</summary>
+    [Parameter] public IReadOnlyList<IVisualizationType> AvailableTypes { get; set; } = [];
+
+    /// <summary>Gets or sets the initial visualization type. Defaults to the first available.</summary>
+    [Parameter] public IVisualizationType? InitialType { get; set; }
+
+    /// <summary>Gets or sets the stat set service for computing statistics.</summary>
+    [Parameter] public IStatSetService? StatSetService { get; set; }
+
+    /// <summary>Gets or sets the stat set request template (connection/container info).</summary>
+    [Parameter] public StatSetRequest? StatSetRequestTemplate { get; set; }
+
+    [Inject] private ILogger<VisualizationProvider>? LoggerParam { get; set; }
+
+    private ILogger<VisualizationProvider> _logger = NullLogger<VisualizationProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IVisualizationType? _visualizationType;
+    private VisualizationConfig _config = new();
+    private StatSetResponse? _statSet;
+    private List<FilterCondition> _filters = [];
+    private List<ColumnCalculation> _calculations = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private VisualizationContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<VisualizationProvider>.Instance;
+
+        _visualizationType = InitialType is not null
+            ? InitialType
+            : AvailableTypes.Count > 0 ? AvailableTypes[0] : null;
+        if (_visualizationType is not null)
+        {
+            _config = _visualizationType.GetDefaultConfiguration();
+            VisualizationProviderLog.Initialized(_logger, _visualizationType.Name);
+        }
+
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized && IsStatSetVisualization())
+        {
+            _initialized = true;
+            await ComputeStatSet();
+        }
+    }
+
+    // ── Methods ──────────────────────────────────────────────────────────────
+
+    private async Task ChangeVisualization(IVisualizationType vizType, CancellationToken cancellationToken = default)
+    {
+        _visualizationType = vizType;
+        _config = vizType.GetDefaultConfiguration();
+        VisualizationProviderLog.VisualizationTypeChanged(_logger, vizType.Name);
+
+        if (IsStatSetVisualization())
+        {
+            await ComputeStatSet(cancellationToken);
+        }
+        else
+        {
+            _statSet = null;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private Task ApplyFilters(IReadOnlyList<FilterCondition> filters)
+    {
+        _filters = filters.ToList();
+        VisualizationProviderLog.FiltersApplied(_logger, _filters.Count);
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task AddCalculation(ColumnCalculation calculation)
+    {
+        _calculations.Add(calculation);
+        VisualizationProviderLog.CalculationAdded(_logger, calculation.Operation.ToString(), calculation.SourceColumn);
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task ComputeStatSet(CancellationToken cancellationToken = default)
+    {
+        if (StatSetService is null || StatSetRequestTemplate is null)
+        {
+            return;
+        }
+
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        VisualizationProviderLog.ComputingStatSet(_logger);
+
+        try
+        {
+            var result = await StatSetService.ComputeStatSet(StatSetRequestTemplate, cancellationToken);
+            if (result.IsSuccess && result.Value is not null)
+            {
+                _statSet = result.Value;
+                VisualizationProviderLog.StatSetComputed(_logger, _statSet.ColumnStats.Count);
+            }
+            else
+            {
+                _statSet = null;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { VisualizationProviderLog.StatSetComputationFailed(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _statSet = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private bool IsStatSetVisualization()
+        => _visualizationType is not null
+        && string.Equals(_visualizationType.Name, "StatSet", StringComparison.OrdinalIgnoreCase);
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new VisualizationContext
+        {
+            Data = Data,
+            VisualizationType = _visualizationType,
+            Config = _config,
+            StatSet = _statSet,
+            Filters = _filters,
+            AvailableVisualizationTypes = AvailableTypes.Select(t => t.Name).ToList(),
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnChangeVisualization = vizType => ChangeVisualization(vizType),
+            OnApplyFilters = filters => ApplyFilters(filters),
+            OnAddCalculation = calc => AddCalculation(calc)
+        };
+    }
+}

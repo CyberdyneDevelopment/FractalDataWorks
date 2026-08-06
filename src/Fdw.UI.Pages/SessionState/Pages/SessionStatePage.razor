@@ -1,0 +1,181 @@
+@page "/session-state"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@inject ILogger<SessionStatePage> Logger
+@inject NavigationManager Navigation
+
+<PageTitle>Session State - Cyberdyne</PageTitle>
+
+<SessionStateProvider>
+    <ChildContent Context="ctx">
+        <div class="space-y-4">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-semibold">Session State</h2>
+                    <p class="text-sm text-muted">Inspect and manage the authenticated user's session state entries.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    @if (ctx.IsLoading)
+                    {
+                        <span class="inline-flex items-center rounded-full bg-info-subtle border border-info px-2.5 py-0.5 text-xs font-medium text-info">
+                            Loading…
+                        </span>
+                    }
+                    <button class="btn btn-secondary btn-sm"
+                            @onclick="OnRefresh"
+                            disabled="@ctx.IsLoading">
+                        Refresh
+                    </button>
+                    <button class="btn btn-danger btn-sm"
+                            @onclick="() => OnClearAll(ctx)"
+                            disabled="@(ctx.IsLoading || ctx.State.Count == 0)">
+                        Clear All
+                    </button>
+                </div>
+            </div>
+
+            @if (ctx.ErrorMessage is not null)
+            {
+                <div class="rounded-md bg-error-subtle border border-error px-4 py-3 text-sm text-error">
+                    @ctx.ErrorMessage
+                </div>
+            }
+
+            @if (!ctx.IsLoading && ctx.ErrorMessage is null)
+            {
+                @* Why: no per-render logging — RenderTreeBuilder runs this on every render; state-load
+                   logging belongs in the provider's load path, not the render body. *@
+                @if (ctx.State.Count == 0)
+                {
+                    <div class="rounded-md border bg-card px-4 py-8 text-center text-sm text-muted">
+                        No session state entries.
+                    </div>
+                }
+                else
+                {
+                    <div class="overflow-hidden rounded-md border">
+                        <table class="w-full text-sm">
+                            <thead class="bg-muted/40">
+                                <tr>
+                                    <th class="px-4 py-2.5 text-left font-medium text-muted">Key</th>
+                                    <th class="px-4 py-2.5 text-left font-medium text-muted">Value (JSON)</th>
+                                    <th class="px-4 py-2.5 text-right font-medium text-muted">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                @foreach (var entry in ctx.State)
+                                {
+                                    <tr class="hover:bg-muted/20">
+                                        <td class="px-4 py-2.5 font-mono text-xs align-top">@entry.Key</td>
+                                        <td class="px-4 py-2.5 font-mono text-xs break-all max-w-lg">
+                                            @SerializeValue(entry.Value)
+                                        </td>
+                                        <td class="px-4 py-2.5 text-right whitespace-nowrap">
+                                            <button class="btn btn-ghost btn-xs mr-1"
+                                                    @onclick="() => OnValueCopy(entry.Key, entry.Value)"
+                                                    title="Copy value">
+                                                Copy
+                                            </button>
+                                            <button class="btn btn-ghost btn-xs text-error"
+                                                    @onclick="() => OnDelete(ctx, entry.Key)"
+                                                    title="Delete entry">
+                                                Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            }
+        </div>
+    </ChildContent>
+</SessionStateProvider>
+
+@code {
+    // Why: session key reserves a slot in the outer SessionStateProvider for any
+    // future page-level preferences (e.g. column visibility, sort order) without
+    // requiring structural changes to the provider.
+    private const string SessionKey = "sessionstate:page:filter";
+
+    [CascadingParameter] private SessionStateContext? Session { get; set; }
+
+    private bool _sessionRestored;
+
+    protected override void OnParametersSet()
+    {
+        if (_sessionRestored || Session is null || Session.IsLoading)
+        {
+            return;
+        }
+
+        if (!Session.State.TryGetValue(SessionKey, out var raw) || raw is not JsonElement)
+        {
+            return;
+        }
+
+        _sessionRestored = true;
+    }
+
+    private void OnRefresh()
+    {
+        // Why: SessionStateProvider reloads on first render via OnAfterRenderAsync;
+        // forcing a full page reload triggers that path without adding a second
+        // loading callback on the provider.
+        Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+    }
+
+    private async Task OnDelete(SessionStateContext ctx, string key)
+    {
+        await ctx.OnDeleteState(key);
+    }
+
+    private async Task OnClearAll(SessionStateContext ctx)
+    {
+        SessionStatePageLog.ClearingAll(Logger);
+
+        // Why: snapshot the keys before iterating because deleting entries modifies
+        // the underlying State dictionary (IReadOnlyDictionary view is rebuilt).
+        var keys = ctx.State.Keys.ToList();
+
+        foreach (var key in keys)
+        {
+            await ctx.OnDeleteState(key);
+        }
+    }
+
+    private void OnValueCopy(string key, object? value)
+    {
+        // Why: clipboard writes in server-side Blazor require IJSRuntime interop
+        // which is beyond the scope of this developer inspection page.
+        // The value is already visible in the cell for manual selection and copy.
+        _ = key;
+        _ = value;
+    }
+
+    private static string SerializeValue(object? value)
+    {
+        if (value is null)
+        {
+            return "null";
+        }
+
+        if (value is JsonElement element)
+        {
+            // Why: JsonElement.GetRawText() is the zero-allocation path for already-deserialized JSON.
+            return element.GetRawText();
+        }
+
+        try
+        {
+            return JsonSerializer.Serialize(value);
+        }
+        catch (NotSupportedException)
+        {
+            // Why: some runtime types (e.g. cyclic objects, unregistered converters) cannot be
+            // serialized. Fall back to ToString() so the display never throws.
+            return value.ToString() ?? "null";
+        }
+    }
+}

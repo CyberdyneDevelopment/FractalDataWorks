@@ -1,0 +1,135 @@
+@page "/projects/list"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using System.Net.Http
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+
+<PageTitle>Projects - Cyberdyne</PageTitle>
+
+<ProjectProvider>
+    <ChildContent Context="ctx">
+        <div>
+            <div class="pagehead">
+                <div>
+                    <div class="ey">Pipelines &amp; Scheduling</div>
+                    <h1>Projects</h1>
+                    <div class="sub">ETL projects — stage and step orchestration.</div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/projects/edit")'>
+                        New Project
+                    </button>
+                </div>
+            </div>
+
+            <div class="filters">
+                <input type="text"
+                       class="finput"
+                       style="flex:1;"
+                       placeholder="Search projects..."
+                       value="@ctx.SearchString"
+                       @oninput="e => ctx.OnSearchStringChanged(e.Value?.ToString() ?? string.Empty)" />
+            </div>
+
+            @if (ctx.ErrorMessage is not null)
+            {
+                <div class="card b-fail" style="margin-bottom:14px;padding:14px 16px;">
+                    <span class="mono" style="font-size:12px;color:var(--signal);">@ctx.ErrorMessage</span>
+                </div>
+            }
+
+            @if (ctx.IsLoading)
+            {
+                <div class="card" style="padding:48px;text-align:center;">
+                    <span class="mono" style="color:var(--n-500);">Loading projects…</span>
+                </div>
+            }
+            else
+            {
+                <div class="card">
+                    <div class="card-h"><h3>All Projects</h3></div>
+                    <div class="card-b" style="padding:0 10px 12px;">
+                        <table class="tbl">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th>Stage Policy</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var project in ctx.FilteredProjects)
+                                {
+                                    <tr>
+                                        <td>
+                                            <button class="cellpad nm" style="background:none;border:0;cursor:pointer;text-align:left;font-family:inherit;"
+                                                    @onclick='() => Nav.NavigateTo($"/projects/edit/{project.Id}")'>
+                                                @project.Name
+                                            </button>
+                                        </td>
+                                        <td class="mut">
+                                            @(project.Description ?? "-")
+                                        </td>
+                                        <td>
+                                            @if (project.IsEnabled)
+                                            {
+                                                <span class="badge b-ok"><span class="bd"></span>Enabled</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge b-idle"><span class="bd"></span>Disabled</span>
+                                            }
+                                        </td>
+                                        <td class="mut">
+                                            @(project.StageFailurePolicy ?? "inherit")
+                                        </td>
+                                        <td>
+                                            <div class="actions">
+                                                <button class="btn btn-ghost btn-sm"
+                                                        @onclick="() => TriggerProject(ctx, project.Name)">
+                                                    Run
+                                                </button>
+                                                <button class="btn btn-ghost btn-sm"
+                                                        @onclick='() => Nav.NavigateTo($"/projects/edit/{project.Id}")'>
+                                                    Edit
+                                                </button>
+                                                <button class="btn btn-ghost btn-sm" style="color:var(--signal);"
+                                                        @onclick="() => DeleteProject(ctx, project.Id)">
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!ctx.FilteredProjects.Any())
+                                {
+                                    <tr>
+                                        <td colspan="5" style="padding:32px;text-align:center;color:var(--n-500);">
+                                            No projects found.
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        </div>
+    </ChildContent>
+</ProjectProvider>
+
+@code {
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private async Task TriggerProject(ProjectContext ctx, string name)
+    {
+        await ctx.OnTriggerProject(name);
+    }
+
+    private async Task DeleteProject(ProjectContext ctx, Guid id)
+    {
+        await ctx.OnDeleteProject(id);
+    }
+}

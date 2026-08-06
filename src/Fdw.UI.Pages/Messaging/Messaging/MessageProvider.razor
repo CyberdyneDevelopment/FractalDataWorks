@@ -1,0 +1,377 @@
+@namespace Fdw.Services.Messaging.Components.Messaging
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using Fdw.Services.Messaging.Clients
+@using System.Net.Http
+@* Why: Fdw.Services.Messaging (server-side) is accessible via ancestor-namespace
+   lookup from this @namespace, causing `MessagePayload` to resolve to the server-side type and
+   override any @using directive. A namespace alias bypasses ancestor-namespace lookup because
+   the alias identifier (ClientModels) is not found in any ancestor namespace. *@
+@using ClientModels = Fdw.Services.Messaging.Clients.Models
+@inject IHttpClientFactory HttpClientFactory
+@inject ILoggerFactory? LoggerFactory
+@inject ILogger<MessageProvider>? LoggerParam
+
+@* Headless provider — no markup. Renders child content only. *@
+@if (MessageListContent is not null)
+{
+    @MessageListContent(BuildMessageListContext())
+}
+@if (MessageDetailContent is not null)
+{
+    @MessageDetailContent(BuildMessageDetailContext())
+}
+@if (AccessRequestContent is not null)
+{
+    @AccessRequestContent(BuildAccessRequestListContext())
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for messaging operations (messages, access requests). Wraps
+    /// <see cref="MessageApiClient"/> to load, filter, and mutate messages and access requests.
+    /// No UI markup.
+    /// </summary>
+
+    private ILogger<MessageProvider> _logger = default!;
+    private MessageApiClient? _messageApi;
+
+    private IReadOnlyList<ClientModels.MessagePayload> _messages = [];
+    private ClientModels.MessagePayload? _detailMessage;
+    private IReadOnlyList<ClientModels.AccessRequestPayload> _accessRequests = [];
+    private int _unreadCount;
+    private bool _isLoading;
+    private bool _isLoadingDetail;
+    private bool _isLoadingAccessRequests;
+    private IGenericResult? _lastResult;
+
+    [Parameter]
+    public RenderFragment<MessageListContext>? MessageListContent { get; set; }
+
+    [Parameter]
+    public RenderFragment<MessageDetailContext>? MessageDetailContent { get; set; }
+
+    [Parameter]
+    public RenderFragment<AccessRequestListContext>? AccessRequestContent { get; set; }
+
+    /// <summary>
+    /// When true, calls <see cref="LoadMessages"/> with default parameters during <see cref="OnAfterRenderAsync"/>.
+    /// </summary>
+    [Parameter]
+    public bool AutoLoad { get; set; }
+
+    /// <summary>
+    /// When set, loads the single message with this ID during <see cref="OnAfterRenderAsync"/>
+    /// and exposes it via <see cref="MessageDetailContent"/>.
+    /// </summary>
+    [Parameter]
+    public Guid? AutoLoadMessageId { get; set; }
+
+    /// <summary>
+    /// When true, calls <see cref="LoadAccessRequests"/> during <see cref="OnAfterRenderAsync"/>.
+    /// </summary>
+    [Parameter]
+    public bool AutoLoadAccessRequests { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _messageApi = new MessageApiClient(HttpClientFactory.CreateClient("MessageClient"), LoggerFactory?.CreateLogger<MessageApiClient>());
+        _logger = LoggerParam ?? NullLogger<MessageProvider>.Instance;
+    }
+
+    // Why: OnInitializedAsync runs during server prerender before a Blazor Dispatcher is available.
+    // Calling StateHasChanged() from that path throws InvalidOperationException → HTTP 500.
+    // Every other FDW provider defers auto-load to OnAfterRenderAsync(firstRender) for this reason.
+    private bool _initialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _initialized)
+        {
+            return;
+        }
+
+        _initialized = true;
+
+        if (AutoLoad)
+        {
+            await LoadMessages(null, null, null, 0, 50).ConfigureAwait(false);
+        }
+
+        if (AutoLoadMessageId.HasValue)
+        {
+            await LoadMessageDetail(AutoLoadMessageId.Value).ConfigureAwait(false);
+        }
+
+        if (AutoLoadAccessRequests)
+        {
+            await LoadAccessRequests().ConfigureAwait(false);
+        }
+    }
+
+    private MessageListContext BuildMessageListContext() => new()
+    {
+        Messages = _messages,
+        UnreadCount = _unreadCount,
+        IsLoading = _isLoading,
+        LastResult = _lastResult,
+        OnLoad = (messageType, severity, status, skip, take) => LoadMessages(messageType, severity, status, skip, take),
+        OnMarkAllRead = () => MarkAllRead(),
+        OnMarkRead = id => MarkRead(id),
+        OnArchive = id => Archive(id),
+        OnDismiss = id => Dismiss(id),
+    };
+
+    private MessageDetailContext BuildMessageDetailContext() => new()
+    {
+        Message = _detailMessage,
+        IsLoading = _isLoadingDetail,
+        LastResult = _lastResult,
+        OnLoad = id => LoadMessageDetail(id),
+        OnMarkRead = () => _detailMessage is not null ? MarkRead(_detailMessage.Id) : Task.CompletedTask,
+        OnArchive = () => _detailMessage is not null ? Archive(_detailMessage.Id) : Task.CompletedTask,
+        OnDismiss = () => _detailMessage is not null ? Dismiss(_detailMessage.Id) : Task.CompletedTask,
+    };
+
+    private AccessRequestListContext BuildAccessRequestListContext() => new()
+    {
+        AccessRequests = _accessRequests,
+        IsLoading = _isLoadingAccessRequests,
+        LastResult = _lastResult,
+        OnLoad = () => LoadAccessRequests(),
+        OnApprove = (id, notes) => ApproveAccessRequest(id, notes),
+        OnDeny = (id, notes) => DenyAccessRequest(id, notes),
+        OnCreate = model => CreateAccessRequest(model),
+    };
+
+    private async Task LoadMessages(
+        string? messageType,
+        string? severity,
+        string? status,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        StateHasChanged();
+
+        try
+        {
+            _messages = await _messageApi!.GetMessages(
+                messageType: messageType,
+                severity: severity,
+                status: status,
+                skip: skip,
+                take: take,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            _unreadCount = _messages.Count(m => m.IsUnread);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load messages");
+            _lastResult = GenericResult.Failure(ExceptionResultExtensions.FlattenException(ex));
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadMessageDetail(Guid id, CancellationToken cancellationToken = default)
+    {
+        _isLoadingDetail = true;
+        _lastResult = null;
+        StateHasChanged();
+
+        try
+        {
+            _detailMessage = await _messageApi!.GetMessage(id, cancellationToken).ConfigureAwait(false);
+
+            if (_detailMessage is not null && _detailMessage.ReadAt is null)
+            {
+                await _messageApi!.MarkRead(id, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load message {MessageId}", id);
+            _lastResult = GenericResult.Failure(ExceptionResultExtensions.FlattenException(ex));
+        }
+        finally
+        {
+            _isLoadingDetail = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAccessRequests(CancellationToken cancellationToken = default)
+    {
+        _isLoadingAccessRequests = true;
+        _lastResult = null;
+        StateHasChanged();
+
+        try
+        {
+            _accessRequests = await _messageApi!.GetAccessRequests(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load access requests");
+            _lastResult = GenericResult.Failure(ExceptionResultExtensions.FlattenException(ex));
+        }
+        finally
+        {
+            _isLoadingAccessRequests = false;
+            // Why: the GetAccessRequests await used ConfigureAwait(false), so this continuation resumes on a
+            // thread-pool thread, not the Blazor Dispatcher. Calling StateHasChanged() directly there throws
+            // "current thread is not associated with the Dispatcher" — which aborted the circuit and discarded
+            // the loaded rows (page rendered empty). InvokeAsync marshals the render back onto the Dispatcher.
+            await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+        }
+    }
+
+    private async Task MarkRead(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _messageApi!.MarkRead(id, cancellationToken).ConfigureAwait(false);
+            var updated = _messages.Select(m => m.Id == id ? UpdateMessageReadAt(m) : m).ToList();
+            _messages = updated;
+            _unreadCount = _messages.Count(m => m.IsUnread);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to mark message {MessageId} as read", id);
+        }
+    }
+
+    private async Task MarkAllRead(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _messageApi!.MarkAllRead(cancellationToken).ConfigureAwait(false);
+            var updated = _messages.Select(m => m.ReadAt is null ? UpdateMessageReadAt(m) : m).ToList();
+            _messages = updated;
+            _unreadCount = 0;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to mark all messages as read");
+        }
+    }
+
+    private async Task Archive(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _messageApi!.Archive(id, cancellationToken).ConfigureAwait(false);
+            var now = DateTime.UtcNow;
+            var updated = _messages.Select(m => m.Id == id
+                ? new ClientModels.MessagePayload
+                {
+                    Id = m.Id, TenantId = m.TenantId, RecipientUserId = m.RecipientUserId,
+                    SenderUserId = m.SenderUserId, MessageType = m.MessageType, Severity = m.Severity,
+                    Subject = m.Subject, Body = m.Body, ResourceType = m.ResourceType, ResourceId = m.ResourceId,
+                    ReferenceId = m.ReferenceId, ActionType = m.ActionType, ActionUrl = m.ActionUrl,
+                    Status = m.Status, DeliveredAt = m.DeliveredAt, ReadAt = m.ReadAt,
+                    DismissedAt = m.DismissedAt, ArchivedAt = now, CreatedAt = m.CreatedAt
+                }
+                : m).ToList();
+            _messages = updated;
+            _unreadCount = _messages.Count(m => m.IsUnread);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to archive message {MessageId}", id);
+        }
+    }
+
+    private async Task Dismiss(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _messageApi!.Dismiss(id, cancellationToken).ConfigureAwait(false);
+            var now = DateTime.UtcNow;
+            var updated = _messages.Select(m => m.Id == id
+                ? new ClientModels.MessagePayload
+                {
+                    Id = m.Id, TenantId = m.TenantId, RecipientUserId = m.RecipientUserId,
+                    SenderUserId = m.SenderUserId, MessageType = m.MessageType, Severity = m.Severity,
+                    Subject = m.Subject, Body = m.Body, ResourceType = m.ResourceType, ResourceId = m.ResourceId,
+                    ReferenceId = m.ReferenceId, ActionType = m.ActionType, ActionUrl = m.ActionUrl,
+                    Status = m.Status, DeliveredAt = m.DeliveredAt, ReadAt = m.ReadAt,
+                    DismissedAt = now, ArchivedAt = m.ArchivedAt, CreatedAt = m.CreatedAt
+                }
+                : m).ToList();
+            _messages = updated;
+            _unreadCount = _messages.Count(m => m.IsUnread);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to dismiss message {MessageId}", id);
+        }
+    }
+
+    private async Task ApproveAccessRequest(Guid id, string? notes, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _messageApi!.ApproveAccessRequest(id, notes, cancellationToken).ConfigureAwait(false);
+            await LoadAccessRequests(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to approve access request {RequestId}", id);
+        }
+    }
+
+    private async Task DenyAccessRequest(Guid id, string? notes, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _messageApi!.DenyAccessRequest(id, notes, cancellationToken).ConfigureAwait(false);
+            await LoadAccessRequests(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to deny access request {RequestId}", id);
+        }
+    }
+
+    private async Task CreateAccessRequest(ClientModels.CreateAccessRequestModel model, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _messageApi!.CreateAccessRequest(model, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create access request for resource {Resource}", model.RequestedResource);
+            throw;
+        }
+    }
+
+    private static ClientModels.MessagePayload UpdateMessageReadAt(ClientModels.MessagePayload m) =>
+        new()
+        {
+            Id = m.Id, TenantId = m.TenantId, RecipientUserId = m.RecipientUserId,
+            SenderUserId = m.SenderUserId, MessageType = m.MessageType, Severity = m.Severity,
+            Subject = m.Subject, Body = m.Body, ResourceType = m.ResourceType, ResourceId = m.ResourceId,
+            ReferenceId = m.ReferenceId, ActionType = m.ActionType, ActionUrl = m.ActionUrl,
+            Status = m.Status, DeliveredAt = m.DeliveredAt, ReadAt = DateTime.UtcNow,
+            DismissedAt = m.DismissedAt, ArchivedAt = m.ArchivedAt, CreatedAt = m.CreatedAt
+        };
+}

@@ -1,0 +1,120 @@
+@page "/audit"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Execution History - Cyberdyne</PageTitle>
+
+<AuditProvider Context="ctx">
+    <div class="pagehead">
+        <div>
+            <div class="ey">Operations</div>
+            <h1>Execution History</h1>
+            <div class="sub">Workflow, job, stage, step and task executions.</div>
+        </div>
+        <div class="actions">
+            <button class="btn btn-secondary" @onclick="async () => await ctx.OnRefresh()" disabled="@ctx.IsLoading">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M20 8a8 8 0 00-14-3M4 16a8 8 0 0014 3" />
+                </svg>
+                Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px;">
+        <div class="card-h"><h3>Filters</h3></div>
+        <div class="card-b">
+            <div class="fgrid" style="grid-template-columns:repeat(3,1fr);align-items:end;">
+                <div class="frow">
+                    <label>State</label>
+                    <select class="finput" @bind="ctx.FilterState">
+                        <option value="">All States</option>
+                        <option value="Running">Running</option>
+                        @* Why: the friendly label is "Succeeded" but the domain ExecutionState is "Completed"
+                           (ExecutionStateTypes has no "Succeeded"); the option VALUE must carry the real state
+                           name so the server filter resolves it instead of silently dropping an unknown state. *@
+                        <option value="Completed">Succeeded</option>
+                        <option value="Failed">Failed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="frow">
+                    <label>Item Type</label>
+                    <select class="finput" @bind="ctx.FilterItemType">
+                        <option value="">All Types</option>
+                        <option value="Workflow">Workflow</option>
+                        <option value="Job">Job</option>
+                        <option value="Stage">Stage</option>
+                        <option value="Step">Step</option>
+                        <option value="Task">Task</option>
+                    </select>
+                </div>
+                <div class="frow">
+                    <button class="btn btn-secondary" @onclick="async () => await ctx.OnFilterChanged(ctx.FilterItemType, ctx.FilterState)">Apply Filters</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (ctx.IsLoading)
+    {
+        <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="mut" style="color:var(--n-500);">Loading execution history&hellip;</p></div></div>
+    }
+    else if (ctx.Entries.Count == 0)
+    {
+        <div class="card">
+            <div class="card-b" style="padding:48px 20px;text-align:center;">
+                <p style="color:var(--n-300);">No execution history found</p>
+                <p class="sub" style="margin-top:6px;">Executions will appear here once pipelines run</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-h"><h3>Executions</h3><span class="meta">@ctx.Entries.Count / @ctx.TotalCount</span></div>
+            <div class="card-b" style="padding:0 10px 12px;">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Started</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>State</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in ctx.Entries)
+                        {
+                            <tr>
+                                <td class="num"><div class="cellpad">@entry.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</div></td>
+                                <td class="nm">@entry.Name</td>
+                                <td class="mut"><span class="tpill">@entry.ItemType</span></td>
+                                <td class="mut">
+                                    <span class="@GetStateBadge(entry.State)"><span class="bd"></span>@entry.State</span>
+                                </td>
+                                <td class="num">
+                                    @(entry.CompletedAt.HasValue
+                                        ? (entry.CompletedAt.Value - entry.CreatedAt).ToString(@"hh\:mm\:ss")
+                                        : (DateTimeOffset.Now - entry.CreatedAt).ToString(@"hh\:mm\:ss"))
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</AuditProvider>
+
+@code {
+    private static string GetStateBadge(string state) => state switch
+    {
+        "Succeeded" => "badge b-ok",
+        "Completed" => "badge b-ok",
+        "Failed" => "badge b-fail",
+        "Running" => "badge b-run",
+        "Cancelled" => "badge b-warn",
+        _ => "badge b-idle"
+    };
+}

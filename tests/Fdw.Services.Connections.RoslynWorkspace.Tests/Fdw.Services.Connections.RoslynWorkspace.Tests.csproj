@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Why: Microsoft.Build.Locator refuses (MSBL001) any Microsoft.Build.* PackageReference that
+         lacks ExcludeAssets=runtime/PrivateAssets=all. Transitive pinning materializes exactly
+         such a reference for Microsoft.Build.Framework, so this project opts out. -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Why: Synthetic solution must be physically present on disk for MSBuildWorkspace to load it.
+         Copy as-is into the output directory so tests can reference by relative path. -->
+    <Content Include="tests\_Fixtures\SyntheticSolution\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Why: the fixture is a REAL project that MSBuildWorkspace compiles when the tests open it,
+         which leaves a SyntheticLib/obj/ inside this project's own directory. That obj is not this
+         project's obj, so the SDK's default **/*.cs glob does not exclude it and its generated
+         AssemblyInfo.cs gets compiled in alongside ours — duplicate assembly attributes, CS0579.
+         Net effect without this: running the tests breaks the next build. The fixture's sources are
+         only ever Content-copied, so removing them from Compile costs nothing. -->
+    <Compile Remove="tests\_Fixtures\**\*" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Why: Connectors.Abstractions (netstandard2.0) pulls Microsoft.Bcl.AsyncInterfaces 6.0.0
+         as a transitive dep. Pinning here resolves the MSB3277 version conflict with net10.0. -->
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Services.Connections.RoslynWorkspace\Fdw.Services.Connections.RoslynWorkspace.csproj" />
+    <!-- Registration.SourceGenerators generates the module initializer that registers TypeOptions -->
+    <ProjectReference Include="..\..\src\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Why: transitive of MSBuild family — Build.Locator's MSBL001 check forbids its runtime DLL
+         being copied to bin/ (would conflict with MSBuild's in-process copy). Compile-only. -->
+    <PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,154 @@
+@using Excubo.Blazor.Canvas
+@using Excubo.Blazor.Canvas.Contexts
+@using Fdw.UI.Themes.Components.Theme
+@inherits Microsoft.AspNetCore.Components.ComponentBase
+
+<div class="donut-chart-widget">
+    <Canvas @ref="_canvas" width="@Size" height="@Size" />
+    @if (!string.IsNullOrEmpty(CenterLabel))
+    {
+        <div class="donut-center-label" style="width: @(Size)px; height: @(Size)px;">
+            <span class="center-value">@CenterValue</span>
+            <span class="center-text">@CenterLabel</span>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Data segments for the donut chart.
+    /// </summary>
+    [Parameter]
+    public System.Collections.Generic.IEnumerable<DonutSegment>? Segments { get; set; }
+
+    /// <summary>
+    /// Size (width and height) of the donut chart.
+    /// </summary>
+    [Parameter]
+    public int Size { get; set; } = 150;
+
+    /// <summary>
+    /// Thickness of the donut ring as a percentage of radius (0-1).
+    /// </summary>
+    [Parameter]
+    public double Thickness { get; set; } = 0.3;
+
+    /// <summary>
+    /// Label to display in the center of the donut.
+    /// </summary>
+    [Parameter]
+    public string? CenterLabel { get; set; }
+
+    /// <summary>
+    /// Value to display above the center label.
+    /// </summary>
+    [Parameter]
+    public string? CenterValue { get; set; }
+
+    /// <summary>
+    /// Theme configuration for styling.
+    /// </summary>
+    [CascadingParameter]
+    protected UiThemeConfiguration? Theme { get; set; }
+
+    private Canvas _canvas = null!;
+
+    // Default colors if not specified in segments
+    private static readonly string[] DefaultColors = new[]
+    {
+        "#3b82f6", "#22c55e", "#eab308", "#ef4444", "#8b5cf6",
+        "#06b6d4", "#f97316", "#ec4899", "#14b8a6", "#6366f1"
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await DrawAsync();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_canvas != null)
+        {
+            await DrawAsync();
+        }
+    }
+
+    private async Task DrawAsync()
+    {
+        if (_canvas == null)
+            return;
+
+        await using var ctx = await _canvas.GetContext2DAsync();
+
+        // Clear canvas
+        await ctx.ClearRectAsync(0, 0, Size, Size);
+
+        var segmentList = Segments?.ToList();
+        if (segmentList == null || segmentList.Count == 0)
+            return;
+
+        var centerX = Size / 2.0;
+        var centerY = Size / 2.0;
+        var outerRadius = (Size / 2.0) - 4;
+        var innerRadius = outerRadius * (1 - Thickness);
+
+        // Calculate total for percentages
+        var total = segmentList.Sum(s => s.Value);
+        if (total <= 0) return;
+
+        // Draw segments
+        var startAngle = -System.Math.PI / 2; // Start at top
+        var colorIndex = 0;
+
+        foreach (var segment in segmentList)
+        {
+            var sliceAngle = (double)(segment.Value / total) * 2 * System.Math.PI;
+            var endAngle = startAngle + sliceAngle;
+            var color = segment.Color ?? DefaultColors[colorIndex % DefaultColors.Length];
+
+            // Draw outer arc
+            await ctx.BeginPathAsync();
+            await ctx.ArcAsync(centerX, centerY, outerRadius, startAngle, endAngle);
+            await ctx.ArcAsync(centerX, centerY, innerRadius, endAngle, startAngle, true);
+            await ctx.ClosePathAsync();
+            await ctx.FillStyleAsync(color);
+            await ctx.FillAsync(FillRule.NonZero);
+
+            // Draw segment border
+            await ctx.BeginPathAsync();
+            await ctx.ArcAsync(centerX, centerY, outerRadius, startAngle, endAngle);
+            await ctx.ArcAsync(centerX, centerY, innerRadius, endAngle, startAngle, true);
+            await ctx.ClosePathAsync();
+            await ctx.StrokeStyleAsync(Theme?.Colors?.Background ?? "#1f2937");
+            await ctx.LineWidthAsync(2);
+            await ctx.StrokeAsync();
+
+            startAngle = endAngle;
+            colorIndex++;
+        }
+    }
+
+    /// <summary>
+    /// Represents a segment of the donut chart.
+    /// </summary>
+    public sealed class DonutSegment
+    {
+        /// <summary>
+        /// Label for this segment.
+        /// </summary>
+        public string Label { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Value of this segment.
+        /// </summary>
+        public decimal Value { get; set; }
+
+        /// <summary>
+        /// Color for this segment. If not set, uses default color palette.
+        /// </summary>
+        public string? Color { get; set; }
+    }
+}

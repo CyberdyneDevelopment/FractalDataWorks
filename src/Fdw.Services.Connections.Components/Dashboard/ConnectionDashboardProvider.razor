@@ -1,0 +1,112 @@
+@namespace Fdw.Services.Connections.Components.Dashboard
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.Services.Connections.Clients
+@using Fdw.Services.Connections.Clients.Models
+@using Fdw.Results
+@using Fdw.Services.Connections.Components.Logging
+@using Fdw.UI.Components.Base
+@using System.Net.Http
+
+@inherits UIComponentBase
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for the connection dashboard widget.
+    /// Fetches connection counts and health status.
+    /// </summary>
+    [Parameter] public RenderFragment<ConnectionDashboardContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private ConnectionApiClient? _connectionApi;
+    [Inject] private ILogger<ConnectionDashboardProvider>? LoggerParam { get; set; }
+
+    private ILogger<ConnectionDashboardProvider> _logger = NullLogger<ConnectionDashboardProvider>.Instance;
+
+    private IReadOnlyList<ConnectionPayload> _connections = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private ConnectionDashboardContext _context = new();
+    private bool _initialized;
+
+    protected override void OnInitialized()
+    {
+        _connectionApi = new ConnectionApiClient(HttpClientFactory.CreateClient("ConnectionClient"), LoggerFactory?.CreateLogger<ConnectionApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<ConnectionDashboardProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadSummary();
+        }
+    }
+
+    private async Task<IGenericResult> LoadSummary(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _connectionApi!.GetConnections(cancellationToken);
+            if (result.IsSuccess)
+            {
+                _connections = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(ConnectionProviderLog.LoadConnectionsFailed(_logger));
+                _connections = [];
+            }
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            return ProviderContextBase.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ConnectionProviderLog.LoadConnectionsException(_logger, ex));
+            return _lastResult;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private void RebuildContext()
+    {
+        _context = new ConnectionDashboardContext
+        {
+            TotalConnections = _connections.Count,
+            HealthyConnections = _connections.Count(c => c.LastTestSuccess == true),
+            Connections = _connections,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnRefresh = () => LoadSummary()
+        };
+    }
+}

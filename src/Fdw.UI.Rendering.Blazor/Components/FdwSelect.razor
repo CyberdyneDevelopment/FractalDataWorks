@@ -1,0 +1,79 @@
+@* Select primitive over the NON-generic ISelectableComponentModel surface (covers
+   SelectModel<T> and TypeCollectionSelectModel). Options resolve via SelectOptionAccess. *@
+@if (Model.IsVisible)
+{
+    <div class="fdw-ui-field fdw-ui-select" id="@Model.Id">
+        <label class="fdw-ui-label">
+            @(Model.Label ?? Model.Id)
+            @if (Model.IsRequired)
+            {
+                <span class="fdw-ui-required">*</span>
+            }
+        </label>
+        @if (!string.IsNullOrEmpty(Model.HelpText))
+        {
+            <div class="fdw-ui-help">@Model.HelpText</div>
+        }
+        @if (IsDisplayOnly)
+        {
+            <span class="fdw-ui-value">@(SelectOptionAccess.GetDisplayText(Model, Input?.ValueAsObject) ?? "(none)")</span>
+        }
+        else
+        {
+            <select class="fdw-ui-input" value="@SelectedIndex" @onchange="OnChanged">
+                <option value="-1">(none)</option>
+                @for (var i = 0; i < _options.Count; i++)
+                {
+                    var index = i;
+                    <option value="@index" disabled="@_options[index].IsDisabled">@_options[index].DisplayText</option>
+                }
+            </select>
+        }
+    </div>
+}
+
+@code {
+    private IReadOnlyList<(object? Value, string DisplayText, bool IsDisabled)> _options = [];
+
+    /// <summary>The select model to render.</summary>
+    [Parameter, EditorRequired] public ISelectableComponentModel Model { get; set; } = default!;
+
+    /// <summary>The active render mode.</summary>
+    [Parameter, EditorRequired] public IRenderMode Mode { get; set; } = default!;
+
+    private IInputComponentModel? Input => Model as IInputComponentModel;
+
+    private bool IsDisplayOnly =>
+        string.Equals(Mode.Name, "Display", StringComparison.Ordinal) || Model.IsReadOnly;
+
+    protected override void OnParametersSet() => _options = SelectOptionAccess.GetOptions(Model);
+
+    private int SelectedIndex
+    {
+        get
+        {
+            var selected = Input?.ValueAsObject;
+            for (var i = 0; i < _options.Count; i++)
+            {
+                if (Equals(_options[i].Value, selected))
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+    }
+
+    // Why: option values are surfaced by index, not by string round-trip — arbitrary option
+    // value types (ints, TypeOption ids, enums-as-ids) survive selection losslessly.
+    private void OnChanged(ChangeEventArgs e)
+    {
+        if (Input is null)
+        {
+            return;
+        }
+        Input.ValueAsObject = int.TryParse(e.Value?.ToString(), out var index) && index >= 0 && index < _options.Count
+            ? _options[index].Value
+            : null;
+    }
+}

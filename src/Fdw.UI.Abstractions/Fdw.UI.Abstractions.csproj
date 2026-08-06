@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+
+    <!-- Package Information -->
+    <PackageId>Fdw.UI.Abstractions</PackageId>
+    <Title>Fdw UI Abstractions</Title>
+    <Description>Pure C# abstractions for building type-safe UI components using CRTP. Framework-agnostic foundation that works with any UI technology.</Description>
+    <Authors>Fdw</Authors>
+    <Copyright>Copyright © Fdw</Copyright>
+
+    <!-- NuGet -->
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- Documentation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Reference Fdw.Collections for TypeOptionBase (base classes) -->
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Types.Abstractions\Fdw.Types.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

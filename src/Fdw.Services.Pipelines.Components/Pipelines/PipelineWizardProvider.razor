@@ -1,0 +1,460 @@
+@namespace Fdw.Services.Pipelines.Components.Pipelines
+@using Fdw.Messages
+@inherits WizardProviderBase<PipelineWizardContext>
+
+@if (ChildContent is not null)
+{
+    @ChildContent(CurrentContext)
+}
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Net.Http
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Results
+@using Fdw.Services.Connections.Clients
+@using Fdw.Services.Connections.Clients.Models
+@using Fdw.Services.Data.Clients
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Services.Pipelines.Clients.Abstractions
+@using Fdw.UI.Components.Blazor.Logging
+@using Fdw.UI.Pipelines.Clients.Models
+@using Fdw.UI.Wizard
+
+@code {
+    /// <summary>
+    /// Headless provider for the pipeline creation wizard: sources the pluggable engine-type list
+    /// from <see cref="IPipelineClient.GetPipelineTypes"/> (backed by the <c>EtlPipelineTypes</c>
+    /// ServiceTypeCollection — never hardcoded "BatchCopy"/"Streaming"), walks Engine/Details/
+    /// Source/Destination/Review steps, and creates the pipeline shell via
+    /// <see cref="IPipelineClient.CreatePipeline"/>. Every required field fails loud — no default is
+    /// ever substituted for a missing engine type, name, source, or destination.
+    /// </summary>
+    /// <remarks>
+    /// Steps: 0=Engine Type, 1=Details (Name/Description), 2=Source, 3=Destination, 4=Review &amp; Create.
+    /// </remarks>
+    [Inject] private IPipelineClient PipelineApi { get; set; } = default!;
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+    [Inject] private ILogger<PipelineWizardProvider>? LoggerParam { get; set; }
+
+    private ILogger<PipelineWizardProvider> _logger = NullLogger<PipelineWizardProvider>.Instance;
+    private ConnectionApiClient? _connectionApi;
+    private DataSetApiClient? _dataSetApi;
+
+    // ── Domain State ──────────────────────────────────────────────────────────
+
+    private IReadOnlyList<PipelineTypeSummary> _engineTypes = [];
+    private string? _selectedEngineTypeName;
+    private string _name = string.Empty;
+    private string? _description;
+    private IReadOnlyList<ConnectionPayload> _connections = [];
+    private IReadOnlyList<DataSetSummaryPayload> _dataSets = [];
+    private readonly DataSourceReference _source = new();
+    private readonly DataDestinationReference _destination = new();
+    private bool _isComplete;
+    private Guid? _createdPipelineId;
+
+    // ── Base class overrides ──────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    protected override int StepCount => 5;
+
+    /// <inheritdoc />
+    protected override ILogger GetLogger() => _logger;
+
+    /// <inheritdoc />
+    protected override void OnWizardInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<PipelineWizardProvider>.Instance;
+        _connectionApi = new ConnectionApiClient(
+            HttpClientFactory.CreateClient("ConnectionClient"),
+            LoggerFactory?.CreateLogger<ConnectionApiClient>() ?? NullLogger<ConnectionApiClient>.Instance);
+        _dataSetApi = new DataSetApiClient(
+            HttpClientFactory.CreateClient("DataSetClient"),
+            LoggerFactory?.CreateLogger<DataSetApiClient>() ?? NullLogger<DataSetApiClient>.Instance);
+    }
+
+    /// <inheritdoc />
+    protected override async Task LoadInitialData(CancellationToken cancellationToken)
+    {
+        // Why: engine types, connections, and DataSets are independent lookups needed across
+        // different steps — load them in parallel so every picker is ready by the time the user
+        // reaches its step.
+        await Task.WhenAll(
+            LoadEngineTypes(cancellationToken),
+            LoadConnections(cancellationToken),
+            LoadWizardDataSets(cancellationToken));
+    }
+
+    /// <inheritdoc />
+    protected override Task<bool> OnBeforeNextStep(int fromStep)
+    {
+        LastResult = null;
+
+        IGenericMessage? error = fromStep switch
+        {
+            0 when string.IsNullOrEmpty(_selectedEngineTypeName) => PipelineWizardLog.NoEngineTypeSelected(_logger),
+            1 when string.IsNullOrWhiteSpace(_name) => PipelineWizardLog.PipelineNameRequired(_logger),
+            2 when string.IsNullOrWhiteSpace(_source.Name) => PipelineWizardLog.SourceRequired(_logger),
+            3 when string.IsNullOrWhiteSpace(_destination.Name) => PipelineWizardLog.DestinationRequired(_logger),
+            _ => null
+        };
+
+        if (error is null)
+            return Task.FromResult(true);
+
+        LastResult = GenericResult.Failure(error);
+        RebuildAndNotify();
+        return Task.FromResult(false);
+    }
+
+    /// <inheritdoc />
+    protected override PipelineWizardContext BuildContext()
+    {
+        return new PipelineWizardContext
+        {
+            Wizard = BuildWizardContext(),
+            Step = Step,
+            IsFirstStep = IsFirstStep,
+            IsLastStep = IsLastStep,
+            IsLoading = IsLoading,
+            LastResult = LastResult,
+            EngineTypes = _engineTypes,
+            SelectedEngineTypeName = _selectedEngineTypeName,
+            Name = _name,
+            Description = _description,
+            Connections = _connections,
+            DataSets = _dataSets,
+            Source = _source,
+            Destination = _destination,
+            IsComplete = _isComplete,
+            CreatedPipelineId = _createdPipelineId,
+            OnSelectEngineType = name => HandleEngineTypeSelected(name),
+            OnNameChanged = name => HandleNameChanged(name),
+            OnDescriptionChanged = description => HandleDescriptionChanged(description),
+            OnSourceKindChanged = kindName => HandleSourceKindChanged(kindName),
+            OnSourceNameChanged = name => HandleSourceNameChanged(name),
+            OnDestinationKindChanged = kindName => HandleDestinationKindChanged(kindName),
+            OnDestinationNameChanged = name => HandleDestinationNameChanged(name),
+            OnNextStep = () => NextStep(),
+            OnPreviousStep = PreviousStep,
+            OnCreatePipeline = () => CreatePipelineShell()
+        };
+    }
+
+    // ── Public Methods ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Loads the pluggable pipeline engine-type list from <see cref="IPipelineClient.GetPipelineTypes"/>
+    /// (backed by the <c>EtlPipelineTypes</c> ServiceTypeCollection). A new engine type registered via
+    /// <c>[ServiceTypeOption(typeof(EtlPipelineTypes), "...")]</c> appears here with no code change.
+    /// </summary>
+    public async Task LoadEngineTypes(CancellationToken cancellationToken = default)
+    {
+        IsLoading = true;
+        LastResult = null;
+        RebuildAndNotify();
+
+        PipelineWizardLog.LoadingEngineTypes(_logger);
+
+        try
+        {
+            var result = await PipelineApi.GetPipelineTypes(cancellationToken);
+            if (!result.IsSuccess)
+            {
+                LastResult = GenericResult.Failure(PipelineWizardLog.LoadEngineTypesFailed(_logger));
+                _engineTypes = [];
+                return;
+            }
+
+            _engineTypes = result.Value?.ToList() ?? [];
+            PipelineWizardLog.EngineTypesLoaded(_logger, _engineTypes.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            LastResult = GenericResult.Failure(PipelineWizardLog.LoadEngineTypesException(_logger, ex));
+            _engineTypes = [];
+        }
+        finally
+        {
+            IsLoading = false;
+            RebuildAndNotify();
+        }
+    }
+
+    /// <summary>
+    /// Validates all required steps (engine type, name, source, destination), resolves the
+    /// underlying connection name for any DataSet-kind source/destination, and creates the pipeline
+    /// shell via <see cref="IPipelineClient.CreatePipeline"/>. Fails loud on any missing required
+    /// field or unresolvable connection — never substitutes a default.
+    /// </summary>
+    /// <returns>The created pipeline's identifier on success; <c>null</c> on failure/cancellation.</returns>
+    public async Task<Guid?> CreatePipelineShell(CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(_selectedEngineTypeName))
+        {
+            LastResult = GenericResult.Failure(PipelineWizardLog.NoEngineTypeSelected(_logger));
+            RebuildAndNotify();
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(_name))
+        {
+            LastResult = GenericResult.Failure(PipelineWizardLog.PipelineNameRequired(_logger));
+            RebuildAndNotify();
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(_source.Name))
+        {
+            LastResult = GenericResult.Failure(PipelineWizardLog.SourceRequired(_logger));
+            RebuildAndNotify();
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(_destination.Name))
+        {
+            LastResult = GenericResult.Failure(PipelineWizardLog.DestinationRequired(_logger));
+            RebuildAndNotify();
+            return null;
+        }
+
+        IsLoading = true;
+        LastResult = null;
+        RebuildAndNotify();
+
+        try
+        {
+            var sourceConnectionResult = await ResolveSourceConnectionName(cancellationToken);
+            if (!sourceConnectionResult.IsSuccess)
+            {
+                LastResult = sourceConnectionResult;
+                return null;
+            }
+
+            var destinationConnectionResult = await ResolveDestinationConnectionName(cancellationToken);
+            if (!destinationConnectionResult.IsSuccess)
+            {
+                LastResult = destinationConnectionResult;
+                return null;
+            }
+
+            var request = new CreatePipelineClientRequest
+            {
+                Name = _name,
+                PipelineType = _selectedEngineTypeName,
+                SourceConnectionName = sourceConnectionResult.Value!,
+                DestinationConnectionName = destinationConnectionResult.Value!,
+                SourceDataSet = string.Equals(_source.Kind.Name, DataSourceKinds.DataSet.Name, StringComparison.Ordinal) ? _source.Name : null,
+                DestinationDataSet = string.Equals(_destination.Kind.Name, DataDestinationKinds.DataSet.Name, StringComparison.Ordinal) ? _destination.Name : null,
+                Description = _description,
+                IsEnabled = true,
+                Transforms = [],
+            };
+
+            var createResult = await PipelineApi.CreatePipeline(request, cancellationToken);
+            if (!createResult.IsSuccess)
+            {
+                LastResult = createResult;
+                return null;
+            }
+
+            _createdPipelineId = createResult.Value!.Id;
+            _isComplete = true;
+            PipelineWizardLog.WizardCompleted(_logger, _name);
+            return _createdPipelineId;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            LastResult = GenericResult.Failure(PipelineWizardLog.CreatePipelineException(_logger, ex, _name));
+            return null;
+        }
+        finally
+        {
+            IsLoading = false;
+            RebuildAndNotify();
+        }
+    }
+
+    // ── Private Operations ─────────────────────────────────────────────────────
+
+    private async Task LoadConnections(CancellationToken cancellationToken = default)
+    {
+        PipelineWizardLog.LoadingConnections(_logger);
+
+        try
+        {
+            var result = await _connectionApi!.GetConnections(cancellationToken);
+            if (!result.IsSuccess)
+            {
+                LastResult = GenericResult.Failure(PipelineWizardLog.LoadConnectionsFailed(_logger));
+                _connections = [];
+                return;
+            }
+
+            _connections = result.Value?.ToList() ?? [];
+            PipelineWizardLog.ConnectionsLoaded(_logger, _connections.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            LastResult = GenericResult.Failure(PipelineWizardLog.LoadConnectionsException(_logger, ex));
+            _connections = [];
+        }
+        finally
+        {
+            RebuildAndNotify();
+        }
+    }
+
+    private async Task LoadWizardDataSets(CancellationToken cancellationToken = default)
+    {
+        PipelineWizardLog.LoadingWizardDataSets(_logger);
+
+        try
+        {
+            var result = await _dataSetApi!.GetDataSets(cancellationToken);
+            if (!result.IsSuccess)
+            {
+                LastResult = GenericResult.Failure(PipelineWizardLog.LoadWizardDataSetsFailed(_logger));
+                _dataSets = [];
+                return;
+            }
+
+            _dataSets = result.Value?.ToList() ?? [];
+            PipelineWizardLog.WizardDataSetsLoaded(_logger, _dataSets.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            LastResult = GenericResult.Failure(PipelineWizardLog.LoadWizardDataSetsException(_logger, ex));
+            _dataSets = [];
+        }
+        finally
+        {
+            RebuildAndNotify();
+        }
+    }
+
+    private void HandleEngineTypeSelected(string name)
+    {
+        _selectedEngineTypeName = name;
+        PipelineWizardLog.TypeSelected(_logger, name);
+        RebuildAndNotify();
+    }
+
+    private void HandleNameChanged(string name)
+    {
+        _name = name;
+        RebuildAndNotify();
+    }
+
+    private void HandleDescriptionChanged(string? description)
+    {
+        _description = description;
+        RebuildAndNotify();
+    }
+
+    private void HandleSourceKindChanged(string kindName)
+    {
+        var kind = DataSourceKinds.ByName(kindName);
+        // Why: the dropdown only ever offers registered kind names (Connection/DataSet) — an
+        // unregistered value here is a UI wiring bug, not missing user data, so it is ignored
+        // rather than surfaced as a false "missing source" error.
+        if (kind == DataSourceKinds.NotFound)
+            return;
+
+        _source.Kind = kind;
+        _source.Name = string.Empty;
+        RebuildAndNotify();
+    }
+
+    private void HandleSourceNameChanged(string name)
+    {
+        _source.Name = name;
+        RebuildAndNotify();
+    }
+
+    private void HandleDestinationKindChanged(string kindName)
+    {
+        var kind = DataDestinationKinds.ByName(kindName);
+        if (kind == DataDestinationKinds.NotFound)
+            return;
+
+        _destination.Kind = kind;
+        _destination.Name = string.Empty;
+        RebuildAndNotify();
+    }
+
+    private void HandleDestinationNameChanged(string name)
+    {
+        _destination.Name = name;
+        RebuildAndNotify();
+    }
+
+    /// <summary>
+    /// Resolves the connection name that satisfies <see cref="CreatePipelineClientRequest.SourceConnectionName"/>
+    /// (always required by the server contract, even for a DataSet-kind source). For a Connection-kind
+    /// source, the picked name IS the connection name. For a DataSet-kind source, the DataSet's own
+    /// primary source's ConnectionName is used — fails loud (no fallback) when the DataSet has no single
+    /// resolvable primary source.
+    /// </summary>
+    private async Task<IGenericResult<string>> ResolveSourceConnectionName(CancellationToken cancellationToken)
+    {
+        if (string.Equals(_source.Kind.Name, DataSourceKinds.Connection.Name, StringComparison.Ordinal))
+            return GenericResult<string>.Success(_source.Name);
+
+        var dataSetResult = await _dataSetApi!.GetDataSet(_source.Name, cancellationToken);
+        if (!dataSetResult.IsSuccess || dataSetResult.Value is null)
+            return GenericResult<string>.Failure(PipelineWizardLog.SourceDataSetLoadFailed(_logger, _source.Name));
+
+        var primary = dataSetResult.Value.Sources.FirstOrDefault(s => s.IsPrimary)
+                      ?? (dataSetResult.Value.Sources.Count == 1 ? dataSetResult.Value.Sources[0] : null);
+
+        if (primary is null || string.IsNullOrWhiteSpace(primary.ConnectionName))
+            return GenericResult<string>.Failure(PipelineWizardLog.SourceDataSetConnectionUnresolved(_logger, _source.Name));
+
+        return GenericResult<string>.Success(primary.ConnectionName);
+    }
+
+    /// <summary>
+    /// Resolves the connection name that satisfies <see cref="CreatePipelineClientRequest.DestinationConnectionName"/>.
+    /// See <see cref="ResolveSourceConnectionName"/> for the resolution rule (same rule, destination side).
+    /// </summary>
+    private async Task<IGenericResult<string>> ResolveDestinationConnectionName(CancellationToken cancellationToken)
+    {
+        if (string.Equals(_destination.Kind.Name, DataDestinationKinds.Connection.Name, StringComparison.Ordinal))
+            return GenericResult<string>.Success(_destination.Name);
+
+        var dataSetResult = await _dataSetApi!.GetDataSet(_destination.Name, cancellationToken);
+        if (!dataSetResult.IsSuccess || dataSetResult.Value is null)
+            return GenericResult<string>.Failure(PipelineWizardLog.DestinationDataSetLoadFailed(_logger, _destination.Name));
+
+        var primary = dataSetResult.Value.Sources.FirstOrDefault(s => s.IsPrimary)
+                      ?? (dataSetResult.Value.Sources.Count == 1 ? dataSetResult.Value.Sources[0] : null);
+
+        if (primary is null || string.IsNullOrWhiteSpace(primary.ConnectionName))
+            return GenericResult<string>.Failure(PipelineWizardLog.DestinationDataSetConnectionUnresolved(_logger, _destination.Name));
+
+        return GenericResult<string>.Success(primary.ConnectionName);
+    }
+}

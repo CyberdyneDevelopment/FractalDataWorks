@@ -1,0 +1,40 @@
+@page "/settings"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Settings - Cyberdyne</PageTitle>
+
+<SettingsProvider>
+    <ChildContent Context="ctx">
+        @if (ctx.IsLoading)
+        {
+            <div class="flex justify-center items-center py-12">
+                <span class="text-sm text-muted">Loading settings…</span>
+            </div>
+        }
+        else if (ctx.ErrorMessage is not null)
+        {
+            <div class="rounded-md bg-error-subtle border border-error px-4 py-3 text-sm text-error">
+                @ctx.ErrorMessage
+            </div>
+        }
+        else
+        {
+            <div class="max-w-3xl mx-auto space-y-4">
+                @foreach (var setting in ctx.Settings)
+                {
+                    <div class="rounded-md border bg-card px-4 py-3 flex items-center justify-between gap-4">
+                        <div>
+                            <div class="text-sm font-medium">@setting.SettingName</div>
+                            <div class="text-xs text-muted mt-0.5">@setting.DataType</div>
+                        </div>
+                        <div class="text-sm text-muted shrink-0">@(string.IsNullOrEmpty(setting.SettingValue) ? "—" : setting.SettingValue)</div>
+                    </div>
+                }
+            </div>
+        }
+    </ChildContent>
+</SettingsProvider>
+
+@code {
+    [CascadingParameter] private SessionStateContext? Session { get; set; }
+}

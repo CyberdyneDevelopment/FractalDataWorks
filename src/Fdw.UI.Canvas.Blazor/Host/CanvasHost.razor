@@ -1,0 +1,72 @@
+@namespace Fdw.UI.Canvas.Blazor.Host
+@using System
+@using Fdw.UI.Abstractions.Canvas
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+
+@* Why: CanvasHost is a headless host component — no @page directive. Callers embed it
+   inside their own routable pages. The component adds the renderer dropdown chrome and
+   renders the active renderer via DynamicComponent so no import of the renderer packages
+   is required in the calling page. *@
+
+@if (Model is null)
+{
+    return;
+}
+
+<div style="display:flex;flex-direction:column;width:100%;height:100%;">
+
+    @* ── Renderer selection dropdown ──────────────────────────────────────────────── *@
+    @if (_renderers.Count > 0)
+    {
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 12px;border-bottom:1px solid #1e293b;flex-shrink:0;background:#0a0f1a;">
+            <label style="font-family:monospace;font-size:11px;color:#64748b;">Renderer:</label>
+
+            @* Why: show the dropdown even when only one renderer is registered — ensures a
+               consistent UX, lets future renderers appear without any page-level changes,
+               and makes the active renderer name visible for orientation. *@
+            <select style="font-family:monospace;font-size:11px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;padding:3px 6px;"
+                    @bind:get="_selectedRendererName"
+                    @bind:set="OnRendererChanged">
+                @foreach (var renderer in _renderers)
+                {
+                    <option value="@renderer.Name">@renderer.DisplayName</option>
+                }
+            </select>
+
+            @if (!string.IsNullOrEmpty(Model.Title))
+            {
+                <span style="font-family:monospace;font-size:11px;color:#475569;margin-left:8px;">@Model.Title</span>
+            }
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <span style="font-family:monospace;font-size:11px;color:#ef4444;margin-left:auto;">@_errorMessage</span>
+            }
+        </div>
+    }
+
+    @* ── Active renderer ─────────────────────────────────────────────────────────── *@
+    <div style="flex:1;position:relative;overflow:hidden;">
+        @if (ActiveComponentType is not null)
+        {
+            @* Why: DynamicComponent is the FDW-approved mechanism for renderer dispatch without
+               a switch/if-else on renderer type names. The parameters dictionary is rebuilt
+               whenever the selected renderer or model changes (see RebuildDynamicParams). *@
+            <DynamicComponent Type="@ActiveComponentType" Parameters="@_dynamicParams" />
+        }
+        else if (_renderers.Count == 0)
+        {
+            <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">
+                <span style="font-family:monospace;font-size:12px;color:#334155;">No canvas renderers registered. Reference a renderer package.</span>
+            </div>
+        }
+        else
+        {
+            <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">
+                <span style="font-family:monospace;font-size:12px;color:#334155;">Renderer '@_selectedRendererName' has no registered Blazor component.</span>
+            </div>
+        }
+    </div>
+
+</div>

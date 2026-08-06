@@ -1,0 +1,46 @@
+@using Fdw.UI.Abstractions
+@typeparam TModel
+@typeparam TComponent where TComponent : ComponentBase<TComponent, TModel>
+
+<div>
+    @if (string.Equals(DisplayMode?.Name, "Accordion", StringComparison.Ordinal))
+    {
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            @if (Items != null)
+            {
+                @for (int i = 0; i < Items.Count; i++)
+                {
+                    var index = i;
+                    var item = Items[i];
+
+                    <div class="card" @key="item">
+                        <div class="card-h" style="cursor:pointer;" @onclick="() => ToggleItem(index)">
+                            <h3>Item @(index + 1)</h3>
+                            @if (AllowRemove)
+                            {
+                                <button class="btn btn-danger btn-sm" @onclick:stopPropagation="true" @onclick="() => RemoveItem(index)">
+                                    Remove
+                                </button>
+                            }
+                        </div>
+
+                        @if (IsItemExpanded(index))
+                        {
+                            <div class="card-b">
+                                <DynamicComponent Type="@typeof(TComponent)"
+                                                  Parameters="@GetComponentParameters(item, index)" />
+                            </div>
+                        }
+                    </div>
+                }
+            }
+
+            @if (AllowAdd)
+            {
+                <button class="btn btn-primary btn-sm" @onclick="AddNewItem">
+                    @(AddButtonText ?? "Add Item")
+                </button>
+            }
+        </div>
+    }
+</div>

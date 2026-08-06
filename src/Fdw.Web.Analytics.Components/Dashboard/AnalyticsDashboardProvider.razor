@@ -1,0 +1,103 @@
+@namespace Fdw.Web.Analytics.Components.Dashboard
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Web.Analytics.Clients.ApiClients
+@using Fdw.Web.Analytics.Clients.Models
+@using Fdw.Results
+@using Fdw.UI.Components.Logging
+@using Fdw.UI.Components.Base
+@using System.Net.Http
+
+@inherits UIComponentBase
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for the analytics dashboard widget.
+    /// Fetches analytics data for a date range.
+    /// </summary>
+    [Parameter] public RenderFragment<AnalyticsDashboardContext>? ChildContent { get; set; }
+
+    /// <summary>Gets or sets the default number of days to load on first render. Default is 7.</summary>
+    [Parameter] public int DefaultDays { get; set; } = 7;
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private AnalyticsApiClient? _analyticsApi;
+    [Inject] private ILogger<AnalyticsDashboardProvider>? LoggerParam { get; set; }
+
+    private ILogger<AnalyticsDashboardProvider> _logger = NullLogger<AnalyticsDashboardProvider>.Instance;
+
+    private AnalyticsResponse? _analyticsData;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private AnalyticsDashboardContext _context = new();
+    private bool _initialized;
+
+    protected override void OnInitialized()
+    {
+        _analyticsApi = new AnalyticsApiClient(HttpClientFactory.CreateClient("AnalyticsClient"), LoggerFactory?.CreateLogger<AnalyticsApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<AnalyticsDashboardProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            var end = DateTimeOffset.UtcNow;
+            var start = end.AddDays(-DefaultDays);
+            await LoadAnalytics(start, end);
+        }
+    }
+
+    private async Task LoadAnalytics(DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _analyticsApi!.GetAnalytics(new AnalyticsRequest { StartDate = start, EndDate = end }, cancellationToken);
+            _analyticsData = result.IsSuccess ? result.Value : null;
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.LoadException(_logger, ex, "AnalyticsDashboardProvider", "analytics"));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private void RebuildContext()
+    {
+        _context = new AnalyticsDashboardContext
+        {
+            AnalyticsData = _analyticsData,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnLoadAnalytics = (start, end) => LoadAnalytics(start, end)
+        };
+    }
+}

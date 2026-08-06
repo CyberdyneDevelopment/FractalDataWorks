@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Fdw.Intelligence</RootNamespace>
+    <PackageId>Fdw.Intelligence.Abstractions</PackageId>
+    <Title>Fdw Intelligence Abstractions</Title>
+    <Description>Abstractions for semantic memory and agent intelligence services.</Description>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Abstractions\Fdw.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Results.Abstractions\Fdw.Results.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

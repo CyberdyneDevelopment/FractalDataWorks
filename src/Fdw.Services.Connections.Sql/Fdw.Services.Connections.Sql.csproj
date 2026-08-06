@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Why: provides DataCommandTranslatorBase<TCommand>, IDataCommand, IDataCommandWithInput -->
+    <ProjectReference Include="..\Fdw.Commands.Data.Abstractions\Fdw.Commands.Data.Abstractions.csproj" />
+    <!-- Why: provides IFilterExpression, IPagingExpression, IOrderingExpression, IStorageContainer, FilterCondition, LogicalOperator -->
+    <ProjectReference Include="..\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+    <!-- Why: provides FilterGroup (concrete filter node) used in BuildWhereNode switch -->
+    <ProjectReference Include="..\Fdw.Data\Fdw.Data.csproj" />
+    <!-- Why: provides ISqlDialect and IDatabasePath — the dialect carrier seam -->
+    <ProjectReference Include="..\Fdw.Services.Connections.Abstractions\Fdw.Services.Connections.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,55 @@
+@* Date picker primitive bound to a DatePickerModel. *@
+@if (Model.IsVisible)
+{
+    <div class="fdw-ui-field fdw-ui-date-picker" id="@Model.Id">
+        <label class="fdw-ui-label">
+            @(Model.Label ?? Model.Id)
+            @if (Model.IsRequired)
+            {
+                <span class="fdw-ui-required">*</span>
+            }
+        </label>
+        @if (!string.IsNullOrEmpty(Model.HelpText))
+        {
+            <div class="fdw-ui-help">@Model.HelpText</div>
+        }
+        @if (IsDisplayOnly)
+        {
+            <span class="fdw-ui-value">@(Model.Value?.ToString(DisplayFormat) ?? "(empty)")</span>
+        }
+        else
+        {
+            <input class="fdw-ui-input"
+                   type="@(Model.IncludeTime ? "datetime-local" : "date")"
+                   value="@Model.Value?.ToString(InputFormat)"
+                   @onchange="OnChanged" />
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The date picker model to render.</summary>
+    [Parameter, EditorRequired] public DatePickerModel Model { get; set; } = default!;
+
+    /// <summary>The active render mode.</summary>
+    [Parameter, EditorRequired] public IRenderMode Mode { get; set; } = default!;
+
+    private bool IsDisplayOnly =>
+        string.Equals(Mode.Name, "Display", StringComparison.Ordinal) || Model.IsReadOnly;
+
+    private string DisplayFormat =>
+        Model.IncludeTime ? $"{Model.Format} {Model.TimeFormat}" : Model.Format;
+
+    // Why: HTML date inputs require these exact wire formats regardless of the model's
+    // display Format; the display format applies only in read-only rendering.
+    private string InputFormat =>
+        Model.IncludeTime ? "yyyy-MM-dd\\THH:mm" : "yyyy-MM-dd";
+
+    private void OnChanged(ChangeEventArgs e)
+    {
+        Model.Value = DateTime.TryParse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out var parsed)
+            ? parsed
+            : null;
+    }
+}

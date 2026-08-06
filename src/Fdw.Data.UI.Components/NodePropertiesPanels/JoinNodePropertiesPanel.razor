@@ -1,0 +1,233 @@
+@namespace Fdw.Data.UI.Components.NodePropertiesPanels
+@using System
+@using System.Collections.Generic
+@using System.Threading.Tasks
+@using Fdw.Data.UI.Components.Logging
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.Extensions.Logging
+
+@* Why: join-node properties panel for CalculatedDesigner. Headless — no @page directive.
+   Receives the selected node's configuration dictionary and a list of available source names
+   (populated from the graph's Source nodes) so the left/right source dropdowns remain
+   context-aware without coupling to the designer's private Node class. *@
+
+<div class="frow" style="margin-bottom:8px;">
+    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Left Source</label>
+    @if (AvailableSourceNames.Count == 0)
+    {
+        <div class="mono" style="font-size:10px;color:var(--n-500);font-style:italic;">No source nodes in graph</div>
+    }
+    else
+    {
+        <select class="finput mono" value="@_leftSource" @onchange="OnLeftSourceChanged" style="font-size:10px;">
+            <option value="">— select source —</option>
+            @foreach (var src in AvailableSourceNames)
+            {
+                <option value="@src">@src</option>
+            }
+        </select>
+    }
+</div>
+
+<div class="frow" style="margin-bottom:8px;">
+    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Left Field</label>
+    <input class="finput mono @(string.IsNullOrWhiteSpace(_leftField) && _validationTriggered ? "input-error" : string.Empty)"
+           value="@_leftField"
+           @onchange="OnLeftFieldChanged"
+           placeholder="field name"
+           style="font-size:10px;" />
+</div>
+
+<div class="frow" style="margin-bottom:8px;">
+    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Right Source</label>
+    @if (AvailableSourceNames.Count == 0)
+    {
+        <div class="mono" style="font-size:10px;color:var(--n-500);font-style:italic;">No source nodes in graph</div>
+    }
+    else
+    {
+        <select class="finput mono" value="@_rightSource" @onchange="OnRightSourceChanged" style="font-size:10px;">
+            <option value="">— select source —</option>
+            @foreach (var src in AvailableSourceNames)
+            {
+                <option value="@src">@src</option>
+            }
+        </select>
+    }
+</div>
+
+<div class="frow" style="margin-bottom:8px;">
+    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Right Field</label>
+    <input class="finput mono @(string.IsNullOrWhiteSpace(_rightField) && _validationTriggered ? "input-error" : string.Empty)"
+           value="@_rightField"
+           @onchange="OnRightFieldChanged"
+           placeholder="field name"
+           style="font-size:10px;" />
+</div>
+
+<div class="frow" style="margin-bottom:8px;">
+    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Join Type</label>
+    <select class="finput mono" value="@_joinType" @onchange="OnJoinTypeChanged" style="font-size:10px;">
+        <option value="Inner">Inner</option>
+        <option value="Left">Left</option>
+        <option value="Right">Right</option>
+        <option value="Full">Full</option>
+        <option value="Cross">Cross</option>
+    </select>
+</div>
+
+<div class="frow" style="margin-bottom:8px;">
+    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Description</label>
+    <textarea class="finput mono"
+              value="@_description"
+              @onchange="OnDescriptionChanged"
+              rows="2"
+              style="resize:vertical;font-size:10px;"></textarea>
+</div>
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="mono" style="font-size:10px;color:var(--signal);margin-top:4px;">@_errorMessage</div>
+}
+
+@code {
+    /// <summary>Gets or sets the unique identifier of the selected node.</summary>
+    [Parameter] public Guid NodeId { get; set; }
+
+    /// <summary>Gets or sets the current node configuration dictionary.</summary>
+    [Parameter] public Dictionary<string, object?> Configuration { get; set; } = new(StringComparer.Ordinal);
+
+    /// <summary>Gets or sets the list of source node names available in the current graph.</summary>
+    [Parameter] public IReadOnlyList<string> AvailableSourceNames { get; set; } = Array.Empty<string>();
+
+    /// <summary>Gets or sets the callback to invoke when the configuration changes.</summary>
+    [Parameter] public EventCallback<Dictionary<string, object?>> OnConfigurationChanged { get; set; }
+
+    /// <summary>Gets or sets the logger used by the panel.</summary>
+    [Parameter] public ILogger? Logger { get; set; }
+
+    private string _leftSource = string.Empty;
+    private string _leftField = string.Empty;
+    private string _rightSource = string.Empty;
+    private string _rightField = string.Empty;
+    private string _joinType = "Inner";
+    private string? _description;
+    private string? _errorMessage;
+    private bool _validationTriggered;
+
+    protected override void OnParametersSet()
+    {
+        _leftSource = ReadString("LeftSourceName");
+        _leftField = ReadString("LeftFieldName");
+        _rightSource = ReadString("RightSourceName");
+        _rightField = ReadString("RightFieldName");
+        _joinType = ReadString("JoinType", "Inner");
+        _description = ReadStringNullable("Description");
+        _errorMessage = null;
+        _validationTriggered = false;
+    }
+
+    private string ReadString(string key, string defaultValue = "")
+    {
+        if (Configuration.TryGetValue(key, out var val) && val is not null)
+            return val.ToString() ?? defaultValue;
+        return defaultValue;
+    }
+
+    private string? ReadStringNullable(string key)
+    {
+        if (Configuration.TryGetValue(key, out var val) && val is not null)
+            return val.ToString();
+        return null;
+    }
+
+    private Task OnLeftSourceChanged(ChangeEventArgs e)
+    {
+        _leftSource = e.Value?.ToString() ?? string.Empty;
+        return NotifyChanged();
+    }
+
+    private Task OnLeftFieldChanged(ChangeEventArgs e)
+    {
+        _leftField = e.Value?.ToString() ?? string.Empty;
+        return NotifyChanged();
+    }
+
+    private Task OnRightSourceChanged(ChangeEventArgs e)
+    {
+        _rightSource = e.Value?.ToString() ?? string.Empty;
+        return NotifyChanged();
+    }
+
+    private Task OnRightFieldChanged(ChangeEventArgs e)
+    {
+        _rightField = e.Value?.ToString() ?? string.Empty;
+        return NotifyChanged();
+    }
+
+    private Task OnJoinTypeChanged(ChangeEventArgs e)
+    {
+        _joinType = e.Value?.ToString() ?? "Inner";
+        return NotifyChanged();
+    }
+
+    private Task OnDescriptionChanged(ChangeEventArgs e)
+    {
+        _description = e.Value?.ToString();
+        return NotifyChanged();
+    }
+
+    private Task NotifyChanged()
+    {
+        _validationTriggered = true;
+        _errorMessage = null;
+
+        // Why: validate required fields before raising the callback. Incomplete state
+        // is highlighted red; the callback is still raised so the designer can persist
+        // partial state on save (only compile validation blocks incomplete graphs).
+        if (string.IsNullOrWhiteSpace(_leftSource))
+        {
+            var msg = DesignerNodePropertiesPanelLog.NodeFieldsIncomplete(
+                Logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+                "Join", "LeftSourceName");
+            _errorMessage = msg.Message;
+        }
+        else if (string.IsNullOrWhiteSpace(_leftField))
+        {
+            var msg = DesignerNodePropertiesPanelLog.NodeFieldsIncomplete(
+                Logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+                "Join", "LeftFieldName");
+            _errorMessage = msg.Message;
+        }
+        else if (string.IsNullOrWhiteSpace(_rightSource))
+        {
+            var msg = DesignerNodePropertiesPanelLog.NodeFieldsIncomplete(
+                Logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+                "Join", "RightSourceName");
+            _errorMessage = msg.Message;
+        }
+        else if (string.IsNullOrWhiteSpace(_rightField))
+        {
+            var msg = DesignerNodePropertiesPanelLog.NodeFieldsIncomplete(
+                Logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+                "Join", "RightFieldName");
+            _errorMessage = msg.Message;
+        }
+
+        var updated = new Dictionary<string, object?>(Configuration, StringComparer.Ordinal)
+        {
+            ["LeftSourceName"] = _leftSource,
+            ["LeftFieldName"] = _leftField,
+            ["RightSourceName"] = _rightSource,
+            ["RightFieldName"] = _rightField,
+            ["JoinType"] = _joinType,
+        };
+
+        if (_description is not null)
+            updated["Description"] = _description;
+        else
+            updated.Remove("Description");
+
+        return OnConfigurationChanged.InvokeAsync(updated);
+    }
+}

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Fdw.Hosting.MsSql</RootNamespace>
+    <Description>Fdw MsSql hosting extensions. Provides MsSql DataStoreType registration and MsSql configuration writer backend.</Description>
+    <NoWarn>$(NoWarn);CS1591;MSB3277</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Hosting\Fdw.Hosting.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Connections.MsSql\Fdw.Services.Connections.MsSql.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Fdw.UI.Components.Blazor.MsSql\Fdw.UI.Components.Blazor.MsSql.csproj" />
+    <ProjectReference Include="..\Fdw.Security.Hashing\Fdw.Security.Hashing.csproj" />
+    <ProjectReference Include="..\Fdw.Web.Analytics.Clients\Fdw.Web.Analytics.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Credentials.Sql\Fdw.Services.Credentials.Sql.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VSTemplate Version="3.0.0" Type="Project" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
+  <TemplateData>
+    <Name>$serviceName$.Abstractions</Name>
+    <Description>Service abstractions and contracts</Description>
+    <Icon>__TemplateIcon.ico</Icon>
+    <ProjectType>CSharp</ProjectType>
+    <LanguageTag>csharp</LanguageTag>
+  </TemplateData>
+  <TemplateContent>
+    <Project File="Abstractions.csproj" ReplaceParameters="true">
+      <ProjectItem ReplaceParameters="true">I$serviceName$Service.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true">I$serviceName$Factory.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true">I$serviceName$Configuration.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true">I$serviceName$Provider.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true">I$serviceName$Type.cs</ProjectItem>
+    </Project>
+  </TemplateContent>
+</VSTemplate>

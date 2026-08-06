@@ -1,0 +1,124 @@
+@page "/orchestration"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Orchestration - Cyberdyne</PageTitle>
+
+<OrchestrationNodeProvider>
+    <ChildContent Context="ctx">
+        <div>
+            <div class="pagehead">
+                <div>
+                    <div class="ey">Pipelines &amp; Scheduling</div>
+                    <h1>Orchestration</h1>
+                    <div class="sub">Orchestration nodes — hierarchical execution policy.</div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/orchestration/edit")'>
+                        New Node
+                    </button>
+                </div>
+            </div>
+
+            <div class="filters">
+                <input type="text"
+                       class="finput"
+                       style="flex:1;"
+                       placeholder="Search nodes..."
+                       value="@ctx.SearchString"
+                       @oninput="e => ctx.OnSearchStringChanged(e.Value?.ToString() ?? string.Empty)" />
+            </div>
+
+            @if (ctx.ErrorMessage is not null)
+            {
+                <div class="card b-fail" style="margin-bottom:14px;padding:14px 16px;">
+                    <span class="mono" style="font-size:12px;color:var(--signal);">@ctx.ErrorMessage</span>
+                </div>
+            }
+
+            @if (ctx.IsLoading)
+            {
+                <div class="card" style="padding:48px;text-align:center;">
+                    <span class="mono" style="color:var(--n-500);">Loading nodes…</span>
+                </div>
+            }
+            else
+            {
+                <div class="card">
+                    <div class="card-h"><h3>Root Nodes</h3></div>
+                    <div class="card-b" style="padding:0 10px 12px;">
+                        <table class="tbl">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th>Stage Policy</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var node in ctx.FilteredRootNodes)
+                                {
+                                    <tr>
+                                        <td>
+                                            <button class="cellpad nm" style="background:none;border:0;cursor:pointer;text-align:left;font-family:inherit;"
+                                                    @onclick='() => Nav.NavigateTo($"/orchestration/edit/{node.Id}")'>
+                                                @node.Name
+                                            </button>
+                                        </td>
+                                        <td class="mut">
+                                            @(node.Description ?? "-")
+                                        </td>
+                                        <td>
+                                            @if (node.IsEnabled)
+                                            {
+                                                <span class="badge b-ok"><span class="bd"></span>Enabled</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge b-idle"><span class="bd"></span>Disabled</span>
+                                            }
+                                        </td>
+                                        <td class="mut">
+                                            @(node.StageFailurePolicy ?? "inherit")
+                                        </td>
+                                        <td>
+                                            <div class="actions">
+                                                <button class="btn btn-ghost btn-sm"
+                                                        @onclick='() => Nav.NavigateTo($"/orchestration/edit/{node.Id}")'>
+                                                    Edit
+                                                </button>
+                                                <button class="btn btn-ghost btn-sm" style="color:var(--signal);"
+                                                        @onclick="() => DeleteNode(ctx, node.Id)">
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!ctx.FilteredRootNodes.Any())
+                                {
+                                    <tr>
+                                        <td colspan="5" style="padding:32px;text-align:center;color:var(--n-500);">
+                                            No orchestration nodes found.
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        </div>
+    </ChildContent>
+</OrchestrationNodeProvider>
+
+@code {
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private async Task DeleteNode(OrchestrationNodeContext ctx, Guid id)
+    {
+        await ctx.OnDeleteNode(id);
+    }
+}

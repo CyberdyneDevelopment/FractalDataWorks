@@ -1,0 +1,55 @@
+@namespace Fdw.UI.Charts.Blazor.Renderers.ApexChartsRender
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using ApexCharts
+@using Fdw.UI.Abstractions.Charts
+
+@* Why: ApexChartsRenderer is a headless renderer component — no @page directive. It is resolved
+   and mounted exclusively by ChartHost via DynamicComponent. The Model parameter carries the
+   render-agnostic chart spec; Rows carries the data to plot. *@
+
+@if (Model is null)
+{
+    return;
+}
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:16px;">
+        <span style="font-family:monospace;font-size:12px;color:#ef4444;">@_errorMessage</span>
+    </div>
+}
+else if (_chartConfig is not null)
+{
+    @* Why: render inside a div that expands to fill the host container so the chart fills the
+       available space without requiring the caller to know the chart library. *@
+    <div class="fdw-chart-host" style="width:100%;height:100%;">
+        <ApexChart TItem="ChartDataRow"
+                   Options="@_chartConfig.Options"
+                   @ref="_apexChart"
+                   Height="@("100%")"
+                   Width="@("100%")">
+
+            @if (_chartConfig.SeriesItems is not null)
+            {
+                @foreach (var series in _chartConfig.SeriesItems)
+                {
+                    <ApexPointSeries TItem="ChartDataRow"
+                                     Items="@series.Items"
+                                     Name="@series.Name"
+                                     SeriesType="@series.SeriesType"
+                                     XValue="@series.XValueSelector"
+                                     YValue="@series.YValueSelector" />
+                }
+            }
+
+        </ApexChart>
+    </div>
+}
+else if (!_isLoading)
+{
+    <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:16px;">
+        <span style="font-family:monospace;font-size:12px;color:#475569;">No chart configuration available.</span>
+    </div>
+}

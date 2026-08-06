@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Why: xunit.v3, Shouldly, Moq, coverlet.collector, and Microsoft.NET.Test.Sdk are
+         inherited from tests/Directory.Build.props; Microsoft.AspNetCore.App supplies the
+         in-process Kestrel stub the non-exposure proof runs against. -->
+    <ProjectReference Include="..\..\src\Fdw.Aegis.McpServer\Fdw.Aegis.McpServer.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Aegis\Fdw.Aegis.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Aegis.Abstractions\Fdw.Aegis.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Aegis.Configuration\Fdw.Aegis.Configuration.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.SecretManagers\Fdw.Services.SecretManagers.csproj" />
+    <!-- Why: this assembly declares its own Synthetic SecretManager [ServiceTypeOption] (FDW ships
+         no concrete backend), so it needs the module-initializer generator to register it at load. -->
+    <ProjectReference Include="..\..\src\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\src\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Connections.Http\Fdw.Services.Connections.Http.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Connections.FileSystem\Fdw.Services.Connections.FileSystem.csproj" />
+    <ProjectReference Include="..\Fdw.Services.SecretManagers.TestDouble\Fdw.Services.SecretManagers.TestDouble.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

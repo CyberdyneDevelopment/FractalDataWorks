@@ -1,0 +1,262 @@
+@namespace Fdw.Calculations.Components.Calculations
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Web.Calculations.Clients.Models
+@using Fdw.Calculations.Components.Logging
+
+@if (Context is null)
+{
+    <div class="card b-fail" style="padding:12px 16px;">
+        <span class="mono" style="font-size:12px;color:var(--signal);">CalculationFormBuilder: Context is required.</span>
+    </div>
+}
+else
+{
+    <section class="card" style="margin-bottom:14px;">
+        <div class="card-h"><h3>Formula</h3></div>
+        <div class="card-b">
+
+            @* Language selector — populated from supported languages (no switch/if-else on type name) *@
+            <div class="frow" style="margin-bottom:12px;">
+                <label>Language</label>
+                <select class="finput" value="@Context.SelectedLanguage" @onchange="LanguageSelectionChanged">
+                    @foreach (var lang in _supportedLanguages)
+                    {
+                        <option value="@lang">@lang</option>
+                    }
+                </select>
+            </div>
+
+            @* Field picker — loads from OnGetDataSetFields when TargetDataSet is provided *@
+            @if (!string.IsNullOrWhiteSpace(_targetDataSet))
+            {
+                <div class="frow" style="margin-bottom:12px;">
+                    <label>Insert Field Reference</label>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <select class="finput" style="flex:1;" @bind="_selectedField">
+                            <option value="">— select a field —</option>
+                            @if (Context.DataSetFields is not null)
+                            {
+                                @foreach (var field in Context.DataSetFields)
+                                {
+                                    <option value="@field.Name">@field.Name (@field.DataType)</option>
+                                }
+                            }
+                        </select>
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                disabled="@(string.IsNullOrEmpty(_selectedField) || Context.IsLoading)"
+                                @onclick="InsertFieldReference">
+                            Insert
+                        </button>
+                        <button type="button" class="btn btn-ghost btn-sm"
+                                disabled="@(string.IsNullOrWhiteSpace(_targetDataSet) || Context.IsLoading)"
+                                @onclick="LoadFieldsForDataSet">
+                            Reload Fields
+                        </button>
+                    </div>
+                </div>
+            }
+
+            @* Formula textarea — two-way bound to Formula *@
+            <div class="frow">
+                <label>Expression</label>
+                <textarea class="finput mono"
+                          style="height:160px;resize:vertical;font-family:var(--font-mono,monospace);font-size:13px;"
+                          placeholder="Enter formula expression…"
+                          value="@Formula"
+                          @onchange="FormulaTextChanged" />
+            </div>
+
+            @* Live validation trigger *@
+            <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+                <button type="button" class="btn btn-secondary btn-sm"
+                        disabled="@(string.IsNullOrWhiteSpace(Formula) || string.IsNullOrWhiteSpace(_targetDataSet) || Context.IsLoading)"
+                        @onclick="ValidateFormula">
+                    Validate Formula
+                </button>
+                @if (Context.IsLoading)
+                {
+                    <span class="mono" style="font-size:12px;color:var(--n-500);">Validating…</span>
+                }
+            </div>
+
+            @* Error display — fail loud, no ?? silencing *@
+            @if (Context.ErrorMessage is not null)
+            {
+                <div class="card b-fail" style="margin-top:12px;padding:12px 16px;">
+                    <span class="mono" style="font-size:12px;color:var(--signal);">@Context.ErrorMessage</span>
+                </div>
+            }
+
+            @* Validation result panel *@
+            @if (Context.PreviewResult is not null)
+            {
+                var preview = Context.PreviewResult;
+                <div class="card @(preview.IsValid ? "b-ok" : "b-fail")" style="margin-top:12px;padding:12px 16px;">
+                    @if (preview.IsValid)
+                    {
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                            <span class="badge b-ok"><span class="bd"></span>Valid</span>
+                            @if (!string.IsNullOrEmpty(preview.InferredResultType))
+                            {
+                                <span class="mono" style="font-size:12px;color:var(--n-400);">Inferred type: @preview.InferredResultType</span>
+                            }
+                        </div>
+                        @if (preview.ReferencedFields.Any())
+                        {
+                            <div style="margin-top:6px;">
+                                <span class="mut" style="font-size:12px;">Referenced fields: </span>
+                                @foreach (var field in preview.ReferencedFields)
+                                {
+                                    <span class="mono badge b-idle" style="margin-left:4px;font-size:11px;">@field</span>
+                                }
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                            <span class="badge b-fail"><span class="bd"></span>Invalid</span>
+                        </div>
+                        @if (preview.Errors.Any())
+                        {
+                            <ul style="margin:0;padding:0 0 0 16px;">
+                                @foreach (var err in preview.Errors)
+                                {
+                                    <li class="mono" style="font-size:12px;color:var(--signal);margin-bottom:2px;">@err</li>
+                                }
+                            </ul>
+                        }
+                        else if (!string.IsNullOrEmpty(preview.Error))
+                        {
+                            <span class="mono" style="font-size:12px;color:var(--signal);">@preview.Error</span>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    /// <summary>The builder context supplied by the parent Create/Edit page.</summary>
+    [Parameter] public CalculationFormBuilderContext? Context { get; set; }
+
+    /// <summary>The formula text — two-way bindable via FormulaChanged.</summary>
+    [Parameter] public string Formula { get; set; } = string.Empty;
+
+    /// <summary>Notifies the parent when the formula text changes.</summary>
+    [Parameter] public EventCallback<string> FormulaChanged { get; set; }
+
+    /// <summary>
+    /// The target DataSet name — supplied by the parent form.
+    /// Required before fields can be loaded or formulas validated.
+    /// </summary>
+    [Parameter] public string TargetDataSet { get; set; } = string.Empty;
+
+    [Inject] private ILogger<CalculationFormBuilder>? LoggerParam { get; set; }
+
+    private ILogger<CalculationFormBuilder> _logger = NullLogger<CalculationFormBuilder>.Instance;
+
+    // Why: supported languages are the canonical set from the calculation domain;
+    // this list drives the <select> without a switch/if-else dispatch on string values.
+    private static readonly IReadOnlyList<string> _supportedLanguages = ["CSharp", "Sql"];
+
+    private string _selectedField = string.Empty;
+    private string _targetDataSet = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<CalculationFormBuilder>.Instance;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Why: re-load fields whenever the TargetDataSet parameter changes so the picker stays in sync.
+        if (!string.Equals(_targetDataSet, TargetDataSet, StringComparison.OrdinalIgnoreCase))
+        {
+            _targetDataSet = TargetDataSet;
+            if (!string.IsNullOrWhiteSpace(_targetDataSet) && Context is not null)
+            {
+                await LoadFieldsForDataSet();
+            }
+        }
+    }
+
+    private async Task FormulaTextChanged(ChangeEventArgs e)
+    {
+        var text = e.Value?.ToString() ?? string.Empty;
+        await FormulaChanged.InvokeAsync(text);
+    }
+
+    private async Task LanguageSelectionChanged(ChangeEventArgs e)
+    {
+        if (Context is null) return;
+        var lang = e.Value?.ToString() ?? string.Empty;
+        if (string.IsNullOrEmpty(lang)) return;
+        CalculationFormBuilderLog.LanguageChanged(_logger, lang);
+        await Context.OnLanguageChanged(lang);
+    }
+
+    private async Task LoadFieldsForDataSet()
+    {
+        if (Context is null) return;
+        if (string.IsNullOrWhiteSpace(_targetDataSet)) return;
+
+        CalculationFormBuilderLog.GetDataSetFieldsStarted(_logger, _targetDataSet);
+        var fields = await Context.OnGetDataSetFields(_targetDataSet);
+        if (fields is not null)
+        {
+            CalculationFormBuilderLog.GetDataSetFieldsSucceeded(_logger, fields.Count, _targetDataSet);
+        }
+        else
+        {
+            CalculationFormBuilderLog.GetDataSetFieldsFailed(_logger, _targetDataSet);
+        }
+    }
+
+    private async Task ValidateFormula()
+    {
+        if (Context is null) return;
+        if (string.IsNullOrWhiteSpace(Formula) || string.IsNullOrWhiteSpace(_targetDataSet)) return;
+
+        CalculationFormBuilderLog.ValidateFormulaStarted(_logger, _targetDataSet);
+        try
+        {
+            var result = await Context.OnValidateFormula(Formula, _targetDataSet);
+            if (result is not null)
+            {
+                CalculationFormBuilderLog.ValidateFormulaSucceeded(_logger, _targetDataSet, result.IsValid);
+            }
+            else
+            {
+                CalculationFormBuilderLog.ValidateFormulaFailed(_logger, _targetDataSet);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Why: cancelled operations are silently discarded; the user navigated away.
+        }
+        catch (Exception ex)
+        {
+            CalculationFormBuilderLog.ValidateFormulaException(_logger, ex, _targetDataSet);
+        }
+    }
+
+    private async Task InsertFieldReference()
+    {
+        if (string.IsNullOrEmpty(_selectedField)) return;
+        var insertion = $"{{{_selectedField}}}";
+        var newFormula = string.IsNullOrEmpty(Formula)
+            ? insertion
+            : string.Concat(Formula, " ", insertion);
+        await FormulaChanged.InvokeAsync(newFormula);
+        _selectedField = string.Empty;
+    }
+}

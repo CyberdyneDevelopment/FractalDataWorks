@@ -1,0 +1,416 @@
+@namespace Fdw.Services.Connections.Components.ConnectionWizard
+@inherits WizardProviderBase<ConnectionWizardContext>
+
+@if (ChildContent is not null)
+{
+    @ChildContent(CurrentContext)
+}
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Connections.Clients
+@using Fdw.Services.Connections.Clients.Models
+@using Fdw.Operations.Clients
+@using Fdw.Operations.Clients.Models
+@using Fdw.Results
+@using Fdw.Services.Connections.Components.Logging
+@using Fdw.Services.SecretManagers.Clients
+@using Fdw.UI.Wizard
+@using System.Net.Http
+
+@code {
+    /// <summary>
+    /// Headless provider for new-connection wizard logic: load connection types, multi-step
+    /// navigation, secret password storage, and final save.
+    /// Steps: 0=Configure, 1=Test, 2=Save/Complete.
+    /// </summary>
+    [Parameter] public EventCallback<ConnectionDetailResponse> OnCompleted { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private ConnectionApiClient? _connectionApi;
+    private ConfigurationApiClient? _configurationApi;
+    private SecretManagerApiClient? _secretManagerApi;
+    [Inject] private ILogger<ConnectionWizardProvider>? LoggerParam { get; set; }
+
+    private ILogger<ConnectionWizardProvider> _logger = NullLogger<ConnectionWizardProvider>.Instance;
+
+    // ── Domain State ──────────────────────────────────────────────────────────
+
+    private CreateConnectionClientRequest _connectionConfig = new();
+    // Why: ConnectionApiClient.GetConnectionTypes() hits connections/types (200) not
+    // ConfigurationApiClient.GetTypesByCategory("Connection") which hits configuration/types?category=Connection (404).
+    private IReadOnlyList<ConnectionTypePayload> _connectionTypes = [];
+    private IReadOnlyList<TypeCollectionValueSummary> _authenticationTypes = [];
+    private bool _isLoadingAuthTypes;
+    private TestConnectionClientResponse? _testResult;
+    private bool _isComplete;
+    private string? _plainPassword;
+    private string? _storedSecretKeyName;
+    private IReadOnlyList<string> _availableSecretManagers = [];
+    private string? _selectedSecretManagerName;
+    private string _secretStorageMode = "new";
+
+    // ── Base class overrides ──────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    protected override int StepCount => 3;
+
+    /// <inheritdoc />
+    protected override ILogger GetLogger() => _logger;
+
+    /// <inheritdoc />
+    protected override void OnWizardInitialized()
+    {
+        _secretManagerApi = new SecretManagerApiClient(HttpClientFactory.CreateClient("SecretManagerClient"), LoggerFactory?.CreateLogger<SecretManagerApiClient>()!);
+        _connectionApi = new ConnectionApiClient(HttpClientFactory.CreateClient("ConnectionClient"), LoggerFactory?.CreateLogger<ConnectionApiClient>()!);
+        _configurationApi = new ConfigurationApiClient(HttpClientFactory.CreateClient("ConfigurationClient"), LoggerFactory?.CreateLogger<ConfigurationApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<ConnectionWizardProvider>.Instance;
+    }
+
+    /// <inheritdoc />
+    protected override async Task LoadInitialData(CancellationToken cancellationToken)
+    {
+        await Task.WhenAll(LoadConnectionTypes(cancellationToken), LoadSecretManagers(cancellationToken));
+    }
+
+    /// <inheritdoc />
+    protected override async Task<bool> OnBeforeNextStep(int fromStep)
+    {
+        // Step 0 → 1: store password in secret manager before testing
+        if (fromStep == 0
+            && _secretStorageMode == "new"
+            && !string.IsNullOrEmpty(_plainPassword)
+            && !string.IsNullOrEmpty(_selectedSecretManagerName)
+            && _secretManagerApi is not null)
+        {
+            var stored = await StorePassword(_selectedSecretManagerName, _plainPassword);
+            if (!stored) return false;
+        }
+
+        // Step 1 → 2: Must test successfully before advancing
+        if (fromStep == 1)
+        {
+            await RunTest();
+            if (_testResult is null || !_testResult.Success) return false;
+        }
+
+        return true;
+    }
+
+    /// <inheritdoc />
+    protected override ConnectionWizardContext BuildContext()
+    {
+        return new ConnectionWizardContext
+        {
+            Wizard = BuildWizardContext(),
+            ConnectionConfig = _connectionConfig,
+            ConnectionTypes = _connectionTypes,
+            AuthenticationTypes = _authenticationTypes,
+            IsLoadingAuthTypes = _isLoadingAuthTypes,
+            TestResult = _testResult,
+            IsLoading = IsLoading,
+            LastResult = LastResult,
+            IsComplete = _isComplete,
+            IsFirstStep = IsFirstStep,
+            IsLastStep = IsLastStep,
+            Step = Step,
+            AvailableSecretManagers = _availableSecretManagers,
+            SelectedSecretManagerName = _selectedSecretManagerName,
+            SecretStorageMode = _secretStorageMode,
+            PlainPassword = _plainPassword,
+            StoredSecretKeyName = _storedSecretKeyName,
+            OnServiceTypeChanged = serviceType => HandleServiceTypeChanged(serviceType),
+            OnNextStep = () => NextStep(),
+            OnPreviousStep = PreviousStep,
+            OnTestConnection = () => HandleTestConnection(),
+            OnSaveConnection = () => HandleSaveConnection(),
+            OnSecretManagerChanged = managerName => HandleSecretManagerChanged(managerName),
+            OnSecretStorageModeChanged = mode => HandleSecretStorageModeChanged(mode),
+            OnPasswordChanged = password => HandlePasswordChanged(password)
+        };
+    }
+
+    // ── Private Operations ─────────────────────────────────────────────────────
+
+    private async Task LoadConnectionTypes(CancellationToken cancellationToken = default)
+    {
+        ConnectionWizardProviderLog.LoadingConnectionTypes(_logger);
+
+        try
+        {
+            var result = await _connectionApi!.GetConnectionTypes(cancellationToken);
+            if (!result.IsSuccess)
+            {
+                LastResult = GenericResult.Failure(ConnectionWizardProviderLog.LoadedConnectionTypes(_logger, 0));
+                _connectionTypes = [];
+                return;
+            }
+
+            _connectionTypes = result.Value?.ToList() ?? [];
+            ConnectionWizardProviderLog.LoadedConnectionTypes(_logger, _connectionTypes.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception)
+        {
+            _connectionTypes = [];
+        }
+        finally
+        {
+            RebuildAndNotify();
+        }
+    }
+
+    private async Task LoadSecretManagers(CancellationToken cancellationToken = default)
+    {
+        if (_secretManagerApi is null) return;
+
+        ConnectionWizardProviderLog.LoadingSecretManagers(_logger);
+
+        try
+        {
+            var result = await _secretManagerApi!.GetManagers(cancellationToken);
+            if (result.IsSuccess && result.Value is not null)
+            {
+                _availableSecretManagers = result.Value.Managers;
+                ConnectionWizardProviderLog.LoadedSecretManagers(_logger, _availableSecretManagers.Count);
+
+                // Auto-select if only one manager is available
+                if (_availableSecretManagers.Count == 1)
+                    _selectedSecretManagerName = _availableSecretManagers[0];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception)
+        {
+            _availableSecretManagers = [];
+        }
+        finally
+        {
+            RebuildAndNotify();
+        }
+    }
+
+    private async Task LoadAuthTypes(string serviceType, CancellationToken cancellationToken = default)
+    {
+        _isLoadingAuthTypes = true;
+        RebuildAndNotify();
+
+        ConnectionWizardProviderLog.LoadingAuthTypes(_logger, serviceType);
+
+        try
+        {
+            var collectionName = $"{serviceType}AuthenticationTypes";
+            var result = await _configurationApi!.GetTypeCollectionValues(collectionName, cancellationToken);
+            if (!result.IsSuccess)
+            {
+                _authenticationTypes = [];
+                return;
+            }
+
+            _authenticationTypes = result.Value?.ToList() ?? [];
+            ConnectionWizardProviderLog.LoadedAuthTypes(_logger, _authenticationTypes.Count, serviceType);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception)
+        {
+            _authenticationTypes = [];
+        }
+        finally
+        {
+            _isLoadingAuthTypes = false;
+            RebuildAndNotify();
+        }
+    }
+
+    private async Task HandleServiceTypeChanged(string serviceType)
+    {
+        _connectionConfig.ServiceType = serviceType;
+        _connectionConfig.AuthenticationType = null;
+        _connectionConfig.Authentication = null;
+        _authenticationTypes = [];
+        _storedSecretKeyName = null;
+        _plainPassword = null;
+        RebuildAndNotify();
+
+        if (!string.IsNullOrEmpty(serviceType))
+        {
+            await LoadAuthTypes(serviceType);
+        }
+    }
+
+    private void HandleSecretManagerChanged(string managerName)
+    {
+        _selectedSecretManagerName = managerName;
+        _storedSecretKeyName = null;
+        _plainPassword = null;
+        if (_connectionConfig.Authentication is not null)
+            _connectionConfig.Authentication.SecretKeyName = null;
+        RebuildAndNotify();
+    }
+
+    private void HandleSecretStorageModeChanged(string mode)
+    {
+        _secretStorageMode = mode;
+        _storedSecretKeyName = null;
+        _plainPassword = null;
+        if (_connectionConfig.Authentication is not null)
+            _connectionConfig.Authentication.SecretKeyName = null;
+        RebuildAndNotify();
+    }
+
+    private void HandlePasswordChanged(string password)
+    {
+        _plainPassword = password;
+        RebuildAndNotify();
+    }
+
+    private async Task HandleTestConnection()
+    {
+        await RunTest();
+    }
+
+    private async Task RunTest(CancellationToken cancellationToken = default)
+    {
+        IsLoading = true;
+        LastResult = null;
+        _testResult = null;
+        RebuildAndNotify();
+
+        ConnectionWizardProviderLog.TestingConnection(_logger, _connectionConfig.Name);
+
+        try
+        {
+            var result = await _connectionApi!.TestConnectionConfig(_connectionConfig, cancellationToken);
+            if (result.IsSuccess && result.Value is not null)
+            {
+                _testResult = result.Value;
+
+                if (_testResult.Success)
+                {
+                    ConnectionWizardProviderLog.TestConnectionSucceeded(_logger, _connectionConfig.Name);
+                }
+                else
+                {
+                    LastResult = GenericResult.Failure(ConnectionWizardProviderLog.TestConnectionFailed(_logger, _connectionConfig.Name));
+                }
+            }
+            else
+            {
+                LastResult = GenericResult.Failure(ConnectionWizardProviderLog.TestConnectionFailed(_logger, _connectionConfig.Name));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            LastResult = GenericResult.Failure(ConnectionWizardProviderLog.TestConnectionException(_logger, ex, _connectionConfig.Name));
+        }
+        finally
+        {
+            IsLoading = false;
+            RebuildAndNotify();
+        }
+    }
+
+    private async Task<bool> StorePassword(string managerName, string password, CancellationToken cancellationToken = default)
+    {
+        IsLoading = true;
+        LastResult = null;
+        RebuildAndNotify();
+
+        var safeName = System.Text.RegularExpressions.Regex.Replace(
+            _connectionConfig.Name?.ToLowerInvariant() ?? "connection", @"[^a-z0-9]", "-");
+        var keyName = $"connection-{safeName}-password";
+
+        ConnectionWizardProviderLog.StoringSecret(_logger, managerName, keyName);
+
+        try
+        {
+            var result = await _secretManagerApi!.SetSecret(managerName, keyName, password, cancellationToken);
+            if (!result.IsSuccess || result.Value is null || !result.Value.Success)
+            {
+                LastResult = GenericResult.Failure(ConnectionWizardProviderLog.StoreSecretFailed(_logger, managerName, keyName));
+                return false;
+            }
+
+            _storedSecretKeyName = result.Value.KeyName;
+            _plainPassword = null;
+
+            _connectionConfig.Authentication ??= new ConnectionAuthenticationRequest();
+            _connectionConfig.Authentication.SecretKeyName = _storedSecretKeyName;
+
+            ConnectionWizardProviderLog.SecretStored(_logger, managerName, _storedSecretKeyName);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            LastResult = GenericResult.Failure(ConnectionWizardProviderLog.StoreSecretException(_logger, ex, managerName, keyName));
+            return false;
+        }
+        finally
+        {
+            IsLoading = false;
+            RebuildAndNotify();
+        }
+    }
+
+    private async Task HandleSaveConnection(CancellationToken cancellationToken = default)
+    {
+        IsLoading = true;
+        LastResult = null;
+        RebuildAndNotify();
+
+        ConnectionWizardProviderLog.SavingConnection(_logger, _connectionConfig.Name);
+
+        try
+        {
+            var result = await _connectionApi!.CreateConnection(_connectionConfig, cancellationToken);
+            if (!result.IsSuccess || result.Value is null)
+            {
+                LastResult = GenericResult.Failure(ConnectionWizardProviderLog.SaveConnectionFailed(_logger, _connectionConfig.Name));
+                return;
+            }
+
+            _isComplete = true;
+            ConnectionWizardProviderLog.ConnectionSaved(_logger, _connectionConfig.Name);
+            ConnectionWizardProviderLog.WizardCompleted(_logger, _connectionConfig.Name);
+
+            await OnCompleted.InvokeAsync(result.Value);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            LastResult = GenericResult.Failure(ConnectionWizardProviderLog.SaveConnectionException(_logger, ex, _connectionConfig.Name));
+        }
+        finally
+        {
+            IsLoading = false;
+            RebuildAndNotify();
+        }
+    }
+}

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Why: the source generator must run in this compilation context to perform cross-assembly
+         TypeOption discovery and bake all PageType registrations into the generated
+         PageTypes static constructor. Without this, PageTypes.All() returns empty. -->
+    <ProjectReference Include="..\..\src\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\src\Fdw.UI\Fdw.UI.csproj" />
+    <!-- All 19 UI.Pages packages are now consolidated into Fdw.UI.Pages -->
+    <ProjectReference Include="..\..\src\Fdw.UI.Pages\Fdw.UI.Pages.csproj" />
+  </ItemGroup>
+</Project>

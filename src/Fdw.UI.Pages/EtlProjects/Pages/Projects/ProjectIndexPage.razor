@@ -1,0 +1,177 @@
+@page "/projects"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using System.Net.Http
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Projects - Cyberdyne</PageTitle>
+
+<ProjectProvider>
+    <ChildContent Context="ctx">
+        <div>
+            <div class="pagehead">
+                <div>
+                    <div class="ey">Pipelines &amp; Scheduling</div>
+                    <h1>Project Tree</h1>
+                    <div class="sub">Projects → stages → steps → pipelines.</div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-secondary btn-sm" @onclick='() => Nav.NavigateTo("/projects/list")'>
+                        List View
+                    </button>
+                    <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/projects/edit")'>
+                        New Project
+                    </button>
+                </div>
+            </div>
+
+            @if (ctx.ErrorMessage is not null)
+            {
+                <div class="card b-fail" style="margin-bottom:14px;padding:14px 16px;">
+                    <span class="mono" style="font-size:12px;color:var(--signal);">@ctx.ErrorMessage</span>
+                </div>
+            }
+
+            @if (ctx.IsLoading)
+            {
+                <div class="card" style="padding:48px;text-align:center;">
+                    <span class="mono" style="color:var(--n-500);">Loading projects…</span>
+                </div>
+            }
+            else if (!ctx.Projects.Any())
+            {
+                <div class="card" style="padding:48px;text-align:center;">
+                    <p style="color:var(--n-500);">No projects defined yet.</p>
+                    <button class="btn btn-primary" style="margin-top:14px;" @onclick='() => Nav.NavigateTo("/projects/edit")'>
+                        Create Your First Project
+                    </button>
+                </div>
+            }
+            else
+            {
+                <ul class="card" style="list-style:none;margin:0;padding:14px;display:flex;flex-direction:column;gap:8px;" role="tree">
+                    @foreach (var project in ctx.Projects)
+                    {
+                        var projectExpanded = _expandedProjects.Contains(project.Id);
+                        <li role="treeitem" aria-expanded="@projectExpanded.ToString().ToLowerInvariant()">
+                            <!-- Project Row -->
+                            <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--s2);border-radius:9px;">
+                                <button class="btn btn-ghost btn-sm" style="padding:4px;"
+                                        @onclick="() => ToggleProject(project.Id)"
+                                        aria-label="@(projectExpanded ? "Collapse" : "Expand") @project.Name">
+                                    @if (projectExpanded)
+                                    {
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    }
+                                    else
+                                    {
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    }
+                                </button>
+                                <span class="mono nm" style="flex:1;">@project.Name</span>
+                                @if (!project.IsEnabled)
+                                {
+                                    <span class="badge b-idle"><span class="bd"></span>disabled</span>
+                                }
+                                <div class="actions">
+                                    <button class="btn btn-ghost btn-sm" @onclick="() => TriggerProject(ctx, project.Name)">Run</button>
+                                    <button class="btn btn-ghost btn-sm" @onclick='() => Nav.NavigateTo($"/projects/edit/{project.Id}")'>Edit</button>
+                                </div>
+                            </div>
+
+                            <!-- Stages (expanded) -->
+                            @if (projectExpanded && project.Stages.Any())
+                            {
+                                <ul style="list-style:none;margin:6px 0 0 24px;padding-left:16px;border-left:1px solid var(--hair);display:flex;flex-direction:column;gap:6px;" role="group">
+                                    @foreach (var stage in project.Stages.OrderBy(s => s.Ordinal))
+                                    {
+                                        var stageKey = (project.Id, stage.Id);
+                                        var stageExpanded = _expandedStages.Contains(stageKey);
+                                        <li role="treeitem" aria-expanded="@stageExpanded.ToString().ToLowerInvariant()">
+                                            <!-- Stage Row -->
+                                            <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--s1);border-radius:8px;">
+                                                <button class="btn btn-ghost btn-sm" style="padding:3px;"
+                                                        @onclick="() => ToggleStage(project.Id, stage.Id)">
+                                                    @if (stageExpanded)
+                                                    {
+                                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                        </svg>
+                                                    }
+                                                    else
+                                                    {
+                                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                                        </svg>
+                                                    }
+                                                </button>
+                                                <span class="mono num" style="width:20px;text-align:right;">@stage.Ordinal</span>
+                                                <span class="mono" style="flex:1;color:var(--glacier-soft);">@stage.Name</span>
+                                                <span class="tpill">stage</span>
+                                            </div>
+
+                                            <!-- Steps (expanded) -->
+                                            @if (stageExpanded && stage.Steps.Any())
+                                            {
+                                                <ul style="list-style:none;margin:6px 0 0 24px;padding-left:12px;border-left:1px solid var(--hair);display:flex;flex-direction:column;gap:6px;" role="group">
+                                                    @foreach (var step in stage.Steps.OrderBy(s => s.Ordinal))
+                                                    {
+                                                        <li role="treeitem">
+                                                            <!-- Step Row -->
+                                                            <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg);border-radius:8px;">
+                                                                <span class="mono num" style="width:18px;text-align:right;">@step.Ordinal</span>
+                                                                <span class="mono" style="flex:1;color:var(--glacier);font-size:12px;">@step.Name</span>
+                                                                @if (step.Pipelines.Any())
+                                                                {
+                                                                    <span class="tpill">
+                                                                        @step.Pipelines.Count pipeline@(step.Pipelines.Count == 1 ? "" : "s")
+                                                                    </span>
+                                                                }
+                                                            </div>
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </ChildContent>
+</ProjectProvider>
+
+@code {
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private readonly HashSet<Guid> _expandedProjects = new();
+    private readonly HashSet<(Guid ProjectId, Guid StageId)> _expandedStages = new();
+
+    private void ToggleProject(Guid projectId)
+    {
+        if (!_expandedProjects.Remove(projectId))
+        {
+            _expandedProjects.Add(projectId);
+        }
+    }
+
+    private void ToggleStage(Guid projectId, Guid stageId)
+    {
+        var key = (projectId, stageId);
+        if (!_expandedStages.Remove(key))
+        {
+            _expandedStages.Add(key);
+        }
+    }
+
+    private async Task TriggerProject(ProjectContext ctx, string name)
+    {
+        await ctx.OnTriggerProject(name);
+    }
+}

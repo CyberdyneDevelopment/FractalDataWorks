@@ -1,0 +1,204 @@
+@page "/projects/execution/{ExecutionId:guid}"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@implements IAsyncDisposable
+@using System.Net.Http
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Execution - Cyberdyne</PageTitle>
+
+<div style="display:flex;flex-direction:column;height:calc(100vh - 90px);">
+    <!-- Header -->
+    <div class="dhead" style="margin-bottom:14px;">
+        <div class="ic">
+            <button class="btn btn-ghost btn-sm" style="padding:0;" @onclick='() => Nav.NavigateTo("/projects")'>
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+        </div>
+        <h1>Execution Monitor</h1>
+        <span class="mono" style="font-size:11px;color:var(--n-500);">@ExecutionId</span>
+        <div class="actions" style="margin-left:auto;">
+            <span class="badge @GetStatusBadge(_overallStatus)"><span class="bd"></span>@(_overallStatus ?? "Loading...")</span>
+            <button class="btn btn-ghost btn-sm" style="color:var(--signal);"
+                    @onclick="CancelExecution"
+                    disabled="@_isCompleted">
+                Cancel
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content: Status Tree + Lineage -->
+    <div class="split" style="flex:1;min-height:0;grid-template-columns:320px 1fr;">
+        <!-- Left: Hierarchical Status Tree -->
+        <div class="card" style="overflow-y:auto;">
+            <div class="card-h"><h3>Execution Hierarchy</h3></div>
+            <div class="card-b">
+                @if (_statusRoot is null)
+                {
+                    <div style="padding:24px;text-align:center;">
+                        <span class="mono" style="color:var(--n-500);">Loading…</span>
+                    </div>
+                }
+                else
+                {
+                    @RenderNode(_statusRoot, 0)
+                }
+            </div>
+        </div>
+
+        <!-- Right: Lineage view placeholder (reuses Lineage.razor if embedded) -->
+        <div class="card" style="display:flex;flex-direction:column;overflow:hidden;">
+            <div class="card-h"><h3>Lineage Overlay</h3></div>
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--n-500);font-size:13px;">
+                <div style="text-align:center;">
+                    <p>Lineage graph available at <a href="/lineage" style="color:var(--amber);">/lineage</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid ExecutionId { get; set; }
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private Microsoft.Extensions.Logging.ILoggerFactory? LoggerFactory { get; set; }
+
+    private ProjectApiClient? _projectApi;
+    private ProjectExecutionStatusNode? _statusRoot;
+    private string? _overallStatus;
+    private bool _isCompleted;
+    private System.Threading.Timer? _pollTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _projectApi = new ProjectApiClient(HttpClientFactory.CreateClient("ProjectClient"), LoggerFactory?.CreateLogger<ProjectApiClient>()!);
+
+        await RefreshStatus();
+
+        // Why: Poll every 5 seconds for status. Project execution has no server-side realtime
+        // broadcast path — only pipeline-level executions broadcast (via PipelineStatusHub) — so
+        // polling is the status source here, not a SignalR fallback.
+        _pollTimer = new System.Threading.Timer(
+            async _ => await InvokeAsync(async () => { await RefreshStatus(); StateHasChanged(); }),
+            null,
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromSeconds(5));
+    }
+
+    private async Task RefreshStatus()
+    {
+        if (_projectApi is null) return;
+
+        try
+        {
+            var result = await _projectApi.GetExecutionStatus(ExecutionId);
+            if (result.IsSuccess && result.Value is not null)
+            {
+                _statusRoot = result.Value;
+                _overallStatus = _statusRoot.RollupState;
+                _isCompleted = string.Equals(_overallStatus, "Completed", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(_overallStatus, "Failed", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(_overallStatus, "Cancelled", StringComparison.OrdinalIgnoreCase);
+
+                if (_isCompleted && _pollTimer is not null)
+                {
+                    await _pollTimer.DisposeAsync();
+                    _pollTimer = null;
+                }
+            }
+        }
+        catch
+        {
+            // Why: Transient failure — next poll will retry.
+        }
+    }
+
+    private async Task CancelExecution()
+    {
+        if (_projectApi is null) return;
+        await _projectApi.CancelExecution(ExecutionId);
+        await RefreshStatus();
+    }
+
+    // Why: Recursive render method for arbitrary-depth status trees (Project → Stage → Step → Pipeline).
+    private RenderFragment RenderNode(ProjectExecutionStatusNode node, int depth) => builder =>
+    {
+        var indent = depth * 12;
+        var statusClass = GetStatusStyle(node.RollupState);
+        var typeName = node.ExecutionItem?.Name ?? "—";
+
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "act-row");
+        builder.AddAttribute(2, "style", $"display:flex;align-items:flex-start;gap:9px;padding:7px 0;font-size:12px;border-bottom:1px solid var(--hair);padding-left:{indent}px");
+
+        // Status dot
+        builder.OpenElement(3, "div");
+        builder.AddAttribute(4, "style", $"width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0;background:{GetDotColor(node.RollupState)};");
+        builder.CloseElement();
+
+        builder.OpenElement(6, "div");
+        builder.AddAttribute(7, "style", "display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;");
+
+        builder.OpenElement(8, "span");
+        builder.AddAttribute(9, "class", "mono");
+        builder.AddAttribute(10, "style", "color:var(--n-200);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;");
+        builder.AddContent(11, typeName);
+        builder.CloseElement();
+
+        builder.OpenElement(12, "span");
+        builder.AddAttribute(13, "class", "mono");
+        builder.AddAttribute(14, "style", $"font-size:10px;{statusClass}");
+        builder.AddContent(15, node.RollupState);
+        builder.CloseElement();
+
+        builder.CloseElement(); // inner div
+
+        builder.CloseElement(); // outer div
+
+        // Children
+        foreach (var child in node.Children)
+        {
+            builder.AddContent(16, RenderNode(child, depth + 1));
+        }
+    };
+
+    // Why: Status strings map to console.css badge classes for the header chip.
+    private static string GetStatusBadge(string? status) => status switch
+    {
+        "Completed" => "b-ok",
+        "Failed" => "b-fail",
+        "Running" => "b-run",
+        "Cancelled" => "b-idle",
+        "AwaitingApproval" => "b-warn",
+        _ => "b-idle"
+    };
+
+    // Why: Inline color style for the tree-node status label (RenderTreeBuilder can't use badge spans cleanly here).
+    private static string GetStatusStyle(string? status) => status switch
+    {
+        "Completed" => "color:var(--success);",
+        "Failed" => "color:var(--signal);",
+        "Running" => "color:var(--warn);",
+        "Cancelled" => "color:var(--n-400);",
+        "AwaitingApproval" => "color:var(--violet);",
+        _ => "color:var(--n-500);"
+    };
+
+    // Why: status maps to a console.css CSS-var color for the inline status dot background.
+    private static string GetDotColor(string? status) => status switch
+    {
+        "Completed" => "var(--success)",
+        "Failed" => "var(--signal)",
+        "Running" => "var(--warn)",
+        "Cancelled" => "var(--n-500)",
+        "AwaitingApproval" => "var(--violet)",
+        _ => "var(--n-600)"
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_pollTimer is not null) await _pollTimer.DisposeAsync();
+    }
+}

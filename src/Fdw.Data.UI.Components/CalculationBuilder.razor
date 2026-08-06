@@ -1,0 +1,351 @@
+@namespace Fdw.Data.UI.Components
+@using Fdw.Data.Components.Visualization
+@using Fdw.Services.Calculations
+@using Fdw.Services.Calculations.Abstractions
+
+@if (Context is null)
+{
+    <div class="empty">Visualization context not available.</div>
+}
+else
+{
+    <div class="card">
+        <div class="card-h">
+            <h3>Add Calculation</h3>
+        </div>
+        <div class="card-b">
+
+            @* ── Operation picker ─────────────────────────────────────────────── *@
+            <div class="frow" style="margin-bottom:16px;">
+                @* Why: OptionPicker over CalculationOperationTypes.All() replaces the old
+                   CalculationTypes picker and drives parameter rendering below (FDW convention
+                   — no free-text, no switch on type strings). *@
+                <OptionPicker TTypeOption="ICalculationOperation"
+                              StaticOptions="@CalculationOperationTypes.All()"
+                              Value="@_selectedOperationName"
+                              ValueChanged="@OnOperationChanged"
+                              Label="Operation"
+                              Required="true" />
+            </div>
+
+            @* ── Operation description ────────────────────────────────────────── *@
+            @if (_selectedOperation is not null && !string.IsNullOrEmpty(_selectedOperation.Description))
+            {
+                <p class="fhint" style="margin-bottom:12px;">@_selectedOperation.Description</p>
+            }
+
+            @* ── Per-parameter inputs (driven by ICalculationOperation.Parameters) ─ *@
+            @if (_selectedOperation is not null && _selectedOperation.Parameters.Count > 0)
+            {
+                <div class="fgrid" style="margin-bottom:8px;">
+                    @foreach (var param in _selectedOperation.Parameters)
+                    {
+                        var paramName = param.Name;
+                        <div class="frow" style="margin-bottom:8px;">
+
+                            @if (string.Equals(param.Kind, "Scalar", StringComparison.Ordinal))
+                            {
+                                @* Scalar → free-text input; numeric validation handled in Validate() *@
+                                <label class="flbl">
+                                    @param.DisplayName
+                                    @if (param.IsRequired) { <span style="color:var(--signal);margin-left:2px;">*</span> }
+                                </label>
+                                <input class="fin"
+                                       placeholder="@(param.HelpText ?? param.DisplayName)"
+                                       value="@GetParam(paramName)"
+                                       @onchange="@(e => SetParam(paramName, e.Value?.ToString() ?? string.Empty))" />
+                            }
+                            else if (string.Equals(param.Kind, "Field", StringComparison.Ordinal))
+                            {
+                                @* Field → column picker dropdown *@
+                                <label class="flbl">
+                                    @param.DisplayName
+                                    @if (param.IsRequired) { <span style="color:var(--signal);margin-left:2px;">*</span> }
+                                </label>
+                                <select class="fin"
+                                        value="@GetParam(paramName)"
+                                        @onchange="@(e => SetParam(paramName, e.Value?.ToString() ?? string.Empty))">
+                                    <option value="">@(param.HelpText ?? $"Select field for {param.DisplayName}...")</option>
+                                    @if (Context.Data?.Columns is not null)
+                                    {
+                                        @foreach (var col in Context.Data.Columns)
+                                        {
+                                            <option value="@col.Name">@col.Name</option>
+                                        }
+                                    }
+                                </select>
+                            }
+                            else if (string.Equals(param.Kind, "FieldArray", StringComparison.Ordinal))
+                            {
+                                @* FieldArray → multi-select checkboxes *@
+                                <label class="flbl" style="margin-bottom:6px;">
+                                    @param.DisplayName
+                                    @if (param.IsRequired) { <span style="color:var(--signal);margin-left:2px;">*</span> }
+                                </label>
+                                @if (param.HelpText is not null)
+                                {
+                                    <p class="fhint" style="margin-bottom:4px;">@param.HelpText</p>
+                                }
+                                <div class="finput" style="max-height:8rem;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
+                                    @if (Context.Data?.Columns is null || Context.Data.Columns.Count == 0)
+                                    {
+                                        <p class="fhint mono">No columns available.</p>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var col in Context.Data.Columns)
+                                        {
+                                            var colName = col.Name;
+                                            var selected = IsFieldArraySelected(paramName, colName);
+                                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                                <input type="checkbox"
+                                                       style="width:14px;height:14px;accent-color:var(--amber);"
+                                                       checked="@selected"
+                                                       @onchange="@(e => ToggleFieldArray(paramName, colName, (bool)(e.Value ?? false)))" />
+                                                <span class="mono" style="color:@(selected ? "var(--n-200)" : "var(--n-400)");">@colName</span>
+                                            </label>
+                                        }
+                                    }
+                                </div>
+                            }
+                            else if (string.Equals(param.Kind, "DataSet", StringComparison.Ordinal))
+                            {
+                                @* DataSet → EntityPicker<string> with async name search *@
+                                <label class="flbl">
+                                    @param.DisplayName
+                                    @if (param.IsRequired) { <span style="color:var(--signal);margin-left:2px;">*</span> }
+                                </label>
+                                @if (DataSetSearch is not null)
+                                {
+                                    <EntityPicker TItem="string"
+                                                  Value="@GetParam(paramName)"
+                                                  ValueChanged="@(v => SetParam(paramName, v ?? string.Empty))"
+                                                  SearchSource="@DataSetSearch"
+                                                  LabelSelector="@(name => name)"
+                                                  LabelText="@param.HelpText"
+                                                  Placeholder="@($"Search DataSets for {param.DisplayName}...")"
+                                                  Required="@param.IsRequired" />
+                                }
+                                else
+                                {
+                                    @* Fallback: plain text input when no DataSet search delegate is wired *@
+                                    <input class="fin"
+                                           placeholder="@(param.HelpText ?? "DataSet name")"
+                                           value="@GetParam(paramName)"
+                                           @onchange="@(e => SetParam(paramName, e.Value?.ToString() ?? string.Empty))" />
+                                }
+                            }
+
+                            @* Per-parameter inline error *@
+                            @if (_paramErrors.TryGetValue(paramName, out var paramErr) && !string.IsNullOrEmpty(paramErr))
+                            {
+                                <span class="ferr">@paramErr</span>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+            @* ── Output column name ───────────────────────────────────────────── *@
+            <div class="frow" style="margin-bottom:8px;">
+                <label class="flbl">Output Column Name <span style="color:var(--signal);margin-left:2px;">*</span></label>
+                <input class="fin" placeholder="e.g. total_amount" @bind="_outputColumn" />
+                @if (_paramErrors.TryGetValue("__output", out var outErr) && !string.IsNullOrEmpty(outErr))
+                {
+                    <span class="ferr">@outErr</span>
+                }
+            </div>
+
+            @* ── Summary validation error ─────────────────────────────────────── *@
+            @if (!string.IsNullOrEmpty(_validationError))
+            {
+                <div class="alert alert-err" style="margin-bottom:16px;">@_validationError</div>
+            }
+
+            <div class="card-h" style="padding:14px 0 0;border-top:1px solid var(--hair);justify-content:flex-end;">
+                <div class="actions">
+                    <button class="btn btn-primary btn-sm" @onclick="AddCalculation" disabled="@(!CanSubmit)">Add Calculation</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>The visualization context that drives column options and the add callback.</summary>
+    [Parameter] public VisualizationContext? Context { get; set; }
+
+    /// <summary>
+    /// Optional async DataSet name search delegate for <c>DataSet</c>-kind parameters.
+    /// Signature: (searchTerm, skip, take, ct) → IReadOnlyList&lt;string&gt;.
+    /// When not provided, DataSet parameters render as plain text inputs.
+    /// </summary>
+    [Parameter] public Func<string, int, int, CancellationToken, Task<IReadOnlyList<string>>>? DataSetSearch { get; set; }
+
+    // ── Local state ────────────────────────────────────────────────────────────────
+
+    // Why: operation selection is tracked by name (TypeCollection key) not instance ref so
+    // re-render after parameter changes doesn't lose the OptionPicker selection.
+    private string _selectedOperationName = string.Empty;
+    private ICalculationOperation? _selectedOperation;
+
+    // Why: parameter values are stored as string→string (matching ColumnCalculation.Parameters)
+    // so they round-trip cleanly without type-specific deserialization in the UI layer.
+    private readonly Dictionary<string, string> _paramValues = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _paramErrors = new(StringComparer.Ordinal);
+
+    private string _outputColumn = string.Empty;
+    private string? _validationError;
+
+    // ── Derived ────────────────────────────────────────────────────────────────────
+
+    private bool CanSubmit
+    {
+        get
+        {
+            if (_selectedOperation is null) return false;
+            if (string.IsNullOrWhiteSpace(_outputColumn)) return false;
+            foreach (var param in _selectedOperation.Parameters)
+            {
+                if (!param.IsRequired) continue;
+                _paramValues.TryGetValue(param.Name, out var v);
+                if (string.IsNullOrWhiteSpace(v)) return false;
+            }
+            return true;
+        }
+    }
+
+    // ── Event handlers ─────────────────────────────────────────────────────────────
+
+    private void OnOperationChanged(string? name)
+    {
+        if (string.IsNullOrEmpty(name)) return;
+
+        _selectedOperationName = name;
+
+        var op = CalculationOperationTypes.ByName(name);
+        // Why: ByName returns the NotFound sentinel, not null — compare with NotFound.
+        _selectedOperation = op == CalculationOperationTypes.NotFound ? null : op;
+
+        // Clear prior parameter values/errors so stale state from the previous operation
+        // doesn't bleed into the newly-selected one.
+        _paramValues.Clear();
+        _paramErrors.Clear();
+        _validationError = null;
+    }
+
+    private string GetParam(string paramName)
+    {
+        _paramValues.TryGetValue(paramName, out var v);
+        // Why: empty string is the correct UI binding default for an unset input — this is
+        // display state, not a configuration fallback. The submit path checks IsNullOrWhiteSpace
+        // independently, so no data logic depends on this return value.
+        return v is not null ? v : string.Empty;
+    }
+
+    private void SetParam(string paramName, string value)
+    {
+        _paramValues[paramName] = value;
+        // Clear per-field error on edit so the user gets immediate feedback relief.
+        _paramErrors.Remove(paramName);
+        _validationError = null;
+    }
+
+    // ── FieldArray helpers ─────────────────────────────────────────────────────────
+
+    private bool IsFieldArraySelected(string paramName, string colName)
+    {
+        _paramValues.TryGetValue(paramName, out var raw);
+        if (string.IsNullOrEmpty(raw)) return false;
+        return raw.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                  .Any(f => string.Equals(f.Trim(), colName, StringComparison.Ordinal));
+    }
+
+    private void ToggleFieldArray(string paramName, string colName, bool add)
+    {
+        _paramValues.TryGetValue(paramName, out var raw);
+        var parts = (raw ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(f => f.Trim())
+            .Where(f => !string.IsNullOrEmpty(f))
+            .ToList();
+
+        if (add)
+        {
+            if (!parts.Any(f => string.Equals(f, colName, StringComparison.Ordinal)))
+                parts.Add(colName);
+        }
+        else
+        {
+            parts.RemoveAll(f => string.Equals(f, colName, StringComparison.Ordinal));
+        }
+
+        _paramValues[paramName] = string.Join(",", parts);
+        _paramErrors.Remove(paramName);
+        _validationError = null;
+    }
+
+    // ── Validation ─────────────────────────────────────────────────────────────────
+
+    private bool ValidateAll()
+    {
+        _paramErrors.Clear();
+        _validationError = null;
+        var valid = true;
+
+        if (_selectedOperation is null)
+        {
+            _validationError = "An operation must be selected.";
+            return false;
+        }
+
+        foreach (var param in _selectedOperation.Parameters)
+        {
+            if (!param.IsRequired) continue;
+            _paramValues.TryGetValue(param.Name, out var v);
+            if (string.IsNullOrWhiteSpace(v))
+            {
+                _paramErrors[param.Name] = $"{param.DisplayName} is required.";
+                valid = false;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(_outputColumn))
+        {
+            _paramErrors["__output"] = "Output column name is required.";
+            valid = false;
+        }
+
+        if (!valid)
+            _validationError = "Please fill in all required fields.";
+
+        return valid;
+    }
+
+    // ── Add ────────────────────────────────────────────────────────────────────────
+
+    private async Task AddCalculation()
+    {
+        if (Context is null) return;
+        if (!ValidateAll()) return;
+
+        var calc = new ColumnCalculation
+        {
+            // Why: Operation carries the TypeCollection name used by CalculationOperationTypes.ByName
+            // at execution time — same round-trip key the form captured via OptionPicker.
+            Operation = _selectedOperationName,
+            OutputColumn = _outputColumn,
+            Parameters = new System.Collections.Generic.Dictionary<string, string>(_paramValues, StringComparer.Ordinal)
+        };
+
+        await Context.OnAddCalculation.Invoke(calc);
+
+        // Reset form state for the next entry.
+        _selectedOperationName = string.Empty;
+        _selectedOperation = null;
+        _paramValues.Clear();
+        _paramErrors.Clear();
+        _outputColumn = string.Empty;
+        _validationError = null;
+    }
+}

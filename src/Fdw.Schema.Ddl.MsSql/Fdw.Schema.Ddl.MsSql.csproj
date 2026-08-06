@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- NuGet Package Information -->
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageId>Fdw.Schema.Ddl.MsSql</PackageId>
+    <Authors>Fdw</Authors>
+    <Description>SQL Server DDL generator for database schema generation</Description>
+    <PackageTags>schema;ddl;database;sql;mssql;sqlserver;migration</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Fdw.Schema.Ddl.MsSql.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Schema.Ddl\Fdw.Schema.Ddl.csproj" />
+    <ProjectReference Include="..\Fdw.Schema.Abstractions\Fdw.Schema.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+  </ItemGroup>
+</Project>

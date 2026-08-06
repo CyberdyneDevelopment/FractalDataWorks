@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>    <!-- Target Framework -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+
+    <!-- Language and Compiler Settings -->
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);SA1202;SA1201;SA1208;MA0048;MA0016;MA0051;</NoWarn>
+
+    <!-- Code Analysis -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+
+    <!-- CodeFix Package Configuration -->
+    <IsPackable>false</IsPackable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeBuildOutput>true</IncludeBuildOutput>
+    <DevelopmentDependency>true</DevelopmentDependency>
+
+    <!-- Build Settings -->
+    <Deterministic>true</Deterministic>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- Package Management -->
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <EnablePackageValidation>false</EnablePackageValidation>
+
+    <!-- NuGet Package Properties -->
+    <PackageTags>codefixes;conventions;roslyn;code-analysis</PackageTags>
+    <PackageDescription>Roslyn code fixes for Fdw code conventions including move-type-to-file.</PackageDescription>
+
+    <!-- Strong Naming -->
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile Condition="Exists('$(MSBuildThisFileDirectory)..\..\Fdw.snk')">$(MSBuildThisFileDirectory)..\..\Fdw.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" PrivateAssets="All" />
+  </ItemGroup>
+</Project>

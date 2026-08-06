@@ -1,0 +1,236 @@
+@namespace Fdw.Data.Components.Annotations
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Catalog.Clients
+@using Fdw.Services.Catalog.Clients.Models
+@using Fdw.Results
+@using Fdw.Data.Components.Logging
+@using System.Net.Http
+
+@*
+    Headless component that provides DataSet annotation management logic and state.
+*@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for DataSet annotation operations. Owns list loading,
+    /// create, delete, and resolve logic. No UI markup.
+    /// </summary>
+    /// <remarks>
+    /// Headless chain:
+    /// <list type="bullet">
+    ///   <item><description>Consumer (before): page shells with markup and ctx.OnXxx() calls</description></item>
+    ///   <item><description>This (provider): <see cref="AnnotationProvider"/> — owns all state and logic, exposes via <see cref="AnnotationContext"/></description></item>
+    ///   <item><description>Context (after): <see cref="AnnotationContext"/> — sealed; passed to consumer RenderFragment</description></item>
+    /// </list>
+    /// </remarks>
+    [Parameter, EditorRequired] public string DataSetName { get; set; } = string.Empty;
+    [Parameter] public RenderFragment<AnnotationContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private CatalogApiClient? _catalogApi;
+    [Inject] private ILogger<AnnotationProvider>? LoggerParam { get; set; }
+
+    private ILogger<AnnotationProvider> _logger = NullLogger<AnnotationProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<DataSetAnnotationPayload> _annotations = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private AnnotationContext _context = new();
+    private string? _loadedDataSetName;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _catalogApi = new CatalogApiClient(HttpClientFactory.CreateClient("CatalogClient"), LoggerFactory?.CreateLogger<CatalogApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<AnnotationProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrEmpty(DataSetName) || string.Equals(DataSetName, _loadedDataSetName, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _loadedDataSetName = DataSetName;
+        await LoadAnnotations();
+    }
+
+    // ── Methods (exposed as callbacks via AnnotationContext) ────────────────
+
+    private async Task<IGenericResult> LoadAnnotations(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _catalogApi!.GetAnnotations(DataSetName, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _annotations = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(AnnotationProviderLog.LoadAnnotationsFailed(_logger, DataSetName));
+                _annotations = [];
+            }
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            return ProviderContextBase.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(AnnotationProviderLog.LoadAnnotationsException(_logger, ex));
+            _annotations = [];
+            return _lastResult;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task CreateAnnotation(CreateAnnotationRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _catalogApi!.CreateAnnotation(DataSetName, request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadAnnotations(cancellationToken);
+                return;
+            }
+
+            _lastResult = GenericResult.Failure(AnnotationProviderLog.CreateAnnotationFailed(_logger, DataSetName));
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(AnnotationProviderLog.CreateAnnotationException(_logger, ex));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteAnnotation(Guid annotationId, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _catalogApi!.DeleteAnnotation(annotationId, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadAnnotations(cancellationToken);
+                return;
+            }
+
+            _lastResult = GenericResult.Failure(AnnotationProviderLog.DeleteAnnotationFailed(_logger, annotationId));
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(AnnotationProviderLog.DeleteAnnotationException(_logger, ex));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ResolveAnnotation(Guid annotationId, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _catalogApi!.ResolveAnnotation(annotationId, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadAnnotations(cancellationToken);
+                return;
+            }
+
+            _lastResult = GenericResult.Failure(AnnotationProviderLog.ResolveAnnotationFailed(_logger, annotationId));
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(AnnotationProviderLog.ResolveAnnotationException(_logger, ex));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new AnnotationContext
+        {
+            Annotations = _annotations,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnCreate = request => CreateAnnotation(request),
+            OnDelete = id => DeleteAnnotation(id),
+            OnResolve = id => ResolveAnnotation(id),
+            OnRefresh = () => LoadAnnotations()
+        };
+    }
+}

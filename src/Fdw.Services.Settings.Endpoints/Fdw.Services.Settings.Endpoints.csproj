@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.Services.Settings.Endpoints</RootNamespace>
+
+    <!-- NuGet Package Properties -->
+    <PackageId>Fdw.Services.Settings.Endpoints</PackageId>
+    <Title>Fdw.Services.Settings.Endpoints</Title>
+    <Description>Generic endpoint base classes and DTOs for managing layered settings via FastEndpoints.</Description>
+    <Authors>Fdw</Authors>
+    <PackageTags>fdw;endpoints;settings;api;fastendpoints</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Web.RestEndpoints\Fdw.Web.RestEndpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Fdw.Hosting\Fdw.Hosting.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FastEndpoints" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+
+</Project>

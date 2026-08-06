@@ -1,0 +1,92 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Fdw.Data.Abstractions;
+using Fdw.Results;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Authorization.Commands;
+using Fdw.Services.Authorization.Configuration;
+using Fdw.Services.Authorization.Logging;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+
+namespace Fdw.Services.Authorization;
+
+/// <summary>
+/// Domain configuration provider for user-role assignments.
+/// Thin wrapper over <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> with a by-user convenience method.
+/// </summary>
+public class UserRoleConfigurationProvider : DefaultConfigurationProvider<UserRoleConfiguration, UserRoleConfigurationCommand>
+{
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Registers this provider (and its interface forwards) as the domain's canonical singletons,
+    /// targeting this domain's own default location. To override, call <c>SetConfiguration</c> on
+    /// the resolved singleton — never register a second time with different arguments.
+    /// </summary>
+    /// <remarks>Same cascade rationale as <see cref="RoleConfigurationProvider.RegisterDomainConfiguration"/>.</remarks>
+    public static IServiceCollection RegisterDomainConfiguration(IServiceCollection services)
+    {
+        services.TryAddSingleton<UserRoleConfigurationProvider>(sp =>
+            new UserRoleConfigurationProvider(
+                sp.GetService<ILogger<UserRoleConfigurationProvider>>(),
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+        services.TryAddSingleton<DefaultConfigurationProvider<UserRoleConfiguration, Fdw.Services.Authorization.Commands.UserRoleConfigurationCommand>>(
+            sp => sp.GetRequiredService<UserRoleConfigurationProvider>());
+        services.TryAddSingleton<IServiceConfigurationProvider<UserRoleConfiguration>>(
+            sp => sp.GetRequiredService<UserRoleConfigurationProvider>());
+        return services;
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="UserRoleConfigurationProvider"/> class.</summary>
+    public UserRoleConfigurationProvider(
+        ILogger<UserRoleConfigurationProvider>? logger,
+        Lazy<IConfigurationGateway> lazyGateway,
+        string dataStoreName = "ConfigurationDb",
+        string pathName = "authz",
+        Lazy<ICacheInvalidator?>? invalidator = null)
+        : base(logger ?? NullLogger<UserRoleConfigurationProvider>.Instance,
+               lazyGateway,
+               dataStoreName, pathName,
+               invalidator)
+    {
+        _logger = logger ?? NullLogger<UserRoleConfigurationProvider>.Instance;
+    }
+
+    /// <summary>
+    /// Gets all user-role assignments for a specific user.
+    /// Returns a failure result if the underlying provider fails — callers must treat failure as
+    /// an authorization denial (fail-closed).
+    /// </summary>
+    public virtual async Task<IGenericResult<IReadOnlyList<UserRoleConfiguration>>> GetByUser(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        var allResult = await Get(cancellationToken).ConfigureAwait(false);
+        if (!allResult.IsSuccess || allResult.Value is null)
+            // Why: FDW-532 — failing to load user role assignments must propagate as a failure
+            // result, not silently become an empty list. Callers must fail-closed on this.
+            // ToNewResult() preserves the full error chain from the underlying Get() failure.
+            return allResult.ToNewResult<IReadOnlyList<UserRoleConfiguration>>();
+
+        // Why: FDW-532 follow-up — userId (token subject) and the stored authz.UserRole.UserId are
+        // both GUIDs but differ in case (the DB stores uppercase; Guid.ToString() emits lowercase),
+        // so a case-SENSITIVE Ordinal compare matched nobody and zeroed every user's roles (admin
+        // included). GUID identity is case-insensitive — compare with OrdinalIgnoreCase.
+        var filtered = allResult.Value
+            .Where(ur => string.Equals(ur.UserId, userId, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        UserRoleConfigurationProviderLog.UserRolesForUserLoaded(_logger, filtered.Count, userId);
+        return GenericResult<IReadOnlyList<UserRoleConfiguration>>.Success(filtered);
+    }
+}

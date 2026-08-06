@@ -1,0 +1,341 @@
+@namespace Fdw.Data.UI.Components.DataCommand
+@using Fdw.UI.Providers
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Text.Json
+@using System.Threading
+@using System.Threading.Tasks
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using Fdw.Results
+@using Fdw.Services.Data.Clients
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Data.UI.Components.Logging
+@using Fdw.UI.CommandBuilders.Abstractions
+@implements ICommandBuilderProvider<DataCommandSpec>
+@implements IAsyncDisposable
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    // ── Parameters ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The name of the connection whose schema metadata drives the container pickers.
+    /// Mutually exclusive with <see cref="DataStoreName"/> — if both are set, DataStoreName wins.
+    /// </summary>
+    [Parameter] public string? ConnectionName { get; set; }
+
+    /// <summary>
+    /// The name of the DataStore whose containers populate the pickers.
+    /// Takes precedence over <see cref="ConnectionName"/> when both are set.
+    /// </summary>
+    [Parameter] public string? DataStoreName { get; set; }
+
+    /// <summary>The initial command spec JSON (from task.Configuration["CommandSpec"]).</summary>
+    [Parameter] public string? InitialCommandJson { get; set; }
+
+    /// <summary>Raised when the command spec changes; carries the updated JSON string.</summary>
+    [Parameter] public EventCallback<string> CommandJsonChanged { get; set; }
+
+    /// <summary>Skin content receiving the fully-populated <see cref="DataCommandContext"/>.</summary>
+    [Parameter] public RenderFragment<DataCommandContext>? ChildContent { get; set; }
+
+    // ── Injected services ──────────────────────────────────────────────────────
+
+    [Inject] private DataStoreApiClient DataStoreApi { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    // ── Internal state ─────────────────────────────────────────────────────────
+
+    private ILogger _logger = NullLogger.Instance;
+    private DataCommandContext _context = new();
+    private DataCommandSpec _spec = new();
+    private List<DataContainerSummary> _containers = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private CancellationTokenSource _cts = new();
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        _logger = LoggerFactory?.CreateLogger<DataCommandProvider>()
+            ?? NullLogger<DataCommandProvider>.Instance;
+
+        // Why: parse initial JSON before loading containers so the spec is ready
+        // when the context is first built and passed to the skin.
+        if (!string.IsNullOrEmpty(InitialCommandJson))
+        {
+            try
+            {
+                _spec = JsonSerializer.Deserialize<DataCommandSpec>(
+                    InitialCommandJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                    ?? new DataCommandSpec();
+            }
+            catch
+            {
+                // Why: fall back to empty spec — malformed JSON should not crash the builder.
+                _spec = new DataCommandSpec();
+            }
+        }
+
+        await LoadContainersAsync(_cts.Token).ConfigureAwait(false);
+        RebuildContext();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Why: only reload when the data source key changes to avoid thrashing on parent re-renders.
+        var key = DataStoreName ?? ConnectionName ?? string.Empty;
+        if (!string.Equals(key, _lastLoadKey, StringComparison.Ordinal))
+        {
+            _lastLoadKey = key;
+            await LoadContainersAsync(_cts.Token).ConfigureAwait(false);
+            RebuildContext();
+        }
+    }
+
+    private string _lastLoadKey = string.Empty;
+
+    // ── Container loading ──────────────────────────────────────────────────────
+
+    private async Task LoadContainersAsync(CancellationToken ct)
+    {
+        var sourceName = DataStoreName ?? ConnectionName ?? string.Empty;
+        if (string.IsNullOrEmpty(sourceName))
+        {
+            _containers = [];
+            return;
+        }
+
+        _isLoading = true;
+        DataCommandProviderLog.Initializing(_logger, sourceName);
+
+        try
+        {
+            // Why: load from DataStore metadata (data.DataContainer + data.DataContainerField).
+            // This is the coordination-specified path: no live schema introspection at build time.
+            var storeResult = await DataStoreApi.GetDataStore(sourceName, ct).ConfigureAwait(false);
+
+            if (!storeResult.IsSuccess || storeResult.Value == null)
+            {
+                DataCommandProviderLog.NoContainersFound(_logger, sourceName);
+                _containers = [];
+                _lastResult = storeResult;
+                return;
+            }
+
+            var store = storeResult.Value;
+            DataCommandProviderLog.LoadingContainers(_logger, store.Name);
+
+            var containers = new List<DataContainerSummary>();
+            foreach (var path in store.Paths ?? [])
+            {
+                foreach (var c in path.Containers ?? [])
+                {
+                    containers.Add(new DataContainerSummary
+                    {
+                        Id = c.Id,
+                        Name = c.Name,
+                        ContainerType = c.ContainerType,
+                        DataStoreName = store.Name,
+                        PathName = path.Name,
+                        Fields = (c.Fields ?? []).Select(f => new DataFieldSummary
+                        {
+                            Id = f.Id,
+                            Name = f.Name,
+                            DataType = f.NativeDataType,
+                            IsNullable = f.IsNullable,
+                        }).ToList(),
+                    });
+                }
+            }
+
+            _containers = containers;
+            _lastResult = null;
+            DataCommandProviderLog.ContainersLoaded(_logger, containers.Count, store.Name);
+        }
+        catch (OperationCanceledException)
+        {
+            // Why: silent return on cancellation — component is navigating away.
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataCommandProviderLog.LoadContainersFailed(_logger, ex, sourceName));
+            _containers = [];
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    // ── Context construction ───────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new DataCommandContext
+        {
+            CurrentSpec = _spec,
+            CurrentKind = _spec.Kind,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnChanged = async spec =>
+            {
+                _spec = spec;
+                RebuildContext();
+                await NotifyChangedAsync().ConfigureAwait(false);
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            },
+            AvailableContainers = _containers,
+
+            // Callbacks — each mutates _spec and rebuilds context + fires notification.
+            SetKind = async kind =>
+            {
+                _spec.Kind = kind;
+                DataCommandProviderLog.SpecChanged(_logger, kind.ToString());
+                RebuildContext();
+                await NotifyChangedAsync().ConfigureAwait(false);
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            },
+            SetFromContainer = async (containerId, alias) =>
+            {
+                _spec.From = new DataCommandFrom { ContainerId = containerId, Alias = alias };
+                RebuildContext();
+                await NotifyChangedAsync().ConfigureAwait(false);
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            },
+            AddJoin = async join =>
+            {
+                _spec.Joins.Add(join);
+                RebuildContext();
+                await NotifyChangedAsync().ConfigureAwait(false);
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            },
+            RemoveJoin = async idx =>
+            {
+                if (idx >= 0 && idx < _spec.Joins.Count)
+                    _spec.Joins.RemoveAt(idx);
+                RebuildContext();
+                await NotifyChangedAsync().ConfigureAwait(false);
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            },
+            SetFields = async fields =>
+            {
+                _spec.Fields = fields.ToList();
+                RebuildContext();
+                await NotifyChangedAsync().ConfigureAwait(false);
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            },
+            SetFilter = async filter =>
+            {
+                _spec.Filter = filter;
+                RebuildContext();
+                await NotifyChangedAsync().ConfigureAwait(false);
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            },
+            SetPaging = async paging =>
+            {
+                _spec.Paging = paging;
+                RebuildContext();
+                await NotifyChangedAsync().ConfigureAwait(false);
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            },
+            SetSort = async sort =>
+            {
+                _spec.Sort = sort.ToList();
+                RebuildContext();
+                await NotifyChangedAsync().ConfigureAwait(false);
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            },
+            SetTarget = async containerId =>
+            {
+                _spec.Target = new DataCommandTarget { ContainerId = containerId };
+                RebuildContext();
+                await NotifyChangedAsync().ConfigureAwait(false);
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            },
+            SetSetClauses = async clauses =>
+            {
+                _spec.Set = clauses.ToList();
+                RebuildContext();
+                await NotifyChangedAsync().ConfigureAwait(false);
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            },
+            SetValues = async values =>
+            {
+                _spec.Values = values.ToList();
+                RebuildContext();
+                await NotifyChangedAsync().ConfigureAwait(false);
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            },
+            SetKeyFields = async keyFields =>
+            {
+                _spec.KeyFields = keyFields.ToList();
+                RebuildContext();
+                await NotifyChangedAsync().ConfigureAwait(false);
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            },
+            SetBatchSize = async batchSize =>
+            {
+                _spec.BatchSize = batchSize;
+                RebuildContext();
+                await NotifyChangedAsync().ConfigureAwait(false);
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            },
+        };
+    }
+
+    private async Task NotifyChangedAsync()
+    {
+        if (CommandJsonChanged.HasDelegate)
+        {
+            var json = await Serialize().ConfigureAwait(false);
+            await CommandJsonChanged.InvokeAsync(json).ConfigureAwait(false);
+        }
+    }
+
+    // ── ICommandBuilderProvider<DataCommandSpec> ───────────────────────────────
+
+    /// <inheritdoc />
+    public Task<bool> Validate(CancellationToken cancellationToken = default)
+    {
+        // Why: basic structural check — From must be set for Query; Target for writes.
+        var valid = _spec.Kind switch
+        {
+            "Query" => _spec.From?.ContainerId != Guid.Empty,
+            "Insert" or "Update" or "Upsert"
+                or "BulkInsert" or "BulkUpsert"
+                => _spec.Target?.ContainerId != Guid.Empty,
+            _ => true
+        };
+        return Task.FromResult(valid);
+    }
+
+    /// <inheritdoc />
+    public Task<string> Serialize(CancellationToken cancellationToken = default)
+    {
+        DataCommandProviderLog.SerializingSpec(_logger, _spec.Kind.ToString());
+        var json = JsonSerializer.Serialize(_spec, new JsonSerializerOptions
+        {
+            WriteIndented = false,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+        });
+        return Task.FromResult(json);
+    }
+
+    // ── IAsyncDisposable ───────────────────────────────────────────────────────
+
+    public async ValueTask DisposeAsync()
+    {
+        await _cts.CancelAsync().ConfigureAwait(false);
+        _cts.Dispose();
+    }
+}

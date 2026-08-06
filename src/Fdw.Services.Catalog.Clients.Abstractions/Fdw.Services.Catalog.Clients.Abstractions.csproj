@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.Services.Catalog.Clients</RootNamespace>
+    <PackageId>Fdw.Services.Catalog.Clients.Abstractions</PackageId>
+    <Title>Fdw Catalog Client Abstractions</Title>
+    <Description>DTO models for catalog API client operations.</Description>
+  </PropertyGroup>
+</Project>

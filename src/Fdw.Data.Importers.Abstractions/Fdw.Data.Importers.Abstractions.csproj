@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Fdw.Data.SchemaImporters.Abstractions</RootNamespace>
+    <AssemblyName>Fdw.Data.SchemaImporters.Abstractions</AssemblyName>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+
+
+    <!-- Source Generators -->
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Services.Connections\Fdw.Services.Connections.csproj" />
+  </ItemGroup>
+
+</Project>

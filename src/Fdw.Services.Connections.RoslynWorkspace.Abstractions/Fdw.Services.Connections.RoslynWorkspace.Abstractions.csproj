@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Services.Connections.Abstractions\Fdw.Services.Connections.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Configuration.Abstractions\Fdw.Configuration.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Results.Abstractions\Fdw.Results.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <!-- Why: IRoslynWorkspaceClient.GetSymbolSource returns RawText / RawTextLineRange which now
+         live in Data.Abstractions after the Connectors subsystem was deleted. -->
+    <ProjectReference Include="..\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+</Project>

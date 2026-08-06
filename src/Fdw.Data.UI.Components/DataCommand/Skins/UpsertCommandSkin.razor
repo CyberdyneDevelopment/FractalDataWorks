@@ -1,0 +1,90 @@
+@namespace Fdw.Data.UI.Components.DataCommand.Skins
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.UI.CommandBuilders.Abstractions
+
+@* Upsert command skin — Target container + Key fields + SET clauses + match filter.
+   Tailwind-only. *@
+
+@if (Context is null)
+{
+    <div class="fhint mono">No command context.</div>
+}
+else
+{
+    <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="frow" style="margin-bottom:0;">
+            <label class="flbl">Target Container</label>
+            <DataContainerPicker Containers="@Context.AvailableContainers"
+                                 SelectedContainerId="@_targetId"
+                                 SelectedContainerIdChanged="@OnTargetChanged"
+                                 Placeholder="Select target container..." />
+        </div>
+
+        @* Key fields (match criteria) *@
+        <div class="frow" style="margin-bottom:0;">
+            <label class="flbl">Key Fields (match on)</label>
+            <div class="finput" style="max-height:7rem;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
+                @foreach (var f in _targetFields)
+                {
+                    var isKey = Context.CurrentSpec.KeyFields.Contains(f.Name, StringComparer.Ordinal);
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox"
+                               style="width:14px;height:14px;accent-color:var(--amber);"
+                               checked="@isKey"
+                               @onchange="@(e => ToggleKey(f.Name, (bool)(e.Value ?? false)))" />
+                        <span class="mono" style="color:@(isKey ? "var(--n-200)" : "var(--n-400)");">@f.DisplayLabel</span>
+                    </label>
+                }
+                @if (_targetFields.Count == 0)
+                {
+                    <p class="fhint mono">Select a container to see its fields.</p>
+                }
+            </div>
+        </div>
+
+        <SetClauseEditor AvailableFields="@_targetFields"
+                         Clauses="@((IReadOnlyList<DataCommandSetClause>)Context.CurrentSpec.Set)"
+                         ClausesChanged="@OnSetChanged" />
+    </div>
+}
+
+@code {
+    [Parameter] public DataCommandContext? Context { get; set; }
+    public string SupportedKind => "Upsert";
+    public Type ContextType => typeof(DataCommandContext);
+
+    private Guid _targetId;
+    private IReadOnlyList<DataFieldSummary> _targetFields = [];
+
+    protected override void OnParametersSet()
+    {
+        if (Context is null) return;
+        _targetId = Context.CurrentSpec.Target?.ContainerId ?? Guid.Empty;
+        _targetFields = Context.GetFields(_targetId);
+    }
+
+    private async Task OnTargetChanged(Guid id)
+    {
+        _targetId = id;
+        _targetFields = Context?.GetFields(id) ?? [];
+        if (Context is not null) await Context.SetTarget(id).ConfigureAwait(false);
+    }
+
+    private async Task ToggleKey(string fieldName, bool selected)
+    {
+        if (Context is null) return;
+        var keys = Context.CurrentSpec.KeyFields.ToList();
+        if (selected && !keys.Contains(fieldName, StringComparer.Ordinal))
+            keys.Add(fieldName);
+        else if (!selected)
+            keys.RemoveAll(k => string.Equals(k, fieldName, StringComparison.Ordinal));
+        await Context.SetKeyFields(keys).ConfigureAwait(false);
+    }
+
+    private async Task OnSetChanged(IReadOnlyList<DataCommandSetClause> clauses)
+    {
+        if (Context is not null) await Context.SetSetClauses(clauses).ConfigureAwait(false);
+    }
+}

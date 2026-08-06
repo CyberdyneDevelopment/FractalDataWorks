@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <!-- Override Directory.Build.props threshold for this project due to ExcludeFromCodeCoverage classes -->
+    <Threshold>90</Threshold>
+    <ThresholdType>line</ThresholdType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Services.Scheduling.Abstractions\Fdw.Services.Scheduling.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+  <PropertyGroup>
+    <!-- Only include Fdw.Services.Scheduling.Abstractions in coverage -->
+    <Include>[Fdw.Services.Scheduling.Abstractions]*</Include>
+    <!-- Exclude test frameworks and TypeOption implementations -->
+    <Exclude>[xunit.*]*,[Moq]*,[Shouldly]*,[Fdw.Services.Scheduling.Abstractions]Fdw.Services.Scheduling.Abstractions.OptionTypes.TriggerTypeImplementations.*,[Fdw.Services.Scheduling.Abstractions]Fdw.Services.Scheduling.Abstractions.Messages.*</Exclude>
+    <!-- Respect ExcludeFromCodeCoverage attribute -->
+    <ExcludeByAttribute>ExcludeFromCodeCoverageAttribute,GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
+  </PropertyGroup>
+</Project>

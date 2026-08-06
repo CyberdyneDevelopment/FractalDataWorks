@@ -1,0 +1,164 @@
+@namespace Fdw.Services.Catalog.Components.Catalog
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Catalog.Clients
+@using Fdw.Services.Catalog.Clients.Models
+@using Fdw.Services.Catalog.Components.Logging
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    // -- Parameters ---------------------------------------------------------------
+
+    [Parameter] public RenderFragment<CatalogContext>? ChildContent { get; set; }
+
+    // -- Injected Services --------------------------------------------------------
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private CatalogApiClient? _catalogApi;
+    [Inject] private ILogger<CatalogProvider>? LoggerParam { get; set; }
+
+    private ILogger<CatalogProvider> _logger = NullLogger<CatalogProvider>.Instance;
+
+    // -- State --------------------------------------------------------------------
+
+    private IReadOnlyList<CatalogEntityPayload> _dataSets = [];
+    private string _searchQuery = string.Empty;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private CatalogContext _context = new();
+    private bool _initialized;
+
+    // -- Lifecycle ----------------------------------------------------------------
+
+    protected override void OnInitialized()
+    {
+        _catalogApi = new CatalogApiClient(HttpClientFactory.CreateClient("CatalogClient"), LoggerFactory?.CreateLogger<CatalogApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<CatalogProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadCatalog();
+        }
+    }
+
+    // -- Private Operations -------------------------------------------------------
+
+    private async Task<IGenericResult> LoadCatalog(CancellationToken ct = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        CatalogProviderLog.LoadStarted(_logger);
+
+        try
+        {
+            var searchResult = string.IsNullOrEmpty(_searchQuery)
+                ? await _catalogApi!.Search(string.Empty, ct: ct)
+                : await _catalogApi!.Search(_searchQuery, ct: ct);
+
+            if (!searchResult.IsSuccess)
+            {
+                CatalogProviderLog.LoadFailed(_logger);
+                _lastResult = searchResult;
+                _dataSets = [];
+                return searchResult;
+            }
+
+            _dataSets = searchResult.Value?.ToList() ?? [];
+            CatalogProviderLog.LoadCompleted(_logger, _dataSets.Count);
+            return searchResult;
+        }
+        catch (OperationCanceledException)
+        {
+            return ProviderContextBase.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            _dataSets = [];
+            return GenericResult.Failure(
+                new[] { CatalogProviderLog.LoadException(_logger, ex) }
+                    .Concat(ExceptionResultExtensions.FlattenException(ex)));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleSearch(string query, CancellationToken ct = default)
+    {
+        _searchQuery = query;
+        CatalogProviderLog.Searching(_logger, query);
+        await LoadCatalog(ct);
+        CatalogProviderLog.SearchCompleted(_logger, _dataSets.Count);
+    }
+
+    private async Task<IGenericResult> HandleRefresh(CancellationToken ct = default)
+    {
+        CatalogProviderLog.Refreshing(_logger);
+        _searchQuery = string.Empty;
+        return await LoadCatalog(ct);
+    }
+
+    private Task HandleSelectDataSet(string name)
+    {
+        CatalogProviderLog.DataSetSelected(_logger, name);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleStartBuilder(string dataSetName)
+    {
+        CatalogProviderLog.StartBuilderFromCatalog(_logger, dataSetName);
+        Nav.NavigateTo($"/pipelines/new?sourceDataSet={Uri.EscapeDataString(dataSetName)}");
+        return Task.CompletedTask;
+    }
+
+    private Task HandleDeriveDataSet(string dataSetName)
+    {
+        CatalogProviderLog.DeriveDataSetFromCatalog(_logger, dataSetName);
+        Nav.NavigateTo($"/datasets/new?baseDataSet={Uri.EscapeDataString(dataSetName)}");
+        return Task.CompletedTask;
+    }
+
+    // -- Context Builder ----------------------------------------------------------
+
+    private void RebuildContext()
+    {
+        _context = new CatalogContext
+        {
+            DataSets = _dataSets,
+            SearchQuery = _searchQuery,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnSearch = query => HandleSearch(query),
+            OnRefresh = () => HandleRefresh(),
+            OnSelectDataSet = name => HandleSelectDataSet(name),
+            OnStartBuilder = name => HandleStartBuilder(name),
+            OnDeriveDataSet = name => HandleDeriveDataSet(name)
+        };
+    }
+}

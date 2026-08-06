@@ -1,0 +1,116 @@
+@namespace Fdw.UI.Components.Primitives
+@typeparam TItem
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+
+@* Why: Generic server-searchable picker for existing named config entities
+   (connections, datasets, calculations, etc.). Unlike ObjectPicker (which loads
+   a fixed item list once on first render) EntityPicker pages through an
+   async, paged, server-side search delegate so it stays fast regardless of
+   how many items exist in the database.
+
+   Search is type-ahead with a configurable debounce — each keystroke schedules
+   a fresh search and cancels the in-flight one.
+
+   The visual result list is rendered inside <Virtualize> with an
+   ItemsProviderDelegate so the browser virtualises the scroll window even when
+   hundreds of items match.
+
+   Public API is backward-compatible with ObjectPicker's single-select contract
+   (Value/ValueChanged/Label/Required/Disabled/Placeholder/Logger) while adding
+   SearchSource (the async delegate), SubLabelSelector (a second display line),
+   and OnCreateNew (optional "create new" escape hatch). *@
+
+<div class="frow">
+    @if (!string.IsNullOrEmpty(LabelText))
+    {
+        <label>@LabelText</label>
+    }
+
+    @* Why: the search input drives both the visible filter text and the
+       current Value display. When the user has an item selected and starts
+       typing again the selection is cleared so the source is re-queried. *@
+    <input class="finput"
+           placeholder="@(Placeholder ?? "Search...")"
+           disabled="@(_isLoading || Disabled)"
+           autocomplete="off"
+           value="@_inputText"
+           @oninput="HandleInput"
+           @onfocus="HandleFocus"
+           @onblur="HandleBlur" />
+
+    @* Why: the results panel is a positioned overlay so it does not push layout.
+       It is visible while the input is focused AND there is something to show
+       (either results or an empty-state message). *@
+    @if (_isPanelOpen)
+    {
+        <div class="fpicker-panel">
+            @if (_isLoading)
+            {
+                <div class="fpicker-loading-row">Loading…</div>
+            }
+            else if (_items.Count == 0)
+            {
+                <div class="fpicker-empty-row">
+                    @if (string.IsNullOrEmpty(_inputText))
+                    {
+                        <span>Type to search.</span>
+                    }
+                    else
+                    {
+                        <span>No results for "@_inputText".</span>
+                    }
+                </div>
+            }
+            else
+            {
+                @* Why: Virtualize with ItemsProvider so large result windows do not
+                   inflate the DOM. ItemSize is an approximation; Blazor adjusts the
+                   spacer height automatically after the first render cycle. *@
+                <div class="fpicker-list">
+                    <Virtualize ItemsProvider="@ProvideItems" Context="item" ItemSize="52" OverscanCount="4">
+                        <ItemContent>
+                            @{
+                                var itemKey = KeyOf(item);
+                                var isSelected = string.Equals(Value, itemKey, StringComparison.Ordinal);
+                            }
+                            <button type="button"
+                                    class="fpicker-item @(isSelected ? "fpicker-item-selected" : null)"
+                                    @onclick="() => SelectItem(item)"
+                                    @onclick:stopPropagation="true">
+                                <span class="fpicker-item-label">@LabelSelector(item)</span>
+                                @if (SubLabelSelector is not null)
+                                {
+                                    <span class="fpicker-item-sublabel">@SubLabelSelector(item)</span>
+                                }
+                            </button>
+                        </ItemContent>
+                        <Placeholder>
+                            <div class="fpicker-item fpicker-item-placeholder">&nbsp;</div>
+                        </Placeholder>
+                    </Virtualize>
+                </div>
+            }
+
+            @if (OnCreateNew.HasDelegate)
+            {
+                @* Why: "create new" affordance is always at the bottom of the results panel
+                   so users can escape the pick-from-existing constraint when needed. *@
+                <div class="fpicker-footer">
+                    <button type="button"
+                            class="btn btn-secondary btn-sm"
+                            @onclick="HandleCreateNew"
+                            @onclick:stopPropagation="true"
+                            disabled="@Disabled">
+                        + Create new
+                    </button>
+                </div>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="hint" style="color:var(--signal);">@_errorMessage</div>
+    }
+</div>

@@ -1,0 +1,147 @@
+@page "/review/{ActionId:int}"
+@namespace Fdw.Agents.UI.Pages.Pages
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Review Agent Action</PageTitle>
+
+<AgentActionProvider ActionId="@ActionId">
+    <ChildContent Context="ctx">
+
+        <div class="pagehead">
+            <div>
+                <div class="ey">Agent Actions</div>
+                <h1>Review #@ActionId</h1>
+            </div>
+            <div class="actions"></div>
+        </div>
+
+        @if (ctx.IsLoading)
+        {
+            <div class="card"><div class="card-b" style="padding:24px;color:var(--n-500);">Loading…</div></div>
+        }
+        else if (ctx.CurrentAction is null)
+        {
+            <div class="card"><div class="card-b" style="padding:48px;text-align:center;">
+                <p class="mono" style="color:var(--signal);">ACTION_NOT_FOUND</p>
+                <button class="btn btn-secondary" style="margin-top:16px;" @onclick='() => Nav.NavigateTo("/agent-actions")'>Back</button>
+            </div></div>
+        }
+        else if (!string.Equals(ctx.CurrentAction.Status, "Pending", StringComparison.Ordinal))
+        {
+            <div style="max-width:680px;display:flex;flex-direction:column;gap:14px;">
+                <div class="card"><div class="card-b">
+                    <h3 style="margin:0 0 8px;">Action #@ctx.CurrentAction.AgentActionId — @ctx.CurrentAction.Status</h3>
+                    <p style="font-size:13px;color:var(--n-400);">This action has already been reviewed.</p>
+                    @if (ctx.CurrentAction.ReviewedAt.HasValue)
+                    {
+                        <p class="mono" style="font-size:11px;color:var(--n-500);">@ctx.CurrentAction.Status by @ctx.CurrentAction.ReviewedBy at @ctx.CurrentAction.ReviewedAt.Value.ToString("yyyy-MM-dd HH:mm")</p>
+                    }
+                </div></div>
+                <button class="btn btn-secondary" @onclick='() => Nav.NavigateTo("/agent-actions")'>Back to Queue</button>
+            </div>
+        }
+        else
+        {
+            <div class="card" style="margin-bottom:14px;">
+                <div class="card-b" style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:18px;">
+                    <div>
+                        <div class="ey" style="color:var(--warn);margin-bottom:6px;">Agent Review Mode</div>
+                        <p style="font-size:13px;color:var(--n-300);">
+                            <span style="color:var(--warn);font-weight:500;">@ctx.CurrentAction.AgentLabel</span>
+                            requested
+                            <span class="tpill">@ctx.CurrentAction.Method @ctx.CurrentAction.Route</span>
+                        </p>
+                        @if (!string.IsNullOrEmpty(_reviewError))
+                        {
+                            <div class="mono" style="color:var(--signal);font-size:11px;margin-top:8px;">@_reviewError</div>
+                        }
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-danger btn-sm"
+                                @onclick="() => HandleDeny(ctx)" disabled="@_isReviewing">
+                            @(_isReviewing ? "..." : "Deny")
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:14px;">
+                <div class="card">
+                    <div class="card-h">
+                        <h3>Request Body</h3>
+                        <span class="meta">@ctx.CurrentAction.Method @ctx.CurrentAction.Route</span>
+                    </div>
+                    <div class="card-b">
+                        <pre class="term" style="min-height:auto;">@FormatJson(ctx.CurrentAction.RequestBody)</pre>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" @onclick="() => HandleApprove(ctx)" disabled="@_isReviewing">
+                        @(_isReviewing ? "Approving..." : "Approve")
+                    </button>
+                    <button class="btn btn-secondary" @onclick='() => Nav.NavigateTo("/agent-actions")'>Back</button>
+                </div>
+            </div>
+        }
+
+    </ChildContent>
+</AgentActionProvider>
+
+@code {
+    [Parameter] public int ActionId { get; set; }
+
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private bool _isReviewing;
+    private string? _reviewError;
+
+    private async Task HandleDeny(AgentActionContext ctx)
+    {
+        _isReviewing = true;
+        _reviewError = null;
+        try
+        {
+            var ok = await ctx.OnDeny(ActionId);
+            if (ok)
+                Nav.NavigateTo("/agent-actions");
+            else
+                _reviewError = "Failed to deny action.";
+        }
+        finally
+        {
+            _isReviewing = false;
+        }
+    }
+
+    private async Task HandleApprove(AgentActionContext ctx)
+    {
+        _isReviewing = true;
+        _reviewError = null;
+        try
+        {
+            var ok = await ctx.OnApprove(ActionId);
+            if (ok)
+                Nav.NavigateTo("/agent-actions");
+            else
+                _reviewError = "Failed to approve action.";
+        }
+        finally
+        {
+            _isReviewing = false;
+        }
+    }
+
+    private static string FormatJson(string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return "(empty)";
+        try
+        {
+            var node = JsonNode.Parse(json);
+            return node?.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) ?? json;
+        }
+        catch
+        {
+            return json;
+        }
+    }
+}

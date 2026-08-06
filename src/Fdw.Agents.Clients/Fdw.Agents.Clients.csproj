@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.Agents.Clients</RootNamespace>
+    <PackageId>Fdw.Agents.Clients</PackageId>
+    <Title>Fdw Agent API Clients</Title>
+    <Description>API client, DTOs, and registration types for agent action review-queue operations.</Description>
+    <PackageTags>api;clients;agents</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Web.Clients\Fdw.Web.Clients.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Web.Http.Authentication\Fdw.Web.Http.Authentication.csproj" />
+  </ItemGroup>
+
+</Project>

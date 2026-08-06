@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <RootNamespace>Fdw.Sql.Commands.Abstractions</RootNamespace>
+    <AssemblyName>Fdw.Sql.Commands.Abstractions</AssemblyName>
+    <Description>SQL command abstractions: ISqlCommand, ISqlCommandTranslator, SqlCommands / SqlCommandTranslators TypeCollections. Parallel to Fdw.Roslyn.Commands.Abstractions.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Abstractions\Fdw.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Commands.Development.Abstractions\Fdw.Commands.Development.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Results.Abstractions\Fdw.Results.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Sql.Workspace\Fdw.Sql.Workspace.csproj" />
+    <ProjectReference Include="..\Fdw.Types.Abstractions\Fdw.Types.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

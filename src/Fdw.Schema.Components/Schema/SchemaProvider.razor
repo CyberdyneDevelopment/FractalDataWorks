@@ -1,0 +1,328 @@
+@namespace Fdw.Schema.Components.Schema
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.Schema.Clients
+@using Fdw.Schema.Clients.Models
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Results
+@using Fdw.UI.Components.Logging
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    [Parameter] public RenderFragment<SchemaContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private SchemaApiClient? _schemaApi;
+    [Inject] private ILogger<SchemaProvider>? LoggerParam { get; set; }
+
+    private ILogger<SchemaProvider> _logger = NullLogger<SchemaProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<SchemaCapableConnectionPayload> _capableConnections = [];
+    private SchemaDiscoveryResponse? _discoveryResult;
+    private DataPreviewResponsePayload? _previewResult;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private SyncSchemaResponse? _syncResult;
+    private bool _isSyncing;
+    private DateTimeOffset? _lastRefreshedAt;
+    private SchemaContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _schemaApi = new SchemaApiClient(HttpClientFactory.CreateClient("SchemaClient"), LoggerFactory?.CreateLogger<SchemaApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<SchemaProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadCapableConnections();
+        }
+    }
+
+    // ── Methods (exposed as callbacks via SchemaContext) ────────────────────────
+
+    private async Task LoadCapableConnections(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _schemaApi!.GetCapableConnections(cancellationToken);
+            if (result.IsSuccess)
+            {
+                _capableConnections = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                UiProviderLog.LoadFailed(_logger, "SchemaProvider", "connections");
+                _lastResult = result;
+                _capableConnections = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.LoadException(_logger, ex, "SchemaProvider", "connections"));
+            _capableConnections = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task Discover(string connectionName, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            _schemaApi!.SetConnection(connectionName);
+            var discoverResult = await _schemaApi!.DiscoverSchema(cancellationToken);
+            if (discoverResult.IsSuccess)
+            {
+                _discoveryResult = discoverResult.Value;
+            }
+            else
+            {
+                UiProviderLog.OperationFailed(_logger, "SchemaProvider", "Schema discovery");
+                _lastResult = discoverResult;
+                _discoveryResult = null;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.OperationException(_logger, ex, "SchemaProvider", "Schema discovery"));
+            _discoveryResult = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task PreviewData(SchemaPreviewRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var previewResult = await _schemaApi!.PreviewData(request, cancellationToken);
+            if (previewResult.IsSuccess)
+            {
+                _previewResult = previewResult.Value;
+            }
+            else
+            {
+                UiProviderLog.OperationFailed(_logger, "SchemaProvider", "Data preview");
+                _lastResult = previewResult;
+                _previewResult = null;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.OperationException(_logger, ex, "SchemaProvider", "Data preview"));
+            _previewResult = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SyncSchema(string connectionName, CancellationToken cancellationToken = default)
+    {
+        _isSyncing = true;
+        _lastResult = null;
+        _syncResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            _schemaApi!.SetConnection(connectionName);
+            var result = await _schemaApi!.SyncSchema(applyChanges: false, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _syncResult = result.Value;
+                _lastRefreshedAt = DateTimeOffset.UtcNow;
+            }
+            else
+            {
+                UiProviderLog.OperationFailed(_logger, "SchemaProvider", "Schema sync");
+                _lastResult = result;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.OperationException(_logger, ex, "SchemaProvider", "Schema sync"));
+        }
+        finally
+        {
+            _isSyncing = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ApplySchemaChanges(string connectionName, CancellationToken cancellationToken = default)
+    {
+        _isSyncing = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            _schemaApi!.SetConnection(connectionName);
+            var result = await _schemaApi!.SyncSchema(applyChanges: true, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _syncResult = result.Value;
+                _lastRefreshedAt = DateTimeOffset.UtcNow;
+            }
+            else
+            {
+                UiProviderLog.OperationFailed(_logger, "SchemaProvider", "Schema apply");
+                _lastResult = result;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.OperationException(_logger, ex, "SchemaProvider", "Schema apply"));
+        }
+        finally
+        {
+            _isSyncing = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ImportSchema(string connectionName, CancellationToken cancellationToken = default)
+    {
+        _isSyncing = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            _schemaApi!.SetConnection(connectionName);
+            var result = await _schemaApi!.ImportSchema(new ImportSchemaRequestPayload(), cancellationToken);
+            if (result.IsSuccess)
+            {
+                _lastRefreshedAt = DateTimeOffset.UtcNow;
+            }
+            else
+            {
+                UiProviderLog.OperationFailed(_logger, "SchemaProvider", "Schema import");
+                _lastResult = result;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.OperationException(_logger, ex, "SchemaProvider", "Schema import"));
+        }
+        finally
+        {
+            _isSyncing = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private Task ClearSyncResult()
+    {
+        _syncResult = null;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new SchemaContext
+        {
+            CapableConnections = _capableConnections,
+            DiscoveryResult = _discoveryResult,
+            PreviewResult = _previewResult,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            SyncResult = _syncResult,
+            IsSyncing = _isSyncing,
+            LastRefreshedAt = _lastRefreshedAt,
+            OnLoadCapableConnections = () => LoadCapableConnections(),
+            OnDiscover = name => Discover(name),
+            OnPreviewData = req => PreviewData(req),
+            OnSyncSchema = name => SyncSchema(name),
+            OnApplySchemaChanges = name => ApplySchemaChanges(name),
+            OnImportSchema = name => ImportSchema(name),
+            OnClearSyncResult = () => ClearSyncResult()
+        };
+    }
+}

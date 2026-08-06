@@ -1,0 +1,69 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Enable generator debugging -->
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Commands.Abstractions\Fdw.Commands.Abstractions.csproj" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Commands.Data.Abstractions\Fdw.Commands.Data.Abstractions.csproj" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Configuration.Abstractions\Fdw.Configuration.Abstractions.csproj" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Configuration\Fdw.Configuration.csproj" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Services.Connections.Abstractions\Fdw.Services.Connections.Abstractions.csproj" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Services.SecretManagers.Abstractions\Fdw.Services.SecretManagers.Abstractions.csproj" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Configuration.SourceGenerators\Fdw.Configuration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Services\Fdw.Services.csproj" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Schema.Abstractions\Fdw.Schema.Abstractions.csproj" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Validation\Fdw.Validation.csproj" />    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+
+    <ProjectReference Include="..\Fdw.Data.Configuration\Fdw.Data.Configuration.csproj" />
+
+    <ProjectReference Include="..\Fdw.Data\Fdw.Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <!-- Embed Registration generator DLL for transitive NuGet flow -->
+  <ItemGroup>
+    <None Include="..\Fdw.Collections.SourceGenerators.Registration\bin\$(Configuration)\netstandard2.0\Fdw.Collections.SourceGenerators.Registration.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" Condition="Exists('..\Fdw.Collections.SourceGenerators.Registration\bin\$(Configuration)\netstandard2.0\Fdw.Collections.SourceGenerators.Registration.dll')" />
+  </ItemGroup>
+
+</Project>

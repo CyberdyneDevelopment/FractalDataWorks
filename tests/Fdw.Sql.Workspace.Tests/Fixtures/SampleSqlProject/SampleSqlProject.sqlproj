@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <ItemGroup>
+    <Build Include="Tables\dbo.Customer.sql" />
+    <Build Include="Tables\dbo.Orders.sql" />
+    <Build Include="Views\dbo.CustomerOrders.sql" />
+    <Build Include="StoredProcedures\dbo.GetCustomerById.sql" />
+    <Build Include="Schemas\audit.sql" />
+  </ItemGroup>
+</Project>

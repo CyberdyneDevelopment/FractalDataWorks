@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Schema.Ddl.MsSql\Fdw.Schema.Ddl.MsSql.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Schema.Ddl\Fdw.Schema.Ddl.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Schema.Abstractions\Fdw.Schema.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

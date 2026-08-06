@@ -1,0 +1,1592 @@
+@page "/pipelines/{Id:guid}/edit"
+@page "/pipelines/builder/{PipelineId:guid}"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using Microsoft.AspNetCore.SignalR.Client
+@using Fdw.Services.Pipelines.Hubs
+@using Fdw.Services.Etl.Abstractions.Execution
+@using Fdw.Services.Connections.Abstractions
+@using Fdw.Services.Pipelines.Components.Canvas
+@using Fdw.Services.Pipelines.Components.Logging
+@using Fdw.UI.Abstractions.Canvas
+@using Fdw.UI.Canvas.Blazor.Host
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@implements IAsyncDisposable
+
+<PipelineBuilderProvider @ref="_builderProvider" PipelineId="@EffectivePipelineId" InitialSourceDataSet="@SourceDataSet" OnInitialLoadComplete="HandleProviderLoaded">
+<ChildContent Context="pipelineBuilder">
+
+<PageTitle>Pipeline Builder - Cyberdyne</PageTitle>
+
+<div class="content builder" style="display:flex;flex-direction:column;height:calc(100vh - 90px);padding:0;">
+    <!-- Toolbar -->
+    <div class="bhead" style="margin-bottom:12px;">
+        <div class="l">
+            <a class="back" href="/pipelines">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 18l-6-6 6-6"/></svg>
+                Pipelines
+            </a>
+            <h1>Pipeline Builder</h1>
+            <input class="finput mono" style="width:200px;padding:7px 10px;" placeholder="Pipeline name..." @bind="_pipelineName" />
+            @* Why: PipelineType is a required engine discriminator with no default (see
+               CreatePipelineClientRequest/PipelineCreateRequestProjection) — a new pipeline's canvas
+               carries no PipelineType until the user picks one here; shown only while unset so a
+               loaded pipeline (which already carries its engine type) never re-prompts. *@
+            @if (pipelineBuilder.CanvasModel is not null && string.IsNullOrEmpty(pipelineBuilder.CanvasModel.PipelineType))
+            {
+                <select class="finput mono" style="width:160px;padding:7px 10px;"
+                        value="@pipelineBuilder.CanvasModel.PipelineType"
+                        @onchange="@(async e => { var selected = e.Value?.ToString(); if (!string.IsNullOrEmpty(selected)) await pipelineBuilder.OnSetPipelineType(selected); })">
+                    <option value="">Select engine type...</option>
+                    @foreach (var pipelineType in pipelineBuilder.PipelineTypes)
+                    {
+                        <option value="@pipelineType.Name">@pipelineType.Name</option>
+                    }
+                </select>
+            }
+        </div>
+        <div class="actions">
+            <button class="btn btn-ghost btn-sm" @onclick="Undo" disabled="@(_undoStack.Count == 0)">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                </svg>
+                Undo
+            </button>
+            <button class="btn btn-ghost btn-sm" @onclick="Redo" disabled="@(_redoStack.Count == 0)">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" />
+                </svg>
+                Redo
+            </button>
+            <button class="btn btn-ghost btn-sm" @onclick="ZoomOut">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+                </svg>
+            </button>
+            <span class="mono" style="font-size:11px;width:48px;text-align:center;color:var(--n-400);">@(Math.Round(_zoom * 100))%</span>
+            <button class="btn btn-ghost btn-sm" @onclick="ZoomIn">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                </svg>
+            </button>
+            @if (!string.IsNullOrEmpty(_validationError))
+            {
+                <span class="mono" style="color:var(--signal);font-size:11px;">@_validationError</span>
+            }
+
+            @* Test-mode toolbar — shown when a test run is active *@
+            @if (_testRunActive)
+            {
+                <div class="actions" style="padding-left:8px;border-left:1px solid var(--hair);">
+                    @if (_testIsPaused)
+                    {
+                        <button class="btn btn-secondary btn-sm" style="color:var(--success);"
+                                @onclick="TestResume" title="Resume execution">
+                            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            Resume
+                        </button>
+                        <button class="btn btn-secondary btn-sm" style="color:var(--glacier);"
+                                @onclick="TestStep" title="Step one batch">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Step
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-secondary btn-sm" style="color:var(--warn);"
+                                @onclick="TestPause" title="Pause execution">
+                            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                            Pause
+                        </button>
+                    }
+                    <button class="btn btn-secondary btn-sm" style="color:var(--signal);"
+                            @onclick="TestStop" title="Stop execution">
+                        <svg fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+                        Stop
+                    </button>
+                    <span class="badge @GetStatusBadgeClass(_testExecutionStatus)"><span class="bd"></span>@_testExecutionStatus</span>
+                </div>
+            }
+            else
+            {
+                <button class="btn btn-secondary btn-sm" style="color:var(--glacier);"
+                        @onclick="StartTestRun"
+                        title="Run pipeline in test mode (bounded, no destination writes)">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Test
+                </button>
+            }
+
+            <button class="btn btn-primary btn-sm" @onclick="SavePipeline" disabled="@_isSaving">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                @(_isSaving ? "Saving..." : "Save")
+            </button>
+            <button class="btn btn-secondary btn-sm" style="color:var(--success);"
+                    @onclick="PublishPipeline"
+                    disabled="@(_isPublishing || _pipelineId == null)"
+                    title="Publish pipeline to make it active">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                @(_isPublishing ? "Publishing..." : "Publish")
+            </button>
+        </div>
+    </div>
+
+    <div style="flex:1;display:flex;gap:12px;overflow:hidden;min-height:0;">
+        <!-- Test execution panel (shown during active test run, replaces Properties panel) -->
+        @if (_testRunActive || _testExecutionId.HasValue)
+        {
+            <div class="pane" style="width:320px;flex:none;overflow:hidden;">
+                <PipelineExecutionPanel
+                    ExecutionStatus="@_testExecutionStatus"
+                    IsRunning="@(_testRunActive && !_testIsPaused)"
+                    IsPaused="@_testIsPaused"
+                    LogLines="@_testLogLines"
+                    InspectorTaskState="@_inspectorTaskState"
+                    InspectorEdgeState="@_inspectorEdgeState"
+                    InspectorItemLabel="@_inspectorItemLabel"
+                    OnPause="TestPause"
+                    OnResume="TestResume"
+                    OnStep="TestStep"
+                    OnStop="TestStop"
+                    OnClose="CloseExecutionPanel"
+                    OnInspectorClose="CloseInspector" />
+            </div>
+        }
+
+        <!-- Task Palette -->
+        <div class="pane" style="width:224px;flex:none;overflow-y:auto;">
+            <div class="ph">Nodes</div>
+            <div class="pb">
+                @foreach (var category in _taskCategories)
+                {
+                    <div style="margin-bottom:10px;">
+                        <div class="mono" style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--n-500);margin-bottom:6px;">@category.Name</div>
+                        @foreach (var task in category.Tasks)
+                        {
+                            <div class="palitem"
+                                 style="flex-direction:column;align-items:flex-start;gap:2px;margin-bottom:4px;"
+                                 draggable="true"
+                                 @ondragstart="() => _draggedTaskType = task.Name">
+                                <div class="mono" style="font-size:12px;color:var(--n-100);">@task.DisplayName</div>
+                                <div class="mono" style="font-size:9px;color:var(--n-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;">@task.Description</div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Canvas — rendered by CanvasHost using the projected PipelineCanvasModel -->
+        <div class="canvas" style="flex:1;position:relative;overflow:hidden;border-radius:14px;"
+             @ondragover:preventDefault
+             @ondrop="OnCanvasDrop">
+            @if (_builderProvider.CanvasModel is not null)
+            {
+                @* Why: CanvasHost dispatches to the registered renderer via DynamicComponent,
+                   keeping Builder.razor free of any direct dependency on a specific SVG or
+                   WebGL renderer implementation. *@
+                <CanvasHost Model="@_builderProvider.CanvasModel" />
+            }
+            else if (!_builderProvider.Context.IsLoading)
+            {
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+                    <div style="text-align:center;color:var(--n-500);">
+                        <p class="mono" style="font-size:13px;">Drag tasks from the palette to build your pipeline</p>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Properties Panel -->
+        <div class="pane" style="width:288px;flex:none;overflow-y:auto;">
+            <div class="ph">Inspector</div>
+            <div class="pb">
+            @if (_selectedTask != null)
+            {
+                <div style="display:flex;flex-direction:column;gap:16px;">
+                    <div class="frow" style="margin-bottom:0;">
+                        <label>Name</label>
+                        <input class="finput" @bind="_selectedTask.Name" />
+                    </div>
+                    <div class="frow" style="margin-bottom:0;">
+                        <label>Type</label>
+                        <input class="finput mono" value="@_selectedTask.TaskType" disabled />
+                    </div>
+                    <div class="frow" style="margin-bottom:0;">
+                        <label>Step Type</label>
+                        @if (pipelineBuilder.PipelineStepTypes.Count > 0)
+                        {
+                            <select class="finput" @bind="_selectedTask.StepType">
+                                <option value="">Select step type...</option>
+                                @foreach (var st in pipelineBuilder.PipelineStepTypes)
+                                {
+                                    <option value="@st.TypeName">@st.DisplayName</option>
+                                }
+                            </select>
+                        }
+                        else
+                        {
+                            <select class="finput" @bind="_selectedTask.StepType">
+                                <option value="">Select step type...</option>
+                                <option value="Extract">Extract</option>
+                                <option value="Transform">Transform</option>
+                                <option value="Load">Load</option>
+                                <option value="Validate">Validate</option>
+                                <option value="Notify">Notify</option>
+                                <option value="Branch">Branch</option>
+                            </select>
+                        }
+                    </div>
+                    @if (_selectedTask.Category == "Source" || _selectedTask.Category == "Destination")
+                    {
+                        <DataSetPicker SelectedDataSetName="@_selectedTask.DataSetName"
+                                       SelectedDataSetNameChanged="@(name => OnDataSetSelectionChanged(_selectedTask, name))"
+                                       AvailableDataSets="@(pipelineBuilder.DataSets ?? (IReadOnlyList<DataSetSummaryPayload>)[])"
+                                       OnCreateDataSet="@(req => OnCreateDataSetFromPicker(_selectedTask, req))" />
+                    }
+
+                    @{
+                        // Why: Compute all dynamic fields outside any @if so the local variables
+                        // survive into subsequent markup blocks within the same Razor scope.
+                        // supportedCaps drives the connection-driven input form.
+                        // taskType drives the task-type-level fields (e.g., Trash buffer size).
+                        var connDto = string.IsNullOrEmpty(_selectedTask?.ConnectionName)
+                            ? null
+                            : _availableConnections.FirstOrDefault(c => string.Equals(c.Name, _selectedTask.ConnectionName, StringComparison.OrdinalIgnoreCase));
+                        var supportedCaps = GetSupportedCommands(connDto?.ConnectionType);
+
+                        // Why: Backward-compat heuristic — tasks saved before FDW-391 have a
+                        // "Query" key but no "CapabilityName". Default to RawQuery in that case
+                        // so existing pipelines render the same textarea they always did.
+                        var capabilityName = ReadConfigString(_selectedTask!.Configuration, "CapabilityName");
+                        if (string.IsNullOrEmpty(capabilityName)
+                            && supportedCaps.Count > 0
+                            && !string.IsNullOrEmpty(ReadConfigString(_selectedTask.Configuration, "Query")))
+                        {
+                            capabilityName = "RawQuery";
+                        }
+
+                        var selectedCap = supportedCaps.Count > 0 && !string.IsNullOrEmpty(capabilityName)
+                            ? supportedCaps.FirstOrDefault(c => string.Equals(c.Name, capabilityName, StringComparison.Ordinal))
+                            : null;
+                        var capFields = selectedCap?.ConfigurationFields;
+
+                        var taskType = PipelineTaskTypes.ByName(_selectedTask!.TaskType);
+
+                        // Why: write-capability mode computed here (in the shared outer @{} block)
+                        // so it is in scope for both the badge markup and the log call that follow.
+                        // Destination write mode: "Table" = any insert/update/bulk command present;
+                        // "API" = HttpRequest present; "None" = no write-capable commands.
+                        var writeCapNames = new[] { "Insert", "BulkInsert", "Update", "Upsert", "BulkUpsert" };
+                        var destHasTableWrite = supportedCaps.Any(c =>
+                            writeCapNames.Any(wn => string.Equals(c.Name, wn, StringComparison.Ordinal)));
+                        var destHasApiWrite = supportedCaps.Any(c =>
+                            string.Equals(c.Name, "HttpRequest", StringComparison.Ordinal));
+                        var destWriteMode = destHasTableWrite ? "Table" : destHasApiWrite ? "API" : "None";
+                    }
+                    @if (_selectedTask.Category == "Source" || _selectedTask.Category == "Destination")
+                    {
+                        @* Connection picker — drives which capability picker appears below *@
+                        <div class="frow" style="margin-bottom:0;">
+                            <label>Connection</label>
+                            @* Why: value+@onchange instead of @bind so we can also trigger
+                               canvas metadata write-back when the user changes the connection. *@
+                            <select class="finput"
+                                    value="@_selectedTask.ConnectionName"
+                                    @onchange="@(async e => { _selectedTask.ConnectionName = e.Value?.ToString() ?? string.Empty; await SyncTaskMetadataToCanvas(_selectedTask); })">
+                                <option value="">Select connection...</option>
+                                @foreach (var conn in _availableConnections)
+                                {
+                                    <option value="@conn.Name">@conn.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        @* Capability picker — shown only when the connection has supported commands *@
+                        @if (supportedCaps.Count > 0)
+                        {
+                            <div class="frow" style="margin-bottom:0;">
+                                <label>Command</label>
+                                <select class="finput"
+                                        value="@capabilityName"
+                                        @onchange="@(e => SetSelectedCapability(_selectedTask!, e.Value?.ToString() ?? string.Empty))">
+                                    <option value="">Select command...</option>
+                                    @foreach (var cap in supportedCaps)
+                                    {
+                                        <option value="@cap.Name">@((cap as CommandCapabilityTypeBase)?.DisplayName ?? cap.Name)</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+
+                        @* ── Destination write-capability badge ──────────────────────────── *@
+                        @* Why: show the write capability of the selected Destination's connection
+                           so designers can see at a glance whether the destination supports
+                           table writes, API writes, or has no write capability at all.
+                           If no write capability exists, log a structured warning so it is
+                           captured in diagnostics without blocking further UI interaction.
+                           Guarded on supportedCaps.Count > 0 — when capability data is unavailable
+                           (see GetSupportedCommands) destWriteMode would always evaluate to "None",
+                           which is a fabricated negative, not an observed fact; omit the badge rather
+                           than assert a capability verdict we don't actually have data for. *@
+                        @if (string.Equals(_selectedTask.Category, "Destination", StringComparison.Ordinal)
+                             && connDto is not null
+                             && supportedCaps.Count > 0)
+                        {
+                            <div class="frow" style="margin-bottom:0;">
+                                <label>Write Capability</label>
+                                @if (string.Equals(destWriteMode, "None", StringComparison.Ordinal))
+                                {
+                                    <span class="badge b-fail" title="This connection has no write capability — save will be blocked">
+                                        <span class="bd"></span>None — insufficient write capability
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge b-ok" title="Write mode: @destWriteMode">
+                                        <span class="bd"></span>@destWriteMode
+                                    </span>
+                                }
+                            </div>
+                        }
+
+                        @* Command configuration — composite widget or flat field list *@
+                        @if (selectedCap is not null)
+                        {
+                            @if (selectedCap.BuilderComponentType is not null)
+                            {
+                                @* Why: DynamicComponent renders the capability-specific composite widget
+                                   (e.g., QueryCommandBuilder) without a hard compile-time reference from
+                                   this page to the Connections.UI.Components package. The component
+                                   receives the task's Configuration dictionary directly so it can
+                                   read/write capability fields without an intermediary. *@
+                                <DynamicComponent Type="selectedCap.BuilderComponentType"
+                                                  Parameters="@(new Dictionary<string, object?>(StringComparer.Ordinal) { ["TaskConfiguration"] = (object?)_selectedTask.Configuration })" />
+                            }
+                            else if (capFields is not null)
+                            {
+                                @foreach (var field in capFields)
+                                {
+                                    <div class="frow" style="margin-bottom:0;">
+                                        <label>@field.Label</label>
+                                        @if (string.Equals(field.InputKind, ConfigurationFieldKinds.Textarea, StringComparison.Ordinal))
+                                        {
+                                            <textarea class="finput mono" style="height:80px;font-size:12px;"
+                                                      placeholder="@field.Placeholder"
+                                                      value="@_selectedTask.GetTransformValue(field.Key)"
+                                                      @oninput="@(e => _selectedTask.SetTransformValue(field.Key, e.Value?.ToString() ?? string.Empty))"></textarea>
+                                        }
+                                        else if (string.Equals(field.InputKind, ConfigurationFieldKinds.Select, StringComparison.Ordinal))
+                                        {
+                                            <select class="finput"
+                                                    value="@_selectedTask.GetTransformValue(field.Key)"
+                                                    @onchange="@(e => _selectedTask.SetTransformValue(field.Key, e.Value?.ToString() ?? string.Empty))">
+                                                <option value="">Select...</option>
+                                                @if (field.SelectOptions is not null)
+                                                {
+                                                    @foreach (var opt in field.SelectOptions)
+                                                    {
+                                                        var parts = opt.Split(':', 2);
+                                                        var optValue = parts[0];
+                                                        var optLabel = parts.Length > 1 ? parts[1] : parts[0];
+                                                        <option value="@optValue">@optLabel</option>
+                                                    }
+                                                }
+                                            </select>
+                                        }
+                                        else if (string.Equals(field.InputKind, ConfigurationFieldKinds.Boolean, StringComparison.Ordinal))
+                                        {
+                                            <input type="checkbox"
+                                                   checked="@string.Equals(_selectedTask.GetTransformValue(field.Key), "true", StringComparison.OrdinalIgnoreCase)"
+                                                   @onchange="@(e => _selectedTask.SetTransformValue(field.Key, (e.Value is bool bv && bv) ? "true" : "false"))" />
+                                        }
+                                        else
+                                        {
+                                            <input class="finput"
+                                                   type="@(string.Equals(field.InputKind, ConfigurationFieldKinds.Numeric, StringComparison.Ordinal) ? "number" : "text")"
+                                                   placeholder="@field.Placeholder"
+                                                   value="@_selectedTask.GetTransformValue(field.Key)"
+                                                   @oninput="@(e => _selectedTask.SetTransformValue(field.Key, e.Value?.ToString() ?? string.Empty))" />
+                                        }
+                                    </div>
+                                }
+                            }
+                        }
+                    }
+
+                    @* Transform-step parameter authoring is pending the canvas-native transform editor.
+                       The legacy ITransformationType dropdown here was always empty (no endpoint projected
+                       the transform-operation catalog) and referenced the removed transformation-service
+                       subsystem; it is dropped with that subsystem. *@
+
+                    @* Task-type-level fields (e.g., TrashTaskType.BufferSize / LogSinkName) *@
+                    @if (taskType is not null && taskType.ConfigurationFields.Count > 0)
+                    {
+                        @foreach (var field in taskType.ConfigurationFields)
+                        {
+                            <div class="frow" style="margin-bottom:0;">
+                                <label>@field.Label</label>
+                                @if (string.Equals(field.InputKind, TransformFieldKinds.Textarea, StringComparison.Ordinal))
+                                {
+                                    <textarea class="finput mono" style="height:80px;font-size:12px;"
+                                              placeholder="@field.Placeholder"
+                                              value="@_selectedTask.GetTransformValue(field.Key)"
+                                              @oninput="@(e => _selectedTask.SetTransformValue(field.Key, e.Value?.ToString() ?? string.Empty))"></textarea>
+                                }
+                                else
+                                {
+                                    <input class="finput"
+                                           placeholder="@field.Placeholder"
+                                           value="@_selectedTask.GetTransformValue(field.Key)"
+                                           @oninput="@(e => _selectedTask.SetTransformValue(field.Key, e.Value?.ToString() ?? string.Empty))" />
+                                }
+                            </div>
+                        }
+                    }
+
+                    <div style="padding-top:16px;border-top:1px solid var(--hair);">
+                        <button class="btn btn-ghost btn-sm" style="color:var(--signal);width:100%;justify-content:center;" @onclick="DeleteSelectedTask">
+                            Delete Task
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div style="font-size:13px;color:var(--n-500);font-style:italic;text-align:center;margin-top:40px;">
+                    Select a node to edit its properties.
+                </div>
+            }
+
+            @if (_pipelineDescription != null)
+            {
+                <div class="frow" style="margin-top:24px;margin-bottom:0;">
+                    <label>Pipeline Description</label>
+                    <textarea class="finput" style="height:80px;font-size:12px;" @bind="_pipelineDescription"></textarea>
+                </div>
+            }
+            </div>
+        </div>
+    </div>
+</div>
+
+</ChildContent>
+</PipelineBuilderProvider>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+    [Parameter] public Guid? PipelineId { get; set; }
+
+    // Why: sourceDataSet query param carries the pre-selected DataSet name from Catalog or
+    // DataSetDetail "Start Builder" / "Use in Pipeline" journeys. SupplyParameterFromQuery
+    // binds the URL ?sourceDataSet=... value to this property automatically.
+    [SupplyParameterFromQuery(Name = "sourceDataSet")]
+    public string? SourceDataSet { get; set; }
+
+    // Why: Both routes load an existing pipeline — /builder/{PipelineId} and /{Id}/edit.
+    // The edit route binds Id (not PipelineId), so without folding Id in here the provider
+    // received Guid.Empty and never called LoadExisting, leaving the canvas blank (FINDINGS bug #2).
+    private Guid EffectivePipelineId => PipelineId ?? Id ?? Guid.Empty;
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+    // Why: the pipeline hub requires an authenticated principal (FDW-545). This supplies the circuit
+    // user's access token to the SignalR connection so the hub negotiate is not rejected with 401.
+    [Inject] private Fdw.Web.Http.Authentication.IAccessTokenProvider TokenProvider { get; set; } = default!;
+    [Inject] private ILogger<PipelineBuilderPage>? LoggerParam { get; set; }
+
+    private ILogger<PipelineBuilderPage> _logger = NullLogger<PipelineBuilderPage>.Instance;
+    private bool _initialSourceApplied;
+
+    private ConnectionApiClient? _connectionApi;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    [CascadingParameter] private SessionStateContext? Session { get; set; }
+
+    private PipelineBuilderProvider _builderProvider = null!;
+    private bool _providerLoaded;
+    private bool _sessionRestored;
+
+    private double _zoom = 1.0;
+    private double _panX = 100;
+    private double _panY = 100;
+    private string? _draggedTaskType;
+    private Guid? _selectedTaskId;
+    private TaskNode? _selectedTask => _tasks.FirstOrDefault(t => t.Id == _selectedTaskId);
+    private Guid? _connectingFromId;
+    private Guid? _pipelineId;
+    private string _pipelineName = "";
+    private string? _pipelineDescription = "";
+    private string? _validationError;
+    private bool _isSaving;
+    private bool _isPublishing;
+
+    private List<TaskNode> _tasks = new();
+    private List<ConnectionModel> _connections = new();
+    private List<ConnectionPayload> _availableConnections = new();
+    private Stack<List<TaskNode>> _undoStack = new();
+    private Stack<List<TaskNode>> _redoStack = new();
+
+    // Why: dedupes the ConnectionCommandCapabilitiesUnavailable gap log — GetSupportedCommands runs
+    // on every render of the Inspector panel while a task is selected; log the gap once per
+    // connection type name rather than spamming the logger every StateHasChanged cycle.
+    private readonly HashSet<string> _loggedCapabilityGapConnectionTypes = new(StringComparer.Ordinal);
+
+    // ─── Test-mode state ───────────────────────────────────────────────────────
+
+    // Why: All test-mode fields are grouped together so they are easy to reason
+    // about in isolation from the main designer state.
+    private Guid? _testExecutionId;
+    private bool _testRunActive;
+    private bool _testIsPaused;
+    private string _testExecutionStatus = "";
+    private HubConnection? _hubConnection;
+
+    // Why: ConcurrentDictionary for thread-safe per-task counter updates arriving
+    // on the SignalR thread vs. StateHasChanged on the Blazor sync context.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, PipelineTaskStatusUpdate>
+        _taskUpdates = new();
+
+    // Why: Dictionary rather than ConcurrentDictionary — edge keys are strings that
+    // combine two Guids; writes are always on the SignalR receive path (sequential
+    // per connection), so a plain dict locked on StateHasChanged is sufficient.
+    private readonly Dictionary<string, PipelineEdgeFlowUpdate>
+        _edgeUpdates = new(StringComparer.Ordinal);
+
+    // Log lines rolling tail — last 100 lines from the execution group.
+    private readonly List<string> _testLogLines = new();
+    private const int MaxLogLines = 100;
+
+    // Inspector sub-panel state — populated when the user clicks a node/edge.
+    private TaskInspectorState? _inspectorTaskState;
+    private EdgeInspectorState? _inspectorEdgeState;
+    private string? _inspectorItemLabel;
+
+    // Why: Base URL for ETL API calls derived from NavigationManager so that the
+    // component works regardless of deployment origin (localhost vs production host).
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+
+    private string SessionKey => $"pipelines:builder:{PipelineId ?? Id ?? Guid.Empty}";
+
+    protected override void OnParametersSet()
+    {
+        if (_sessionRestored || Session is null || Session.IsLoading) return;
+        if (!Session.State.TryGetValue(SessionKey, out var raw) || raw is not System.Text.Json.JsonElement json) return;
+        _sessionRestored = true;
+
+        if (json.TryGetProperty("zoom", out var z)) _zoom = z.GetDouble();
+        if (json.TryGetProperty("panX", out var px)) _panX = px.GetDouble();
+        if (json.TryGetProperty("panY", out var py)) _panY = py.GetDouble();
+        if (json.TryGetProperty("selectedTaskId", out var sid) && sid.ValueKind != System.Text.Json.JsonValueKind.Null)
+        {
+            if (Guid.TryParse(sid.GetString(), out var taskId)) _selectedTaskId = taskId;
+        }
+    }
+
+    private async Task SaveBuilderSessionState()
+    {
+        if (Session is null) return;
+        var state = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["zoom"] = _zoom,
+            ["panX"] = _panX,
+            ["panY"] = _panY,
+            ["selectedTaskId"] = _selectedTaskId?.ToString()
+        };
+        await Session.OnSaveState(SessionKey, state);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _logger = LoggerParam ?? NullLogger<PipelineBuilderPage>.Instance;
+        _connectionApi = new ConnectionApiClient(HttpClientFactory.CreateClient("ConnectionClient"), LoggerFactory?.CreateLogger<ConnectionApiClient>()!);
+        try
+        {
+            var result = await _connectionApi!.GetConnections();
+            if (result.IsSuccess && result.Value != null)
+                _availableConnections = result.Value.ToList();
+        }
+        catch
+        {
+            _availableConnections = new List<ConnectionPayload>();
+        }
+
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Why: if the provider's async load already resolved before this first render, hydrate now;
+        // otherwise HandleProviderLoaded (provider's OnInitialLoadComplete) hydrates once it resolves.
+        if (firstRender && !_providerLoaded
+            && (_builderProvider.CanvasModel is not null || _builderProvider.LastResult is { IsFailure: true }))
+        {
+            HydrateFromProvider();
+        }
+        return Task.CompletedTask;
+    }
+
+    // Why: provider callback — fires when the initial async load resolves (Pipeline OR ErrorMessage is
+    // set), the point the page's firstRender raced past. Without it a failed Get(id) left a blank canvas.
+    private void HandleProviderLoaded() => HydrateFromProvider();
+
+    private void HydrateFromProvider()
+    {
+        if (_providerLoaded) return;
+        _providerLoaded = true;
+
+        // PipelineBuilderProvider has loaded task types and existing pipeline by now.
+        // Why: hydrate the page's local pipelineId from the provider so test-run dispatch
+        // and Publish button get the correct pipeline identifier after load.
+        _pipelineId = _builderProvider.PipelineConfigurationId;
+
+        if (_builderProvider.CanvasModel is { } canvasModel)
+        {
+            // Why: populate _pipelineName from the canvas model title so the name field
+            // shows the loaded pipeline name correctly on first render.
+            _pipelineName = canvasModel.Title;
+
+            // Why: populate _tasks from canvas model nodes for the Inspector panel and
+            // test-mode task lookup. Canvas model nodes are the authoritative source of
+            // truth; this local list is a read-only view used by the inspector and SignalR
+            // overlay — mutations via the inspector are local and do not affect the canvas model.
+            _tasks = canvasModel.Nodes
+                .OfType<PipelineCanvasNode>()
+                .Select(n =>
+                {
+                    n.Metadata.TryGetValue(PipelineCanvasMetadataKeys.OperationType, out var opType);
+                    n.Metadata.TryGetValue(PipelineCanvasMetadataKeys.DataSetName, out var dataSetName);
+                    n.Metadata.TryGetValue(PipelineCanvasMetadataKeys.ConnectionName, out var connName);
+                    n.Metadata.TryGetValue(PipelineCanvasMetadataKeys.DataSetRole, out var role);
+
+                    // Why: canvas node IDs are strings (e.g. "source", "sink", "transform-{guid}");
+                    // synthesize stable Guids for the test-mode task-update lookup keyed by Guid.
+                    _ = Guid.TryParse(n.Id.Replace("transform-", string.Empty, StringComparison.Ordinal), out var nodeGuid);
+                    if (nodeGuid == Guid.Empty)
+                        nodeGuid = Guid.CreateVersion7();
+
+                    var category = string.IsNullOrEmpty(role)
+                        ? "Transform"
+                        : string.Equals(role, PipelineCanvasMetadataKeys.RoleSource, StringComparison.Ordinal)
+                            ? "Source"
+                            : "Destination";
+
+                    return new TaskNode
+                    {
+                        Id = nodeGuid,
+                        CanvasNodeId = n.Id,
+                        Name = n.Label,
+                        TaskType = opType ?? n.NodeType.Name,
+                        Category = category,
+                        DataSetName = dataSetName ?? string.Empty,
+                        ConnectionName = connName ?? string.Empty,
+                        Configuration = new Dictionary<string, object?>(StringComparer.Ordinal),
+                    };
+                })
+                .ToList();
+
+            StateHasChanged();
+        }
+        else if (_builderProvider.LastResult is { IsFailure: true })
+        {
+            _validationError = _builderProvider.LastResult?.CurrentMessage;
+            StateHasChanged();
+        }
+    }
+
+    // Why: ConnectionPayload (Fdw.Services.Connections.Clients) carries only Name/ConnectionType/etc. — no
+    // endpoint projects IConnectionType.SupportedCommands (the command-capability metadata: per-capability
+    // ConfigurationFields / BuilderComponentType) to the client. That metadata lives only on the
+    // server-side ConnectionTypes TypeCollection (Fdw.Services.Connections core), which Fdw.UI.Pages no
+    // longer references (canvas decoupling). Until a connection-types/{name}/command-capabilities
+    // endpoint ships, the capability picker has no data source; log the gap once per connection type
+    // and return empty so the Command picker/config fields/write-capability badge simply don't render
+    // rather than guessing at a hardcoded capability list.
+    private IReadOnlyList<ICommandCapabilityType> GetSupportedCommands(string? connectionTypeName)
+    {
+        if (string.IsNullOrEmpty(connectionTypeName))
+            return [];
+
+        if (_loggedCapabilityGapConnectionTypes.Add(connectionTypeName))
+            PipelineBuilderProviderLog.ConnectionCommandCapabilitiesUnavailable(_logger, connectionTypeName);
+
+        return [];
+    }
+
+    private static string InferCategory(string taskType) => taskType switch
+    {
+        // Why: SqlQuery/HttpSource/FileSource are legacy task-type names that pre-date the
+        // connection-driven field model. Map them to Source for backward compatibility with
+        // pipelines saved before Wave 0a.
+        "Source" or "SqlQuery" or "HttpSource" or "FileSource" => "Source",
+        "Destination" or "SqlDestination" or "FileDestination" => "Destination",
+        "Conditional" or "Union" or "Loop" or "ErrorHandler" => "Control",
+        "Trash" => "Diagnostics",
+        _ => "Transform"
+    };
+
+    private static string GetConfigValue(TaskNode task, string key)
+    {
+        if (task.Configuration.TryGetValue(key, out var val))
+            return val?.ToString() ?? string.Empty;
+        return string.Empty;
+    }
+
+    private static void SetConfigValue(TaskNode task, string key, string? value)
+    {
+        task.Configuration[key] = value;
+    }
+
+    // Why: Configuration round-trips through System.Text.Json so string values land in the dict
+    // as JsonElement after a load. .ToString() on a JsonElement returns the raw JSON encoding
+    // (string values show up wrapped in quotes) — use GetString() when the element is a JSON
+    // string so the UI gets the unwrapped value.
+    private static string ReadConfigString(IDictionary<string, object?> cfg, string key)
+    {
+        if (!cfg.TryGetValue(key, out var value) || value is null)
+            return string.Empty;
+        if (value is string s) return s;
+        if (value is System.Text.Json.JsonElement je)
+        {
+            return je.ValueKind == System.Text.Json.JsonValueKind.String
+                ? je.GetString() ?? string.Empty
+                : je.ToString();
+        }
+        return value.ToString() ?? string.Empty;
+    }
+
+    // Why: Capability selection clears previously stored fields from the old capability
+    // before writing the new CapabilityName, preventing stale keys from accumulating in
+    // the Configuration dict across capability switches.
+    private void SetSelectedCapability(TaskNode task, string capabilityName)
+    {
+        // Remove fields from the previously selected capability.
+        var oldName = ReadConfigString(task.Configuration, "CapabilityName");
+        if (!string.IsNullOrEmpty(oldName))
+        {
+            var connDto = _availableConnections.FirstOrDefault(
+                c => string.Equals(c.Name, task.ConnectionName, StringComparison.OrdinalIgnoreCase));
+            // Why: see GetSupportedCommands — SupportedCommands is not exposed over the connections API.
+            var oldCap = GetSupportedCommands(connDto?.ConnectionType)
+                .FirstOrDefault(c => string.Equals(c.Name, oldName, StringComparison.Ordinal));
+            if (oldCap is not null)
+            {
+                foreach (var field in oldCap.ConfigurationFields)
+                    task.Configuration.Remove(field.Key);
+            }
+        }
+
+        if (string.IsNullOrEmpty(capabilityName))
+            task.Configuration.Remove("CapabilityName");
+        else
+            task.Configuration["CapabilityName"] = capabilityName;
+    }
+
+    private void PushUndo()
+    {
+        _undoStack.Push(_tasks.Select(t => new TaskNode
+        {
+            Id = t.Id, Name = t.Name, TaskType = t.TaskType, StepType = t.StepType,
+            Category = t.Category, X = t.X, Y = t.Y, ConnectionName = t.ConnectionName,
+            TransformType = t.TransformType,
+            TransformFields = new Dictionary<string, string>(t.TransformFields, StringComparer.Ordinal)
+        }).ToList());
+        _redoStack.Clear();
+    }
+
+    private void Undo()
+    {
+        if (_undoStack.Count == 0) return;
+        _redoStack.Push(_tasks);
+        _tasks = _undoStack.Pop();
+    }
+
+    private void Redo()
+    {
+        if (_redoStack.Count == 0) return;
+        _undoStack.Push(_tasks);
+        _tasks = _redoStack.Pop();
+    }
+
+    private async Task ZoomIn() { _zoom = Math.Min(2, _zoom + 0.1); await SaveBuilderSessionState(); }
+    private async Task ZoomOut() { _zoom = Math.Max(0.5, _zoom - 0.1); await SaveBuilderSessionState(); }
+
+    private void StartConnection(Guid sourceId)
+    {
+        _connectingFromId = sourceId;
+    }
+
+    private void SetConnectionTarget(Guid targetId)
+    {
+        if (_connectingFromId == null || _connectingFromId == targetId) return;
+        _connections.Add(new ConnectionModel
+        {
+            Id = Guid.NewGuid(),
+            SourceTaskId = _connectingFromId.Value,
+            TargetTaskId = targetId
+        });
+        _connectingFromId = null;
+    }
+
+    private void DeleteSelectedTask()
+    {
+        if (_selectedTaskId == null) return;
+        PushUndo();
+        _tasks.RemoveAll(t => t.Id == _selectedTaskId.Value);
+        _connections.RemoveAll(c => c.SourceTaskId == _selectedTaskId.Value || c.TargetTaskId == _selectedTaskId.Value);
+        _selectedTaskId = null;
+    }
+
+    private void OnDragOver(DragEventArgs e) { }
+
+    // Why: separate canvas-drop handler for the CanvasHost container so that drag-and-drop
+    // from the palette creates a canvas node via EditContext.AddNode when the builder is in
+    // edit mode. The original OnDrop handler mutated the legacy _tasks list for the non-canvas
+    // path; this handler drives the canvas model — both paths coexist during the
+    // canvas-adoption migration.
+    private async Task OnCanvasDrop(DragEventArgs e)
+    {
+        if (_draggedTaskType is null) return;
+        if (_builderProvider.CanvasModel?.EditContext is not { } editContext)
+        {
+            _draggedTaskType = null;
+            return;
+        }
+
+        // Why: PipelinePaletteNodeMap closes the mechanism gap where palette names ("Source"/"Map"/
+        // "Filter"/etc. — UI-facing labels) were passed straight to CanvasNodeTypes.ByName, which has
+        // no member by those names (only "DataSet"/"Transform"/etc.) — every drop failed loud before
+        // this map existed. The map also returns the seed metadata (DataSetRole / OperationType +
+        // ExecutionOrder) the node needs, computed from the current canvas's Transform node count.
+        var draggedTaskType = _draggedTaskType;
+        var transformCount = _builderProvider.CanvasModel.Nodes
+            .Count(n => string.Equals(n.NodeType.Name, "Transform", StringComparison.Ordinal));
+        var mapResult = PipelinePaletteNodeMap.Map(draggedTaskType, transformCount + 1, _logger);
+        if (!mapResult.IsSuccess)
+        {
+            // Why: fail loud — an unregistered drag type is a configuration error, not a
+            // user error. Show the validation error rather than silently dropping the node.
+            _validationError = mapResult.CurrentMessage;
+            _draggedTaskType = null;
+            StateHasChanged();
+            return;
+        }
+
+        var (nodeType, seedMetadata) = mapResult.Value;
+
+        // Why: position the new node at the cursor, adjusted for the canvas element's
+        // left offset (palette ≈ 224px + gap ≈ 12px = ~236px) and the page header offset
+        // (~100px). Canvas-space coords divide by zoom and subtract the pan origin.
+        var canvasOffsetLeft = _testRunActive ? 556.0 : 236.0;  // wider when execution panel is open
+        var x = (e.ClientX - canvasOffsetLeft - _panX) / _zoom;
+        var y = (e.ClientY - 100 - _panY) / _zoom;
+
+        var taskInfo = _taskCategories.SelectMany(c => c.Tasks)
+            .FirstOrDefault(t => string.Equals(t.Name, draggedTaskType, StringComparison.Ordinal));
+        var label = taskInfo?.DisplayName ?? draggedTaskType;
+
+        var addResult = await editContext.AddNode(nodeType, label, x, y);
+        if (!addResult.IsSuccess)
+        {
+            _validationError = addResult.CurrentMessage;
+            _draggedTaskType = null;
+            StateHasChanged();
+            return;
+        }
+
+        var newNodeId = addResult.Value!;
+        _draggedTaskType = null;
+
+        // Why: seed the node's DataSetRole/OperationType/ExecutionOrder metadata from the palette map
+        // — AddNode always starts a node with empty metadata (it doesn't understand domain semantics).
+        var seedResult = await editContext.UpdateNodeMetadata(newNodeId, seedMetadata);
+        if (!seedResult.IsSuccess)
+        {
+            _validationError = seedResult.CurrentMessage;
+            StateHasChanged();
+            return;
+        }
+
+        // Why: synthesize a TaskNode entry so the inspector can select and edit the
+        // newly dropped node in the same render cycle.
+        var newGuid = Guid.CreateVersion7();
+        var category = taskInfo?.Category ?? InferCategory(draggedTaskType);
+
+        // Why: apply the journey-entry DataSet on the first Source node dropped when the
+        // page was reached via ?sourceDataSet=... — same guard as the legacy OnDrop path.
+        var initialDataSetName = string.Empty;
+        if (!_initialSourceApplied
+            && !string.IsNullOrEmpty(SourceDataSet)
+            && string.Equals(category, "Source", StringComparison.Ordinal))
+        {
+            initialDataSetName = SourceDataSet;
+            _initialSourceApplied = true;
+            PipelineBuilderProviderLog.InitialSourceDataSetApplied(_logger, SourceDataSet);
+        }
+
+        var newTask = new TaskNode
+        {
+            Id = newGuid,
+            CanvasNodeId = newNodeId,
+            Name = label,
+            TaskType = nodeType.Name,
+            Category = category,
+            DataSetName = initialDataSetName,
+            Configuration = new Dictionary<string, object?>(StringComparer.Ordinal),
+        };
+        _tasks.Add(newTask);
+        _selectedTaskId = newGuid;
+
+        await SaveBuilderSessionState();
+        StateHasChanged();
+    }
+
+    // Why: write-back method syncs inspector-editable metadata fields (DataSetName,
+    // ConnectionName, OperationType, DataSetRole) from the local TaskNode to the canvas model.
+    // Called after any inspector field change that maps to a canvas metadata key.
+    // Does nothing when no EditContext is available (view-only or canvas not yet loaded).
+    private async Task SyncTaskMetadataToCanvas(TaskNode task)
+    {
+        if (_builderProvider.CanvasModel?.EditContext is not { } editContext) return;
+        if (string.IsNullOrEmpty(task.CanvasNodeId)) return;
+
+        var update = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [PipelineCanvasMetadataKeys.DataSetName] = task.DataSetName,
+            [PipelineCanvasMetadataKeys.ConnectionName] = task.ConnectionName,
+            [PipelineCanvasMetadataKeys.OperationType] = task.TaskType,
+        };
+
+        // Why: DataSetRole was never written here — PipelineCreateRequestProjection's source/sink
+        // node lookup keys exclusively off this metadata key, so without it Save can never find the
+        // source/sink DataSet nodes for a task synced through the inspector. Only Source/Destination
+        // category tasks carry a role (the DataSet picker/connection picker in Builder.razor is itself
+        // gated on Category == "Source" || "Destination", so this method is only ever called for
+        // those two categories today) — no other category maps to a DataSetRole value.
+        if (string.Equals(task.Category, "Source", StringComparison.Ordinal))
+            update[PipelineCanvasMetadataKeys.DataSetRole] = PipelineCanvasMetadataKeys.RoleSource;
+        else if (string.Equals(task.Category, "Destination", StringComparison.Ordinal))
+            update[PipelineCanvasMetadataKeys.DataSetRole] = PipelineCanvasMetadataKeys.RoleSink;
+
+        var result = await editContext.UpdateNodeMetadata(task.CanvasNodeId, update);
+        if (!result.IsSuccess)
+        {
+            // Why: log the failure at warning level but do not block the UI — the user's
+            // in-memory inspector edit is still visible; the failure is a canvas-sync gap.
+            _validationError = result.CurrentMessage;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnDataSetSelectionChanged(TaskNode task, string? name)
+    {
+        // Why: Persist DataSet binding on the task. When DataSet is bound, the runtime reads
+        // SourceDataSet/TargetDataSet from the pipeline config and resolves the Connection
+        // server-side — no need to auto-fill ConnectionName in the UI. When "None" is picked,
+        // leave ConnectionName alone so the user can pick one manually for ad-hoc mode.
+        task.DataSetName = name ?? string.Empty;
+        await SyncTaskMetadataToCanvas(task);
+        StateHasChanged();
+    }
+
+    private async Task OnCreateDataSetFromPicker(TaskNode task, CreateDataSetPayload request)
+    {
+        if (_builderProvider.Context?.OnCreateDataSet is null) return;
+        await _builderProvider.Context.OnCreateDataSet.Invoke(request);
+        // Auto-select the just-created DataSet on the task so the picker shows it selected.
+        task.DataSetName = request.Name;
+        StateHasChanged();
+    }
+
+    private async Task OnDrop(DragEventArgs e)
+    {
+        if (_draggedTaskType == null) return;
+
+        var taskInfo = _taskCategories.SelectMany(c => c.Tasks).FirstOrDefault(t => t.Name == _draggedTaskType);
+        if (taskInfo == null) return;
+
+        PushUndo();
+        var newTask = new TaskNode
+        {
+            Id = Guid.NewGuid(),
+            Name = taskInfo.DisplayName,
+            TaskType = taskInfo.Name,
+            Category = taskInfo.Category,
+            X = (int)((e.ClientX - _panX - 300) / _zoom),
+            Y = (int)((e.ClientY - _panY - 100) / _zoom)
+        };
+
+        // Why: auto-apply the journey-entry DataSet on the first Source task dropped when the
+        // page was reached via ?sourceDataSet=... from Catalog or DataSetDetail. Applied only
+        // once (_initialSourceApplied guard) so subsequent Source drops start blank.
+        if (!_initialSourceApplied
+            && !string.IsNullOrEmpty(SourceDataSet)
+            && string.Equals(taskInfo.Category, "Source", StringComparison.Ordinal))
+        {
+            newTask.DataSetName = SourceDataSet;
+            _initialSourceApplied = true;
+            PipelineBuilderProviderLog.InitialSourceDataSetApplied(_logger, SourceDataSet);
+        }
+
+        _tasks.Add(newTask);
+
+        // Why: auto-select the just-dropped node so the properties panel opens immediately
+        // rather than requiring a second click.
+        _selectedTaskId = newTask.Id;
+
+        _draggedTaskType = null;
+        await SaveBuilderSessionState();
+        StateHasChanged();
+    }
+
+    // ─── Test-mode methods ─────────────────────────────────────────────────────
+
+    private async Task StartTestRun()
+    {
+        if (_pipelineId == null)
+        {
+            _validationError = "Save the pipeline before running a test";
+            return;
+        }
+
+        _testExecutionStatus = "Starting";
+        _testRunActive = false;
+        _taskUpdates.Clear();
+        _edgeUpdates.Clear();
+        _testLogLines.Clear();
+        _inspectorTaskState = null;
+        _inspectorEdgeState = null;
+        _inspectorItemLabel = null;
+
+        try
+        {
+            var etlBaseUrl = NavigationManager.BaseUri.TrimEnd('/').Replace(":5010", ":5011", StringComparison.Ordinal);
+            var client = HttpClientFactory.CreateClient();
+            var payload = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                PipelineId = _pipelineId.Value,
+                MaxRowsPerSource = 100,
+                SkipDestinationWrites = true,
+                TriggerSource = "TestRun:Builder"
+            });
+            var content = new System.Net.Http.StringContent(payload, System.Text.Encoding.UTF8, "application/json");
+            var response = await client.PostAsync($"{etlBaseUrl}/etl/trigger/test", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _validationError = $"Test run failed to start ({(int)response.StatusCode})";
+                _testExecutionStatus = "";
+                return;
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            var testResponse = System.Text.Json.JsonSerializer.Deserialize<TestRunResponseDto>(json,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (testResponse?.ExecutionId == null)
+            {
+                _validationError = "Test run response was missing execution ID";
+                _testExecutionStatus = "";
+                return;
+            }
+
+            _testExecutionId = testResponse.ExecutionId;
+            _testExecutionStatus = testResponse.Status ?? "Queued";
+            _testRunActive = true;
+            _testIsPaused = false;
+
+            await ConnectSignalR(_testExecutionId.Value);
+        }
+        catch (Exception ex)
+        {
+            _validationError = $"Test run error: {ex.Message}";
+            _testExecutionStatus = "";
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ConnectSignalR(Guid executionId)
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+            _hubConnection = null;
+        }
+
+        var etlBaseUrl = NavigationManager.BaseUri.TrimEnd('/').Replace(":5010", ":5011", StringComparison.Ordinal);
+        // Why: HubConnectionBuilder.WithUrl requires an absolute URL. Derive it from NavigationManager
+        // so it works in any deployment without hardcoding ports.
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl($"{etlBaseUrl}/hubs/pipelines", options =>
+            {
+                // Why: the pipeline hub is [Authorize]d (FDW-545). The .NET SignalR client sends this
+                // token as a bearer credential on negotiate/connect; the ETL server validates it via
+                // OpenIddict. No token => 401, which is the correct fail-loud behavior (no anonymous path).
+                options.AccessTokenProvider = () => TokenProvider.GetAccessToken();
+            })
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<PipelineTaskStatusUpdate>("OnTaskStatusChanged", update =>
+        {
+            if (update.ExecutionId != executionId) return;
+            _taskUpdates[update.TaskId] = update;
+            // Update inspector if this task is currently selected in the inspector.
+            if (_inspectorTaskState != null && _inspectorItemLabel != null)
+            {
+                var matchingTask = _tasks.FirstOrDefault(t => t.Id == update.TaskId);
+                if (matchingTask != null && string.Equals(matchingTask.Name, _inspectorItemLabel, StringComparison.Ordinal))
+                    UpdateInspectorForTask(update.TaskId);
+            }
+            InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On<PipelineEdgeFlowUpdate>("OnEdgeFlow", update =>
+        {
+            if (update.ExecutionId != executionId) return;
+            var key = $"{update.SourceTaskId:N}_{update.TargetTaskId:N}";
+            _edgeUpdates[key] = update;
+            InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On<Guid>("OnExecutionPaused", id =>
+        {
+            if (id != executionId) return;
+            _testIsPaused = true;
+            _testExecutionStatus = "Paused";
+            InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On<Guid>("OnExecutionResumed", id =>
+        {
+            if (id != executionId) return;
+            _testIsPaused = false;
+            _testExecutionStatus = "Running";
+            InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On<PipelineStatusUpdate>("OnStatusChanged", update =>
+        {
+            if (update.ExecutionId != executionId) return;
+            _testExecutionStatus = update.Status;
+            if (string.Equals(update.Status, "Complete", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(update.Status, "Failed", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(update.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            {
+                _testRunActive = false;
+            }
+            AppendLogLine($"[{update.Status}] {update.Message}");
+            InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On<PipelineProgressUpdate>("OnProgressUpdated", update =>
+        {
+            if (update.ExecutionId != executionId) return;
+            AppendLogLine($"Extracted: {update.RecordsExtracted} | Loaded: {update.RecordsLoaded} | Failed: {update.RecordsFailed}");
+            InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On<PipelineExecutionComplete>("OnExecutionCompleted", complete =>
+        {
+            if (complete.ExecutionId != executionId) return;
+            _testExecutionStatus = "Complete";
+            _testRunActive = false;
+            AppendLogLine($"Execution completed: {complete.PipelineName} — {complete.RecordsLoaded} loaded");
+            InvokeAsync(StateHasChanged);
+        });
+
+        await _hubConnection.StartAsync();
+        // Why: SubscribeToExecution is the PipelineStatusHub verb that joins the execution:{id}
+        // group. Task/edge/pause/resume events broadcast ONLY to that group, so without this the
+        // live node/edge animations never arrive. (The prior "JoinGroup" verb had no hub handler.)
+        await _hubConnection.SendAsync("SubscribeToExecution", executionId);
+        AppendLogLine($"Connected to execution group {executionId}");
+    }
+
+    private void AppendLogLine(string? line)
+    {
+        if (string.IsNullOrEmpty(line)) return;
+        _testLogLines.Add($"[{DateTime.UtcNow:HH:mm:ss}] {line}");
+        if (_testLogLines.Count > MaxLogLines)
+            _testLogLines.RemoveAt(0);
+    }
+
+    private async Task TestPause()
+    {
+        if (!_testExecutionId.HasValue) return;
+        try
+        {
+            var etlBaseUrl = NavigationManager.BaseUri.TrimEnd('/').Replace(":5010", ":5011", StringComparison.Ordinal);
+            var client = HttpClientFactory.CreateClient();
+            await client.PostAsync($"{etlBaseUrl}/etl/executions/{_testExecutionId.Value}/pause",
+                new System.Net.Http.StringContent("", System.Text.Encoding.UTF8, "application/json"));
+        }
+        catch { /* best-effort, SignalR will confirm the state change */ }
+    }
+
+    private async Task TestResume()
+    {
+        if (!_testExecutionId.HasValue) return;
+        try
+        {
+            var etlBaseUrl = NavigationManager.BaseUri.TrimEnd('/').Replace(":5010", ":5011", StringComparison.Ordinal);
+            var client = HttpClientFactory.CreateClient();
+            await client.PostAsync($"{etlBaseUrl}/etl/executions/{_testExecutionId.Value}/resume",
+                new System.Net.Http.StringContent("", System.Text.Encoding.UTF8, "application/json"));
+        }
+        catch { /* best-effort */ }
+    }
+
+    private async Task TestStep()
+    {
+        if (!_testExecutionId.HasValue) return;
+        try
+        {
+            var etlBaseUrl = NavigationManager.BaseUri.TrimEnd('/').Replace(":5010", ":5011", StringComparison.Ordinal);
+            var client = HttpClientFactory.CreateClient();
+            await client.PostAsync($"{etlBaseUrl}/etl/executions/{_testExecutionId.Value}/step",
+                new System.Net.Http.StringContent("", System.Text.Encoding.UTF8, "application/json"));
+        }
+        catch { /* best-effort */ }
+    }
+
+    private async Task TestStop()
+    {
+        if (!_testExecutionId.HasValue) return;
+        try
+        {
+            var etlBaseUrl = NavigationManager.BaseUri.TrimEnd('/').Replace(":5010", ":5011", StringComparison.Ordinal);
+            var client = HttpClientFactory.CreateClient();
+            await client.DeleteAsync($"{etlBaseUrl}/etl/executions/{_testExecutionId.Value}");
+        }
+        catch { /* best-effort */ }
+        _testRunActive = false;
+        _testExecutionStatus = "Cancelled";
+        StateHasChanged();
+    }
+
+    private void CloseExecutionPanel()
+    {
+        _testRunActive = false;
+        _testExecutionId = null;
+        _testExecutionStatus = "";
+        _testIsPaused = false;
+        _taskUpdates.Clear();
+        _edgeUpdates.Clear();
+        _testLogLines.Clear();
+        CloseInspector();
+        StateHasChanged();
+    }
+
+    private void CloseInspector()
+    {
+        _inspectorTaskState = null;
+        _inspectorEdgeState = null;
+        _inspectorItemLabel = null;
+        StateHasChanged();
+    }
+
+    private async Task SelectTask(Guid id)
+    {
+        _selectedTaskId = id;
+
+        // Why: write-capability detection needs IConnectionType.SupportedCommands, which is not
+        // exposed over the connections API (see GetSupportedCommands). Rather than assert a
+        // possibly-false "no write capability" warning when the API genuinely doesn't know,
+        // GetSupportedCommands logs the capability-data gap once per connection type (not on every
+        // task selection); the prior write-capability warning is retired until real capability
+        // data is available to evaluate honestly.
+        var selected = _tasks.FirstOrDefault(t => t.Id == id);
+        if (selected is not null
+            && string.Equals(selected.Category, "Destination", StringComparison.Ordinal)
+            && !string.IsNullOrEmpty(selected.ConnectionName))
+        {
+            var connDto = _availableConnections.FirstOrDefault(c =>
+                string.Equals(c.Name, selected.ConnectionName, StringComparison.OrdinalIgnoreCase));
+            if (connDto is not null)
+                GetSupportedCommands(connDto.ConnectionType);
+        }
+
+        if (_testExecutionId.HasValue)
+            UpdateInspectorForTask(id);
+        await SaveBuilderSessionState();
+    }
+
+    private void UpdateInspectorForTask(Guid taskId)
+    {
+        // Why: Inspector state is fetched from the in-process inspector singleton via the
+        // HTTP inspect endpoint. In the UI-only package we don't have direct access to the
+        // inspector singleton — instead, fetch from the API so we get a consistent snapshot.
+        // For now, the task update dict gives us the counters; full sample fetch would need
+        // a separate HTTP call to /etl/executions/{id}/tasks/{taskId}/inspect.
+        // The counters are already tracked in _taskUpdates; create a thin state wrapper here.
+        if (_taskUpdates.TryGetValue(taskId, out var update))
+        {
+            _inspectorTaskState = null; // Reset to trigger re-render
+            var task = _tasks.FirstOrDefault(t => t.Id == taskId);
+            _inspectorItemLabel = task?.Name ?? taskId.ToString();
+        }
+    }
+
+    private void SelectEdge(Guid sourceTaskId, Guid targetTaskId, string sourceName, string targetName)
+    {
+        _inspectorItemLabel = $"{sourceName} → {targetName}";
+        _inspectorTaskState = null;
+        _inspectorEdgeState = null;
+        // Why: edge state only available from API call — set label for display, reset inspector content.
+        StateHasChanged();
+    }
+
+    private string? GetTaskTestStatus(Guid taskId)
+    {
+        if (!_testExecutionId.HasValue) return null;
+        if (!_taskUpdates.TryGetValue(taskId, out var update)) return null;
+        return update.Status;
+    }
+
+    private TaskInspectorState? GetTaskInspectorState(Guid taskId)
+    {
+        if (!_testExecutionId.HasValue) return null;
+        if (!_taskUpdates.TryGetValue(taskId, out var update)) return null;
+        // Why: Build a thin state object from the broadcast update so the canvas badge renders
+        // the counters without a full inspector fetch. Samples require a separate HTTP call.
+        return new TaskInspectorState
+        {
+            RecordsIn = update.RecordsIn,
+            RecordsOut = update.RecordsOut,
+            RecordsDiscarded = update.RecordsDiscarded,
+            RecordsHeld = update.RecordsHeld,
+            SampleBufferAtCapacity = update.SampleBufferAtCapacity,
+        };
+    }
+
+    private long GetEdgeFlowCount(Guid sourceTaskId, Guid targetTaskId)
+    {
+        var key = $"{sourceTaskId:N}_{targetTaskId:N}";
+        return _edgeUpdates.TryGetValue(key, out var update) ? update.RecordsFlowed : 0;
+    }
+
+    private static string GetTestStatusBorderColor(string? status) => status switch
+    {
+        "Running" => "#f59e0b",
+        "Complete" => "#22c55e",
+        "Failed" => "#ef4444",
+        "Cancelled" => "#6b7280",
+        _ => "#475569"
+    };
+
+    private static string GetStatusBadgeClass(string status)
+    {
+        if (string.Equals(status, "Running", StringComparison.OrdinalIgnoreCase))
+            return "b-ok";
+        if (string.Equals(status, "Paused", StringComparison.OrdinalIgnoreCase))
+            return "b-warn";
+        if (string.Equals(status, "Complete", StringComparison.OrdinalIgnoreCase))
+            return "b-run";
+        if (string.Equals(status, "Failed", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            return "b-fail";
+        return "b-idle";
+    }
+
+    // Why: IAsyncDisposable implementation ensures the SignalR connection is cleanly
+    // closed when the component is navigated away from.
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
+    }
+
+    // Why: Private DTO for deserializing the test run response from the ETL API. This
+    // avoids a dependency on the reference-etl package from the FDW UI package.
+    private sealed class TestRunResponseDto
+    {
+        public Guid? ExecutionId { get; set; }
+        public string? Status { get; set; }
+    }
+
+    private bool ValidatePipeline()
+    {
+        if (string.IsNullOrWhiteSpace(_pipelineName))
+        {
+            _validationError = "Pipeline name is required";
+            return false;
+        }
+        if (_tasks.Count == 0)
+        {
+            _validationError = "Pipeline must have at least one task";
+            return false;
+        }
+        _validationError = null;
+        return true;
+    }
+
+    private async Task SavePipeline()
+    {
+        if (!ValidatePipeline()) return;
+        _isSaving = true;
+        try
+        {
+            // Why: delegate save to the provider which projects the canvas model to an
+            // EtlPipelineConfiguration and persists via PipelineServiceConfigurationProvider.Save.
+            // No client-side task-list serialization — the canvas model is authoritative.
+            var success = await _builderProvider.Save(_pipelineName, _pipelineDescription);
+            if (success)
+            {
+                // Why: refresh pipelineId after save so test-run dispatch and Publish button
+                // work immediately for a pipeline that was just created (was null before save).
+                _pipelineId = _builderProvider.PipelineConfigurationId;
+                Nav.NavigateTo("/pipelines");
+            }
+            else
+            {
+                _validationError = _builderProvider.LastResult?.CurrentMessage ?? "Failed to save pipeline";
+            }
+        }
+        catch
+        {
+            _validationError = "Failed to save pipeline";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task PublishPipeline()
+    {
+        if (string.IsNullOrWhiteSpace(_pipelineName)) return;
+        _isPublishing = true;
+        _validationError = null;
+        try
+        {
+            // Why: Publish projects the canvas model to ETL config and calls Save with Active status.
+            var success = await _builderProvider.Context.OnPublish(_pipelineName);
+            if (success)
+            {
+                Nav.NavigateTo("/pipelines");
+            }
+            else
+            {
+                _validationError = _builderProvider.LastResult?.CurrentMessage ?? "Failed to publish pipeline";
+            }
+        }
+        catch
+        {
+            _validationError = "Failed to publish pipeline";
+        }
+        finally
+        {
+            _isPublishing = false;
+        }
+    }
+
+    // Why: Node accent colors aligned to the console design palette
+    // (glacier/green/signal/violet) so the canvas matches the Reference Console.
+    private string GetTaskColor(string category) => category switch
+    {
+        "Source" => "#56b070",      // success green
+        "Transform" => "#79a8cc",   // glacier
+        "Destination" => "#e05c4a", // signal red
+        "Diagnostics" => "#787e89", // n-400
+        _ => "#9b8cd6"              // violet
+    };
+
+    // Why: Collapsed SqlQuery/HttpSource/FileSource into a single "Source" entry. The connection
+    // selected on the task now drives which query fields appear in the properties panel via
+    // IConnectionType.DataQueryType.ConfigurationFields — no need for separate palette entries
+    // per connection technology. Same principle applies to Destination.
+    private List<TaskCategory> _taskCategories = new()
+    {
+        new("Source", new List<TaskInfo>
+        {
+            new("Source", "Source", "Source", "Read from a connection or dataset"),
+        }),
+        new("Transform", new List<TaskInfo>
+        {
+            new("Filter", "Filter", "Transform", "Filter rows by condition"),
+            new("Map", "Map", "Transform", "Transform field values"),
+            new("Join", "Join", "Transform", "Join two streams"),
+            new("Aggregate", "Aggregate", "Transform", "Group and aggregate data"),
+            new("Sort", "Sort", "Transform", "Sort rows by columns"),
+            new("Deduplicate", "Deduplicate", "Transform", "Remove duplicate rows"),
+            new("Pivot", "Pivot", "Transform", "Pivot rows to columns"),
+            new("Unpivot", "Unpivot", "Transform", "Unpivot columns to rows"),
+        }),
+        new("Destination", new List<TaskInfo>
+        {
+            new("Destination", "Destination", "Destination", "Write to a connection or dataset"),
+        }),
+        new("Control", new List<TaskInfo>
+        {
+            new("Conditional", "Conditional", "Control", "Branch on condition"),
+            new("Union", "Union", "Control", "Combine streams"),
+            new("Loop", "Loop", "Control", "Iterate over items"),
+            new("ErrorHandler", "Error Handler", "Control", "Handle errors gracefully"),
+        }),
+        new("Diagnostics", new List<TaskInfo>
+        {
+            // Why: Trash is a runtime concept — records routed here are counted, optionally
+            // buffered, and optionally written to a log sink (Wave 0c runtime). Placed under
+            // Diagnostics rather than Control because it produces no downstream data stream.
+            new("Trash", "Trash", "Diagnostics", "Discard and count rejected records"),
+        }),
+    };
+
+    private class TaskNode
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+        public string TaskType { get; set; } = "";
+        public string StepType { get; set; } = "";
+        public string Category { get; set; } = "";
+        public int X { get; set; }
+        public int Y { get; set; }
+        public string ConnectionName { get; set; } = "";
+        public string DataSetName { get; set; } = "";
+
+        // Why: canvas node IDs are strings; storing the mapping here avoids a
+        // O(n) scan every time the inspector needs to write back to the canvas model.
+        public string? CanvasNodeId { get; set; }
+
+        // Per-transform configuration — keyed by TransformFieldDescriptor.Key values from the
+        // matching TransformationType's ConfigurationFields. Only populated when StepType=="Transform".
+        // The persistence layer serializes these into the task's Configuration dict on save and
+        // the server writes them to the matching pipe.PipelineTransform{Subtype} columns.
+        public string TransformType { get; set; } = "";
+        public Dictionary<string, string> TransformFields { get; set; } = new(StringComparer.Ordinal);
+
+        public string GetTransformValue(string key)
+            => TransformFields.TryGetValue(key, out var v) ? v : string.Empty;
+
+        public void SetTransformValue(string key, string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                TransformFields.Remove(key);
+            else
+                TransformFields[key] = value;
+        }
+
+        public IDictionary<string, object?> Configuration { get; set; } = new Dictionary<string, object?>(StringComparer.Ordinal);
+    }
+
+    private class ConnectionModel
+    {
+        public Guid Id { get; set; }
+        public Guid SourceTaskId { get; set; }
+        public Guid TargetTaskId { get; set; }
+    }
+
+    private record TaskCategory(string Name, List<TaskInfo> Tasks);
+    private record TaskInfo(string Name, string DisplayName, string Category, string Description);
+}

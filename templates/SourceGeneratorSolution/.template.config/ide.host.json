@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json.schemastore.org/vs-2017.3.host",
+  "icon": "icon.png",
+  "symbolInfo": [
+    {
+      "id": "RootNamespace",
+      "name": {
+        "text": "Root Namespace"
+      },
+      "isVisible": true
+    },
+    {
+      "id": "EmbedInPackage",
+      "name": {
+        "text": "Embed Generator In"
+      },
+      "isVisible": true
+    },
+    {
+      "id": "UseSharedHelpers",
+      "name": {
+        "text": "Use Shared Helpers"
+      },
+      "isVisible": true
+    },
+    {
+      "id": "EnableDebug",
+      "name": {
+        "text": "Enable Debug Output"
+      },
+      "isVisible": true
+    },
+    {
+      "id": "TargetFrameworks",
+      "name": {
+        "text": "Target Frameworks"
+      },
+      "isVisible": true
+    }
+  ]
+}

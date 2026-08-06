@@ -1,0 +1,427 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - 'wiki/**'
+      - '.gitignore'
+      - 'LICENSE'
+      - '*.md'
+  pull_request:
+    branches:
+      - master
+      - develop
+  workflow_dispatch:
+    inputs:
+      full_build:
+        description: 'Run full build (ignore affected detection)'
+        type: boolean
+        default: false
+  repository_dispatch:
+    types: [trigger-build]
+
+# Also skipped by [skip ci], [ci skip], [no build], [skip build] in commit message (GitHub native)
+
+env:
+  DOTNET_VERSION: '10.0'
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+  DOTNET_INSTALL_DIR: ${{ github.workspace }}/.dotnet
+  # Set to 'true' to enable incremental builds using dotnet-affected
+  # Set to 'false' to always do full builds (current: disabled)
+  USE_AFFECTED_BUILDS: 'false'
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: windows-latest
+    env:
+      BUILD_CONFIGURATION: Release
+    outputs:
+      has-changes: ${{ steps.affected.outputs.has-changes }}
+      is-release: ${{ steps.check-release.outputs.is-release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore .NET tools (reportgenerator, stryker)
+        run: dotnet tool restore
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore packages
+        run: dotnet restore
+
+      - name: Check if full build
+        id: check-release
+        run: |
+          $affectedDisabled = "${{ env.USE_AFFECTED_BUILDS }}" -ne "true"
+          $isRelease = "${{ github.ref }}" -eq "refs/heads/master" -or "${{ github.ref }}".StartsWith("refs/heads/release/")
+          $manualFullBuild = "${{ inputs.full_build }}" -eq "true"
+          $commitMsg = @"
+          ${{ github.event.head_commit.message }}
+          "@
+          $commitFullBuild = $commitMsg -match "\[full[- ]?build\]"
+          $isFullBuild = $affectedDisabled -or $isRelease -or $manualFullBuild -or $commitFullBuild
+          echo "is-release=$($isFullBuild.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          Write-Output "Is full build: $isFullBuild (affected disabled: $affectedDisabled, release: $isRelease, manual: $manualFullBuild, commit: $commitFullBuild)"
+
+      - name: Install dotnet-affected
+        if: steps.check-release.outputs.is-release != 'true'
+        run: dotnet tool install dotnet-affected --global --version 6.2.0-preview-1
+
+      - name: Determine affected projects
+        id: affected
+        if: steps.check-release.outputs.is-release != 'true'
+        run: |
+          # CRITICAL: Prevent PowerShell from failing on non-zero exit codes
+          $ErrorActionPreference = 'Continue'
+
+          # Determine the base commit to compare against
+          if ("${{ github.event_name }}" -eq "pull_request") {
+            $from = "origin/${{ github.base_ref }}"
+            Write-Output "PR build: comparing against $from"
+          } else {
+            $from = "${{ github.event.before }}"
+            Write-Output "Push build: comparing against $from"
+          }
+
+          # Run dotnet-affected to generate affected.proj (traversal format)
+          # Note: dotnet-affected returns exit code 1 when no projects are affected - this is expected
+          Write-Output "Running dotnet affected from $from to ${{ github.sha }}..."
+
+          $affectedOutput = & dotnet affected --from $from --to ${{ github.sha }} -v -f traversal text --output-dir .affected --filter-file-path Fdw.DeveloperKit.slnx 2>&1 | Out-String
+          $affectedExitCode = $LASTEXITCODE
+          Write-Output $affectedOutput
+
+          # Exit code 1 with "No affected projects" is expected - not an error
+          if ($affectedExitCode -ne 0) {
+            if ($affectedOutput -match "No affected projects") {
+              Write-Output "✓ No affected projects found (this is OK, not an error)"
+            } else {
+              Write-Output "::error::dotnet-affected failed unexpectedly"
+              Write-Output "Exit code: $affectedExitCode"
+              exit 1
+            }
+          }
+
+          # Check if any projects were affected
+          if (Test-Path ".affected/affected.proj") {
+            $affectedContent = Get-Content ".affected/affected.proj" -Raw
+            if ($affectedContent -match "<ProjectReference") {
+              echo "has-changes=true" >> $env:GITHUB_OUTPUT
+              Write-Output "Affected projects detected"
+
+              # List affected projects
+              Write-Output "Affected projects:"
+              Get-Content ".affected/affected.txt" -ErrorAction SilentlyContinue
+            } else {
+              echo "has-changes=false" >> $env:GITHUB_OUTPUT
+              Write-Output "No projects affected"
+            }
+          } else {
+            echo "has-changes=false" >> $env:GITHUB_OUTPUT
+            Write-Output "No affected.proj generated - no changes detected"
+          }
+
+      # === INCREMENTAL BUILD (PR / develop) ===
+      - name: Build affected projects
+        if: |
+          steps.check-release.outputs.is-release != 'true' &&
+          steps.affected.outputs.has-changes == 'true'
+        run: |
+          Write-Output "Building affected projects only..."
+          dotnet build .affected/affected.proj --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+
+      - name: Test affected projects
+        if: |
+          steps.check-release.outputs.is-release != 'true' &&
+          steps.affected.outputs.has-changes == 'true'
+        run: |
+          Write-Output "Testing affected projects only..."
+          dotnet test .affected/affected.proj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal
+        continue-on-error: ${{ github.ref == 'refs/heads/develop' }}
+
+      - name: Skip build (no changes)
+        if: |
+          steps.check-release.outputs.is-release != 'true' &&
+          steps.affected.outputs.has-changes != 'true'
+        run: Write-Output "No projects affected by changes - skipping build"
+
+      # === FULL BUILD (master / release) ===
+      - name: Build all projects (release)
+        if: steps.check-release.outputs.is-release == 'true'
+        run: |
+          Write-Output "Release build: building all projects..."
+          dotnet build --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+
+      - name: Test all projects (release)
+        if: steps.check-release.outputs.is-release == 'true'
+        run: |
+          Write-Output "Release build: testing all projects..."
+          dotnet test --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal
+        continue-on-error: ${{ github.ref == 'refs/heads/develop' }}
+
+      # === CACHE BUILD OUTPUTS ===
+      - name: Cache build outputs
+        if: steps.affected.outputs.has-changes == 'true' || steps.check-release.outputs.is-release == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            **/bin/${{ env.BUILD_CONFIGURATION }}
+            **/obj/${{ env.BUILD_CONFIGURATION }}
+          key: build-${{ github.sha }}-${{ github.run_id }}
+
+      # === PACK PACKAGES ===
+      - name: Pack affected packages
+        if: |
+          (github.ref == 'refs/heads/develop' || github.event_name == 'pull_request') &&
+          steps.affected.outputs.has-changes == 'true'
+        run: |
+          Write-Output "Packing affected projects only..."
+
+          # Get list of affected projects
+          $affectedProjects = Get-Content ".affected/affected.txt" -ErrorAction SilentlyContinue
+          if (-not $affectedProjects) {
+            Write-Output "No affected projects to pack"
+            exit 0
+          }
+
+          $packedCount = 0
+          foreach ($projectPath in $affectedProjects) {
+            if (-not (Test-Path $projectPath)) { continue }
+
+            [xml]$content = Get-Content $projectPath
+            $isPackable = $content.Project.PropertyGroup.IsPackable
+
+            if ($isPackable -ne "false") {
+              $projectName = [System.IO.Path]::GetFileName($projectPath)
+              Write-Output "Packing: $projectName"
+              dotnet pack $projectPath `
+                --configuration ${{ env.BUILD_CONFIGURATION }} `
+                --no-build `
+                --output ${{ github.workspace }}/packages
+              $packedCount++
+            }
+          }
+
+          Write-Output "Packed $packedCount affected packages"
+
+      - name: Pack all packages (release)
+        if: steps.check-release.outputs.is-release == 'true'
+        run: |
+          Write-Output "Release build: packing all packages..."
+
+          # Get projects from solution file (not filesystem)
+          $slnProjects = dotnet sln list | Select-Object -Skip 2 | Where-Object { $_ -match '^src\\.*\.csproj$' }
+
+          # Filter to packable projects only
+          $packableProjects = @()
+          foreach ($projectPath in $slnProjects) {
+            [xml]$content = Get-Content $projectPath
+            $isPackable = $content.Project.PropertyGroup.IsPackable
+            if ($isPackable -ne "false") {
+              $packableProjects += $projectPath
+            }
+          }
+
+          Write-Output "Packing $($packableProjects.Count) projects from solution..."
+
+          foreach ($project in $packableProjects) {
+            $projectName = [System.IO.Path]::GetFileName($project)
+            Write-Output "Packing: $projectName"
+            dotnet pack $project `
+              --configuration ${{ env.BUILD_CONFIGURATION }} `
+              --no-build `
+              --output ${{ github.workspace }}/packages
+          }
+
+          $packageCount = (Get-ChildItem -Path ${{ github.workspace }}/packages -Filter "*.nupkg" -ErrorAction SilentlyContinue | Measure-Object).Count
+          Write-Output "Created $packageCount packages"
+
+      - name: Upload packages
+        if: |
+          (steps.affected.outputs.has-changes == 'true' || steps.check-release.outputs.is-release == 'true') &&
+          (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/heads/release/'))
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: ${{ github.workspace }}/packages
+          if-no-files-found: warn
+
+  security-scan:
+    name: Security Scan
+    runs-on: windows-latest
+    needs: build-and-test
+    if: |
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') &&
+      (needs.build-and-test.outputs.has-changes == 'true' || needs.build-and-test.outputs.is-release == 'true')
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    outputs:
+      scan-result: ${{ steps.set-result.outputs.result }}
+      package-ids: ${{ steps.extract-ids.outputs.ids }}
+    env:
+      BUILD_CONFIGURATION: Release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore .NET tools (reportgenerator, stryker)
+        run: dotnet tool restore
+
+      - name: Restore build cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            **/bin/${{ env.BUILD_CONFIGURATION }}
+            **/obj/${{ env.BUILD_CONFIGURATION }}
+          key: build-${{ github.sha }}-${{ github.run_id }}
+          fail-on-cache-miss: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Restore packages
+        run: dotnet restore
+
+      - name: Build for CodeQL
+        run: dotnet build --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+
+      - name: Perform CodeQL Analysis
+        id: codeql
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:csharp"
+        continue-on-error: true
+
+      - name: Security audit (vulnerable packages)
+        id: audit
+        run: |
+          $output = dotnet list package --vulnerable --include-transitive 2>&1
+          Write-Output $output
+          if ($output -match "has the following vulnerable packages") {
+            Write-Output "::error::Vulnerable packages detected"
+            exit 1
+          }
+        continue-on-error: true
+
+      - name: Set scan result
+        id: set-result
+        if: always()
+        run: |
+          if ("${{ steps.codeql.outcome }}" -eq "failure" -or "${{ steps.audit.outcome }}" -eq "failure") {
+            echo "result=failed" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "result=success" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Extract package IDs
+        id: extract-ids
+        if: always()
+        run: |
+          $csprojFiles = Get-ChildItem -Path "src" -Filter "*.csproj" -Recurse
+          $packageIds = @()
+          foreach ($file in $csprojFiles) {
+            [xml]$content = Get-Content $file.FullName
+            $packageId = $content.Project.PropertyGroup.PackageId
+            if (-not $packageId) {
+              $packageId = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+            }
+            if ($packageId) {
+              $packageIds += $packageId
+            }
+          }
+          $idsJson = ($packageIds | ConvertTo-Json -Compress)
+          echo "ids=$idsJson" >> $env:GITHUB_OUTPUT
+
+  # =============================================================================
+  # NUGET PUBLISHING DISABLED - Moved to GitLab CI
+  # Uncomment this job if you need to restore GitHub-based NuGet publishing
+  # =============================================================================
+  # publish-packages:
+  #   name: Publish Packages
+  #   runs-on: windows-latest
+  #   needs: [build-and-test, security-scan]
+  #   if: |
+  #     always() &&
+  #     github.event_name == 'push' &&
+  #     (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/heads/release/')) &&
+  #     (needs.build-and-test.result == 'success' || (github.ref == 'refs/heads/develop' && needs.build-and-test.result != 'cancelled')) &&
+  #     (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped' || github.ref == 'refs/heads/develop')
+  #   outputs:
+  #     published-ids: ${{ steps.track-published.outputs.ids }}
+  #   steps:
+  #     - name: Download packages
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: packages
+  #         path: ${{ github.workspace }}/packages
+  #       continue-on-error: true
+  #
+  #     - name: Push to NuGet.org and track published
+  #       id: track-published
+  #       if: env.NUGET_API_KEY != ''
+  #       env:
+  #         NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+  #       run: |
+  #         $publishedIds = @()
+  #         $packagesPath = "${{ github.workspace }}/packages"
+  #
+  #         if (-not (Test-Path $packagesPath)) {
+  #           Write-Output "No packages directory found - no changes to publish"
+  #           echo "ids=[]" >> $env:GITHUB_OUTPUT
+  #           exit 0
+  #         }
+  #
+  #         $packages = Get-ChildItem -Path $packagesPath -Filter "*.nupkg" -Recurse
+  #         if ($packages.Count -eq 0) {
+  #           Write-Output "No packages found - no changes to publish"
+  #           echo "ids=[]" >> $env:GITHUB_OUTPUT
+  #           exit 0
+  #         }
+  #
+  #         $packages | ForEach-Object {
+  #           Write-Output "Publishing $($_.Name)..."
+  #           $pushResult = dotnet nuget push $_.FullName --source "https://api.nuget.org/v3/index.json" --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate 2>&1
+  #           Write-Output $pushResult
+  #           if ($LASTEXITCODE -eq 0 -or $pushResult -match "already exists") {
+  #             # Extract package ID from filename (format: PackageId.Version.nupkg)
+  #             $packageId = $_.Name -replace '\.\d+\.\d+\.\d+.*\.nupkg$', ''
+  #             $publishedIds += $packageId
+  #             Write-Output "Successfully published/exists: $packageId"
+  #           }
+  #         }
+  #         $idsJson = ($publishedIds | ConvertTo-Json -Compress)
+  #         echo "ids=$idsJson" >> $env:GITHUB_OUTPUT
+  #       continue-on-error: false

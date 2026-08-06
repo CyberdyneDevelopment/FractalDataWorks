@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Fdw",
+  "classifications": [
+    "Fdw",
+    "Service",
+    "Domain"
+  ],
+  "identity": "Fdw.Templates.ServiceDomain",
+  "name": "Fdw Service Domain",
+  "shortName": "fdw-service-domain",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "ServiceName",
+  "preferNameDirectory": true,
+  "symbols": {
+    "ServiceName": {
+      "type": "parameter",
+      "datatype": "string",
+      "isRequired": true,
+      "description": "The name of the service domain (e.g., Connection, Notification, Transformation)",
+      "replaces": "ServiceName"
+    }
+  }
+}

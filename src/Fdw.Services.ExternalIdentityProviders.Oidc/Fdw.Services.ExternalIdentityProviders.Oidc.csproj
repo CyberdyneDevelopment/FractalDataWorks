@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Why: this package is the CONTRACT for the generic "Oidc" external-identity kind — the
+    configuration POCO and its ConfigurationCommand, nothing else. The aggregation it used to hold
+    (the provider service, its factory, the [ServiceTypeOption] and the configuration provider) moved
+    to reference-servicetypes/ReferenceExternalIdentityProviders.Oidc under FDW-622's boundary rule:
+    the aggregation leaves, the components it composes stay.
+
+    It remains a package separate from the vendor-neutral Fdw.Services.ExternalIdentityProviders
+    domain because module initializers auto-register every [TypeOption] at load, so package reference
+    IS registration intent — a consumer that wants password-only auth simply does not reference the
+    reference aggregation. See FDW-624.
+
+    No InternalsVisibleTo: the tests moved out with the aggregation they exercise.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Services.ExternalIdentityProviders\Fdw.Services.ExternalIdentityProviders.csproj" />
+    <ProjectReference Include="..\Fdw.Services.ExternalIdentityProviders.Abstractions\Fdw.Services.ExternalIdentityProviders.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Configuration\Fdw.Configuration.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Services\Fdw.Services.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Commands.Data.Extensions\Fdw.Commands.Data.Extensions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.SecretManagers\Fdw.Services.SecretManagers.csproj" />
+    <ProjectReference Include="..\Fdw.Services.SecretManagers.Abstractions\Fdw.Services.SecretManagers.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Configuration.SourceGenerators\Fdw.Configuration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

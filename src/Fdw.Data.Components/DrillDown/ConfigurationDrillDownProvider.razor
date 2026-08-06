@@ -1,0 +1,20 @@
+@namespace Fdw.UI.DrillDown
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading.Tasks
+@using Fdw.Operations.Clients.Models
+
+@*
+    Headless configuration-driven drill-down provider. Discovers tree structure from
+    configuration metadata (GetChildTypes) and walks the pre-loaded RootData object
+    using reflection to build the node hierarchy automatically.
+*@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}

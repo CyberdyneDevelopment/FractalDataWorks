@@ -1,0 +1,54 @@
+@page "/connections"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Connections - Cyberdyne</PageTitle>
+
+<ConnectionProvider>
+    <ChildContent Context="ctx">
+        <ConnectionList Context="ctx"
+                        SearchText="@_searchText"
+                        SearchTextChanged="@(v => _searchText = v)"
+                        ConnectionTypeFilter="@_connectionTypeFilter"
+                        ConnectionTypeFilterChanged="@(v => _connectionTypeFilter = v)"
+                        SortOrder="@_sortOrder"
+                        SortOrderChanged="@(v => _sortOrder = v)"
+                        OnNewConnection='@(() => Nav.NavigateTo("/connections/new"))'
+                        OnCardClick='@(name => Nav.NavigateTo($"/connections/{name}/edit"))'
+                        OnFilterChanged="OnFilterChanged" />
+    </ChildContent>
+</ConnectionProvider>
+
+@code {
+    private const string SessionKey = "connections:list:filters";
+
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    [CascadingParameter] private SessionStateContext? Session { get; set; }
+
+    private string _searchText = "";
+    private string _connectionTypeFilter = "";
+    private string _sortOrder = "name-asc";
+    private bool _sessionRestored;
+
+    protected override void OnParametersSet()
+    {
+        if (_sessionRestored || Session is null || Session.IsLoading) return;
+        if (!Session.State.TryGetValue(SessionKey, out var raw) || raw is not System.Text.Json.JsonElement json) return;
+        _sessionRestored = true;
+
+        if (json.TryGetProperty("searchText", out var st)) _searchText = st.GetString() ?? "";
+        if (json.TryGetProperty("connectionTypeFilter", out var ctf)) _connectionTypeFilter = ctf.GetString() ?? "";
+        if (json.TryGetProperty("sortOrder", out var so)) _sortOrder = so.GetString() ?? "name-asc";
+    }
+
+    private async Task OnFilterChanged()
+    {
+        if (Session is null) return;
+        var state = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["searchText"] = _searchText,
+            ["connectionTypeFilter"] = _connectionTypeFilter,
+            ["sortOrder"] = _sortOrder
+        };
+        await Session.OnSaveState(SessionKey, state);
+    }
+}

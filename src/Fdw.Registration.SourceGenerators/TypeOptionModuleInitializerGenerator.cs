@@ -1,0 +1,585 @@
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace Fdw.Registration.SourceGenerators;
+
+/// <summary>
+/// Generates module initializers in CONSUMING executable assemblies to register [TypeOption] types
+/// from REFERENCED assemblies.
+///
+/// Key insight: Module initializers only run when their assembly loads. Library assemblies
+/// may never load if nothing directly accesses them. By generating the initializer in the
+/// consuming assembly (entry point), we guarantee it runs when the application starts.
+///
+/// This generator:
+/// 1. SKIPS library assemblies (OutputKind == DynamicallyLinkedLibrary)
+/// 2. GENERATES in executable assemblies that reference libraries with [TypeOption] types
+/// 3. Respects RestrictToCurrentCompilation on both TypeOption and TypeCollection attributes
+/// </summary>
+[Generator]
+public class TypeOptionModuleInitializerGenerator : IIncrementalGenerator
+{
+    private const string TypeOptionAttributeName = "Fdw.Collections.Attributes.TypeOptionAttribute";
+    private const string TypeCollectionAttributeName = "Fdw.Collections.Attributes.TypeCollectionAttribute";
+    private const string ReplacesAttributeName = "Fdw.Collections.Attributes.ReplacesAttribute";
+
+    /// <inheritdoc />
+    public void Initialize(IncrementalGeneratorInitializationContext context)
+    {
+        context.RegisterSourceOutput(context.CompilationProvider, Execute);
+    }
+
+    private static void Execute(
+        SourceProductionContext context,
+        Compilation compilation)
+    {
+        // Library assemblies skip module initializer generation — only executables need it.
+        // ServiceTypeOption cross-assembly registration for DLL assemblies is handled by
+        // ServiceTypeOptionModuleInitializerGenerator.
+        if (compilation.Options.OutputKind == OutputKind.DynamicallyLinkedLibrary)
+            return;
+
+        var assemblyName = compilation.AssemblyName ?? "Unknown";
+
+        // Scan referenced assemblies for [TypeOption] types
+        var (optionsFromReferences, diagnosticInfo) = DiscoverOptionsInReferencedAssembliesWithDiagnostics(compilation);
+
+        // Why: Build replacement map from [Replaces] attributes across all referenced assemblies.
+        // The executable has full visibility, so it builds the complete map before emitting registrations.
+        var replacementMap = BuildReplacementMap(compilation, diagnosticInfo);
+
+        // Why: Filter out replaced types so the module initializer only registers the replacements.
+        var filteredOptions = optionsFromReferences
+            .Where(o => !replacementMap.ContainsKey(o.OptionFullTypeName))
+            .ToList();
+
+        diagnosticInfo.Add($"Replacement map entries: {replacementMap.Count}");
+        foreach (var kvp in replacementMap)
+        {
+            diagnosticInfo.Add($"  [Replaces] {kvp.Key} => {kvp.Value}");
+        }
+        diagnosticInfo.Add($"Options after replacement filtering: {filteredOptions.Count}");
+
+        // Always generate a diagnostic file so we can see what happened
+        var diagCode = GenerateDiagnosticFile(assemblyName, diagnosticInfo, filteredOptions.Count);
+        context.AddSource("TypeOptionModuleInitializer.Diagnostics.g.cs", SourceText.From(diagCode, Encoding.UTF8));
+
+        if (filteredOptions.Count == 0)
+            return;
+
+        // Group by collection
+        var byCollection = filteredOptions
+            .GroupBy(o => o.CollectionFullName, StringComparer.Ordinal)
+            .ToList();
+
+        var code = GenerateModuleInitializer(byCollection, assemblyName);
+        context.AddSource(
+            "TypeOptionModuleInitializer.g.cs",
+            SourceText.From(code, Encoding.UTF8));
+    }
+
+#pragma warning disable MA0051 // Source generator emits complete module initializer — splitting scatters the template
+    private static string GenerateModuleInitializer(
+        List<IGrouping<string, ModuleInitOptionModel>> byCollection,
+        string assemblyName)
+    {
+        var sb = new StringBuilder();
+        var namespaces = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "System.Runtime.CompilerServices"
+        };
+
+        // Collect all namespaces needed
+        foreach (var group in byCollection)
+        {
+            var firstOption = group.First();
+            if (!string.IsNullOrEmpty(firstOption.CollectionNamespace))
+                namespaces.Add(firstOption.CollectionNamespace);
+
+            foreach (var option in group)
+            {
+                if (!string.IsNullOrEmpty(option.OptionNamespace))
+                    namespaces.Add(option.OptionNamespace);
+            }
+        }
+
+        // Use a unique namespace based on assembly name to avoid conflicts
+        var safeAssemblyName = assemblyName.Replace(".", "_").Replace("-", "_");
+
+        sb.AppendLine("// <auto-generated />");
+        sb.AppendLine("#nullable enable");
+        sb.AppendLine();
+
+        foreach (var ns in namespaces.OrderBy(n => n, StringComparer.Ordinal))
+        {
+            sb.AppendLine($"using {ns};");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine($"namespace {safeAssemblyName}.Generated");
+        sb.AppendLine("{");
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Module initializer for registering TypeOptions from referenced assemblies.");
+        sb.AppendLine("    /// This runs automatically when this assembly loads, before any user code executes.");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    internal static class TypeOptionRegistration");
+        sb.AppendLine("    {");
+        sb.AppendLine("        [ModuleInitializer]");
+        sb.AppendLine("        internal static void Initialize()");
+        sb.AppendLine("        {");
+        sb.AppendLine("            try");
+        sb.AppendLine("            {");
+
+        foreach (var group in byCollection)
+        {
+            var collectionClassName = group.First().CollectionClassName;
+            sb.AppendLine($"                // Register with {collectionClassName}");
+
+            foreach (var option in group)
+            {
+                // Use fully qualified names to avoid ambiguity
+                sb.AppendLine($"                global::{option.CollectionFullName}.RegisterMember(new global::{option.OptionFullTypeName}());");
+            }
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("            }");
+        sb.AppendLine("            catch (global::System.InvalidOperationException ex) when (ex.Message.Contains(\"frozen\", global::System.StringComparison.Ordinal))");
+        sb.AppendLine("            {");
+        sb.AppendLine($"                throw new global::System.InvalidOperationException(");
+        sb.AppendLine($"                    \"[TypeOption Registration] Assembly '{assemblyName}' could not register type options because one or more \" +");
+        sb.AppendLine($"                    \"target collections were already frozen. Ensure this assembly is loaded before any \" +");
+        sb.AppendLine($"                    \"code accesses the collection. Detail: \" + ex.Message, ex);");
+        sb.AppendLine("            }");
+        sb.AppendLine("            catch (global::System.Exception ex)");
+        sb.AppendLine("            {");
+        sb.AppendLine($"                throw new global::System.InvalidOperationException(");
+        sb.AppendLine($"                    \"[TypeOption Registration] Assembly '{assemblyName}' failed to register type options \" +");
+        sb.AppendLine($"                    \"during module initialization. Detail: \" + ex.Message, ex);");
+        sb.AppendLine("            }");
+        sb.AppendLine("            finally");
+        sb.AppendLine("            {");
+        sb.AppendLine($"                global::System.Diagnostics.Debug.WriteLine(");
+        sb.AppendLine($"                    \"[TypeOption Registration] Module initializer complete for '{assemblyName}'.\");");
+        sb.AppendLine("            }");
+        sb.AppendLine("        }");
+        sb.AppendLine("    }");
+        sb.AppendLine("}");
+
+        return sb.ToString();
+    }
+
+    private record struct ModuleInitOptionModel(
+        string OptionTypeName,
+        string OptionFullTypeName,
+        string OptionNamespace,
+        string CollectionFullName,
+        string CollectionNamespace,
+        string CollectionClassName
+    );
+
+#pragma warning disable MA0051 // Cross-assembly discovery scans all referenced assemblies — must stay as one cohesive pass
+    private static (List<ModuleInitOptionModel> Options, List<string> DiagnosticInfo) DiscoverOptionsInReferencedAssembliesWithDiagnostics(Compilation compilation)
+    {
+        var options = new List<ModuleInitOptionModel>();
+        var diagnostics = new List<string>();
+        var typeOptionAttributeSymbol = compilation.GetTypeByMetadataName(TypeOptionAttributeName);
+        var typeCollectionAttributeSymbol = compilation.GetTypeByMetadataName(TypeCollectionAttributeName);
+
+        diagnostics.Add($"Assembly: {compilation.AssemblyName}");
+        diagnostics.Add($"TypeOptionAttribute found: {typeOptionAttributeSymbol != null}");
+        diagnostics.Add($"TypeCollectionAttribute found: {typeCollectionAttributeSymbol != null}");
+
+        if (typeOptionAttributeSymbol == null)
+        {
+            diagnostics.Add("ERROR: Could not find TypeOptionAttribute in compilation");
+            return (options, diagnostics);
+        }
+
+        diagnostics.Add($"TypeOptionAttribute: {typeOptionAttributeSymbol.ToDisplayString()}");
+        diagnostics.Add($"Reference count: {compilation.References.Count()}");
+
+        // Cache restricted collections (where TypeCollection.RestrictToCurrentCompilation = true)
+        var restrictedCollections = new HashSet<string>(StringComparer.Ordinal);
+        if (typeCollectionAttributeSymbol != null)
+        {
+            FindRestrictedCollections(compilation, typeCollectionAttributeSymbol, restrictedCollections, diagnostics);
+        }
+
+        int scannedAssemblies = 0;
+        int skippedAssemblies = 0;
+
+        // Scan all referenced assemblies
+        foreach (var reference in compilation.References)
+        {
+            var assemblySymbol = compilation.GetAssemblyOrModuleSymbol(reference) as IAssemblySymbol;
+            if (assemblySymbol == null)
+                continue;
+
+            // Skip system assemblies
+            var assemblyName = assemblySymbol.Name;
+            if (assemblyName.StartsWith("System", StringComparison.Ordinal) ||
+                assemblyName.StartsWith("Microsoft", StringComparison.Ordinal) ||
+                assemblyName.StartsWith("netstandard", StringComparison.Ordinal) ||
+                assemblyName.StartsWith("mscorlib", StringComparison.Ordinal))
+            {
+                skippedAssemblies++;
+                continue;
+            }
+
+            scannedAssemblies++;
+            var foundInAssembly = new List<string>();
+
+            // Find types with [TypeOption] attribute
+            ScanNamespaceForOptions(assemblySymbol.GlobalNamespace, typeOptionAttributeSymbol, restrictedCollections, options, foundInAssembly);
+
+            if (foundInAssembly.Count > 0)
+            {
+                diagnostics.Add($"Assembly '{assemblyName}': Found {foundInAssembly.Count} options");
+                foreach (var found in foundInAssembly)
+                    diagnostics.Add($"  - {found}");
+            }
+        }
+
+        diagnostics.Add($"Scanned {scannedAssemblies} assemblies, skipped {skippedAssemblies} system assemblies");
+        diagnostics.Add($"Total options found: {options.Count}");
+
+        return (options, diagnostics);
+    }
+
+    private static void FindRestrictedCollections(
+        Compilation compilation,
+        INamedTypeSymbol typeCollectionAttributeSymbol,
+        HashSet<string> restrictedCollections,
+        List<string> diagnostics)
+    {
+        // Scan referenced assemblies for TypeCollections with RestrictToCurrentCompilation = true
+        foreach (var reference in compilation.References)
+        {
+            var assemblySymbol = compilation.GetAssemblyOrModuleSymbol(reference) as IAssemblySymbol;
+            if (assemblySymbol == null)
+                continue;
+
+            var assemblyName = assemblySymbol.Name;
+            if (assemblyName.StartsWith("System", StringComparison.Ordinal) ||
+                assemblyName.StartsWith("Microsoft", StringComparison.Ordinal) ||
+                assemblyName.StartsWith("netstandard", StringComparison.Ordinal) ||
+                assemblyName.StartsWith("mscorlib", StringComparison.Ordinal))
+                continue;
+
+            ScanNamespaceForRestrictedCollections(assemblySymbol.GlobalNamespace, typeCollectionAttributeSymbol, restrictedCollections, diagnostics);
+        }
+    }
+
+    private static void ScanNamespaceForRestrictedCollections(
+        INamespaceSymbol ns,
+        INamedTypeSymbol typeCollectionAttributeSymbol,
+        HashSet<string> restrictedCollections,
+        List<string> diagnostics)
+    {
+        foreach (var type in ns.GetTypeMembers())
+        {
+            foreach (var attr in type.GetAttributes())
+            {
+                if (!SymbolEqualityComparer.Default.Equals(attr.AttributeClass, typeCollectionAttributeSymbol))
+                    continue;
+
+                // Check RestrictToCurrentCompilation named argument
+                foreach (var namedArg in attr.NamedArguments)
+                {
+                    if (string.Equals(namedArg.Key, "RestrictToCurrentCompilation", StringComparison.Ordinal) &&
+                        namedArg.Value.Value is bool restricted && restricted)
+                    {
+                        restrictedCollections.Add(type.ToDisplayString());
+                        diagnostics.Add($"Collection '{type.Name}' has RestrictToCurrentCompilation=true");
+                    }
+                }
+            }
+        }
+
+        foreach (var nestedNs in ns.GetNamespaceMembers())
+        {
+            ScanNamespaceForRestrictedCollections(nestedNs, typeCollectionAttributeSymbol, restrictedCollections, diagnostics);
+        }
+    }
+
+    private static void ScanNamespaceForOptions(
+        INamespaceSymbol ns,
+        INamedTypeSymbol attributeSymbol,
+        HashSet<string> restrictedCollections,
+        List<ModuleInitOptionModel> options,
+        List<string> foundInAssembly)
+    {
+        foreach (var type in ns.GetTypeMembers())
+        {
+            ScanTypeForOptions(type, attributeSymbol, restrictedCollections, options, foundInAssembly);
+        }
+
+        foreach (var nestedNs in ns.GetNamespaceMembers())
+        {
+            ScanNamespaceForOptions(nestedNs, attributeSymbol, restrictedCollections, options, foundInAssembly);
+        }
+    }
+
+#pragma warning disable MA0051 // Roslyn symbol inspection walks type hierarchy — must stay cohesive
+    private static void ScanTypeForOptions(
+        INamedTypeSymbol type,
+        INamedTypeSymbol attributeSymbol,
+        HashSet<string> restrictedCollections,
+        List<ModuleInitOptionModel> options,
+        List<string> foundInAssembly)
+    {
+        // Check nested types first
+        foreach (var nestedType in type.GetTypeMembers())
+        {
+            ScanTypeForOptions(nestedType, attributeSymbol, restrictedCollections, options, foundInAssembly);
+        }
+
+        // Skip generic types - can't instantiate with new()
+        if (type.IsGenericType || type.TypeParameters.Length > 0)
+            return;
+
+        // Skip abstract types
+        if (type.IsAbstract)
+            return;
+
+        // Must have parameterless constructor
+        var hasParameterlessConstructor = type.InstanceConstructors
+            .Any(c => c.Parameters.Length == 0 && c.DeclaredAccessibility == Accessibility.Public);
+        if (!hasParameterlessConstructor)
+            return;
+
+        // Check for [TypeOption] attribute
+        foreach (var attr in type.GetAttributes())
+        {
+            if (!SymbolEqualityComparer.Default.Equals(attr.AttributeClass, attributeSymbol))
+                continue;
+
+            if (attr.ConstructorArguments.Length < 2)
+                continue;
+
+            // Check RestrictToCurrentCompilation on the TypeOption
+            var optionRestricted = false;
+            foreach (var namedArg in attr.NamedArguments)
+            {
+                if (string.Equals(namedArg.Key, "RestrictToCurrentCompilation", StringComparison.Ordinal) &&
+                    namedArg.Value.Value is bool restricted && restricted)
+                {
+                    optionRestricted = true;
+                    break;
+                }
+            }
+
+            if (optionRestricted)
+                continue; // Skip options that are restricted to current compilation
+
+            var collectionType = attr.ConstructorArguments[0].Value as ITypeSymbol;
+            if (collectionType == null)
+                continue;
+
+            var collectionFullName = collectionType.ToDisplayString();
+
+            // Skip if the collection itself is restricted
+            if (restrictedCollections.Contains(collectionFullName))
+                continue;
+
+            foundInAssembly.Add(type.ToDisplayString());
+
+            options.Add(new ModuleInitOptionModel(
+                OptionTypeName: type.Name,
+                OptionFullTypeName: type.ToDisplayString(),
+                OptionNamespace: type.ContainingNamespace?.ToDisplayString() ?? "",
+                CollectionFullName: collectionFullName,
+                CollectionNamespace: collectionType.ContainingNamespace?.ToDisplayString() ?? "",
+                CollectionClassName: collectionType.Name
+            ));
+        }
+    }
+
+    /// <summary>
+    /// Builds a replacement map from [Replaces] attributes across all referenced assemblies.
+    /// Maps original type full name to replacement type full name.
+    /// </summary>
+    /// <remarks>
+    /// Why: The executable has complete visibility across all referenced assemblies, making it
+    /// the right place to build the full replacement map and filter registrations accordingly.
+    /// </remarks>
+    private static Dictionary<string, string> BuildReplacementMap(
+        Compilation compilation,
+        List<string> diagnostics)
+    {
+        var replacesAttrSymbol = compilation.GetTypeByMetadataName(ReplacesAttributeName);
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        if (replacesAttrSymbol == null)
+        {
+            diagnostics.Add("[Replaces] ReplacesAttribute not found in compilation — skipping replacement scan");
+            return map;
+        }
+
+        // Why: Scan all referenced assemblies (not just system-skipped ones) for [Replaces] declarations.
+        var rawReplacements = new List<(string ReplacementFullName, string OriginalFullName)>();
+
+        foreach (var reference in compilation.References)
+        {
+            var assemblySymbol = compilation.GetAssemblyOrModuleSymbol(reference) as IAssemblySymbol;
+            if (assemblySymbol == null)
+                continue;
+
+            var assemblyName = assemblySymbol.Name;
+            if (assemblyName.StartsWith("System", StringComparison.Ordinal) ||
+                assemblyName.StartsWith("Microsoft", StringComparison.Ordinal) ||
+                assemblyName.StartsWith("netstandard", StringComparison.Ordinal) ||
+                assemblyName.StartsWith("mscorlib", StringComparison.Ordinal))
+                continue;
+
+            ScanNamespaceForReplaces(assemblySymbol.GlobalNamespace, replacesAttrSymbol, rawReplacements);
+        }
+
+        // Also scan current compilation for [Replaces] in case the executable itself declares one
+        ScanNamespaceForReplaces(compilation.Assembly.GlobalNamespace, replacesAttrSymbol, rawReplacements);
+
+        // Group by original — detect conflicts
+        var byOriginal = rawReplacements
+            .GroupBy(r => r.OriginalFullName, StringComparer.Ordinal);
+
+        foreach (var group in byOriginal)
+        {
+            var replacers = group.ToList();
+            if (replacers.Count > 1)
+            {
+                // Why: Multiple [Replaces] targeting the same type is ambiguous — log it.
+                diagnostics.Add($"  WARNING: Multiple replacements for '{group.Key}': {string.Join(", ", replacers.Select(r => r.ReplacementFullName))}");
+            }
+            else
+            {
+                map[group.Key] = replacers[0].ReplacementFullName;
+            }
+        }
+
+        // Why: Resolve chains — if A replaces B and B replaces C, then C maps to A.
+        ResolveReplacementChains(map);
+
+        return map;
+    }
+
+    private static void ResolveReplacementChains(Dictionary<string, string> map)
+    {
+        var resolved = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var key in map.Keys.ToList())
+        {
+            var current = key;
+            var visited = new HashSet<string>(StringComparer.Ordinal) { current };
+
+            while (map.TryGetValue(current, out var next))
+            {
+                if (map.ContainsKey(next) && !visited.Contains(next))
+                {
+                    visited.Add(next);
+                    current = next;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            var terminal = map[current];
+            foreach (var node in visited)
+            {
+                if (map.ContainsKey(node))
+                    resolved[node] = terminal;
+            }
+        }
+
+        foreach (var kvp in resolved)
+        {
+            map[kvp.Key] = kvp.Value;
+        }
+    }
+
+    private static void ScanNamespaceForReplaces(
+        INamespaceSymbol ns,
+        INamedTypeSymbol replacesAttrSymbol,
+        List<(string ReplacementFullName, string OriginalFullName)> results)
+    {
+        foreach (var type in ns.GetTypeMembers())
+        {
+            foreach (var attr in type.GetAttributes())
+            {
+                if (!SymbolEqualityComparer.Default.Equals(attr.AttributeClass, replacesAttrSymbol))
+                    continue;
+
+                if (attr.ConstructorArguments.Length < 1)
+                    continue;
+
+                var originalType = attr.ConstructorArguments[0].Value as ITypeSymbol;
+                if (originalType == null)
+                    continue;
+
+                results.Add((type.ToDisplayString(), originalType.ToDisplayString()));
+            }
+
+            // Scan nested types
+            ScanNestedTypesForReplaces(type, replacesAttrSymbol, results);
+        }
+
+        foreach (var nestedNs in ns.GetNamespaceMembers())
+        {
+            ScanNamespaceForReplaces(nestedNs, replacesAttrSymbol, results);
+        }
+    }
+
+    private static void ScanNestedTypesForReplaces(
+        INamedTypeSymbol type,
+        INamedTypeSymbol replacesAttrSymbol,
+        List<(string ReplacementFullName, string OriginalFullName)> results)
+    {
+        foreach (var nested in type.GetTypeMembers())
+        {
+            foreach (var attr in nested.GetAttributes())
+            {
+                if (!SymbolEqualityComparer.Default.Equals(attr.AttributeClass, replacesAttrSymbol))
+                    continue;
+
+                if (attr.ConstructorArguments.Length < 1)
+                    continue;
+
+                var originalType = attr.ConstructorArguments[0].Value as ITypeSymbol;
+                if (originalType == null)
+                    continue;
+
+                results.Add((nested.ToDisplayString(), originalType.ToDisplayString()));
+            }
+
+            ScanNestedTypesForReplaces(nested, replacesAttrSymbol, results);
+        }
+    }
+
+    private static string GenerateDiagnosticFile(string assemblyName, List<string> diagnosticInfo, int optionsCount)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("// <auto-generated />");
+        sb.AppendLine("// Diagnostic output from TypeOptionModuleInitializerGenerator");
+        sb.AppendLine();
+        sb.AppendLine("/*");
+        sb.AppendLine($"Generator ran for: {assemblyName}");
+        sb.AppendLine($"Options found: {optionsCount}");
+        sb.AppendLine();
+        sb.AppendLine("Diagnostic Info:");
+        foreach (var line in diagnosticInfo)
+        {
+            sb.AppendLine($"  {line}");
+        }
+        sb.AppendLine("*/");
+        sb.AppendLine();
+        sb.AppendLine("// This file is intentionally empty - it exists only for diagnostic purposes");
+
+        return sb.ToString();
+    }
+}

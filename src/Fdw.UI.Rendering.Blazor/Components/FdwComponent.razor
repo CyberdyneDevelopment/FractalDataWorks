@@ -1,0 +1,36 @@
+@* Dispatcher: resolves a headless component model to its Blazor primitive through the
+   BlazorComponentRenderers TypeCollection. This was previously a switch over concrete model types,
+   which closed the set — a model declared outside this assembly could never render, so the headless
+   architecture was extensible everywhere except where extension actually reaches the screen.
+   Registration is now a TypeOption, so a downstream package maps its own model without editing here. *@
+@using System
+@using System.Collections.Generic
+@using Fdw.UI.Rendering.Blazor.Dispatch
+@{
+    var renderer = BlazorComponentRendererExtensions.ResolveFor(Model);
+}
+@if (renderer is null)
+{
+    <div class="fdw-ui-unsupported">Unsupported component type: @Model.GetType().Name</div>
+}
+else
+{
+    <DynamicComponent Type="renderer.ComponentType" Parameters="BuildParameters()" />
+}
+
+@code {
+    /// <summary>The component model to dispatch.</summary>
+    [Parameter, EditorRequired] public IComponentModel Model { get; set; } = default!;
+
+    /// <summary>The active render mode.</summary>
+    [Parameter, EditorRequired] public IRenderMode Mode { get; set; } = default!;
+
+    // Why every primitive takes the same two parameters: Model + Mode IS the dispatch contract, so a
+    // registered renderer only has to accept those to participate. A renderer needing more reads it
+    // from its own model rather than widening this seam for everyone.
+    private Dictionary<string, object> BuildParameters() => new(StringComparer.Ordinal)
+    {
+        ["Model"] = Model,
+        ["Mode"] = Mode,
+    };
+}

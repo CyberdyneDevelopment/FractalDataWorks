@@ -1,0 +1,395 @@
+@namespace Fdw.Data.Components.DataStores
+@inherits WizardProviderBase<DataStoreEditorContext>
+
+@if (ChildContent is not null)
+{
+    @ChildContent(CurrentContext)
+}
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Operations.Clients.Models
+@using Fdw.Services.Connections.Clients
+@using Fdw.Services.Connections.Clients.Models
+@using Fdw.Services.Data.Clients
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Results
+@using Fdw.Data.Components.Logging
+@using Fdw.UI.Wizard
+@using System.Net.Http
+
+@code {
+    /// <summary>
+    /// Headless provider for the DataStore editor wizard: load connections, DataStore types,
+    /// connection capabilities, multi-step navigation, and create/update submission.
+    /// Steps: 0=Basic Info, 1=Store Type &amp; Write Config, 2=Container Management.
+    /// </summary>
+
+    /// <summary>When non-null, the editor operates in edit mode and pre-loads this DataStore.</summary>
+    [Parameter] public string? DataStoreName { get; set; }
+
+    /// <summary>Invoked with the saved detail after a successful create or update.</summary>
+    [Parameter] public EventCallback<DataStoreDetailPayload> OnSaved { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private ConnectionApiClient? _connectionApi;
+    private DataStoreApiClient? _dataStoreApi;
+    [Inject] private ILogger<DataStoreEditorProvider>? LoggerParam { get; set; }
+
+    private ILogger<DataStoreEditorProvider> _logger = NullLogger<DataStoreEditorProvider>.Instance;
+
+    // ── Domain State ──────────────────────────────────────────────────────────
+
+    private DataStoreEditorModel _form = new();
+    private IReadOnlyList<ConnectionPayload> _connections = [];
+    private IReadOnlyList<ConfigurationTypeSummary> _dataStoreTypes = [];
+    private ConnectionTypeCapabilitiesPayload? _capabilities;
+    private List<DataPathRequest> _paths = [];
+    private bool _isLoadingCapabilities;
+    // ── Base class overrides ──────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    protected override int StepCount => 3;
+
+    /// <inheritdoc />
+    protected override ILogger GetLogger() => _logger;
+
+    /// <inheritdoc />
+    protected override void OnWizardInitialized()
+    {
+        _connectionApi = new ConnectionApiClient(HttpClientFactory.CreateClient("ConnectionClient"), LoggerFactory?.CreateLogger<ConnectionApiClient>()!);
+        _dataStoreApi = new DataStoreApiClient(HttpClientFactory.CreateClient("DataStoreClient"), LoggerFactory?.CreateLogger<DataStoreApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<DataStoreEditorProvider>.Instance;
+    }
+
+    /// <inheritdoc />
+    protected override async Task LoadInitialData(CancellationToken cancellationToken)
+    {
+        await Task.WhenAll(LoadConnections(cancellationToken), LoadDataStoreTypes(cancellationToken));
+
+        if (!string.IsNullOrEmpty(DataStoreName))
+        {
+            await LoadExisting(DataStoreName, cancellationToken);
+        }
+    }
+
+    /// <inheritdoc />
+    protected override DataStoreEditorContext BuildContext()
+    {
+        return new DataStoreEditorContext
+        {
+            Wizard = BuildWizardContext(),
+            Step = Step,
+            IsFirstStep = IsFirstStep,
+            IsLastStep = IsLastStep,
+            Form = _form,
+            Connections = _connections,
+            DataStoreTypes = _dataStoreTypes,
+            Capabilities = _capabilities,
+            Paths = _paths.AsReadOnly(),
+            IsLoading = IsLoading,
+            IsSaving = IsSaving,
+            IsReadOnly = false,
+            IsLoadingCapabilities = _isLoadingCapabilities,
+            LastResult = LastResult,
+            OnNextStep = () => NextStep(),
+            OnPreviousStep = PreviousStep,
+            OnConnectionChanged = connectionName => HandleConnectionChanged(connectionName),
+            OnAddPath = HandleAddPath,
+            OnRemovePath = HandleRemovePath,
+            OnSave = () => HandleSave(),
+            OnRefreshConnections = () => ReloadAndSelectConnection(null),
+            OnRefreshAndSelectConnection = name => ReloadAndSelectConnection(name)
+        };
+    }
+
+    // ── Private Operations ─────────────────────────────────────────────────────
+
+    private async Task LoadConnections(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _connectionApi!.GetConnections(cancellationToken);
+            if (!result.IsSuccess)
+            {
+                LastResult = GenericResult.Failure(DataStoreEditorProviderLog.LoadConnectionsFailed(_logger));
+                _connections = [];
+                return;
+            }
+
+            _connections = result.Value?.ToList() ?? [];
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            LastResult = GenericResult.Failure(DataStoreEditorProviderLog.LoadConnectionsException(_logger, ex));
+            _connections = [];
+        }
+        finally
+        {
+            RebuildAndNotify();
+        }
+    }
+
+    private async Task LoadDataStoreTypes(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Why: the domain client hits GET /datastores/types which reads DataStoreTypes.All()
+            // (source-generated, no reflection), not the broken schema-tree generic endpoint.
+            var result = await _dataStoreApi!.GetTypes(cancellationToken);
+            if (!result.IsSuccess)
+            {
+                // Why: DataStore types failing to load is a soft failure — the UI has a manual
+                // text input fallback so the user can still type a store type and advance.
+                // Setting ErrorMessage here would block WizardCore.NextStep() even after the
+                // user fills in the manual field, making the wizard permanently stuck on step 1.
+                _ = DataStoreEditorProviderLog.LoadDataStoreTypesFailed(_logger);
+                _dataStoreTypes = [];
+                return;
+            }
+
+            _dataStoreTypes = result.Value?
+                .Select(t => new ConfigurationTypeSummary
+                {
+                    TypeName = t.TypeName,
+                    DisplayName = t.DisplayName,
+                    Description = t.Description,
+                    Category = t.Category
+                })
+                .ToList() ?? [];
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            // Why: same reasoning as the IsSuccess branch above — don't set ErrorMessage for a
+            // soft fallback load, only log so the wizard remains navigable.
+            _ = DataStoreEditorProviderLog.LoadDataStoreTypesException(_logger, ex);
+            _dataStoreTypes = [];
+        }
+        finally
+        {
+            RebuildAndNotify();
+        }
+    }
+
+    private async Task LoadCapabilities(string connectionTypeName, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(connectionTypeName)) return;
+
+        _isLoadingCapabilities = true;
+        _capabilities = null;
+        RebuildAndNotify();
+
+        try
+        {
+            var result = await _connectionApi!.GetCapabilities(connectionTypeName, cancellationToken);
+            if (!result.IsSuccess)
+            {
+                LastResult = GenericResult.Failure(DataStoreEditorProviderLog.LoadCapabilitiesFailed(_logger, connectionTypeName));
+                _capabilities = null;
+                return;
+            }
+
+            _capabilities = result.Value;
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            LastResult = GenericResult.Failure(DataStoreEditorProviderLog.LoadCapabilitiesException(_logger, ex, connectionTypeName));
+            _capabilities = null;
+        }
+        finally
+        {
+            _isLoadingCapabilities = false;
+            RebuildAndNotify();
+        }
+    }
+
+    private async Task LoadExisting(string name, CancellationToken cancellationToken = default)
+    {
+        IsLoading = true;
+        LastResult = null;
+        RebuildAndNotify();
+
+        try
+        {
+            var result = await _dataStoreApi!.GetDataStore(name, cancellationToken);
+            if (!result.IsSuccess || result.Value is null)
+            {
+                LastResult = GenericResult.Failure(DataStoreEditorProviderLog.LoadExistingFailed(_logger, name));
+                return;
+            }
+
+            var detail = result.Value;
+            _form = new DataStoreEditorModel
+            {
+                Name = detail.Name,
+                DisplayName = detail.DisplayName,
+                Description = detail.Description,
+                ConnectionName = detail.ConnectionName,
+                StoreType = detail.StoreType,
+                WriteMode = detail.WriteMode,
+                IsActive = detail.IsActive
+            };
+
+            _paths = detail.Paths
+                .Select(p => new DataPathRequest
+                {
+                    Name = p.Name,
+                    PhysicalPath = p.PhysicalPath,
+                    Description = p.Description
+                })
+                .ToList();
+
+            var selectedConnection = _connections.FirstOrDefault(
+                c => string.Equals(c.Name, detail.ConnectionName, StringComparison.Ordinal));
+            if (selectedConnection is not null && !string.IsNullOrEmpty(selectedConnection.ConnectionType))
+            {
+                _form.ConnectionTypeName = selectedConnection.ConnectionType;
+                await LoadCapabilities(selectedConnection.ConnectionType, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            LastResult = GenericResult.Failure(DataStoreEditorProviderLog.LoadExistingException(_logger, ex, name));
+        }
+        finally
+        {
+            IsLoading = false;
+            RebuildAndNotify();
+        }
+    }
+
+    private async Task HandleConnectionChanged(string connectionName)
+    {
+        _form.ConnectionName = connectionName;
+        _capabilities = null;
+        _form.ConnectionTypeName = string.Empty;
+
+        var selectedConnection = _connections.FirstOrDefault(
+            c => string.Equals(c.Name, connectionName, StringComparison.Ordinal));
+
+        if (selectedConnection is not null && !string.IsNullOrEmpty(selectedConnection.ConnectionType))
+        {
+            _form.ConnectionTypeName = selectedConnection.ConnectionType;
+            await LoadCapabilities(selectedConnection.ConnectionType);
+        }
+        else
+        {
+            RebuildAndNotify();
+        }
+    }
+
+    private void HandleAddPath(DataPathRequest path)
+    {
+        _paths.Add(path);
+        RebuildAndNotify();
+    }
+
+    private void HandleRemovePath(int index)
+    {
+        if (index < 0 || index >= _paths.Count) return;
+        _paths.RemoveAt(index);
+        RebuildAndNotify();
+    }
+
+    // Why: Called after the inline connection dialog completes. Re-fetches the connection list
+    // so the new connection appears in the dropdown, then auto-selects it and loads its
+    // capabilities — all without disrupting any other DataStore wizard state.
+    private async Task ReloadAndSelectConnection(string? selectName, CancellationToken cancellationToken = default)
+    {
+        await LoadConnections(cancellationToken);
+        if (!string.IsNullOrEmpty(selectName))
+        {
+            await HandleConnectionChanged(selectName);
+        }
+    }
+
+    private async Task HandleSave(CancellationToken cancellationToken = default)
+    {
+        IsSaving = true;
+        LastResult = null;
+        RebuildAndNotify();
+
+        var pathsSnapshot = _paths.ToList().AsReadOnly();
+
+        try
+        {
+            IGenericResult<DataStoreDetailPayload> result;
+
+            if (!string.IsNullOrEmpty(DataStoreName))
+            {
+                var request = new UpdateDataStoreWithPathsRequest
+                {
+                    DisplayName = _form.DisplayName,
+                    Description = _form.Description,
+                    ConnectionName = _form.ConnectionName,
+                    // Why: StoreType is derived server-side from the connection's transport; not on the wire.
+                    IsActive = _form.IsActive,
+                    WriteMode = _form.WriteMode,
+                    Paths = pathsSnapshot
+                };
+
+                result = await _dataStoreApi!.UpdateDataStore(DataStoreName, request, cancellationToken);
+            }
+            else
+            {
+                var request = new CreateDataStoreWithPathsRequest
+                {
+                    Name = _form.Name,
+                    DisplayName = _form.DisplayName,
+                    Description = _form.Description,
+                    ConnectionName = _form.ConnectionName,
+                    // Why: StoreType is derived server-side from the connection's transport; not on the wire.
+                    IsActive = _form.IsActive,
+                    WriteMode = _form.WriteMode,
+                    Paths = pathsSnapshot
+                };
+
+                result = await _dataStoreApi!.CreateDataStore(request, cancellationToken);
+            }
+
+            if (!result.IsSuccess || result.Value is null)
+            {
+                LastResult = GenericResult.Failure(DataStoreEditorProviderLog.SaveFailed(_logger, _form.Name));
+                return;
+            }
+
+            await OnSaved.InvokeAsync(result.Value);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            LastResult = GenericResult.Failure(DataStoreEditorProviderLog.SaveException(_logger, ex, _form.Name));
+        }
+        finally
+        {
+            IsSaving = false;
+            RebuildAndNotify();
+        }
+    }
+}

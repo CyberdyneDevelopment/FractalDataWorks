@@ -1,0 +1,144 @@
+@namespace Fdw.Data.UI.Components.DataCommand.Skins
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.UI.CommandBuilders.Abstractions
+
+@* Bulk Upsert command skin — Target container + Key fields + source mapping + BatchSize.
+   Tailwind-only. *@
+
+@if (Context is null)
+{
+    <div class="fhint mono">No command context.</div>
+}
+else
+{
+    <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="frow" style="margin-bottom:0;">
+            <label class="flbl">Target Container</label>
+            <DataContainerPicker Containers="@Context.AvailableContainers"
+                                 SelectedContainerId="@_targetId"
+                                 SelectedContainerIdChanged="@OnTargetChanged"
+                                 Placeholder="Select target container..." />
+        </div>
+
+        @* Key fields *@
+        <div class="frow" style="margin-bottom:0;">
+            <label class="flbl">Key Fields (merge on)</label>
+            <div class="finput" style="max-height:7rem;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
+                @foreach (var f in _targetFields)
+                {
+                    var isKey = Context.CurrentSpec.KeyFields.Contains(f.Name, StringComparer.Ordinal);
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox"
+                               style="width:14px;height:14px;accent-color:var(--amber);"
+                               checked="@isKey"
+                               @onchange="@(e => ToggleKey(f.Name, (bool)(e.Value ?? false)))" />
+                        <span class="mono" style="color:@(isKey ? "var(--n-200)" : "var(--n-400)");">@f.DisplayLabel</span>
+                    </label>
+                }
+                @if (_targetFields.Count == 0)
+                {
+                    <p class="fhint mono">Select a container to see its fields.</p>
+                }
+            </div>
+        </div>
+
+        @* Field mapping *@
+        <div class="frow" style="margin-bottom:0;">
+            <div class="card-h" style="padding:0;">
+                <label class="flbl">Field Mapping (source → target)</label>
+                <button class="btn btn-secondary btn-sm" @onclick="AddRow">+ Field</button>
+            </div>
+            @for (var i = 0; i < _values.Count; i++)
+            {
+                var idx = i;
+                var v = _values[idx];
+                <div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:4px;align-items:center;">
+                    <input class="fin mono" placeholder="source field"
+                           value="@v.Value"
+                           @oninput="@(e => SetSourceField(idx, e.Value?.ToString() ?? string.Empty))" />
+                    <span class="mono" style="color:var(--n-500);padding:0 4px;">→</span>
+                    @if (_targetFields.Any())
+                    {
+                        <select class="fin"
+                                value="@v.Field"
+                                @onchange="@(e => SetTargetField(idx, e.Value?.ToString() ?? string.Empty))">
+                            <option value="">Target field...</option>
+                            @foreach (var f in _targetFields)
+                            {
+                                <option value="@f.Name">@f.DisplayLabel</option>
+                            }
+                        </select>
+                    }
+                    else
+                    {
+                        <input class="fin mono" placeholder="target field"
+                               value="@v.Field"
+                               @oninput="@(e => SetTargetField(idx, e.Value?.ToString() ?? string.Empty))" />
+                    }
+                    <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => RemoveRow(idx)">✕</button>
+                </div>
+            }
+        </div>
+
+        <div class="frow" style="margin-bottom:0;">
+            <label class="flbl">Batch Size (0 = connection default)</label>
+            <input class="fin" type="number" min="0"
+                   value="@Context.CurrentSpec.BatchSize"
+                   @oninput="@(e => OnBatchSizeChanged(e))" />
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public DataCommandContext? Context { get; set; }
+    public string SupportedKind => "BulkUpsert";
+    public Type ContextType => typeof(DataCommandContext);
+
+    private Guid _targetId;
+    private IReadOnlyList<DataFieldSummary> _targetFields = [];
+    private List<DataCommandValueEntry> _values = [];
+
+    protected override void OnParametersSet()
+    {
+        if (Context is null) return;
+        _targetId = Context.CurrentSpec.Target?.ContainerId ?? Guid.Empty;
+        _targetFields = Context.GetFields(_targetId);
+        _values = Context.CurrentSpec.Values.ToList();
+    }
+
+    private async Task OnTargetChanged(Guid id)
+    {
+        _targetId = id;
+        _targetFields = Context?.GetFields(id) ?? [];
+        if (Context is not null) await Context.SetTarget(id).ConfigureAwait(false);
+    }
+
+    private async Task ToggleKey(string fieldName, bool selected)
+    {
+        if (Context is null) return;
+        var keys = Context.CurrentSpec.KeyFields.ToList();
+        if (selected && !keys.Contains(fieldName, StringComparer.Ordinal))
+            keys.Add(fieldName);
+        else if (!selected)
+            keys.RemoveAll(k => string.Equals(k, fieldName, StringComparison.Ordinal));
+        await Context.SetKeyFields(keys).ConfigureAwait(false);
+    }
+
+    private void AddRow() { _values.Add(new DataCommandValueEntry()); _ = Sync(); }
+    private void RemoveRow(int idx) { if (idx >= 0 && idx < _values.Count) _values.RemoveAt(idx); _ = Sync(); }
+    private void SetSourceField(int idx, string v) { if (idx < _values.Count) _values[idx] = _values[idx] with { Value = v }; _ = Sync(); }
+    private void SetTargetField(int idx, string v) { if (idx < _values.Count) _values[idx] = _values[idx] with { Field = v }; _ = Sync(); }
+
+    private async Task OnBatchSizeChanged(ChangeEventArgs e)
+    {
+        if (Context is not null && int.TryParse(e.Value?.ToString(), out var val))
+            await Context.SetBatchSize(val).ConfigureAwait(false);
+    }
+
+    private async Task Sync()
+    {
+        if (Context is not null) await Context.SetValues(_values).ConfigureAwait(false);
+    }
+}

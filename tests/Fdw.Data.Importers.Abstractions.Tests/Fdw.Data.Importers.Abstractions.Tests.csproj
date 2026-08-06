@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../src/Fdw.Data.Importers.Abstractions/Fdw.Data.Importers.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

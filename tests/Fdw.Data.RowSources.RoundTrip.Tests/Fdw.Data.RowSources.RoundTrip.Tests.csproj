@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Data.RowSources.Abstractions\Fdw.Data.RowSources.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.RowSources\Fdw.Data.RowSources.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.RowSources.Json\Fdw.Data.RowSources.Json.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.RowSources.Xml\Fdw.Data.RowSources.Xml.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.RowSources.Delimited\Fdw.Data.RowSources.Delimited.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.RowSources.FixedWidth.Abstractions\Fdw.Data.RowSources.FixedWidth.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.RowSources.FixedWidth\Fdw.Data.RowSources.FixedWidth.csproj" />
+    <!-- Registration generator scans referenced assemblies and generates module initializers in this entry point -->
+    <ProjectReference Include="..\..\src\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

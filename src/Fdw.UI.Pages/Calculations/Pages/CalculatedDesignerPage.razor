@@ -1,0 +1,481 @@
+@page "/datasets/calculated/new"
+@page "/datasets/calculated/{Name}/edit"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@implements IDisposable
+
+<PageTitle>Calculation Designer - Cyberdyne</PageTitle>
+
+<CalculatedDataSetProvider DataSetName="@Name" Context="ctx">
+@{ SyncFromContext(ctx); }
+<div style="height:100%;display:flex;flex-direction:column;gap:14px;padding:14px 32px 32px;">
+    <div class="pagehead" style="margin-bottom:0;">
+        <div class="dhead" style="margin-bottom:0;">
+            <button class="btn btn-ghost btn-sm" @onclick='() => Nav.NavigateTo("/datasets")'>
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <h1>Calculation Designer</h1>
+            <span class="est">EXPERIMENTAL</span>
+        </div>
+        <div class="actions">
+            @if (!string.IsNullOrEmpty(_statusMessage))
+            {
+                <span class="mono" style="font-size:11px;color:@(_statusMessage is "Saved" or "Compiled" ? "var(--success)" : "var(--signal)");">@_statusMessage</span>
+            }
+            <button class="btn btn-secondary btn-sm" @onclick="() => CompileGraph(ctx)" disabled="@(_isSaving || _isCompiling)">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                @(_isCompiling ? "Compiling..." : "Compile")
+            </button>
+            <button class="btn btn-primary btn-sm" @onclick="() => SaveLayout(ctx)" disabled="@(_isSaving || _isCompiling)">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                @(_isSaving ? "Saving..." : "Save Layout")
+            </button>
+        </div>
+    </div>
+
+    <div style="flex:1;display:flex;gap:14px;overflow:hidden;">
+        @* Palette *@
+        <div class="card" style="width:192px;display:flex;flex-direction:column;">
+            <div class="card-h"><span class="meta">OPERATIONS PALETTE</span></div>
+            <div class="card-b" style="padding:8px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;">
+                @foreach (var op in _ops)
+                {
+                    <button class="chip mono" style="text-align:left;width:100%;border:0;" @onclick="() => AddNode(op)">
+                        &gt; @op.ToUpper()
+                    </button>
+                }
+            </div>
+        </div>
+
+        @* Canvas *@
+        <div class="graph" style="flex:1;position:relative;background:#08090b;overflow:hidden;">
+            <div style="position:absolute;inset:0;opacity:0.1;pointer-events:none;background-image:radial-gradient(var(--glacier) 0.5px, transparent 0.5px);background-size:20px 20px;"></div>
+
+            <svg class="w-full h-full" style="width:100%;height:100%;cursor:crosshair;" @onmousemove="OnMouseMove" @onmouseup="OnMouseUp">
+                <g transform="translate(@_panX, @_panY) scale(@_zoom)">
+                    @foreach (var conn in _connections)
+                    {
+                        var s = _nodes.Find(n => n.Id == conn.From);
+                        var t = _nodes.Find(n => n.Id == conn.To);
+                        if (s != null && t != null)
+                        {
+                            <path d="@($"M {s.X+140} {s.Y+30} C {s.X+190} {s.Y+30}, {t.X-50} {t.Y+30}, {t.X} {t.Y+30}")"
+                                  stroke="#ef4444" stroke-width="1.5" fill="none" />
+                        }
+                    }
+
+                    @foreach (var node in _nodes)
+                    {
+                        <g transform="translate(@node.X, @node.Y)" @onmousedown="() => SelectNode(node)" style="cursor: move;">
+                            <rect width="140" height="60" fill="#000" stroke="@(node == _selected ? "#ef4444" : "#374151")" stroke-width="1" />
+                            <rect width="2" height="60" fill="@GetNodeColor(node.Type)" />
+                            <text x="10" y="25" fill="#fff" font-family="monospace" font-size="10" font-weight="bold">@node.Name</text>
+                            <text x="10" y="45" fill="#666" font-family="monospace" font-size="8">@node.Type</text>
+
+                            @* Ports *@
+                            <circle cx="0" cy="30" r="3" fill="#374151" />
+                            <circle cx="140" cy="30" r="3" fill="#ef4444" class="hover:r-5" @onmousedown:stopPropagation="true" @onmousedown="() => StartConnect(node)" />
+                        </g>
+                    }
+                </g>
+            </svg>
+
+            @* Controls *@
+            <div style="position:absolute;bottom:16px;right:16px;display:flex;gap:6px;">
+                <button class="btn btn-secondary btn-sm" @onclick="() => _zoom *= 1.1">+</button>
+                <button class="btn btn-secondary btn-sm" @onclick="() => _zoom /= 1.1">-</button>
+            </div>
+        </div>
+
+        @* Properties *@
+        <div class="card" style="width:256px;">
+             <div class="card-h"><span class="meta">NODE PROPERTIES</span></div>
+             <div class="card-b">
+             @if (_selected != null)
+             {
+                 <div class="frow" style="margin-bottom:8px;">
+                     <label>Instance Name</label>
+                     <input @bind="_selected.Name" class="finput mono" />
+                 </div>
+                 @switch (_selected.Type)
+                 {
+                     case "Source":
+                         <div class="frow" style="margin-bottom:8px;">
+                             <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Source Container</label>
+                             @if (_loadingSourceRoots)
+                             {
+                                 <div class="mono" style="font-size:10px;color:var(--n-500);font-style:italic;">Loading data stores…</div>
+                             }
+                             else
+                             {
+                                 <NestedObjectPicker TNode="DataStoreNode"
+                                     Items="@(_sourceRoots ?? Array.Empty<DataStoreNode>())"
+                                     GetChildren="GetDataStoreChildren"
+                                     IsLeaf="@(n => n.Kind.Equals(DataStoreNodeKind.Container, StringComparison.Ordinal))"
+                                     LabelSelector="@(n => n.Name)"
+                                     KeySelector="@(n => n.Id == Guid.Empty ? n.Name : n.Id.ToString())"
+                                     Label="Data Store"
+                                     ChildLabel="Container"
+                                     SelectionChanged="OnSourceContainerSelected" />
+                             }
+                         </div>
+                         break;
+                     case "DataSet-Source":
+                         <DataSetSourceNodePropertiesPanel
+                             Configuration="_selected.Configuration"
+                             DataStoreRoots="@(_sourceRoots ?? Array.Empty<DataStoreNode>())"
+                             IsLoadingDataStores="_loadingSourceRoots"
+                             GetDataStoreChildren="GetDataStoreChildren"
+                             OnConfigurationChanged="cfg => UpdateNodeConfig(_selected, cfg)" />
+                         break;
+                     case "Join":
+                         <JoinNodePropertiesPanel
+                             NodeId="_selected.Id"
+                             Configuration="_selected.Configuration"
+                             AvailableSourceNames="@GetSourceNames()"
+                             OnConfigurationChanged="cfg => UpdateNodeConfig(_selected, cfg)" />
+                         break;
+                     case "Aggregate":
+                         <AggregateNodePropertiesPanel
+                             Configuration="_selected.Configuration"
+                             AvailableFields="@GetAvailableFields()"
+                             AvailableAggregationFunctions="@_aggregationFunctionNames"
+                             OnConfigurationChanged="cfg => UpdateNodeConfig(_selected, cfg)" />
+                         break;
+                     case "Output":
+                         <div class="frow" style="margin-bottom:8px;">
+                             <label>Result Field Name</label>
+                             <input value="@GetConfigString(_selected, "ResultFieldName", "Result")"
+                                    @onchange="OnResultFieldNameChanged"
+                                    class="finput mono" placeholder="Result" />
+                         </div>
+                         break;
+                     default:
+                         <div class="frow" style="margin-bottom:8px;">
+                             <label>Formula Body</label>
+                             <textarea value="@GetConfigString(_selected, "FormulaBody", string.Empty)"
+                                       @onchange="OnFormulaBodyChanged"
+                                       class="finput mono" rows="4"
+                                       placeholder="[Field1] + [Field2]"
+                                       style="resize:vertical;font-size:10px;"></textarea>
+                         </div>
+                         break;
+                 }
+                 <button class="btn btn-danger btn-sm" style="width:100%;margin-top:4px;" @onclick="DeleteSelected">Delete Node</button>
+             }
+             else
+             {
+                 <div class="mono" style="font-size:10px;color:var(--n-600);font-style:italic;">NO_SELECTION_ACTIVE</div>
+             }
+             </div>
+        </div>
+    </div>
+</div>
+</CalculatedDataSetProvider>
+
+@code {
+    [Parameter] public string? Name { get; set; }
+
+    [CascadingParameter] private MainLayoutBase? Layout { get; set; }
+
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    [Inject] private DataStoreApiClient DataStoreClient { get; set; } = default!;
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private List<Node> _nodes = [];
+    private List<Conn> _connections = [];
+    private string[] _ops = ["Source", "DataSet-Source", "Filter", "Map", "Join", "Aggregate", "Output"];
+    private double _panX = 50, _panY = 50, _zoom = 1.0, _mouseX, _mouseY;
+    private Node? _selected, _dragged, _connSrc;
+    private bool _isConnecting;
+    private bool _isSaving;
+    private bool _isCompiling;
+    private string? _statusMessage;
+    private bool _synced;
+    private CalculatedDataSetContext? _ctx;
+
+    private IReadOnlyList<string> _aggregationFunctionNames = [];
+    private IReadOnlyList<DataStoreNode>? _sourceRoots;
+    private bool _loadingSourceRoots;
+    private Dictionary<string, DataStoreDetailPayload> _detailByName = new(StringComparer.Ordinal);
+    private Dictionary<Guid, (DataStoreDetailPayload Detail, DataStorePathPayload Path)> _pathContext = new();
+    private bool _initialized;
+
+    protected override void OnInitialized()
+    {
+        Layout?.SetNoPadding(true);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _initialized)
+            return;
+        _initialized = true;
+        await LoadAggregationFunctionNames();
+    }
+
+    private async Task LoadAggregationFunctionNames(CancellationToken cancellationToken = default)
+    {
+        // Why: ConfigurationApiClient is constructed manually (same pattern as DataSetDetailProvider)
+        // because CalculatedDesigner is a Blazor page that uses IHttpClientFactory, not DI-injected
+        // typed clients. The "ConfigurationClient" named HttpClient is registered by the host app.
+        var configurationApi = new ConfigurationApiClient(
+            HttpClientFactory.CreateClient("ConfigurationClient"),
+            LoggerFactory?.CreateLogger<ConfigurationApiClient>()!);
+
+        try
+        {
+            var result = await configurationApi.GetTypeCollectionValues("AggregationFunctions", cancellationToken);
+            if (!result.IsSuccess)
+                return;
+
+            _aggregationFunctionNames = result.Value?.Select(v => v.Name).ToList() ?? [];
+            StateHasChanged();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            // Why: aggregation function names are a UX convenience; a load failure leaves
+            // _aggregationFunctionNames empty (panel shows no options) but does not break the designer.
+        }
+    }
+
+    public void Dispose()
+    {
+        Layout?.SetNoPadding(false);
+    }
+
+    private void SyncFromContext(CalculatedDataSetContext ctx)
+    {
+        if (_synced || ctx.IsLoading) return;
+        _synced = true;
+        _ctx = ctx;
+
+        _nodes = ctx.InitialTasks.Select(t => new Node
+        {
+            Id = t.Id, Name = t.Name, Type = t.TaskType,
+            X = t.PositionX, Y = t.PositionY
+        }).ToList();
+
+        _connections = ctx.InitialConnections.Select(c => new Conn
+        {
+            Id = c.Id, From = c.SourceTaskId, To = c.TargetTaskId
+        }).ToList();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        // Ctx is available in render — sync once loaded
+    }
+
+    private void AddNode(string type) => _nodes.Add(new Node { Id = Guid.NewGuid(), Name = $"{type}_{_nodes.Count}", Type = type, X = 100, Y = 100 });
+    private void SelectNode(Node n)
+    {
+        _selected = n;
+        _dragged = n;
+        // Why: DataSet-Source panel also uses the DataStore drill-down picker.
+        var needsDataStoreRoots = n.Type.Equals("Source", StringComparison.Ordinal)
+            || n.Type.Equals("DataSet-Source", StringComparison.Ordinal);
+        if (needsDataStoreRoots && _sourceRoots == null && !_loadingSourceRoots)
+            _ = LoadSourceRootsAsync();
+    }
+    private void DeleteSelected() { if (_selected != null) { _connections.RemoveAll(c => c.From == _selected.Id || c.To == _selected.Id); _nodes.Remove(_selected); _selected = null; } }
+    private void StartConnect(Node n) { _connSrc = n; _isConnecting = true; }
+    private string GetNodeColor(string t) => t switch { "Source" => "#22c55e", "Output" => "#eab308", _ => "#ef4444" };
+
+    private TaskPayload NodeToTaskDto(Node n) => new()
+    {
+        Id = n.Id, Name = n.Name, TaskType = n.Type,
+        PositionX = n.X, PositionY = n.Y,
+        Configuration = n.Configuration
+    };
+
+    private TaskConnectionPayload ConnToDto(Conn c) => new()
+    {
+        Id = c.Id,
+        SourceTaskId = c.From, SourcePort = 0,
+        TargetTaskId = c.To, TargetPort = 0
+    };
+
+    private async Task SaveLayout(CalculatedDataSetContext ctx)
+    {
+        _isSaving = true;
+        _statusMessage = null;
+        try
+        {
+            var tasks = _nodes.Select(NodeToTaskDto).ToList();
+            var connections = _connections.Select(ConnToDto).ToList();
+            var savedId = await ctx.OnSave(tasks, connections);
+            _statusMessage = savedId is not null ? "Saved" : (ctx.ErrorMessage ?? "Failed to save");
+        }
+        catch
+        {
+            _statusMessage = "Failed to save";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task CompileGraph(CalculatedDataSetContext ctx)
+    {
+        _isCompiling = true;
+        _statusMessage = null;
+        try
+        {
+            var tasks = _nodes.Select(NodeToTaskDto).ToList();
+            var connections = _connections.Select(ConnToDto).ToList();
+            var result = await ctx.OnCompile(tasks, connections);
+            _statusMessage = result.IsSuccess ? "Compiled" : result.CurrentMessage;
+        }
+        catch
+        {
+            _statusMessage = "Compile failed";
+        }
+        finally
+        {
+            _isCompiling = false;
+        }
+    }
+
+    private static string GetConfigString(Node node, string key, string defaultValue)
+    {
+        if (node.Configuration.TryGetValue(key, out var val) && val is not null)
+            return val.ToString() ?? defaultValue;
+        return defaultValue;
+    }
+
+    private static void SetConfig(Node node, string key, string? value)
+    {
+        if (value is null)
+            node.Configuration.Remove(key);
+        else
+            node.Configuration[key] = value;
+    }
+
+    private void OnResultFieldNameChanged(ChangeEventArgs e)
+        => SetConfig(_selected!, "ResultFieldName", e.Value?.ToString());
+
+    private void OnFormulaBodyChanged(ChangeEventArgs e)
+        => SetConfig(_selected!, "FormulaBody", e.Value?.ToString());
+
+    private void OnMouseMove(MouseEventArgs e) {
+        if (_dragged != null) { _dragged.X += e.MovementX / _zoom; _dragged.Y += e.MovementY / _zoom; }
+        _mouseX = (e.OffsetX - _panX) / _zoom; _mouseY = (e.OffsetY - _panY) / _zoom;
+    }
+    private void OnMouseUp() {
+        if (_isConnecting && _connSrc != null) {
+            var t = _nodes.Find(n => n != _connSrc && Math.Abs(n.X - _mouseX) < 20 && Math.Abs(n.Y + 30 - _mouseY) < 30);
+            if (t != null) _connections.Add(new Conn { From = _connSrc.Id, To = t.Id });
+        }
+        _dragged = null; _isConnecting = false;
+    }
+
+    private async Task LoadSourceRootsAsync()
+    {
+        _loadingSourceRoots = true;
+        StateHasChanged();
+        var result = await DataStoreClient.GetDataStores();
+        _sourceRoots = result.IsSuccess && result.Value is not null
+            ? result.Value.Select(ds => new DataStoreNode(ds.Name, DataStoreNodeKind.DataStore, ds.Id)).ToList()
+            : Array.Empty<DataStoreNode>();
+        _loadingSourceRoots = false;
+        StateHasChanged();
+    }
+
+    private async Task<IReadOnlyList<DataStoreNode>> GetDataStoreChildren(DataStoreNode node)
+    {
+        if (node.Kind.Equals(DataStoreNodeKind.DataStore, StringComparison.Ordinal))
+        {
+            if (!_detailByName.TryGetValue(node.Name, out var detail))
+            {
+                var result = await DataStoreClient.GetDataStore(node.Name);
+                if (!result.IsSuccess || result.Value is null) return Array.Empty<DataStoreNode>();
+                detail = result.Value;
+                _detailByName[node.Name] = detail;
+                foreach (var path in detail.Paths)
+                    _pathContext[path.Id] = (detail, path);
+            }
+            return detail.Paths
+                .Select(p => new DataStoreNode(p.Name, DataStoreNodeKind.Path, p.Id))
+                .ToList();
+        }
+        if (node.Kind.Equals(DataStoreNodeKind.Path, StringComparison.Ordinal))
+        {
+            if (!_pathContext.TryGetValue(node.Id, out var ctx)) return Array.Empty<DataStoreNode>();
+            return ctx.Path.Containers
+                .Select(c => new DataStoreNode(c.Name, DataStoreNodeKind.Container, c.Id))
+                .ToList();
+        }
+        return Array.Empty<DataStoreNode>();
+    }
+
+    private Task OnSourceContainerSelected(IReadOnlyList<DataStoreNode> chain)
+    {
+        if (_selected == null) return Task.CompletedTask;
+        var dataStore = chain.FirstOrDefault(n => n.Kind.Equals(DataStoreNodeKind.DataStore, StringComparison.Ordinal));
+        var container = chain.LastOrDefault(n => n.Kind.Equals(DataStoreNodeKind.Container, StringComparison.Ordinal));
+        if (dataStore != null)
+            _selected.Configuration["DataStoreName"] = dataStore.Name;
+        if (container != null)
+        {
+            _selected.Configuration["ContainerName"] = container.Name;
+            _selected.Configuration["ContainerId"] = container.Id.ToString();
+        }
+        return Task.CompletedTask;
+    }
+
+    // Why: merges a panel's updated configuration dictionary back into the graph node so
+    // structured node configs (JoinConfiguration, AggregateConfiguration) persist through
+    // the designer without requiring the panel to hold a direct reference to the Node class.
+    private void UpdateNodeConfig(Node node, Dictionary<string, object?> config)
+    {
+        node.Configuration = config;
+    }
+
+    // Why: returns the names of all Source and DataSet-Source nodes currently in the graph
+    // so Join panels can populate their left/right source dropdowns from live graph state.
+    private IReadOnlyList<string> GetSourceNames()
+        => _nodes
+            .Where(n => n.Type.Equals("Source", StringComparison.Ordinal)
+                     || n.Type.Equals("DataSet-Source", StringComparison.Ordinal))
+            .Select(n => n.Name)
+            .ToList();
+
+    // Why: aggregates available field names from all Source/DataSet-Source nodes for the
+    // group-by checkbox list and measure source-field dropdowns in AggregateNodePropertiesPanel.
+    // For now returns all configuration keys that look like field name entries; a future
+    // schema-fetch step can replace this with introspected container fields.
+    private IReadOnlyList<string> GetAvailableFields()
+    {
+        var fields = new List<string>();
+        foreach (var node in _nodes)
+        {
+            if (!node.Type.Equals("Source", StringComparison.Ordinal)
+                && !node.Type.Equals("DataSet-Source", StringComparison.Ordinal))
+                continue;
+            // Why: ContainerName is the logical field roster anchor. When the DataStore tree
+            // has been expanded, the full field list is cached in _detailByName. Until then
+            // surface the container name as a placeholder so the panel is not empty.
+            if (node.Configuration.TryGetValue("ContainerName", out var cn) && cn is not null)
+            {
+                var containerName = cn.ToString() ?? string.Empty;
+                if (containerName.Length > 0 && !fields.Contains(containerName, StringComparer.Ordinal))
+                    fields.Add(containerName);
+            }
+        }
+        return fields;
+    }
+
+    class Node
+    {
+        public Guid Id;
+        public string Name = string.Empty, Type = string.Empty;
+        public double X, Y;
+        public Dictionary<string, object?> Configuration = new(StringComparer.Ordinal);
+    }
+    class Conn { public Guid Id = Guid.NewGuid(); public Guid From, To; }
+}

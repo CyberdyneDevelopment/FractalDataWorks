@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+
+    <!-- Source Generator Specific -->
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <DevelopmentDependency>true</DevelopmentDependency>
+
+    <!-- Package Properties -->
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeBuildOutput>true</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <IncludeSymbols>false</IncludeSymbols>
+    <PackageDescription>Opt-in source generator that discovers every [ServiceTypeCollection] domain, builds a cross-domain dependency graph from Configure/Register/Initialize call sites, and emits a module initializer that registers each domain into PlatformServices in a dependency-safe order.</PackageDescription>
+    <PackageTags>service-types;registration;module-initializer;source-generator;roslyn;cross-assembly</PackageTags>
+
+    <!-- Suppress warnings for analyzer-only packages -->
+    <NoWarn>$(NoWarn);NU5128;NU5118</NoWarn>
+    <!-- Source generators have inherent Roslyn complexity -->
+    <FDW_MaxMethodLines>500</FDW_MaxMethodLines>
+    <FDW_MaxCyclomaticComplexity>200</FDW_MaxCyclomaticComplexity>
+
+    <!-- Generator Debugging -->
+    <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)g</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- Package generator DLL in analyzers folder for transitive flow -->
+  <ItemGroup>
+    <None Include="$(OutputPath)$(AssemblyName).dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
+  </ItemGroup>
+
+</Project>

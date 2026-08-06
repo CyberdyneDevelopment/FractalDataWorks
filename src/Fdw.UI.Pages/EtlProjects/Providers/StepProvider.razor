@@ -1,0 +1,351 @@
+@namespace Fdw.Services.Etl.Projects.UI.Components.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using System.Net.Http
+@using Fdw.Results
+@using Fdw.Services.Etl.Projects.Clients
+@using Fdw.Services.Etl.Projects.Abstractions.Configuration
+@using Fdw.Services.Etl.Projects.UI.Components.Logging
+
+@*
+    Headless component that provides Step Management logic and state for a specific Stage.
+    Loads steps from the parent project's nested stage configuration (StageConfiguration.Steps).
+*@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for step management within a stage. Owns step loading and CRUD logic.
+    /// No UI markup.
+    /// </summary>
+    [Parameter] public RenderFragment<StepContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    [Inject] private ILogger<StepProvider>? LoggerParam { get; set; }
+    private ILogger<StepProvider> _logger = NullLogger<StepProvider>.Instance;
+
+    private ProjectApiClient? _projectApi;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<StepConfiguration> _steps = [];
+    private StepConfiguration? _currentStep;
+    private Guid? _stageId;
+    private Guid? _projectId;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private StepContext _context = new();
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _projectApi = new ProjectApiClient(HttpClientFactory.CreateClient("ProjectClient"), LoggerFactory?.CreateLogger<ProjectApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<StepProvider>.Instance;
+        RebuildContext();
+    }
+
+    // ── Methods (exposed as callbacks via StepContext) ────────────────────────
+
+    private async Task LoadSteps(Guid stageId, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        _stageId = stageId;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            // Why: Steps are nested inside Stages inside Projects. We need the project to walk
+            // down to the stage. ProjectId must be pre-set via LoadStepsForStage if known,
+            // or we scan all projects for the matching stage.
+            if (_projectId is null)
+            {
+                var listResult = await _projectApi!.ListProjects(cancellationToken);
+                if (!listResult.IsSuccess || listResult.Value is null)
+                {
+                    StepProviderLog.LoadStepsFailed(_logger, stageId.ToString());
+                    _lastResult = listResult;
+                    _steps = [];
+                    _isLoading = false;
+                    RebuildContext();
+                    StateHasChanged();
+                    return;
+                }
+
+                foreach (var project in listResult.Value)
+                {
+                    var stage = project.Stages.FirstOrDefault(s => s.Id == stageId);
+                    if (stage is not null)
+                    {
+                        _projectId = project.Id;
+                        _steps = stage.Steps.OrderBy(s => s.Ordinal).ToList();
+                        _isLoading = false;
+                        RebuildContext();
+                        StateHasChanged();
+                        return;
+                    }
+                }
+
+                _lastResult = GenericResult.Failure(StepProviderLog.LoadStepsFailed(_logger, stageId.ToString()));
+                _steps = [];
+                return;
+            }
+
+            var projectResult = await _projectApi!.GetProject(_projectId.Value, cancellationToken);
+            if (projectResult.IsSuccess && projectResult.Value is not null)
+            {
+                var matchedStage = projectResult.Value.Stages.FirstOrDefault(s => s.Id == stageId);
+                if (matchedStage is not null)
+                {
+                    _steps = matchedStage.Steps.OrderBy(s => s.Ordinal).ToList();
+                }
+                else
+                {
+                    StepProviderLog.LoadStepsFailed(_logger, stageId.ToString());
+                    _lastResult = projectResult;
+                    _steps = [];
+                }
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(StepProviderLog.LoadStepsFailed(_logger, stageId.ToString()));
+                _steps = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(StepProviderLog.LoadStepsException(_logger, ex));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<StepConfiguration?> CreateStep(StepConfiguration request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            if (_projectId is null || _stageId is null)
+            {
+                _lastResult = GenericResult.Failure(StepProviderLog.StepCreateFailed(_logger));
+                return null;
+            }
+
+            var projectResult = await _projectApi!.GetProject(_projectId.Value, cancellationToken);
+            if (!projectResult.IsSuccess || projectResult.Value is null)
+            {
+                _lastResult = GenericResult.Failure(StepProviderLog.StepCreateFailed(_logger));
+                return null;
+            }
+
+            var stage = projectResult.Value.Stages.FirstOrDefault(s => s.Id == _stageId.Value);
+            if (stage is null)
+            {
+                _lastResult = GenericResult.Failure(StepProviderLog.StepCreateFailed(_logger));
+                return null;
+            }
+
+            stage.Steps.Add(request);
+            var updateResult = await _projectApi!.UpdateProject(_projectId.Value, projectResult.Value, cancellationToken);
+            if (updateResult.IsSuccess)
+            {
+                await LoadSteps(_stageId.Value, cancellationToken);
+                return request;
+            }
+
+            _lastResult = GenericResult.Failure(StepProviderLog.StepCreateFailed(_logger));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(StepProviderLog.StepCreateException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<StepConfiguration?> UpdateStep(Guid stepId, StepConfiguration request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            if (_projectId is null || _stageId is null)
+            {
+                _lastResult = GenericResult.Failure(StepProviderLog.StepUpdateFailed(_logger, stepId.ToString()));
+                return null;
+            }
+
+            var projectResult = await _projectApi!.GetProject(_projectId.Value, cancellationToken);
+            if (!projectResult.IsSuccess || projectResult.Value is null)
+            {
+                _lastResult = GenericResult.Failure(StepProviderLog.StepUpdateFailed(_logger, stepId.ToString()));
+                return null;
+            }
+
+            var stage = projectResult.Value.Stages.FirstOrDefault(s => s.Id == _stageId.Value);
+            if (stage is null)
+            {
+                _lastResult = GenericResult.Failure(StepProviderLog.StepUpdateFailed(_logger, stepId.ToString()));
+                return null;
+            }
+
+            var idx = stage.Steps.ToList().FindIndex(s => s.Id == stepId);
+            if (idx >= 0)
+            {
+                stage.Steps[idx] = request;
+            }
+
+            var updateResult = await _projectApi!.UpdateProject(_projectId.Value, projectResult.Value, cancellationToken);
+            if (updateResult.IsSuccess)
+            {
+                await LoadSteps(_stageId.Value, cancellationToken);
+                return request;
+            }
+
+            _lastResult = GenericResult.Failure(StepProviderLog.StepUpdateFailed(_logger, stepId.ToString()));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(StepProviderLog.StepUpdateException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> DeleteStep(Guid stepId, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            if (_projectId is null || _stageId is null)
+            {
+                _lastResult = GenericResult.Failure(StepProviderLog.StepDeleteFailed(_logger, stepId.ToString()));
+                return false;
+            }
+
+            var projectResult = await _projectApi!.GetProject(_projectId.Value, cancellationToken);
+            if (!projectResult.IsSuccess || projectResult.Value is null)
+            {
+                _lastResult = GenericResult.Failure(StepProviderLog.StepDeleteFailed(_logger, stepId.ToString()));
+                return false;
+            }
+
+            var stage = projectResult.Value.Stages.FirstOrDefault(s => s.Id == _stageId.Value);
+            if (stage is null)
+            {
+                _lastResult = GenericResult.Failure(StepProviderLog.StepDeleteFailed(_logger, stepId.ToString()));
+                return false;
+            }
+
+            var toRemove = stage.Steps.FirstOrDefault(s => s.Id == stepId);
+            if (toRemove is not null)
+            {
+                stage.Steps.Remove(toRemove);
+            }
+
+            var updateResult = await _projectApi!.UpdateProject(_projectId.Value, projectResult.Value, cancellationToken);
+            if (updateResult.IsSuccess)
+            {
+                await LoadSteps(_stageId.Value, cancellationToken);
+                return true;
+            }
+
+            _lastResult = GenericResult.Failure(StepProviderLog.StepDeleteFailed(_logger, stepId.ToString()));
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(StepProviderLog.StepDeleteException(_logger, ex));
+            return false;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private void SelectStep(StepConfiguration? step)
+    {
+        _currentStep = step;
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new StepContext
+        {
+            Steps = _steps,
+            CurrentStep = _currentStep,
+            StageId = _stageId,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnLoadSteps = id => LoadSteps(id),
+            OnCreateStep = request => CreateStep(request),
+            OnUpdateStep = (id, request) => UpdateStep(id, request),
+            OnDeleteStep = id => DeleteStep(id),
+            OnSelectStep = SelectStep
+        };
+    }
+}

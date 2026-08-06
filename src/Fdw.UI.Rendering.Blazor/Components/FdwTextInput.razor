@@ -1,0 +1,41 @@
+@* Text input primitive bound to a TextInputModel. Presentation-only: all state lives on the model. *@
+@if (Model.IsVisible)
+{
+    <div class="fdw-ui-field fdw-ui-text-input" id="@Model.Id">
+        <label class="fdw-ui-label">
+            @(Model.Label ?? Model.Id)
+            @if (Model.IsRequired)
+            {
+                <span class="fdw-ui-required">*</span>
+            }
+        </label>
+        @if (!string.IsNullOrEmpty(Model.HelpText))
+        {
+            <div class="fdw-ui-help">@Model.HelpText</div>
+        }
+        @if (IsDisplayOnly)
+        {
+            <span class="fdw-ui-value">@(Model.Value ?? "(empty)")</span>
+        }
+        else
+        {
+            <input class="fdw-ui-input"
+                   type="@(Model.IsPassword ? "password" : "text")"
+                   value="@Model.Value"
+                   placeholder="@Model.Placeholder"
+                   maxlength="@Model.MaxLength"
+                   @onchange="@(e => Model.Value = e.Value?.ToString())" />
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The text input model to render.</summary>
+    [Parameter, EditorRequired] public TextInputModel Model { get; set; } = default!;
+
+    /// <summary>The active render mode.</summary>
+    [Parameter, EditorRequired] public IRenderMode Mode { get; set; } = default!;
+
+    private bool IsDisplayOnly =>
+        string.Equals(Mode.Name, "Display", StringComparison.Ordinal) || Model.IsReadOnly;
+}

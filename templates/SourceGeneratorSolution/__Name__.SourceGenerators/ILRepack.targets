@@ -1,0 +1,2 @@
+<!-- Empty ILRepack.targets file to disable default ILRepack behavior -->
+<!-- Custom ILRepack merging is handled by MergeAnalyzerDependencies target in the project file -->

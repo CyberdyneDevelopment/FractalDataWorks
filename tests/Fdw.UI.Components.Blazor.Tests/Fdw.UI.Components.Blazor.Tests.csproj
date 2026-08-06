@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.UI.Components\Fdw.UI.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Authentication.Components\Fdw.Services.Authentication.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.SecretManagers.Components\Fdw.Services.SecretManagers.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.Components\Fdw.Data.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Quality.Components\Fdw.Services.Quality.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Web.Analytics.Components\Fdw.Web.Analytics.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Catalog.Components\Fdw.Services.Catalog.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Operations.Components\Fdw.Operations.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Settings.Components\Fdw.Services.Settings.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Messaging.Components\Fdw.Services.Messaging.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Web.Clients.Abstractions\Fdw.Web.Clients.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Connections.Components\Fdw.Services.Connections.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Authorization.Components\Fdw.Services.Authorization.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Pipelines.Components\Fdw.Services.Pipelines.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Scheduling.Components\Fdw.Services.Scheduling.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.UI.Themes.Components\Fdw.UI.Themes.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Etl.Projects.UI.Components\Fdw.Services.Etl.Projects.UI.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.UI.Components\Fdw.Data.UI.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Connections.UI.Components\Fdw.Services.Connections.UI.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Connections.UI.Pages\Fdw.Services.Connections.UI.Pages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.UI.Pages\Fdw.Data.UI.Pages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.SecretManagers.UI.Pages\Fdw.Services.SecretManagers.UI.Pages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Calculations.UI.Pages\Fdw.Calculations.UI.Pages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Catalog.UI.Pages\Fdw.Services.Catalog.UI.Pages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Pipelines.UI.Pages\Fdw.Services.Pipelines.UI.Pages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Scheduling.UI.Pages\Fdw.Services.Scheduling.UI.Pages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Etl.Projects.UI.Pages\Fdw.Services.Etl.Projects.UI.Pages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Operations.UI.Pages\Fdw.Operations.UI.Pages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Agents.Components\Fdw.Agents.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Agents.UI.Pages\Fdw.Agents.UI.Pages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Authentication.UI.Pages\Fdw.Services.Authentication.UI.Pages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Authorization.UI.Pages\Fdw.Services.Authorization.UI.Pages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Messaging.UI.Pages\Fdw.Services.Messaging.UI.Pages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Dashboard.UI.Components\Fdw.Dashboard.UI.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Configuration.UI.Components\Fdw.Configuration.UI.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Quality.UI.Pages\Fdw.Services.Quality.UI.Pages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Configuration.UI.Pages\Fdw.Configuration.UI.Pages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Messages\Fdw.Messages.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="bunit" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+</Project>

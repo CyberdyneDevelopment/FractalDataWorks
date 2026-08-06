@@ -1,0 +1,27 @@
+# Fdw.Connections.PostgreSql
+
+Curated bundle: transitively pulls the Fdw PostgreSql connection implementation.
+
+This package declares no types. Referencing it pulls the packages below transitively — which, because a package reference is a registration, also enlists whatever service types they contain.
+
+## What it pulls in
+
+| Package | Notes |
+|---|---|
+| `Fdw.Services.Connections.PostgreSql` | — |
+
+## Installation
+
+```bash
+dotnet add package Fdw.Connections.PostgreSql --prerelease
+```
+
+## Dependencies
+
+`Fdw.Services.Connections.PostgreSql`
+
+---
+
+Part of **[FractalDataWorks](https://github.com/CyberdyneDevelopment/FractalDataWorks)** `1.0.0-rc.1`. Licensed under Apache-2.0.
+
+<!-- generated from source at 4d75c3fab on 2026-08-04; regenerate rather than hand-edit -->

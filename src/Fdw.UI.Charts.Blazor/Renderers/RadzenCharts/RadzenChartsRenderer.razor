@@ -1,0 +1,51 @@
+@namespace Fdw.UI.Charts.Blazor.Renderers.RadzenCharts
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using Radzen
+@using Radzen.Blazor
+@using Fdw.UI.Abstractions.Charts
+
+@* Why: RadzenChartsRenderer is a headless renderer component — no @page directive. It is
+   resolved and mounted exclusively by ChartHost via DynamicComponent. The Model parameter
+   carries the render-agnostic chart spec; Rows carries the data to plot. *@
+
+@if (Model is null)
+{
+    return;
+}
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:16px;">
+        <span style="font-family:monospace;font-size:12px;color:#ef4444;">@_errorMessage</span>
+    </div>
+}
+else if (_chartConfig is not null)
+{
+    @* Why: render inside a div that expands to fill the host container so the chart fills the
+       available space without requiring the caller to know the chart library. *@
+    <div class="fdw-chart-host" style="width:100%;height:100%;">
+        <RadzenChart Style="width:100%;height:100%;">
+
+            @* Why: RadzenLegend is an opt-in child component — only mount when the model
+               requests it. Placing it first ensures Radzen processes it before series. *@
+            @if (_chartConfig.ShowLegend)
+            {
+                <RadzenLegend />
+            }
+
+            @* Why: SeriesFragment is pre-built by RadzenChartStrategyMap at parameter-set time.
+               Rendering it here keeps the razor free of any if/else dispatch on chart-type name
+               (FDW019 — the dictionary in the strategy map owns all dispatch). *@
+            @_chartConfig.SeriesFragment
+
+        </RadzenChart>
+    </div>
+}
+else if (!_isLoading)
+{
+    <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:16px;">
+        <span style="font-family:monospace;font-size:12px;color:#475569;">No chart configuration available.</span>
+    </div>
+}

@@ -1,0 +1,104 @@
+@page "/dataflow"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Dataflow - Cyberdyne</PageTitle>
+
+<DataflowProvider>
+    <ChildContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">Operations</div>
+                <h1>Dataflow Overview</h1>
+                <div class="sub">DataSets, DataStores, sources and connections in the active graph.</div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-secondary" @onclick="async () => await ctx.OnLoadGraph()" disabled="@ctx.IsLoading">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M20 8a8 8 0 00-14-3M4 16a8 8 0 0014 3" />
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
+        {
+            <div class="danger" style="margin-bottom:14px;"><div class="t"><p>@ctx.ErrorMessage</p></div></div>
+        }
+
+        @if (ctx.IsLoading)
+        {
+            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="mut" style="color:var(--n-500);">Loading dataflow graph&hellip;</p></div></div>
+        }
+        else
+        {
+            <div class="metrics">
+                <div class="metric">
+                    <div class="mt"><span class="lbl">DataSets</span><span class="ic ic-glacier"></span></div>
+                    <div class="row"><span class="val">@(ctx.Graph?.Stats?.DataSetCount ?? 0)</span></div>
+                </div>
+                <div class="metric">
+                    <div class="mt"><span class="lbl">DataStores</span><span class="ic ic-green"></span></div>
+                    <div class="row"><span class="val">@(ctx.Graph?.Stats?.DataStoreCount ?? 0)</span></div>
+                </div>
+                <div class="metric">
+                    <div class="mt"><span class="lbl">Sources</span><span class="ic ic-amber"></span></div>
+                    <div class="row"><span class="val">@(ctx.Graph?.Stats?.SourceCount ?? 0)</span></div>
+                </div>
+                <div class="metric">
+                    <div class="mt"><span class="lbl">Connections</span><span class="ic ic-warn"></span></div>
+                    <div class="row"><span class="val">@(ctx.Graph?.Stats?.ConnectionCount ?? 0)</span></div>
+                </div>
+            </div>
+
+            @if ((ctx.Graph?.Nodes.Count ?? 0) == 0)
+            {
+                <div class="card">
+                    <div class="card-b" style="padding:48px 20px;text-align:center;">
+                        <p style="color:var(--n-300);">No dataflow nodes found</p>
+                        <p class="sub" style="margin-top:6px;">Configure DataSets and DataStores to see the dataflow graph</p>
+                    </div>
+                </div>
+            }
+            else
+            {
+                @foreach (var group in ctx.Graph!.Nodes.GroupBy(n => n.NodeType).OrderBy(g => g.Key))
+                {
+                    <div class="card" style="margin-bottom:14px;">
+                        <div class="card-h"><h3>@group.Key</h3><span class="meta">@group.Count()</span></div>
+                        <div class="card-b" style="padding:0 10px 12px;">
+                            <table class="tbl">
+                                <tbody>
+                                    @foreach (var node in group.OrderBy(n => n.Label))
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="cellpad nm">@node.Label</div>
+                                                @if (!string.IsNullOrEmpty(node.Category))
+                                                {
+                                                    <div class="mut" style="font-size:11px;">@node.Category</div>
+                                                }
+                                            </td>
+                                            <td style="text-align:right;"><span class="@GetNodeTypeBadge(node.NodeType)"><span class="bd"></span>@node.NodeType</span></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            }
+        }
+    </ChildContent>
+</DataflowProvider>
+
+@code {
+    private static string GetNodeTypeBadge(string nodeType) => nodeType switch
+    {
+        "Pipeline" => "badge b-run",
+        "DataSet" => "badge b-run",
+        "DataStore" => "badge b-ok",
+        "Connection" => "badge b-warn",
+        _ => "badge b-idle"
+    };
+}

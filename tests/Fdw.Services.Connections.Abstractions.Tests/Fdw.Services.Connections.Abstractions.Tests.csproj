@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Services.Connections.Abstractions\Fdw.Services.Connections.Abstractions.csproj" />
+  </ItemGroup>
+  <PropertyGroup>
+    <!-- Only include Fdw.Services.Connections.Abstractions in coverage -->
+    <Include>[Fdw.Services.Connections.Abstractions]*</Include>
+    <!-- Exclude everything else including Authentication namespace -->
+    <Exclude>[xunit.*]*,[Moq]*,[Shouldly]*,[Fdw.Services.Connections.Abstractions.Authentication]*</Exclude>
+  </PropertyGroup>
+</Project>

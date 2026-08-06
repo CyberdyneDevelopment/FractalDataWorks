@@ -1,0 +1,72 @@
+@namespace Fdw.Data.UI.Components.DataCommand
+@using System
+@using System.Collections.Generic
+@using System.Linq
+
+@* Multi-select field picker — shows fully-qualified alias.fieldName entries as checkboxes.
+   Accepts a merged list of (alias, fields) pairs to support cross-join field selection.
+   Tailwind-only. *@
+
+<div class="finput" style="max-height:10rem;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
+    @if (!Sources.Any())
+    {
+        <p class="fhint mono">No fields available. Select a container first.</p>
+    }
+    else
+    {
+        @foreach (var source in Sources)
+        {
+            @foreach (var field in source.Fields)
+            {
+                var qname = string.IsNullOrEmpty(source.Alias)
+                    ? field.Name
+                    : $"{source.Alias}.{field.Name}";
+                var isSelected = SelectedFields.Any(f =>
+                    string.Equals(f.Alias, source.Alias, StringComparison.Ordinal)
+                    && string.Equals(f.FieldName, field.Name, StringComparison.Ordinal));
+
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox"
+                           style="width:14px;height:14px;accent-color:var(--amber);"
+                           checked="@isSelected"
+                           @onchange="@(e => ToggleField(source.Alias, field.Name, (bool)(e.Value ?? false)))" />
+                    <span class="mono" style="color:@(isSelected ? "var(--n-200)" : "var(--n-400)");">
+                        @(string.IsNullOrEmpty(source.Alias) ? field.DisplayLabel : $"{source.Alias}.{field.DisplayLabel}")
+                    </span>
+                </label>
+            }
+        }
+    }
+</div>
+
+@code {
+    /// <summary>Sources: each entry is (alias, fields) — alias may be empty for the primary container.</summary>
+    [Parameter] public IReadOnlyList<FieldSource> Sources { get; set; } = [];
+
+    [Parameter] public IReadOnlyList<DataCommandField> SelectedFields { get; set; } = [];
+    [Parameter] public EventCallback<IReadOnlyList<DataCommandField>> SelectedFieldsChanged { get; set; }
+
+    private async Task ToggleField(string alias, string fieldName, bool selected)
+    {
+        var list = SelectedFields.ToList();
+        if (selected)
+        {
+            if (!list.Any(f =>
+                string.Equals(f.Alias, alias, StringComparison.Ordinal)
+                && string.Equals(f.FieldName, fieldName, StringComparison.Ordinal)))
+            {
+                list.Add(new DataCommandField { Alias = alias, FieldName = fieldName });
+            }
+        }
+        else
+        {
+            list.RemoveAll(f =>
+                string.Equals(f.Alias, alias, StringComparison.Ordinal)
+                && string.Equals(f.FieldName, fieldName, StringComparison.Ordinal));
+        }
+        await SelectedFieldsChanged.InvokeAsync(list).ConfigureAwait(false);
+    }
+
+    /// <summary>Pairs a container alias with its field list for the multi-select.</summary>
+    public sealed record FieldSource(string Alias, IReadOnlyList<DataFieldSummary> Fields);
+}

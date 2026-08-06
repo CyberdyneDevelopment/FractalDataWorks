@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Fdw.Calculations.Endpoints</RootNamespace>
+
+    <!-- NuGet Package Properties -->
+    <PackageId>Fdw.Calculations.Endpoints</PackageId>
+    <Title>Fdw.Calculations.Endpoints</Title>
+    <Description>Generic endpoint base classes and DTOs for calculation operations via FastEndpoints.</Description>
+    <Authors>Fdw</Authors>
+    <PackageTags>fdw;endpoints;calculations;api;fastendpoints</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Web.RestEndpoints\Fdw.Web.RestEndpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Web.Calculations.Clients\Fdw.Web.Calculations.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.Calculations.Abstractions\Fdw.Calculations.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Messages\Fdw.Messages.csproj" />
+
+    <!-- Source Generators -->
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Services.Calculations.Abstractions\Fdw.Services.Calculations.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Calculations\Fdw.Calculations.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Validation.FastEndpoints\Fdw.Validation.FastEndpoints.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FastEndpoints" />
+  </ItemGroup>
+
+</Project>

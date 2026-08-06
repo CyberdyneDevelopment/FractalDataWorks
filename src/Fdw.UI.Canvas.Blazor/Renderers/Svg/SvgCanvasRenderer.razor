@@ -1,0 +1,338 @@
+@namespace Fdw.UI.Canvas.Blazor.Renderers.Svg
+@using System
+@using System.Linq
+@using Fdw.UI.Abstractions.Canvas
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+
+@* Why: render guard — Model is EditorRequired but guard against null defensively since Blazor
+   can render before parameters are set in some prerender paths. *@
+@if (Model is null)
+{
+    return;
+}
+
+<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;background:#08090b;">
+
+    @* ── Edit-mode toolbar ───────────────────────────────────────────────────────── *@
+    @if (IsEditMode)
+    {
+        <div style="display:flex;gap:8px;padding:6px 10px;border-bottom:1px solid #1e293b;align-items:center;flex-shrink:0;">
+            <span style="font-size:11px;font-family:monospace;color:#64748b;">EDIT</span>
+
+            @if (_selectedId is not null)
+            {
+                <button style="font-family:monospace;font-size:11px;padding:3px 8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;cursor:pointer;"
+                        @onclick="DeleteSelected">
+                    Delete
+                </button>
+                <button style="font-family:monospace;font-size:11px;padding:3px 8px;background:#1e293b;color:#06b6d4;border:1px solid #334155;cursor:pointer;"
+                        @onclick="BeginConnect">
+                    @(_connectSourceId is not null ? "Click target..." : "Connect")
+                </button>
+            }
+
+            @* Why: the port-connect gesture has no toolbar button — it starts by clicking a port
+               directly — so this is the only feedback that a source port is pending. *@
+            @if (_connectSourcePortId is not null)
+            {
+                <span style="font-size:11px;font-family:monospace;color:#06b6d4;">
+                    Mapping from @_connectSourcePortId — click the target port (or the same port to cancel)
+                </span>
+            }
+
+            @if (!string.IsNullOrEmpty(_editErrorMessage))
+            {
+                <span style="font-size:11px;font-family:monospace;color:#ef4444;margin-left:8px;">@_editErrorMessage</span>
+                <button style="font-size:10px;padding:2px 6px;background:transparent;color:#64748b;border:none;cursor:pointer;"
+                        @onclick="@(() => _editErrorMessage = null)">
+                    dismiss
+                </button>
+            }
+        </div>
+    }
+
+    @* ── SVG canvas ──────────────────────────────────────────────────────────────── *@
+    <svg style="flex:1;width:100%;height:100%;background:#08090b;cursor:@(_isPanning ? "grabbing" : "default")"
+         @onmousedown="OnCanvasMouseDown"
+         @onmousemove="OnCanvasMouseMove"
+         @onmouseup="OnCanvasMouseUp"
+         @onmouseleave="OnCanvasMouseUp"
+         @onwheel="OnCanvasWheel"
+         @onwheel:preventDefault="true">
+
+        <defs>
+            @* Background grid pattern *@
+            <pattern id="fdw-svg-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5" />
+            </pattern>
+
+            @* Arrow marker shared by all edges *@
+            <marker id="fdw-svg-arrow" markerWidth="10" markerHeight="10"
+                    refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L0,6 L9,3 z" fill="#64748b" />
+            </marker>
+
+            @* Per-edge-type coloured arrow markers — referenced via EdgeAppearance.MarkerRef *@
+            <marker id="fdw-svg-arrow-flow" markerWidth="10" markerHeight="10"
+                    refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L0,6 L9,3 z" fill="#06b6d4" />
+            </marker>
+            <marker id="fdw-svg-arrow-reference" markerWidth="10" markerHeight="10"
+                    refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L0,6 L9,3 z" fill="#64748b" />
+            </marker>
+            <marker id="fdw-svg-arrow-fieldmapping" markerWidth="10" markerHeight="10"
+                    refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L0,6 L9,3 z" fill="#a855f7" />
+            </marker>
+        </defs>
+
+        @{
+            @* Why: computed once per render pass and shared by the edge and node loops — both need
+               the same port offsets, and rebuilding per edge would recompute every node's layout
+               once per incident edge. *@
+            var portLayouts = BuildPortLayouts();
+        }
+
+        <g transform="@Transform">
+            @* Grid background *@
+            <rect x="-5000" y="-5000" width="10000" height="10000" fill="url(#fdw-svg-grid)" />
+
+            @* ── Node-to-node edges ────────────────────────────────────────────── *@
+            @* Why: self-loop edges are excluded here and rendered inside their own node's group
+               instead — a field mapping runs from an in-port to an out-port on the SAME node, so it
+               crosses that node's body and would be hidden beneath it if drawn in this pass. *@
+            @foreach (var edge in Model.Edges.Where(e => !IsSelfLoop(e)))
+            {
+                @* Why: endpoints resolve through the port layout each render pass. The Model.Nodes
+                   list is the authoritative position source — no local node state is duplicated.
+                   During a drag, _draggingNode overrides the live node position. *@
+                var geometry = ResolveEdgeGeometry(edge, portLayouts);
+
+                if (geometry is not null)
+                {
+                    var ea = GetEdgeAppearance(edge);
+                    var midX = (geometry.SourceX + geometry.TargetX) / 2.0;
+                    var isEdgeSelected = IsSelected(edge.Id);
+
+                    @* Why: cubic bezier provides natural-looking curved paths between nodes,
+                       matching the Lineage.razor approach. The control points share the midX X
+                       so the curve bows horizontally between source and target. *@
+                    <g @onclick="@(() => OnEdgeClick(edge))" style="cursor:pointer;">
+                        <path d="M @(geometry.SourceX.ToString("F1")) @(geometry.SourceY.ToString("F1")) C @(midX.ToString("F1")) @(geometry.SourceY.ToString("F1")), @(midX.ToString("F1")) @(geometry.TargetY.ToString("F1")), @(geometry.TargetX.ToString("F1")) @(geometry.TargetY.ToString("F1"))"
+                              stroke="@ea.StrokeColor"
+                              stroke-width="@(isEdgeSelected ? ea.StrokeWidth + 1.0 : ea.StrokeWidth)"
+                              stroke-dasharray="@ea.DashArray"
+                              fill="none"
+                              marker-end="@ea.MarkerRef" />
+                        @if (edge.Label is not null)
+                        {
+                            @* Why: SVG <text> is a reserved Razor control tag — emit it as a MarkupString
+                               (the same pattern the lineage page uses). Label is HTML-encoded (user data). *@
+                            var elx = midX.ToString("F1");
+                            var ely = ((geometry.SourceY + geometry.TargetY) / 2.0 - 6).ToString("F1");
+                            var eLabel = System.Net.WebUtility.HtmlEncode(edge.Label);
+                            @((MarkupString)$"<text x=\"{elx}\" y=\"{ely}\" text-anchor=\"middle\" fill=\"{ea.StrokeColor}\" font-size=\"9\" font-family=\"monospace\">{eLabel}</text>")
+                        }
+                    </g>
+                }
+            }
+
+            @* ── Nodes ─────────────────────────────────────────────────────────── *@
+            @foreach (var node in Model.Nodes)
+            {
+                @* Why: during a drag preview, _draggingNode overrides the live model node for this ID
+                   so the shape follows the cursor without waiting for an async MoveNode round-trip. *@
+                var visualNode = (_draggingNode is not null && string.Equals(_draggingNode.Id, node.Id, StringComparison.Ordinal))
+                    ? _draggingNode
+                    : node;
+
+                var na = GetNodeAppearance(visualNode);
+                var isNodeSelected = IsSelected(visualNode.Id);
+                var labelText = TruncateLabel(visualNode.Label);
+                var subLabelText = visualNode.SubLabel is not null ? TruncateLabel(visualNode.SubLabel) : null;
+
+                @* Why: indexed, not TryGetValue — portLayouts is built from this very list earlier in
+                   the same pass, so a miss is impossible by construction. Substituting a default
+                   half-height for a "missing" layout would silently render the node at the wrong
+                   size; asserting the invariant here keeps that impossible instead of plausible.
+                   Port offsets are position-independent, so this layout stays valid during a drag —
+                   only the group's translate changes. *@
+                var layout = portLayouts[node.Id];
+                var halfHeight = layout.BodyHalfHeight;
+
+                <g transform="translate(@(visualNode.X.ToString("F1")), @(visualNode.Y.ToString("F1")))"
+                   style="cursor:@(IsEditMode ? "move" : "pointer")"
+                   @onclick="@(() => OnNodeClick(node))"
+                   @onmousedown="@(e => OnNodeMouseDown(node, e))"
+                   @onmousedown:stopPropagation="true">
+
+                    @* Shape is driven by NodeAppearance.Shape — no switch on type name.
+                       string.Equals with Ordinal per FDW convention (internal string keys).
+                       Why: every shape is expressed in terms of halfHeight, which the port layout
+                       grows so a tall port column stays inside its body. At the default half-height
+                       of 20 each expression reduces to the original fixed geometry, so a node
+                       without ports renders exactly as it did before. *@
+                    @if (string.Equals(na.Shape, NodeShape.Rectangle, StringComparison.Ordinal))
+                    {
+                        <rect x="-60" y="@((-halfHeight).ToString("F1"))" width="120" height="@((halfHeight * 2).ToString("F1"))" rx="0"
+                              fill="@na.FillColor" stroke="@na.StrokeColor" stroke-width="1.5" />
+                    }
+                    else if (string.Equals(na.Shape, NodeShape.Diamond, StringComparison.Ordinal))
+                    {
+                        <polygon points="@($"0,{-(halfHeight + 5):F1} 65,0 0,{halfHeight + 5:F1} -65,0")"
+                                 fill="@na.FillColor" stroke="@na.StrokeColor" stroke-width="1.5" />
+                    }
+                    else if (string.Equals(na.Shape, NodeShape.Circle, StringComparison.Ordinal))
+                    {
+                        <circle r="@(Math.Max(28.0, halfHeight).ToString("F1"))" fill="@na.FillColor" stroke="@na.StrokeColor" stroke-width="1.5" />
+                    }
+                    else if (string.Equals(na.Shape, NodeShape.Parallelogram, StringComparison.Ordinal))
+                    {
+                        <path d="@($"M -50,{-halfHeight:F1} L 50,{-halfHeight:F1} L 60,{halfHeight:F1} L -60,{halfHeight:F1} Z")"
+                              fill="@na.FillColor" stroke="@na.StrokeColor" stroke-width="1.5" />
+                    }
+                    else if (string.Equals(na.Shape, NodeShape.Hexagon, StringComparison.Ordinal))
+                    {
+                        <polygon points="@($"0,{-(halfHeight + 2):F1} -40,{-(halfHeight - 9):F1} -40,{halfHeight - 9:F1} 0,{halfHeight + 2:F1} 40,{halfHeight - 9:F1} 40,{-(halfHeight - 9):F1}")"
+                                 fill="@na.FillColor" stroke="@na.StrokeColor" stroke-width="1.5" />
+                    }
+                    else
+                    {
+                        @* Default / RoundedRect *@
+                        <rect x="-60" y="@((-halfHeight).ToString("F1"))" width="120" height="@((halfHeight * 2).ToString("F1"))" rx="6"
+                              fill="@na.FillColor" stroke="@na.StrokeColor" stroke-width="1.5" />
+                    }
+
+                    @* Primary label — MarkupString (SVG <text> is a reserved Razor tag); HTML-encoded. *@
+                    @{
+                        var primaryY = subLabelText is not null ? "1" : "5";
+                        var primaryLabel = System.Net.WebUtility.HtmlEncode(labelText);
+                    }
+                    @((MarkupString)$"<text x=\"0\" y=\"{primaryY}\" text-anchor=\"middle\" fill=\"{na.StrokeColor}\" font-size=\"10\" font-weight=\"bold\" font-family=\"monospace\">{primaryLabel}</text>")
+
+                    @* Sub-label *@
+                    @if (subLabelText is not null)
+                    {
+                        var subLabel = System.Net.WebUtility.HtmlEncode(subLabelText);
+                        @((MarkupString)$"<text x=\"0\" y=\"14\" text-anchor=\"middle\" fill=\"{na.StrokeColor}\" font-size=\"8\" font-family=\"monospace\" opacity=\"0.7\">{subLabel}</text>")
+                    }
+
+                    @* ── Field-mapping (self-loop) edges ───────────────────────────
+                       Why: rendered here, inside this node's translated group, so they draw above
+                       the body they cross and travel with the node during a drag. Their geometry is
+                       node-relative, straight from the port offsets — no absolute maths. *@
+                    @foreach (var mappingEdge in SelfLoopEdgesFor(node.Id))
+                    {
+                        var mappingGeometry = ResolveSelfLoopGeometry(mappingEdge, layout, node.Id);
+                        if (mappingGeometry is not null)
+                        {
+                            var mea = GetEdgeAppearance(mappingEdge);
+                            var mappingMidX = (mappingGeometry.SourceX + mappingGeometry.TargetX) / 2.0;
+
+                            <g @onclick="@(() => OnEdgeClick(mappingEdge))"
+                               @onclick:stopPropagation="true"
+                               style="cursor:pointer;">
+                                <path d="M @(mappingGeometry.SourceX.ToString("F1")) @(mappingGeometry.SourceY.ToString("F1")) C @(mappingMidX.ToString("F1")) @(mappingGeometry.SourceY.ToString("F1")), @(mappingMidX.ToString("F1")) @(mappingGeometry.TargetY.ToString("F1")), @(mappingGeometry.TargetX.ToString("F1")) @(mappingGeometry.TargetY.ToString("F1"))"
+                                      stroke="@mea.StrokeColor"
+                                      stroke-width="@(IsSelected(mappingEdge.Id) ? mea.StrokeWidth + 1.0 : mea.StrokeWidth)"
+                                      stroke-dasharray="@mea.DashArray"
+                                      fill="none"
+                                      marker-end="@mea.MarkerRef" />
+                            </g>
+                        }
+                    }
+
+                    @* ── Ports ────────────────────────────────────────────────────
+                       Why: drawn after the mapping edges so a port disc sits on top of the line
+                       ends that terminate on it. *@
+                    @foreach (var placement in layout.Placements)
+                    {
+                        var isPendingSource = IsPendingConnectSourcePort(visualNode.Id, placement.Port.Id);
+
+                        <circle cx="@placement.Dx.ToString("F1")" cy="@placement.Dy.ToString("F1")"
+                                r="@SvgPortGeometry.PortRadius.ToString("F1")"
+                                fill="@(isPendingSource ? PortConnectHighlightColor : na.FillColor)"
+                                stroke="@(isPendingSource ? PortConnectHighlightColor : na.StrokeColor)"
+                                stroke-width="1.5"
+                                style="cursor:@(IsEditMode ? "crosshair" : "pointer");"
+                                @onclick="@(() => OnPortClick(node, placement.Port))"
+                                @onclick:stopPropagation="true"
+                                @onmousedown:stopPropagation="true" />
+
+                        @* Why: the label sits OUTSIDE the body — a lone port in a column sits on
+                           the node's centre line, where an inside label would land on top of the
+                           node's own label. Anchored away from the disc on the column's side. *@
+                        var isInColumn = placement.Dx < 0;
+                        var portLabelX = (placement.Dx + (isInColumn ? -8.0 : 8.0)).ToString("F1");
+                        var portLabelY = (placement.Dy + 3.0).ToString("F1");
+                        var portLabelAnchor = isInColumn ? "end" : "start";
+                        var portLabel = System.Net.WebUtility.HtmlEncode(TruncatePortLabel(placement.Port.Name));
+
+                        @((MarkupString)$"<text x=\"{portLabelX}\" y=\"{portLabelY}\" text-anchor=\"{portLabelAnchor}\" fill=\"{na.StrokeColor}\" font-size=\"7\" font-family=\"monospace\" opacity=\"0.7\">{portLabel}</text>")
+                    }
+
+                    @* Selection ring *@
+                    @if (isNodeSelected)
+                    {
+                        <circle r="@((halfHeight + 18).ToString("F1"))" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="4 2" />
+                    }
+
+                    @* Connect-mode source indicator *@
+                    @if (_connectSourceId is not null && string.Equals(_connectSourceId, visualNode.Id, StringComparison.Ordinal))
+                    {
+                        <circle r="@((halfHeight + 18).ToString("F1"))" fill="none" stroke="#06b6d4" stroke-width="2" stroke-dasharray="6 2" />
+                    }
+
+                </g>
+            }
+        </g>
+    </svg>
+
+    @* ── Zoom controls ───────────────────────────────────────────────────────────── *@
+    <div style="position:absolute;bottom:16px;right:16px;display:flex;flex-direction:column;gap:6px;">
+        <button style="font-family:monospace;font-size:14px;width:30px;height:30px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;cursor:pointer;"
+                @onclick="ZoomIn">+</button>
+        <button style="font-family:monospace;font-size:14px;width:30px;height:30px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;cursor:pointer;"
+                @onclick="ZoomOut">−</button>
+        <button style="font-family:monospace;font-size:11px;width:30px;height:30px;background:#1e293b;color:#94a3b8;border:1px solid #334155;cursor:pointer;"
+                @onclick="ResetView">⟳</button>
+    </div>
+
+    @* ── Canvas title ─────────────────────────────────────────────────────────────── *@
+    @if (!string.IsNullOrEmpty(Model.Title))
+    {
+        <div style="position:absolute;top:@(IsEditMode ? "38px" : "10px");left:14px;font-family:monospace;font-size:12px;color:#64748b;pointer-events:none;">
+            @Model.Title
+        </div>
+    }
+
+    @* ── Empty state ─────────────────────────────────────────────────────────────── *@
+    @if (!Model.Nodes.Any())
+    {
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+            <span style="font-family:monospace;font-size:12px;color:#334155;">No nodes to display.</span>
+        </div>
+    }
+
+</div>
+
+@code {
+    // Why: the helper methods referenced from the markup need access to _draggingNode, which lives
+    // in the code-behind partial class. These small helpers live here so they can reference the
+    // private state of the same partial class instance without extra plumbing.
+
+    private ICanvasNode? FindNode(string nodeId)
+    {
+        // Why: check _draggingNode first so edge endpoints track the drag position visually.
+        if (_draggingNode is not null && string.Equals(_draggingNode.Id, nodeId, StringComparison.Ordinal))
+            return _draggingNode;
+        foreach (var n in Model.Nodes)
+        {
+            if (string.Equals(n.Id, nodeId, StringComparison.Ordinal))
+                return n;
+        }
+        return null;
+    }
+}

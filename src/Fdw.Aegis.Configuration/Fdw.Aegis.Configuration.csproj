@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Aegis.Abstractions\Fdw.Aegis.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Configuration\Fdw.Configuration.csproj" />
+    <ProjectReference Include="..\Fdw.Configuration.Abstractions\Fdw.Configuration.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Configuration.SourceGenerators\Fdw.Configuration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Types.Abstractions\Fdw.Types.Abstractions.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <Title>Fdw Aegis Configuration</Title>
+    <Description>ManagedConfiguration POCOs for the Aegis Gateway approval-policy domain (AegisCommandConfiguration parent header + ApprovalPolicyTypes discriminator + PreApproved/AdHoc typed bodies). Mirrors Fdw.Data.Configuration/Fdw.Services.Connections so Fdw.Services.Data can reference it without a package cycle.</Description>
+  </PropertyGroup>
+
+</Project>

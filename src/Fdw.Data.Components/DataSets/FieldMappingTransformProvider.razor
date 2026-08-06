@@ -1,0 +1,330 @@
+@namespace Fdw.Data.Components.DataSets
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Data.Clients
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Results
+@using Fdw.Data.Components.Logging
+@using System.Net.Http
+
+@*
+    Headless component that provides FieldMappingTransform management logic and state.
+    Owns loading, CRUD, reordering, and selection for a field mapping's transform chain.
+*@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for field mapping transform operations. Owns transform chain
+    /// loading, CRUD, reordering, and selection. No UI markup.
+    /// </summary>
+    /// <remarks>
+    /// Headless chain:
+    /// <list type="bullet">
+    ///   <item><description>Consumer (before): page shells with markup and ctx.OnXxx() calls</description></item>
+    ///   <item><description>This (provider): <see cref="FieldMappingTransformProvider"/> — owns all state and logic, exposes via <see cref="FieldMappingTransformContext"/></description></item>
+    ///   <item><description>Context (after): <see cref="FieldMappingTransformContext"/> — sealed; passed to consumer RenderFragment</description></item>
+    /// </list>
+    /// </remarks>
+    [Parameter, EditorRequired] public Guid FieldMappingId { get; set; }
+    [Parameter] public string FieldMappingName { get; set; } = string.Empty;
+    [Parameter] public RenderFragment<FieldMappingTransformContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private DataSetApiClient? _dataSetApi;
+    [Inject] private ILogger<FieldMappingTransformProvider>? LoggerParam { get; set; }
+
+    private ILogger<FieldMappingTransformProvider> _logger = NullLogger<FieldMappingTransformProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<FieldMappingTransformPayload> _transforms = [];
+    private IReadOnlyList<TransformTypePayload> _availableTypes = [];
+    private FieldMappingTransformPayload? _selectedTransform;
+    private bool _isLoading;
+    private bool _isSaving;
+    private IGenericResult? _lastResult;
+    private FieldMappingTransformContext _context = new();
+    private Guid _lastFieldMappingId;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _dataSetApi = new DataSetApiClient(HttpClientFactory.CreateClient("DataSetClient"), LoggerFactory?.CreateLogger<DataSetApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<FieldMappingTransformProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (FieldMappingId != _lastFieldMappingId && FieldMappingId != Guid.Empty)
+        {
+            _lastFieldMappingId = FieldMappingId;
+            await LoadTransforms();
+        }
+    }
+
+    // ── Methods (exposed as callbacks via FieldMappingTransformContext) ───────
+
+    private async Task LoadTransforms(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        FieldMappingTransformProviderLog.LoadingTransforms(_logger);
+        FieldMappingTransformProviderLog.LoadingAvailableTypes(_logger);
+
+        try
+        {
+            var transformsTask = _dataSetApi!.GetTransforms(FieldMappingId, cancellationToken);
+            var typesTask = _dataSetApi!.GetAvailableTransformTypes(cancellationToken);
+            await Task.WhenAll(transformsTask, typesTask);
+
+            var transformsResult = transformsTask.Result;
+            var typesResult = typesTask.Result;
+
+            if (transformsResult.IsSuccess)
+            {
+                _transforms = transformsResult.Value?.ToList() ?? [];
+                FieldMappingTransformProviderLog.LoadedTransforms(_logger, _transforms.Count);
+            }
+            else
+            {
+                FieldMappingTransformProviderLog.LoadTransformsFailed(_logger);
+                _lastResult = transformsResult;
+                _transforms = [];
+            }
+
+            if (typesResult.IsSuccess)
+            {
+                _availableTypes = typesResult.Value?.ToList() ?? [];
+                FieldMappingTransformProviderLog.LoadedAvailableTypes(_logger, _availableTypes.Count);
+            }
+            else
+            {
+                FieldMappingTransformProviderLog.LoadAvailableTypesFailed(_logger);
+                _availableTypes = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(FieldMappingTransformProviderLog.LoadTransformsException(_logger, ex));
+            _transforms = [];
+            _availableTypes = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private Task SelectTransform(Guid id)
+    {
+        FieldMappingTransformProviderLog.SelectingTransform(_logger, id.ToString());
+
+        _selectedTransform = _transforms.FirstOrDefault(t => t.Id == id);
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task AddTransform(string typeName, CancellationToken cancellationToken = default)
+    {
+        FieldMappingTransformProviderLog.AddingTransform(_logger, typeName);
+
+        var nextOrdinal = _transforms.Count > 0 ? _transforms.Max(t => t.Ordinal) + 1 : 0;
+        var request = new SaveFieldMappingTransformRequest
+        {
+            FieldMappingId = FieldMappingId,
+            TransformType = typeName,
+            Ordinal = nextOrdinal,
+            Parameters = []
+        };
+
+        await SaveTransform(request, cancellationToken);
+    }
+
+    private async Task SaveTransform(SaveFieldMappingTransformRequest request, CancellationToken cancellationToken = default)
+    {
+        _isSaving = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        FieldMappingTransformProviderLog.SavingTransform(_logger, request.TransformType);
+
+        try
+        {
+            var result = await _dataSetApi!.SaveTransform(request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                FieldMappingTransformProviderLog.SavedTransform(_logger, request.TransformType);
+                await LoadTransforms(cancellationToken);
+                return;
+            }
+
+            _lastResult = GenericResult.Failure(FieldMappingTransformProviderLog.SaveTransformFailed(_logger, request.TransformType));
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(FieldMappingTransformProviderLog.SaveTransformException(_logger, ex));
+        }
+        finally
+        {
+            _isSaving = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteTransform(Guid id, CancellationToken cancellationToken = default)
+    {
+        _isSaving = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        var idString = id.ToString();
+        FieldMappingTransformProviderLog.DeletingTransform(_logger, idString);
+
+        try
+        {
+            var result = await _dataSetApi!.DeleteTransform(id, cancellationToken);
+            if (result.IsSuccess)
+            {
+                FieldMappingTransformProviderLog.DeletedTransform(_logger, idString);
+                if (_selectedTransform is not null && _selectedTransform.Id == id)
+                {
+                    _selectedTransform = null;
+                }
+                await LoadTransforms(cancellationToken);
+                return;
+            }
+
+            _lastResult = GenericResult.Failure(FieldMappingTransformProviderLog.DeleteTransformFailed(_logger, idString));
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(FieldMappingTransformProviderLog.DeleteTransformException(_logger, ex));
+        }
+        finally
+        {
+            _isSaving = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ReorderTransforms(IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        _isSaving = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        FieldMappingTransformProviderLog.ReorderingTransforms(_logger);
+
+        try
+        {
+            var request = new ReorderTransformsRequest { TransformIds = ids.ToList() };
+            var result = await _dataSetApi!.ReorderTransforms(FieldMappingId, request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                FieldMappingTransformProviderLog.ReorderedTransforms(_logger);
+                await LoadTransforms(cancellationToken);
+                return;
+            }
+
+            _lastResult = GenericResult.Failure(FieldMappingTransformProviderLog.ReorderTransformsFailed(_logger));
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(FieldMappingTransformProviderLog.LoadTransformsException(_logger, ex));
+        }
+        finally
+        {
+            _isSaving = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task MoveUp(Guid id, CancellationToken cancellationToken = default)
+    {
+        var ordered = _transforms.OrderBy(t => t.Ordinal).ToList();
+        var index = ordered.FindIndex(t => t.Id == id);
+        if (index <= 0) return;
+
+        (ordered[index], ordered[index - 1]) = (ordered[index - 1], ordered[index]);
+        await ReorderTransforms(ordered.Select(t => t.Id).ToList().AsReadOnly(), cancellationToken);
+    }
+
+    private async Task MoveDown(Guid id, CancellationToken cancellationToken = default)
+    {
+        var ordered = _transforms.OrderBy(t => t.Ordinal).ToList();
+        var index = ordered.FindIndex(t => t.Id == id);
+        if (index < 0 || index >= ordered.Count - 1) return;
+
+        (ordered[index], ordered[index + 1]) = (ordered[index + 1], ordered[index]);
+        await ReorderTransforms(ordered.Select(t => t.Id).ToList().AsReadOnly(), cancellationToken);
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new FieldMappingTransformContext
+        {
+            FieldMappingId = FieldMappingId,
+            FieldMappingName = FieldMappingName,
+            Transforms = _transforms,
+            AvailableTransformTypes = _availableTypes,
+            SelectedTransform = _selectedTransform,
+            IsLoading = _isLoading,
+            IsSaving = _isSaving,
+            LastResult = _lastResult,
+            OnLoadTransforms = () => LoadTransforms(),
+            OnSelectTransform = id => SelectTransform(id),
+            OnAddTransform = typeName => AddTransform(typeName),
+            OnSaveTransform = request => SaveTransform(request),
+            OnDeleteTransform = id => DeleteTransform(id),
+            OnReorderTransforms = ids => ReorderTransforms(ids),
+            OnMoveUp = id => MoveUp(id),
+            OnMoveDown = id => MoveDown(id)
+        };
+    }
+}

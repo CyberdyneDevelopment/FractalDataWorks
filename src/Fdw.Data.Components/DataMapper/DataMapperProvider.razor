@@ -1,0 +1,534 @@
+@namespace Fdw.Data.Components.DataMapper
+@using Fdw.UI.Providers
+@using Fdw.Results
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Schema.Clients
+@using Fdw.Schema.Clients.Models
+@using Fdw.Services.Data.Clients
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Data.Components.Logging
+@using Fdw.Data.Components.Models
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for data mapper operations. Owns DataStore loading, field discovery,
+    /// auto-mapping, validation, and save logic. No UI markup.
+    /// </summary>
+    /// <remarks>
+    /// Headless chain:
+    /// <list type="bullet">
+    ///   <item><description>Consumer (before): page shells with markup and ctx.OnXxx() calls</description></item>
+    ///   <item><description>This (provider): <see cref="DataMapperProvider"/> — owns all state and logic, exposes via <see cref="DataMapperContext"/></description></item>
+    ///   <item><description>Context (after): <see cref="DataMapperContext"/> — sealed; passed to consumer RenderFragment</description></item>
+    /// </list>
+    /// </remarks>
+    [Parameter] public RenderFragment<DataMapperContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private DataStoreApiClient? _dataStoreApi;
+    private SchemaApiClient? _schemaApi;
+    [Inject] private ILogger<DataMapperProvider>? LoggerParam { get; set; }
+
+    private ILogger<DataMapperProvider> _logger = NullLogger<DataMapperProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<DataStoreSummaryPayload> _dataStores = [];
+    // Why: stable-reference cache so RebuildContext() does not create a new list on every call
+    // while _dataStores hasn't changed.
+    private IReadOnlyList<DataStoreNode> _dataStorePickerItems = [];
+
+    // Source selection
+    private string _sourceDataStore = string.Empty;
+    private string _sourcePath = string.Empty;
+    private string _sourceContainer = string.Empty;
+    private DataStoreDetailPayload? _sourceDataStoreDetail;
+    private IReadOnlyList<DataStoreFieldPayload> _sourceFields = [];
+
+    // Target selection
+    private string _targetDataStore = string.Empty;
+    private string _targetPath = string.Empty;
+    private string _targetContainer = string.Empty;
+    private DataStoreDetailPayload? _targetDataStoreDetail;
+    private IReadOnlyList<DataStoreFieldPayload> _targetFields = [];
+
+    private List<FieldMappingDto> _mappings = [];
+    private bool _isLoading;
+    private bool _isLoadingSchema;
+    private IGenericResult? _lastResult;
+    private ValidationResultDto? _validationResult;
+    private DataMapperContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _dataStoreApi = new DataStoreApiClient(HttpClientFactory.CreateClient("DataStoreClient"), LoggerFactory?.CreateLogger<DataStoreApiClient>()!);
+        _schemaApi = new SchemaApiClient(HttpClientFactory.CreateClient("SchemaClient"), LoggerFactory?.CreateLogger<SchemaApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<DataMapperProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadDataStores();
+        }
+    }
+
+    // ── Public Methods (exposed as callbacks via DataMapperContext) ────────────
+
+    /// <summary>Loads all available DataStores from the API.</summary>
+    public async Task LoadDataStores(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _dataStoreApi!.GetDataStores(cancellationToken);
+            if (result.IsSuccess)
+            {
+                _dataStores = result.Value ?? [];
+                _dataStorePickerItems = _dataStores
+                    .Select(ds => new DataStoreNode(ds.Name, DataStoreNodeKind.DataStore))
+                    .ToList();
+                DataMapperProviderLog.DataStoresLoaded(_logger, _dataStores.Count);
+            }
+            else
+            {
+                DataMapperProviderLog.LoadDataStoresFailed(
+                    _logger, new InvalidOperationException(result.CurrentMessage ?? "API returned failure"));
+                _lastResult = result;
+                _dataStores = [];
+                _dataStorePickerItems = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { DataMapperProviderLog.LoadDataStoresFailed(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _dataStores = [];
+            _dataStorePickerItems = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Picker callbacks ──────────────────────────────────────────────────────
+
+    // Why: NestedObjectPicker calls GetSourcePickerChildren to load children for each level.
+    // For a DataStore node, we fetch detail and return paths. For a Path node, we return
+    // containers from the already-loaded source detail. IsLeaf on Container prevents recursion.
+    private async Task<IReadOnlyList<DataStoreNode>> GetSourcePickerChildren(DataStoreNode node)
+    {
+        if (string.Equals(node.Kind, DataStoreNodeKind.DataStore, StringComparison.Ordinal))
+        {
+            await LoadDataStoreDetail(node.Name, isSource: true, CancellationToken.None);
+            RebuildContext();
+            StateHasChanged();
+            if (_sourceDataStoreDetail is null) return [];
+            return _sourceDataStoreDetail.Paths
+                .Select(p => new DataStoreNode(p.Name, DataStoreNodeKind.Path))
+                .ToList();
+        }
+        if (string.Equals(node.Kind, DataStoreNodeKind.Path, StringComparison.Ordinal) && _sourceDataStoreDetail is not null)
+        {
+            var path = _sourceDataStoreDetail.Paths
+                .FirstOrDefault(p => string.Equals(p.Name, node.Name, StringComparison.OrdinalIgnoreCase));
+            if (path is null) return [];
+            return path.Containers
+                .Select(c => new DataStoreNode(c.Name, DataStoreNodeKind.Container, c.Id))
+                .ToList();
+        }
+        return [];
+    }
+
+    private async Task<IReadOnlyList<DataStoreNode>> GetTargetPickerChildren(DataStoreNode node)
+    {
+        if (string.Equals(node.Kind, DataStoreNodeKind.DataStore, StringComparison.Ordinal))
+        {
+            await LoadDataStoreDetail(node.Name, isSource: false, CancellationToken.None);
+            RebuildContext();
+            StateHasChanged();
+            if (_targetDataStoreDetail is null) return [];
+            return _targetDataStoreDetail.Paths
+                .Select(p => new DataStoreNode(p.Name, DataStoreNodeKind.Path))
+                .ToList();
+        }
+        if (string.Equals(node.Kind, DataStoreNodeKind.Path, StringComparison.Ordinal) && _targetDataStoreDetail is not null)
+        {
+            var path = _targetDataStoreDetail.Paths
+                .FirstOrDefault(p => string.Equals(p.Name, node.Name, StringComparison.OrdinalIgnoreCase));
+            if (path is null) return [];
+            return path.Containers
+                .Select(c => new DataStoreNode(c.Name, DataStoreNodeKind.Container, c.Id))
+                .ToList();
+        }
+        return [];
+    }
+
+    private Task OnSourcePickerSelectionChanged(IReadOnlyList<DataStoreNode> chain)
+    {
+        _sourceDataStore = chain.Count > 0 ? chain[0].Name : string.Empty;
+        _sourcePath = chain.Count > 1 ? chain[1].Name : string.Empty;
+        _sourceContainer = chain.Count > 2 ? chain[2].Name : string.Empty;
+
+        if (chain.Count >= 3)
+        {
+            _sourceFields = GetFieldsForContainer(_sourceDataStoreDetail, _sourcePath, _sourceContainer);
+            AutoMapFields();
+        }
+        else
+        {
+            _sourceFields = [];
+            _mappings = [];
+        }
+
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task OnTargetPickerSelectionChanged(IReadOnlyList<DataStoreNode> chain)
+    {
+        _targetDataStore = chain.Count > 0 ? chain[0].Name : string.Empty;
+        _targetPath = chain.Count > 1 ? chain[1].Name : string.Empty;
+        _targetContainer = chain.Count > 2 ? chain[2].Name : string.Empty;
+
+        if (chain.Count >= 3)
+        {
+            _targetFields = GetFieldsForContainer(_targetDataStoreDetail, _targetPath, _targetContainer);
+            AutoMapFields();
+        }
+        else
+        {
+            _targetFields = [];
+            _mappings = [];
+        }
+
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Replaces the current mapping list with the consumer-supplied list.</summary>
+    public Task OnMappingsChanged(IReadOnlyList<FieldMappingDto> mappings, CancellationToken cancellationToken = default)
+    {
+        _mappings = [..mappings];
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Runs automatic name-based field matching and replaces the mapping list.</summary>
+    public Task OnAutoMap(CancellationToken cancellationToken = default)
+    {
+        AutoMapFields();
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Validates all current mappings: checks for unmapped required target fields and direct
+    /// type mismatches. Populates <see cref="DataMapperContext.ValidationResult"/>.
+    /// </summary>
+    public Task OnValidate(CancellationToken cancellationToken = default)
+    {
+        var errors = new List<ValidationErrorDto>();
+        var warnings = new List<ValidationWarningDto>();
+
+        var mappedTargets = new HashSet<string>(_mappings.Select(m => m.TargetField), StringComparer.OrdinalIgnoreCase);
+        var unmappedRequired = _targetFields
+            .Where(t => !t.IsNullable && !mappedTargets.Contains(t.Name))
+            .ToList();
+
+        foreach (var field in unmappedRequired)
+        {
+            errors.Add(new ValidationErrorDto
+            {
+                Code = "REQUIRED_UNMAPPED",
+                Message = $"Required target field '{field.Name}' has no mapping",
+                PropertyPath = field.Name
+            });
+        }
+
+        foreach (var mapping in _mappings)
+        {
+            var source = _sourceFields.FirstOrDefault(f =>
+                string.Equals(f.Name, mapping.SourceField, StringComparison.OrdinalIgnoreCase));
+            var target = _targetFields.FirstOrDefault(f =>
+                string.Equals(f.Name, mapping.TargetField, StringComparison.OrdinalIgnoreCase));
+
+            if (source is not null && target is not null && MappingTypes.ByName(mapping.MappingType) == MappingTypes.Direct)
+            {
+                if (!AreTypesCompatible(source.NativeDataType, target.NativeDataType))
+                {
+                    warnings.Add(new ValidationWarningDto
+                    {
+                        Code = "TYPE_MISMATCH",
+                        Message = $"Type mismatch: {source.Name} ({source.NativeDataType}) → {target.Name} ({target.NativeDataType})"
+                    });
+                }
+            }
+        }
+
+        _validationResult = new ValidationResultDto
+        {
+            IsValid = errors.Count == 0,
+            Errors = errors,
+            Warnings = warnings
+        };
+
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Persists the current mappings via the DataSet source mappings API.
+    /// The target container name becomes the DataSet name; the source container name becomes the source name.
+    /// </summary>
+    public async Task OnSave(CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(_targetContainer) || string.IsNullOrEmpty(_sourceContainer))
+        {
+            _lastResult = GenericResult.Failure(DataMapperProviderLog.MappingsPreparationFailed(
+                _logger, new InvalidOperationException("Source and target containers must be selected before saving")));
+            RebuildContext();
+            StateHasChanged();
+            return;
+        }
+
+        // Why: use container names as the DataSet name and source name — the mapper UI is
+        // container-addressed. The target container is the logical DataSet; the source container
+        // is the physical source within that DataSet.
+        var dataSetName = _targetContainer;
+        var sourceName = _sourceContainer;
+
+        var inputMappings = _mappings.Select(m => new FieldMappingInputPayload
+        {
+            LogicalFieldName = m.TargetField,
+            PhysicalFieldName = m.SourceField,
+            TransformExpression = null
+        }).ToList();
+
+        try
+        {
+            var result = await _schemaApi!.SaveSourceMappings(new SaveSourceMappingsPayload
+            {
+                DataSetName = dataSetName,
+                SourceName = sourceName,
+                Mappings = inputMappings
+            }, cancellationToken);
+
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(DataMapperProviderLog.MappingsSaveFailed(_logger, dataSetName, sourceName));
+                RebuildContext();
+                StateHasChanged();
+                return;
+            }
+
+            DataMapperProviderLog.MappingsSaved(_logger, _mappings.Count, dataSetName, sourceName);
+            _validationResult = null;
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { DataMapperProviderLog.MappingsPreparationFailed(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+        }
+
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    // ── Private Helpers ────────────────────────────────────────────────────────
+
+    private async Task LoadDataStoreDetail(string dataStoreName, bool isSource, CancellationToken cancellationToken)
+    {
+        _isLoadingSchema = true;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _dataStoreApi!.GetDataStore(dataStoreName, cancellationToken);
+            if (!result.IsSuccess)
+            {
+                DataMapperProviderLog.LoadDataStoreFailed(
+                    _logger,
+                    new InvalidOperationException(result.CurrentMessage ?? "API returned failure"),
+                    dataStoreName);
+                _lastResult = result;
+                return;
+            }
+
+            var detail = result.Value;
+            if (detail is not null)
+            {
+                DataMapperProviderLog.DataStoreLoaded(_logger, dataStoreName, detail.Paths.Count);
+            }
+
+            if (isSource)
+                _sourceDataStoreDetail = detail;
+            else
+                _targetDataStoreDetail = detail;
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled — do not update state
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { DataMapperProviderLog.LoadDataStoreFailed(_logger, ex, dataStoreName) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+        }
+        finally
+        {
+            _isLoadingSchema = false;
+        }
+    }
+
+    private static IReadOnlyList<DataStoreFieldPayload> GetFieldsForContainer(
+        DataStoreDetailPayload? dataStoreDetail,
+        string pathName,
+        string containerName)
+    {
+        if (dataStoreDetail is null || string.IsNullOrEmpty(pathName) || string.IsNullOrEmpty(containerName))
+            return [];
+
+        var path = dataStoreDetail.Paths
+            .FirstOrDefault(p => string.Equals(p.Name, pathName, StringComparison.OrdinalIgnoreCase));
+
+        if (path is null)
+            return [];
+
+        var container = path.Containers
+            .FirstOrDefault(c => string.Equals(c.Name, containerName, StringComparison.OrdinalIgnoreCase));
+
+        return container?.Fields ?? [];
+    }
+
+    private string DeriveDatasetName()
+    {
+        if (!string.IsNullOrEmpty(_sourceContainer) && !string.IsNullOrEmpty(_targetContainer))
+            return $"{_sourceContainer} → {_targetContainer}";
+        return string.Empty;
+    }
+
+    private void AutoMapFields()
+    {
+        if (_sourceFields.Count == 0 || _targetFields.Count == 0)
+        {
+            _mappings = [];
+            return;
+        }
+
+        var newMappings = new List<FieldMappingDto>();
+        foreach (var source in _sourceFields)
+        {
+            var target = _targetFields.FirstOrDefault(t =>
+                string.Equals(t.Name, source.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (target is not null)
+            {
+                newMappings.Add(new FieldMappingDto
+                {
+                    Id = Guid.NewGuid(),
+                    SourceField = source.Name,
+                    TargetField = target.Name,
+                    MappingType = MappingTypes.Direct.Name,
+                    IsAutoMapped = true
+                });
+            }
+        }
+
+        _mappings = newMappings;
+
+        if (_mappings.Count > 0)
+        {
+            DataMapperProviderLog.AutoMappedFields(_logger, _mappings.Count);
+        }
+    }
+
+    private static bool AreTypesCompatible(string? sourceType, string? targetType)
+    {
+        // Why: unknown/absent types are not automatically compatible — warn so the user can verify.
+        if (string.IsNullOrEmpty(sourceType) || string.IsNullOrEmpty(targetType))
+            return false;
+
+        var source = sourceType.ToLowerInvariant();
+        var target = targetType.ToLowerInvariant();
+
+        if (string.Equals(source, target, StringComparison.Ordinal)) return true;
+        if ((string.Equals(source, "varchar", StringComparison.Ordinal) && string.Equals(target, "nvarchar", StringComparison.Ordinal)) ||
+            (string.Equals(source, "nvarchar", StringComparison.Ordinal) && string.Equals(target, "varchar", StringComparison.Ordinal))) return true;
+        if ((string.Equals(source, "datetime", StringComparison.Ordinal) && string.Equals(target, "datetime2", StringComparison.Ordinal)) ||
+            (string.Equals(source, "datetime2", StringComparison.Ordinal) && string.Equals(target, "datetime", StringComparison.Ordinal))) return true;
+        if ((string.Equals(source, "int", StringComparison.Ordinal) && string.Equals(target, "bigint", StringComparison.Ordinal)) ||
+            (string.Equals(source, "smallint", StringComparison.Ordinal) && string.Equals(target, "int", StringComparison.Ordinal))) return true;
+
+        return false;
+    }
+
+    private void RebuildContext()
+    {
+        _context = new DataMapperContext
+        {
+            DataStorePickerItems = _dataStorePickerItems,
+            GetSourcePickerChildren = GetSourcePickerChildren,
+            GetTargetPickerChildren = GetTargetPickerChildren,
+            OnSourcePickerSelectionChanged = OnSourcePickerSelectionChanged,
+            OnTargetPickerSelectionChanged = OnTargetPickerSelectionChanged,
+            SourceFields = _sourceFields,
+            TargetFields = _targetFields,
+            Mappings = _mappings,
+            SourceDataStore = _sourceDataStore,
+            SourcePath = _sourcePath,
+            SourceContainer = _sourceContainer,
+            TargetDataStore = _targetDataStore,
+            TargetPath = _targetPath,
+            TargetContainer = _targetContainer,
+            DatasetName = DeriveDatasetName(),
+            IsLoading = _isLoading,
+            IsLoadingSchema = _isLoadingSchema,
+            LastResult = _lastResult,
+            ValidationResult = _validationResult,
+            OnMappingsChanged = mappings => OnMappingsChanged(mappings),
+            OnAutoMap = () => OnAutoMap(),
+            OnValidate = () => OnValidate(),
+            OnSave = () => OnSave()
+        };
+    }
+}

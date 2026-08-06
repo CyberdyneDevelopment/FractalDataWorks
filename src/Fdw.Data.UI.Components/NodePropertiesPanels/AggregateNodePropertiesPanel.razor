@@ -1,0 +1,276 @@
+@namespace Fdw.Data.UI.Components.NodePropertiesPanels
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading.Tasks
+@using Fdw.Data.UI.Components.Logging
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.Extensions.Logging
+
+@* Why: aggregate-node properties panel for CalculatedDesigner. Headless — no @page directive.
+   Two sections: (1) Group-By Fields — multi-select checkboxes for available source fields;
+   (2) Measures — a repeater row for each aggregate (source field, function, output name).
+   Fail-loud: missing required fields highlight red; the callback is always raised so save
+   persists partial state; compile validation is what blocks incomplete aggregate graphs.
+   Serialises the aggregate spec as structured keys in the configuration dictionary so the
+   designer's task DTO round-trips cleanly via JSON without custom converters. *@
+
+@* ── Group-By Fields ─────────────────────────────────────────────────────────────── *@
+<div class="frow" style="margin-bottom:8px;">
+    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Group-By Fields</label>
+    @if (AvailableFields.Count == 0)
+    {
+        <div class="mono" style="font-size:10px;color:var(--n-500);font-style:italic;">No fields available — add a Source node first</div>
+    }
+    else
+    {
+        <div style="display:flex;flex-direction:column;gap:3px;max-height:100px;overflow-y:auto;">
+            @foreach (var field in AvailableFields)
+            {
+                var isChecked = _groupByFields.Contains(field, StringComparer.Ordinal);
+                <label style="font-size:10px;display:flex;align-items:center;gap:4px;cursor:pointer;">
+                    <input type="checkbox" checked="@isChecked" @onchange="() => ToggleGroupByField(field)" />
+                    <span class="mono">@field</span>
+                </label>
+            }
+        </div>
+    }
+    @if (_groupByFields.Count == 0 && _validationTriggered)
+    {
+        <div class="mono" style="font-size:9px;color:var(--signal);">At least one group-by field is required</div>
+    }
+</div>
+
+@* ── Measures ─────────────────────────────────────────────────────────────────────── *@
+<div class="frow" style="margin-bottom:8px;">
+    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Measures</label>
+    @if (_measures.Count == 0 && _validationTriggered)
+    {
+        <div class="mono" style="font-size:9px;color:var(--signal);">At least one measure is required</div>
+    }
+    @for (var i = 0; i < _measures.Count; i++)
+    {
+        var idx = i;
+        var measure = _measures[idx];
+        <div style="border:1px solid #374151;border-radius:4px;padding:6px;margin-bottom:4px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                <span class="mono" style="font-size:9px;color:var(--n-500);">MEASURE @(idx + 1)</span>
+                <button class="btn btn-danger btn-sm" style="font-size:9px;padding:1px 6px;"
+                        @onclick="() => RemoveMeasure(idx)">×</button>
+            </div>
+            <div class="frow" style="margin-bottom:4px;">
+                <label style="font-size:9px;color:var(--n-500);">Source Field</label>
+                @if (AvailableFields.Count > 0)
+                {
+                    <select class="finput mono" style="font-size:9px;"
+                            value="@measure.SourceField"
+                            @onchange="e => OnMeasureSourceFieldChanged(idx, e)">
+                        <option value="">— select field —</option>
+                        @foreach (var field in AvailableFields)
+                        {
+                            <option value="@field">@field</option>
+                        }
+                    </select>
+                }
+                else
+                {
+                    <input class="finput mono" style="font-size:9px;"
+                           value="@measure.SourceField"
+                           @onchange="e => OnMeasureSourceFieldChanged(idx, e)"
+                           placeholder="field name" />
+                }
+            </div>
+            <div class="frow" style="margin-bottom:4px;">
+                <label style="font-size:9px;color:var(--n-500);">Function</label>
+                @* Why: options come from AvailableAggregationFunctions parameter, populated by the host
+                   from the canonical AggregationFunctions TypeCollection via the API, so this panel
+                   stays in sync with what the server can execute without any hardcoded list here. *@
+                <select class="finput mono" style="font-size:9px;"
+                        value="@measure.AggregateFunction"
+                        @onchange="e => OnMeasureFunctionChanged(idx, e)">
+                    <option value="">— select —</option>
+                    @foreach (var fn in AvailableAggregationFunctions)
+                    {
+                        <option value="@fn">@fn</option>
+                    }
+                </select>
+            </div>
+            <div class="frow">
+                <label style="font-size:9px;color:var(--n-500);">Output Name</label>
+                <input class="finput mono" style="font-size:9px;"
+                       value="@measure.OutputName"
+                       @onchange="e => OnMeasureOutputNameChanged(idx, e)"
+                       placeholder="e.g. TotalSales" />
+            </div>
+        </div>
+    }
+    <button class="btn btn-secondary btn-sm" style="width:100%;font-size:9px;margin-top:2px;"
+            @onclick="AddMeasure">+ Add Measure</button>
+</div>
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="mono" style="font-size:10px;color:var(--signal);margin-top:4px;">@_errorMessage</div>
+}
+
+@code {
+    /// <summary>Gets or sets the current node configuration dictionary.</summary>
+    [Parameter] public Dictionary<string, object?> Configuration { get; set; } = new(StringComparer.Ordinal);
+
+    /// <summary>Gets or sets the list of available field names from connected source nodes.</summary>
+    [Parameter] public IReadOnlyList<string> AvailableFields { get; set; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Gets or sets the ordered list of aggregation function names from the canonical
+    /// AggregationFunctions TypeCollection (e.g. Sum, Count, Average, Min, Max).
+    /// Supplied by the host provider. Empty until the host has loaded the values from the API.
+    /// </summary>
+    [Parameter] public IReadOnlyList<string> AvailableAggregationFunctions { get; set; } = Array.Empty<string>();
+
+    /// <summary>Gets or sets the callback to invoke when the configuration changes.</summary>
+    [Parameter] public EventCallback<Dictionary<string, object?>> OnConfigurationChanged { get; set; }
+
+    /// <summary>Gets or sets the logger used by the panel.</summary>
+    [Parameter] public ILogger? Logger { get; set; }
+
+    private List<string> _groupByFields = new List<string>();
+    private List<MeasureState> _measures = new List<MeasureState>();
+    private string? _errorMessage;
+    private bool _validationTriggered;
+
+    protected override void OnParametersSet()
+    {
+        _groupByFields = ReadGroupByFields();
+        _measures = ReadMeasures();
+        _errorMessage = null;
+        _validationTriggered = false;
+    }
+
+    private List<string> ReadGroupByFields()
+    {
+        if (!Configuration.TryGetValue("GroupByFields", out var raw) || raw is null)
+            return new List<string>();
+        if (raw is List<string> typed)
+            return new List<string>(typed);
+        // Why: when deserialised from JSON the value may arrive as a comma-separated string.
+        var str = raw.ToString() ?? string.Empty;
+        return str.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                  .Select(s => s.Trim())
+                  .Where(s => s.Length > 0)
+                  .ToList();
+    }
+
+    private List<MeasureState> ReadMeasures()
+    {
+        // Why: stored as parallel arrays in the configuration dictionary so the dictionary
+        // remains serialisable as JSON primitives without custom converters.
+        if (!Configuration.TryGetValue("MeasureCount", out var countRaw) || countRaw is null)
+            return new List<MeasureState>();
+        if (!int.TryParse(countRaw.ToString(), out var count) || count <= 0)
+            return new List<MeasureState>();
+
+        var result = new List<MeasureState>(count);
+        for (var i = 0; i < count; i++)
+        {
+            result.Add(new MeasureState
+            {
+                SourceField = ReadString($"Measure_{i}_SourceField"),
+                AggregateFunction = ReadString($"Measure_{i}_AggregateFunction"),
+                OutputName = ReadString($"Measure_{i}_OutputName"),
+            });
+        }
+        return result;
+    }
+
+    private string ReadString(string key, string defaultValue = "")
+    {
+        if (Configuration.TryGetValue(key, out var val) && val is not null)
+            return val.ToString() ?? defaultValue;
+        return defaultValue;
+    }
+
+    private Task ToggleGroupByField(string field)
+    {
+        if (_groupByFields.Contains(field, StringComparer.Ordinal))
+            _groupByFields.Remove(field);
+        else
+            _groupByFields.Add(field);
+        return NotifyChanged();
+    }
+
+    private void AddMeasure()
+    {
+        _measures.Add(new MeasureState());
+        _ = NotifyChanged();
+    }
+
+    private Task RemoveMeasure(int index)
+    {
+        if (index >= 0 && index < _measures.Count)
+            _measures.RemoveAt(index);
+        return NotifyChanged();
+    }
+
+    private Task OnMeasureSourceFieldChanged(int index, ChangeEventArgs e)
+    {
+        _measures[index].SourceField = e.Value?.ToString() ?? string.Empty;
+        return NotifyChanged();
+    }
+
+    private Task OnMeasureFunctionChanged(int index, ChangeEventArgs e)
+    {
+        _measures[index].AggregateFunction = e.Value?.ToString() ?? string.Empty;
+        return NotifyChanged();
+    }
+
+    private Task OnMeasureOutputNameChanged(int index, ChangeEventArgs e)
+    {
+        _measures[index].OutputName = e.Value?.ToString() ?? string.Empty;
+        return NotifyChanged();
+    }
+
+    private Task NotifyChanged()
+    {
+        _validationTriggered = true;
+        _errorMessage = null;
+
+        if (_groupByFields.Count == 0)
+        {
+            var msg = DesignerNodePropertiesPanelLog.AggregateSpecInvalid(
+                Logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+                "at least one group-by field is required");
+            _errorMessage = msg.Message;
+        }
+        else if (_measures.Count == 0)
+        {
+            var msg = DesignerNodePropertiesPanelLog.AggregateSpecInvalid(
+                Logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+                "at least one measure is required");
+            _errorMessage = msg.Message;
+        }
+
+        // Why: store as parallel arrays with a count key so the dictionary serialises
+        // as a flat JSON object without nested arrays or custom converters.
+        var updated = new Dictionary<string, object?>(StringComparer.Ordinal);
+        foreach (var kv in Configuration)
+            updated[kv.Key] = kv.Value;
+
+        updated["GroupByFields"] = string.Join(",", _groupByFields);
+        updated["MeasureCount"] = _measures.Count.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        for (var i = 0; i < _measures.Count; i++)
+        {
+            updated[$"Measure_{i}_SourceField"] = _measures[i].SourceField;
+            updated[$"Measure_{i}_AggregateFunction"] = _measures[i].AggregateFunction;
+            updated[$"Measure_{i}_OutputName"] = _measures[i].OutputName;
+        }
+
+        return OnConfigurationChanged.InvokeAsync(updated);
+    }
+
+    private sealed class MeasureState
+    {
+        public string SourceField { get; set; } = string.Empty;
+        public string AggregateFunction { get; set; } = string.Empty;
+        public string OutputName { get; set; } = string.Empty;
+    }
+}

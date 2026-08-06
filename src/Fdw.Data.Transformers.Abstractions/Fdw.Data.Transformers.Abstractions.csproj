@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Fdw.Data.Transformers.Abstractions</RootNamespace>
+    <AssemblyName>Fdw.Data.Transformers.Abstractions</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <Configurations>Debug;Release;Experimental;Alpha;Beta;Preview;Test</Configurations>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

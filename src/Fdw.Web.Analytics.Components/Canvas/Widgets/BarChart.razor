@@ -1,0 +1,283 @@
+@using Excubo.Blazor.Canvas
+@using Excubo.Blazor.Canvas.Contexts
+@using Fdw.UI.Themes.Components.Theme
+@inherits Microsoft.AspNetCore.Components.ComponentBase
+
+<div class="bar-chart-widget">
+    <Canvas @ref="_canvas" width="@Width" height="@Height" />
+</div>
+
+@code {
+    /// <summary>
+    /// Data items for the bar chart.
+    /// </summary>
+    [Parameter]
+    public System.Collections.Generic.IEnumerable<BarChartItem>? Items { get; set; }
+
+    /// <summary>
+    /// Width of the chart canvas.
+    /// </summary>
+    [Parameter]
+    public int Width { get; set; } = 300;
+
+    /// <summary>
+    /// Height of the chart canvas.
+    /// </summary>
+    [Parameter]
+    public int Height { get; set; } = 200;
+
+    /// <summary>
+    /// Whether to render bars horizontally (true) or vertically (false).
+    /// </summary>
+    [Parameter]
+    public bool Horizontal { get; set; } = false;
+
+    /// <summary>
+    /// Whether to show labels on bars.
+    /// </summary>
+    [Parameter]
+    public bool ShowLabels { get; set; } = true;
+
+    /// <summary>
+    /// Whether to show values on bars.
+    /// </summary>
+    [Parameter]
+    public bool ShowValues { get; set; } = true;
+
+    /// <summary>
+    /// Spacing between bars as a percentage of bar width (0-1).
+    /// </summary>
+    [Parameter]
+    public double BarSpacing { get; set; } = 0.2;
+
+    /// <summary>
+    /// Theme configuration for styling.
+    /// </summary>
+    [CascadingParameter]
+    protected UiThemeConfiguration? Theme { get; set; }
+
+    private Canvas _canvas = null!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await DrawAsync();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_canvas != null)
+        {
+            await DrawAsync();
+        }
+    }
+
+    private async Task DrawAsync()
+    {
+        if (_canvas == null)
+            return;
+
+        await using var ctx = await _canvas.GetContext2DAsync();
+
+        // Clear canvas
+        await ctx.ClearRectAsync(0, 0, Width, Height);
+
+        var itemsList = Items?.ToList();
+        if (itemsList == null || itemsList.Count == 0)
+            return;
+
+        var padding = 10;
+        var labelHeight = ShowLabels ? 20 : 0;
+        var chartWidth = Width - (padding * 2);
+        var chartHeight = Height - (padding * 2) - labelHeight;
+
+        // Calculate max value for scaling
+        var maxValue = itemsList.Max(i => i.Value);
+        if (maxValue <= 0) maxValue = 1;
+
+        var defaultColor = Theme?.Colors?.Primary ?? "#3b82f6";
+        var textColor = Theme?.Colors?.Foreground ?? "#f8fafc";
+        var mutedColor = Theme?.Colors?.Muted ?? "#6b7280";
+
+        if (Horizontal)
+        {
+            await DrawHorizontalBarsAsync(ctx, itemsList, padding, chartWidth, chartHeight, labelHeight, maxValue, defaultColor, textColor, mutedColor);
+        }
+        else
+        {
+            await DrawVerticalBarsAsync(ctx, itemsList, padding, chartWidth, chartHeight, labelHeight, maxValue, defaultColor, textColor, mutedColor);
+        }
+    }
+
+    private async Task DrawVerticalBarsAsync(
+        Context2D ctx,
+        System.Collections.Generic.List<BarChartItem> items,
+        int padding,
+        int chartWidth,
+        int chartHeight,
+        int labelHeight,
+        decimal maxValue,
+        string defaultColor,
+        string textColor,
+        string mutedColor)
+    {
+        var barCount = items.Count;
+        var totalBarWidth = (double)chartWidth / barCount;
+        var barWidth = totalBarWidth * (1 - BarSpacing);
+        var gapWidth = totalBarWidth * BarSpacing;
+
+        for (var i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            var normalizedValue = (double)(item.Value / maxValue);
+            var barHeight = normalizedValue * chartHeight;
+
+            var x = padding + (i * totalBarWidth) + (gapWidth / 2);
+            var y = padding + chartHeight - barHeight;
+            var color = item.Color ?? defaultColor;
+
+            // Draw bar with rounded top
+            await ctx.BeginPathAsync();
+            var radius = System.Math.Min(barWidth / 4, 6);
+            await DrawRoundedRectAsync(ctx, x, y, barWidth, barHeight, radius, true, false, true, false);
+            await ctx.FillStyleAsync(color);
+            await ctx.FillAsync(FillRule.NonZero);
+
+            // Draw value on bar
+            if (ShowValues && barHeight > 20)
+            {
+                await ctx.FontAsync("bold 12px sans-serif");
+                await ctx.TextAlignAsync(TextAlign.Center);
+                await ctx.FillStyleAsync("#ffffff");
+                await ctx.FillTextAsync($"{item.Value:N0}", x + barWidth / 2, y + barHeight - 8);
+            }
+
+            // Draw label below
+            if (ShowLabels)
+            {
+                await ctx.FontAsync("11px sans-serif");
+                await ctx.TextAlignAsync(TextAlign.Center);
+                await ctx.FillStyleAsync(mutedColor);
+                await ctx.FillTextAsync(TruncateLabel(item.Label, (int)barWidth), x + barWidth / 2, padding + chartHeight + 14);
+            }
+        }
+    }
+
+    private async Task DrawHorizontalBarsAsync(
+        Context2D ctx,
+        System.Collections.Generic.List<BarChartItem> items,
+        int padding,
+        int chartWidth,
+        int chartHeight,
+        int labelHeight,
+        decimal maxValue,
+        string defaultColor,
+        string textColor,
+        string mutedColor)
+    {
+        var labelWidth = ShowLabels ? 60 : 0;
+        var barAreaWidth = chartWidth - labelWidth;
+        var barCount = items.Count;
+        var totalBarHeight = (double)chartHeight / barCount;
+        var barHeight = totalBarHeight * (1 - BarSpacing);
+        var gapHeight = totalBarHeight * BarSpacing;
+
+        for (var i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            var normalizedValue = (double)(item.Value / maxValue);
+            var barWidth = normalizedValue * barAreaWidth;
+
+            var x = padding + labelWidth;
+            var y = padding + (i * totalBarHeight) + (gapHeight / 2);
+            var color = item.Color ?? defaultColor;
+
+            // Draw label to the left
+            if (ShowLabels)
+            {
+                await ctx.FontAsync("11px sans-serif");
+                await ctx.TextAlignAsync(TextAlign.Right);
+                await ctx.FillStyleAsync(mutedColor);
+                await ctx.FillTextAsync(TruncateLabel(item.Label, labelWidth - 5), x - 5, y + barHeight / 2 + 4);
+            }
+
+            // Draw bar with rounded right
+            await ctx.BeginPathAsync();
+            var radius = System.Math.Min(barHeight / 4, 6);
+            await DrawRoundedRectAsync(ctx, x, y, barWidth, barHeight, radius, false, true, false, true);
+            await ctx.FillStyleAsync(color);
+            await ctx.FillAsync(FillRule.NonZero);
+
+            // Draw value on bar
+            if (ShowValues && barWidth > 30)
+            {
+                await ctx.FontAsync("bold 11px sans-serif");
+                await ctx.TextAlignAsync(TextAlign.Right);
+                await ctx.FillStyleAsync("#ffffff");
+                await ctx.FillTextAsync($"{item.Value:N0}", x + barWidth - 5, y + barHeight / 2 + 4);
+            }
+        }
+    }
+
+    private static async Task DrawRoundedRectAsync(
+        Context2D ctx,
+        double x, double y, double width, double height, double radius,
+        bool roundTopLeft, bool roundTopRight, bool roundBottomLeft, bool roundBottomRight)
+    {
+        await ctx.BeginPathAsync();
+        await ctx.MoveToAsync(x + (roundTopLeft ? radius : 0), y);
+
+        // Top edge
+        await ctx.LineToAsync(x + width - (roundTopRight ? radius : 0), y);
+        if (roundTopRight)
+            await ctx.ArcToAsync(x + width, y, x + width, y + radius, radius);
+
+        // Right edge
+        await ctx.LineToAsync(x + width, y + height - (roundBottomRight ? radius : 0));
+        if (roundBottomRight)
+            await ctx.ArcToAsync(x + width, y + height, x + width - radius, y + height, radius);
+
+        // Bottom edge
+        await ctx.LineToAsync(x + (roundBottomLeft ? radius : 0), y + height);
+        if (roundBottomLeft)
+            await ctx.ArcToAsync(x, y + height, x, y + height - radius, radius);
+
+        // Left edge
+        await ctx.LineToAsync(x, y + (roundTopLeft ? radius : 0));
+        if (roundTopLeft)
+            await ctx.ArcToAsync(x, y, x + radius, y, radius);
+
+        await ctx.ClosePathAsync();
+    }
+
+    private static string TruncateLabel(string label, int maxWidth)
+    {
+        // Rough estimate: 6 pixels per character
+        var maxChars = maxWidth / 6;
+        if (label.Length <= maxChars) return label;
+        return label[..(maxChars - 1)] + "…";
+    }
+
+    /// <summary>
+    /// Represents an item in the bar chart.
+    /// </summary>
+    public sealed class BarChartItem
+    {
+        /// <summary>
+        /// Label for this bar.
+        /// </summary>
+        public string Label { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Value of this bar.
+        /// </summary>
+        public decimal Value { get; set; }
+
+        /// <summary>
+        /// Color for this bar. If not set, uses theme primary color.
+        /// </summary>
+        public string? Color { get; set; }
+    }
+}

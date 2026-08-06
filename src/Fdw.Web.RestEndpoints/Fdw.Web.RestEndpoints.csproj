@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Web.Http.Abstractions\Fdw.Web.Http.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services\Fdw.Services.csproj" />
+    <ProjectReference Include="..\Fdw.Configuration\Fdw.Configuration.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+
+    <!-- Source Generators -->
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Orchestration.Abstractions\Fdw.Orchestration.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Scheduling.Abstractions\Fdw.Services.Scheduling.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Operations.Abstractions\Fdw.Operations.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Web.Endpoints\Fdw.Web.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
+
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ASP.NET Core framework reference for rate limiting and endpoint configuration -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FastEndpoints" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

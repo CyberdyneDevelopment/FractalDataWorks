@@ -1,0 +1,80 @@
+@namespace Fdw.UI.Themes.Components.Themes
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading.Tasks
+@using Fdw.UI.Themes
+
+<CascadingValue Value="_currentTheme" Name="BlazorTheme">
+    @if (ChildContent is not null)
+    {
+        @ChildContent(_context)
+    }
+</CascadingValue>
+
+@code {
+    /// <summary>
+    /// Headless provider for Blazor CSS theme cascading.
+    /// Manages theme selection and cascades the active <see cref="IBlazorTheme"/>
+    /// to the component tree. At least one theme must be supplied via <see cref="Themes"/>.
+    /// </summary>
+    [Parameter] public RenderFragment<BlazorThemeContext>? ChildContent { get; set; }
+
+    /// <summary>Gets or sets the registered themes. At least one must be provided.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<IBlazorTheme> Themes { get; set; } = [];
+
+    /// <summary>Gets or sets the name of the initially selected theme. Defaults to the first theme.</summary>
+    [Parameter] public string? DefaultThemeName { get; set; }
+
+    [Inject] private ILogger<BlazorThemeProvider>? LoggerParam { get; set; }
+
+    private ILogger<BlazorThemeProvider> _logger = NullLogger<BlazorThemeProvider>.Instance;
+
+    private IBlazorTheme _currentTheme = default!;
+    private IReadOnlyList<string> _availableThemes = [];
+    private BlazorThemeContext _context = new();
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<BlazorThemeProvider>.Instance;
+
+        _availableThemes = Themes.Select(t => t.Name).ToList();
+
+        _currentTheme = (!string.IsNullOrEmpty(DefaultThemeName)
+            ? Themes.FirstOrDefault(t => string.Equals(t.Name, DefaultThemeName, StringComparison.OrdinalIgnoreCase))
+            : null) ?? Themes[0];
+
+        BlazorThemeProviderLog.Initialized(_logger, _currentTheme.Name);
+        RebuildContext();
+    }
+
+    private Task SwitchTheme(string themeName)
+    {
+        var theme = Themes.FirstOrDefault(t => string.Equals(t.Name, themeName, StringComparison.OrdinalIgnoreCase));
+
+        if (theme is null)
+        {
+            BlazorThemeProviderLog.ThemeNotFound(_logger, themeName);
+            return Task.CompletedTask;
+        }
+
+        _currentTheme = theme;
+        BlazorThemeProviderLog.ThemeSwitched(_logger, themeName);
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void RebuildContext()
+    {
+        _context = new BlazorThemeContext
+        {
+            CurrentTheme = _currentTheme,
+            AvailableThemes = _availableThemes,
+            OnSwitchTheme = themeName => SwitchTheme(themeName)
+        };
+    }
+}

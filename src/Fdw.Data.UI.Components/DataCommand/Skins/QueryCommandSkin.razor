@@ -1,0 +1,296 @@
+@namespace Fdw.Data.UI.Components.DataCommand.Skins
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.UI.CommandBuilders.Abstractions
+
+@* Query command skin — FROM + Joins + Fields + Filter + Paging + Sort.
+   Implements ICommandBuilderSkin so Builder.razor can verify the type contract.
+   Tailwind-only. *@
+
+@if (Context is null)
+{
+    <div class="fhint mono">No command context.</div>
+}
+else if (Context.IsLoading)
+{
+    <div class="fhint mono">Loading schema metadata...</div>
+}
+else if (!string.IsNullOrEmpty(Context.ErrorMessage))
+{
+    <div class="alert alert-err">@Context.ErrorMessage</div>
+}
+else
+{
+    <div style="display:flex;flex-direction:column;gap:12px;">
+        @* FROM clause *@
+        <div class="frow" style="margin-bottom:0;">
+            <label class="flbl">FROM Container</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <div style="flex:1;">
+                    <DataContainerPicker Containers="@Context.AvailableContainers"
+                                         SelectedContainerId="@_fromContainerId"
+                                         SelectedContainerIdChanged="@OnFromContainerChanged"
+                                         Placeholder="Select primary container..." />
+                </div>
+                <input class="fin mono" style="width:5rem;"
+                       placeholder="alias"
+                       value="@_fromAlias"
+                       @oninput="@(e => OnAliasChanged(e.Value?.ToString() ?? string.Empty))" />
+            </div>
+        </div>
+
+        @* JOIN clauses *@
+        <div class="frow" style="margin-bottom:0;">
+            <div class="card-h" style="padding:0;">
+                <label class="flbl" style="margin-bottom:0;">JOIN Clauses</label>
+                <button class="btn btn-secondary btn-sm" @onclick="AddJoin">+ Join</button>
+            </div>
+            @for (var i = 0; i < _joins.Count; i++)
+            {
+                var idx = i;
+                var join = _joins[idx];
+                var rightFields = Context.GetFields(join.ContainerId);
+                <JoinClauseEditor Join="@join"
+                                  JoinChanged="@(j => UpdateJoin(idx, j))"
+                                  OnRemove="@(() => RemoveJoin(idx))"
+                                  AllContainers="@Context.AvailableContainers"
+                                  PrimaryFields="@_fromFields"
+                                  PrimaryAlias="@_fromAlias"
+                                  RightFields="@rightFields" />
+            }
+        </div>
+
+        @* Field selection *@
+        <div class="frow" style="margin-bottom:0;">
+            <label class="flbl">Select Fields</label>
+            <DataFieldsMultiSelect Sources="@BuildFieldSources()"
+                                   SelectedFields="@_selectedFields"
+                                   SelectedFieldsChanged="@OnFieldsChanged" />
+        </div>
+
+        @* Filter *@
+        <FilterExpressionEditor AvailableFields="@_allQualifiedFields"
+                                Filter="@Context.CurrentSpec.Filter"
+                                FilterChanged="@OnFilterChanged" />
+
+        @* Paging *@
+        <div class="fgrid">
+            <div class="frow" style="margin-bottom:0;">
+                <label class="flbl">Skip (OFFSET)</label>
+                <input class="fin"
+                       type="number"
+                       min="0"
+                       value="@(Context.CurrentSpec.Paging?.Skip ?? 0)"
+                       @oninput="@(e => OnPagingChanged(e, isPagingSkip: true))" />
+            </div>
+            <div class="frow" style="margin-bottom:0;">
+                <label class="flbl">Take (0 = all)</label>
+                <input class="fin"
+                       type="number"
+                       min="0"
+                       value="@(Context.CurrentSpec.Paging?.Take ?? 0)"
+                       @oninput="@(e => OnPagingChanged(e, isPagingSkip: false))" />
+            </div>
+        </div>
+
+        @* Sort *@
+        <div class="frow" style="margin-bottom:0;">
+            <div class="card-h" style="padding:0;">
+                <label class="flbl" style="margin-bottom:0;">Sort</label>
+                <button class="btn btn-secondary btn-sm" @onclick="AddSort">+ Sort</button>
+            </div>
+            @for (var i = 0; i < _sort.Count; i++)
+            {
+                var idx = i;
+                var s = _sort[idx];
+                <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px;align-items:center;">
+                    @if (_allQualifiedFields.Any())
+                    {
+                        <select class="fin"
+                                value="@s.Field"
+                                @onchange="@(e => UpdateSortField(idx, e.Value?.ToString() ?? string.Empty))">
+                            <option value="">Field...</option>
+                            @foreach (var f in _allQualifiedFields)
+                            {
+                                <option value="@f.QualifiedName">@f.QualifiedName</option>
+                            }
+                        </select>
+                    }
+                    else
+                    {
+                        <input class="fin mono" placeholder="field"
+                               value="@s.Field"
+                               @oninput="@(e => UpdateSortField(idx, e.Value?.ToString() ?? string.Empty))" />
+                    }
+                    <select class="fin" style="width:5rem;"
+                            value="@s.Direction"
+                            @onchange="@(e => UpdateSortDir(idx, e.Value?.ToString() ?? "Asc"))">
+                        <option value="Asc">Asc</option>
+                        <option value="Desc">Desc</option>
+                    </select>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => RemoveSort(idx)">✕</button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public DataCommandContext? Context { get; set; }
+
+    // ICommandBuilderSkin implementation (properties only — no rendering logic)
+    public string SupportedKind => "Query";
+    public Type ContextType => typeof(DataCommandContext);
+
+    private Guid _fromContainerId;
+    private string _fromAlias = "t";
+    private IReadOnlyList<DataFieldSummary> _fromFields = [];
+    private List<DataCommandJoin> _joins = [];
+    private List<DataCommandField> _selectedFields = [];
+    private List<DataCommandField> _allQualifiedFields = [];
+    private List<DataCommandSort> _sort = [];
+
+    protected override void OnParametersSet()
+    {
+        if (Context is null) return;
+        var spec = Context.CurrentSpec;
+        _fromContainerId = spec.From?.ContainerId ?? Guid.Empty;
+        _fromAlias = spec.From?.Alias ?? "t";
+        _fromFields = Context.GetFields(_fromContainerId);
+        _joins = spec.Joins.ToList();
+        _selectedFields = spec.Fields.ToList();
+        _sort = spec.Sort.ToList();
+        RebuildQualifiedFields();
+    }
+
+    private void RebuildQualifiedFields()
+    {
+        var all = new List<DataCommandField>();
+        foreach (var f in _fromFields)
+            all.Add(new DataCommandField { Alias = _fromAlias, FieldName = f.Name });
+        foreach (var j in _joins)
+        {
+            foreach (var f in (Context?.GetFields(j.ContainerId) ?? []))
+                all.Add(new DataCommandField { Alias = j.Alias, FieldName = f.Name });
+        }
+        _allQualifiedFields = all;
+    }
+
+    private IReadOnlyList<DataFieldsMultiSelect.FieldSource> BuildFieldSources()
+    {
+        var sources = new List<DataFieldsMultiSelect.FieldSource>();
+        if (_fromFields.Count > 0)
+            sources.Add(new DataFieldsMultiSelect.FieldSource(_fromAlias, _fromFields));
+        foreach (var j in _joins)
+        {
+            var rFields = Context?.GetFields(j.ContainerId) ?? [];
+            if (rFields.Count > 0)
+                sources.Add(new DataFieldsMultiSelect.FieldSource(j.Alias, rFields));
+        }
+        return sources;
+    }
+
+    private async Task OnFromContainerChanged(Guid id)
+    {
+        _fromContainerId = id;
+        _fromFields = Context?.GetFields(id) ?? [];
+        RebuildQualifiedFields();
+        if (Context is not null)
+            await Context.SetFromContainer(id, _fromAlias).ConfigureAwait(false);
+    }
+
+    private async Task OnAliasChanged(string alias)
+    {
+        _fromAlias = alias;
+        RebuildQualifiedFields();
+        if (Context is not null)
+            await Context.SetFromContainer(_fromContainerId, alias).ConfigureAwait(false);
+    }
+
+    private async Task AddJoin()
+    {
+        var join = new DataCommandJoin { Alias = $"j{_joins.Count + 1}" };
+        _joins.Add(join);
+        RebuildQualifiedFields();
+        if (Context is not null)
+            await Context.AddJoin(join).ConfigureAwait(false);
+    }
+
+    private async Task UpdateJoin(int idx, DataCommandJoin updated)
+    {
+        if (idx >= 0 && idx < _joins.Count)
+        {
+            _joins[idx] = updated;
+            RebuildQualifiedFields();
+            // Why: rebuild the entire join list from local state to keep in sync.
+            if (Context is not null)
+            {
+                Context.CurrentSpec.Joins.Clear();
+                foreach (var j in _joins) Context.CurrentSpec.Joins.Add(j);
+                await Context.OnChanged(Context.CurrentSpec).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private async Task RemoveJoin(int idx)
+    {
+        if (idx >= 0 && idx < _joins.Count)
+        {
+            _joins.RemoveAt(idx);
+            RebuildQualifiedFields();
+            if (Context is not null)
+                await Context.RemoveJoin(idx).ConfigureAwait(false);
+        }
+    }
+
+    private async Task OnFieldsChanged(IReadOnlyList<DataCommandField> fields)
+    {
+        _selectedFields = fields.ToList();
+        if (Context is not null)
+            await Context.SetFields(fields).ConfigureAwait(false);
+    }
+
+    private async Task OnFilterChanged(DataCommandFilter? filter)
+    {
+        if (Context is not null)
+            await Context.SetFilter(filter).ConfigureAwait(false);
+    }
+
+    private async Task OnPagingChanged(ChangeEventArgs e, bool isPagingSkip)
+    {
+        if (Context is null) return;
+        if (!int.TryParse(e.Value?.ToString(), out var val)) return;
+        var current = Context.CurrentSpec.Paging ?? new DataCommandPaging();
+        var updated = isPagingSkip
+            ? new DataCommandPaging { Skip = val, Take = current.Take }
+            : new DataCommandPaging { Skip = current.Skip, Take = val };
+        await Context.SetPaging(updated).ConfigureAwait(false);
+    }
+
+    private void AddSort() { _sort.Add(new DataCommandSort()); _ = SyncSort(); }
+
+    private void RemoveSort(int idx)
+    {
+        if (idx >= 0 && idx < _sort.Count) _sort.RemoveAt(idx);
+        _ = SyncSort();
+    }
+
+    private void UpdateSortField(int idx, string field)
+    {
+        if (idx < _sort.Count) _sort[idx] = _sort[idx] with { Field = field };
+        _ = SyncSort();
+    }
+
+    private void UpdateSortDir(int idx, string dir)
+    {
+        if (idx < _sort.Count) _sort[idx] = _sort[idx] with { Direction = dir };
+        _ = SyncSort();
+    }
+
+    private async Task SyncSort()
+    {
+        if (Context is not null)
+            await Context.SetSort(_sort).ConfigureAwait(false);
+    }
+}

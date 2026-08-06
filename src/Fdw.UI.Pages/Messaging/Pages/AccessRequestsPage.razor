@@ -1,0 +1,176 @@
+@page "/access-requests"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Access Requests - Cyberdyne</PageTitle>
+
+<MessageProvider AutoLoadAccessRequests="true">
+    <AccessRequestContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">Admin</div>
+                <h1>Access Requests</h1>
+                <div class="sub">Review and manage resource access requests.</div>
+            </div>
+            <div class="actions"></div>
+        </div>
+
+        @* Filter chips *@
+        <div class="filters">
+            <span class="lbl">Status</span>
+            @foreach (var status in new[] { "All", "Pending", "Approved", "Denied" })
+            {
+                <span class="@(string.Equals(_statusFilter, status, StringComparison.Ordinal) ? "chip on" : "chip")"
+                      @onclick="@(() => SetFilter(status))">
+                    @status
+                </span>
+            }
+        </div>
+
+        <div class="card">
+            <div class="card-h"><h3>Requests</h3></div>
+            <div class="card-b" style="padding:0 10px 12px;">
+                @if (ctx.IsLoading)
+                {
+                    <div class="mono mut" style="padding:20px;">Loading…</div>
+                }
+                else if (!string.IsNullOrEmpty(ctx.ErrorMessage))
+                {
+                    <div class="mono" style="padding:20px;color:var(--signal);">@ctx.ErrorMessage</div>
+                }
+                else if (ApplyFilter(ctx.AccessRequests).Count == 0)
+                {
+                    <div class="mono mut" style="padding:20px;">No access requests</div>
+                }
+                else
+                {
+                    <table class="tbl">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Resource</th>
+                                <th>Permission</th>
+                                <th>Justification</th>
+                                <th>Submitted</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var request in ApplyFilter(ctx.AccessRequests))
+                            {
+                                <tr>
+                                    <td><div class="cellpad"><span class="badge @GetStatusBadgeClass(request.Status)"><span class="bd"></span>@request.Status</span></div></td>
+                                    <td class="mut">@request.RequestedResource</td>
+                                    <td class="mut">@request.RequestedPermission</td>
+                                    <td class="mut" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@(request.Justification ?? "-")</td>
+                                    <td class="num">@request.CreatedAt.ToString("g")</td>
+                                    <td>
+                                        @if (string.Equals(request.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <div class="actions">
+                                                <button class="btn btn-ghost btn-sm" title="Approve" style="color:var(--success);"
+                                                        @onclick="@(async () => await ctx.OnApprove(request.Id, null))">
+                                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                </button>
+                                                <button class="btn btn-ghost btn-sm" title="Deny" style="color:var(--signal);"
+                                                        @onclick="@(() => OpenDenyDialog(request))">
+                                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        }
+                                        else if (request.ReviewNotes is not null)
+                                        {
+                                            <span class="mut" title="@request.ReviewNotes">
+                                                <svg style="width:15px;height:15px;display:inline;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                            </span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+
+        @* Deny dialog *@
+        @if (_showDenyDialog && _denyTarget is not null)
+        {
+            <div style="position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.8);">
+                <div class="card" style="width:100%;max-width:480px;">
+                    <div class="card-h">
+                        <h3>Deny Access Request</h3>
+                        <button class="btn btn-ghost btn-sm" @onclick="@(() => _showDenyDialog = false)">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="card-b">
+                        <p class="sub" style="margin-bottom:16px;">
+                            Denying access to: <span class="mono" style="color:var(--n-100);">@_denyTarget.RequestedResource</span>
+                            (<span class="mono">@_denyTarget.RequestedPermission</span>)
+                        </p>
+                        <div class="frow">
+                            <label>Notes (optional)</label>
+                            <textarea class="finput" rows="3" @bind="_denyNotes" placeholder="Reason for denial..."></textarea>
+                        </div>
+                        <div class="actions" style="justify-content:flex-end;">
+                            <button class="btn btn-secondary btn-sm" @onclick="@(() => _showDenyDialog = false)">Cancel</button>
+                            <button class="btn btn-danger btn-sm" @onclick="@(async () => await ConfirmDeny(ctx))">Deny</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </AccessRequestContent>
+</MessageProvider>
+
+@code {
+    private string _statusFilter = "All";
+    private bool _showDenyDialog;
+    private AccessRequestPayload? _denyTarget;
+    private string? _denyNotes;
+
+    private IReadOnlyList<AccessRequestPayload> ApplyFilter(IReadOnlyList<AccessRequestPayload> requests)
+    {
+        return string.Equals(_statusFilter, "All", StringComparison.OrdinalIgnoreCase)
+            ? requests
+            : requests.Where(r => string.Equals(r.Status, _statusFilter, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    private void SetFilter(string status)
+    {
+        _statusFilter = status;
+    }
+
+    private void OpenDenyDialog(AccessRequestPayload request)
+    {
+        _denyTarget = request;
+        _denyNotes = null;
+        _showDenyDialog = true;
+    }
+
+    private async Task ConfirmDeny(AccessRequestListContext ctx)
+    {
+        if (_denyTarget is not null)
+        {
+            await ctx.OnDeny(_denyTarget.Id, _denyNotes);
+            _showDenyDialog = false;
+            _denyTarget = null;
+        }
+    }
+
+    private static string GetStatusBadgeClass(string status) => status switch
+    {
+        "Pending" => "b-warn",
+        "Approved" => "b-run",
+        "Denied" => "b-fail",
+        _ => "b-idle"
+    };
+}

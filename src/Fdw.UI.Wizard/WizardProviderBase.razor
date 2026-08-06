@@ -1,0 +1,7 @@
+@namespace Fdw.UI.Wizard
+@typeparam TContext where TContext : class, new()
+
+@if (ChildContent is not null)
+{
+    @ChildContent(CurrentContext)
+}

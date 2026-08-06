@@ -1,0 +1,53 @@
+@namespace Fdw.Web.Analytics.Components.Health.Gauge
+
+<div style="display:flex;flex-direction:column;align-items:center;">
+    <svg width="@Width" height="@(Width / 2 + 20)" viewBox="0 0 @Width @(Width / 2 + 20)">
+        @{
+            var cx = Width / 2.0;
+            var cy = Width / 2.0;
+            var radius = (Width / 2.0) - 12;
+            var circumference = Math.PI * radius;
+            var range = Max - Min;
+            var normalized = range > 0 ? Math.Clamp((Value - Min) / range, 0, 1) : 0;
+            var dashOffset = circumference * (1 - normalized);
+            var color = GetColor();
+        }
+        <!-- Background arc -->
+        <path d="M @(cx - radius) @cy A @radius @radius 0 0 1 @(cx + radius) @cy"
+              fill="none" stroke="#262a31" stroke-width="8" stroke-linecap="round" />
+        <!-- Value arc -->
+        <path d="M @(cx - radius) @cy A @radius @radius 0 0 1 @(cx + radius) @cy"
+              fill="none" stroke="@color" stroke-width="8" stroke-linecap="round"
+              stroke-dasharray="@circumference.ToString("F2")"
+              stroke-dashoffset="@dashOffset.ToString("F2")" />
+        <!-- Value text -->
+        <text x="@cx" y="@(cy - 8)" text-anchor="middle" fill="@color"
+              style="font-size: 18px; font-weight: 700; font-family: var(--mono);">
+            @Value.ToString("F0")@Unit
+        </text>
+    </svg>
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <span class="mono" style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--n-400);margin-top:4px;">@Label</span>
+    }
+</div>
+
+@code {
+    [Parameter] public double Value { get; set; }
+    [Parameter] public double Min { get; set; }
+    [Parameter] public double Max { get; set; } = 100;
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Unit { get; set; } = string.Empty;
+    [Parameter] public int Width { get; set; } = 120;
+    [Parameter] public double WarningThreshold { get; set; } = 70;
+    [Parameter] public double CriticalThreshold { get; set; } = 90;
+    [Parameter] public string? ColorOverride { get; set; }
+
+    private string GetColor()
+    {
+        if (!string.IsNullOrEmpty(ColorOverride)) return ColorOverride;
+        if (Value >= CriticalThreshold) return "#ef4444";
+        if (Value >= WarningThreshold) return "#eab308";
+        return "#22c55e";
+    }
+}

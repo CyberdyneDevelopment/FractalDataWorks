@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Services.Connections.Abstractions\Fdw.Services.Connections.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Configuration.Abstractions\Fdw.Configuration.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Messages\Fdw.Messages.csproj" />
+    
+    <!-- Reference Collections framework -->
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+
+    <!-- Build dependency on the source generator -->
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Commands.Data.Abstractions\Fdw.Commands.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Data.RowSources.Abstractions\Fdw.Data.RowSources.Abstractions.csproj" />
+                      
+    <!-- Build dependency on Messages source generator -->
+  </ItemGroup>
+<ItemGroup>
+    <InternalsVisibleTo Include="Fdw.Services.Connections.Http.Abstractions.Tests" />
+    <InternalsVisibleTo Include="Fdw.Services.Connections.Http.Tests" />
+    <InternalsVisibleTo Include="ReferenceConnections.Http.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Messages\" />
+  </ItemGroup>
+
+</Project>

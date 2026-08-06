@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Why: Microsoft.Build.Locator refuses (MSBL001) any Microsoft.Build.* PackageReference that
+         lacks ExcludeAssets=runtime/PrivateAssets=all. Transitive pinning materializes exactly
+         such a reference for Microsoft.Build.Framework, so this project opts out. -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Roslyn workspace management is inherently branchy - raise conventions thresholds -->
+    <FDW_MaxCyclomaticComplexity>25</FDW_MaxCyclomaticComplexity>
+
+    <!-- Package Properties -->
+    <PackageDescription>Roslyn workspace management with snapshot/rollback capabilities for Fdw development tools.</PackageDescription>
+    <PackageTags>roslyn;workspace;solution;msbuild;code-analysis</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" />
+    <PackageReference Include="Microsoft.Build.Locator" />
+    <!-- Why: Workspaces.MSBuild + Build.Locator transitively bring in Microsoft.Build.Framework,
+         but version resolution promotes it WITHOUT the ExcludeAssets/PrivateAssets from the central
+         <PackageVersion> entry (CPM doesn't propagate item metadata to transitive promotions).
+         MSBL001 fires. A direct PackageReference with the metadata forces compile-only,
+         runtime-loaded-from-MSBuild — preventing an in-process assembly conflict between
+         MSBuild's loaded Build.Framework and a local bin copy. -->
+    <!-- Workspaces.MSBuild already injects Build.Framework / Tasks.Core / Utilities.Core with
+         the correct ExcludeAssets/PrivateAssets metadata; we don't need to Update those.
+         Microsoft.NET.StringTools is the one piece the MSBuild assembly-load check
+         (Build.Locator's EnsureMSBuildAssembliesNotCopied target) also covers but which
+         isn't injected anywhere — pin it explicitly to keep the runtime DLL out of bin/. -->
+    <PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Results.Abstractions\Fdw.Results.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

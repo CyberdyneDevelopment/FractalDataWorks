@@ -1,0 +1,88 @@
+@namespace Fdw.UI.Charts.Blazor.Host
+@using System
+@using System.Collections.Generic
+@using Fdw.UI.Abstractions.Charts
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+
+@* Why: ChartHost is a headless host component — no @page directive. Callers embed it inside
+   their own routable pages. The component adds the renderer + chart-type dropdown chrome and
+   mounts the active renderer via DynamicComponent so no direct import of the renderer packages
+   is required in the calling page. *@
+
+@if (Model is null)
+{
+    return;
+}
+
+<div style="display:flex;flex-direction:column;width:100%;height:100%;">
+
+    @* ── Renderer + chart-type selection dropdowns ───────────────────────────────── *@
+    @if (_renderers.Count > 0)
+    {
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 12px;border-bottom:1px solid #1e293b;flex-shrink:0;background:#0a0f1a;">
+            <label style="font-family:monospace;font-size:11px;color:#64748b;">Renderer:</label>
+
+            @* Why: show renderer dropdown even when only one renderer is registered — consistent UX
+               and makes the active renderer visible for orientation. *@
+            <select style="font-family:monospace;font-size:11px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;padding:3px 6px;"
+                    @bind:get="_selectedRendererName"
+                    @bind:set="OnRendererChanged">
+                @foreach (var renderer in _renderers)
+                {
+                    <option value="@renderer.Name">@renderer.DisplayName</option>
+                }
+            </select>
+
+            @* Why: chart-type dropdown is filtered to the SELECTED renderer's SupportedChartTypes
+               so the user only sees types the active renderer can draw. Switching renderer
+               re-filters the list; switching chart type updates Model.ChartType. *@
+            @if (_compatibleChartTypes.Count > 0)
+            {
+                <label style="font-family:monospace;font-size:11px;color:#64748b;margin-left:8px;">Chart Type:</label>
+                <select style="font-family:monospace;font-size:11px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;padding:3px 6px;"
+                        @bind:get="_selectedChartTypeName"
+                        @bind:set="OnChartTypeChanged">
+                    @foreach (var ct in _compatibleChartTypes)
+                    {
+                        <option value="@ct.Name">@ct.DisplayName</option>
+                    }
+                </select>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.Title))
+            {
+                <span style="font-family:monospace;font-size:11px;color:#475569;margin-left:8px;">@Model.Title</span>
+            }
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <span style="font-family:monospace;font-size:11px;color:#ef4444;margin-left:auto;">@_errorMessage</span>
+            }
+        </div>
+    }
+
+    @* ── Active renderer ─────────────────────────────────────────────────────────── *@
+    <div style="flex:1;position:relative;overflow:hidden;">
+        @if (ActiveComponentType is not null)
+        {
+            @* Why: DynamicComponent is the FDW-approved mechanism for renderer dispatch without
+               a switch/if-else on renderer type names. The parameters dictionary is rebuilt
+               whenever the selected renderer or model changes (see RebuildDynamicParams). *@
+            <DynamicComponent Type="@ActiveComponentType" Parameters="@_dynamicParams" />
+        }
+        else if (_renderers.Count == 0)
+        {
+            <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">
+                <span style="font-family:monospace;font-size:12px;color:#334155;">No chart renderers registered. Reference a renderer package.</span>
+            </div>
+        }
+        else
+        {
+            <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">
+                <span style="font-family:monospace;font-size:12px;color:#334155;">Renderer '@_selectedRendererName' has no registered Blazor component.</span>
+            </div>
+        }
+    </div>
+
+</div>

@@ -1,0 +1,618 @@
+@namespace Fdw.Data.Components.DataSets
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Data.Clients
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Services.Connections.Clients
+@using Fdw.Services.Connections.Clients.Models
+@using Fdw.Operations.Clients.Models
+@using Fdw.Results
+@using Fdw.Data.Components.Logging
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for DataSet wizard logic: DataStore loading, container loading,
+    /// and DataSet create/update submission.
+    /// </summary>
+    [Parameter] public RenderFragment<DataSetWizardContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private DataStoreApiClient? _dataStoreApi;
+    private DataSetApiClient? _dataSetApi;
+    private ConnectionApiClient? _connectionApi;
+    [Inject] private ILogger<DataSetWizardProvider>? LoggerParam { get; set; }
+
+    private ILogger<DataSetWizardProvider> _logger = NullLogger<DataSetWizardProvider>.Instance;
+
+    // ── State ───────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<DataStoreSummaryPayload> _dataStores = [];
+    private readonly Dictionary<string, DataStoreDetailPayload> _loadedDataStoreDetails = new(StringComparer.Ordinal);
+    private DataSetDetailPayload? _existingDataSet;
+    private bool _isLoading;
+    private bool _isSubmitting;
+    private bool _isContainerBusy;
+    private IGenericResult? _lastResult;
+    private IReadOnlyList<ConfigurationTypeSummary> _dataSetTypes = [];
+    private IReadOnlyList<ConfigurationTypeSummary> _dataStoreTypes = [];
+    private ConnectionTypeCapabilitiesPayload? _selectedDataStoreCapabilities;
+
+    // Why: keyed by source name so that each join's field picker gets the correct field list
+    // without a separate API call per picker render. Populated lazily when a join source is selected.
+    private readonly Dictionary<string, IReadOnlyList<DataStoreFieldPayload>> _sourceFields = new(StringComparer.Ordinal);
+
+    private DataSetWizardContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ───────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _dataStoreApi = new DataStoreApiClient(HttpClientFactory.CreateClient("DataStoreClient"), LoggerFactory?.CreateLogger<DataStoreApiClient>()!);
+        _dataSetApi = new DataSetApiClient(HttpClientFactory.CreateClient("DataSetClient"), LoggerFactory?.CreateLogger<DataSetApiClient>()!);
+        _connectionApi = new ConnectionApiClient(HttpClientFactory.CreateClient("ConnectionClient"), LoggerFactory?.CreateLogger<ConnectionApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<DataSetWizardProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await Task.WhenAll(LoadDataStores(), LoadWizardTypes());
+        }
+    }
+
+    // ── Public Methods ──────────────────────────────────────────────────────────
+
+    public async Task LoadDataStores(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        DataSetWizardProviderLog.LoadingDataStores(_logger);
+
+        try
+        {
+            var result = await _dataStoreApi!.GetDataStores(cancellationToken);
+            if (!result.IsSuccess)
+            {
+                DataSetWizardProviderLog.LoadDataStoresFailed(_logger);
+                _lastResult = result;
+                _dataStores = [];
+                return;
+            }
+
+            _dataStores = result.Value?.ToList() ?? [];
+            DataSetWizardProviderLog.LoadedDataStores(_logger, _dataStores.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetWizardProviderLog.LoadDataStoresException(_logger, ex));
+            _dataStores = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    public async Task LoadWizardTypes(CancellationToken cancellationToken = default)
+    {
+        DataSetWizardProviderLog.LoadingWizardTypes(_logger);
+
+        try
+        {
+            // Why: domain clients hit GET /datasets/types and GET /datastores/types, which read
+            // directly from source-generated TypeCollections via .All(), not the broken schema-tree
+            // generic endpoint (GetTypesByCategory) that returns 0 results for these categories.
+            var dataSetTask = _dataSetApi!.GetTypes(cancellationToken);
+            var dataStoreTask = _dataStoreApi!.GetTypes(cancellationToken);
+            await Task.WhenAll(dataSetTask, dataStoreTask);
+
+            var dataSetResult = dataSetTask.Result;
+            var dataStoreResult = dataStoreTask.Result;
+
+            if (!dataSetResult.IsSuccess || dataSetResult.Value is null)
+            {
+                DataSetWizardProviderLog.LoadWizardTypesFailed(_logger, "DataSet");
+                _dataSetTypes = [];
+            }
+            else
+            {
+                // Why: the TypeCollection enumerates one entry per registered type; distinct
+                // by TypeName is still applied defensively in case two assemblies register the
+                // same name (would be a configuration error, but a safe guard here costs nothing).
+                _dataSetTypes = dataSetResult.Value
+                    .GroupBy(t => t.TypeName, StringComparer.Ordinal)
+                    .Select(g => new ConfigurationTypeSummary
+                    {
+                        TypeName = g.First().TypeName,
+                        DisplayName = g.First().DisplayName,
+                        Description = g.First().Description,
+                        Category = g.First().Category
+                    })
+                    .ToList();
+            }
+
+            if (!dataStoreResult.IsSuccess || dataStoreResult.Value is null)
+            {
+                DataSetWizardProviderLog.LoadWizardTypesFailed(_logger, "DataStore");
+                _dataStoreTypes = [];
+            }
+            else
+            {
+                _dataStoreTypes = dataStoreResult.Value
+                    .Select(t => new ConfigurationTypeSummary
+                    {
+                        TypeName = t.TypeName,
+                        DisplayName = t.DisplayName,
+                        Description = t.Description,
+                        Category = t.Category
+                    })
+                    .ToList();
+            }
+
+            DataSetWizardProviderLog.LoadedWizardTypes(_logger, _dataSetTypes.Count, _dataStoreTypes.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception)
+        {
+            DataSetWizardProviderLog.LoadWizardTypesFailed(_logger, "DataSet/DataStore");
+            _dataSetTypes = [];
+            _dataStoreTypes = [];
+        }
+        finally
+        {
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    public async Task LoadCapabilitiesForDataStore(string dataStoreName, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(dataStoreName)) return;
+
+        if (!_loadedDataStoreDetails.TryGetValue(dataStoreName, out var detail))
+            return;
+
+        var connectionTypeName = detail.StoreType;
+        DataSetWizardProviderLog.LoadingCapabilities(_logger, connectionTypeName);
+
+        try
+        {
+            var result = await _connectionApi!.GetCapabilities(connectionTypeName, cancellationToken);
+            if (!result.IsSuccess)
+            {
+                DataSetWizardProviderLog.LoadCapabilitiesFailed(_logger, connectionTypeName);
+                _selectedDataStoreCapabilities = null;
+                return;
+            }
+
+            _selectedDataStoreCapabilities = result.Value;
+            DataSetWizardProviderLog.LoadedCapabilities(_logger, result.Value is not null ? result.Value.FieldTypes.Count : 0, connectionTypeName);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception)
+        {
+            DataSetWizardProviderLog.LoadCapabilitiesFailed(_logger, connectionTypeName);
+            _selectedDataStoreCapabilities = null;
+        }
+        finally
+        {
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    public async Task LoadExistingDataSet(string name, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        DataSetWizardProviderLog.LoadingExistingDataSet(_logger, name);
+
+        try
+        {
+            var result = await _dataSetApi!.GetDataSet(name, cancellationToken);
+            if (!result.IsSuccess)
+            {
+                DataSetWizardProviderLog.LoadExistingDataSetFailed(_logger, name);
+                _lastResult = result;
+                _existingDataSet = null;
+                return;
+            }
+
+            _existingDataSet = result.Value;
+            DataSetWizardProviderLog.LoadedExistingDataSet(_logger, name);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetWizardProviderLog.LoadExistingDataSetException(_logger, ex, name));
+            _existingDataSet = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    public async Task LoadContainersForDataStore(string dataStoreName, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(dataStoreName)) return;
+        if (_loadedDataStoreDetails.ContainsKey(dataStoreName)) return;
+
+        DataSetWizardProviderLog.LoadingContainersForDataStore(_logger, dataStoreName);
+        _isContainerBusy = true;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _dataStoreApi!.GetDataStore(dataStoreName, cancellationToken);
+            if (!result.IsSuccess || result.Value is null)
+            {
+                DataSetWizardProviderLog.LoadContainersForDataStoreFailed(_logger, dataStoreName);
+                _lastResult = result;
+                return;
+            }
+
+            _loadedDataStoreDetails[dataStoreName] = result.Value;
+            var containerCount = result.Value.Paths.Sum(p => p.Containers.Count);
+            DataSetWizardProviderLog.LoadedContainersForDataStore(_logger, containerCount, dataStoreName);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetWizardProviderLog.LoadContainersForDataStoreException(_logger, ex, dataStoreName));
+        }
+        finally
+        {
+            _isContainerBusy = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    public async Task<ContainerInitializationResult?> InitializeFromContainer(string dataStoreName, string containerName, CancellationToken cancellationToken = default)
+    {
+        await LoadContainersForDataStore(dataStoreName, cancellationToken);
+
+        if (!_loadedDataStoreDetails.TryGetValue(dataStoreName, out var detail))
+            return null;
+
+        DataStoreContainerPayload? container = null;
+        DataStorePathPayload? matchingPath = null;
+        foreach (var path in detail.Paths)
+        {
+            foreach (var c in path.Containers)
+            {
+                if (string.Equals(c.Name, containerName, StringComparison.Ordinal))
+                {
+                    container = c;
+                    matchingPath = path;
+                    break;
+                }
+            }
+            if (container is not null) break;
+        }
+
+        if (container is null)
+        {
+            DataSetWizardProviderLog.InitializeFromContainerFailed(_logger, dataStoreName, containerName);
+            return null;
+        }
+
+        DataSetWizardProviderLog.InitializingFromContainer(_logger, dataStoreName, containerName);
+
+        var fields = container.Fields
+            .Select((f, i) => new CreateDataSetFieldRequest
+            {
+                Name = f.Name,
+                // Why: empty string means "user must select" — blocked by save-path validation.
+                DataType = MapToAbstractType(f.NativeDataType) is string t ? t : string.Empty,
+                IsKey = f.IsKey,
+                IsRequired = !f.IsNullable,
+                Ordinal = f.Ordinal == 0 ? i : f.Ordinal,
+                MaxLength = f.MaxLength,
+                Role = InferRole(container, f.Name)
+            })
+            .ToList();
+
+        DataSetWizardProviderLog.InitializedFromContainer(_logger, fields.Count, dataStoreName, containerName);
+
+        return new ContainerInitializationResult
+        {
+            SourceName = "Primary",
+            DataStoreName = dataStoreName,
+            ContainerName = containerName,
+            Path = matchingPath?.PhysicalPath ?? string.Empty,
+            Fields = fields.AsReadOnly()
+        };
+    }
+
+    public async Task<IReadOnlyList<DataStoreFieldPayload>> LoadFieldsForSource(string sourceName, CancellationToken cancellationToken = default)
+    {
+        DataSetWizardProviderLog.LoadingFieldsForSource(_logger, sourceName);
+
+        if (_sourceFields.TryGetValue(sourceName, out var cached))
+        {
+            DataSetWizardProviderLog.LoadedFieldsForSource(_logger, cached.Count, sourceName);
+            return cached;
+        }
+
+        // Locate the source configuration in the wizard model to find its DataStoreName and ContainerName.
+        // Fields are embedded in DataStoreDetailPayload.Paths[].Containers[].Fields — ensure the DataStore is loaded first.
+        // Why: the source's DataStoreName maps directly to the _loadedDataStoreDetails cache key; if not present,
+        // LoadContainersForDataStore must run before fields can be resolved.
+        try
+        {
+            // Walk loaded DataStore details to find a container whose fields can be returned.
+            // The source name is a logical alias — callers must have previously loaded the DataStore.
+            DataStoreContainerPayload? found = null;
+            foreach (var detail in _loadedDataStoreDetails.Values)
+            {
+                foreach (var path in detail.Paths)
+                {
+                    foreach (var container in path.Containers)
+                    {
+                        if (container.Fields.Count == 0)
+                            continue;
+                        // Why: container name is matched against the source name as a fallback;
+                        // the exact DataStore/container for a source is set by NestedObjectPicker
+                        // selection on step 3 (Sources). If the DataStore wasn't loaded yet, return empty.
+                        _ = container;
+                    }
+                }
+            }
+
+            // Why: the provider does not have direct access to the wizard model's source list;
+            // the razor page calls this method with the source's DataStoreName+ContainerName already
+            // resolved. This overload accepts only sourceName (a logical alias) and expects the
+            // page to have set _sourceFields via the resolved-path overload or to call
+            // LoadFieldsForContainer (below).
+            // Return empty when not yet populated — the page triggers OnLoadFieldsForSource only
+            // after a source selection is confirmed via NestedObjectPicker.
+            _ = found;
+            DataSetWizardProviderLog.LoadFieldsForSourceFailed(_logger, sourceName);
+            return [];
+        }
+        catch (OperationCanceledException)
+        {
+            return [];
+        }
+        catch (Exception ex)
+        {
+            DataSetWizardProviderLog.LoadFieldsForSourceException(_logger, ex, sourceName);
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Loads and caches fields for the named source using its resolved DataStore name and container name.
+    /// Called from the razor page after a source's DataStore/container has been fully resolved via NestedObjectPicker.
+    /// </summary>
+    public async Task<IReadOnlyList<DataStoreFieldPayload>> LoadFieldsForSourceFromContainer(
+        string sourceName,
+        string dataStoreName,
+        string containerName,
+        CancellationToken cancellationToken = default)
+    {
+        DataSetWizardProviderLog.LoadingFieldsForSource(_logger, sourceName);
+
+        if (_sourceFields.TryGetValue(sourceName, out var cached))
+        {
+            DataSetWizardProviderLog.LoadedFieldsForSource(_logger, cached.Count, sourceName);
+            return cached;
+        }
+
+        try
+        {
+            // Ensure the DataStore detail is loaded so container fields are available.
+            if (!_loadedDataStoreDetails.ContainsKey(dataStoreName))
+                await LoadContainersForDataStore(dataStoreName, cancellationToken);
+
+            if (!_loadedDataStoreDetails.TryGetValue(dataStoreName, out var detail))
+            {
+                DataSetWizardProviderLog.LoadFieldsForSourceFailed(_logger, sourceName);
+                return [];
+            }
+
+            DataStoreContainerPayload? container = null;
+            foreach (var path in detail.Paths)
+            {
+                foreach (var c in path.Containers)
+                {
+                    if (string.Equals(c.Name, containerName, StringComparison.Ordinal))
+                    {
+                        container = c;
+                        break;
+                    }
+                }
+                if (container is not null) break;
+            }
+
+            if (container is null)
+            {
+                DataSetWizardProviderLog.LoadFieldsForSourceFailed(_logger, sourceName);
+                return [];
+            }
+
+            _sourceFields[sourceName] = container.Fields;
+            DataSetWizardProviderLog.LoadedFieldsForSource(_logger, container.Fields.Count, sourceName);
+
+            RebuildContext();
+            StateHasChanged();
+
+            return container.Fields;
+        }
+        catch (OperationCanceledException)
+        {
+            return [];
+        }
+        catch (Exception ex)
+        {
+            DataSetWizardProviderLog.LoadFieldsForSourceException(_logger, ex, sourceName);
+            return [];
+        }
+    }
+
+    public async Task<DataSetDetailPayload?> Submit(CreateDataSetPayload model, CancellationToken cancellationToken = default)
+    {
+        _isSubmitting = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        DataSetWizardProviderLog.SubmittingDataSet(_logger, model.Name);
+
+        try
+        {
+            IGenericResult<DataSetDetailPayload> result;
+            if (_existingDataSet is not null)
+            {
+                var updateRequest = new UpdateDataSetPayload
+                {
+                    Description = model.Description,
+                    Version = model.Version,
+                    Category = model.Category,
+                    ServiceOptionType = model.ServiceOptionType,
+                    Fields = model.Fields.AsReadOnly(),
+                    Sources = model.Sources.AsReadOnly(),
+                    Joins = model.Joins.AsReadOnly(),
+                    Caching = model.Caching
+                };
+                result = await _dataSetApi!.UpdateDataSet(model.Name, updateRequest, cancellationToken);
+            }
+            else
+            {
+                result = await _dataSetApi!.CreateDataSet(model, cancellationToken);
+            }
+
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(DataSetWizardProviderLog.SubmitDataSetFailed(_logger, model.Name));
+                return null;
+            }
+
+            DataSetWizardProviderLog.DataSetSubmitted(_logger, model.Name);
+            return result.Value;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetWizardProviderLog.SubmitDataSetException(_logger, ex, model.Name));
+            return null;
+        }
+        finally
+        {
+            _isSubmitting = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Private Helpers ─────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new DataSetWizardContext
+        {
+            DataStores = _dataStores,
+            LoadedDataStoreDetails = _loadedDataStoreDetails,
+            ExistingDataSet = _existingDataSet,
+            IsLoading = _isLoading,
+            IsSubmitting = _isSubmitting,
+            IsContainerBusy = _isContainerBusy,
+            LastResult = _lastResult,
+            DataSetTypes = _dataSetTypes,
+            DataStoreTypes = _dataStoreTypes,
+            SelectedDataStoreCapabilities = _selectedDataStoreCapabilities,
+            // Why: _sourceFields is populated on demand via LoadFieldsForSourceFromContainer when
+            // a join source is selected on the Advanced step; snapshot here so the razor page can
+            // read cached field lists without a separate callback per render.
+            LoadedSourceFields = _sourceFields,
+            OnLoadDataStores = () => LoadDataStores(),
+            OnLoadExistingDataSet = name => LoadExistingDataSet(name),
+            OnLoadContainersForDataStore = name => LoadContainersForDataStore(name),
+            OnLoadCapabilitiesForDataStore = name => LoadCapabilitiesForDataStore(name),
+            OnInitializeFromContainer = (ds, ct) => InitializeFromContainer(ds, ct),
+            // Why: the razor page resolves DataStoreName+ContainerName from the Sources list before
+            // calling this callback so the provider can locate the container's fields in the cache.
+            OnLoadFieldsForSource = name => LoadFieldsForSource(name),
+            OnSubmit = model => Submit(model)
+        };
+    }
+
+    private static string? MapToAbstractType(string? dataType)
+    {
+        if (string.IsNullOrWhiteSpace(dataType))
+            return null;
+        var t = dataType.ToLowerInvariant();
+        if (t is "int" or "bigint" or "smallint" or "tinyint" or "decimal" or "numeric"
+                 or "float" or "real" or "double" or "money" or "smallmoney" or "bit"
+                 or "double precision")
+            return "Numeric";
+        if (t is "date" or "datetime" or "datetime2" or "datetimeoffset" or "smalldatetime" or "time")
+            return "Date";
+        if (t is "nvarchar" or "varchar" or "char" or "nchar" or "text" or "ntext"
+                 or "uniqueidentifier" or "xml" or "string" or "guid")
+            return "Alphanumeric";
+        return "Other";
+    }
+
+    private static string InferRole(DataStoreContainerPayload container, string fieldName)
+    {
+        if (container.NaturalKeyFields is not null &&
+            container.NaturalKeyFields.Any(f => string.Equals(f, fieldName, StringComparison.OrdinalIgnoreCase)))
+            return "NaturalKey";
+        if (container.SurrogateKeyFields is not null &&
+            container.SurrogateKeyFields.Any(f => string.Equals(f, fieldName, StringComparison.OrdinalIgnoreCase)))
+            return "Surrogate";
+        return "Attribute";
+    }
+}

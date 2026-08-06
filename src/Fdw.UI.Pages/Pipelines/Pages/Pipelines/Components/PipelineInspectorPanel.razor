@@ -1,0 +1,215 @@
+@* Inspector panel — shows per-task or per-edge counters and sample records.
+   Rendered inside Builder.razor when a node or edge is clicked during a test run.
+   Buffer-eviction amber alert (plan: user addition after dead agent started). *@
+
+@using System.Text.Json
+@using Fdw.Services.Etl.Abstractions.Execution
+
+<div style="display:flex;flex-direction:column;height:100%;font-size:12px;">
+    <!-- Header -->
+    <div class="card-h" style="padding:10px 14px;border-bottom:1px solid var(--hair);">
+        <span class="mono" style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--glacier);">
+            Inspector — @(_isEdge ? "Edge" : "Task")
+        </span>
+        @if (OnClose.HasDelegate)
+        {
+            <button class="btn btn-ghost btn-sm" @onclick="OnClose" title="Close inspector">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        }
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:12px;">
+
+        @* Eviction amber alert — shown when the sample ring buffer has been capped at least once. *@
+        @if (_showEvictionAlert)
+        {
+            <div style="border-radius:8px;background:var(--amber-dim);padding:10px 12px;color:var(--amber-400);line-height:1.4;">
+                <div style="font-weight:600;margin-bottom:4px;">Inspector buffer cap reached</div>
+                <div>
+                    Older samples have been discarded (@_samplesDiscarded discarded). If you need
+                    deeper inspection, the server administrator can raise
+                    <code class="mono" style="color:var(--amber);">PipelineTestMode:InspectorSampleBufferMaxBytes</code>
+                    in appsettings
+                    @if (_sampleBufferMaxBytes > 0)
+                    {
+                        <span> (current: @FormatBytes(_sampleBufferMaxBytes))</span>
+                    }
+                    .
+                </div>
+            </div>
+        }
+
+        @* Counters section *@
+        @if (!_isEdge && TaskState != null)
+        {
+            <div>
+                <div class="mono" style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--n-500);margin-bottom:6px;">Counters</div>
+                <div class="mono" style="display:grid;grid-template-columns:1fr 1fr;column-gap:16px;row-gap:4px;">
+                    <span style="color:var(--n-400);">Records In</span>
+                    <span style="color:var(--success);">@TaskState.RecordsIn.ToString("N0")</span>
+                    <span style="color:var(--n-400);">Records Out</span>
+                    <span style="color:var(--glacier);">@TaskState.RecordsOut.ToString("N0")</span>
+                    <span style="color:var(--n-400);">Discarded</span>
+                    <span style="color:@(TaskState.RecordsDiscarded > 0 ? "var(--signal)" : "var(--n-500)");">@TaskState.RecordsDiscarded.ToString("N0")</span>
+                    <span style="color:var(--n-400);">Held</span>
+                    <span style="color:var(--warn);">@TaskState.RecordsHeld.ToString("N0")</span>
+                </div>
+            </div>
+        }
+        else if (_isEdge && EdgeState != null)
+        {
+            <div>
+                <div class="mono" style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--n-500);margin-bottom:6px;">Counters</div>
+                <div class="mono" style="display:grid;grid-template-columns:1fr 1fr;column-gap:16px;row-gap:4px;">
+                    <span style="color:var(--n-400);">Records Flowed</span>
+                    <span style="color:var(--glacier);">@EdgeState.RecordsFlowed.ToString("N0")</span>
+                    <span style="color:var(--n-400);">Samples Held</span>
+                    <span style="color:var(--n-200);">@_sampleCount.ToString("N0")</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div style="color:var(--n-500);font-style:italic;text-align:center;padding:16px 0;">
+                No inspector data. Click a node or edge during a test run.
+            </div>
+        }
+
+        @* Samples table *@
+        @if (_columns.Count > 0 && _sampleRows.Count > 0)
+        {
+            <div>
+                <div class="mono" style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--n-500);margin-bottom:6px;">
+                    Sample Records (@_sampleCount)
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="tbl mono" style="font-size:10px;">
+                        <thead>
+                            <tr>
+                                @foreach (var col in _columns)
+                                {
+                                    <th>@col</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in _sampleRows)
+                            {
+                                <tr>
+                                    @foreach (var col in _columns)
+                                    {
+                                        <td style="white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;padding:6px 8px;"
+                                            title="@FormatCellValue(row, col)">
+                                            @FormatCellValue(row, col)
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+        else if (_sampleCount == 0 && (TaskState != null || EdgeState != null))
+        {
+            <div style="color:var(--n-500);font-style:italic;text-align:center;padding:8px 0;">No sample records buffered yet.</div>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>Task state to display (set when a node is clicked).</summary>
+    [Parameter] public TaskInspectorState? TaskState { get; set; }
+
+    /// <summary>Edge state to display (set when an edge is clicked).</summary>
+    [Parameter] public EdgeInspectorState? EdgeState { get; set; }
+
+    /// <summary>Label identifying the selected item (task name or "A → B").</summary>
+    [Parameter] public string? ItemLabel { get; set; }
+
+    /// <summary>Callback to close the inspector panel.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool _isEdge => EdgeState != null;
+
+    // Derived display state — recomputed when parameters change.
+    private bool _showEvictionAlert;
+    private long _samplesDiscarded;
+    private long _sampleBufferMaxBytes;
+    private int _sampleCount;
+    private List<string> _columns = new();
+    private List<IDictionary<string, object?>> _sampleRows = new();
+
+    protected override void OnParametersSet()
+    {
+        _columns = new();
+        _sampleRows = new();
+        _samplesDiscarded = 0;
+        _sampleBufferMaxBytes = 0;
+        _sampleCount = 0;
+        _showEvictionAlert = false;
+
+        if (!_isEdge && TaskState != null)
+        {
+            // Why: Lock on SamplesLock to get a consistent snapshot — the inspector may be
+            // mutating the list concurrently from the pipeline batch loop.
+            lock (TaskState.SamplesLock)
+            {
+                _sampleRows = TaskState.Samples.ToList();
+            }
+            _samplesDiscarded = TaskState.SamplesDiscarded;
+            _sampleBufferMaxBytes = TaskState.SampleBufferMaxBytes;
+            _showEvictionAlert = TaskState.SampleBufferAtCapacity || _samplesDiscarded > 0;
+            _sampleCount = _sampleRows.Count + (int)_samplesDiscarded;
+        }
+        else if (EdgeState != null)
+        {
+            lock (EdgeState.SamplesLock)
+            {
+                _sampleRows = EdgeState.Samples.ToList();
+            }
+            _samplesDiscarded = EdgeState.SamplesDiscarded;
+            _sampleBufferMaxBytes = EdgeState.SampleBufferMaxBytes;
+            _showEvictionAlert = EdgeState.SampleBufferAtCapacity || _samplesDiscarded > 0;
+            _sampleCount = _sampleRows.Count + (int)_samplesDiscarded;
+        }
+
+        if (_sampleRows.Count > 0)
+        {
+            // Why: Derive columns from the union of all sample record keys so that
+            // heterogeneous records (e.g., after a Pivot transform) still show all columns.
+            var colSet = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+            foreach (var row in _sampleRows)
+            {
+                foreach (var key in row.Keys)
+                    colSet.Add(key);
+            }
+            _columns = colSet.OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+    }
+
+    private static string FormatCellValue(IDictionary<string, object?> row, string col)
+    {
+        if (!row.TryGetValue(col, out var val)) return "";
+        if (val is null) return "null";
+        if (val is string s) return s;
+        try
+        {
+            return JsonSerializer.Serialize(val);
+        }
+        catch
+        {
+            return val.ToString() ?? "";
+        }
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes >= 1_000_000) return $"{bytes / 1_000_000:N0} MB";
+        if (bytes >= 1_000) return $"{bytes / 1_000:N0} KB";
+        return $"{bytes:N0} B";
+    }
+}

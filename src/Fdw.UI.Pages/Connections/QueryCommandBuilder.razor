@@ -1,0 +1,466 @@
+@namespace Fdw.Services.Connections.UI.Components
+@using Fdw.Services.Connections.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Text.Json
+
+@* QueryCommandBuilder — structured query editor for the pipeline builder properties panel.
+   Bound to a task's Configuration dictionary via TaskConfiguration parameter.
+   Renders: container picker → field selector → filter clauses → sort → paging.
+   Tailwind-only — no MudBlazor. No generic <T> — container is a string name; result type
+   is always Dictionary<string,object?> at runtime (see StreamingPipeline.cs:372). *@
+
+<div style="display:flex;flex-direction:column;gap:12px;">
+    @* Container picker *@
+    <div class="frow" style="margin-bottom:0;">
+        <label>Container</label>
+        @if (AvailableContainers.Count > 0)
+        {
+            <select class="finput"
+                    value="@_container"
+                    @onchange="OnContainerChanged">
+                <option value="">Select container...</option>
+                @foreach (var c in AvailableContainers)
+                {
+                    <option value="@c">@c</option>
+                }
+            </select>
+        }
+        else
+        {
+            <input class="finput mono"
+                   placeholder="schema.TableName"
+                   value="@_container"
+                   @oninput="OnContainerInput" />
+        }
+    </div>
+
+    @* Field selector — shown once a container is picked *@
+    @if (!string.IsNullOrEmpty(_container))
+    {
+        <div class="frow" style="margin-bottom:0;">
+            <label>Fields</label>
+            @if (AvailableFields.Count > 0)
+            {
+                <div style="background:var(--s2);border-radius:8px;padding:10px;max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--n-400);cursor:pointer;text-transform:none;letter-spacing:0;font-family:var(--font);">
+                        <input type="checkbox"
+                               checked="@IsAllFieldsSelected()"
+                               @onchange="ToggleAllFields" />
+                        <span>All fields (*)</span>
+                    </label>
+                    @foreach (var field in AvailableFields)
+                    {
+                        var f = field;
+                        <label class="mono" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--n-200);cursor:pointer;text-transform:none;letter-spacing:0;">
+                            <input type="checkbox"
+                                   checked="@IsFieldSelected(f)"
+                                   @onchange="() => ToggleField(f)" />
+                            <span>@f</span>
+                        </label>
+                    }
+                </div>
+            }
+            else
+            {
+                <input class="finput mono"
+                       placeholder="* (all fields) or comma-separated names"
+                       value="@_fields"
+                       @oninput="OnFieldsInput" />
+            }
+        </div>
+
+        @* Filter clauses *@
+        <div class="frow" style="margin-bottom:0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <label>Filters</label>
+                <button class="btn btn-ghost btn-sm" @onclick="AddFilterClause">+ Add</button>
+            </div>
+            @if (_filterClauses.Count == 0)
+            {
+                <div class="hint" style="font-style:italic;">No filters — returns all rows.</div>
+            }
+            @for (var i = 0; i < _filterClauses.Count; i++)
+            {
+                var idx = i;
+                var clause = _filterClauses[idx];
+                var fieldOptions = AvailableFields.Count > 0 ? AvailableFields : _derivedFields;
+                <div style="display:flex;gap:6px;align-items:center;">
+                    @if (idx > 0)
+                    {
+                        <span class="mono" style="font-size:10px;color:var(--n-500);width:28px;text-align:center;">AND</span>
+                    }
+                    else
+                    {
+                        <span style="width:28px;"></span>
+                    }
+                    <select class="finput mono" style="flex:1;"
+                            value="@clause.Field"
+                            @onchange="@(e => UpdateClauseField(idx, e.Value?.ToString() ?? string.Empty))">
+                        <option value="">Column...</option>
+                        @foreach (var fo in fieldOptions)
+                        {
+                            <option value="@fo">@fo</option>
+                        }
+                    </select>
+                    <select class="finput mono" style="width:112px;"
+                            value="@clause.Operator"
+                            @onchange="@(e => UpdateClauseOperator(idx, e.Value?.ToString() ?? string.Empty))">
+                        @foreach (var op in FilterOperators)
+                        {
+                            <option value="@op.Key">@op.Value</option>
+                        }
+                    </select>
+                    @if (!string.Equals(clause.Operator, "IsNull", StringComparison.Ordinal)
+                         && !string.Equals(clause.Operator, "IsNotNull", StringComparison.Ordinal))
+                    {
+                        <input class="finput mono" style="flex:1;"
+                               placeholder="Value"
+                               value="@clause.Value"
+                               @oninput="@(e => UpdateClauseValue(idx, e.Value?.ToString() ?? string.Empty))" />
+                    }
+                    <button class="btn btn-danger btn-sm"
+                            @onclick="() => RemoveFilterClause(idx)"
+                            title="Remove filter">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            }
+        </div>
+
+        @* Sort *@
+        <div class="frow" style="margin-bottom:0;">
+            <label>Sort</label>
+            <div style="display:flex;gap:6px;">
+                @{
+                    var sortFieldOptions = AvailableFields.Count > 0 ? AvailableFields : _derivedFields;
+                }
+                <select class="finput mono" style="flex:1;"
+                        value="@_sortField"
+                        @onchange="OnSortFieldChanged">
+                    <option value="">No sort</option>
+                    @foreach (var sf in sortFieldOptions)
+                    {
+                        <option value="@sf">@sf</option>
+                    }
+                </select>
+                <select class="finput mono" style="width:120px;"
+                        value="@_sortDirection"
+                        @onchange="OnSortDirectionChanged">
+                    <option value="Asc">Ascending</option>
+                    <option value="Desc">Descending</option>
+                </select>
+            </div>
+        </div>
+
+        @* Paging *@
+        <div class="frow" style="margin-bottom:0;">
+            <label>Paging</label>
+            <div style="display:flex;gap:6px;">
+                <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+                    <span class="hint">Skip</span>
+                    <input class="finput mono"
+                           placeholder="0"
+                           value="@_skip"
+                           @oninput="OnSkipInput" />
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+                    <span class="hint">Take (0 = all)</span>
+                    <input class="finput mono"
+                           placeholder="0"
+                           value="@_take"
+                           @oninput="OnTakeInput" />
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    // ── Configuration keys ────────────────────────────────────────────────────
+
+    private const string KeyContainer = "Container";
+    private const string KeyFields = "Fields";
+    private const string KeySortField = "SortField";
+    private const string KeySortDirection = "SortDirection";
+    private const string KeySkip = "Skip";
+    private const string KeyTake = "Take";
+    private const string KeyFilterJson = "FilterJson";
+
+    // ── Parameters ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The task's Configuration dictionary, mutated directly by this component.
+    /// Passed from the pipeline builder's task properties panel.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public IDictionary<string, object?> TaskConfiguration { get; set; } = new Dictionary<string, object?>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Optional list of container names fetched from connection metadata.
+    /// When empty, a free-text input is shown instead of a dropdown.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<string> AvailableContainers { get; set; } = [];
+
+    /// <summary>
+    /// Optional list of field names for the selected container, fetched from schema metadata.
+    /// When empty, a free-text input is shown instead of checkboxes.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<string> AvailableFields { get; set; } = [];
+
+    // ── Local state mirroring Configuration dict ─────────────────────────────
+
+    // Why: Mirror the dict into typed local fields so @bind and event handlers operate on
+    // simple string properties rather than wrestling with double-quote escaping inside
+    // Razor attribute values. Synced to/from TaskConfiguration in lifecycle methods.
+    private string _container = string.Empty;
+    private string _fields = string.Empty;
+    private string _sortField = string.Empty;
+    private string _sortDirection = "Asc";
+    private string _skip = string.Empty;
+    private string _take = string.Empty;
+
+    // ── Filter state ──────────────────────────────────────────────────────────
+
+    private sealed class FilterClause
+    {
+        public string Field { get; set; } = string.Empty;
+        public string Operator { get; set; } = "Equal";
+        public string Value { get; set; } = string.Empty;
+    }
+
+    private List<FilterClause> _filterClauses = new();
+
+    // Why: derive field list from existing filter clauses when schema metadata is unavailable.
+    // This prevents the sort/filter dropdowns from being empty when AvailableFields is empty
+    // but the user has already typed field names.
+    private IReadOnlyList<string> _derivedFields =>
+        _filterClauses
+            .Select(c => c.Field)
+            .Where(f => !string.IsNullOrEmpty(f))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private static readonly IReadOnlyList<KeyValuePair<string, string>> FilterOperators =
+    [
+        new("Equal", "="),
+        new("NotEqual", "≠"),
+        new("GreaterThan", ">"),
+        new("GreaterThanOrEqual", "≥"),
+        new("LessThan", "<"),
+        new("LessThanOrEqual", "≤"),
+        new("Contains", "Contains"),
+        new("StartsWith", "Starts with"),
+        new("EndsWith", "Ends with"),
+        new("In", "In (CSV)"),
+        new("IsNull", "Is null"),
+        new("IsNotNull", "Is not null"),
+    ];
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+
+    protected override void OnParametersSet()
+    {
+        // Hydrate local state from Configuration dict.
+        _container = GetConfig(KeyContainer);
+        _fields = GetConfig(KeyFields);
+        _sortField = GetConfig(KeySortField);
+        _sortDirection = GetConfig(KeySortDirection) is var dir && !string.IsNullOrEmpty(dir) ? dir : "Asc";
+        _skip = GetConfig(KeySkip);
+        _take = GetConfig(KeyTake);
+
+        var json = GetConfig(KeyFilterJson);
+        if (string.IsNullOrEmpty(json))
+        {
+            _filterClauses = new List<FilterClause>();
+            return;
+        }
+        try
+        {
+            _filterClauses = JsonSerializer.Deserialize<List<FilterClause>>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                ?? new List<FilterClause>();
+        }
+        catch
+        {
+            _filterClauses = new List<FilterClause>();
+        }
+    }
+
+    // ── Configuration access ─────────────────────────────────────────────────
+
+    private string GetConfig(string key)
+    {
+        if (!TaskConfiguration.TryGetValue(key, out var value) || value is null)
+            return string.Empty;
+        if (value is string s) return s;
+        if (value is JsonElement je)
+        {
+            return je.ValueKind == JsonValueKind.String
+                ? je.GetString() ?? string.Empty
+                : je.ToString();
+        }
+        return value.ToString() ?? string.Empty;
+    }
+
+    private void SetConfig(string key, string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            TaskConfiguration.Remove(key);
+        else
+            TaskConfiguration[key] = value;
+    }
+
+    // ── Event handlers (named methods avoid Razor double-quote escape issues) ──
+
+    private void OnContainerChanged(ChangeEventArgs e)
+    {
+        _container = e.Value?.ToString() ?? string.Empty;
+        SetConfig(KeyContainer, _container);
+    }
+
+    private void OnContainerInput(ChangeEventArgs e)
+    {
+        _container = e.Value?.ToString() ?? string.Empty;
+        SetConfig(KeyContainer, _container);
+    }
+
+    private void OnFieldsInput(ChangeEventArgs e)
+    {
+        _fields = e.Value?.ToString() ?? string.Empty;
+        SetConfig(KeyFields, _fields);
+    }
+
+    private void OnSortFieldChanged(ChangeEventArgs e)
+    {
+        _sortField = e.Value?.ToString() ?? string.Empty;
+        SetConfig(KeySortField, _sortField);
+    }
+
+    private void OnSortDirectionChanged(ChangeEventArgs e)
+    {
+        _sortDirection = e.Value?.ToString() ?? "Asc";
+        SetConfig(KeySortDirection, _sortDirection);
+    }
+
+    private void OnSkipInput(ChangeEventArgs e)
+    {
+        _skip = e.Value?.ToString() ?? string.Empty;
+        SetConfig(KeySkip, _skip);
+    }
+
+    private void OnTakeInput(ChangeEventArgs e)
+    {
+        _take = e.Value?.ToString() ?? string.Empty;
+        SetConfig(KeyTake, _take);
+    }
+
+    // ── Field selection helpers ──────────────────────────────────────────────
+
+    private bool IsAllFieldsSelected()
+    {
+        return string.IsNullOrEmpty(_fields)
+            || string.Equals(_fields, "*", StringComparison.Ordinal);
+    }
+
+    private bool IsFieldSelected(string field)
+    {
+        if (IsAllFieldsSelected()) return true;
+        var parts = _fields.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Any(f => string.Equals(f.Trim(), field, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void ToggleAllFields(ChangeEventArgs e)
+    {
+        var isChecked = e.Value is bool b && b;
+        _fields = isChecked ? "*" : string.Empty;
+        SetConfig(KeyFields, _fields);
+    }
+
+    private void ToggleField(string field)
+    {
+        if (IsAllFieldsSelected())
+        {
+            // Switch from "all" to specific — select all except this one.
+            var others = AvailableFields
+                .Where(f => !string.Equals(f, field, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            _fields = others.Count > 0 ? string.Join(",", others) : "*";
+            SetConfig(KeyFields, _fields);
+            return;
+        }
+
+        var current = _fields
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(f => f.Trim())
+            .ToList();
+
+        if (current.Any(f => string.Equals(f, field, StringComparison.OrdinalIgnoreCase)))
+            current.RemoveAll(f => string.Equals(f, field, StringComparison.OrdinalIgnoreCase));
+        else
+            current.Add(field);
+
+        _fields = current.Count > 0 ? string.Join(",", current) : "*";
+        SetConfig(KeyFields, _fields);
+    }
+
+    // ── Filter clause helpers ────────────────────────────────────────────────
+
+    private void AddFilterClause()
+    {
+        _filterClauses.Add(new FilterClause());
+        PersistFilterJson();
+    }
+
+    private void RemoveFilterClause(int index)
+    {
+        if (index >= 0 && index < _filterClauses.Count)
+        {
+            _filterClauses.RemoveAt(index);
+            PersistFilterJson();
+        }
+    }
+
+    private void UpdateClauseField(int index, string value)
+    {
+        if (index >= 0 && index < _filterClauses.Count)
+        {
+            _filterClauses[index].Field = value;
+            PersistFilterJson();
+        }
+    }
+
+    private void UpdateClauseOperator(int index, string value)
+    {
+        if (index >= 0 && index < _filterClauses.Count)
+        {
+            _filterClauses[index].Operator = value;
+            PersistFilterJson();
+        }
+    }
+
+    private void UpdateClauseValue(int index, string value)
+    {
+        if (index >= 0 && index < _filterClauses.Count)
+        {
+            _filterClauses[index].Value = value;
+            PersistFilterJson();
+        }
+    }
+
+    private void PersistFilterJson()
+    {
+        if (_filterClauses.Count == 0)
+        {
+            TaskConfiguration.Remove(KeyFilterJson);
+            return;
+        }
+        TaskConfiguration[KeyFilterJson] = JsonSerializer.Serialize(_filterClauses);
+    }
+}

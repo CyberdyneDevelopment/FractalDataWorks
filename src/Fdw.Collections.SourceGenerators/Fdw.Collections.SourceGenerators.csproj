@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+
+    <!-- Source Generator Specific -->
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <DevelopmentDependency>true</DevelopmentDependency>
+
+    <!-- Package Properties -->
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeSymbols>false</IncludeSymbols>
+    <PackageDescription>Source generators for TypeCollections including cross-assembly discovery. Enables type options to be distributed across multiple NuGet packages.</PackageDescription>
+    <PackageTags>type-collections;enumeration;source-generator;roslyn;cross-assembly</PackageTags>
+
+    <!-- Suppress warnings for analyzer-only packages -->
+    <NoWarn>$(NoWarn);NU5128;NU5118</NoWarn>
+    <!-- Source generators have inherent Roslyn complexity -->
+    <FDW_MaxMethodLines>500</FDW_MaxMethodLines>
+    <FDW_MaxCyclomaticComplexity>200</FDW_MaxCyclomaticComplexity>
+
+    <!-- Generator Debugging -->
+    <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)g</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- Package generator DLL in analyzers folder -->
+  <ItemGroup>
+    <None Include="$(OutputPath)$(AssemblyName).dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
+    <None Include="build\$(AssemblyName).props"
+          Pack="true"
+          PackagePath="build\"
+          Visible="false"
+          Condition="Exists('build\$(AssemblyName).props')" />
+  </ItemGroup>
+
+</Project>

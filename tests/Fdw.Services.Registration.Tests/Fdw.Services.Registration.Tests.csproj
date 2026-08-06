@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Services.Registration\Fdw.Services.Registration.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+  <PropertyGroup>
+    <!-- Only include Fdw.Services.Registration in coverage -->
+    <Include>[Fdw.Services.Registration]*</Include>
+    <!-- Exclude everything else -->
+    <Exclude>[xunit.*]*,[Moq]*,[Shouldly]*</Exclude>
+  </PropertyGroup>
+</Project>

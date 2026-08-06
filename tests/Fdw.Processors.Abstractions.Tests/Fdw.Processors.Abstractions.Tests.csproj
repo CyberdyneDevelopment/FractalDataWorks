@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Processors.Abstractions\Fdw.Processors.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Messages\Fdw.Messages.csproj" />
+  </ItemGroup>
+  <PropertyGroup>
+    <!-- Only include Fdw.Processors.Abstractions in coverage -->
+    <Include>[Fdw.Processors.Abstractions]*</Include>
+    <!-- Exclude everything else -->
+    <Exclude>[Fdw.Messages]*,[Fdw.Collections]*,[Fdw.Results]*</Exclude>
+  </PropertyGroup>
+</Project>

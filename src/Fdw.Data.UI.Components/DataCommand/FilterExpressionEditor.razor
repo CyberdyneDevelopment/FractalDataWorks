@@ -1,0 +1,149 @@
+@namespace Fdw.Data.UI.Components.DataCommand
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.Data
+
+@* Filter expression editor — repeating list of clause rows.
+   Each clause: field dropdown (from AvailableFields), operator dropdown (FilterOperators), value input.
+   Tailwind-only. *@
+
+<div style="display:flex;flex-direction:column;gap:8px;">
+    <div class="card-h" style="padding:0;">
+        <span class="flbl" style="margin-bottom:0;">Filters</span>
+        <button class="btn btn-secondary btn-sm" @onclick="AddClause">+ Add</button>
+    </div>
+
+    @if (_clauses.Count == 0)
+    {
+        <p class="fhint mono">No filters — all rows returned.</p>
+    }
+    else
+    {
+        @for (var i = 0; i < _clauses.Count; i++)
+        {
+            var idx = i;
+            var clause = _clauses[idx];
+
+            @if (idx > 0)
+            {
+                <div style="display:flex;justify-content:center;">
+                    <button class="chip @(clause.UseOr ? "on" : "")"
+                            @onclick="() => ToggleGrouping(idx)">
+                        @(clause.UseOr ? "OR" : "AND")
+                    </button>
+                </div>
+            }
+
+            <div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:4px;align-items:center;">
+                @* Field picker — dropdown when fields are available, text input otherwise *@
+                @if (AvailableFields.Any())
+                {
+                    <select class="fin" value="@clause.Field" @onchange="@(e => SetClauseField(idx, e.Value?.ToString() ?? string.Empty))">
+                        <option value="">Field...</option>
+                        @foreach (var f in AvailableFields)
+                        {
+                            <option value="@f.QualifiedName">@f.QualifiedName</option>
+                        }
+                    </select>
+                }
+                else
+                {
+                    <input class="fin mono" placeholder="field" value="@clause.Field"
+                           @oninput="@(e => SetClauseField(idx, e.Value?.ToString() ?? string.Empty))" />
+                }
+
+                <select class="fin" value="@clause.Operator" @onchange="@(e => SetClauseOperator(idx, e.Value?.ToString() ?? string.Empty))">
+                    <option value="">Op...</option>
+                    @foreach (var op in _operators)
+                    {
+                        <option value="@op.Name">@op.Name</option>
+                    }
+                </select>
+
+                <input class="fin mono"
+                       placeholder="value"
+                       value="@clause.Value"
+                       disabled="@IsNullOperator(clause.Operator)"
+                       @oninput="@(e => SetClauseValue(idx, e.Value?.ToString() ?? string.Empty))" />
+
+                <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => RemoveClause(idx)">✕</button>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<DataCommandField> AvailableFields { get; set; } = [];
+    [Parameter] public DataCommandFilter? Filter { get; set; }
+    [Parameter] public EventCallback<DataCommandFilter?> FilterChanged { get; set; }
+
+    private List<DataCommandFilterClause> _clauses = [];
+    private IReadOnlyList<Fdw.Data.IFilterOperator> _operators = [];
+
+    protected override void OnInitialized()
+    {
+        _operators = FilterOperators.All().OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    protected override void OnParametersSet()
+    {
+        _clauses = Filter?.Clauses.ToList() ?? [];
+    }
+
+    private async Task NotifyChanged()
+    {
+        var filter = _clauses.Count > 0
+            ? new DataCommandFilter { Clauses = _clauses.ToList() }
+            : null;
+        await FilterChanged.InvokeAsync(filter).ConfigureAwait(false);
+    }
+
+    private void AddClause()
+    {
+        _clauses.Add(new DataCommandFilterClause());
+        // Why: fire NotifyChanged via async wrapper — direct await in event handler is fine but
+        // we want it to run inline so the parent sees the update before re-render.
+        _ = NotifyChanged();
+    }
+
+    private void RemoveClause(int idx)
+    {
+        if (idx >= 0 && idx < _clauses.Count)
+        {
+            _clauses.RemoveAt(idx);
+            _ = NotifyChanged();
+        }
+    }
+
+    private void ToggleGrouping(int idx)
+    {
+        if (idx > 0 && idx < _clauses.Count)
+        {
+            _clauses[idx] = _clauses[idx] with { UseOr = !_clauses[idx].UseOr };
+            _ = NotifyChanged();
+        }
+    }
+
+    private void SetClauseField(int idx, string value)
+    {
+        if (idx < _clauses.Count) _clauses[idx] = _clauses[idx] with { Field = value };
+        _ = NotifyChanged();
+    }
+
+    private void SetClauseOperator(int idx, string value)
+    {
+        if (idx < _clauses.Count) _clauses[idx] = _clauses[idx] with { Operator = value };
+        _ = NotifyChanged();
+    }
+
+    private void SetClauseValue(int idx, string value)
+    {
+        if (idx < _clauses.Count) _clauses[idx] = _clauses[idx] with { Value = value };
+        _ = NotifyChanged();
+    }
+
+    private static bool IsNullOperator(string op)
+        => string.Equals(op, "IsNull", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(op, "IsNotNull", StringComparison.OrdinalIgnoreCase);
+}

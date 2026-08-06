@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Fdw.Services.Messaging.Endpoints</RootNamespace>
+
+    <!-- NuGet Package Properties -->
+    <PackageId>Fdw.Services.Messaging.Endpoints</PackageId>
+    <Title>Fdw.Services.Messaging.Endpoints</Title>
+    <Description>Generic endpoint base classes and DTOs for messaging operations via FastEndpoints.</Description>
+    <Authors>Fdw</Authors>
+    <PackageTags>fdw;endpoints;messaging;messages;access-requests;api;fastendpoints</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Web.RestEndpoints\Fdw.Web.RestEndpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Messaging.Abstractions\Fdw.Services.Messaging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Messages\Fdw.Messages.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FastEndpoints" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Web.Http.Authentication\Fdw.Web.Http.Authentication.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Fdw.Web.Http.Authentication.Blazor</RootNamespace>
+    <PackageId>Fdw.Web.Http.Authentication.Blazor</PackageId>
+    <Title>Fdw Blazor Server Authentication</Title>
+    <Description>Blazor Server circuit token bridge for Fdw authentication</Description>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+</Project>

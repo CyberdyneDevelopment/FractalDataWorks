@@ -1,0 +1,32 @@
+@namespace Fdw.Data.UI.Components.DataCommand
+@using System
+@using System.Collections.Generic
+@using System.Linq
+
+@* Container picker — dropdown populated from ctrl.DataContainer metadata.
+   Tailwind-only. Shared by all command-kind skins. *@
+
+<select class="input text-sm"
+        value="@SelectedContainerId"
+        @onchange="HandleChange">
+    <option value="">@(Placeholder ?? "Select container...")</option>
+    @foreach (var c in Containers)
+    {
+        <option value="@c.Id">@c.DisplayLabel</option>
+    }
+</select>
+
+@code {
+    [Parameter] public IReadOnlyList<DataContainerSummary> Containers { get; set; } = [];
+    [Parameter] public Guid SelectedContainerId { get; set; }
+    [Parameter] public EventCallback<Guid> SelectedContainerIdChanged { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+
+    private async Task HandleChange(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id))
+            await SelectedContainerIdChanged.InvokeAsync(id).ConfigureAwait(false);
+        else
+            await SelectedContainerIdChanged.InvokeAsync(Guid.Empty).ConfigureAwait(false);
+    }
+}

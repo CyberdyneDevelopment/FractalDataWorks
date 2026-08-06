@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.Operations.Endpoints</RootNamespace>
+
+    <!-- NuGet Package Properties -->
+    <PackageId>Fdw.Operations.Endpoints</PackageId>
+    <Title>Fdw.Operations.Endpoints</Title>
+    <Description>Generic endpoint base classes and DTOs for lineage/impact analysis and configuration metadata via FastEndpoints.</Description>
+    <Authors>Fdw</Authors>
+    <PackageTags>fdw;endpoints;operations;lineage;impact-analysis;configuration-metadata;api;fastendpoints</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Web.RestEndpoints\Fdw.Web.RestEndpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Web.Endpoints\Fdw.Web.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Operations.Abstractions\Fdw.Operations.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Configuration\Fdw.Configuration.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Lineage\Fdw.Data.Lineage.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Agents.Abstractions\Fdw.Services.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Audit.Abstractions\Fdw.Services.Audit.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Web.Analytics.Clients.Abstractions\Fdw.Web.Analytics.Clients.Abstractions.csproj" />
+    <!-- Why: QueryCommandBuilder.WithCaching() is used in BuildFullGraph to add CachePolicy metadata
+         to lineage graph queries. Commands.Data.Extensions provides the fluent builder API. -->
+    <ProjectReference Include="..\Fdw.Commands.Data.Extensions\Fdw.Commands.Data.Extensions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Etl.Abstractions\Fdw.Services.Etl.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Pipelines\Fdw.Services.Pipelines.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Etl\Fdw.Services.Etl.csproj" />
+    <!-- Why: Services.Etl.Projects.Abstractions is referenced to access pipe.* configuration
+         records (ProjectLineageRecord, StageLineageRecord, etc.) for the lineage graph extension. -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FastEndpoints" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Why: PipelineLineageProjection/PipelineLineageLoader and GetLineageGraphEndpointBase's
+         internal-static BuildGraphFromRecords/MapToResponse builders are internal (no public API
+         surface for an implementation detail); the test project needs to unit-test them directly
+         without re-exercising the full endpoint HTTP pipeline. -->
+    <InternalsVisibleTo Include="Fdw.Operations.Endpoints.Tests" />
+  </ItemGroup>
+
+</Project>

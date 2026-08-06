@@ -1,0 +1,26 @@
+<Project>
+  <!--
+    Fix pack when projects explicitly set TargetFramework (singular) but Directory.Build.props
+    sets a default TargetFrameworks (plural). Clear TargetFrameworks to prevent pack from
+    looking for target frameworks that weren't built.
+  -->
+  <PropertyGroup Condition="'$(TargetFramework)' != '' AND '$(TargetFrameworks)' != ''">
+    <!-- Clear TargetFrameworks when we have an explicit single TargetFramework -->
+    <TargetFrameworks></TargetFrameworks>
+  </PropertyGroup>
+
+  <!--
+    SourceLink path fix: The build runs from the GitLab monorepo where source files
+    are under public/src/..., but the GitHub public repo (after subtree split) has them
+    at src/... This target adds a more-specific SourceRoot for the public/ directory
+    so SourceLink maps files directly to GitHub URLs without the public/ prefix.
+  -->
+  <Target Name="SetSourceLinkUrlForSubtreeSplit"
+          AfterTargets="InitializeSourceControlInformationFromSourceControlManager"
+          Condition="'$(ContinuousIntegrationBuild)' == 'true' AND '$(RepositoryCommit)' != ''">
+    <ItemGroup>
+      <SourceRoot Include="$(MSBuildThisFileDirectory)"
+                  SourceLinkUrl="https://raw.githubusercontent.com/CyberdyneDevelopment/Fdw/$(RepositoryCommit)/*" />
+    </ItemGroup>
+  </Target>
+</Project>

@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- NuGet Package Information -->
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageId>Fdw.Schema.Ddl</PackageId>
+    <Authors>Fdw</Authors>
+    <Description>DDL command interfaces and definitions for generating database schema scripts</Description>
+    <PackageTags>schema;ddl;database;sql;migration</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Schema.Abstractions\Fdw.Schema.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- Pack MSBuild targets and tasks into NuGet package -->
+  <ItemGroup>
+    <!-- Include targets file -->
+    <None Include="build\**\*" Pack="true" PackagePath="build\" />
+
+    <!-- Include task assembly in tools folder -->
+    <!-- Note: Task assembly is built separately and copied during pack -->
+    <None Include="..\Fdw.Schema.Ddl.Tasks\bin\$(Configuration)\netstandard2.0\Fdw.Schema.Ddl.Tasks.dll"
+          Pack="true"
+          PackagePath="tools\"
+          Condition="Exists('..\Fdw.Schema.Ddl.Tasks\bin\$(Configuration)\netstandard2.0\Fdw.Schema.Ddl.Tasks.dll')" />
+  </ItemGroup>
+</Project>

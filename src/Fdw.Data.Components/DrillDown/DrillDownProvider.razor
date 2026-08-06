@@ -1,0 +1,19 @@
+@namespace Fdw.UI.DrillDown
+@typeparam T
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading.Tasks
+
+@*
+    Headless drill-down provider. Manages expand/collapse state, node selection,
+    and breadcrumb path computation for a recursive hierarchy built from a root object.
+*@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}

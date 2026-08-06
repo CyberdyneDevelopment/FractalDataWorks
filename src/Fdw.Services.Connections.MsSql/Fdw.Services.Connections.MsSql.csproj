@@ -1,0 +1,74 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- Enable generator debugging -->
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Commands.Data.Abstractions\Fdw.Commands.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Configuration.Abstractions\Fdw.Configuration.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Configuration.SourceGenerators\Fdw.Configuration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Services.Connections.Abstractions\Fdw.Services.Connections.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Connections\Fdw.Services.Connections.csproj" />
+    <ProjectReference Include="..\Fdw.Services\Fdw.Services.csproj" />
+    <ProjectReference Include="..\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\Fdw.Data.RowSources.Abstractions\Fdw.Data.RowSources.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.SecretManagers\Fdw.Services.SecretManagers.csproj" />
+    <ProjectReference Include="..\Fdw.Results.Abstractions\Fdw.Results.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Validation\Fdw.Validation.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Data.DataSets\Fdw.Data.DataSets.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Connections.Sql\Fdw.Services.Connections.Sql.csproj" />
+    <ProjectReference Include="..\Fdw.Data.DataNodes\Fdw.Data.DataNodes.csproj" />
+    <ProjectReference Include="..\Fdw.Data.MsSql\Fdw.Data.MsSql.csproj" />
+    <ProjectReference Include="..\Fdw.Types.MsSql\Fdw.Types.MsSql.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Fdw.Services.Connections.MsSql.Tests" />
+    <InternalsVisibleTo Include="ReferenceConnections.MsSql.Tests" />
+    <!-- Why: Fdw.Data.MsSql.Tests was merged here when Data.MsSql was folded into Connections.MsSql. -->
+    <InternalsVisibleTo Include="Fdw.Data.MsSql.Tests" />
+    <!-- Why: the MsSql vault opens its OWN pooled connection via the internal connection-string
+         factory (CreatePooledConnection) — the shared GetOpenSqlConnection seam was removed.
+         DataVault.MsSql source was folded into Services.Credentials.Sql, so both are listed. -->
+    <InternalsVisibleTo Include="Fdw.Services.DataVault.MsSql" />
+    <InternalsVisibleTo Include="Fdw.Services.Credentials.Sql" />
+    <!-- Why: the RLS acceptance test composes CreatePooledConnection + SetUserSessionContext (the
+         production session-context path) directly, replacing the removed GetOpenSqlConnection seam. -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Why: Azure.Core (via Azure.Identity + Microsoft.Data.SqlClient.Extensions.Azure)
+         transitively pins Microsoft.Bcl.AsyncInterfaces 10.0.2, conflicting with the
+         10.0.5 central pin demanded by Microsoft.Extensions.* in the FDW chain.
+         A direct reference here promotes it to primary so the central pin wins. -->
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Microsoft.Data.SqlClient.Extensions.Azure" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Why: TypesSchema.sql moved here from Fdw.Types.MsSql during package consolidation. -->
+    <Folder Include="Messages\" />
+  </ItemGroup>
+
+
+</Project>

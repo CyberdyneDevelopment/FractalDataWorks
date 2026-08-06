@@ -1,0 +1,23 @@
+@using Fdw.UI.Web.Abstractions
+@typeparam TValue
+
+<div class="frow">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label>@Label</label>
+    }
+
+    <input
+        type="text"
+        class="finput"
+        value="@Value"
+        placeholder="@Placeholder"
+        maxlength="@MaxLength"
+        readonly="@ReadOnly"
+        @oninput="HandleInput" />
+
+    @if (!string.IsNullOrEmpty(HelpText))
+    {
+        <small class="hint">@HelpText</small>
+    }
+</div>

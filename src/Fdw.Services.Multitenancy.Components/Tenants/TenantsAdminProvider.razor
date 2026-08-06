@@ -1,0 +1,198 @@
+@namespace Fdw.Services.Multitenancy.Components.Tenants
+@using Fdw.UI.Providers
+@using Fdw.Results
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Net.Http
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Multitenancy.Clients
+@using Fdw.Services.Multitenancy.Clients.Models
+@using Fdw.Services.Multitenancy.Components.Logging
+
+@* Why: Headless provider for admin tenant CRUD. Manages list, create, edit, delete with proper state tracking. *@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    [Parameter] public RenderFragment<TenantsAdminContext>? ChildContent { get; set; }
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+    [Inject] private ILogger<TenantsAdminProvider>? LoggerParam { get; set; }
+
+    private TenantApiClient? _tenantApi;
+    private ILogger<TenantsAdminProvider> _logger = NullLogger<TenantsAdminProvider>.Instance;
+    private IReadOnlyList<TenantDetailPayload> _tenants = [];
+    private bool _isLoading;
+    private bool _isSaving;
+    private IGenericResult? _lastResult;
+    private string? _successMessage;
+    private TenantsAdminContext _context = new();
+    private bool _initialized;
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<TenantsAdminProvider>.Instance;
+        _tenantApi = new TenantApiClient(
+            HttpClientFactory.CreateClient("TenantClient"),
+            LoggerFactory?.CreateLogger<TenantApiClient>() ?? NullLogger<TenantApiClient>.Instance);
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _initialized) return;
+        _initialized = true;
+        await Load();
+    }
+
+    private async Task Load(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        _successMessage = null;
+        RebuildContext();
+        StateHasChanged();
+
+        TenantsAdminProviderLog.LoadingTenants(_logger);
+
+        try
+        {
+            var result = await _tenantApi!.GetTenants(includeInactive: true, cancellationToken);
+            if (!result.IsSuccess)
+            {
+                TenantsAdminProviderLog.LoadTenantsFailed(
+                    _logger, new InvalidOperationException(result.CurrentMessage));
+                _lastResult = result;
+                _tenants = [];
+                return;
+            }
+
+            var detailTasks = result.Value?.Select(t => _tenantApi!.GetTenant(t.Id, cancellationToken)) ?? [];
+            var detailResults = await Task.WhenAll(detailTasks);
+            // Why: explicit per-result IsSuccess guard before reading Value (FDW016) — a single LINQ
+            // Where(IsSuccess).Select(Value!) reads Value in a form the analyzer can't see is guarded.
+            var loaded = new List<TenantDetailPayload>();
+            foreach (var r in detailResults)
+            {
+                if (!r.IsSuccess || r.Value is null)
+                    continue;
+                loaded.Add(r.Value);
+            }
+            _tenants = loaded;
+            TenantsAdminProviderLog.LoadedTenants(_logger, _tenants.Count);
+        }
+        catch (OperationCanceledException) { return; }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(
+                new[] { TenantsAdminProviderLog.LoadTenantsFailed(_logger, ex) }
+                    .Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _tenants = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task CreateTenant(CreateTenantRequest request, CancellationToken cancellationToken = default)
+    {
+        _isSaving = true;
+        _lastResult = null;
+        _successMessage = null;
+        RebuildContext();
+        StateHasChanged();
+
+        TenantsAdminProviderLog.CreatingTenant(_logger, request.Name);
+
+        try
+        {
+            var result = await _tenantApi!.CreateTenant(request, cancellationToken);
+            if (!result.IsSuccess || result.Value is null)
+            {
+                TenantsAdminProviderLog.CreateTenantFailed(_logger, request.Name);
+                _lastResult = result;
+                return;
+            }
+
+            TenantsAdminProviderLog.TenantCreated(_logger, request.Name);
+            _successMessage = $"Tenant '{request.Name}' created successfully.";
+            await Load(cancellationToken);
+        }
+        catch (OperationCanceledException) { return; }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(
+                new[] { TenantsAdminProviderLog.CreateTenantException(_logger, ex, request.Name) }
+                    .Concat(ExceptionResultExtensions.FlattenException(ex)));
+        }
+        finally
+        {
+            _isSaving = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task UpdateTenant(Guid tenantId, UpdateTenantRequest request, CancellationToken cancellationToken = default)
+    {
+        _isSaving = true;
+        _lastResult = null;
+        _successMessage = null;
+        RebuildContext();
+        StateHasChanged();
+
+        TenantsAdminProviderLog.UpdatingTenant(_logger, tenantId.ToString());
+
+        try
+        {
+            var result = await _tenantApi!.UpdateTenant(tenantId, request, cancellationToken);
+            if (!result.IsSuccess || result.Value is null)
+            {
+                TenantsAdminProviderLog.UpdateTenantFailed(_logger, tenantId.ToString());
+                _lastResult = result;
+                return;
+            }
+
+            TenantsAdminProviderLog.TenantUpdated(_logger, tenantId.ToString());
+            _successMessage = $"Tenant '{result.Value.Name}' updated successfully.";
+            await Load(cancellationToken);
+        }
+        catch (OperationCanceledException) { return; }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(TenantsAdminProviderLog.UpdateTenantException(_logger, ex, tenantId.ToString()));
+        }
+        finally
+        {
+            _isSaving = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private void RebuildContext()
+    {
+        _context = new TenantsAdminContext
+        {
+            Tenants = _tenants,
+            IsLoading = _isLoading,
+            IsSaving = _isSaving,
+            LastResult = _lastResult,
+            SuccessMessage = _successMessage,
+            OnLoad = () => Load(),
+            OnCreateTenant = (req) => CreateTenant(req),
+            OnUpdateTenant = (id, req) => UpdateTenant(id, req)
+        };
+    }
+}

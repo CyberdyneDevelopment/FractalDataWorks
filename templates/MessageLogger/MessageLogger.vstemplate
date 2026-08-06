@@ -1,0 +1,21 @@
+<VSTemplate Version="3.0.0" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" Type="Item">
+  <TemplateData>
+    <DefaultName>ServiceLogger.cs</DefaultName>
+    <Name>FractalDataWorks Message Logger</Name>
+    <Description>Creates a static logger class with source-generated logging methods that return IGenericMessage</Description>
+    <ProjectType>CSharp</ProjectType>
+    <SortOrder>10</SortOrder>
+    <Icon>MessageLogger.ico</Icon>
+    <TemplateID>FractalDataWorks.MessageLogger</TemplateID>
+    <TemplateGroupID>CSharp</TemplateGroupID>
+    <PromptForSaveOnCreation>true</PromptForSaveOnCreation>
+  </TemplateData>
+  <TemplateContent>
+    <References>
+      <Reference>
+        <Assembly>Microsoft.Extensions.Logging.Abstractions</Assembly>
+      </Reference>
+    </References>
+    <ProjectItem ReplaceParameters="true" TargetFileName="$fileinputname$.cs">ServiceLogger.cs</ProjectItem>
+  </TemplateContent>
+</VSTemplate>

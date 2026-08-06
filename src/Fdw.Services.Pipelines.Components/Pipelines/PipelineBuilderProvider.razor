@@ -1,0 +1,668 @@
+@namespace Fdw.Services.Pipelines.Components.Pipelines
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Net.Http
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.UI.Pipelines.Clients
+@using Fdw.UI.Pipelines.Clients.Models
+@using Fdw.Services.Data.Clients
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Results
+@using Fdw.Services.Pipelines.Clients.Abstractions
+@using Fdw.Services.Pipelines.Components.Logging
+@using Fdw.Services.Pipelines.Components.Canvas
+@using Fdw.Services.Pipelines.Components.Canvas.Projection
+@using Fdw.UI.Abstractions.RenderModeOptions
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for pipeline builder: loads task/step/pipeline types and DataSets, and
+    /// projects a <see cref="PipelineDetailResponse"/> to/from <see cref="PipelineCanvasModel"/> via
+    /// <see cref="PipelineDetailCanvasProjection"/>/<see cref="PipelineCreateRequestProjection"/>.
+    /// </summary>
+    /// <remarks>
+    /// Why: this provider carries no dependency on server-core pipeline/ETL execution types
+    /// (<c>Fdw.Services.Pipelines</c>/<c>Fdw.Services.Etl</c>) — it is a headless UI component and
+    /// must only reference client DTOs. Both loading an existing pipeline (<see cref="LoadExisting"/>)
+    /// and Save/Publish persist through <see cref="IPipelineClient"/> — see their own remarks for how
+    /// the route's Guid id is resolved to the server's name-keyed contract, and how the canvas is
+    /// projected to/from <see cref="PipelineDetailResponse"/>.
+    /// </remarks>
+    [Parameter] public RenderFragment<PipelineBuilderContext>? ChildContent { get; set; }
+
+    [Parameter] public Guid PipelineId { get; set; }
+
+    // Why: carries the query-param pre-selected DataSet name for new pipelines arriving from
+    // Catalog or DataSetDetail "Use in Pipeline" / "Start Builder" journeys. The provider stores
+    // it so Builder.razor can read it from Context.InitialSourceDataSet after the first render.
+    [Parameter] public string? InitialSourceDataSet { get; set; }
+
+    // Why: fired once after the initial load (task/step/dataset types + any existing pipeline) resolves,
+    // so the host page can hydrate from CanvasModel OR ErrorMessage. The page's own OnAfterRenderAsync
+    // (firstRender) races ahead of this async load — without this callback a failed Get(id) leaves the
+    // canvas blank with no error banner.
+    [Parameter] public EventCallback OnInitialLoadComplete { get; set; }
+
+    // Why: designer client is retained ONLY for palette discovery (GetTaskTypes / GetStepTypes) — the
+    // only capability IPipelineDesignerClient currently exposes. There is no client method that loads
+    // a real pipeline's tasks/connections (see LoadExisting Why notes); Save/Publish persist through
+    // IPipelineClient below instead.
+    [Inject] private IPipelineDesignerClient DesignerApi { get; set; } = default!;
+
+    // Why: IPipelineClient is the real, persistence-capable client (CreatePipeline/UpdatePipeline)
+    // that Save/Publish target via PipelineCreateRequestProjection — see their Why remarks.
+    [Inject] private IPipelineClient PipelineApi { get; set; } = default!;
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+    [Inject] private ILogger<PipelineBuilderProvider>? LoggerParam { get; set; }
+
+    private ILogger<PipelineBuilderProvider> _logger = NullLogger<PipelineBuilderProvider>.Instance;
+    private DataSetApiClient? _dataSetApi;
+
+    // ── State ───────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<TaskTypeInfo> _taskTypes = [];
+    private IReadOnlyList<PipelineStepTypeSummary> _pipelineStepTypes = [];
+    private IReadOnlyList<DataSetSummaryPayload> _dataSets = [];
+    private IReadOnlyList<PipelineTypeSummary> _pipelineTypes = [];
+
+    // Why: tracks the id of a successfully loaded/saved real pipeline. Stays null under the current
+    // gap (no client capability persists a real pipeline's tasks/connections — see LoadExisting/Save).
+    private Guid? _loadedPipelineId;
+    private PipelineCanvasModel? _canvasModel;
+
+    private bool _isLoading;
+    private bool _isSaving;
+    private bool _isPublishing;
+    private IGenericResult? _lastResult;
+    private PipelineBuilderContext _context = new();
+    private bool _initialized;
+
+    // ── Public Read-Only Accessors (for @ref backward compatibility) ──────────
+
+    /// <summary>Gets the list of available task types.</summary>
+    public IReadOnlyList<TaskTypeInfo> TaskTypes => _taskTypes;
+
+    /// <summary>Gets the projected canvas model for the loaded pipeline, or <c>null</c> when creating new.</summary>
+    public PipelineCanvasModel? CanvasModel => _canvasModel;
+
+    /// <summary>
+    /// Gets the loaded pipeline's identifier, or <c>null</c> when no pipeline has been loaded
+    /// (new pipeline mode). Used by the host page to identify the pipeline for test-run dispatch.
+    /// </summary>
+    public Guid? PipelineConfigurationId => _loadedPipelineId;
+
+    /// <summary>Gets the most recent operation result.</summary>
+    public IGenericResult? LastResult => _lastResult;
+
+    /// <summary>Gets the current builder context (DataSets, callbacks, etc.).</summary>
+    public PipelineBuilderContext Context => _context;
+
+    // ── Lifecycle ───────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<PipelineBuilderProvider>.Instance;
+        // Why: DataSetApiClient is constructed here via IHttpClientFactory — the named client
+        //      registration provides the base URL; step types now come from DesignerApi (injected).
+        _dataSetApi = new DataSetApiClient(
+            HttpClientFactory.CreateClient("DataSetClient"),
+            LoggerFactory?.CreateLogger<DataSetApiClient>() ?? NullLogger<DataSetApiClient>.Instance);
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            // Why: LoadDataSets/LoadPipelineTypes run in parallel with LoadTaskTypes and LoadStepTypes
+            //      so the DataSet list and engine-type picker are ready by the time the first node is
+            //      dropped / the canvas renders.
+            await Task.WhenAll(LoadTaskTypes(), LoadStepTypes(), LoadDataSets(), LoadPipelineTypes());
+
+            if (PipelineId != Guid.Empty)
+            {
+                await LoadExisting(PipelineId);
+            }
+            else
+            {
+                // Why: a blank canvas must render (and accept drops) for a brand-new pipeline too —
+                // previously _canvasModel stayed null until LoadExisting ran, so OnCanvasDrop's
+                // CanvasModel?.EditContext guard silently no-op'd every drop on a new pipeline.
+                // PipelineType is deliberately left null here — it is set only by a real user
+                // selection (see SetPipelineType), never defaulted.
+                _canvasModel = new PipelineCanvasModel(
+                    id: Guid.Empty.ToString(),
+                    title: string.Empty,
+                    renderMode: RenderModes.ByName("Edit")!);
+                RebuildContext();
+                StateHasChanged();
+            }
+
+            // Why: deterministic "initial load done" signal — CanvasModel or ErrorMessage is now set;
+            // notify the host page so it hydrates (and surfaces a load failure) instead of relying on
+            // its own firstRender which already ran before this completed.
+            await OnInitialLoadComplete.InvokeAsync();
+        }
+    }
+
+    // ── Public Methods ──────────────────────────────────────────────────────────
+
+    /// <summary>Loads (or reloads) the available task types from the designer API palette endpoint.</summary>
+    public async Task LoadTaskTypes(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        PipelineBuilderProviderLog.LoadingTaskTypes(_logger);
+
+        try
+        {
+            var result = await DesignerApi.GetTaskTypes(cancellationToken);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(PipelineBuilderProviderLog.LoadTaskTypesFailed(_logger));
+                _taskTypes = [];
+                return;
+            }
+
+            _taskTypes = result.Value?.ToList() ?? [];
+            PipelineBuilderProviderLog.LoadedTaskTypes(_logger, _taskTypes.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { PipelineBuilderProviderLog.LoadTaskTypesException(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _taskTypes = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>Loads pipeline step types from the designer API.</summary>
+    public async Task LoadStepTypes(CancellationToken cancellationToken = default)
+    {
+        PipelineStepTypeProviderLog.LoadingStepTypes(_logger);
+
+        try
+        {
+            // Why: step types come from the domain's own endpoint (GET /pipelines/designer/step-types)
+            //      which reads PipelineStepTypes.All() via source-generated TypeCollection —
+            //      not the generic configuration/types?category=PipelineStep endpoint which
+            //      walks the schema-container tree and returns 0 for non-schema categories.
+            var result = await DesignerApi.GetStepTypes(cancellationToken);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(PipelineStepTypeProviderLog.LoadStepTypesFailed(_logger));
+                _pipelineStepTypes = [];
+                return;
+            }
+
+            _pipelineStepTypes = result.Value?.ToList() ?? [];
+            PipelineStepTypeProviderLog.LoadedStepTypes(_logger, _pipelineStepTypes.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { PipelineStepTypeProviderLog.LoadStepTypesException(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _pipelineStepTypes = [];
+        }
+        finally
+        {
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>Loads the list of DataSets available for task binding.</summary>
+    public async Task LoadDataSets(CancellationToken cancellationToken = default)
+    {
+        PipelineBuilderDataSetLog.LoadingDataSets(_logger);
+
+        try
+        {
+            var result = await _dataSetApi!.GetDataSets(cancellationToken);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(PipelineBuilderDataSetLog.LoadDataSetsFailed(_logger));
+                _dataSets = [];
+                return;
+            }
+
+            _dataSets = result.Value?.ToList() ?? [];
+            PipelineBuilderDataSetLog.LoadedDataSets(_logger, _dataSets.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { PipelineBuilderDataSetLog.LoadDataSetsException(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _dataSets = [];
+        }
+        finally
+        {
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>Loads the list of registered ETL pipeline engine types for the canvas engine picker.</summary>
+    public async Task LoadPipelineTypes(CancellationToken cancellationToken = default)
+    {
+        PipelineBuilderProviderLog.LoadingPipelineTypes(_logger);
+
+        try
+        {
+            var result = await PipelineApi.GetPipelineTypes(cancellationToken);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(PipelineBuilderProviderLog.LoadPipelineTypesFailed(_logger));
+                _pipelineTypes = [];
+                return;
+            }
+
+            _pipelineTypes = result.Value?.ToList() ?? [];
+            PipelineBuilderProviderLog.LoadedPipelineTypes(_logger, _pipelineTypes.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { PipelineBuilderProviderLog.LoadPipelineTypesException(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _pipelineTypes = [];
+        }
+        finally
+        {
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Sets the canvas model's engine discriminator (<see cref="PipelineCanvasModel.PipelineType"/>)
+    /// from a real user selection (the canvas toolbar engine picker, populated from
+    /// <see cref="LoadPipelineTypes"/>). Never called with a defaulted/guessed value.
+    /// </summary>
+    /// <param name="pipelineType">The selected engine type (e.g. "BatchCopy").</param>
+    public void SetPipelineType(string pipelineType)
+    {
+        if (_canvasModel is null)
+            return;
+
+        _canvasModel.PipelineType = pipelineType;
+        PipelineBuilderProviderLog.PipelineTypeSet(_logger, pipelineType);
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    /// <summary>Creates a new DataSet inline from the builder and refreshes the DataSet list.</summary>
+    public async Task<string?> CreateDataSet(CreateDataSetPayload request, CancellationToken cancellationToken = default)
+    {
+        PipelineBuilderDataSetLog.CreatingDataSet(_logger, request.Name);
+
+        try
+        {
+            var result = await _dataSetApi!.CreateDataSet(request, cancellationToken);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(PipelineBuilderDataSetLog.CreateDataSetFailed(_logger, request.Name));
+                RebuildContext();
+                StateHasChanged();
+                return null;
+            }
+
+            PipelineBuilderDataSetLog.DataSetCreated(_logger, request.Name);
+
+            // Why: reload the DataSets list so the picker shows the newly created entry.
+            await LoadDataSets(cancellationToken);
+            return result.Value?.Name;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { PipelineBuilderDataSetLog.CreateDataSetException(_logger, ex, request.Name) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            RebuildContext();
+            StateHasChanged();
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Loads an existing pipeline by id and projects it to a <see cref="PipelineCanvasModel"/> via
+    /// <see cref="PipelineDetailCanvasProjection.ToCanvas"/>.
+    /// </summary>
+    /// <remarks>
+    /// Why: the Builder route carries a Guid id, but <see cref="IPipelineClient.Get"/> is name-keyed
+    /// (the server resource is <c>pipelines/{name}</c>) — there is no by-id client/endpoint method.
+    /// Rather than fabricate/guess a name, this resolves the id honestly through data the client
+    /// already exposes: <see cref="IPipelineClient.List"/> returns every pipeline's real
+    /// <c>Id</c>/<c>Name</c> pair, so the matching summary's <c>Name</c> is used for the subsequent
+    /// <c>Get</c> call. <see cref="PipelineDetailCanvasProjection"/> (not the retired
+    /// <see cref="PipelineCanvasProjection.ToCanvas"/> designer-graph projection, which has no live
+    /// backing endpoint) builds the canvas from the resulting <see cref="PipelineDetailResponse"/>.
+    /// </remarks>
+    public async Task LoadExisting(Guid id, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        PipelineBuilderProviderLog.LoadingExistingPipeline(_logger, id);
+
+        try
+        {
+            var listResult = await PipelineApi.List(cancellationToken);
+            if (!listResult.IsSuccess)
+            {
+                PipelineBuilderProviderLog.LoadExistingPipelineFailed(_logger, id);
+                _lastResult = listResult;
+                _canvasModel = null;
+                _loadedPipelineId = null;
+                return;
+            }
+
+            var summary = listResult.Value?.FirstOrDefault(p => p.Id == id);
+            if (summary is null)
+            {
+                PipelineBuilderProviderLog.PipelineNotFoundById(_logger, id);
+                _lastResult = listResult;
+                _canvasModel = null;
+                _loadedPipelineId = null;
+                return;
+            }
+
+            var detailResult = await PipelineApi.Get(summary.Name, cancellationToken);
+            if (!detailResult.IsSuccess)
+            {
+                PipelineBuilderProviderLog.LoadExistingPipelineFailed(_logger, id);
+                _lastResult = detailResult;
+                _canvasModel = null;
+                _loadedPipelineId = null;
+                return;
+            }
+
+            var canvasResult = PipelineDetailCanvasProjection.ToCanvas(detailResult.Value!, RenderModes.ByName("Edit")!, _logger);
+            if (!canvasResult.IsSuccess)
+            {
+                _lastResult = canvasResult;
+                _canvasModel = null;
+                _loadedPipelineId = null;
+                return;
+            }
+
+            _canvasModel = canvasResult.Value;
+            _loadedPipelineId = detailResult.Value!.Id;
+            PipelineBuilderProviderLog.LoadedExistingPipeline(_logger, id);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(PipelineBuilderProviderLog.LoadExistingPipelineException(_logger, ex, id));
+            _canvasModel = null;
+            _loadedPipelineId = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Validates the current canvas model, projects it to a <see cref="CreatePipelineClientRequest"/>
+    /// via <see cref="PipelineCreateRequestProjection.ToCreateRequest"/>, and persists it through
+    /// <see cref="PipelineApi"/> — <c>CreatePipeline</c> for a new pipeline, <c>UpdatePipeline</c> for
+    /// an already-loaded one.
+    /// </summary>
+    /// <remarks>
+    /// Why: <see cref="PipelineCanvasProjection.ToDetail"/> is still run first purely for its graph
+    /// validation (<see cref="Canvas.Validation.PipelineGraphValidator"/>) — its
+    /// <see cref="PipelineDetailPayload"/> output is not itself persisted; that designer contract (retired
+    /// <c>FileSystemDesignerPipelineStore</c> CRUD surface) has no live persistence endpoint.
+    /// <see cref="PipelineCreateRequestProjection"/> targets the contract that actually persists.
+    /// </remarks>
+    /// <param name="pipelineName">The (possibly updated) name for the pipeline.</param>
+    /// <param name="pipelineDescription">The optional description for the pipeline.</param>
+    /// <param name="cancellationToken">Token to cancel the save operation.</param>
+    /// <returns><c>true</c> on success; <c>false</c> when validation or persistence fails.</returns>
+    public async Task<bool> Save(string pipelineName, string? pipelineDescription, CancellationToken cancellationToken = default)
+    {
+        if (_canvasModel is null)
+        {
+            _lastResult = GenericResult.Failure(PipelineBuilderProviderLog.SavePipelineFailed(_logger, pipelineName));
+            RebuildContext();
+            StateHasChanged();
+            return false;
+        }
+
+        _isSaving = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        PipelineBuilderProviderLog.SavingPipeline(_logger, pipelineName);
+
+        try
+        {
+            // ── Validate the graph via the designer-contract projection ──────────────
+            var projectionResult = PipelineCanvasProjection.ToDetail(_canvasModel, _logger);
+            if (!projectionResult.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(PipelineBuilderProviderLog.CanvasProjectionFailed(_logger, pipelineName));
+                return false;
+            }
+
+            // ── Project canvas → CreatePipelineClientRequest (the real, persistence-capable contract) ──
+            var requestResult = PipelineCreateRequestProjection.ToCreateRequest(_canvasModel, pipelineName, pipelineDescription, _logger);
+            if (!requestResult.IsSuccess)
+            {
+                _lastResult = requestResult;
+                return false;
+            }
+
+            var request = requestResult.Value!;
+
+            if (_loadedPipelineId is null)
+            {
+                var createResult = await PipelineApi.CreatePipeline(request, cancellationToken);
+                if (!createResult.IsSuccess)
+                {
+                    _lastResult = createResult;
+                    return false;
+                }
+
+                _loadedPipelineId = createResult.Value!.Id;
+            }
+            else
+            {
+                var updateResult = await PipelineApi.UpdatePipeline(pipelineName, ToUpdateRequest(request), cancellationToken);
+                if (!updateResult.IsSuccess)
+                {
+                    _lastResult = updateResult;
+                    return false;
+                }
+            }
+
+            PipelineBuilderProviderLog.PipelineSaved(_logger, pipelineName);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(PipelineBuilderProviderLog.SavePipelineException(_logger, ex, pipelineName));
+            return false;
+        }
+        finally
+        {
+            _isSaving = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Publishes the pipeline (sets it to Active status). Persists the current canvas state via the
+    /// same projection as <see cref="Save"/> and forces <c>IsEnabled = true</c> on the resulting
+    /// <see cref="UpdatePipelineClientRequest"/>.
+    /// </summary>
+    public async Task<bool> Publish(string name, CancellationToken cancellationToken = default)
+    {
+        if (_loadedPipelineId is null)
+        {
+            _lastResult = GenericResult.Failure(PipelineBuilderProviderLog.PublishPipelineFailed(_logger, name));
+            RebuildContext();
+            StateHasChanged();
+            return false;
+        }
+
+        if (_canvasModel is null)
+        {
+            _lastResult = GenericResult.Failure(PipelineBuilderProviderLog.PublishPipelineFailed(_logger, name));
+            RebuildContext();
+            StateHasChanged();
+            return false;
+        }
+
+        _isPublishing = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        PipelineBuilderProviderLog.PublishingPipeline(_logger, name);
+
+        try
+        {
+            var requestResult = PipelineCreateRequestProjection.ToCreateRequest(_canvasModel, name, pipelineDescription: null, _logger);
+            if (!requestResult.IsSuccess)
+            {
+                _lastResult = requestResult;
+                return false;
+            }
+
+            var updateRequest = ToUpdateRequest(requestResult.Value!);
+            updateRequest.IsEnabled = true;
+
+            var updateResult = await PipelineApi.UpdatePipeline(name, updateRequest, cancellationToken);
+            if (!updateResult.IsSuccess)
+            {
+                _lastResult = updateResult;
+                return false;
+            }
+
+            PipelineBuilderProviderLog.PipelinePublished(_logger, name);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(PipelineBuilderProviderLog.PublishPipelineException(_logger, ex, name));
+            return false;
+        }
+        finally
+        {
+            _isPublishing = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // Why: shared by Save's update branch and Publish — both persist the current canvas state through
+    // UpdatePipelineClientRequest; Publish additionally forces IsEnabled = true on the result.
+    private static UpdatePipelineClientRequest ToUpdateRequest(CreatePipelineClientRequest request)
+    {
+        return new UpdatePipelineClientRequest
+        {
+            SourceConnectionName = request.SourceConnectionName,
+            DestinationConnectionName = request.DestinationConnectionName,
+            SourceDataSet = request.SourceDataSet,
+            DestinationDataSet = request.DestinationDataSet,
+            Description = request.Description,
+            IsEnabled = request.IsEnabled,
+            Transforms = request.Transforms,
+        };
+    }
+
+    /// <summary>
+    /// Validates the current canvas model using <see cref="Canvas.Validation.PipelineGraphValidator"/>
+    /// and returns the validation issues. Does not persist.
+    /// </summary>
+    public Canvas.Validation.PipelineGraphValidationResult? ValidateCanvas()
+    {
+        if (_canvasModel is null)
+            return null;
+        return Canvas.Validation.PipelineGraphValidator.Validate(_canvasModel);
+    }
+
+    // ── Private Helpers ─────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new PipelineBuilderContext
+        {
+            TaskTypes = _taskTypes,
+            PipelineStepTypes = _pipelineStepTypes,
+            DataSets = _dataSets,
+            PipelineTypes = _pipelineTypes,
+            CanvasModel = _canvasModel,
+            IsLoading = _isLoading,
+            IsSaving = _isSaving,
+            IsPublishing = _isPublishing,
+            LastResult = _lastResult,
+            // Why: pass through the journey-entry query param so Builder.razor can read it
+            // from Context.InitialSourceDataSet and auto-populate the first Source task.
+            InitialSourceDataSet = InitialSourceDataSet,
+            OnLoadTaskTypes = () => LoadTaskTypes(),
+            OnLoadExisting = id => LoadExisting(id),
+            OnSave = (name, desc) => Save(name, desc),
+            OnPublish = name => Publish(name),
+            OnCreateDataSet = request => CreateDataSet(request),
+            OnSetPipelineType = pipelineType =>
+            {
+                SetPipelineType(pipelineType);
+                return Task.CompletedTask;
+            }
+        };
+    }
+}

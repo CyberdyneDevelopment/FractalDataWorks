@@ -1,0 +1,76 @@
+namespace Fdw.UI.Components.Services;
+
+using System;
+
+/// <summary>
+/// Maps health/status values to display properties (color, label, CSS class hints).
+/// Framework-agnostic — returns semantic values that consumers map to their styling system.
+/// </summary>
+public static class StatusBadgeMapper
+{
+    /// <summary>
+    /// Gets a <see cref="StatusBadge"/> for the given health state.
+    /// </summary>
+    /// <param name="isHealthy">Whether the entity is healthy.</param>
+    /// <returns>A status badge with label, color, and variant.</returns>
+    public static StatusBadge FromHealth(bool isHealthy)
+    {
+        return isHealthy
+            ? new StatusBadge("Healthy", StatusColors.Green, StatusVariants.Success)
+            : new StatusBadge("Unhealthy", StatusColors.Red, StatusVariants.Error);
+    }
+
+    /// <summary>
+    /// Gets a <see cref="StatusBadge"/> for the given pipeline status.
+    /// </summary>
+    /// <param name="status">The pipeline execution status.</param>
+    /// <returns>A status badge with label, color, and variant.</returns>
+    public static StatusBadge FromPipelineStatus(string? status)
+    {
+        if (string.IsNullOrEmpty(status))
+        {
+            return new StatusBadge("Unknown", StatusColors.Gray, StatusVariants.Neutral);
+        }
+
+        if (string.Equals(status, "Running", StringComparison.OrdinalIgnoreCase))
+        {
+            return new StatusBadge("Running", StatusColors.Blue, StatusVariants.Info);
+        }
+
+        if (string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(status, "Succeeded", StringComparison.OrdinalIgnoreCase))
+        {
+            return new StatusBadge("Completed", StatusColors.Green, StatusVariants.Success);
+        }
+
+        if (string.Equals(status, "Failed", StringComparison.OrdinalIgnoreCase))
+        {
+            return new StatusBadge("Failed", StatusColors.Red, StatusVariants.Error);
+        }
+
+        if (string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+        {
+            return new StatusBadge("Cancelled", StatusColors.Yellow, StatusVariants.Warning);
+        }
+
+        if (string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(status, "Queued", StringComparison.OrdinalIgnoreCase))
+        {
+            return new StatusBadge("Pending", StatusColors.Gray, StatusVariants.Neutral);
+        }
+
+        return new StatusBadge(status, StatusColors.Gray, StatusVariants.Neutral);
+    }
+
+    /// <summary>
+    /// Gets a <see cref="StatusBadge"/> for a schedule enabled/disabled state.
+    /// </summary>
+    /// <param name="isEnabled">Whether the schedule is enabled.</param>
+    /// <returns>A status badge with label, color, and variant.</returns>
+    public static StatusBadge FromScheduleState(bool isEnabled)
+    {
+        return isEnabled
+            ? new StatusBadge("Active", StatusColors.Green, StatusVariants.Success)
+            : new StatusBadge("Disabled", StatusColors.Gray, StatusVariants.Neutral);
+    }
+}

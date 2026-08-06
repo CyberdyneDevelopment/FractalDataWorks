@@ -1,0 +1,36 @@
+using FluentValidation;
+using Fdw.Validation.FastEndpoints;
+
+namespace Fdw.Services.SecretManagers.Endpoints.Validators;
+
+/// <summary>
+/// Validator for <see cref="CreateSecretManagerRequest"/>.
+/// </summary>
+public sealed class CreateSecretManagerRequestValidator : FdwEndpointValidator<CreateSecretManagerRequest>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CreateSecretManagerRequestValidator"/> class.
+    /// </summary>
+    public CreateSecretManagerRequestValidator()
+    {
+        ValidateName(x => x.Name);
+
+        RuleFor(x => x.SecretManagerType)
+            .NotEmpty()
+            .WithMessage("SecretManagerType is required");
+
+        // Why: callers must supply the typed body explicitly. A request body that omits
+        // Configuration would leave the typed-body child row unset and silently break
+        // subsequent Get/Update/Delete on the SM.
+        RuleFor(x => x.Configuration)
+            .NotNull()
+            .WithMessage("Configuration object is required");
+
+        When(x => x.Description is not null, () =>
+        {
+            RuleFor(x => x.Description!)
+                .MaximumLength(1000)
+                .WithMessage("Description must not exceed 1000 characters");
+        });
+    }
+}

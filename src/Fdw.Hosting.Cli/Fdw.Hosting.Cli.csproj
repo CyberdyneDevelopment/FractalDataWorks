@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.Hosting.Cli</RootNamespace>
+
+    <PackageId>Fdw.Hosting.Cli</PackageId>
+    <Title>Fdw Hosting — CLI</Title>
+    <Description>Hosting extensions for Fdw CLI / admin console hosts. Wires Spectre rendering, env-var secret manager, audit context accessor, and schema discovery dispatch into the DI container so any FDW-built CLI (fdw-cli, per-app admin tools) can bootstrap with a single extension method.</Description>
+    <Authors>Fdw</Authors>
+    <Copyright>Copyright © Fdw</Copyright>
+
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.UI.Rendering.Spectre\Fdw.UI.Rendering.Spectre.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Audit.Abstractions\Fdw.Services.Audit.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Audit\Fdw.Services.Audit.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+</Project>

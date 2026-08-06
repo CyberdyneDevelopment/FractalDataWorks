@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Schema.Ddl\Fdw.Schema.Ddl.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,233 @@
+@namespace Fdw.Data.UI.Components
+@using System.Net.Http
+@using Fdw.Data.Components.Logging
+@using Fdw.Schema.Clients
+@using Fdw.Schema.Clients.Models
+@using Fdw.Services.Data.Clients.Models
+@using Microsoft.Extensions.Logging.Abstractions
+
+@ChildContent?.Invoke(BuildContext())
+
+@code {
+    // ── Parameters ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The name of the DataSet for which to run the embedded preview query.
+    /// This parameter is required; the pane will log a failure and show an error if it is absent.
+    /// </summary>
+    [Parameter] public string? DataSetName { get; set; }
+
+    /// <summary>Render fragment that receives the <see cref="DataSetDetailPreviewContext"/> for layout.</summary>
+    [Parameter] public RenderFragment<DataSetDetailPreviewContext>? ChildContent { get; set; }
+
+    // ── Injected services ──────────────────────────────────────────────────────
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    // ── Internal state ─────────────────────────────────────────────────────────
+
+    private ILogger<DataSetDetailPreviewPane> _logger = NullLogger<DataSetDetailPreviewPane>.Instance;
+    private SchemaApiClient? _schemaApi;
+
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private IReadOnlyList<string> _columns = [];
+    private IReadOnlyList<IReadOnlyDictionary<string, object?>> _rows = [];
+    private int _rowLimit = 25;
+    private bool _isPaneOpen;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerFactory?.CreateLogger<DataSetDetailPreviewPane>() ?? NullLogger<DataSetDetailPreviewPane>.Instance;
+        // Why: SchemaApiClient is created once per pane instance to avoid repeated allocation.
+        // Risk 1 in spec: if 'SchemaClient' is not registered the HttpClientFactory will throw at
+        // runtime; that error surfaces as a failed LastResult on the first LoadPreview call.
+        _schemaApi = new SchemaApiClient(
+            HttpClientFactory.CreateClient("SchemaClient"),
+            LoggerFactory?.CreateLogger<SchemaApiClient>() ?? NullLogger<SchemaApiClient>.Instance);
+    }
+
+    // ── Public surface (consumed via @ref from DataSetDetail.razor) ────────────
+
+    /// <summary>Toggles the preview pane open or closed, then updates state.</summary>
+    public Task OnTogglePane()
+    {
+        var name = DataSetName;
+        if (_isPaneOpen)
+        {
+            _isPaneOpen = false;
+            if (name is not null)
+                DataPreviewProviderLog.TogglePaneClose(_logger, name);
+        }
+        else
+        {
+            _isPaneOpen = true;
+            if (name is not null)
+                DataPreviewProviderLog.TogglePaneOpen(_logger, name);
+        }
+
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    // ── Private callbacks (wired into context) ─────────────────────────────────
+
+    private async Task LoadPreview(CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(DataSetName))
+        {
+            // Why: Fail loud — a missing DataSetName is a programming error, not a benign state.
+            _lastResult = GenericResult.Failure(DataPreviewProviderLog.LoadPreviewPaneFailed(
+                _logger,
+                new InvalidOperationException("DataSetName parameter is required but was not provided."),
+                ""));
+            RebuildContext();
+            StateHasChanged();
+            return;
+        }
+
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        // Why: DataSetName is captured here after the null-guard above, so the compiler knows
+        // it is non-null for the rest of the method (local shadows the nullable parameter).
+        var dataSetName = DataSetName;
+
+        try
+        {
+            DataPreviewProviderLog.LoadingPreviewPane(_logger, dataSetName);
+
+            var request = new SchemaPreviewRequest
+            {
+                DataSetName = dataSetName,
+                MaxRows = _rowLimit,
+            };
+
+            var result = await _schemaApi!.PreviewData(request, cancellationToken);
+            if (!result.IsSuccess)
+            {
+                _lastResult = result;
+                _columns = [];
+                _rows = [];
+                _isLoading = false;
+                RebuildContext();
+                StateHasChanged();
+                return;
+            }
+
+            var response = result.Value;
+            _columns = response?.Columns.Select(c => c.Name).ToList() ?? [];
+            _rows = response?.Rows.ToList() ?? [];
+        }
+        catch (OperationCanceledException)
+        {
+            // Why: Silent return on cancellation — no log, no state change (standard FDW pattern).
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { DataPreviewProviderLog.LoadPreviewPaneFailed(_logger, ex, dataSetName) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _columns = [];
+            _rows = [];
+        }
+
+        _isLoading = false;
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    private void OnRowLimitChanged(int limit)
+    {
+        _rowLimit = limit;
+        DataPreviewProviderLog.UpdateRowLimit(_logger, limit);
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    private async Task OnExportCsv()
+    {
+        // Why: Export is a UI concern — DataSetDetailPreviewPane holds the state,
+        // so CSV generation lives here rather than burdening the page.
+        if (_columns.Count == 0 || _rows.Count == 0) return;
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(string.Join(",", _columns.Select(EscapeCsv)));
+        foreach (var row in _rows)
+        {
+            var values = _columns.Select(c =>
+            {
+                row.TryGetValue(c, out var val);
+                return EscapeCsv(val?.ToString() ?? "");
+            });
+            sb.AppendLine(string.Join(",", values));
+        }
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+        var base64 = Convert.ToBase64String(bytes);
+        var fileName = $"{DataSetName}_preview.csv";
+
+        // Why: JS interop is the established pattern for CSV download in this codebase;
+        // see DataPreviewPageProvider.razor for the identical technique.
+        var js = HttpContextAccessorFallback();
+        if (js is not null)
+            await js.InvokeVoidAsync("eval", $"""
+                var a = document.createElement('a');
+                a.href = 'data:text/csv;base64,{base64}';
+                a.download = '{fileName}';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                """);
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+
+    private IJSRuntime? HttpContextAccessorFallback()
+    {
+        // Why: DataSetDetailPreviewPane is a headless component (no @page) embedded inside a page
+        // that already has IJSRuntime via the page's Inject. We cannot Inject twice on the same
+        // component, so we expose OnExportCsv as a fallback no-op when JS is not wired. The
+        // skin (DataSetDetail.razor) must pass JS interop to the pane if CSV export is wanted.
+        return _jsRuntime;
+    }
+
+    [Inject] private IJSRuntime? _jsRuntime { get; set; }
+
+    private void RebuildContext()
+    {
+        _context = new DataSetDetailPreviewContext
+        {
+            Columns = _columns,
+            Rows = _rows,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            IsPaneOpen = _isPaneOpen,
+            RowLimit = _rowLimit,
+            OnLoadPreview = () => LoadPreview(),
+            OnTogglePane = OnTogglePane,
+            OnRowLimitChanged = OnRowLimitChanged,
+            OnExportCsv = OnExportCsv,
+        };
+    }
+
+    private DataSetDetailPreviewContext _context = new();
+
+    private DataSetDetailPreviewContext BuildContext()
+    {
+        RebuildContext();
+        return _context;
+    }
+
+    private static string EscapeCsv(string value)
+    {
+        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
+            return $"\"{value.Replace("\"", "\"\"")}\"";
+        return value;
+    }
+}

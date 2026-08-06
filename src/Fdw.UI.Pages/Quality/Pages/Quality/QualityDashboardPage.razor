@@ -1,0 +1,112 @@
+@page "/quality"
+@page "/quality/dashboard"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Quality Dashboard - Cyberdyne</PageTitle>
+
+<QualityDashboardProvider>
+    <ChildContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">Governance</div>
+                <h1>Quality</h1>
+                <div class="sub">Rule-based validation across DataSets — null, range, unique, foreign-key, custom.</div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-secondary" @onclick="async () => await ctx.OnRefresh()" disabled="@ctx.IsLoading">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
+        {
+            <div class="card"><div class="card-b"><div class="alert alert-err">@ctx.ErrorMessage</div></div></div>
+        }
+
+        @if (ctx.IsLoading && ctx.Dashboard is null)
+        {
+            <div class="loadwrap"><div class="spin"></div></div>
+        }
+        else if (ctx.Dashboard is not null)
+        {
+            <div class="metrics" style="grid-template-columns:repeat(3,1fr);">
+                <div class="metric">
+                    <div class="mt"><span class="lbl">Total Rules</span><span class="ic ic-glacier"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 4v5c0 5-4 8-8 9-4-1-8-4-8-9V7z" /></svg></span></div>
+                    <div class="row"><span class="val">@ctx.Dashboard.TotalRules</span></div>
+                </div>
+                <div class="metric">
+                    <div class="mt"><span class="lbl">Passing</span><span class="ic ic-green"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></span></div>
+                    <div class="row"><span class="val">@ctx.Dashboard.PassingRules</span></div>
+                </div>
+                <div class="metric">
+                    <div class="mt"><span class="lbl">Failing</span><span class="ic ic-red"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9L2.4 18a1.5 1.5 0 001.3 2.2h16.6a1.5 1.5 0 001.3-2.2L13.7 3.9a1.5 1.5 0 00-2.6 0z" /></svg></span></div>
+                    <div class="row"><span class="val">@ctx.Dashboard.FailingRules</span></div>
+                </div>
+            </div>
+
+            @if (ctx.Dashboard.TotalRules > 0)
+            {
+                <div class="card">
+                    <div class="card-h"><h3>Quality Health</h3><span class="meta">@(Math.Round((double)ctx.Dashboard.PassingRules / ctx.Dashboard.TotalRules * 100))% passing</span></div>
+                    <div class="card-b">
+                        <div class="health">
+                            <div class="h" style="grid-column:1/-1;">
+                                <div class="hbar"><i style="@($"width:{Math.Round((double)ctx.Dashboard.PassingRules / ctx.Dashboard.TotalRules * 100)}%;background:var(--success);")"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (ctx.RecentExecutions.Any())
+            {
+                <div class="card">
+                    <div class="card-h"><h3>Rules Overview</h3></div>
+                    <div class="card-b" style="padding:0 10px 12px;">
+                        <table class="tbl">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var rule in ctx.RecentExecutions)
+                                {
+                                    <tr>
+                                        <td><div class="cellpad nm">@rule.Name</div></td>
+                                        <td class="mut">@rule.Description</td>
+                                        <td>
+                                            <span class="badge @(rule.IsEnabled ? "b-ok" : "b-idle")"><span class="bd"></span>@(rule.IsEnabled ? "Enabled" : "Disabled")</span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+
+            <div class="actions" style="justify-content:center;">
+                <a class="btn btn-secondary btn-sm" href="/quality/rules">Manage Quality Rules</a>
+            </div>
+        }
+        else
+        {
+            <div class="card">
+                <div class="card-b" style="text-align:center;padding:40px 20px;">
+                    <p style="color:var(--n-300);margin:0 0 6px;">Quality dashboard data unavailable</p>
+                    <p class="hint" style="margin:0;">Configure quality rules to start monitoring data quality</p>
+                </div>
+            </div>
+        }
+    </ChildContent>
+</QualityDashboardProvider>
+
+@code {
+}

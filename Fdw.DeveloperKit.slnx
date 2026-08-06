@@ -1,0 +1,906 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Debug-Local" />
+    <BuildType Name="Develop" />
+    <BuildType Name="Develop-Local" />
+    <BuildType Name="Release" />
+    <BuildType Name="Release-Local" />
+    <BuildType Name="Test" />
+    <BuildType Name="Test-Local" />
+  </Configurations>
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- Solution Items                                                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="coverage.runsettings" />
+    <File Path="coverlet.runsettings" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="LICENSE" />
+    <File Path="nuget.config" />
+    <File Path="README.md" />
+    <File Path="SECURITY.md" />
+    <File Path="version.json" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Core - Foundation packages                                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Core/">
+    <Project Path="src/Fdw.Abstractions/Fdw.Abstractions.csproj" />
+    <Project Path="src/Fdw.Collections.Analyzers/Fdw.Collections.Analyzers.csproj" />
+    <Project Path="src/Fdw.Collections.CodeFixes/Fdw.Collections.CodeFixes.csproj" />
+    <Project Path="src/Fdw.Collections.SourceGenerators/Fdw.Collections.SourceGenerators.csproj" />
+    <Project Path="src/Fdw.Expressions/Fdw.Expressions.csproj" />
+    <Project Path="src/Fdw.SourceGenerators/Fdw.SourceGenerators.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Configuration - Configuration system                                          -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Configuration/">
+    <Project Path="src/Fdw.Configuration.Abstractions/Fdw.Configuration.Abstractions.csproj" />
+    <Project Path="src/Fdw.Configuration/Fdw.Configuration.csproj" />
+    <Project Path="src/Fdw.Configuration.UI.SourceGenerators/Fdw.Configuration.UI.SourceGenerators.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/CodeBuilder - Code analysis and generation                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/CodeBuilder/">
+    <Project Path="src/Fdw.CodeBuilder.Abstractions/Fdw.CodeBuilder.Abstractions.csproj" />
+    <Project Path="src/Fdw.CodeBuilder.Analysis/Fdw.CodeBuilder.Analysis.csproj" />
+    <Project Path="src/Fdw.CodeBuilder.Analysis.CSharp/Fdw.CodeBuilder.Analysis.CSharp.csproj" />
+    <Project Path="src/Fdw.CodeBuilder.CSharp/Fdw.CodeBuilder.CSharp.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Commands - Command pattern implementations                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Commands/">
+    <Project Path="src/Fdw.Commands.Abstractions/Fdw.Commands.Abstractions.csproj" />
+    <Project Path="src/Fdw.Commands.Data.Abstractions/Fdw.Commands.Data.Abstractions.csproj" />
+    <Project Path="src/Fdw.Commands.Data.Extensions/Fdw.Commands.Data.Extensions.csproj" />
+    <Project Path="src/Fdw.Commands.Development.Abstractions/Fdw.Commands.Development.Abstractions.csproj" />
+    <Project Path="src/Fdw.Roslyn.Commands.Abstractions/Fdw.Roslyn.Commands.Abstractions.csproj" />
+    <Project Path="src/Fdw.Roslyn.Commands/Fdw.Roslyn.Commands.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Data - Data access and manipulation                                           -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Data/">
+    <Project Path="src/Fdw.Data.Abstractions/Fdw.Data.Abstractions.csproj" />
+    <Project Path="src/Fdw.Data.Builders/Fdw.Data.Builders.csproj" />
+    <Project Path="src/Fdw.Data.DataContainers.Abstractions/Fdw.Data.DataContainers.Abstractions.csproj" />
+    <Project Path="src/Fdw.Data.Files/Fdw.Data.Files.csproj" />
+    <Project Path="src/Fdw.Data.Importers.Abstractions/Fdw.Data.Importers.Abstractions.csproj" />
+    <Project Path="src/Fdw.Data.JsonSchema/Fdw.Data.JsonSchema.csproj" />
+    <Project Path="src/Fdw.Data.Lineage/Fdw.Data.Lineage.csproj" />
+    <Project Path="src/Fdw.Data.OData/Fdw.Data.OData.csproj" />
+    <Project Path="src/Fdw.Data.OpenApi/Fdw.Data.OpenApi.csproj" />
+    <Project Path="src/Fdw.Data.RowSources.Abstractions/Fdw.Data.RowSources.Abstractions.csproj" />
+    <Project Path="src/Fdw.Data.RowSources.DataReader/Fdw.Data.RowSources.DataReader.csproj" />
+    <Project Path="src/Fdw.Data.RowSources.Http/Fdw.Data.RowSources.Http.csproj" />
+    <Project Path="src/Fdw.Data.RowSources.Json/Fdw.Data.RowSources.Json.csproj" />
+    <Project Path="src/Fdw.Data.RowSources.Xml/Fdw.Data.RowSources.Xml.csproj" />
+    <Project Path="src/Fdw.Data.RowSources/Fdw.Data.RowSources.csproj" />
+    <Project Path="src/Fdw.Data.Serialization/Fdw.Data.Serialization.csproj" />
+    <Project Path="src/Fdw.Data.SourceGenerators/Fdw.Data.SourceGenerators.csproj" />
+    <Project Path="src/Fdw.Data.Transformers.Abstractions/Fdw.Data.Transformers.Abstractions.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/ServiceTypes - Service type system with analyzers                             -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/ServiceTypes/">
+    <Project Path="src/Fdw.ServiceTypes.Analyzers/Fdw.ServiceTypes.Analyzers.csproj" />
+    <Project Path="src/Fdw.ServiceTypes.CodeFixes/Fdw.ServiceTypes.CodeFixes.csproj" />
+  </Folder>
+  <Folder Name="/src/Roslyn/">
+    <Project Path="src/Fdw.Results.Abstractions/Fdw.Results.Abstractions.csproj" />
+    <Project Path="src/Fdw.Sql.Workspace/Fdw.Sql.Workspace.csproj" />
+    <Project Path="src/Fdw.Sql.Commands.Abstractions/Fdw.Sql.Commands.Abstractions.csproj" />
+    <Project Path="src/Fdw.Sql.Commands/Fdw.Sql.Commands.csproj" />
+    <Project Path="tests/Fdw.Sql.Workspace.Tests/Fdw.Sql.Workspace.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Services - Service domain implementations                                     -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Services/">
+    <Project Path="src/Fdw.Services.Abstractions/Fdw.Services.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.SessionState.Abstractions/Fdw.Services.SessionState.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.SessionState.Components/Fdw.Services.SessionState.Components.csproj" />
+    <Project Path="src/Fdw.Services.SessionState/Fdw.Services.SessionState.csproj" />
+    <Project Path="src/Fdw.Services/Fdw.Services.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Audit/">
+    <Project Path="src/Fdw.Services.Audit.Abstractions/Fdw.Services.Audit.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Audit/Fdw.Services.Audit.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Authentication/">
+    <Project Path="src/Fdw.Services.Authentication.Abstractions/Fdw.Services.Authentication.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Authentication/Fdw.Services.Authentication.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Connections/">
+    <Project Path="src/Fdw.Services.Connections.Abstractions/Fdw.Services.Connections.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Connections.Sql/Fdw.Services.Connections.Sql.csproj" />
+    <Project Path="src/Fdw.Services.Connections/Fdw.Services.Connections.csproj" />
+    <Project Path="src/Fdw.Services.Connections.Http.Abstractions/Fdw.Services.Connections.Http.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Connections.Http/Fdw.Services.Connections.Http.csproj" />
+    <Project Path="src/Fdw.Services.Connections.MsSql/Fdw.Services.Connections.MsSql.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Data/">
+    <Project Path="src/Fdw.Services.Data.Abstractions/Fdw.Services.Data.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Data/Fdw.Services.Data.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Execution/">
+    <Project Path="src/Fdw.Services.Execution.Abstractions/Fdw.Services.Execution.Abstractions.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Notifications/">
+    <Project Path="src/Fdw.Services.Notifications.Abstractions/Fdw.Services.Notifications.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Notifications/Fdw.Services.Notifications.csproj" />
+    <Project Path="src/Fdw.Services.Notifications.Email/Fdw.Services.Notifications.Email.csproj" />
+    <Project Path="src/Fdw.Services.Notifications.Webhook/Fdw.Services.Notifications.Webhook.csproj" />
+    <Project Path="src/Fdw.Services.Notifications.Console/Fdw.Services.Notifications.Console.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Pipelines/">
+    <Project Path="src/Fdw.Services.Pipelines.Abstractions/Fdw.Services.Pipelines.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Pipelines/Fdw.Services.Pipelines.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Quality/">
+    <Project Path="src/Fdw.Services.Quality.Abstractions/Fdw.Services.Quality.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Quality/Fdw.Services.Quality.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Scheduling/">
+    <Project Path="src/Fdw.Services.Scheduling.Abstractions/Fdw.Services.Scheduling.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Scheduling/Fdw.Services.Scheduling.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/SecretManagers/">
+    <Project Path="src/Fdw.Services.SecretManagers.Abstractions/Fdw.Services.SecretManagers.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.SecretManagers/Fdw.Services.SecretManagers.csproj" />
+    <Project Path="src/Fdw.Services.SecretManagers.AzureKeyVault/Fdw.Services.SecretManagers.AzureKeyVault.csproj" />
+    <Project Path="src/Fdw.Services.SecretManagers.Clients/Fdw.Services.SecretManagers.Clients.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Transformations/">
+    <Project Path="src/Fdw.Services.Transformations.Abstractions/Fdw.Services.Transformations.Abstractions.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Workflows/">
+    <Project Path="src/Fdw.Services.Workflows.Abstractions/Fdw.Services.Workflows.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Workflows/Fdw.Services.Workflows.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Multitenancy/">
+    <Project Path="src/Fdw.Services.Multitenancy.Abstractions/Fdw.Services.Multitenancy.Abstractions.csproj" />
+  </Folder>
+
+  <Folder Name="/src/Services/Authorization/">
+    <Project Path="src/Fdw.Services.Authorization.Abstractions/Fdw.Services.Authorization.Abstractions.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Fdw.Hosting.Cli/Fdw.Hosting.Cli.csproj" />
+    <Project Path="src/Fdw.Hosting.MsSql/Fdw.Hosting.MsSql.csproj" />
+    <Project Path="src/Fdw.Hosting/Fdw.Hosting.csproj" />
+    <Project Path="src/Fdw.Intelligence.Abstractions/Fdw.Intelligence.Abstractions.csproj" />
+    <Project Path="src/Fdw.Intelligence/Fdw.Intelligence.csproj" />
+    <Project Path="src/Fdw.Mcp.Bus.Abstractions/Fdw.Mcp.Bus.Abstractions.csproj" />
+    <Project Path="src/Fdw.Mcp.Bus/Fdw.Mcp.Bus.csproj" />
+    <Project Path="src/Fdw.Messages/Fdw.Messages.csproj" />
+    <Project Path="src/Fdw.Operations.Abstractions/Fdw.Operations.Abstractions.csproj" />
+    <Project Path="src/Fdw.Operations.Endpoints/Fdw.Operations.Endpoints.csproj" />
+    <Project Path="src/Fdw.Operations/Fdw.Operations.csproj" />
+    <Project Path="src/Fdw.Processors.Abstractions/Fdw.Processors.Abstractions.csproj" />
+    <Project Path="src/Fdw.Registration.SourceGenerators/Fdw.Registration.SourceGenerators.csproj" />
+    <Project Path="src/Fdw.Aegis.Abstractions/Fdw.Aegis.Abstractions.csproj" />
+    <Project Path="src/Fdw.Aegis.Configuration/Fdw.Aegis.Configuration.csproj" />
+    <Project Path="src/Fdw.Aegis.McpServer/Fdw.Aegis.McpServer.csproj" />
+    <Project Path="src/Fdw.Aegis/Fdw.Aegis.csproj" />
+    <Project Path="src/Fdw.Aui.Abstractions/Fdw.Aui.Abstractions.csproj" />
+    <Project Path="src/Fdw.Aui/Fdw.Aui.csproj" />
+    <Project Path="src/Fdw.Calculations.Endpoints/Fdw.Calculations.Endpoints.csproj" />
+    <Project Path="src/Fdw.Collections/Fdw.Collections.csproj" />
+    <Project Path="src/Fdw.Commands.Data/Fdw.Commands.Data.csproj" />
+    <Project Path="src/Fdw.Configuration.Endpoints/Fdw.Configuration.Endpoints.csproj" />
+    <Project Path="src/Fdw.Connections.MsSql/Fdw.Connections.MsSql.csproj" />
+    <Project Path="src/Fdw.Connections.PostgreSql/Fdw.Connections.PostgreSql.csproj" />
+    <Project Path="src/Fdw.Connections/Fdw.Connections.csproj" />
+    <Project Path="src/Fdw.Conventions.Analyzers/Fdw.Conventions.Analyzers.csproj" />
+    <Project Path="src/Fdw.Conventions.CodeFixes/Fdw.Conventions.CodeFixes.csproj" />
+    <Project Path="src/Fdw.Conventions.FileSplitter/Fdw.Conventions.FileSplitter.csproj" />
+    <Project Path="src/Fdw.Data.Configuration/Fdw.Data.Configuration.csproj" />
+    <Project Path="src/Fdw.Data.DataNodes/Fdw.Data.DataNodes.csproj" />
+    <Project Path="src/Fdw.Data.DataPaths/Fdw.Data.DataPaths.csproj" />
+    <Project Path="src/Fdw.Data.FileSystem/Fdw.Data.FileSystem.csproj" />
+    <Project Path="src/Fdw.Data.Http/Fdw.Data.Http.csproj" />
+    <Project Path="src/Fdw.Data.MsSql/Fdw.Data.MsSql.csproj" />
+    <Project Path="src/Fdw.Data.PostgreSql/Fdw.Data.PostgreSql.csproj" />
+    <Project Path="src/Fdw.Data.RowSources.Delimited/Fdw.Data.RowSources.Delimited.csproj" />
+    <Project Path="src/Fdw.Data.RowSources.FixedWidth.Abstractions/Fdw.Data.RowSources.FixedWidth.Abstractions.csproj" />
+    <Project Path="src/Fdw.Data.RowSources.FixedWidth/Fdw.Data.RowSources.FixedWidth.csproj" />
+    <Project Path="src/Fdw.Data.Sqlite/Fdw.Data.Sqlite.csproj" />
+    <Project Path="src/Fdw.Data.UI.Components/Fdw.Data.UI.Components.csproj" />
+    <Project Path="src/Fdw.Data/Fdw.Data.csproj" />
+    <Project Path="src/Fdw.DevSession.Abstractions/Fdw.DevSession.Abstractions.csproj" />
+    <Project Path="src/Fdw.Hosting.Abstractions/Fdw.Hosting.Abstractions.csproj" />
+    <Project Path="src/Fdw.Results/Fdw.Results.csproj" />
+    <Project Path="src/Fdw.Schema.Abstractions/Fdw.Schema.Abstractions.csproj" />
+    <Project Path="src/Fdw.Schema.Clients.Abstractions/Fdw.Schema.Clients.Abstractions.csproj" />
+    <Project Path="src/Fdw.Schema.Ddl.MsSql/Fdw.Schema.Ddl.MsSql.csproj" />
+    <Project Path="src/Fdw.Schema.Ddl.Tasks/Fdw.Schema.Ddl.Tasks.csproj" />
+    <Project Path="src/Fdw.Schema.Ddl/Fdw.Schema.Ddl.csproj" />
+    <Project Path="src/Fdw.Security.Hashing/Fdw.Security.Hashing.csproj" />
+    <Project Path="src/Fdw.Services.Agents.Abstractions/Fdw.Services.Agents.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Agents/Fdw.Services.Agents.csproj" />
+    <Project Path="src/Fdw.Services.Authentication.OpenIddict/Fdw.Services.Authentication.OpenIddict.csproj" />
+    <Project Path="src/Fdw.Services.Authorization/Fdw.Services.Authorization.csproj" />
+    <Project Path="src/Fdw.Services.Calculations.Abstractions/Fdw.Services.Calculations.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Calculations/Fdw.Services.Calculations.csproj" />
+    <Project Path="src/Fdw.Services.Catalog.Clients.Abstractions/Fdw.Services.Catalog.Clients.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Configuration.Abstractions/Fdw.Services.Configuration.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Connections.FileSystem.Abstractions/Fdw.Services.Connections.FileSystem.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Connections.FileSystem/Fdw.Services.Connections.FileSystem.csproj" />
+    <Project Path="src/Fdw.Services.Connections.PostgreSql/Fdw.Services.Connections.PostgreSql.csproj" />
+    <Project Path="src/Fdw.Services.Connections.RoslynWorkspace.Abstractions/Fdw.Services.Connections.RoslynWorkspace.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Connections.RoslynWorkspace/Fdw.Services.Connections.RoslynWorkspace.csproj" />
+    <Project Path="src/Fdw.Services.Connections.Sqlite/Fdw.Services.Connections.Sqlite.csproj" />
+    <Project Path="src/Fdw.Services.Credentials.Abstractions/Fdw.Services.Credentials.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Credentials.Sql/Fdw.Services.Credentials.Sql.csproj" />
+    <Project Path="src/Fdw.Services.Data.Clients.Abstractions/Fdw.Services.Data.Clients.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Data.SignalR/Fdw.Services.Data.SignalR.csproj" />
+    <Project Path="src/Fdw.Services.DataVault.Abstractions/Fdw.Services.DataVault.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Etl.Abstractions/Fdw.Services.Etl.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Etl.Projects/Fdw.Services.Etl.Projects.csproj" />
+    <Project Path="src/Fdw.Services.Etl/Fdw.Services.Etl.csproj" />
+    <Project Path="src/Fdw.Services.EtlMappers.Abstractions/Fdw.Services.EtlMappers.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.EtlMappers/Fdw.Services.EtlMappers.csproj" />
+    <Project Path="src/Fdw.Services.ExternalIdentityProviders.Abstractions/Fdw.Services.ExternalIdentityProviders.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.ExternalIdentityProviders.Oidc/Fdw.Services.ExternalIdentityProviders.Oidc.csproj" />
+    <Project Path="src/Fdw.Services.ExternalIdentityProviders/Fdw.Services.ExternalIdentityProviders.csproj" />
+    <Project Path="src/Fdw.Services.Messaging.Abstractions/Fdw.Services.Messaging.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Messaging.Endpoints/Fdw.Services.Messaging.Endpoints.csproj" />
+    <Project Path="src/Fdw.Services.Messaging/Fdw.Services.Messaging.csproj" />
+    <Project Path="src/Fdw.Services.Multitenancy.Components/Fdw.Services.Multitenancy.Components.csproj" />
+    <Project Path="src/Fdw.Services.Multitenancy.Sql/Fdw.Services.Multitenancy.Sql.csproj" />
+    <Project Path="src/Fdw.Services.Multitenancy/Fdw.Services.Multitenancy.csproj" />
+    <Project Path="src/Fdw.Services.Notifications.Endpoints/Fdw.Services.Notifications.Endpoints.csproj" />
+    <Project Path="src/Fdw.Services.Notifications.System/Fdw.Services.Notifications.System.csproj" />
+    <Project Path="src/Fdw.Services.Pipelines.Clients/Fdw.Services.Pipelines.Clients.csproj" />
+    <Project Path="src/Fdw.Services.RateLimiting.Abstractions/Fdw.Services.RateLimiting.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.RateLimiting/Fdw.Services.RateLimiting.csproj" />
+    <Project Path="src/Fdw.Services.Registration.SourceGenerators/Fdw.Services.Registration.SourceGenerators.csproj" />
+    <Project Path="src/Fdw.Services.Registration/Fdw.Services.Registration.csproj" />
+    <Project Path="src/Fdw.Services.Resiliency.Abstractions/Fdw.Services.Resiliency.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Resiliency.Polly/Fdw.Services.Resiliency.Polly.csproj" />
+    <Project Path="src/Fdw.Services.Resiliency.PrimaryBackup/Fdw.Services.Resiliency.PrimaryBackup.csproj" />
+    <Project Path="src/Fdw.Services.Resiliency.RetryNotify/Fdw.Services.Resiliency.RetryNotify.csproj" />
+    <Project Path="src/Fdw.Services.Resiliency/Fdw.Services.Resiliency.csproj" />
+    <Project Path="src/Fdw.Services.Scheduling.Components/Fdw.Services.Scheduling.Components.csproj" />
+    <Project Path="src/Fdw.Services.SecretManagers.Endpoints/Fdw.Services.SecretManagers.Endpoints.csproj" />
+    <Project Path="src/Fdw.Services.SecretManagers.EnvironmentVariable/Fdw.Services.SecretManagers.EnvironmentVariable.csproj" />
+    <Project Path="src/Fdw.Services.SecretManagers.MsSql/Fdw.Services.SecretManagers.MsSql.csproj" />
+    <Project Path="src/Fdw.Services.SecretManagers.Sqlite/Fdw.Services.SecretManagers.Sqlite.csproj" />
+    <Project Path="src/Fdw.Services.SecretManagers.UserSecrets/Fdw.Services.SecretManagers.UserSecrets.csproj" />
+    <Project Path="src/Fdw.Services.SessionState.Clients/Fdw.Services.SessionState.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Settings.Endpoints/Fdw.Services.Settings.Endpoints.csproj" />
+    <Project Path="src/Fdw.Services.Settings/Fdw.Services.Settings.csproj" />
+    <Project Path="src/Fdw.Services.Terminal.Abstractions/Fdw.Services.Terminal.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.TokenManagers.Abstractions/Fdw.Services.TokenManagers.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.TokenManagers/Fdw.Services.TokenManagers.csproj" />
+    <Project Path="src/Fdw.Services.Users.Abstractions/Fdw.Services.Users.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Users/Fdw.Services.Users.csproj" />
+    <Project Path="src/Fdw.Services.Versions/Fdw.Services.Versions.csproj" />
+    <Project Path="src/Fdw.SignalR/Fdw.SignalR.csproj" />
+    <Project Path="src/Fdw.StateCollections.Abstractions/Fdw.StateCollections.Abstractions.csproj" />
+    <Project Path="src/Fdw.StateCollections/Fdw.StateCollections.csproj" />
+    <Project Path="src/Fdw.Types.Abstractions/Fdw.Types.Abstractions.csproj" />
+    <Project Path="src/Fdw.Types.MsSql/Fdw.Types.MsSql.csproj" />
+    <Project Path="src/Fdw.UI.Blazor.Authentication/Fdw.UI.Blazor.Authentication.csproj" />
+    <Project Path="src/Fdw.UI.Canvas.Blazor/Fdw.UI.Canvas.Blazor.csproj" />
+    <Project Path="src/Fdw.UI.Charts.Blazor/Fdw.UI.Charts.Blazor.csproj" />
+    <Project Path="src/Fdw.UI.CommandBuilders.Abstractions/Fdw.UI.CommandBuilders.Abstractions.csproj" />
+    <Project Path="src/Fdw.UI.Components.Blazor.MsSql/Fdw.UI.Components.Blazor.MsSql.csproj" />
+    <Project Path="src/Fdw.UI.Lineage.Clients.Abstractions/Fdw.UI.Lineage.Clients.Abstractions.csproj" />
+    <Project Path="src/Fdw.UI.Pages/Fdw.UI.Pages.csproj" />
+    <Project Path="src/Fdw.UI.Pipelines.Clients.Abstractions/Fdw.UI.Pipelines.Clients.Abstractions.csproj" />
+    <Project Path="src/Fdw.UI.Pipelines.Endpoints/Fdw.UI.Pipelines.Endpoints.csproj" />
+    <Project Path="src/Fdw.UI.Rendering.Blazor/Fdw.UI.Rendering.Blazor.csproj" />
+    <Project Path="src/Fdw.UI.Schema.Clients.Abstractions/Fdw.UI.Schema.Clients.Abstractions.csproj" />
+    <Project Path="src/Fdw.UI.Services/Fdw.UI.Services.csproj" />
+    <Project Path="src/Fdw.UI.Themes.Abstractions/Fdw.UI.Themes.Abstractions.csproj" />
+    <Project Path="src/Fdw.UI.Themes.Components/Fdw.UI.Themes.Components.csproj" />
+    <Project Path="src/Fdw.UI.WebMcp/Fdw.UI.WebMcp.csproj" />
+    <Project Path="src/Fdw.UI.Wizard/Fdw.UI.Wizard.csproj" />
+    <Project Path="src/Fdw.UI/Fdw.UI.csproj" />
+    <Project Path="src/Fdw.Validation.Abstractions/Fdw.Validation.Abstractions.csproj" />
+    <Project Path="src/Fdw.Validation.FastEndpoints/Fdw.Validation.FastEndpoints.csproj" />
+    <Project Path="src/Fdw.Validation/Fdw.Validation.csproj" />
+    <Project Path="src/Fdw.VsCodeShell.Abstractions/Fdw.VsCodeShell.Abstractions.csproj" />
+    <Project Path="src/Fdw.VsCodeShell/Fdw.VsCodeShell.csproj" />
+    <Project Path="src/Fdw.Web.Analytics.Clients.Abstractions/Fdw.Web.Analytics.Clients.Abstractions.csproj" />
+    <Project Path="src/Fdw.Web.Analytics.Components/Fdw.Web.Analytics.Components.csproj" />
+    <Project Path="src/Fdw.Web.Api/Fdw.Web.Api.csproj" />
+    <Project Path="src/Fdw.Web.Calculations.Clients.Abstractions/Fdw.Web.Calculations.Clients.Abstractions.csproj" />
+    <Project Path="src/Fdw.Web.Clients.Wasm/Fdw.Web.Clients.Wasm.csproj" />
+    <Project Path="src/Fdw.Web.Clients/Fdw.Web.Clients.csproj" />
+    <Project Path="src/Fdw.Web.Endpoints/Fdw.Web.Endpoints.csproj" />
+    <Project Path="src/Fdw.Web.Http.Authentication.Blazor/Fdw.Web.Http.Authentication.Blazor.csproj" />
+    <Project Path="src/Fdw.Web.Http.Authentication/Fdw.Web.Http.Authentication.csproj" />
+    <Project Path="src/Fdw.Web.Search.Clients.Abstractions/Fdw.Web.Search.Clients.Abstractions.csproj" />
+  </Folder>
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Analyzers - Framework-wide code style analyzers and code fixes               -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Analyzers/">
+    <Project Path="src/Fdw.Analyzers/Fdw.Analyzers.csproj" />
+    <Project Path="src/Fdw.CodeFixes/Fdw.CodeFixes.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Calculations - Calculation engine                                             -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Calculations/">
+    <Project Path="src/Fdw.Calculations.Abstractions/Fdw.Calculations.Abstractions.csproj" />
+    <Project Path="src/Fdw.Calculations.SignalR/Fdw.Calculations.SignalR.csproj" />
+    <Project Path="src/Fdw.Calculations/Fdw.Calculations.csproj" />
+    <Project Path="src/Fdw.Calculations.Aggregations/Fdw.Calculations.Aggregations.csproj" />
+    <Project Path="src/Fdw.Configuration.SourceGenerators/Fdw.Configuration.SourceGenerators.csproj" />
+  </Folder>
+  <Folder Name="/src/Datasets/">
+    <Project Path="src/Fdw.Data.DataSets.Abstractions/Fdw.Data.DataSets.Abstractions.csproj" />
+    <Project Path="src/Fdw.Data.DataSets/Fdw.Data.DataSets.csproj" />
+  </Folder>
+  <Folder Name="/src/Datastores/">
+    <Project Path="src/Fdw.Data.DataStores.Rest/Fdw.Data.DataStores.Rest.csproj" />
+    <Project Path="src/Fdw.Data.DataStores.SqlServer/Fdw.Data.DataStores.SqlServer.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/ETL - Extract, Transform, Load pipelines                                      -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/ETL/">
+    <Project Path="src/Fdw.Etl.Abstractions/Fdw.Etl.Abstractions.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Orchestration - Workflow and pipeline orchestration                           -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Orchestration/">
+    <Project Path="src/Fdw.Orchestration.Abstractions/Fdw.Orchestration.Abstractions.csproj" />
+    <Project Path="src/Fdw.Orchestration.Pipelines/Fdw.Orchestration.Pipelines.csproj" />
+    <Project Path="src/Fdw.Orchestration.Workflows/Fdw.Orchestration.Workflows.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Workspace - Workspace and project management                                  -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Workspace/">
+    <Project Path="src/Fdw.Workspace.Management/Fdw.Workspace.Management.csproj" />
+    <Project Path="src/Fdw.Workspace.Roslyn/Fdw.Workspace.Roslyn.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/UI - User interface components                                                -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/UI/">
+    <Project Path="src/Fdw.UI.Abstractions/Fdw.UI.Abstractions.csproj" />
+    <Project Path="src/Fdw.UI.Components/Fdw.UI.Components.csproj" />
+    <Project Path="src/Fdw.UI.Components.RazorConsole/Fdw.UI.Components.RazorConsole.csproj" />
+    <Project Path="src/Fdw.UI.Components.RazorConsole.SourceGenerators/Fdw.UI.Components.RazorConsole.SourceGenerators.csproj" />
+    <Project Path="src/Fdw.UI.Components.TUI/Fdw.UI.Components.TUI.csproj" />
+    <Project Path="src/Fdw.UI.Rendering.Spectre/Fdw.UI.Rendering.Spectre.csproj" />
+    <Project Path="src/Fdw.UI.Themes/Fdw.UI.Themes.csproj" />
+    <Project Path="src/Fdw.UI.Web.Abstractions/Fdw.UI.Web.Abstractions.csproj" />
+    <Project Path="src/Fdw.Dashboard.UI.Components/Fdw.Dashboard.UI.Components.csproj" />
+    <Project Path="src/Fdw.Data.Components/Fdw.Data.Components.csproj" />
+    <Project Path="src/Fdw.Operations.Components/Fdw.Operations.Components.csproj" />
+    <Project Path="src/Fdw.Schema.Components/Fdw.Schema.Components.csproj" />
+    <Project Path="src/Fdw.Services.Connections.Components/Fdw.Services.Connections.Components.csproj" />
+    <Project Path="src/Fdw.Services.Pipelines.Components/Fdw.Services.Pipelines.Components.csproj" />
+    <Project Path="src/Fdw.TUI.Management/Fdw.TUI.Management.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/Web - Web API and HTTP                                                        -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/Web/">
+    <Project Path="src/Fdw.Agents.Clients/Fdw.Agents.Clients.csproj" />
+    <Project Path="src/Fdw.Operations.Clients/Fdw.Operations.Clients.csproj" />
+    <Project Path="src/Fdw.Schema.Clients/Fdw.Schema.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Authentication.Clients/Fdw.Services.Authentication.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Authorization.Clients/Fdw.Services.Authorization.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Catalog.Clients/Fdw.Services.Catalog.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Connections.Clients/Fdw.Services.Connections.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Data.Clients/Fdw.Services.Data.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Etl.Projects.Clients/Fdw.Services.Etl.Projects.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Messaging.Clients/Fdw.Services.Messaging.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Multitenancy.Clients/Fdw.Services.Multitenancy.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Notifications.Clients/Fdw.Services.Notifications.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Quality.Clients/Fdw.Services.Quality.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Scheduling.Clients/Fdw.Services.Scheduling.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Settings.Clients/Fdw.Services.Settings.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Users.Clients/Fdw.Services.Users.Clients.csproj" />
+    <Project Path="src/Fdw.UI.Pipelines.Clients/Fdw.UI.Pipelines.Clients.csproj" />
+    <Project Path="src/Fdw.UI.Themes.Clients/Fdw.UI.Themes.Clients.csproj" />
+    <Project Path="src/Fdw.Web.Analytics.Clients/Fdw.Web.Analytics.Clients.csproj" />
+    <Project Path="src/Fdw.Web.Calculations.Clients/Fdw.Web.Calculations.Clients.csproj" />
+    <Project Path="src/Fdw.Web.Clients.Abstractions/Fdw.Web.Clients.Abstractions.csproj" />
+    <Project Path="src/Fdw.Web.Http.Abstractions/Fdw.Web.Http.Abstractions.csproj" />
+    <Project Path="src/Fdw.Web.RestEndpoints/Fdw.Web.RestEndpoints.csproj" />
+    <Project Path="src/Fdw.Web.Search.Clients/Fdw.Web.Search.Clients.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- src/MessageLogging - Structured logging                                           -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/src/MessageLogging/">
+    <Project Path="src/Fdw.MessageLogging.Abstractions/Fdw.MessageLogging.Abstractions.csproj" />
+    <Project Path="src/Fdw.MessageLogging.SourceGenerators/Fdw.MessageLogging.SourceGenerators.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/Core - Core library tests                                                   -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/Core/">
+    <Project Path="tests/Fdw.Results.Tests/Fdw.Results.Tests.csproj" />
+    <Project Path="tests/Fdw.Messages.Tests/Fdw.Messages.Tests.csproj" />
+    <Project Path="tests/Fdw.Collections.Tests/Fdw.Collections.Tests.csproj" />
+    <Project Path="tests/Fdw.Collections.Analyzers.Tests/Fdw.Collections.Analyzers.Tests.csproj" />
+    <Project Path="tests/Fdw.Collections.SourceGenerators.Tests/Fdw.Collections.SourceGenerators.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/Configuration - Configuration tests                                         -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/Configuration/">
+    <Project Path="tests/Fdw.Configuration.Tests/Fdw.Configuration.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Fdw.Abstractions.Tests/Fdw.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Aegis.Abstractions.Tests/Fdw.Aegis.Abstractions.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Aegis.McpServer.Tests/Fdw.Aegis.McpServer.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Analyzers.Tests/Fdw.Analyzers.Tests.csproj" />
+    <Project Path="tests/Fdw.CodeBuilder.Abstractions.Tests/Fdw.CodeBuilder.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Commands.Abstractions.Tests/Fdw.Commands.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Commands.Data.Abstractions.Tests/Fdw.Commands.Data.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Configuration.SourceGenerators.Tests/Fdw.Configuration.SourceGenerators.Tests.csproj" />
+    <Project Path="tests/Fdw.ContractParity.Tests/Fdw.ContractParity.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Data.Abstractions.Tests/Fdw.Data.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.Components.Tests/Fdw.Data.Components.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Data.DataContainers.Abstractions.Tests/Fdw.Data.DataContainers.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.DataNodes.Tests/Fdw.Data.DataNodes.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Data.DataSets.Abstractions.Tests/Fdw.Data.DataSets.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.Importers.Abstractions.Tests/Fdw.Data.Importers.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.Lineage.Tests/Fdw.Data.Lineage.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.RowSources.Abstractions.Tests/Fdw.Data.RowSources.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.RowSources.Http.Abstractions.Tests/Fdw.Data.RowSources.Http.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.RowSources.RoundTrip.Tests/Fdw.Data.RowSources.RoundTrip.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Data.RowSources.Tests/Fdw.Data.RowSources.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.SourceGenerators.Tests/Fdw.Data.SourceGenerators.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.Tests/Fdw.Data.Tests.csproj" />
+    <Project Path="tests/Fdw.Expressions.Tests/Fdw.Expressions.Tests.csproj" />
+    <Project Path="tests/Fdw.Hosting.MsSql.Tests/Fdw.Hosting.MsSql.Tests.csproj" />
+    <Project Path="tests/Fdw.Hosting.Tests/Fdw.Hosting.Tests.csproj" />
+    <Project Path="tests/Fdw.Mcp.Bus.Tests/Fdw.Mcp.Bus.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.MessageLogging.Abstractions.Tests/Fdw.MessageLogging.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.MessageLogging.SourceGenerators.Tests/Fdw.MessageLogging.SourceGenerators.Tests.csproj" />
+    <Project Path="tests/Fdw.Operations.Clients.Tests/Fdw.Operations.Clients.Tests.csproj" />
+    <Project Path="tests/Fdw.Operations.Endpoints.Tests/Fdw.Operations.Endpoints.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Operations.Tests/Fdw.Operations.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Orchestration.Abstractions.Tests/Fdw.Orchestration.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Orchestration.Pipelines.Abstractions.Tests/Fdw.Orchestration.Pipelines.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Processors.Abstractions.Tests/Fdw.Processors.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Registration.SourceGenerators.Tests/Fdw.Registration.SourceGenerators.Tests.csproj" />
+    <Project Path="tests/Fdw.Results.Abstractions.Tests/Fdw.Results.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Roslyn.Commands.Refactoring.Tests/Fdw.Roslyn.Commands.Refactoring.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Roslyn.Commands.Tests/Fdw.Roslyn.Commands.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Schema.Abstractions.Tests/Fdw.Schema.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Schema.Clients.Tests/Fdw.Schema.Clients.Tests.csproj" />
+    <Project Path="tests/Fdw.Schema.Ddl.MsSql.Tests/Fdw.Schema.Ddl.MsSql.Tests.csproj" />
+    <Project Path="tests/Fdw.Schema.Ddl.Tests/Fdw.Schema.Ddl.Tests.csproj" />
+    <Project Path="tests/Fdw.Schema.Tests/Fdw.Schema.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Abstractions.Tests/Fdw.Services.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Authentication.Abstractions.Tests/Fdw.Services.Authentication.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Authorization.Abstractions.Tests/Fdw.Services.Authorization.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Authorization.Clients.Tests/Fdw.Services.Authorization.Clients.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Authorization.Tests/Fdw.Services.Authorization.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Calculations.Tests/Fdw.Services.Calculations.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.Catalog.Clients.Tests/Fdw.Services.Catalog.Clients.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Connections.Abstractions.Tests/Fdw.Services.Connections.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Connections.Clients.Tests/Fdw.Services.Connections.Clients.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Connections.FileSystem.Abstractions.Tests/Fdw.Services.Connections.FileSystem.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Connections.FileSystem.Tests/Fdw.Services.Connections.FileSystem.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Connections.Http.Abstractions.Tests/Fdw.Services.Connections.Http.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Connections.Limits.Tests/Fdw.Services.Connections.Limits.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Connections.PostgreSql.Tests/Fdw.Services.Connections.PostgreSql.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.Connections.RoslynWorkspace.Abstractions.Tests/Fdw.Services.Connections.RoslynWorkspace.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Connections.RoslynWorkspace.Tests/Fdw.Services.Connections.RoslynWorkspace.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Connections.Sql.Tests/Fdw.Services.Connections.Sql.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.Data.Abstractions.Tests/Fdw.Services.Data.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Data.Clients.Tests/Fdw.Services.Data.Clients.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Etl.Abstractions.Tests/Fdw.Services.Etl.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Etl.Projects.Tests/Fdw.Services.Etl.Projects.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.Etl.Tests/Fdw.Services.Etl.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.EtlMappers.Abstractions.Tests/Fdw.Services.EtlMappers.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.EtlMappers.Tests/Fdw.Services.EtlMappers.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Execution.Abstractions.Tests/Fdw.Services.Execution.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.ExternalIdentityProviders.Tests/Fdw.Services.ExternalIdentityProviders.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.Messaging.Tests/Fdw.Services.Messaging.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.Multitenancy.Abstractions.Tests/Fdw.Services.Multitenancy.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Multitenancy.Clients.Tests/Fdw.Services.Multitenancy.Clients.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Notifications.Abstractions.Tests/Fdw.Services.Notifications.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Notifications.Tests/Fdw.Services.Notifications.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Pipelines.Abstractions.Tests/Fdw.Services.Pipelines.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Pipelines.Clients.Tests/Fdw.Services.Pipelines.Clients.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Pipelines.Components.Tests/Fdw.Services.Pipelines.Components.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.Pipelines.Tests/Fdw.Services.Pipelines.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.Quality.Abstractions.Tests/Fdw.Services.Quality.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Quality.Clients.Tests/Fdw.Services.Quality.Clients.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Quality.Tests/Fdw.Services.Quality.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.RateLimiting.Abstractions.Tests/Fdw.Services.RateLimiting.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.RateLimiting.Tests/Fdw.Services.RateLimiting.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Registration.SourceGenerators.Tests/Fdw.Services.Registration.SourceGenerators.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.Registration.Tests/Fdw.Services.Registration.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.Resiliency.Abstractions.Tests/Fdw.Services.Resiliency.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Resiliency.Polly.Tests/Fdw.Services.Resiliency.Polly.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.Resiliency.Tests/Fdw.Services.Resiliency.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Scheduling.Abstractions.Tests/Fdw.Services.Scheduling.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Scheduling.Clients.Tests/Fdw.Services.Scheduling.Clients.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.SecretManagers.Abstractions.Tests/Fdw.Services.SecretManagers.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.SecretManagers.TestDouble/Fdw.Services.SecretManagers.TestDouble.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.SessionState.Tests/Fdw.Services.SessionState.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.Settings.Tests/Fdw.Services.Settings.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Users.Abstractions.Tests/Fdw.Services.Users.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Users.Clients.Tests/Fdw.Services.Users.Clients.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Users.Tests/Fdw.Services.Users.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.Workflows.Abstractions.Tests/Fdw.Services.Workflows.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Workflows.Tests/Fdw.Services.Workflows.Tests.csproj" />
+    <Project Path="tests/Fdw.ServiceTypes.CodeFixes.Tests/Fdw.ServiceTypes.CodeFixes.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.SignalR.Tests/Fdw.SignalR.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Types.Abstractions.Tests/Fdw.Types.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.UI.Canvas.Blazor.Tests/Fdw.UI.Canvas.Blazor.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.UI.Charts.Blazor.Tests/Fdw.UI.Charts.Blazor.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.UI.Components.TUI.Tests/Fdw.UI.Components.TUI.Tests.csproj" />
+    <Project Path="tests/Fdw.UI.Rendering.Conformance.Tests/Fdw.UI.Rendering.Conformance.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.UI.Tests/Fdw.UI.Tests.csproj" />
+    <Project Path="tests/Fdw.UI.Themes.Clients.Tests/Fdw.UI.Themes.Clients.Tests.csproj" />
+    <Project Path="tests/Fdw.UI.WebMcp.Tests/Fdw.UI.WebMcp.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Validation.Tests/Fdw.Validation.Tests.csproj" />
+    <Project Path="tests/Fdw.VsCodeShell.Tests/Fdw.VsCodeShell.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Web.Analytics.Clients.Tests/Fdw.Web.Analytics.Clients.Tests.csproj" />
+    <Project Path="tests/Fdw.Web.Api.Tests/Fdw.Web.Api.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Web.Calculations.Clients.Tests/Fdw.Web.Calculations.Clients.Tests.csproj" />
+    <Project Path="tests/Fdw.Web.Clients.Abstractions.Tests/Fdw.Web.Clients.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Web.Http.Abstractions.Tests/Fdw.Web.Http.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Web.Search.Clients.Tests/Fdw.Web.Search.Clients.Tests.csproj" />
+    <Project Path="tests/Fdw.Workspace.Management.Tests/Fdw.Workspace.Management.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/CodeBuilder - Code analysis and generation tests                            -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/CodeBuilder/">
+    <Project Path="tests/Fdw.CodeBuilder.Analysis.Tests/Fdw.CodeBuilder.Analysis.Tests.csproj" />
+    <Project Path="tests/Fdw.CodeBuilder.Analysis.CSharp.Tests/Fdw.CodeBuilder.Analysis.CSharp.Tests.csproj" />
+    <Project Path="tests/Fdw.CodeBuilder.CSharp.Tests/Fdw.CodeBuilder.CSharp.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/Commands - Command pattern tests                                            -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/Commands/">
+    <Project Path="tests/Fdw.Commands.Data.Tests/Fdw.Commands.Data.Tests.csproj" />
+    <Project Path="tests/Fdw.Commands.Data.Extensions.Tests/Fdw.Commands.Data.Extensions.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/Data - Data access tests                                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/Data/">
+    <Project Path="tests/Fdw.Data.Builders.Tests/Fdw.Data.Builders.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.DataSets.Tests/Fdw.Data.DataSets.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.DataStores.FileSystem.Tests/Fdw.Data.DataStores.FileSystem.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.DataStores.Rest.Tests/Fdw.Data.DataStores.Rest.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.DataStores.SqlServer.Tests/Fdw.Data.DataStores.SqlServer.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.DataStores.Tests/Fdw.Data.DataStores.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.Execution.Tests/Fdw.Data.Execution.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.JsonSchema.Tests/Fdw.Data.JsonSchema.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.MsSql.Tests/Fdw.Data.MsSql.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.OData.Tests/Fdw.Data.OData.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/ServiceTypes - Service type system tests                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/ServiceTypes/">
+    <Project Path="tests/Fdw.ServiceTypes.Tests/Fdw.ServiceTypes.Tests.csproj" />
+    <Project Path="tests/Fdw.ServiceTypes.Analyzers.Tests/Fdw.ServiceTypes.Analyzers.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/Services - Service domain tests                                             -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/Services/">
+    <Project Path="tests/Fdw.Services.Tests/Fdw.Services.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Authentication.Tests/Fdw.Services.Authentication.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Connections.Tests/Fdw.Services.Connections.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Scheduling.Tests/Fdw.Services.Scheduling.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.SecretManagers.Tests/Fdw.Services.SecretManagers.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/Web - Web API tests                                                         -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/Web/">
+    <Project Path="tests/Fdw.Web.RestEndpoints.Tests/Fdw.Web.RestEndpoints.Tests.csproj" />
+  </Folder>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- tests/Integration - Integration tests                                             -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <Folder Name="/tests/Integration/">
+    <Project Path="tests/Fdw.Integration.Tests/Fdw.Integration.Tests.csproj" />
+    <Project Path="tests/Fdw.ServiceTypes.Integration.Tests/Fdw.ServiceTypes.Integration.Tests.csproj" />
+  </Folder>
+
+</Solution>

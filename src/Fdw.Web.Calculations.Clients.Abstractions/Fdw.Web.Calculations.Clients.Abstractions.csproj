@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.Web.Calculations.Clients</RootNamespace>
+    <PackageId>Fdw.Web.Calculations.Clients.Abstractions</PackageId>
+    <Title>Fdw Calculations Client Abstractions</Title>
+    <Description>DTO models for calculation and formula API client operations.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Web.Clients.Abstractions\Fdw.Web.Clients.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+  </ItemGroup>
+</Project>

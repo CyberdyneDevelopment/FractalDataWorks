@@ -1,0 +1,131 @@
+@page "/access-requests/new"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject NavigationManager Navigation
+
+<PageTitle>Request Access - Cyberdyne</PageTitle>
+
+<MessageProvider>
+    <AccessRequestContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">Admin · Access Requests</div>
+                <h1>Request Access</h1>
+                <div class="sub">Request access to a resource for approval.</div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-ghost" @onclick="@(() => Navigation.NavigateTo("/messages"))">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Back to Messages
+                </button>
+            </div>
+        </div>
+
+        <div class="card" style="max-width:560px;">
+            <div class="card-h"><h3>New Access Request</h3></div>
+            <div class="card-b">
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <div class="mono" style="color:var(--signal);margin-bottom:16px;">@_errorMessage</div>
+                }
+
+                <div class="frow">
+                    <label>Resource</label>
+                    <input class="finput" @bind="_resource" placeholder="e.g., Connection:ProductionDb, DataSet:SalesData" />
+                    <p class="hint">The resource you need access to</p>
+                </div>
+
+                <div class="frow">
+                    <label>Permission</label>
+                    <input class="finput" @bind="_permission" placeholder="e.g., Read, Write, Execute" />
+                    <p class="hint">The level of access required</p>
+                </div>
+
+                <div class="frow">
+                    <label>Justification</label>
+                    <textarea class="finput" rows="4" @bind="_justification" placeholder="Explain why you need this access..."></textarea>
+                    <p class="hint">Provide context for the approver</p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(_referenceId))
+                {
+                    <p class="mono mut" style="font-size:11px;margin-bottom:16px;">
+                        Reference: @_referenceId
+                    </p>
+                }
+
+                <div class="actions" style="justify-content:flex-end;">
+                    <button class="btn btn-secondary btn-sm" @onclick="@(() => Navigation.NavigateTo("/messages"))">Cancel</button>
+                    <button class="btn btn-primary" disabled="@_isSubmitting" @onclick="@(async () => await Submit(ctx))">
+                        @if (_isSubmitting)
+                        {
+                            <span>Submitting...</span>
+                        }
+                        else
+                        {
+                            <span>Submit Request</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </AccessRequestContent>
+</MessageProvider>
+
+@code {
+    [SupplyParameterFromQuery(Name = "resource")]
+    public string? _prefillResource { get; set; }
+
+    [SupplyParameterFromQuery(Name = "permission")]
+    public string? _prefillPermission { get; set; }
+
+    [SupplyParameterFromQuery(Name = "ref")]
+    public string? _prefillRef { get; set; }
+
+    private string _resource = string.Empty;
+    private string _permission = string.Empty;
+    private string? _justification;
+    private string? _referenceId;
+    private string? _errorMessage;
+    private bool _isSubmitting;
+
+    protected override void OnInitialized()
+    {
+        _resource = _prefillResource ?? string.Empty;
+        _permission = _prefillPermission ?? string.Empty;
+        _referenceId = _prefillRef;
+    }
+
+    private async Task Submit(AccessRequestListContext ctx)
+    {
+        _errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(_resource) || string.IsNullOrWhiteSpace(_permission))
+        {
+            _errorMessage = "Resource and Permission are required.";
+            return;
+        }
+
+        _isSubmitting = true;
+        try
+        {
+            await ctx.OnCreate(new CreateAccessRequestModel
+            {
+                RequestedResource = _resource,
+                RequestedPermission = _permission,
+                Justification = _justification,
+                ReferenceId = _referenceId
+            });
+            Navigation.NavigateTo("/messages");
+        }
+        catch
+        {
+            _errorMessage = "Failed to submit access request.";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+}

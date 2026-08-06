@@ -1,0 +1,5 @@
+[*.cs]
+# This is a standalone CLI tool, not framework code — relax convention analyzers
+dotnet_diagnostic.FDW006.severity = none
+dotnet_diagnostic.FDW007.severity = none
+dotnet_diagnostic.MA0051.severity = none

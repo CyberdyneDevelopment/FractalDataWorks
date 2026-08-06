@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VSTemplate Version="3.0.0" Type="Project" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
+  <TemplateData>
+    <Name>$serviceName$.$implName$</Name>
+    <Description>$implName$ implementation of $serviceName$ service</Description>
+    <Icon>__TemplateIcon.ico</Icon>
+    <ProjectType>CSharp</ProjectType>
+    <LanguageTag>csharp</LanguageTag>
+  </TemplateData>
+  <TemplateContent>
+    <Project File="Implementation.csproj" ReplaceParameters="true">
+      <ProjectItem ReplaceParameters="true">$implName$$serviceName$Service.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true">$implName$$serviceName$Factory.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true">$implName$$serviceName$Configuration.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true">$implName$$serviceName$Type.cs</ProjectItem>
+    </Project>
+  </TemplateContent>
+</VSTemplate>

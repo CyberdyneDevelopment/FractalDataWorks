@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.Services.Etl.Projects.Clients</RootNamespace>
+    <PackageId>Fdw.Services.Etl.Projects.Clients</PackageId>
+    <Title>Fdw ETL Projects API Clients</Title>
+    <Description>API clients and registration types for ETL project and orchestration-node operations.</Description>
+    <PackageTags>api;clients;etl;projects</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Web.Clients\Fdw.Web.Clients.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Web.Http.Authentication\Fdw.Web.Http.Authentication.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Etl.Abstractions\Fdw.Services.Etl.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

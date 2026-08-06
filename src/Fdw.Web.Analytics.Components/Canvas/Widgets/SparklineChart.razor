@@ -1,0 +1,149 @@
+@using Excubo.Blazor.Canvas
+@using Excubo.Blazor.Canvas.Contexts
+@using Fdw.UI.Themes.Components.Theme
+@inherits Microsoft.AspNetCore.Components.ComponentBase
+
+<div class="sparkline-widget">
+    <Canvas @ref="_canvas" width="@Width" height="@Height" />
+</div>
+
+@code {
+    /// <summary>
+    /// Data points to display in the sparkline.
+    /// </summary>
+    [Parameter]
+    public System.Collections.Generic.IEnumerable<decimal>? Values { get; set; }
+
+    /// <summary>
+    /// Width of the sparkline canvas.
+    /// </summary>
+    [Parameter]
+    public int Width { get; set; } = 120;
+
+    /// <summary>
+    /// Height of the sparkline canvas.
+    /// </summary>
+    [Parameter]
+    public int Height { get; set; } = 40;
+
+    /// <summary>
+    /// Line color. If not set, uses theme primary color.
+    /// </summary>
+    [Parameter]
+    public string? Color { get; set; }
+
+    /// <summary>
+    /// Whether to fill the area under the line.
+    /// </summary>
+    [Parameter]
+    public bool ShowFill { get; set; } = true;
+
+    /// <summary>
+    /// Whether to show a dot at the last data point.
+    /// </summary>
+    [Parameter]
+    public bool ShowEndDot { get; set; } = true;
+
+    /// <summary>
+    /// Theme configuration for styling.
+    /// </summary>
+    [CascadingParameter]
+    protected UiThemeConfiguration? Theme { get; set; }
+
+    private Canvas _canvas = null!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await DrawAsync();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_canvas != null)
+        {
+            await DrawAsync();
+        }
+    }
+
+    private async Task DrawAsync()
+    {
+        if (_canvas == null)
+            return;
+
+        await using var ctx = await _canvas.GetContext2DAsync();
+
+        // Clear canvas
+        await ctx.ClearRectAsync(0, 0, Width, Height);
+
+        var valuesList = Values?.ToList();
+        if (valuesList == null || valuesList.Count < 2)
+            return;
+
+        var lineColor = Color ?? Theme?.Colors?.Primary ?? "#3b82f6";
+        var padding = 4;
+        var chartWidth = Width - (padding * 2);
+        var chartHeight = Height - (padding * 2);
+
+        // Calculate min/max for scaling
+        var min = valuesList.Min();
+        var max = valuesList.Max();
+        var range = max - min;
+        if (range == 0) range = 1; // Prevent division by zero
+
+        // Calculate point positions
+        var points = new System.Collections.Generic.List<(double X, double Y)>();
+        var stepX = (double)chartWidth / (valuesList.Count - 1);
+
+        for (var i = 0; i < valuesList.Count; i++)
+        {
+            var normalizedValue = (double)((valuesList[i] - min) / range);
+            var x = padding + (i * stepX);
+            var y = padding + chartHeight - (normalizedValue * chartHeight);
+            points.Add((x, y));
+        }
+
+        // Draw filled area
+        if (ShowFill && points.Count > 0)
+        {
+            await ctx.BeginPathAsync();
+            await ctx.MoveToAsync(points[0].X, Height - padding);
+            foreach (var point in points)
+            {
+                await ctx.LineToAsync(point.X, point.Y);
+            }
+            await ctx.LineToAsync(points[^1].X, Height - padding);
+            await ctx.ClosePathAsync();
+            await ctx.FillStyleAsync($"{lineColor}20"); // 12.5% opacity
+            await ctx.FillAsync(FillRule.NonZero);
+        }
+
+        // Draw line
+        if (points.Count > 0)
+        {
+            await ctx.BeginPathAsync();
+            await ctx.MoveToAsync(points[0].X, points[0].Y);
+            for (var i = 1; i < points.Count; i++)
+            {
+                await ctx.LineToAsync(points[i].X, points[i].Y);
+            }
+            await ctx.LineWidthAsync(2);
+            await ctx.StrokeStyleAsync(lineColor);
+            await ctx.LineCapAsync(LineCap.Round);
+            await ctx.LineJoinAsync(LineJoin.Round);
+            await ctx.StrokeAsync();
+        }
+
+        // Draw end dot
+        if (ShowEndDot && points.Count > 0)
+        {
+            var lastPoint = points[^1];
+            await ctx.BeginPathAsync();
+            await ctx.ArcAsync(lastPoint.X, lastPoint.Y, 4, 0, 2 * System.Math.PI);
+            await ctx.FillStyleAsync(lineColor);
+            await ctx.FillAsync(FillRule.NonZero);
+        }
+    }
+}

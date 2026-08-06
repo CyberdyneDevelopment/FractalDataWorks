@@ -1,0 +1,121 @@
+@namespace Fdw.Web.Analytics.Components.Analytics
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.Web.Analytics.Clients.ApiClients
+@using Fdw.Web.Analytics.Clients.Models
+@using Fdw.Results
+@using Fdw.UI.Components.Logging
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    [Parameter] public RenderFragment<AnalyticsContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private AnalyticsApiClient? _analyticsApi;
+    [Inject] private ILogger<AnalyticsProvider>? LoggerParam { get; set; }
+
+    private ILogger<AnalyticsProvider> _logger = NullLogger<AnalyticsProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private AnalyticsResponse? _data;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private AnalyticsRequest _currentRequest = new();
+    private AnalyticsContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _analyticsApi = new AnalyticsApiClient(HttpClientFactory.CreateClient("AnalyticsClient"), LoggerFactory?.CreateLogger<AnalyticsApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<AnalyticsProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadAnalytics();
+        }
+    }
+
+    // ── Methods (exposed as callbacks via AnalyticsContext) ─────────────────
+
+    private async Task LoadAnalytics(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _analyticsApi!.GetAnalytics(_currentRequest, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _data = result.Value;
+            }
+            else
+            {
+                UiProviderLog.LoadFailed(_logger, "AnalyticsProvider", "analytics");
+                _lastResult = result;
+                _data = null;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.LoadException(_logger, ex, "AnalyticsProvider", "analytics"));
+            _data = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task UpdatePeriod(DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default)
+    {
+        _currentRequest.StartDate = start;
+        _currentRequest.EndDate = end;
+        await LoadAnalytics(cancellationToken);
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new AnalyticsContext
+        {
+            Data = _data,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            CurrentRequest = _currentRequest,
+            OnLoadAnalytics = () => LoadAnalytics(),
+            OnUpdatePeriod = (start, end) => UpdatePeriod(start, end)
+        };
+    }
+}

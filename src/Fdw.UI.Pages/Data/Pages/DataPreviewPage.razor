@@ -1,0 +1,62 @@
+@page "/data-preview"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Data Preview - Cyberdyne</PageTitle>
+
+<DataPreviewPageProvider>
+    <ChildContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">Data Sources</div>
+                <h1>Data Preview</h1>
+                <div class="sub">Run a query against a DataStore or DataSet and inspect the rows.</div>
+            </div>
+            <div class="actions">
+                <div class="seg">
+                    <button class="@(ctx.IsTableMode ? "on" : null)" @onclick="ctx.OnSetTableMode">DataStore</button>
+                    <button class="@(!ctx.IsTableMode ? "on" : null)" @onclick="ctx.OnSetDataSetMode">DataSet</button>
+                </div>
+            </div>
+        </div>
+
+        <QueryPanel PreviewProvider="ctx.PreviewProvider"
+                    SchemaContext="ctx.SchemaContext"
+                    PreviewMode="@ctx.Mode"
+                    DataStorePickerItems="ctx.DataStorePickerItems"
+                    GetPickerChildren="ctx.GetPickerChildren"
+                    OnPickerSelectionChanged="@(chain => ctx.OnPickerSelectionChanged(chain))"
+                    RowLimit="@ctx.RowLimit"
+                    RowLimitChanged="@(v => ctx.OnRowLimitChanged(v))"
+                    Filters="ctx.Filters"
+                    IsLoading="ctx.IsLoading"
+                    OnExecute="ctx.OnExecute" />
+
+        @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
+        {
+            <div class="card"><div class="card-b"><div class="alert alert-err">@ctx.ErrorMessage</div></div></div>
+        }
+
+        @if (ctx.Columns.Count > 0 && !ctx.IsLoading)
+        {
+            <div class="card">
+                <div class="card-h"><h3>Visualization</h3></div>
+                <div class="card-b">
+                    <div class="seg">
+                        @foreach (var vizType in ctx.AvailableVizTypes)
+                        {
+                            <button class="@(string.Equals(ctx.SelectedVizType, vizType.Name, StringComparison.OrdinalIgnoreCase) ? "on" : null)"
+                                    @onclick="() => ctx.OnVizTypeSelected(vizType.Name)">
+                                @vizType.DisplayName
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <PreviewPanel Columns="ctx.Columns"
+                      Rows="ctx.Rows"
+                      IsLoading="ctx.IsLoading"
+                      OnExportCsv="ctx.OnExportCsv" />
+    </ChildContent>
+</DataPreviewPageProvider>

@@ -1,0 +1,330 @@
+@namespace Fdw.Services.Etl.Projects.UI.Components.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using System.Net.Http
+@using Fdw.Results
+@using Fdw.Services.Etl.Projects.Clients
+@using Fdw.Services.Etl.Projects.Abstractions.Configuration
+@using Fdw.Services.Etl.Projects.UI.Components.Logging
+
+@*
+    Headless component that provides Project Management logic and state.
+*@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for project management operations. Owns project loading and CRUD logic.
+    /// No UI markup.
+    /// </summary>
+    [Parameter] public RenderFragment<ProjectContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    [Inject] private ILogger<ProjectProvider>? LoggerParam { get; set; }
+    private ILogger<ProjectProvider> _logger = NullLogger<ProjectProvider>.Instance;
+
+    private ProjectApiClient? _projectApi;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<ProjectConfiguration> _projects = [];
+    private ProjectConfiguration? _currentProject;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private string _searchString = string.Empty;
+    private ProjectContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _projectApi = new ProjectApiClient(HttpClientFactory.CreateClient("ProjectClient"), LoggerFactory?.CreateLogger<ProjectApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<ProjectProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadData();
+        }
+    }
+
+    // ── Methods (exposed as callbacks via ProjectContext) ───────────────────────
+
+    private async Task LoadData(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _projectApi!.ListProjects(cancellationToken);
+            if (result.IsSuccess)
+            {
+                _projects = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                ProjectProviderLog.LoadProjectsFailed(_logger);
+                _lastResult = result;
+                _projects = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ProjectProviderLog.LoadProjectsException(_logger, ex));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<ProjectConfiguration?> GetProject(Guid projectId, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _projectApi!.GetProject(projectId, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(ProjectProviderLog.ProjectDetailLoadFailed(_logger, projectId.ToString()));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ProjectProviderLog.ProjectDetailLoadException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<ProjectConfiguration?> CreateProject(ProjectConfiguration request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _projectApi!.CreateProject(request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadData(cancellationToken);
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(ProjectProviderLog.ProjectCreateFailed(_logger));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ProjectProviderLog.ProjectCreateException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<ProjectConfiguration?> UpdateProject(Guid projectId, ProjectConfiguration request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _projectApi!.UpdateProject(projectId, request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadData(cancellationToken);
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(ProjectProviderLog.ProjectUpdateFailed(_logger, projectId.ToString()));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ProjectProviderLog.ProjectUpdateException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> DeleteProject(Guid projectId, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _projectApi!.DeleteProject(projectId, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadData(cancellationToken);
+                return true;
+            }
+
+            _lastResult = GenericResult.Failure(ProjectProviderLog.ProjectDeleteFailed(_logger, projectId.ToString()));
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ProjectProviderLog.ProjectDeleteException(_logger, ex));
+            return false;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<TriggerResponse?> TriggerProject(string projectName, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var request = new TriggerRequest { Name = projectName, TriggerSource = "UI" };
+            var result = await _projectApi!.Trigger("project", request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(ProjectProviderLog.ProjectTriggerFailed(_logger, projectName));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ProjectProviderLog.ProjectTriggerException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private IEnumerable<ProjectConfiguration> GetFilteredProjects()
+    {
+        return string.IsNullOrWhiteSpace(_searchString)
+            ? _projects
+            : _projects.Where(p => p.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+                                   (p.Description?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false));
+    }
+
+    private void SelectProject(ProjectConfiguration? project)
+    {
+        _currentProject = project;
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    private void SetSearchString(string value)
+    {
+        _searchString = value;
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new ProjectContext
+        {
+            Projects = _projects,
+            CurrentProject = _currentProject,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            SearchString = _searchString,
+            FilteredProjects = GetFilteredProjects(),
+            OnLoadData = () => LoadData(),
+            OnGetProject = id => GetProject(id),
+            OnCreateProject = request => CreateProject(request),
+            OnUpdateProject = (id, request) => UpdateProject(id, request),
+            OnDeleteProject = id => DeleteProject(id),
+            OnTriggerProject = name => TriggerProject(name),
+            OnSelectProject = SelectProject,
+            OnSearchStringChanged = SetSearchString
+        };
+    }
+}

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <LangVersion>preview</LangVersion>
+
+    <!-- Override coverage to only measure the SourceGenerators assembly -->
+    <Include>[Fdw.Data.SourceGenerators]*</Include>
+    <Exclude></Exclude>
+
+    <!-- Source generators have some unreachable defensive code - set realistic thresholds -->
+    <Threshold>99</Threshold>
+    <ThresholdType>line</ThresholdType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Results.Abstractions\Fdw.Results.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Collections\Fdw.Collections.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

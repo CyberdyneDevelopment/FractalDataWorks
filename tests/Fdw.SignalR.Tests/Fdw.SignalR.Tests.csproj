@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <LangVersion>preview</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Why: xunit.v3, Shouldly, Moq, coverlet.collector, and Microsoft.NET.Test.Sdk are inherited
+         from tests/Directory.Build.props; Logging.Abstractions, DependencyInjection, and SignalR
+         flow transitively from the SUT + Microsoft.AspNetCore.App framework reference. -->
+    <!-- System under test -->
+    <ProjectReference Include="..\..\src\Fdw.SignalR\Fdw.SignalR.csproj" />
+    <!-- The four migrated domain hubs: their [TypeOption]s populate RealTimeHubs at load -->
+    <ProjectReference Include="..\..\src\Fdw.Services.Pipelines\Fdw.Services.Pipelines.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Calculations.SignalR\Fdw.Calculations.SignalR.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Data.SignalR\Fdw.Services.Data.SignalR.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Messaging\Fdw.Services.Messaging.csproj" />
+    <!-- Module-initializer registration of [TypeOption]s for the test (entry-point role) -->
+    <ProjectReference Include="..\..\src\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

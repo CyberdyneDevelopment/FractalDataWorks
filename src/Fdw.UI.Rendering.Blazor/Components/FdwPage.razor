@@ -1,0 +1,79 @@
+@* Interactive page: header, visible sections, and the action row. Retained-mode counterpart
+   of SpectreUIRenderer.RenderPage + PromptForPageAction — the same action rules apply
+   (Save/Cancel always; Delete only when editable and not in create mode), but completion is
+   callback-driven instead of a blocking prompt. Delete is a two-step in-place confirm,
+   mirroring Spectre's Confirm() gate. *@
+@using Fdw.UI.Abstractions.Pages
+<div class="fdw-ui-page" id="@Page.Id">
+    <header class="fdw-ui-page-header">
+        <h2>@Page.Title</h2>
+        @if (!string.IsNullOrEmpty(Page.Description))
+        {
+            <p class="fdw-ui-page-description">@Page.Description</p>
+        }
+    </header>
+
+    @foreach (var section in Page.Sections.Where(s => s.IsVisible))
+    {
+        <section class="fdw-ui-section" id="@section.Id">
+            @if (!string.IsNullOrEmpty(section.Title))
+            {
+                <h3 class="fdw-ui-section-title">@section.Title</h3>
+            }
+            @foreach (var component in section.AllComponents.Where(c => c.IsVisible).OrderBy(c => c.Order))
+            {
+                <FdwComponent Model="component" Mode="Mode" />
+            }
+        </section>
+    }
+
+    <FdwValidationSummary Validation="_validation" />
+
+    <div class="fdw-ui-actions">
+        @if (_confirmingDelete)
+        {
+            <span class="fdw-ui-confirm-text">Are you sure you want to delete '@Page.Title'?</span>
+            <button class="fdw-ui-action fdw-ui-action-confirm-delete" @onclick="ConfirmDelete">Yes, delete</button>
+            <button class="fdw-ui-action fdw-ui-action-cancel-delete" @onclick="@(() => _confirmingDelete = false)">No</button>
+        }
+        else
+        {
+            <button class="fdw-ui-action fdw-ui-action-save" @onclick="Save">Save</button>
+            <button class="fdw-ui-action fdw-ui-action-cancel" @onclick="@(() => OnCancel())">Cancel</button>
+            @if (ShowDelete)
+            {
+                <button class="fdw-ui-action fdw-ui-action-delete" @onclick="@(() => _confirmingDelete = true)">Delete</button>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private ValidationResult? _validation;
+    private bool _confirmingDelete;
+
+    /// <summary>The page model to render.</summary>
+    [Parameter, EditorRequired] public IPageModel Page { get; set; } = default!;
+
+    /// <summary>The active render mode.</summary>
+    [Parameter, EditorRequired] public IRenderMode Mode { get; set; } = default!;
+
+    /// <summary>Invoked on Save; returns the failed validation to display, or null when accepted.</summary>
+    [Parameter, EditorRequired] public Func<ValidationResult?> OnSave { get; set; } = default!;
+
+    /// <summary>Invoked on Cancel.</summary>
+    [Parameter, EditorRequired] public Action OnCancel { get; set; } = default!;
+
+    /// <summary>Invoked after the in-place delete confirmation.</summary>
+    [Parameter, EditorRequired] public Action OnDelete { get; set; } = default!;
+
+    private bool ShowDelete => Page.Mode is { IsEditable: true, IsCreateMode: false };
+
+    private void Save() => _validation = OnSave();
+
+    private void ConfirmDelete()
+    {
+        _confirmingDelete = false;
+        OnDelete();
+    }
+}

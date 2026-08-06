@@ -1,0 +1,184 @@
+@namespace Fdw.Services.SessionState.Components
+@using Fdw.UI.Providers
+@using Fdw.Results
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Security.Claims
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.SessionState.Components.Logging
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for session state. Loads state for the authenticated user
+    /// and exposes it via <see cref="SessionStateContext"/>.
+    /// </summary>
+    [Parameter] public RenderFragment<SessionStateContext>? ChildContent { get; set; }
+
+    [Inject] private ISessionStateService SessionStateService { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
+    [Inject] private ILogger<SessionStateProvider>? LoggerParam { get; set; }
+
+    private ILogger<SessionStateProvider> _logger = NullLogger<SessionStateProvider>.Instance;
+
+    private readonly Dictionary<string, object?> _state = new(StringComparer.Ordinal);
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private string? _userId;
+
+    private SessionStateContext _context = new();
+    private bool _initialized;
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<SessionStateProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadState();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadState(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        SessionStateProviderLog.LoadingState(_logger);
+
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+            var nameIdClaim = authState.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            _userId = nameIdClaim is not null
+                ? nameIdClaim
+                : authState.User?.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrEmpty(_userId))
+            {
+                SessionStateProviderLog.NoAuthenticatedUser(_logger);
+                return;
+            }
+
+            var keysResult = await SessionStateService.GetAllKeys(_userId, cancellationToken).ConfigureAwait(false);
+
+            if (keysResult.IsSuccess && keysResult.Value is not null)
+            {
+                foreach (var key in keysResult.Value)
+                {
+                    var valueResult = await SessionStateService.GetState<object>(_userId, key, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    if (valueResult.IsSuccess)
+                    {
+                        _state[key] = valueResult.Value;
+                    }
+                }
+
+                SessionStateProviderLog.StateLoaded(_logger, _state.Count);
+            }
+            else
+            {
+                SessionStateProviderLog.LoadStateFailed(
+                    _logger, "Failed to retrieve session state keys");
+                _lastResult = keysResult;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(
+                new[] { SessionStateProviderLog.LoadStateFailed(_logger, ex.Message) }
+                    .Concat(ExceptionResultExtensions.FlattenException(ex)));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+        }
+    }
+
+    private async Task OnSaveState(string key, object? value)
+    {
+        if (string.IsNullOrEmpty(_userId))
+        {
+            return;
+        }
+
+        SessionStateProviderLog.SavingState(_logger, key);
+
+        var result = await SessionStateService.SaveState(_userId, key, value).ConfigureAwait(false);
+
+        if (result.IsSuccess)
+        {
+            _state[key] = value;
+            SessionStateProviderLog.StateSaved(_logger, key);
+        }
+        else
+        {
+            SessionStateProviderLog.SaveStateFailed(_logger, key);
+            _lastResult = result;
+        }
+
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    private async Task OnDeleteState(string key)
+    {
+        if (string.IsNullOrEmpty(_userId))
+        {
+            return;
+        }
+
+        SessionStateProviderLog.DeletingState(_logger, key);
+
+        var result = await SessionStateService.DeleteState(_userId, key).ConfigureAwait(false);
+
+        if (result.IsSuccess)
+        {
+            _state.Remove(key);
+            SessionStateProviderLog.StateDeleted(_logger, key);
+        }
+        else
+        {
+            _lastResult = GenericResult.Failure(SessionStateProviderLog.DeleteStateFailed(_logger, key));
+        }
+
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    private void RebuildContext()
+    {
+        _context = new SessionStateContext
+        {
+            State = _state,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnSaveState = OnSaveState,
+            OnDeleteState = OnDeleteState
+        };
+    }
+}

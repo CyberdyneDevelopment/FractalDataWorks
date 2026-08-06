@@ -1,0 +1,103 @@
+@page "/promotions/{Id:guid}/review"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Review Promotion - Cyberdyne</PageTitle>
+
+<PromotionReviewProvider PromotionId="@Id" OnActionCompleted="HandleActionCompleted">
+    <ChildContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">System</div>
+                <h1>Review Promotion</h1>
+                <div class="sub">Move configuration between environments with review.</div>
+            </div>
+            <div class="actions">
+                <a href="/promotions" class="btn btn-ghost">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Back
+                </a>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
+        {
+            <div class="danger" style="margin-bottom:14px;">
+                <div class="t"><p>@ctx.ErrorMessage</p></div>
+            </div>
+        }
+
+        @if (ctx.IsLoading && ctx.Request is null)
+        {
+            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="mut" style="color:var(--n-500);">Loading&hellip;</p></div></div>
+        }
+        else if (ctx.Request is null)
+        {
+            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p style="color:var(--n-300);">Promotion request not found</p></div></div>
+        }
+        else
+        {
+            <div class="card">
+                <div class="card-h"><h3>@ctx.Request.Name</h3><span class="@GetStatusBadge(ctx.Request.Status)"><span class="bd"></span>@ctx.Request.Status</span></div>
+                <div class="card-b">
+                    <dl class="kv">
+                        <dt>Name</dt><dd>@ctx.Request.Name</dd>
+                        <dt>Status</dt><dd>@ctx.Request.Status</dd>
+                        <dt>Source</dt><dd class="mono">@ctx.Request.SourceEnvironment</dd>
+                        <dt>Target</dt><dd class="mono">@ctx.Request.TargetEnvironment</dd>
+                    </dl>
+
+                    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:22px;">
+                        <div class="svc" style="text-align:center;min-width:160px;">
+                            <span class="hl mono" style="font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--n-500);">Source</span>
+                            <p class="mono" style="margin:6px 0 0;color:var(--glacier-soft);font-weight:600;">@ctx.Request.SourceEnvironment</p>
+                        </div>
+                        <svg style="width:28px;height:28px;color:var(--n-600);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                        <div class="svc" style="text-align:center;min-width:160px;">
+                            <span class="hl mono" style="font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--n-500);">Target</span>
+                            <p class="mono" style="margin:6px 0 0;color:var(--amber-400);font-weight:600;">@ctx.Request.TargetEnvironment</p>
+                        </div>
+                    </div>
+
+                    @if (string.Equals(ctx.Request.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <div class="actions" style="justify-content:flex-end;margin-top:22px;">
+                            <button class="btn btn-danger"
+                                    @onclick="async () => await ctx.OnReject()"
+                                    disabled="@ctx.IsLoading">
+                                Reject
+                            </button>
+                            <button class="btn btn-primary"
+                                    @onclick="async () => await ctx.OnApprove()"
+                                    disabled="@ctx.IsLoading">
+                                Approve
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </ChildContent>
+</PromotionReviewProvider>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private void HandleActionCompleted()
+    {
+        Nav.NavigateTo("/promotions");
+    }
+
+    private static string GetStatusBadge(string status) => status switch
+    {
+        "Approved" => "badge b-ok",
+        "Rejected" => "badge b-fail",
+        "Pending" => "badge b-warn",
+        _ => "badge b-idle"
+    };
+}

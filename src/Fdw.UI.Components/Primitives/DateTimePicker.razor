@@ -1,0 +1,20 @@
+@using System.Globalization
+
+<div class="frow">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label>@Label</label>
+    }
+
+    <input
+        type="@GetInputType()"
+        class="finput mono"
+        value="@GetFormattedValue()"
+        readonly="@ReadOnly"
+        @oninput="HandleInput" />
+
+    @if (!string.IsNullOrEmpty(HelpText))
+    {
+        <small class="hint">@HelpText</small>
+    }
+</div>

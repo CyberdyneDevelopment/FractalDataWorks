@@ -1,0 +1,144 @@
+@namespace Fdw.UI.Components.Primitives
+@typeparam TTypeOption where TTypeOption : class, ITypeOption
+@using Fdw.Collections
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+
+@* Why: Generic picker for any TypeCollection (static or dynamically loaded).
+   Replaces all bespoke *Picker.razor components that rendered a <select> over
+   a TypeCollection. Consumers provide either a StaticOptions (static TypeCollection
+   via All()) or a dynamic Source func (for MutableTypeCollection backed by DB).
+
+   Search + grouping: when GroupSelector is supplied the filtered options are rendered
+   under collapsible group headers (matches the TransformTypeSelector UX). When
+   Searchable=true a type-ahead input narrows the flat <select> list in place so that
+   the number of rendered <option> nodes stays small even for large TypeCollections.
+
+   Virtualize: <Virtualize> cannot be a child of <select> (HTML constraint — <select>
+   only accepts <option>/<optgroup>). Instead we limit DOM size via the search filter:
+   when the visible count exceeds VirtualizeThreshold AND GroupSelector is provided the
+   grouped view is used which renders a scrollable <div> list inside a <Virtualize>
+   block rather than a native <select>, achieving virtual scrolling on large sets.
+
+   Backward compatibility: the existing public API (StaticOptions, Source, Value,
+   ValueChanged, Label, Required, Disabled, Logger) is preserved unchanged. *@
+
+<div class="frow">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label>@Label</label>
+    }
+
+    @if (Searchable)
+    {
+        @* Why: type-ahead filter input rendered before the option list so it appears
+           naturally above it in document order for screen readers and tab order. *@
+        @* Why: use @oninput with a handler rather than @bind="_searchText" so we can
+           call RebuildFilter() immediately on each keystroke without waiting for the
+           next render cycle. @bind:event="oninput" would also work but the handler
+           pattern makes the rebuild trigger explicit. *@
+        <input class="finput"
+               style="margin-bottom:4px;"
+               placeholder="@(SearchPlaceholder ?? "Search...")"
+               value="@_searchText"
+               @oninput="HandleSearchInput"
+               disabled="@(_isLoading || Disabled)" />
+    }
+
+    @if (GroupSelector is not null && _filteredGroups.Count > 0)
+    {
+        @* Why: grouped rendering — iterate groups, show a small group header above each
+           cluster of options, and allow each group to be collapsed independently.
+           Uses a plain <div> list (not <select>) so we can:
+           (a) mix headers and options,
+           (b) wrap items in <Virtualize> for large sets (HTML forbids Virtualize inside <select>).
+           A hidden input carries the actual form value so the component remains form-field compatible. *@
+        <div class="fpicker-grouped @(_isLoading ? "fpicker-loading" : null)"
+             aria-busy="@_isLoading.ToString().ToLowerInvariant()">
+            <input type="hidden" value="@Value" />
+
+            @foreach (var group in _filteredGroups)
+            {
+                var groupKey = group.Key;
+                var isCollapsed = _collapsedGroups.Contains(groupKey);
+
+                <div class="fpicker-group">
+                    <button type="button"
+                            class="fpicker-group-header"
+                            @onclick="() => ToggleGroup(groupKey)">
+                        <span class="fpicker-group-label">@groupKey</span>
+                        <span class="fpicker-group-caret">@(isCollapsed ? "▶" : "▼")</span>
+                    </button>
+
+                    @if (!isCollapsed)
+                    {
+                        <div class="fpicker-group-items">
+                            @if (group.Value.Count > VirtualizeThreshold)
+                            {
+                                @* Why: when a single group is very large, Virtualize keeps
+                                   the DOM small. ItemSize ≈ 36px (button line height). *@
+                                <Virtualize TItem="TTypeOption" Items="@group.Value" Context="option" OverscanCount="4" ItemSize="36">
+                                    @{ var optName = option.Name; }
+                                    <button type="button"
+                                            class="fpicker-option @(string.Equals(Value, optName, StringComparison.Ordinal) ? "fpicker-option-selected" : null)"
+                                            disabled="@Disabled"
+                                            @onclick="() => HandleGroupedSelect(optName)">
+                                        @optName
+                                    </button>
+                                </Virtualize>
+                            }
+                            else
+                            {
+                                @foreach (var option in group.Value)
+                                {
+                                    var optName = option.Name;
+                                    <button type="button"
+                                            class="fpicker-option @(string.Equals(Value, optName, StringComparison.Ordinal) ? "fpicker-option-selected" : null)"
+                                            disabled="@Disabled"
+                                            @onclick="() => HandleGroupedSelect(optName)">
+                                        @optName
+                                    </button>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else if (GroupSelector is not null && _filteredOptions.Count == 0 && Searchable && !string.IsNullOrEmpty(_searchText))
+    {
+        <p class="hint">No options match "@_searchText".</p>
+    }
+    else
+    {
+        @* Why: standard <select>-based rendering for non-grouped mode.
+           Bind via @bind:get/@bind:set (not manual value+@onchange) — the manual pair
+           makes the Razor compiler emit a literal "@onchange" attribute on <select>,
+           which browsers reject as an invalid attribute name (DataSet wizard crash).
+           Note: <Virtualize> cannot be a child of <select> — it inserts spacer divs
+           that browsers reject inside <select>. The search filter (when Searchable=true)
+           limits rendered <option> count naturally, so Virtualize is only used in the
+           grouped path above. *@
+        <select class="finput"
+                disabled="@(_isLoading || Disabled)"
+                @bind:get="Value"
+                @bind:set="HandleChange">
+            <option value="">@(Required ? "Select..." : "(none)")</option>
+            @foreach (var option in _filteredOptions)
+            {
+                <option value="@option.Name">@option.Name</option>
+            }
+        </select>
+
+        @if (Searchable && _filteredOptions.Count == 0 && !string.IsNullOrEmpty(_searchText))
+        {
+            <p class="hint">No options match "@_searchText".</p>
+        }
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="hint" style="color:var(--signal);">@_errorMessage</div>
+    }
+</div>

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.Schema.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Schema.Abstractions\Fdw.Schema.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Schema.Ddl\Fdw.Schema.Ddl.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Schema.Ddl.MsSql\Fdw.Schema.Ddl.MsSql.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

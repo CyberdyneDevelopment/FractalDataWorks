@@ -1,0 +1,255 @@
+@namespace Fdw.Services.Settings.Components.Settings
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Settings.Clients
+@using Fdw.Services.Settings.Clients.Models
+@using Fdw.UI.Themes.Clients.ApiClients
+@using Fdw.UI.Themes.Clients.Models
+@using Fdw.Services.Settings.Components.Logging
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    // -- Parameters --
+
+    [Parameter] public RenderFragment<SettingsContext>? ChildContent { get; set; }
+
+    // -- Injected Services --
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private SettingsApiClient? _settingsApi;
+    private ThemeApiClient? _themeApi;
+    [Inject] private ILogger<SettingsProvider>? LoggerParam { get; set; }
+
+    private ILogger<SettingsProvider> _logger = NullLogger<SettingsProvider>.Instance;
+
+    // -- State --
+
+    private IReadOnlyList<ServerSettingResponse> _settings = [];
+    private IReadOnlyList<ThemeSummaryPayload> _themes = [];
+    private bool _isLoading;
+    private bool _isSaving;
+    private IGenericResult? _lastResult;
+    private string? _successMessage;
+    private SettingsContext _context = new();
+    private bool _initialized;
+
+    // -- Lifecycle --
+
+    protected override void OnInitialized()
+    {
+        _settingsApi = new SettingsApiClient(HttpClientFactory.CreateClient("SettingsClient"), LoggerFactory?.CreateLogger<SettingsApiClient>()!);
+        _themeApi = new ThemeApiClient(HttpClientFactory.CreateClient("ThemeClient"), LoggerFactory?.CreateLogger<ThemeApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<SettingsProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await Task.WhenAll(LoadSettings(), LoadThemes());
+        }
+    }
+
+    // -- Methods --
+
+    private async Task LoadSettings(CancellationToken ct = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        SettingsProviderLog.LoadSettingsStarted(_logger);
+
+        try
+        {
+            var result = await _settingsApi!.List(ct);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(SettingsProviderLog.LoadSettingsFailed(_logger));
+                _settings = [];
+                return;
+            }
+
+            _settings = result.Value?.ToList() ?? [];
+            SettingsProviderLog.LoadSettingsCompleted(_logger, _settings.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { SettingsProviderLog.LoadSettingsException(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _settings = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadThemes(CancellationToken ct = default)
+    {
+        SettingsProviderLog.LoadThemesStarted(_logger);
+
+        try
+        {
+            var result = await _themeApi!.GetThemes(ct);
+            if (!result.IsSuccess)
+            {
+                SettingsProviderLog.LoadThemesFailed(_logger);
+                _themes = [];
+                return;
+            }
+
+            _themes = result.Value?.ToList() ?? [];
+            SettingsProviderLog.LoadThemesCompleted(_logger, _themes.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            SettingsProviderLog.LoadThemesException(_logger, ex);
+            _themes = [];
+        }
+        finally
+        {
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task UpdateSetting(string settingName, string? settingValue, CancellationToken ct = default)
+    {
+        _isSaving = true;
+        _lastResult = null;
+        _successMessage = null;
+        RebuildContext();
+        StateHasChanged();
+
+        SettingsProviderLog.UpdateSettingStarted(_logger, settingName);
+
+        try
+        {
+            var request = new UpdateServerSettingPayload
+            {
+                SettingName = settingName,
+                SettingValue = settingValue
+            };
+
+            var result = await _settingsApi!.Update(settingName, request, ct);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(SettingsProviderLog.UpdateSettingFailed(_logger, settingName));
+                return;
+            }
+
+            SettingsProviderLog.UpdateSettingCompleted(_logger, settingName);
+
+            // Refresh settings list after update
+            var listResult = await _settingsApi!.List(ct);
+            if (listResult.IsSuccess)
+            {
+                _settings = listResult.Value?.ToList() ?? [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(
+                new[] { SettingsProviderLog.UpdateSettingException(_logger, ex, settingName) }
+                    .Concat(ExceptionResultExtensions.FlattenException(ex)));
+        }
+        finally
+        {
+            _isSaving = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SetDefaultTheme(string themeName, CancellationToken ct = default)
+    {
+        _lastResult = null;
+        _successMessage = null;
+        RebuildContext();
+        StateHasChanged();
+
+        SettingsProviderLog.SetThemeStarted(_logger, themeName);
+
+        try
+        {
+            var result = await _themeApi!.SetDefaultTheme(themeName, ct);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(SettingsProviderLog.SetThemeFailed(_logger, themeName));
+                return;
+            }
+
+            SettingsProviderLog.SetThemeCompleted(_logger, themeName);
+            await LoadThemes(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(SettingsProviderLog.SetThemeException(_logger, ex, themeName));
+        }
+        finally
+        {
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private string GetSettingValue(string name, string defaultValue)
+    {
+        var setting = _settings.FirstOrDefault(s => string.Equals(s.SettingName, name, StringComparison.OrdinalIgnoreCase));
+        return setting?.SettingValue ?? defaultValue;
+    }
+
+    // -- Private Helpers --
+
+    private void RebuildContext()
+    {
+        _context = new SettingsContext
+        {
+            Settings = _settings,
+            Themes = _themes,
+            IsLoading = _isLoading,
+            IsSaving = _isSaving,
+            LastResult = _lastResult,
+            SuccessMessage = _successMessage,
+            OnLoadSettings = () => LoadSettings(),
+            OnLoadThemes = () => LoadThemes(),
+            OnUpdateSetting = (name, value) => UpdateSetting(name, value),
+            OnSetDefaultTheme = name => SetDefaultTheme(name),
+            GetSettingValue = GetSettingValue
+        };
+    }
+}

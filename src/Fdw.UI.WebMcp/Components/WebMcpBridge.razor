@@ -1,0 +1,8 @@
+@namespace Fdw.UI.WebMcp.Components
+
+@* Why: the bridge renders no markup of its own — it is a headless coordinator. Child components
+   reach it through the cascaded instance and call RegisterTool during their own initialisation,
+   which runs before the bridge's OnAfterRenderAsync publishes the batch to the browser. *@
+<CascadingValue Value="this" IsFixed="true">
+    @ChildContent
+</CascadingValue>

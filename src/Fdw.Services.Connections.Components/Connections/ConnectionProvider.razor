@@ -1,0 +1,441 @@
+@namespace Fdw.Services.Connections.Components.Connections
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.Services.Connections.Clients
+@using Fdw.Services.Connections.Clients.Models
+@using Fdw.Operations.Clients
+@using Fdw.Operations.Clients.Models
+@using Fdw.Results
+@using Fdw.Services.Connections.Components.Logging
+@using System.Net.Http
+@using Fdw.UI.Components.Logging
+
+@*
+    Headless component that provides Connection Management logic and state.
+*@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for connection management operations. Owns connection loading,
+    /// type discovery, and CRUD logic. No UI markup.
+    /// </summary>
+    /// <remarks>
+    /// Headless chain:
+    /// <list type="bullet">
+    ///   <item><description>Consumer (before): page shells with markup and ctx.OnXxx() calls</description></item>
+    ///   <item><description>This (provider): <see cref="ConnectionProvider"/> — owns all state and logic, exposes via <see cref="ConnectionContext"/></description></item>
+    ///   <item><description>Context (after): <see cref="ConnectionContext"/> — sealed; passed to consumer RenderFragment</description></item>
+    /// </list>
+    /// </remarks>
+    [Parameter] public RenderFragment<ConnectionContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private ConnectionApiClient? _connectionApi;
+    private ConfigurationApiClient? _configurationApi;
+    [Inject] private ILogger<ConnectionProvider>? LoggerParam { get; set; }
+
+    private ILogger<ConnectionProvider> _logger = NullLogger<ConnectionProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<ConnectionPayload> _connections = [];
+    // Why: ConnectionApiClient.GetConnectionTypes() hits connections/types (200); the old
+    // ConfigurationApiClient.GetTypesByCategory("Connection") hit configuration/types?category=Connection (404).
+    private IReadOnlyList<ConnectionTypePayload> _connectionTypes = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private string _searchString = string.Empty;
+    private readonly Dictionary<string, IReadOnlyList<TypeCollectionValueSummary>> _collectionsCache = new(StringComparer.Ordinal);
+
+    // Discovery state
+    private string? _activeDiscoveryId;
+    private bool _isDiscovering;
+    private string? _discoveryDataStoreName;
+    private DateTimeOffset? _discoveryCompletedAt;
+
+    private ConnectionContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _connectionApi = new ConnectionApiClient(HttpClientFactory.CreateClient("ConnectionClient"), LoggerFactory?.CreateLogger<ConnectionApiClient>()!);
+        _configurationApi = new ConfigurationApiClient(HttpClientFactory.CreateClient("ConfigurationClient"), LoggerFactory?.CreateLogger<ConfigurationApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<ConnectionProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadData();
+        }
+    }
+
+    // ── Methods (exposed as callbacks via ConnectionContext) ────────────────────
+
+    private async Task LoadData(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var connectionsTask = _connectionApi!.GetConnections(cancellationToken);
+            var typesTask = _connectionApi!.GetConnectionTypes(cancellationToken);
+
+            await Task.WhenAll(connectionsTask, typesTask);
+
+            var result = await connectionsTask;
+            if (result.IsSuccess)
+            {
+                _connections = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                ConnectionProviderLog.LoadConnectionsFailed(_logger);
+                _lastResult = result;
+                _connections = [];
+            }
+
+            var typesResult = await typesTask;
+            if (typesResult.IsSuccess)
+            {
+                _connectionTypes = typesResult.Value?.ToList() ?? [];
+            }
+            else
+            {
+                ConnectionProviderLog.LoadConnectionTypesFailed(_logger);
+                _lastResult = result;
+                _connectionTypes = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ConnectionProviderLog.LoadConnectionsException(_logger, ex));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private IReadOnlyList<TypeCollectionValueSummary> GetCollectionValues(string collectionName)
+    {
+        if (string.IsNullOrEmpty(collectionName))
+        {
+            return [];
+        }
+
+        _collectionsCache.TryGetValue(collectionName, out var values);
+        return values ?? [];
+    }
+
+    private async Task<IReadOnlyList<TypeCollectionValueSummary>> FetchCollection(string collectionName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _configurationApi!.GetTypeCollectionValues(collectionName, cancellationToken);
+            if (result.IsSuccess && result.Value is not null)
+            {
+                return result.Value;
+            }
+
+            return [];
+        }
+        catch (OperationCanceledException)
+        {
+            return [];
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private IEnumerable<ConnectionPayload> GetFilteredConnections()
+    {
+        return string.IsNullOrWhiteSpace(_searchString)
+            ? _connections
+            : _connections.Where(c => c.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+                                      c.ConnectionType.Contains(_searchString, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task<ConnectionDetailResponse?> GetConnectionDetails(string name, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _connectionApi!.GetConnection(name, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(ConnectionProviderLog.ConnectionDetailLoadFailed(_logger, name));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ConnectionProviderLog.ConnectionDetailLoadException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<ConnectionDetailResponse?> CreateConnection(CreateConnectionClientRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _connectionApi!.CreateConnection(request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadData(cancellationToken);
+
+                if (result.Value?.SetupSummary != null)
+                {
+                    _activeDiscoveryId = result.Value.SetupSummary.DiscoveryId;
+                    _isDiscovering = true;
+                    _discoveryDataStoreName = result.Value.SetupSummary.DataStoreName;
+                    RebuildContext();
+                    StateHasChanged();
+                }
+
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(ConnectionProviderLog.ConnectionCreateFailed(_logger));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ConnectionProviderLog.ConnectionCreateException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<ConnectionDetailResponse?> UpdateConnection(string name, UpdateConnectionClientRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _connectionApi!.UpdateConnection(name, request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadData(cancellationToken);
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(ConnectionProviderLog.ConnectionUpdateFailed(_logger, name));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ConnectionProviderLog.ConnectionUpdateException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> DeleteConnection(string name, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _connectionApi!.DeleteConnection(name, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadData(cancellationToken);
+                return true;
+            }
+
+            _lastResult = GenericResult.Failure(ConnectionProviderLog.ConnectionDeleteFailed(_logger, name));
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ConnectionProviderLog.ConnectionDeleteException(_logger, ex));
+            return false;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<TestConnectionClientResponse?> TestConnection(string name, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _connectionApi!.TestConnection(name, cancellationToken);
+            if (result.IsSuccess && result.Value != null)
+            {
+                var connection = _connections.FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.Ordinal));
+                if (connection != null)
+                {
+                    connection.LastTestSuccess = result.Value.Success;
+                    connection.LastTestedAt = DateTimeOffset.UtcNow;
+                }
+
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(ConnectionProviderLog.ConnectionTestFailed(_logger, name));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ConnectionProviderLog.ConnectionTestException(_logger, ex, name));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private void CompleteDiscovery(string? dataStoreName = null)
+    {
+        _isDiscovering = false;
+        _discoveryCompletedAt = DateTimeOffset.UtcNow;
+        if (dataStoreName != null)
+        {
+            _discoveryDataStoreName = dataStoreName;
+        }
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    private void ClearDiscovery()
+    {
+        _activeDiscoveryId = null;
+        _isDiscovering = false;
+        _discoveryDataStoreName = null;
+        _discoveryCompletedAt = null;
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    private void SetSearchString(string value)
+    {
+        _searchString = value;
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new ConnectionContext
+        {
+            Connections = _connections,
+            ConnectionTypes = _connectionTypes,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            SearchString = _searchString,
+            FilteredConnections = GetFilteredConnections(),
+            ActiveDiscoveryId = _activeDiscoveryId,
+            IsDiscovering = _isDiscovering,
+            DiscoveryDataStoreName = _discoveryDataStoreName,
+            DiscoveryCompletedAt = _discoveryCompletedAt,
+            OnLoadData = () => LoadData(),
+            OnGetConnectionDetails = name => GetConnectionDetails(name),
+            OnCreateConnection = request => CreateConnection(request),
+            OnUpdateConnection = (name, request) => UpdateConnection(name, request),
+            OnDeleteConnection = name => DeleteConnection(name),
+            OnTestConnection = name => TestConnection(name),
+            OnGetCollectionValues = GetCollectionValues,
+            OnSearchStringChanged = SetSearchString,
+            OnCompleteDiscovery = CompleteDiscovery,
+            OnClearDiscovery = ClearDiscovery
+        };
+    }
+}

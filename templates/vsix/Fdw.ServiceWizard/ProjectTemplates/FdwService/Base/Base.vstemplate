@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VSTemplate Version="3.0.0" Type="Project" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
+  <TemplateData>
+    <Name>$serviceName$</Name>
+    <Description>Service types, collection, and provider</Description>
+    <Icon>__TemplateIcon.ico</Icon>
+    <ProjectType>CSharp</ProjectType>
+    <LanguageTag>csharp</LanguageTag>
+  </TemplateData>
+  <TemplateContent>
+    <Project File="Base.csproj" ReplaceParameters="true">
+      <ProjectItem ReplaceParameters="true">$serviceName$TypeBase.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true">$serviceName$Types.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true" Condition="$includeProvider$ == True">Default$serviceName$Provider.cs</ProjectItem>
+    </Project>
+  </TemplateContent>
+</VSTemplate>

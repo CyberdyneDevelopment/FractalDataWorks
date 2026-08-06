@@ -1,0 +1,155 @@
+@namespace Fdw.Data.UI.Components
+@using PreviewFilterCondition = Fdw.Schema.Clients.Models.PreviewFilterCondition
+@using DomainPreviewContext = Fdw.Data.Components.DataPreview.DataPreviewContext
+
+<div class="card">
+    <div class="card-h">
+        <h3>Query Builder</h3>
+    </div>
+    <div class="card-b">
+        @if (string.Equals(PreviewMode, "Table", StringComparison.Ordinal))
+        {
+            <div style="margin-bottom:16px;">
+                <NestedObjectPicker TNode="DataStoreNode"
+                                    Items="DataStorePickerItems"
+                                    GetChildren="GetPickerChildren"
+                                    IsLeaf="@(n => string.Equals(n.Kind, DataStoreNodeKind.Container, StringComparison.Ordinal))"
+                                    LabelSelector="@(n => n.Name)"
+                                    Label="DataStore"
+                                    ChildLabel="Path / Container"
+                                    Placeholder="Select..."
+                                    SelectionChanged="@(chain => OnPickerSelectionChanged.InvokeAsync(chain))" />
+            </div>
+        }
+        else
+        {
+            <div class="fgrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
+                <div class="frow" style="margin-bottom:0;">
+                    <label class="flbl">DataSet</label>
+                    <select class="fin" value="@PreviewProvider.SelectedDataSetName"
+                            @onchange="@(async e => await PreviewProvider.OnDataSetChanged(e.Value?.ToString() ?? string.Empty))"
+                            disabled="@PreviewProvider.IsLoadingDataSets">
+                        <option value="">Select DataSet...</option>
+                        @foreach (var ds in PreviewProvider.DataSets)
+                        {
+                            <option value="@ds.Name">@ds.Name (@ds.FieldCount fields)</option>
+                        }
+                    </select>
+                </div>
+                <div class="frow" style="margin-bottom:0;">
+                    <label class="flbl">Row limit</label>
+                    <select class="fin" @bind="RowLimit">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+        }
+        @if (string.Equals(PreviewMode, "DataSet", StringComparison.Ordinal) && PreviewProvider.SelectedDataSetDetail is not null)
+        {
+            <div class="filters" style="margin-bottom:16px;">
+                @foreach (var field in PreviewProvider.SelectedDataSetDetail.Fields.OrderBy(f => f.Ordinal))
+                {
+                    <span class="@(field.IsKey ? "chip on" : "chip")">
+                        @field.Name <span class="x mono">@field.DataType</span>
+                    </span>
+                }
+            </div>
+        }
+
+        <!-- Filters -->
+        <div class="frow" style="margin-bottom:16px;">
+            <div class="card-h" style="padding:0 0 4px;">
+                <label class="flbl" style="margin-bottom:0;">Filters</label>
+                <button class="btn btn-secondary btn-sm" @onclick="AddFilter">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Filter
+                </button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                @foreach (var filter in Filters)
+                {
+                    <div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:8px;align-items:center;">
+                        @if (string.Equals(PreviewMode, "DataSet", StringComparison.Ordinal) && PreviewProvider.SelectedDataSetDetail is not null)
+                        {
+                            <select class="fin" @bind="filter.Column">
+                                <option value="">Select column...</option>
+                                @foreach (var field in PreviewProvider.SelectedDataSetDetail.Fields.OrderBy(f => f.Ordinal))
+                                {
+                                    <option value="@field.Name">@field.Name (@field.DataType)</option>
+                                }
+                            </select>
+                        }
+                        else
+                        {
+                            <input class="fin" placeholder="Column name" @bind="filter.Column" />
+                        }
+                        <select class="fin" @bind="filter.Operator">
+                            <option value="Equal">Equal</option>
+                            <option value="NotEqual">NotEqual</option>
+                            <option value="Contains">Contains</option>
+                            <option value="StartsWith">StartsWith</option>
+                            <option value="EndsWith">EndsWith</option>
+                            <option value="GreaterThan">GreaterThan</option>
+                            <option value="LessThan">LessThan</option>
+                            <option value="In">In</option>
+                            <option value="IsNull">IsNull</option>
+                            <option value="IsNotNull">IsNotNull</option>
+                        </select>
+                        <input class="fin" placeholder="Value" @bind="filter.Value"
+                               disabled="@(filter.Operator is "IsNull" or "IsNotNull")" />
+                        <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => Filters.Remove(filter)">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card-h" style="padding:0;">
+            <div class="actions">
+                @if (string.Equals(PreviewMode, "Table", StringComparison.Ordinal))
+                {
+                    <label class="flbl" style="margin-bottom:0;">Row limit</label>
+                    <select class="fin" style="width:auto;" @bind="RowLimit">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                }
+            </div>
+            <button class="btn btn-primary" @onclick="OnExecute" disabled="@IsLoading">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                </svg>
+                @(IsLoading ? "Executing..." : "Execute")
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public DomainPreviewContext PreviewProvider { get; set; } = default!;
+    [Parameter, EditorRequired] public SchemaContext SchemaContext { get; set; } = default!;
+    [Parameter] public string PreviewMode { get; set; } = "Table";
+    [Parameter] public IReadOnlyList<DataStoreNode> DataStorePickerItems { get; set; } = [];
+    [Parameter] public Func<DataStoreNode, Task<IReadOnlyList<DataStoreNode>>> GetPickerChildren { get; set; }
+        = _ => Task.FromResult<IReadOnlyList<DataStoreNode>>([]);
+    [Parameter] public EventCallback<IReadOnlyList<DataStoreNode>> OnPickerSelectionChanged { get; set; }
+    [Parameter] public int RowLimit { get; set; } = 25;
+    [Parameter] public EventCallback<int> RowLimitChanged { get; set; }
+    // Why: IList<T> (not List<T>) satisfies the MA0016 abstraction rule while still allowing
+    // AddFilter to mutate the collection in-place when the provider passes its own list reference.
+    [Parameter] public IList<PreviewFilterCondition> Filters { get; set; } = new List<PreviewFilterCondition>();
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback OnExecute { get; set; }
+
+    private void AddFilter() => Filters.Add(new PreviewFilterCondition());
+}

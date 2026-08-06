@@ -1,0 +1,133 @@
+@page "/pipelines/executions/{ExecutionId:guid}"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Execution Detail - Cyberdyne</PageTitle>
+
+<ExecutionDetailProvider ExecutionId="@ExecutionId">
+    <ChildContent Context="ctx">
+        <div>
+            <div class="pagehead">
+                <div>
+                    <div class="ey">Pipelines &amp; Scheduling</div>
+                    <h1>Execution Detail</h1>
+                    <div class="sub mono">@ExecutionId</div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-secondary btn-sm" @onclick="ctx.OnRefresh" disabled="@ctx.IsLoading">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Refresh
+                    </button>
+                    <a href="/audit" class="btn btn-ghost btn-sm">Back to Audit</a>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
+            {
+                <div class="card b-fail" style="margin-bottom:14px;padding:14px 16px;">
+                    <p class="mono" style="font-size:12px;color:var(--signal);margin:0;">@ctx.ErrorMessage</p>
+                </div>
+            }
+
+            @if (ctx.IsLoading && ctx.Execution is null)
+            {
+                <div class="card" style="padding:48px;text-align:center;">
+                    <span class="mono" style="color:var(--n-500);">Loading execution…</span>
+                </div>
+            }
+            else if (ctx.Execution is not null)
+            {
+                var exec = ctx.Execution;
+                <div class="card" style="margin-bottom:14px;">
+                    <div class="card-b" style="padding:20px;">
+                        <dl class="kv">
+                            <dt>Name</dt>
+                            <dd class="mono">@exec.Name</dd>
+                            <dt>Type</dt>
+                            <dd>@exec.ItemType</dd>
+                            <dt>State</dt>
+                            <dd><span class="badge @GetStateClasses(exec.State)"><span class="bd"></span>@exec.State</span></dd>
+                            <dt>Started</dt>
+                            <dd>@(exec.CreatedAt.ToString("g"))</dd>
+                            @if (exec.CorrelationId is not null)
+                            {
+                                <dt>Correlation ID</dt>
+                                <dd class="mono">@exec.CorrelationId</dd>
+                            }
+                            @if (exec.CompletedAt is not null)
+                            {
+                                <dt>Completed</dt>
+                                <dd>@exec.CompletedAt.Value.ToString("g")</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+
+                @if (ctx.Children.Any())
+                {
+                    <div class="card">
+                        <div class="card-h"><h3>Steps (@ctx.Children.Count)</h3></div>
+                        <div class="card-b" style="padding:0 10px 12px;">
+                            <table class="tbl">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>State</th>
+                                        <th>Started</th>
+                                        <th>Completed</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var child in ctx.Children)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <a href="/pipelines/executions/@child.Id" class="cellpad nm">
+                                                    @child.Name
+                                                </a>
+                                            </td>
+                                            <td class="mut">@child.ItemType</td>
+                                            <td>
+                                                <span class="badge @GetStateClasses(child.State)"><span class="bd"></span>@child.State</span>
+                                            </td>
+                                            <td class="mut">@child.CreatedAt.ToString("g")</td>
+                                            <td class="mut">@(child.CompletedAt?.ToString("g") ?? "-")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card" style="padding:32px;text-align:center;">
+                        <p style="color:var(--n-500);margin:0;">No child executions found.</p>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="card" style="padding:48px;text-align:center;">
+                    <p style="color:var(--n-500);">Execution not found</p>
+                </div>
+            }
+        </div>
+    </ChildContent>
+</ExecutionDetailProvider>
+
+@code {
+    [Parameter] public Guid ExecutionId { get; set; }
+
+    private static string GetStateClasses(string state) => state switch
+    {
+        "Completed" or "Succeeded" => "b-ok",
+        "Failed" or "Faulted" => "b-fail",
+        "Running" or "InProgress" => "b-run",
+        "Pending" or "Queued" => "b-warn",
+        "Cancelled" or "Paused" => "b-idle",
+        _ => "b-idle"
+    };
+}

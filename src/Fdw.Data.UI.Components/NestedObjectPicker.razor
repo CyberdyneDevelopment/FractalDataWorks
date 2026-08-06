@@ -1,0 +1,147 @@
+@namespace Fdw.Data.UI.Components
+@typeparam TNode
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading.Tasks
+@using Fdw.UI.Components.Primitives
+
+@* Why: Recursive drill-down picker. Renders an ObjectPicker for the CURRENT level; when a node with
+   children is selected it recurses by rendering ITSELF for the next level. Models the navigable
+   DataStore -> Path -> Container -> Field hierarchy (the DataStore API client now returns the full
+   tree). Recursion terminates at a leaf (IsLeaf predicate, or GetChildren returning empty). The full
+   selected chain (root -> leaf) is surfaced via SelectionChanged. *@
+
+<div class="nested-object-picker-level">
+    <ObjectPicker TItem="TNode"
+                  Items="Items"
+                  Label="@Label"
+                  Placeholder="@Placeholder"
+                  Required="Required"
+                  Disabled="Disabled"
+                  LabelSelector="LabelSelector"
+                  KeySelector="KeySelector"
+                  Value="@_selectedKey"
+                  ValueChanged="HandleSelectionChanged" />
+
+    @* Why: recurse only when the selected node is non-leaf AND its children have loaded.
+       Rendering NestedObjectPicker for the next level continues the drill-down; the leaf check
+       (plus empty children) is what terminates the recursion. *@
+    @if (_selectedNode is not null && _childItems is not null && _childItems.Count > 0)
+    {
+        <NestedObjectPicker TNode="TNode"
+                            Items="_childItems"
+                            GetChildren="GetChildren"
+                            IsLeaf="IsLeaf"
+                            LabelSelector="LabelSelector"
+                            KeySelector="KeySelector"
+                            Label="@ChildLabel"
+                            Placeholder="@Placeholder"
+                            Required="Required"
+                            Disabled="Disabled"
+                            ChildLabel="@ChildLabel"
+                            SelectionChanged="HandleChildSelectionChanged" />
+    }
+</div>
+
+@code {
+    // ── Parameters: level data ──────────────────────────────────────────────────────
+
+    /// <summary>The items shown at THIS level of the drill-down.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<TNode> Items { get; set; } = [];
+
+    /// <summary>
+    /// Async loader for a node's children. Invoked when a non-leaf node is selected.
+    /// Returning an empty list also terminates the recursion (treated as a leaf at runtime).
+    /// </summary>
+    [Parameter, EditorRequired] public Func<TNode, Task<IReadOnlyList<TNode>>> GetChildren { get; set; } = default!;
+
+    /// <summary>
+    /// Predicate identifying leaf nodes (no children, recursion stops). When not supplied, recursion
+    /// is driven purely by <see cref="GetChildren"/> returning an empty list.
+    /// </summary>
+    [Parameter] public Func<TNode, bool>? IsLeaf { get; set; }
+
+    // ── Parameters: projection ──────────────────────────────────────────────────────
+
+    /// <summary>Produces the display label for a node. Required.</summary>
+    [Parameter, EditorRequired] public Func<TNode, string> LabelSelector { get; set; } = default!;
+
+    /// <summary>Produces the stable key for a node. Defaults to <see cref="LabelSelector"/> when null.</summary>
+    [Parameter] public Func<TNode, string>? KeySelector { get; set; }
+
+    // ── Parameters: presentation ────────────────────────────────────────────────────
+
+    /// <summary>Label shown above THIS level's picker.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Label applied to every deeper (recursed) level.</summary>
+    [Parameter] public string? ChildLabel { get; set; }
+
+    /// <summary>Placeholder for each level's blank option.</summary>
+    [Parameter] public string? Placeholder { get; set; }
+
+    /// <summary>Whether a selection is required at each level.</summary>
+    [Parameter] public bool Required { get; set; }
+
+    /// <summary>Whether the pickers are disabled.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    // ── Parameters: output ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Raised with the full selection chain (root -> leaf) whenever the chain changes at this level
+    /// or any deeper level.
+    /// </summary>
+    [Parameter] public EventCallback<IReadOnlyList<TNode>> SelectionChanged { get; set; }
+
+    // ── State ───────────────────────────────────────────────────────────────────────
+
+    private string? _selectedKey;
+    private TNode? _selectedNode;
+    private IReadOnlyList<TNode>? _childItems;
+    // Why: the chain reported by THIS level = [selected node at this level, ...chain from child level].
+    private IReadOnlyList<TNode> _childChain = [];
+
+    private string KeyOf(TNode node) => (KeySelector ?? LabelSelector)(node);
+
+    private async Task HandleSelectionChanged(string? key)
+    {
+        _selectedKey = key;
+        _childItems = null;
+        _childChain = [];
+
+        _selectedNode = string.IsNullOrEmpty(key)
+            ? default
+            : Items.FirstOrDefault(i => string.Equals(KeyOf(i), key, StringComparison.Ordinal));
+
+        // Why: a leaf (by predicate) terminates recursion immediately — no child load, no deeper picker.
+        if (_selectedNode is not null && (IsLeaf is null || !IsLeaf(_selectedNode)))
+        {
+            // Why: empty children also terminates — _childItems stays null/empty so the @if renders nothing.
+            _childItems = await GetChildren(_selectedNode);
+        }
+
+        await EmitChain();
+    }
+
+    private async Task HandleChildSelectionChanged(IReadOnlyList<TNode> childChain)
+    {
+        _childChain = childChain;
+        await EmitChain();
+    }
+
+    private Task EmitChain()
+    {
+        if (!SelectionChanged.HasDelegate)
+            return Task.CompletedTask;
+
+        var chain = new List<TNode>();
+        if (_selectedNode is not null)
+        {
+            chain.Add(_selectedNode);
+            chain.AddRange(_childChain);
+        }
+        return SelectionChanged.InvokeAsync(chain);
+    }
+}

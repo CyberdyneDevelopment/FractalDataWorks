@@ -1,0 +1,94 @@
+@namespace Fdw.Services.Pipelines.Components.Dashboard
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Pipelines.Clients.Abstractions
+@using Fdw.Results
+@using Fdw.UI.Components.Logging
+@using Fdw.UI.Components.Base
+
+@inherits UIComponentBase
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for the pipeline dashboard widget.
+    /// Fetches pipeline count.
+    /// </summary>
+    [Parameter] public RenderFragment<PipelineDashboardContext>? ChildContent { get; set; }
+
+    [Inject] private IPipelineClient PipelineClient { get; set; } = default!;
+    [Inject] private ILogger<PipelineDashboardProvider>? LoggerParam { get; set; }
+
+    private ILogger<PipelineDashboardProvider> _logger = NullLogger<PipelineDashboardProvider>.Instance;
+
+    private int _totalPipelines;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private PipelineDashboardContext _context = new();
+    private bool _initialized;
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<PipelineDashboardProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadSummary();
+        }
+    }
+
+    private async Task<IGenericResult> LoadSummary(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await PipelineClient.List(cancellationToken);
+            _totalPipelines = result.IsSuccess ? result.Value?.Count ?? 0 : 0;
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            return ProviderContextBase.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.LoadException(_logger, ex, "PipelineDashboardProvider", "pipelines"));
+            return _lastResult;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private void RebuildContext()
+    {
+        _context = new PipelineDashboardContext
+        {
+            TotalPipelines = _totalPipelines,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnRefresh = () => LoadSummary()
+        };
+    }
+}

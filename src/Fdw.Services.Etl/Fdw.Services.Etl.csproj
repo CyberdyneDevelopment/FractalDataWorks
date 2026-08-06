@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Fdw.Services.Etl</RootNamespace>
+    <Description>ETL pipeline services for Fdw.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Enable generator debugging -->
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Services.Etl.Abstractions\Fdw.Services.Etl.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services\Fdw.Services.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Configuration.SourceGenerators\Fdw.Configuration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Configuration\Fdw.Configuration.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Connections.Abstractions\Fdw.Services.Connections.Abstractions.csproj" />
+    <!-- Why: IHttpRecordWriterConnection is in Http.Abstractions — needed for write-capability feature detection
+         in BatchCopyPipeline.LoadToConnection (connection type invisible above the connection layer). -->
+    <ProjectReference Include="..\Fdw.Services.Connections.Http.Abstractions\Fdw.Services.Connections.Http.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
+    <ProjectReference Include="..\Fdw.Commands.Data.Extensions\Fdw.Commands.Data.Extensions.csproj" />
+    <ProjectReference Include="..\Fdw.Operations.Abstractions\Fdw.Operations.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Pipelines\Fdw.Services.Pipelines.csproj" />
+    <ProjectReference Include="..\Fdw.Data\Fdw.Data.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Validation\Fdw.Validation.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
+    <!-- Why: IExecutionCompletionSignaler lives in Projects.Abstractions so the optional signaler
+         hook in PipelineExecutionBackgroundService can call Signal without a circular reference.
+         Services.Etl.Projects depends on Services.Etl, not the reverse. -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Why: lets Fdw.Services.Etl.Tests unit-test PipelineExecutionBackgroundService's internal
+         EstablishWorkAuthenticationContext seam directly, without standing up the full pipeline
+         execution dependency graph (IExecutionTracker, IDataGateway, etc.). -->
+    <InternalsVisibleTo Include="Fdw.Services.Etl.Tests" />
+  </ItemGroup>
+</Project>

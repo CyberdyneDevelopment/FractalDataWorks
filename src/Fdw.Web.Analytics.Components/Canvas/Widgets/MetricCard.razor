@@ -1,0 +1,111 @@
+@using Fdw.UI.Abstractions.Pages
+@using Fdw.UI.Themes.Components.Theme
+@inherits Microsoft.AspNetCore.Components.ComponentBase
+
+<div class="metric-card @GetStatusClass()" style="@GetCardStyle()">
+    <div class="metric-header">
+        @if (!string.IsNullOrEmpty(Model?.Icon))
+        {
+            <span class="metric-icon">@Model.Icon</span>
+        }
+        <span class="metric-label" style="color: @GetThemeColor(c => c.Muted);">@Model?.Label</span>
+    </div>
+    <div class="metric-value" style="color: @GetThemeColor(c => c.Primary);">
+        @FormatValue()
+        @if (!string.IsNullOrEmpty(Model?.Unit))
+        {
+            <span class="metric-unit">@Model.Unit</span>
+        }
+    </div>
+    @if (Model?.Trend?.Name != "None")
+    {
+        <div class="metric-trend" style="color: @GetTrendColor();">
+            <span class="trend-icon">@GetTrendIcon()</span>
+            @if (Model?.TrendPercentage.HasValue == true)
+            {
+                <span class="trend-value">@FormatTrendPercentage()</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// The metric widget model to display.
+    /// </summary>
+    [Parameter]
+    public IMetricWidget? Model { get; set; }
+
+    /// <summary>
+    /// Whether to use compact styling.
+    /// </summary>
+    [Parameter]
+    public bool Compact { get; set; } = false;
+
+    /// <summary>
+    /// Theme configuration for styling.
+    /// </summary>
+    [CascadingParameter]
+    protected UiThemeConfiguration? Theme { get; set; }
+
+    private string FormatValue()
+    {
+        if (Model == null) return "-";
+
+        return Model.FormatString != null
+            ? Model.Value.ToString(Model.FormatString, System.Globalization.CultureInfo.CurrentCulture)
+            : Model.Value.ToString("N0", System.Globalization.CultureInfo.CurrentCulture);
+    }
+
+    private string FormatTrendPercentage()
+    {
+        if (Model?.TrendPercentage == null) return "";
+        var value = Model.TrendPercentage.Value;
+        return value >= 0 ? $"+{value:N1}%" : $"{value:N1}%";
+    }
+
+    private string GetTrendIcon()
+    {
+        return Model?.Trend?.Name switch
+        {
+            "Up" => "\u2191",    // ↑
+            "Down" => "\u2193",  // ↓
+            "Stable" => "\u2192", // →
+            _ => ""
+        };
+    }
+
+    private string GetTrendColor()
+    {
+        return Model?.Trend?.Name switch
+        {
+            "Up" => Theme?.Colors?.Success ?? "#22c55e",
+            "Down" => Theme?.Colors?.Error ?? "#ef4444",
+            "Stable" => Theme?.Colors?.Info ?? "#3b82f6",
+            _ => Theme?.Colors?.Muted ?? "#6b7280"
+        };
+    }
+
+    private string GetStatusClass()
+    {
+        var classes = new System.Collections.Generic.List<string>();
+        if (Compact) classes.Add("compact");
+        return string.Join(" ", classes);
+    }
+
+    private string GetCardStyle()
+    {
+        var bg = Theme?.Colors?.Background ?? "#1f2937";
+        var border = Theme?.Colors?.Muted ?? "#374151";
+        return $"background-color: {bg}; border-color: {border};";
+    }
+
+    private string GetThemeColor(System.Func<UiColorScheme, string> selector)
+    {
+        if (Theme?.Colors is { } colors)
+        {
+            return selector(colors);
+        }
+        return "#94a3b8";
+    }
+}

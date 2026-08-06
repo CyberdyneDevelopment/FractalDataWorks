@@ -1,0 +1,182 @@
+@using Excubo.Blazor.Canvas
+@using Excubo.Blazor.Canvas.Contexts
+@using Fdw.UI.Themes.Components.Theme
+@inherits Microsoft.AspNetCore.Components.ComponentBase
+
+<div class="gauge-widget">
+    <Canvas @ref="_canvas" width="@Width" height="@Height" />
+    @if (ShowLabel)
+    {
+        <div class="gauge-label">@Label</div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Current value to display on the gauge.
+    /// </summary>
+    [Parameter]
+    public decimal Value { get; set; }
+
+    /// <summary>
+    /// Minimum value of the gauge range.
+    /// </summary>
+    [Parameter]
+    public decimal Min { get; set; } = 0;
+
+    /// <summary>
+    /// Maximum value of the gauge range.
+    /// </summary>
+    [Parameter]
+    public decimal Max { get; set; } = 100;
+
+    /// <summary>
+    /// Label text to display below the gauge.
+    /// </summary>
+    [Parameter]
+    public string? Label { get; set; }
+
+    /// <summary>
+    /// Unit suffix for the value display (e.g., "%", "ms").
+    /// </summary>
+    [Parameter]
+    public string? Unit { get; set; }
+
+    /// <summary>
+    /// Width of the gauge canvas.
+    /// </summary>
+    [Parameter]
+    public int Width { get; set; } = 200;
+
+    /// <summary>
+    /// Height of the gauge canvas.
+    /// </summary>
+    [Parameter]
+    public int Height { get; set; } = 120;
+
+    /// <summary>
+    /// Whether to show the label below the gauge.
+    /// </summary>
+    [Parameter]
+    public bool ShowLabel { get; set; } = true;
+
+    /// <summary>
+    /// Warning threshold value (gauge turns yellow above this).
+    /// </summary>
+    [Parameter]
+    public decimal? WarningThreshold { get; set; }
+
+    /// <summary>
+    /// Critical threshold value (gauge turns red above this).
+    /// </summary>
+    [Parameter]
+    public decimal? CriticalThreshold { get; set; }
+
+    /// <summary>
+    /// Theme configuration for styling.
+    /// </summary>
+    [CascadingParameter]
+    protected UiThemeConfiguration? Theme { get; set; }
+
+    private Canvas _canvas = null!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await DrawAsync();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_canvas != null)
+        {
+            await DrawAsync();
+        }
+    }
+
+    private async Task DrawAsync()
+    {
+        if (_canvas == null)
+            return;
+
+        await using var ctx = await _canvas.GetContext2DAsync();
+
+        // Clear canvas
+        await ctx.ClearRectAsync(0, 0, Width, Height);
+
+        var centerX = Width / 2.0;
+        var centerY = Height - 20;
+        var radius = System.Math.Min(Width / 2.0 - 10, Height - 30);
+
+        // Calculate normalized value
+        var range = Max - Min;
+        var normalizedValue = range > 0 ? (double)((Value - Min) / range) : 0;
+        normalizedValue = System.Math.Clamp(normalizedValue, 0, 1);
+
+        // Draw background arc
+        await ctx.BeginPathAsync();
+        await ctx.ArcAsync(centerX, centerY, radius, System.Math.PI, 2 * System.Math.PI);
+        await ctx.LineWidthAsync(12);
+        await ctx.StrokeStyleAsync(Theme?.Colors?.Muted ?? "#374151");
+        await ctx.LineCapAsync(LineCap.Round);
+        await ctx.StrokeAsync();
+
+        // Draw value arc
+        var valueAngle = System.Math.PI + (normalizedValue * System.Math.PI);
+        var valueColor = GetValueColor(Value);
+
+        await ctx.BeginPathAsync();
+        await ctx.ArcAsync(centerX, centerY, radius, System.Math.PI, valueAngle);
+        await ctx.LineWidthAsync(12);
+        await ctx.StrokeStyleAsync(valueColor);
+        await ctx.LineCapAsync(LineCap.Round);
+        await ctx.StrokeAsync();
+
+        // Draw needle
+        var needleAngle = System.Math.PI + (normalizedValue * System.Math.PI);
+        var needleLength = radius - 15;
+        var needleX = centerX + needleLength * System.Math.Cos(needleAngle);
+        var needleY = centerY + needleLength * System.Math.Sin(needleAngle);
+
+        await ctx.BeginPathAsync();
+        await ctx.MoveToAsync(centerX, centerY);
+        await ctx.LineToAsync(needleX, needleY);
+        await ctx.LineWidthAsync(3);
+        await ctx.StrokeStyleAsync(Theme?.Colors?.Foreground ?? "#f8fafc");
+        await ctx.LineCapAsync(LineCap.Round);
+        await ctx.StrokeAsync();
+
+        // Draw center cap
+        await ctx.BeginPathAsync();
+        await ctx.ArcAsync(centerX, centerY, 8, 0, 2 * System.Math.PI);
+        await ctx.FillStyleAsync(Theme?.Colors?.Primary ?? "#3b82f6");
+        await ctx.FillAsync(FillRule.NonZero);
+
+        // Draw value text
+        var displayValue = $"{Value:N0}";
+        if (!string.IsNullOrEmpty(Unit))
+        {
+            displayValue += Unit;
+        }
+
+        await ctx.FontAsync("bold 24px sans-serif");
+        await ctx.TextAlignAsync(TextAlign.Center);
+        await ctx.FillStyleAsync(valueColor);
+        await ctx.FillTextAsync(displayValue, centerX, centerY - 15);
+    }
+
+    private string GetValueColor(decimal value)
+    {
+        if (CriticalThreshold.HasValue && value >= CriticalThreshold.Value)
+        {
+            return Theme?.Colors?.Error ?? "#ef4444";
+        }
+        if (WarningThreshold.HasValue && value >= WarningThreshold.Value)
+        {
+            return Theme?.Colors?.Warning ?? "#eab308";
+        }
+        return Theme?.Colors?.Success ?? "#22c55e";
+    }
+}

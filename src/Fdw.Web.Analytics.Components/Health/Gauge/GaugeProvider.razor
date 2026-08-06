@@ -1,0 +1,173 @@
+@namespace Fdw.Web.Analytics.Components.Health.Gauge
+@using Fdw.UI.Providers
+@using Fdw.Results
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using Microsoft.Extensions.Options
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Abstractions.Health
+@using Fdw.Services.Abstractions.Health.Monitoring
+@using Fdw.Web.Analytics.Components.Health.Logging
+@using Fdw.UI.Components.Base
+
+@inherits UIComponentBase
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Render fragment receiving the gauge context.
+    /// </summary>
+    [Parameter] public RenderFragment<GaugeContext>? ChildContent { get; set; }
+
+    /// <summary>Gets or sets the service name to monitor.</summary>
+    [Parameter] public string ServiceName { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the label text.</summary>
+    [Parameter] public string Label { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the unit suffix.</summary>
+    [Parameter] public string Unit { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the minimum gauge value.</summary>
+    [Parameter] public double Min { get; set; }
+
+    /// <summary>Gets or sets the maximum gauge value.</summary>
+    [Parameter] public double Max { get; set; } = 100;
+
+    /// <summary>Gets or sets the warning threshold.</summary>
+    [Parameter] public double WarningThreshold { get; set; } = 70;
+
+    /// <summary>Gets or sets the critical threshold.</summary>
+    [Parameter] public double CriticalThreshold { get; set; } = 90;
+
+    /// <summary>Gets or sets the value selector from a service health snapshot.</summary>
+    [Parameter] public Func<ServiceHealthSnapshot, double> ValueSelector { get; set; } = s => s.ResponseTimeMs;
+
+    /// <summary>Gets or sets the auto-refresh interval. Default is 30 seconds. Set to zero to disable.</summary>
+    [Parameter] public TimeSpan RefreshInterval { get; init; } = TimeSpan.FromSeconds(30);
+
+    [Inject] private IHealthMonitorProvider Monitors { get; set; } = default!;
+    [Inject] private IOptions<HealthMonitorSelectionOptions> MonitorSelection { get; set; } = default!;
+    [Inject] private ILogger<GaugeProvider>? LoggerParam { get; set; }
+
+    private ILogger<GaugeProvider> _logger = NullLogger<GaugeProvider>.Instance;
+    private GaugeContext _context = new();
+    private double _value;
+    private IHealthState? _status;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private bool _initialized;
+    private Timer? _refreshTimer;
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<GaugeProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadData(ComponentCt);
+
+            if (RefreshInterval > TimeSpan.Zero)
+            {
+                _refreshTimer = new Timer(
+                    async _ => await InvokeAsync(async () =>
+                    {
+                        await LoadData(ComponentCt);
+                        StateHasChanged();
+                    }),
+                    null,
+                    RefreshInterval,
+                    RefreshInterval);
+            }
+        }
+    }
+
+    private async Task<IGenericResult> LoadData(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            GaugeProviderLog.LoadStarted(_logger, ServiceName);
+
+            var monitorResult = await Monitors.Get(MonitorSelection.Value.Name, cancellationToken);
+            if (!monitorResult.IsSuccess || monitorResult.Value is null)
+            {
+                _lastResult = monitorResult;
+                GaugeProviderLog.LoadFailed(_logger, ServiceName);
+                return monitorResult;
+            }
+
+            var result = await monitorResult.Value.GetServiceHealth(ServiceName, cancellationToken);
+            if (result.IsSuccess && result.Value is not null)
+            {
+                _value = ValueSelector(result.Value);
+                _status = result.Value.Status;
+                GaugeProviderLog.LoadCompleted(_logger, ServiceName, _value);
+            }
+            else
+            {
+                _lastResult = result;
+                GaugeProviderLog.LoadFailed(_logger, ServiceName);
+            }
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            return ProviderContextBase.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { GaugeProviderLog.LoadException(_logger, ex, ServiceName) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            return _lastResult;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private void RebuildContext()
+    {
+        _context = new GaugeContext
+        {
+            Value = _value,
+            Min = Min,
+            Max = Max,
+            Label = Label,
+            Unit = Unit,
+            Status = _status,
+            WarningThreshold = WarningThreshold,
+            CriticalThreshold = CriticalThreshold,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnRefresh = () => LoadData(ComponentCt)
+        };
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        if (_refreshTimer is not null)
+        {
+            await _refreshTimer.DisposeAsync();
+        }
+        await base.DisposeAsync();
+    }
+}

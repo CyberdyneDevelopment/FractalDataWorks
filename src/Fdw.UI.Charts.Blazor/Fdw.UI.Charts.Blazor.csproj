@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.UI.Charts.Blazor</RootNamespace>
+
+    <!-- Package Information -->
+    <PackageId>Fdw.UI.Charts.Blazor</PackageId>
+    <Title>Fdw Charts Blazor Renderers</Title>
+    <Description>Blazor renderer infrastructure for the FDW render-agnostic chart layer: ChartRendererTypes registry, ChartHost component, and the built-in ApexCharts renderer.</Description>
+    <Authors>Fdw</Authors>
+    <Copyright>Copyright © Fdw</Copyright>
+
+    <!-- NuGet -->
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- Documentation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+    <!-- Razor Configuration -->
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.UI.Abstractions\Fdw.UI.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Blazor Packages -->
+    <PackageReference Include="Microsoft.AspNetCore.Components" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+    <!-- ApexCharts Blazor integration (MIT license) -->
+    <PackageReference Include="Blazor-ApexCharts" />
+    <!-- Radzen Blazor charts (MIT license) — second pluggable chart renderer -->
+    <PackageReference Include="Radzen.Blazor" />
+    <!-- ECharts renderer uses JS interop against the vendored wwwroot/js/echarts.min.js (no NuGet);
+         IJSRuntime comes transitively from Microsoft.AspNetCore.Components. -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="**/*.razor" Pack="true" PackagePath="razor-sources/%(RecursiveDir)" />
+  </ItemGroup>
+
+</Project>

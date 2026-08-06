@@ -1,0 +1,33 @@
+@* Checkbox primitive bound to a CheckboxModel. *@
+@if (Model.IsVisible)
+{
+    <div class="fdw-ui-field fdw-ui-checkbox" id="@Model.Id">
+        <label class="fdw-ui-label">
+            <input class="fdw-ui-input"
+                   type="checkbox"
+                   checked="@(Model.Value == true)"
+                   disabled="@IsDisplayOnly"
+                   @onchange="@(e => Model.Value = e.Value is true)" />
+            @(Model.Label ?? Model.Id)
+            @if (Model.IsRequired)
+            {
+                <span class="fdw-ui-required">*</span>
+            }
+        </label>
+        @if (!string.IsNullOrEmpty(Model.HelpText))
+        {
+            <div class="fdw-ui-help">@Model.HelpText</div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The checkbox model to render.</summary>
+    [Parameter, EditorRequired] public CheckboxModel Model { get; set; } = default!;
+
+    /// <summary>The active render mode.</summary>
+    [Parameter, EditorRequired] public IRenderMode Mode { get; set; } = default!;
+
+    private bool IsDisplayOnly =>
+        string.Equals(Mode.Name, "Display", StringComparison.Ordinal) || Model.IsReadOnly;
+}

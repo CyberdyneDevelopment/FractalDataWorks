@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.UI.Abstractions\Fdw.UI.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.UI.Components\Fdw.UI.Components.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.UI.Rendering.Spectre\Fdw.UI.Rendering.Spectre.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.UI.Rendering.Blazor\Fdw.UI.Rendering.Blazor.csproj" />
+    <!-- Why: [TypeOption] registration is a module initializer emitted per-assembly by
+         Registration.SourceGenerators; this test assembly needs its own so UIRenderers.All()
+         sees Spectre + Blazor (+ RazorConsole) TypeOptions defined in referenced assemblies. -->
+    <ProjectReference Include="..\..\src\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Why: xunit.v3/Shouldly/Moq/coverlet.collector are auto-included for all *.Tests
+         projects via tests/Directory.Build.props; only the extras unique to this project
+         are listed here. -->
+    <PackageReference Include="AngleSharp" />
+    <PackageReference Include="bunit" />
+    <PackageReference Include="Spectre.Console.Testing" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

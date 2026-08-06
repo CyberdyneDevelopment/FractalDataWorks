@@ -1,0 +1,185 @@
+@* Layout host: renders a saved arrangement by resolving each placement's key through the
+   ComponentCatalog and instantiating the descriptor's component. The arrangement is DATA, so this
+   host never names a component — which is what lets a user rearrange a view without a code change.
+   With Editable set, placements can be dragged to move, dragged by their handle to resize, and
+   removed; those rules live in ComposedViewLayoutEditor so they are unit-tested rather than only
+   click-tested. *@
+@using System
+@using System.Collections.Generic
+@using System.Globalization
+@using System.Linq
+@using Fdw.UI.Abstractions.Composition
+@using Microsoft.AspNetCore.Components
+
+<div class="fdw-composed-view @(Editable ? "fdw-composed-editable" : null)" style="@GridStyle()">
+    @if (Editable)
+    {
+        @* Why an explicit cell grid instead of computing a drop position from pointer coordinates:
+           that computation needs the element's box, which means JS interop, and it silently goes
+           wrong under zoom or inside a scrolled container. Real drop targets let the browser decide
+           what was aimed at, and keep this host free of interop. *@
+        @for (var row = 0; row < DropRowCount(); row++)
+        {
+            for (var column = 0; column < Layout.ColumnCount; column++)
+            {
+                var targetColumn = column;
+                var targetRow = row;
+                <div class="fdw-composed-dropcell"
+                     style="@DropCellStyle(targetColumn, targetRow)"
+                     ondragover="event.preventDefault();"
+                     @ondrop="() => Drop(targetColumn, targetRow)"></div>
+            }
+        }
+    }
+
+    @foreach (var placement in Layout.Components)
+    {
+        var current = placement;
+        var descriptor = Resolve(current.ComponentKey);
+        <div class="fdw-composed-cell" style="@CellStyle(current)"
+             draggable="@(Editable ? "true" : null)"
+             @ondragstart="() => BeginMove(current.Id)">
+            @if (Editable)
+            {
+                <div class="fdw-composed-toolbar">
+                    <span class="fdw-composed-title">@(descriptor?.DisplayName ?? current.ComponentKey)</span>
+                    <button type="button" class="fdw-composed-remove" title="Remove"
+                            @onclick="() => Remove(current.Id)">&times;</button>
+                </div>
+            }
+            @if (descriptor is null)
+            {
+                @* Why surface this instead of skipping: a placement whose component is no longer
+                   registered means the saved layout references something removed or renamed.
+                   Silently omitting it leaves a hole the user cannot explain or fix, and their next
+                   save would quietly discard the placement for good. *@
+                <div class="fdw-composed-missing">Unknown component "@current.ComponentKey"</div>
+            }
+            else
+            {
+                <DynamicComponent Type="descriptor.ComponentType" Parameters="ParametersFor(current)" />
+            }
+            @if (Editable)
+            {
+                <div class="fdw-composed-resize" draggable="true" title="Resize"
+                     @ondragstart="() => BeginResize(current.Id)"></div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The arrangement to render.</summary>
+    [Parameter, EditorRequired] public ComposedViewLayout Layout { get; set; } = default!;
+
+    /// <summary>Row height in CSS units; the grid's column width is derived from the layout.</summary>
+    [Parameter] public string RowHeight { get; set; } = "6rem";
+
+    /// <summary>Whether placements can be moved, resized, and removed.</summary>
+    [Parameter] public bool Editable { get; set; }
+
+    /// <summary>Raised after any edit, so the host can persist the layout.</summary>
+    [Parameter] public EventCallback<ComposedViewLayout> OnLayoutChanged { get; set; }
+
+    // Why one in-flight gesture rather than two independent flags: a drag is either a move or a
+    // resize, never both, and modelling it as one gesture makes the contradictory state unreachable.
+    private Guid _draggingId;
+    private bool _resizing;
+
+    private string GridStyle() => string.Create(
+        CultureInfo.InvariantCulture,
+        $"display:grid;grid-template-columns:repeat({Layout.ColumnCount},1fr);grid-auto-rows:{RowHeight};gap:0.75rem;");
+
+    // Why 1-based arithmetic here: CSS grid lines start at 1 while the layout stores zero-based
+    // cells, so the conversion belongs in the renderer rather than leaking a CSS detail into the
+    // persisted schema — which is read by hosts that may not be CSS grid at all.
+    private static string CellStyle(PlacedComponent placement) => string.Create(
+        CultureInfo.InvariantCulture,
+        $"grid-column:{placement.Column + 1} / span {placement.Width};grid-row:{placement.Row + 1} / span {placement.Height};");
+
+    private static string DropCellStyle(int column, int row) => string.Create(
+        CultureInfo.InvariantCulture,
+        $"grid-column:{column + 1} / span 1;grid-row:{row + 1} / span 1;");
+
+    // One spare row past the current content so a placement can always be dragged somewhere new.
+    private int DropRowCount() =>
+        (Layout.Components.Count == 0 ? 0 : Layout.Components.Max(c => c.Row + c.Height)) + 1;
+
+    private static IComponentDescriptor? Resolve(string key)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            return null;
+        }
+
+        var descriptor = ComponentCatalog.ByName(key);
+        return descriptor == ComponentCatalog.NotFound ? null : descriptor;
+    }
+
+    // Why the placement's own settings become component parameters: two placements of the same
+    // component differ only by these, so this is what lets one view hold the same panel twice
+    // pointed at different things.
+    private static Dictionary<string, object> ParametersFor(PlacedComponent placement)
+    {
+        var parameters = new Dictionary<string, object>(StringComparer.Ordinal);
+        foreach (var setting in placement.Settings)
+        {
+            parameters[setting.Key] = setting.Value;
+        }
+
+        return parameters;
+    }
+
+    private void BeginMove(Guid placementId)
+    {
+        _draggingId = placementId;
+        _resizing = false;
+    }
+
+    private void BeginResize(Guid placementId)
+    {
+        _draggingId = placementId;
+        _resizing = true;
+    }
+
+    private async Task Drop(int column, int row)
+    {
+        if (_draggingId == Guid.Empty)
+        {
+            return;
+        }
+
+        var placement = Layout.Components.FirstOrDefault(c => c.Id == _draggingId);
+        if (placement is null)
+        {
+            _draggingId = Guid.Empty;
+            return;
+        }
+
+        // Resizing drags the handle TO a cell, so the target becomes the placement's new
+        // bottom-right — the same gesture as dragging a window corner.
+        var applied = _resizing
+            ? ComposedViewLayoutEditor.Resize(
+                Layout, _draggingId,
+                column - placement.Column + 1,
+                row - placement.Row + 1,
+                Resolve(placement.ComponentKey))
+            : ComposedViewLayoutEditor.Move(Layout, _draggingId, column, row);
+
+        _draggingId = Guid.Empty;
+        _resizing = false;
+
+        if (applied)
+        {
+            await OnLayoutChanged.InvokeAsync(Layout);
+        }
+    }
+
+    private async Task Remove(Guid placementId)
+    {
+        if (ComposedViewLayoutEditor.Remove(Layout, placementId))
+        {
+            await OnLayoutChanged.InvokeAsync(Layout);
+        }
+    }
+}

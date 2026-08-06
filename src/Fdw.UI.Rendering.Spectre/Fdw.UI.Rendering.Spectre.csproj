@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.UI.Rendering.Spectre</RootNamespace>
+
+    <!-- Package Information -->
+    <PackageId>Fdw.UI.Rendering.Spectre</PackageId>
+    <Title>Fdw UI Rendering - Spectre.Console</Title>
+    <Description>Spectre.Console rendering backend for Fdw UI. Provides terminal UI prompts, tables, and panels for configuration forms.</Description>
+    <Authors>Fdw</Authors>
+    <Copyright>Copyright © Fdw</Copyright>
+
+    <!-- NuGet -->
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- Documentation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- TUI rendering methods are inherently branchy - raise conventions thresholds -->
+    <FDW_MaxCyclomaticComplexity>25</FDW_MaxCyclomaticComplexity>
+    <FDW_MaxMethodLines>70</FDW_MaxMethodLines>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.UI.Abstractions\Fdw.UI.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Components\Fdw.UI.Components.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Themes\Fdw.UI.Themes.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

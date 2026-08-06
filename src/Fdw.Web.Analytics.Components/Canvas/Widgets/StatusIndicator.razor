@@ -1,0 +1,137 @@
+@using Excubo.Blazor.Canvas
+@using Excubo.Blazor.Canvas.Contexts
+@using Fdw.UI.Abstractions.Pages
+@using Fdw.UI.Themes.Components.Theme
+@inherits Microsoft.AspNetCore.Components.ComponentBase
+
+<div class="status-indicator-widget">
+    <Canvas @ref="_canvas" width="@Size" height="@Size" />
+    @if (ShowLabel && Model != null)
+    {
+        <div class="status-label">
+            <span class="status-name">@Model.Label</span>
+            @if (!string.IsNullOrEmpty(Model.StatusMessage))
+            {
+                <span class="status-message">@Model.StatusMessage</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// The status widget model to display.
+    /// </summary>
+    [Parameter]
+    public IStatusWidget? Model { get; set; }
+
+    /// <summary>
+    /// Size of the indicator circle in pixels.
+    /// </summary>
+    [Parameter]
+    public int Size { get; set; } = 48;
+
+    /// <summary>
+    /// Whether to show the label below the indicator.
+    /// </summary>
+    [Parameter]
+    public bool ShowLabel { get; set; } = true;
+
+    /// <summary>
+    /// Theme configuration for styling.
+    /// </summary>
+    [CascadingParameter]
+    protected UiThemeConfiguration? Theme { get; set; }
+
+    private Canvas _canvas = null!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender || Model != null)
+        {
+            await DrawAsync();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_canvas != null)
+        {
+            await DrawAsync();
+        }
+    }
+
+    private async Task DrawAsync()
+    {
+        if (_canvas == null || Model == null)
+            return;
+
+        await using var ctx = await _canvas.GetContext2DAsync();
+
+        // Clear canvas
+        await ctx.ClearRectAsync(0, 0, Size, Size);
+
+        var centerX = Size / 2.0;
+        var centerY = Size / 2.0;
+        var radius = (Size / 2.0) - 4;
+
+        // Get status color
+        var statusColor = GetStatusColor(Model.Status);
+
+        // Draw outer glow for non-healthy states
+        var statusName = Model.Status?.Name;
+        if (statusName is "Degraded" or "Unhealthy")
+        {
+            await ctx.BeginPathAsync();
+            await ctx.ArcAsync(centerX, centerY, radius + 2, 0, 2 * System.Math.PI);
+            await ctx.FillStyleAsync($"{statusColor}40"); // 25% opacity
+            await ctx.FillAsync(FillRule.NonZero);
+        }
+
+        // Draw main circle
+        await ctx.BeginPathAsync();
+        await ctx.ArcAsync(centerX, centerY, radius, 0, 2 * System.Math.PI);
+        await ctx.FillStyleAsync(statusColor);
+        await ctx.FillAsync(FillRule.NonZero);
+
+        // Draw inner highlight
+        await ctx.BeginPathAsync();
+        await ctx.ArcAsync(centerX - radius * 0.3, centerY - radius * 0.3, radius * 0.25, 0, 2 * System.Math.PI);
+        await ctx.FillStyleAsync("rgba(255, 255, 255, 0.3)");
+        await ctx.FillAsync(FillRule.NonZero);
+
+        // Draw status icon in center
+        var icon = GetStatusIcon(Model.Status);
+        var fontSize = (int)(Size * 0.4);
+        await ctx.FontAsync($"{fontSize}px sans-serif");
+        await ctx.TextAlignAsync(TextAlign.Center);
+        await ctx.FillStyleAsync("#ffffff");
+        // Adjust Y position to simulate middle baseline
+        await ctx.FillTextAsync(icon, centerX, centerY + fontSize * 0.35);
+    }
+
+    private string GetStatusColor(IServiceStatus? status)
+    {
+        var colors = Theme?.Colors;
+        return status?.Name switch
+        {
+            "Healthy" => colors?.Success ?? "#22c55e",
+            "Degraded" => colors?.Warning ?? "#eab308",
+            "Unhealthy" => colors?.Error ?? "#ef4444",
+            "Offline" => colors?.Muted ?? "#6b7280",
+            _ => colors?.Secondary ?? "#94a3b8"
+        };
+    }
+
+    private static string GetStatusIcon(IServiceStatus? status)
+    {
+        return status?.Name switch
+        {
+            "Healthy" => "\u2713",    // checkmark
+            "Degraded" => "\u26A0",   // warning
+            "Unhealthy" => "\u2717",  // x mark
+            "Offline" => "\u2298",    // circle slash
+            _ => "?"
+        };
+    }
+}

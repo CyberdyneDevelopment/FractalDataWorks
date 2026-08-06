@@ -1,0 +1,313 @@
+@namespace Fdw.Services.Authorization.Components.Users
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.Results
+@using Fdw.Services.Users.Clients
+@using Fdw.Services.Users.Clients.Models
+@using Fdw.UI.Components.Logging
+@using Fdw.Services.Authorization.Components.Logging
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    [Parameter] public RenderFragment<UserContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private UserApiClient? _userApi;
+    [Inject] private ILogger<UserProvider>? LoggerParam { get; set; }
+
+    private ILogger<UserProvider> _logger = NullLogger<UserProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<UserSummaryPayload> _users = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private string _searchString = string.Empty;
+    private UserContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _userApi = new UserApiClient(HttpClientFactory.CreateClient("UserClient"), LoggerFactory?.CreateLogger<UserApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<UserProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadUsers();
+        }
+    }
+
+    // ── Methods (exposed as callbacks via UserContext) ──────────────────────
+
+    private async Task LoadUsers(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _userApi!.GetUsers(cancellationToken);
+            if (result.IsSuccess)
+            {
+                _users = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(UserProviderLog.LoadFailed(_logger));
+                _users = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UserProviderLog.LoadException(_logger, ex));
+            _users = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private Task OnSearchChanged(string search)
+    {
+        _searchString = search;
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private IReadOnlyList<UserSummaryPayload> GetFilteredUsers()
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return _users;
+
+        return _users.Where(u => u.Username.Contains(_searchString, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    private async Task<UserDetailPayload?> CreateUser(CreateUserRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _userApi!.CreateUser(request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadUsers(cancellationToken);
+                return result.Value;
+            }
+
+            // Why: the result already carries the API's real failure reason (e.g. "User 'x' already
+            // exists") along with its code and root cause — propagate it whole. The old two-branch
+            // string extraction existed only because the context could carry nothing but a string.
+            UserProviderLog.CreateFailed(_logger);
+            _lastResult = result;
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UserProviderLog.CreateException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> UpdateUser(Guid id, UpdateUserPayload request, IEnumerable<string> selectedRoles, IEnumerable<string> initialRoles, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var username = _users.FirstOrDefault(u => u.Id == id)?.Username ?? id.ToString();
+            var result = await _userApi!.UpdateUser(username, request, cancellationToken);
+            if (result.IsFailure)
+            {
+                _lastResult = GenericResult.Failure(UserProviderLog.UpdateFailed(_logger, id.ToString()));
+                return false;
+            }
+
+            var currentRolesList = selectedRoles.ToList();
+            var initialRolesList = initialRoles.ToList();
+
+            var rolesToAdd = currentRolesList.Except(initialRolesList).ToList();
+            var rolesToRemove = initialRolesList.Except(currentRolesList).ToList();
+
+            // Why: these results used to be discarded and the method returned true unconditionally, so a
+            // failed role change was reported to the user as a successful save. A role grant that did not
+            // apply is a silent authorization defect — surface it and stop.
+            foreach (var role in rolesToAdd)
+            {
+                var assignResult = await _userApi!.AssignUserRole(id, new Fdw.Services.Users.Clients.Models.AssignRoleRequest { RoleName = role }, cancellationToken);
+                if (assignResult.IsFailure)
+                {
+                    _lastResult = GenericResult.Failure(UserProviderLog.AssignRoleFailed(_logger, role, id.ToString()));
+                    await LoadUsers(cancellationToken);
+                    return false;
+                }
+            }
+
+            foreach (var role in rolesToRemove)
+            {
+                var revokeResult = await _userApi!.RevokeUserRole(id, role, cancellationToken);
+                if (revokeResult.IsFailure)
+                {
+                    _lastResult = GenericResult.Failure(UserProviderLog.RevokeRoleFailed(_logger, role, id.ToString()));
+                    await LoadUsers(cancellationToken);
+                    return false;
+                }
+            }
+
+            await LoadUsers(cancellationToken);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UserProviderLog.UpdateException(_logger, ex));
+            return false;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> DeleteUser(Guid id, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _userApi!.DeleteUser(id, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadUsers(cancellationToken);
+                return true;
+            }
+
+            _lastResult = GenericResult.Failure(UserProviderLog.DeleteFailed(_logger, id.ToString()));
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UserProviderLog.DeleteException(_logger, ex));
+            return false;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> ResetPassword(Guid id, string newPassword, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _userApi!.ResetPassword(id, newPassword, cancellationToken);
+            if (result.IsFailure)
+            {
+                _lastResult = GenericResult.Failure(UserProviderLog.ResetPasswordFailed(_logger, id.ToString()));
+                return false;
+            }
+
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UserProviderLog.ResetPasswordException(_logger, ex));
+            return false;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new UserContext
+        {
+            Users = _users,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            SearchString = _searchString,
+            FilteredUsers = GetFilteredUsers(),
+            OnLoadUsers = () => LoadUsers(),
+            OnSearchChanged = search => OnSearchChanged(search),
+            OnCreateUser = request => CreateUser(request),
+            OnUpdateUser = (id, request, selectedRoles, initialRoles) => UpdateUser(id, request, selectedRoles, initialRoles),
+            OnDeleteUser = id => DeleteUser(id),
+            OnResetPassword = (id, pwd) => ResetPassword(id, pwd)
+        };
+    }
+}

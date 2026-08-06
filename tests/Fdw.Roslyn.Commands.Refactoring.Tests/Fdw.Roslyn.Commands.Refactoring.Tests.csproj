@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Why: Microsoft.Build.Locator refuses (MSBL001) any Microsoft.Build.* PackageReference that
+         lacks ExcludeAssets=runtime/PrivateAssets=all. Transitive pinning materializes exactly
+         such a reference for Microsoft.Build.Framework, so this project opts out. -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Roslyn.Commands\Fdw.Roslyn.Commands.csproj" />
+  </ItemGroup>
+</Project>

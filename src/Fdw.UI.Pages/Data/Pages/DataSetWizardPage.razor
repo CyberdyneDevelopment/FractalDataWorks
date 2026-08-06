@@ -1,0 +1,884 @@
+@page "/datasets/new"
+@page "/datasets/{Name}/edit"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject NavigationManager Nav
+
+<PageTitle>@(_isEdit ? "Edit" : "New") DataSet - Cyberdyne Systems</PageTitle>
+
+<DataSetWizardProvider @ref="_wizardProvider">
+    <ChildContent Context="wizCtx">
+@{ EnsureEditState(wizCtx); }
+<DataSetProvider>
+    <ChildContent Context="dsCtx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">Data Sources &middot; <a href="/datasets">DataSets</a></div>
+                <h1>@(_isEdit ? _model.Name : "New DataSet")</h1>
+                <div class="sub">Define a logical schema, bind sources, and map fields.</div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-ghost" @onclick='() => Nav.NavigateTo("/datasets")'>Cancel</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-b" style="padding:24px;">
+                <div class="stepper">
+                    @for (int i = 0; i < 6; i++)
+                    {
+                        var stepIndex = i;
+                        <div class="step @(stepIndex < _activeStep ? "done" : stepIndex == _activeStep ? "on" : null)">
+                            <span class="num">
+                                @if (stepIndex < _activeStep)
+                                {
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:13px;height:13px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                                }
+                                else
+                                {
+                                    @(stepIndex + 1)
+                                }
+                            </span>
+                            <span class="sl">@GetStepTitle(stepIndex)</span>
+                        </div>
+                        @if (stepIndex < 5)
+                        {
+                            <div class="bar"></div>
+                        }
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(BaseDataSet))
+                {
+                    @* Why: journey context banner — shown on all steps when arriving from a
+                       "Derive new DataSet" action so the user knows which DataSet they are
+                       basing this on without having to navigate back. *@
+                    <div class="alert alert-ok" style="margin-bottom:14px;">
+                        Deriving new DataSet from: <strong>@BaseDataSet</strong>
+                    </div>
+                }
+
+                @if (_activeStep == 0)
+                {
+                    @* Step 1: General *@
+                    <div class="fgrid">
+                        <div class="frow">
+                            <label>Identity name</label>
+                            <input @bind="_model.Name" class="fin mono" disabled="@_isEdit" placeholder="DATA_SET_IDENTIFIER" />
+                        </div>
+                        <div class="frow">
+                            <label>System version</label>
+                            <input @bind="_model.Version" class="fin" />
+                        </div>
+                        <div class="frow full">
+                            <label>Description</label>
+                            <textarea @bind="_model.Description" class="fin"></textarea>
+                        </div>
+                        <div class="frow">
+                            @* Why: OptionPicker<IDataSetCategory> replaces CategoryPicker (FDW-442).
+                               DataSetCategories is a MutableTypeCollection — empty by default, extended
+                               by packages via [TypeOption] and by deployments via data.DataSetCategory.
+                               TTypeOption is the interface (not the abstract base) so All() assignable. *@
+                            <OptionPicker TTypeOption="IDataSetCategory"
+                                          StaticOptions="@DataSetCategories.All()"
+                                          Value="@_model.Category"
+                                          ValueChanged="@(v => _model.Category = v ?? string.Empty)"
+                                          Label="Classification" />
+                        </div>
+                        <div class="frow">
+                            <label>Service option</label>
+                            @* Why: the strategy options come exclusively from the DataSetTypes TypeCollection
+                               (loaded from the datasets/types endpoint). NO hardcoded fallback list — an empty
+                               set means the types failed to load, which must be visible, not papered over with
+                               a fabricated (and possibly stale) list. *@
+                            @if (wizCtx.DataSetTypes.Count > 0)
+                            {
+                                <select @bind="_model.ServiceOptionType" class="fin">
+                                    @foreach (var dst in wizCtx.DataSetTypes)
+                                    {
+                                        <option value="@dst.TypeName">@(string.IsNullOrEmpty(dst.DisplayName) ? dst.TypeName : dst.DisplayName)</option>
+                                    }
+                                </select>
+                            }
+                            else
+                            {
+                                <select class="fin" disabled>
+                                    <option>No DataSet types available — could not load datasets/types</option>
+                                </select>
+                            }
+                        </div>
+                    </div>
+                }
+                else if (_activeStep == 1)
+                {
+                    @* Step 2: Fields *@
+                    <div class="card-h" style="padding:0 0 14px;">
+                        <h3>Logical Schema</h3>
+                        <div class="actions">
+                            <button class="btn btn-secondary btn-sm" @onclick="async () => await ToggleImportPanel(wizCtx)">Import From Table</button>
+                            <button class="btn btn-primary btn-sm" @onclick="AddField">Add Field</button>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_importedFromTable))
+                    {
+                        <div class="alert alert-ok" style="margin-bottom:14px;">@_importedFromTable</div>
+                    }
+
+                    @if (_showImportPanel)
+                    {
+                        <div class="card" style="background:var(--s2);margin-bottom:14px;">
+                            <div class="card-h">
+                                <h3>Container Import</h3>
+                                <button class="btn btn-ghost btn-sm" @onclick="() => _showImportPanel = false">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                            </div>
+                            <div class="card-b">
+                                <div class="fgrid">
+                                    <div class="frow">
+                                        <label>Data Store</label>
+                                        <select class="fin" @onchange="async e => await OnImportDataStoreChanged(e, wizCtx)">
+                                            <option value="">-- Select --</option>
+                                            @foreach (var ds in wizCtx.DataStores)
+                                            {
+                                                <option value="@ds.Name">@ds.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="frow">
+                                        <label>Container</label>
+                                        <select class="fin" disabled="@(_importDataStore is null)" @onchange="async e => await OnImportContainerChanged(e, wizCtx)">
+                                            <option value="">-- Select --</option>
+                                            @if (_importDataStore is not null && wizCtx.LoadedDataStoreDetails.TryGetValue(_importDataStore, out var storeDetail))
+                                            {
+                                                @foreach (var c in storeDetail.Paths.SelectMany(p => p.Containers))
+                                                {
+                                                    <option value="@c.Name">@c.Name</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+
+                                @if (wizCtx.IsContainerBusy)
+                                {
+                                    <div style="display:flex;align-items:center;gap:10px;">
+                                        <div class="spin" style="width:16px;height:16px;border-width:2px;"></div>
+                                        <span class="mono" style="font-size:12px;color:var(--glacier);">Loading containers...</span>
+                                    </div>
+                                }
+
+                                @if (_importResult is not null)
+                                {
+                                    <p class="hint">Ready: @_importResult.Fields.Count fields from @_importResult.ContainerName</p>
+                                    <button class="btn btn-primary btn-sm" @onclick="() => ApplyImport()">Apply Import (@_importResult.Fields.Count fields)</button>
+                                }
+                            </div>
+                        </div>
+                    }
+                    <div class="card">
+                        <div class="card-b" style="padding:0 10px 12px;">
+                            <table class="tbl">
+                                <thead>
+                                    <tr>
+                                        <th>Field Name</th>
+                                        <th>Data Type</th>
+                                        <th>Role</th>
+                                        <th>Attribs</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var field in _model.Fields)
+                                    {
+                                        <tr>
+                                            <td><input @bind="field.Name" class="fin mono" /></td>
+                                            <td>
+                                                <select @bind="field.DataType" class="fin">
+                                                    <option value="">— select type —</option>
+                                                    @if (wizCtx.SelectedDataStoreCapabilities is { FieldTypes.Count: > 0 } caps)
+                                                    {
+                                                        @foreach (var ft in caps.FieldTypes)
+                                                        {
+                                                            <option value="@ft.Name">@(string.IsNullOrEmpty(ft.DisplayName) ? ft.Name : ft.DisplayName)</option>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <option>String</option>
+                                                        <option>Int32</option>
+                                                        <option>Int64</option>
+                                                        <option>Decimal</option>
+                                                        <option>Boolean</option>
+                                                        <option>DateTime</option>
+                                                        <option>Guid</option>
+                                                        <option>Double</option>
+                                                        <option>Byte[]</option>
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <select @bind="field.Role" class="fin">
+                                                    @foreach (var r in _roles) { <option>@r</option> }
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <div class="actions">
+                                                    <button class="btn btn-ghost btn-sm @(field.IsKey ? null : "mut")" @onclick="() => field.IsKey = !field.IsKey" title="Primary Key">
+                                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                                        </svg>
+                                                    </button>
+                                                    <button class="btn btn-ghost btn-sm" @onclick="() => field.IsRequired = !field.IsRequired" title="Required">
+                                                        <span class="mono" style="font-size:10px;font-weight:600;color:@(field.IsRequired ? "var(--amber)" : "var(--n-600)");">REQ</span>
+                                                    </button>
+                                                    <button class="btn btn-ghost btn-sm" @onclick="() => field.IsCalculated = !field.IsCalculated" title="Calculated">
+                                                        <span class="mono" style="font-size:10px;font-weight:600;color:@(field.IsCalculated ? "var(--glacier)" : "var(--n-600)");">CALC</span>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-ghost btn-sm danger" @onclick="() => _model.Fields.Remove(field)">
+                                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+                else if (_activeStep == 2)
+                {
+                    @* Step 3: Sources *@
+                    <div class="card-h" style="padding:0 0 14px;">
+                        <h3>Physical Storage Nodes</h3>
+                        <button class="btn btn-primary btn-sm" @onclick="AddSource">Add Source</button>
+                    </div>
+                    @foreach (var source in _model.Sources)
+                    {
+                        <div class="card" style="background:var(--s2);margin-bottom:14px;">
+                            <div class="card-h">
+                                <h3>@source.SourceName</h3>
+                                <button class="btn btn-ghost btn-sm danger" @onclick="() => _model.Sources.Remove(source)">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                            </div>
+                            <div class="card-b">
+                                <div class="fgrid" style="grid-template-columns:repeat(2,1fr);">
+                                    <div class="frow">
+                                        <label>Node ID</label>
+                                        <input @bind="source.SourceName" class="fin" />
+                                    </div>
+                                    <div class="frow">
+                                        <label>Protocol</label>
+                                        <select @bind="source.ConnectionType" class="fin">
+                                            @if (wizCtx.DataStoreTypes.Count > 0)
+                                            {
+                                                @foreach (var dst in wizCtx.DataStoreTypes)
+                                                {
+                                                    <option value="@dst.TypeName">@(string.IsNullOrEmpty(dst.DisplayName) ? dst.TypeName : dst.DisplayName)</option>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <option>MsSql</option>
+                                                <option>Http</option>
+                                                <option>File</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                                @* Why: NestedObjectPicker replaces the 3 cascading selects (DataStore → Path →
+                                   Container). SelectionChanged populates DataStoreName, Path, ContainerName,
+                                   and ContainerId from the picker chain, making the wizard connection-type-agnostic. *@
+                                <div class="frow">
+                                    <NestedObjectPicker TNode="DataStoreNode"
+                                                        Items="GetWizardDataStoreNodes(wizCtx)"
+                                                        GetChildren="@(node => GetWizardSourcePickerChildren(node, source, wizCtx))"
+                                                        IsLeaf="@(n => string.Equals(n.Kind, DataStoreNodeKind.Container, StringComparison.Ordinal))"
+                                                        LabelSelector="@(n => n.Name)"
+                                                        Label="Data Store"
+                                                        ChildLabel="Path / Container"
+                                                        Placeholder="-- Select --"
+                                                        SelectionChanged="@(chain => OnWizardSourcePickerSelectionChanged(chain, source))" />
+                                </div>
+                                @if (wizCtx.IsContainerBusy)
+                                {
+                                    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+                                        <div class="spin" style="width:14px;height:14px;border-width:2px;"></div>
+                                        <span class="mono" style="font-size:12px;color:var(--glacier);">Loading containers...</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+                else if (_activeStep == 3)
+                {
+                    @* Step 4: Mappings *@
+                    @foreach (var source in _model.Sources)
+                    {
+                        <div class="card" style="margin-bottom:14px;">
+                            <div class="card-h"><h3>@source.SourceName</h3></div>
+                            <div class="card-b" style="padding:0 10px 12px;">
+                                <table class="tbl">
+                                    <thead><tr><th>Logical Target</th><th>Physical Source</th><th>Transforms</th></tr></thead>
+                                    <tbody>
+                                        @foreach (var map in source.FieldMappings)
+                                        {
+                                            @* Why: FieldMappingRowEditor is a thin skin that renders the summary row
+                                               and the expand/collapse TransformChainEditor panel. All expansion state
+                                               lives in _expandedMappingKeys (HashSet keyed by "sourceName:fieldName")
+                                               so re-renders caused by other field edits do not reset expanded rows. *@
+                                            <FieldMappingRowEditor Mapping="@map"
+                                                                   IsExpanded="@_expandedMappingKeys.Contains(MappingKey(source.SourceName, map.DataSetFieldName))"
+                                                                   OnToggleExpand="@(fieldName => ToggleMappingExpand(source.SourceName, fieldName))" />
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                }
+                else if (_activeStep == 4)
+                {
+                    @* Step 5: Advanced *@
+                    <div class="grid2e">
+                        <div class="card">
+                            <div class="card-h"><h3>Cache Policy</h3></div>
+                            <div class="card-b">
+                                <div class="frow full">
+                                    <div style="display:flex;align-items:center;gap:10px;">
+                                        <button type="button" class="sw swbtn @(_model.Caching.Enabled ? "on" : null)" @onclick="() => _model.Caching.Enabled = !_model.Caching.Enabled"></button>
+                                        <span style="font-size:13px;color:var(--n-300);">Activate temporal buffer</span>
+                                    </div>
+                                </div>
+                                <div class="frow">
+                                    <label>TTL minutes</label>
+                                    <input type="number" @bind="_model.Caching.DurationMinutes" class="fin" disabled="@(!_model.Caching.Enabled)" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-h"><h3>Join Linkage</h3></div>
+                            <div class="card-b">
+                                @if (_model.Sources.Count < 2)
+                                {
+                                    <p class="hint">Multiple sources required for linkage.</p>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-primary btn-sm" @onclick="() => _model.Joins.Add(new DataSetJoinPayload())">New Link</button>
+                                    @for (var ji = 0; ji < _model.Joins.Count; ji++)
+                                    {
+                                        var joinIndex = ji;
+                                        var join = _model.Joins[joinIndex];
+                                        <div style="border:1px solid var(--n-700);border-radius:6px;padding:10px;margin-top:10px;">
+                                            @* Header row: LeftSource + RightSource + Remove *@
+                                            <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px;">
+                                                <select class="fin"
+                                                        value="@join.LeftSource"
+                                                        @onchange="async e => await OnJoinLeftSourceChanged(e, join, wizCtx)">
+                                                    <option value="">-- Left Source --</option>
+                                                    @foreach (var s in _model.Sources)
+                                                    {
+                                                        <option value="@s.SourceName">@s.SourceName</option>
+                                                    }
+                                                </select>
+                                                <select class="fin"
+                                                        value="@join.RightSource"
+                                                        @onchange="async e => await OnJoinRightSourceChanged(e, join, wizCtx)">
+                                                    <option value="">-- Right Source --</option>
+                                                    @foreach (var s in _model.Sources)
+                                                    {
+                                                        <option value="@s.SourceName">@s.SourceName</option>
+                                                    }
+                                                </select>
+                                                <button class="btn btn-sm" style="color:var(--err);" type="button"
+                                                        @onclick="() => _model.Joins.RemoveAt(joinIndex)"
+                                                        title="Remove join">&times;</button>
+                                            </div>
+
+                                            @* Condition row: LeftField = RightField *@
+                                            <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;">
+                                                <select class="fin"
+                                                        value="@join.LeftField"
+                                                        @onchange="e => join.LeftField = e.Value is string lf ? lf : string.Empty">
+                                                    <option value="">-- Left Field --</option>
+                                                    @if (_joinStepFieldsBySource.TryGetValue(join.LeftSource, out var leftFields))
+                                                    {
+                                                        @foreach (var f in leftFields)
+                                                        {
+                                                            <option value="@f.Name">@f.Name</option>
+                                                        }
+                                                    }
+                                                </select>
+                                                <span style="font-size:12px;color:var(--n-400);padding:0 4px;">=</span>
+                                                <select class="fin"
+                                                        value="@join.RightField"
+                                                        @onchange="e => join.RightField = e.Value is string rf ? rf : string.Empty">
+                                                    <option value="">-- Right Field --</option>
+                                                    @if (_joinStepFieldsBySource.TryGetValue(join.RightSource, out var rightFields))
+                                                    {
+                                                        @foreach (var f in rightFields)
+                                                        {
+                                                            <option value="@f.Name">@f.Name</option>
+                                                        }
+                                                    }
+                                                </select>
+                                            </div>
+
+                                            @* No fields alert *@
+                                            @if (!string.IsNullOrEmpty(join.LeftSource) && (!_joinStepFieldsBySource.ContainsKey(join.LeftSource) || _joinStepFieldsBySource[join.LeftSource].Count == 0))
+                                            {
+                                                <div class="alert alert-warn" style="margin-top:6px;font-size:12px;">No fields available for '@join.LeftSource'. Ensure the source's DataStore and container are configured.</div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(join.RightSource) && (!_joinStepFieldsBySource.ContainsKey(join.RightSource) || _joinStepFieldsBySource[join.RightSource].Count == 0))
+                                            {
+                                                <div class="alert alert-warn" style="margin-top:6px;font-size:12px;">No fields available for '@join.RightSource'. Ensure the source's DataStore and container are configured.</div>
+                                            }
+
+                                            @* JoinType row *@
+                                            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                                                <label style="font-size:12px;color:var(--n-400);white-space:nowrap;">Join type</label>
+                                                <select class="fin" style="max-width:160px;"
+                                                        value="@join.JoinType"
+                                                        @onchange="e => join.JoinType = e.Value is string jt ? jt : string.Empty">
+                                                    <option value="Inner">Inner</option>
+                                                    <option value="Left">Left</option>
+                                                    <option value="Right">Right</option>
+                                                    <option value="Full">Full</option>
+                                                    <option value="Cross">Cross</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+                else if (_activeStep == 5)
+                {
+                    @* Step 6: Finalize *@
+                    <dl class="kv">
+                        <dt>Entity</dt>
+                        <dd class="mono">@_model.Name</dd>
+                        <dt>Fields</dt>
+                        <dd class="mono">@_model.Fields.Count</dd>
+                        <dt>Sources</dt>
+                        <dd class="mono">@_model.Sources.Count</dd>
+                        <dt>Status</dt>
+                        <dd class="mono">Ready for initialization</dd>
+                    </dl>
+                }
+            </div>
+        </div>
+
+        @if (_errorMessage != null)
+        {
+            <div class="card"><div class="card-b"><div class="alert alert-err">@_errorMessage</div></div></div>
+        }
+
+        @* Actions *@
+        <div style="display:flex;justify-content:space-between;margin-top:14px;">
+            <button class="btn btn-secondary" @onclick='() => Nav.NavigateTo("/datasets")'>Cancel</button>
+            <div class="actions">
+                @if (_activeStep > 0)
+                {
+                    <button class="btn btn-secondary" @onclick="() => _activeStep--">&larr; Back</button>
+                }
+                @if (_activeStep < 5)
+                {
+                    <button class="btn btn-primary" @onclick="NextStep">Continue &rarr;</button>
+                }
+                else
+                {
+                    <button class="btn btn-primary" @onclick="async () => await HandleSubmit(wizCtx)" disabled="@_isSubmitting">
+                        @(_isSubmitting ? "Saving..." : (_isEdit ? "Save Changes" : "Create DataSet"))
+                    </button>
+                }
+            </div>
+        </div>
+    </ChildContent>
+</DataSetProvider>
+    </ChildContent>
+</DataSetWizardProvider>
+
+@code {
+    [Parameter] public string? Name { get; set; }
+
+    // Why: baseDataSet query param carries the name of the DataSet to derive from, set by
+    // DataSetDetail or Catalog "Derive new DataSet" journey actions. When present the wizard
+    // pre-populates the description with a derivation note and skips to step 1 (Fields) so
+    // the user can define the derived schema immediately without re-entering metadata.
+    [SupplyParameterFromQuery(Name = "baseDataSet")]
+    public string? BaseDataSet { get; set; }
+
+    private DataSetWizardProvider _wizardProvider = null!;
+    private bool _isEdit => !string.IsNullOrEmpty(Name);
+    private int _activeStep = 0;
+    private bool _isSubmitting;
+    private string? _errorMessage;
+    private bool _baseDataSetApplied;
+
+    private static readonly string[] _roles = ["Attribute", "Measure", "NaturalKey", "Surrogate", "Lookup"];
+
+    // Local mutable model for the wizard
+    private CreateDataSetPayload _model = new()
+    {
+        Fields = new List<CreateDataSetFieldRequest>(),
+        Sources = new List<CreateDataSetSourcePayload>(),
+        Joins = new List<DataSetJoinPayload>(),
+        Caching = new DataSetCachingPayload()
+    };
+
+    private bool _editLoadRequested;
+    private bool _editHydrated;
+
+    protected override void OnParametersSet()
+    {
+        // Why: apply the baseDataSet pre-fill exactly once per navigation to avoid resetting
+        // the form if the component re-renders with the same parameters. Only applies to new
+        // DataSet creation (not edit mode).
+        if (_baseDataSetApplied || _isEdit || string.IsNullOrEmpty(BaseDataSet))
+            return;
+
+        _baseDataSetApplied = true;
+        _model.Description = $"Derived from {BaseDataSet}";
+        // Why: skip to the Fields step (index 1) so the user arrives directly at the schema
+        // definition instead of re-entering general metadata they've already seen on the base.
+        _activeStep = 1;
+    }
+
+    // Why: in edit mode the wizard MUST load the existing DataSet and hydrate the form before the user
+    // can refine it. Without this, /datasets/{Name}/edit shows a blank form and Save (which the provider
+    // routes to Update because ExistingDataSet is set) wipes the dataset — the destructive-edit blocker.
+    // Two one-shot steps: first render fires the async load; when ExistingDataSet arrives (the provider
+    // re-renders after the load) we copy it into _model exactly once, before the form markup below binds.
+    private void EnsureEditState(DataSetWizardContext wizCtx)
+    {
+        if (!_isEdit)
+            return;
+
+        if (!_editLoadRequested)
+        {
+            _editLoadRequested = true;
+            _ = wizCtx.OnLoadExistingDataSet(Name!);
+            return;
+        }
+
+        if (!_editHydrated && wizCtx.ExistingDataSet is not null)
+        {
+            _editHydrated = true;
+            HydrateModel(wizCtx.ExistingDataSet);
+        }
+    }
+
+    private void HydrateModel(DataSetDetailPayload src)
+    {
+        _model.Name = src.Name;
+        _model.Description = src.Description;
+        _model.Version = src.Version;
+        _model.Category = src.Category;
+        _model.ServiceOptionType = src.ServiceOptionType;
+        _model.RecordTypeName = src.RecordTypeName;
+
+        _model.Fields = src.Fields
+            .OrderBy(f => f.Ordinal)
+            .Select(f => new CreateDataSetFieldRequest
+            {
+                Name = f.Name,
+                Description = f.Description,
+                DataType = f.DataType,
+                IsKey = f.IsKey,
+                IsRequired = f.IsRequired,
+                IsIndexed = f.IsIndexed,
+                MaxLength = f.MaxLength,
+                DefaultValue = f.DefaultValue,
+                IsCalculated = f.IsCalculated,
+                CalculationName = f.CalculationName,
+                IsJoinKey = f.IsJoinKey,
+                Role = f.Role,
+                Ordinal = f.Ordinal
+            })
+            .ToList();
+
+        _model.Sources = src.Sources
+            .Select(s => new CreateDataSetSourcePayload
+            {
+                SourceName = s.SourceName,
+                DataStoreName = s.DataStoreName,
+                ConnectionName = s.ConnectionName,
+                ConnectionType = s.ConnectionType,
+                Path = s.Path,
+                ContainerName = s.ContainerName,
+                SupportsPredicatePushdown = s.SupportsPredicatePushdown,
+                IsPrimary = s.IsPrimary,
+                Priority = s.Priority,
+                MapperTypeName = s.MapperTypeName,
+                HttpEndpoint = s.HttpEndpoint,
+                HttpMethod = s.HttpMethod,
+                FilePath = s.FilePath,
+                FileFormat = s.FileFormat,
+                FieldMappings = s.FieldMappings.ToList()
+            })
+            .ToList();
+
+        _model.Joins = src.Joins
+            .Select(j => new DataSetJoinPayload
+            {
+                LeftSource = j.LeftSource,
+                LeftField = j.LeftField,
+                RightSource = j.RightSource,
+                RightField = j.RightField,
+                JoinType = j.JoinType
+            })
+            .ToList();
+
+        _model.Caching = new DataSetCachingPayload
+        {
+            Enabled = src.Caching.Enabled,
+            DurationMinutes = src.Caching.DurationMinutes,
+            KeyPattern = src.Caching.KeyPattern
+        };
+
+        _model.Filters = src.Filters
+            .Select(f => new DataSetFilterConditionPayload
+            {
+                FieldName = f.FieldName,
+                Operator = f.Operator,
+                Value = f.Value,
+                DataType = f.DataType
+            })
+            .ToList();
+    }
+
+    // Why: keyed by source name so each join's field picker gets the correct field list
+    // without re-querying the provider on every render. Populated when the user selects a
+    // join source via OnJoinLeftSourceChanged / OnJoinRightSourceChanged.
+    private readonly Dictionary<string, IReadOnlyList<DataStoreFieldPayload>> _joinStepFieldsBySource = new(StringComparer.Ordinal);
+
+    private async Task OnJoinLeftSourceChanged(ChangeEventArgs e, DataSetJoinPayload join, DataSetWizardContext wizCtx)
+    {
+        var sourceName = e.Value is string s ? s : string.Empty;
+        // Why: clear stale LeftField when the source changes to prevent cross-source field binding.
+        join.LeftField = string.Empty;
+        join.LeftSource = sourceName;
+        await LoadJoinStepFieldsForSource(sourceName, wizCtx);
+    }
+
+    private async Task OnJoinRightSourceChanged(ChangeEventArgs e, DataSetJoinPayload join, DataSetWizardContext wizCtx)
+    {
+        var sourceName = e.Value is string s ? s : string.Empty;
+        // Why: clear stale RightField when the source changes to prevent cross-source field binding.
+        join.RightField = string.Empty;
+        join.RightSource = sourceName;
+        await LoadJoinStepFieldsForSource(sourceName, wizCtx);
+    }
+
+    private async Task LoadJoinStepFieldsForSource(string sourceName, DataSetWizardContext wizCtx)
+    {
+        if (string.IsNullOrEmpty(sourceName)) return;
+        if (_joinStepFieldsBySource.ContainsKey(sourceName)) return;
+
+        // Why: resolve DataStoreName + ContainerName from the Sources list so the provider can
+        // locate the container's fields in its detail cache. The logical source alias maps 1:1 to
+        // a CreateDataSetSourcePayload which carries the resolved DataStore and container.
+        var sourceConfig = _model.Sources.FirstOrDefault(s => string.Equals(s.SourceName, sourceName, StringComparison.Ordinal));
+        if (sourceConfig is null || string.IsNullOrEmpty(sourceConfig.DataStoreName) || string.IsNullOrEmpty(sourceConfig.ContainerName))
+        {
+            // Mark as attempted-but-empty so the "no fields" alert renders.
+            _joinStepFieldsBySource[sourceName] = [];
+            return;
+        }
+
+        var fields = await _wizardProvider.LoadFieldsForSourceFromContainer(sourceName, sourceConfig.DataStoreName, sourceConfig.ContainerName);
+        _joinStepFieldsBySource[sourceName] = fields;
+    }
+
+    // Import from container state (local UI state only)
+    private bool _showImportPanel;
+    private string? _importDataStore;
+    private ContainerInitializationResult? _importResult;
+    private string? _importedFromTable;
+
+    // Why: expansion state for field-mapping rows in Step 4. Keyed by "sourceName:fieldName" so the
+    // same logical field name used in two different sources does not share expand state. Stored in a
+    // HashSet on the parent so re-renders caused by other field edits do not collapse open rows.
+    private readonly HashSet<string> _expandedMappingKeys = new(StringComparer.Ordinal);
+
+    private static string MappingKey(string sourceName, string fieldName) => $"{sourceName}:{fieldName}";
+
+    private void ToggleMappingExpand(string sourceName, string fieldName)
+    {
+        var key = MappingKey(sourceName, fieldName);
+        if (!_expandedMappingKeys.Remove(key))
+            _expandedMappingKeys.Add(key);
+    }
+
+    // Why: stable-reference cache for the DataStore → DataStoreNode conversion so the
+    // NestedObjectPicker does not see a new list reference on every render.
+    private IReadOnlyList<DataStoreSummaryPayload>? _lastWizardDataStores;
+    private IReadOnlyList<DataStoreNode> _wizardDataStoreNodes = [];
+
+    private async Task HandleSubmit(DataSetWizardContext wizCtx)
+    {
+        _isSubmitting = true;
+        _errorMessage = null;
+        try
+        {
+            var untyped = _model.Fields.FirstOrDefault(f => string.IsNullOrEmpty(f.DataType));
+            if (untyped is not null)
+            {
+                _errorMessage = $"Field '{untyped.Name}' has no type selected.";
+                return;
+            }
+            var result = await wizCtx.OnSubmit(_model);
+            if (result is not null)
+                Nav.NavigateTo("/datasets");
+            else
+                _errorMessage = "Submit failed";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private void AddField() => _model.Fields.Add(new CreateDataSetFieldRequest { Name = $"FLD_{_model.Fields.Count + 1}", DataType = "String", Role = "Attribute" });
+    private void AddSource() => _model.Sources.Add(new CreateDataSetSourcePayload { SourceName = $"SRC_{_model.Sources.Count + 1}" });
+
+    // ── Picker helpers for sources step ──────────────────────────────────────
+
+    private IReadOnlyList<DataStoreNode> GetWizardDataStoreNodes(DataSetWizardContext wizCtx)
+    {
+        if (!ReferenceEquals(wizCtx.DataStores, _lastWizardDataStores))
+        {
+            _lastWizardDataStores = wizCtx.DataStores;
+            _wizardDataStoreNodes = wizCtx.DataStores
+                .Select(ds => new DataStoreNode(ds.Name, DataStoreNodeKind.DataStore))
+                .ToList();
+        }
+        return _wizardDataStoreNodes;
+    }
+
+    // Why: NestedObjectPicker child loader for the wizard sources step. For a DataStore node,
+    // OnLoadContainersForDataStore populates wizCtx.LoadedDataStoreDetails, then path nodes are
+    // returned. For a Path node, source.DataStoreName (set by OnWizardSourcePickerSelectionChanged
+    // when the DataStore was picked at level 0) is used to look up the loaded detail.
+    private async Task<IReadOnlyList<DataStoreNode>> GetWizardSourcePickerChildren(
+        DataStoreNode node,
+        CreateDataSetSourcePayload source,
+        DataSetWizardContext wizCtx)
+    {
+        if (string.Equals(node.Kind, DataStoreNodeKind.DataStore, StringComparison.Ordinal))
+        {
+            await wizCtx.OnLoadContainersForDataStore(node.Name);
+            if (!wizCtx.LoadedDataStoreDetails.TryGetValue(node.Name, out var detail))
+                return [];
+            return detail.Paths
+                .Select(p => new DataStoreNode(p.Name, DataStoreNodeKind.Path))
+                .ToList();
+        }
+        if (string.Equals(node.Kind, DataStoreNodeKind.Path, StringComparison.Ordinal) &&
+            !string.IsNullOrEmpty(source.DataStoreName) &&
+            wizCtx.LoadedDataStoreDetails.TryGetValue(source.DataStoreName, out var storeDetail))
+        {
+            var path = storeDetail.Paths
+                .FirstOrDefault(p => string.Equals(p.Name, node.Name, StringComparison.OrdinalIgnoreCase));
+            if (path is null) return [];
+            return path.Containers
+                .Select(c => new DataStoreNode(c.Name, DataStoreNodeKind.Container, c.Id))
+                .ToList();
+        }
+        return [];
+    }
+
+    private static void OnWizardSourcePickerSelectionChanged(
+        IReadOnlyList<DataStoreNode> chain,
+        CreateDataSetSourcePayload source)
+    {
+        source.DataStoreName = chain.Count > 0 ? chain[0].Name : string.Empty;
+        source.Path = chain.Count > 1 ? chain[1].Name : string.Empty;
+        source.ContainerName = chain.Count > 2 ? chain[2].Name : string.Empty;
+        source.ContainerId = chain.Count > 2 ? (Guid?)chain[2].Id : null;
+    }
+
+    // ── Import panel handlers ────────────────────────────────────────────────
+
+    private static string GetStepTitle(int step) => step switch { 0 => "General", 1 => "Fields", 2 => "Sources", 3 => "Mappings", 4 => "Advanced", _ => "Finalize" };
+
+    private void NextStep() { SyncMappings(); _activeStep++; }
+    private void SyncMappings() {
+        foreach (var s in _model.Sources) {
+            foreach (var f in _model.Fields) {
+                if (!s.FieldMappings.Any(m => string.Equals(m.DataSetFieldName, f.Name, StringComparison.Ordinal)))
+                    s.FieldMappings.Add(new DataSetFieldMappingPayload { DataSetFieldName = f.Name, SourceFieldName = f.Name });
+            }
+            var stale = s.FieldMappings.Where(m => !_model.Fields.Any(f => string.Equals(f.Name, m.DataSetFieldName, StringComparison.Ordinal))).ToList();
+            foreach (var m in stale) s.FieldMappings.Remove(m);
+        }
+    }
+
+    private async Task ToggleImportPanel(DataSetWizardContext wizCtx)
+    {
+        _showImportPanel = !_showImportPanel;
+        if (_showImportPanel && wizCtx.DataStores.Count == 0)
+        {
+            await wizCtx.OnLoadDataStores();
+        }
+    }
+
+    private async Task OnImportDataStoreChanged(ChangeEventArgs e, DataSetWizardContext wizCtx)
+    {
+        var storeName = e.Value?.ToString();
+        _importDataStore = storeName;
+        _importResult = null;
+
+        if (string.IsNullOrEmpty(storeName)) return;
+
+        await wizCtx.OnLoadContainersForDataStore(storeName);
+        await wizCtx.OnLoadCapabilitiesForDataStore(storeName);
+    }
+
+    private async Task OnImportContainerChanged(ChangeEventArgs e, DataSetWizardContext wizCtx)
+    {
+        var containerName = e.Value?.ToString();
+        _importResult = null;
+
+        if (string.IsNullOrEmpty(containerName) || _importDataStore is null) return;
+
+        _importResult = await wizCtx.OnInitializeFromContainer(_importDataStore, containerName);
+    }
+
+    private void ApplyImport()
+    {
+        if (_importResult is null) return;
+
+        _model.Fields = _importResult.Fields.ToList();
+        _model.Sources.Clear();
+        _model.Sources.Add(new CreateDataSetSourcePayload
+        {
+            SourceName = _importResult.SourceName,
+            DataStoreName = _importResult.DataStoreName,
+            IsPrimary = true
+        });
+
+        SyncMappings();
+
+        if (string.IsNullOrEmpty(_model.Name))
+            _model.Name = _importResult.ContainerName;
+        if (string.IsNullOrEmpty(_model.Description))
+            _model.Description = $"Created from {_importResult.DataStoreName}/{_importResult.ContainerName}";
+
+        _importedFromTable = $"Imported {_importResult.Fields.Count} fields from {_importResult.ContainerName} --- all editable";
+        _showImportPanel = false;
+    }
+}

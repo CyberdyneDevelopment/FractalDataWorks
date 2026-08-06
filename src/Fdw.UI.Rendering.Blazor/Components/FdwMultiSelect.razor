@@ -1,0 +1,61 @@
+@* Multi-select primitive over the NON-generic IMultiSelectComponentModel surface,
+   rendered as a checkbox list. Selection round-trips via SelectOptionAccess. *@
+@if (Model.IsVisible)
+{
+    <div class="fdw-ui-field fdw-ui-multi-select" id="@Model.Id">
+        <label class="fdw-ui-label">
+            @(Model.Label ?? Model.Id)
+            @if (Model.IsRequired)
+            {
+                <span class="fdw-ui-required">*</span>
+            }
+        </label>
+        @if (!string.IsNullOrEmpty(Model.HelpText))
+        {
+            <div class="fdw-ui-help">@Model.HelpText</div>
+        }
+        @foreach (var option in _options)
+        {
+            var value = option.Value;
+            <label class="fdw-ui-option">
+                <input type="checkbox"
+                       checked="@IsSelected(value)"
+                       disabled="@(IsDisplayOnly || option.IsDisabled)"
+                       @onchange="@(e => Toggle(value, e.Value is true))" />
+                @option.DisplayText
+            </label>
+        }
+    </div>
+}
+
+@code {
+    private IReadOnlyList<(object? Value, string DisplayText, bool IsDisabled)> _options = [];
+
+    /// <summary>The multi-select model to render.</summary>
+    [Parameter, EditorRequired] public IMultiSelectComponentModel Model { get; set; } = default!;
+
+    /// <summary>The active render mode.</summary>
+    [Parameter, EditorRequired] public IRenderMode Mode { get; set; } = default!;
+
+    private bool IsDisplayOnly =>
+        string.Equals(Mode.Name, "Display", StringComparison.Ordinal) || Model.IsReadOnly;
+
+    protected override void OnParametersSet() => _options = SelectOptionAccess.GetOptions(Model);
+
+    private bool IsSelected(object? value) =>
+        SelectOptionAccess.GetSelectedValues(Model).Any(v => Equals(v, value));
+
+    private void Toggle(object? value, bool selected)
+    {
+        var current = new List<object?>(SelectOptionAccess.GetSelectedValues(Model));
+        if (selected && !current.Any(v => Equals(v, value)))
+        {
+            current.Add(value);
+        }
+        else if (!selected)
+        {
+            current.RemoveAll(v => Equals(v, value));
+        }
+        SelectOptionAccess.SetSelectedValues(Model, current);
+    }
+}

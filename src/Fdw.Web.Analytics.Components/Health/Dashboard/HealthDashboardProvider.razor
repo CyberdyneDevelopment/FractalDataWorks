@@ -1,0 +1,164 @@
+@namespace Fdw.Web.Analytics.Components.Health.Dashboard
+@using Fdw.UI.Providers
+@using Fdw.Results
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using Microsoft.Extensions.Options
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Abstractions.Health.Monitoring
+@using Fdw.Web.Analytics.Components.Health.Logging
+@using Fdw.UI.Components.Base
+
+@inherits UIComponentBase
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Render fragment receiving the health dashboard context.
+    /// </summary>
+    [Parameter] public RenderFragment<HealthDashboardContext>? ChildContent { get; set; }
+
+    /// <summary>Gets or sets the throughput window for per-service data. Default is 5 minutes.</summary>
+    [Parameter] public TimeSpan ThroughputWindow { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>Gets or sets the auto-refresh interval. Default is 30 seconds. Set to zero to disable.</summary>
+    [Parameter] public TimeSpan RefreshInterval { get; init; } = TimeSpan.FromSeconds(30);
+
+    [Inject] private IHealthMonitorProvider Monitors { get; set; } = default!;
+    [Inject] private IOptions<HealthMonitorSelectionOptions> MonitorSelection { get; set; } = default!;
+    [Inject] private ILogger<HealthDashboardProvider>? LoggerParam { get; set; }
+
+    private ILogger<HealthDashboardProvider> _logger = NullLogger<HealthDashboardProvider>.Instance;
+    private HealthDashboardContext _context = new();
+    private SystemHealthSnapshot? _systemHealth;
+    private Dictionary<string, ThroughputData> _serviceThroughput = new(StringComparer.OrdinalIgnoreCase);
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private bool _initialized;
+    private Timer? _refreshTimer;
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<HealthDashboardProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadData(ComponentCt);
+
+            if (RefreshInterval > TimeSpan.Zero)
+            {
+                _refreshTimer = new Timer(
+                    async _ => await InvokeAsync(async () =>
+                    {
+                        await LoadData(ComponentCt);
+                        StateHasChanged();
+                    }),
+                    null,
+                    RefreshInterval,
+                    RefreshInterval);
+            }
+        }
+    }
+
+    private async Task<IGenericResult> LoadData(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            HealthDashboardProviderLog.LoadStarted(_logger);
+
+            var monitorResult = await Monitors.Get(MonitorSelection.Value.Name, cancellationToken);
+            if (!monitorResult.IsSuccess || monitorResult.Value is null)
+            {
+                _lastResult = monitorResult;
+                HealthDashboardProviderLog.LoadFailed(_logger);
+                return monitorResult;
+            }
+
+            var monitor = monitorResult.Value;
+
+            var healthResult = await monitor.GetSystemHealth(cancellationToken);
+            if (healthResult.IsSuccess && healthResult.Value is not null)
+            {
+                _systemHealth = healthResult.Value;
+
+                var throughputDict = new Dictionary<string, ThroughputData>(StringComparer.OrdinalIgnoreCase);
+                foreach (var service in _systemHealth.Services)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var throughputResult = await monitor.GetThroughput(service.Name, ThroughputWindow, cancellationToken);
+                    if (throughputResult.IsSuccess && throughputResult.Value is not null)
+                    {
+                        throughputDict[service.Name] = throughputResult.Value;
+                    }
+                }
+                _serviceThroughput = throughputDict;
+
+                HealthDashboardProviderLog.LoadCompleted(
+                    _logger,
+                    _systemHealth.OverallStatus.Name,
+                    _systemHealth.Services.Count);
+            }
+            else
+            {
+                _lastResult = healthResult;
+                HealthDashboardProviderLog.LoadFailed(_logger);
+            }
+            return healthResult;
+        }
+        catch (OperationCanceledException)
+        {
+            return ProviderContextBase.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { HealthDashboardProviderLog.LoadException(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            return _lastResult;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private void RebuildContext()
+    {
+        _context = new HealthDashboardContext
+        {
+            SystemHealth = _systemHealth,
+            ServiceThroughput = _serviceThroughput,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnRefresh = () => LoadData(ComponentCt)
+        };
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        if (_refreshTimer is not null)
+        {
+            await _refreshTimer.DisposeAsync();
+        }
+        await base.DisposeAsync();
+    }
+}

@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Fdw.VsCodeShell</RootNamespace>
+    <PackageId>Fdw.VsCodeShell</PackageId>
+    <Title>Fdw VS Code Shell</Title>
+    <Description>Ready-made VS Code extension shell: ship a .NET host that contributes commands and webviews; the framework supplies the JavaScript bootstrap and packaging glue. Build a VS Code extension without writing TypeScript.</Description>
+    <IsPackable>true</IsPackable>
+
+    <!-- Why: ship extension.js + bootstrap.props as NuGet content so consumers get the
+         bootstrap dropped into their output and an MSBuild target that copies it next to
+         the published .NET host. No npm dependency, no node_modules. -->
+    <ContentTargetFolders>contentFiles</ContentTargetFolders>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.VsCodeShell.Abstractions\Fdw.VsCodeShell.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Abstractions\Fdw.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Why: extension.js is the hand-rolled bootstrap shipped as NuGet content. The
+         buildTransitive .props file gives consumers an MSBuild target that copies the
+         bootstrap and a templated package.json into their publish output. -->
+    <Content Include="Content\extension.js" Pack="true" PackagePath="contentFiles\any\any\extension.js;content\extension.js" />
+    <Content Include="Content\package.json.template" Pack="true" PackagePath="contentFiles\any\any\package.json.template;content\package.json.template" />
+    <None Include="buildTransitive\Fdw.VsCodeShell.props" Pack="true" PackagePath="buildTransitive\Fdw.VsCodeShell.props" />
+    <None Include="buildTransitive\Fdw.VsCodeShell.targets" Pack="true" PackagePath="buildTransitive\Fdw.VsCodeShell.targets" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <!-- Why: VsCodeManifestFactory and VsCodeManifest are implementation detail, but the manifest
+         projection is exactly what needs direct test coverage. -->
+    <InternalsVisibleTo Include="Fdw.VsCodeShell.Tests" />
+  </ItemGroup>
+
+</Project>

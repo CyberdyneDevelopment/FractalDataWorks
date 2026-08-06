@@ -1,0 +1,210 @@
+@namespace Fdw.Web.Analytics.Components.Health.Throughput
+@using Fdw.UI.Providers
+@using Fdw.Results
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using Microsoft.Extensions.Options
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Abstractions.Health.Monitoring
+@using Fdw.Web.Analytics.Clients.Models
+@using Fdw.Web.Analytics.Components.Health.Logging
+@using Fdw.Web.Analytics.Components.Health.TrendDirectionOptions
+@using Fdw.UI.Components.Base
+
+@inherits UIComponentBase
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Render fragment receiving the throughput context.
+    /// </summary>
+    [Parameter] public RenderFragment<ThroughputContext>? ChildContent { get; set; }
+
+    /// <summary>Gets or sets the service name to monitor.</summary>
+    [Parameter] public string ServiceName { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the throughput time window. Default is 5 minutes.</summary>
+    [Parameter] public TimeSpan Window { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>Gets or sets the auto-refresh interval. Default is 30 seconds. Set to zero to disable.</summary>
+    [Parameter] public TimeSpan RefreshInterval { get; init; } = TimeSpan.FromSeconds(30);
+
+    [Inject] private IHealthMonitorProvider Monitors { get; set; } = default!;
+    [Inject] private IOptions<HealthMonitorSelectionOptions> MonitorSelection { get; set; } = default!;
+    [Inject] private ILogger<ThroughputProvider>? LoggerParam { get; set; }
+
+    private static readonly ITrendDirection TrendUp = TrendDirections.ByName("Up");
+    private static readonly ITrendDirection TrendDown = TrendDirections.ByName("Down");
+    private static readonly ITrendDirection TrendFlat = TrendDirections.ByName("Flat");
+
+    private ILogger<ThroughputProvider> _logger = NullLogger<ThroughputProvider>.Instance;
+    private ThroughputContext _context = new();
+    private ThroughputData? _throughputData;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private bool _initialized;
+    private Timer? _refreshTimer;
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<ThroughputProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadData(ComponentCt);
+
+            if (RefreshInterval > TimeSpan.Zero)
+            {
+                _refreshTimer = new Timer(
+                    async _ => await InvokeAsync(async () =>
+                    {
+                        await LoadData(ComponentCt);
+                        StateHasChanged();
+                    }),
+                    null,
+                    RefreshInterval,
+                    RefreshInterval);
+            }
+        }
+    }
+
+    private async Task<IGenericResult> LoadData(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            ThroughputProviderLog.LoadStarted(_logger, ServiceName, Window.TotalSeconds);
+
+            var monitorResult = await Monitors.Get(MonitorSelection.Value.Name, cancellationToken);
+            if (!monitorResult.IsSuccess || monitorResult.Value is null)
+            {
+                _lastResult = monitorResult;
+                ThroughputProviderLog.LoadFailed(_logger, ServiceName);
+                return monitorResult;
+            }
+
+            var result = await monitorResult.Value.GetThroughput(ServiceName, Window, cancellationToken);
+            if (result.IsSuccess && result.Value is not null)
+            {
+                _throughputData = result.Value;
+                ThroughputProviderLog.LoadCompleted(
+                    _logger,
+                    ServiceName,
+                    _throughputData.RequestsPerSecond,
+                    _throughputData.AvgLatencyMs);
+            }
+            else
+            {
+                _lastResult = result;
+                ThroughputProviderLog.LoadFailed(_logger, ServiceName);
+            }
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            return ProviderContextBase.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { ThroughputProviderLog.LoadException(_logger, ex, ServiceName) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            return _lastResult;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private void RebuildContext()
+    {
+        var historyPoints = _throughputData?.DataPoints
+            .Select(dp => new TimeSeriesDataPoint
+            {
+                Timestamp = dp.Timestamp,
+                ExecutionCount = dp.RequestCount,
+                AverageDurationMs = dp.AverageLatencyMs,
+                ErrorCount = dp.ErrorCount
+            })
+            .ToList() ?? [];
+
+        var (trend, changePercent) = ComputeLatencyTrend(historyPoints);
+
+        _context = new ThroughputContext
+        {
+            RequestsPerSecond = _throughputData?.RequestsPerSecond ?? 0,
+            AvgLatencyMs = _throughputData?.AvgLatencyMs ?? 0,
+            P95LatencyMs = _throughputData?.P95LatencyMs ?? 0,
+            ErrorRate = _throughputData?.ErrorRate ?? 0,
+            HistoryDataPoints = historyPoints,
+            LatencyTrend = trend,
+            LatencyChangePercent = changePercent,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnRefresh = () => LoadData(ComponentCt)
+        };
+    }
+
+    private static (ITrendDirection Direction, double ChangePercent) ComputeLatencyTrend(List<TimeSeriesDataPoint> points)
+    {
+        if (points.Count < 2)
+        {
+            return (TrendFlat, 0);
+        }
+
+        var firstValue = points[0].AverageDurationMs;
+        var lastValue = points[^1].AverageDurationMs;
+
+        if (Math.Abs(firstValue) < 0.001)
+        {
+            return lastValue > 0 ? (TrendUp, 100) : (TrendFlat, 0);
+        }
+
+        var changePercent = ((lastValue - firstValue) / firstValue) * 100;
+
+        const double threshold = 1.0;
+        ITrendDirection direction;
+        if (changePercent > threshold)
+        {
+            direction = TrendUp;
+        }
+        else if (changePercent < -threshold)
+        {
+            direction = TrendDown;
+        }
+        else
+        {
+            direction = TrendFlat;
+        }
+
+        return (direction, changePercent);
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        if (_refreshTimer is not null)
+        {
+            await _refreshTimer.DisposeAsync();
+        }
+        await base.DisposeAsync();
+    }
+}

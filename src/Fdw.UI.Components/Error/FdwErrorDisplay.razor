@@ -1,0 +1,7 @@
+@namespace Fdw.UI.Components.Error
+@using Microsoft.AspNetCore.Components
+
+@if (Error is not null && Content is not null)
+{
+    @Content(_context)
+}

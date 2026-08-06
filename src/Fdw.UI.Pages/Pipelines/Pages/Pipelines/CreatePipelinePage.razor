@@ -1,0 +1,247 @@
+@page "/pipelines/new"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>New Pipeline - Cyberdyne</PageTitle>
+
+<PipelineWizardProvider>
+    <ChildContent Context="ctx">
+
+        <div style="max-width:768px;margin:0 auto;">
+            @* Header *@
+            <div class="pagehead">
+                <div>
+                    <div class="ey">Pipelines &amp; Scheduling · New Pipeline</div>
+                    <h1>New Pipeline</h1>
+                    <div class="sub">Engine, source, and destination — configured here; transform authoring happens on the canvas.</div>
+                </div>
+                <div class="actions">
+                    <a class="btn btn-ghost" href="/pipelines">Cancel</a>
+                </div>
+            </div>
+
+            @* Step Indicator *@
+            <div class="stepper">
+                @for (int i = 0; i < 5; i++)
+                {
+                    var stepIndex = i;
+                    <div class="step @(stepIndex < ctx.Step ? "done" : stepIndex == ctx.Step ? "on" : "")">
+                        <span class="num">
+                            @if (stepIndex < ctx.Step)
+                            {
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:13px;height:13px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                            }
+                            else
+                            {
+                                @(stepIndex + 1)
+                            }
+                        </span>
+                        <span class="sl">@WizardStepTitle(stepIndex)</span>
+                    </div>
+                    @if (stepIndex < 4)
+                    {
+                        <div class="bar"></div>
+                    }
+                }
+            </div>
+
+            @if (ctx.IsComplete)
+            {
+                <div class="card">
+                    <div class="card-b" style="padding:48px;text-align:center;">
+                        <div style="font-size:32px;color:var(--success);margin-bottom:14px;">✓</div>
+                        <p style="color:var(--n-200);margin:0 0 16px;">Pipeline '@ctx.Name' created successfully.</p>
+                        <button class="btn btn-primary" @onclick='() => Nav.NavigateTo($"/pipelines/builder/{ctx.CreatedPipelineId}")'>
+                            Continue to Builder
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card">
+                    <div class="card-h">
+                        <h3>@WizardStepTitle(ctx.Step)</h3>
+                    </div>
+                    <div class="card-b">
+
+                        @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
+                        {
+                            <div class="danger" style="margin-bottom:16px;">
+                                <div class="t"><p class="mono" style="color:var(--signal);">@ctx.ErrorMessage</p></div>
+                            </div>
+                        }
+
+                        @* -- Step 0: Engine Type (pluggable — sourced from EtlPipelineTypes) -- *@
+                        @if (ctx.Step == 0)
+                        {
+                            @if (ctx.EngineTypes.Any())
+                            {
+                                <div class="frow">
+                                    <label>Engine Type</label>
+                                    <select class="finput" value="@(ctx.SelectedEngineTypeName ?? string.Empty)"
+                                            @onchange="e => ctx.OnSelectEngineType(e.Value?.ToString() ?? string.Empty)">
+                                        <option value="">-- Select Engine Type --</option>
+                                        @foreach (var t in ctx.EngineTypes)
+                                        {
+                                            <option value="@t.Name">@t.Name (@t.Category)</option>
+                                        }
+                                    </select>
+                                    <p class="hint">Sourced from the registered pipeline engine types — never hardcoded.</p>
+                                </div>
+                            }
+                            else if (ctx.IsLoading)
+                            {
+                                <p class="hint" style="font-style:italic;">Loading engine types...</p>
+                            }
+                            else
+                            {
+                                <p class="hint" style="font-style:italic;">No pipeline engine types are registered.</p>
+                            }
+                        }
+
+                        @* -- Step 1: Details -- *@
+                        else if (ctx.Step == 1)
+                        {
+                            <div class="frow">
+                                <label>Pipeline Name</label>
+                                <input class="finput mono" value="@ctx.Name" @oninput="e => ctx.OnNameChanged(e.Value?.ToString() ?? string.Empty)" placeholder="e.g. OrdersSync" />
+                            </div>
+                            <div class="frow full">
+                                <label>Description</label>
+                                <textarea class="finput" style="height:80px;" value="@ctx.Description" @oninput="e => ctx.OnDescriptionChanged(e.Value?.ToString())"></textarea>
+                            </div>
+                        }
+
+                        @* -- Step 2: Source -- *@
+                        else if (ctx.Step == 2)
+                        {
+                            <div class="frow">
+                                <label>Source Kind</label>
+                                <select class="finput" value="@ctx.Source.Kind.Name" @onchange="e => ctx.OnSourceKindChanged(e.Value?.ToString() ?? string.Empty)">
+                                    @foreach (var kind in DataSourceKinds.All())
+                                    {
+                                        <option value="@kind.Name">@kind.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            @if (string.Equals(ctx.Source.Kind.Name, DataSourceKinds.Connection.Name, StringComparison.Ordinal))
+                            {
+                                <div class="frow">
+                                    <label>Connection</label>
+                                    <select class="finput" value="@ctx.Source.Name" @onchange="e => ctx.OnSourceNameChanged(e.Value?.ToString() ?? string.Empty)">
+                                        <option value="">-- Select Connection --</option>
+                                        @foreach (var c in ctx.Connections)
+                                        {
+                                            <option value="@c.Name">@c.Name</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="frow">
+                                    <label>DataSet</label>
+                                    <select class="finput" value="@ctx.Source.Name" @onchange="e => ctx.OnSourceNameChanged(e.Value?.ToString() ?? string.Empty)">
+                                        <option value="">-- Select DataSet --</option>
+                                        @foreach (var d in ctx.DataSets)
+                                        {
+                                            <option value="@d.Name">@d.Name</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+                        }
+
+                        @* -- Step 3: Destination -- *@
+                        else if (ctx.Step == 3)
+                        {
+                            <div class="frow">
+                                <label>Destination Kind</label>
+                                <select class="finput" value="@ctx.Destination.Kind.Name" @onchange="e => ctx.OnDestinationKindChanged(e.Value?.ToString() ?? string.Empty)">
+                                    @foreach (var kind in DataDestinationKinds.All())
+                                    {
+                                        <option value="@kind.Name">@kind.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            @if (string.Equals(ctx.Destination.Kind.Name, DataDestinationKinds.Connection.Name, StringComparison.Ordinal))
+                            {
+                                <div class="frow">
+                                    <label>Connection</label>
+                                    <select class="finput" value="@ctx.Destination.Name" @onchange="e => ctx.OnDestinationNameChanged(e.Value?.ToString() ?? string.Empty)">
+                                        <option value="">-- Select Connection --</option>
+                                        @foreach (var c in ctx.Connections)
+                                        {
+                                            <option value="@c.Name">@c.Name</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="frow">
+                                    <label>DataSet</label>
+                                    <select class="finput" value="@ctx.Destination.Name" @onchange="e => ctx.OnDestinationNameChanged(e.Value?.ToString() ?? string.Empty)">
+                                        <option value="">-- Select DataSet --</option>
+                                        @foreach (var d in ctx.DataSets)
+                                        {
+                                            <option value="@d.Name">@d.Name</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+                        }
+
+                        @* -- Step 4: Review & Create -- *@
+                        else if (ctx.Step == 4)
+                        {
+                            <div class="term" style="min-height:0;font-size:11px;"><span class="mut">ENGINE ........... </span><span class="gl">@ctx.SelectedEngineTypeName</span>
+<span class="mut">NAME ............. </span><span class="gl">@ctx.Name</span>
+<span class="mut">SOURCE ........... </span><span class="gl">@ctx.Source.Kind.Name: @ctx.Source.Name</span>
+<span class="mut">DESTINATION ...... </span><span class="gl">@ctx.Destination.Kind.Name: @ctx.Destination.Name</span></div>
+                        }
+
+                    </div>
+                </div>
+
+                @* Navigation *@
+                <div style="display:flex;justify-content:space-between;margin-top:14px;">
+                    <button class="btn btn-secondary" @onclick='() => Nav.NavigateTo("/pipelines")'>Cancel</button>
+                    <div class="actions">
+                        @if (!ctx.IsFirstStep)
+                        {
+                            <button class="btn btn-secondary" @onclick="() => ctx.OnPreviousStep()">← Back</button>
+                        }
+                        @if (!ctx.IsLastStep)
+                        {
+                            <button class="btn btn-primary" @onclick="async () => await ctx.OnNextStep()" disabled="@ctx.IsLoading">
+                                Continue →
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-primary" @onclick="async () => await ctx.OnCreatePipeline()" disabled="@ctx.IsLoading">
+                                @(ctx.IsLoading ? "Creating..." : "Create Pipeline")
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+
+        </div>
+
+    </ChildContent>
+</PipelineWizardProvider>
+
+@code {
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private static string WizardStepTitle(int step) => step switch
+    {
+        0 => "Engine Type",
+        1 => "Details",
+        2 => "Source",
+        3 => "Destination",
+        _ => "Review & Create"
+    };
+}

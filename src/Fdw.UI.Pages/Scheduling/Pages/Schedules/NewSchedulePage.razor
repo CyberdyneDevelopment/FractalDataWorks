@@ -1,0 +1,225 @@
+@page "/schedules/new"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>New Schedule - Cyberdyne Systems</PageTitle>
+
+<ScheduleProvider>
+    <ChildContent Context="ctx">
+        <div style="max-width:760px;margin:0 auto;">
+            <div class="pagehead">
+                <div>
+                    <div class="ey">Pipelines &amp; Scheduling</div>
+                    <h1>New Schedule</h1>
+                    <div class="sub">Cron / Interval / One Time / Event.</div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-ghost" @onclick="GoBack">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back
+                    </button>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="danger" style="margin-bottom:14px;">
+                    <div class="t"><p>@_errorMessage</p></div>
+                </div>
+            }
+
+            <div class="card">
+                <div class="card-h"><h3>Schedule Configuration</h3></div>
+                <div class="card-b">
+                    <div class="frow">
+                        <label>Schedule Name</label>
+                        <input class="finput" @bind="_name" placeholder="my-schedule" />
+                    </div>
+                    <div class="frow">
+                        <label>Pipeline</label>
+                        <select class="finput" @bind="_pipelineName">
+                            <option value="">Select pipeline...</option>
+                            @foreach (var p in _pipelines)
+                            {
+                                <option value="@p.Name">@p.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="frow">
+                        <label>Schedule Type</label>
+                        @if (ctx.ScheduleTypes.Count > 0)
+                        {
+                            <select class="finput" @bind="_schedulerType">
+                                <option value="">Select schedule type...</option>
+                                @foreach (var t in ctx.ScheduleTypes)
+                                {
+                                    <option value="@t.TypeName">@t.DisplayName</option>
+                                }
+                            </select>
+                        }
+                        else
+                        {
+                            <select class="finput" @bind="_schedulerType">
+                                <option value="Cron">Cron</option>
+                                <option value="Interval">Interval</option>
+                                <option value="OneTime">One Time</option>
+                                <option value="Event">Event</option>
+                            </select>
+                        }
+                    </div>
+                    @if (string.Equals(_schedulerType, "Cron", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <div class="frow">
+                            <label>Cron Expression</label>
+                            <input class="finput mono" @bind="_cronExpression" placeholder="0 */5 * * *" />
+                        </div>
+                    }
+                    else if (string.Equals(_schedulerType, "Interval", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <div class="frow">
+                            <label>Interval</label>
+                            <div style="display:flex;gap:9px;">
+                                <input class="finput" style="width:130px;" type="number" min="1" @bind="_intervalValue" />
+                                <select class="finput" @bind="_intervalUnit">
+                                    <option value="Seconds">Seconds</option>
+                                    <option value="Minutes">Minutes</option>
+                                    <option value="Hours">Hours</option>
+                                    <option value="Days">Days</option>
+                                </select>
+                            </div>
+                        </div>
+                    }
+                    else if (string.Equals(_schedulerType, "OneTime", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <div class="frow">
+                            <label>Execution Date</label>
+                            <input class="finput" type="date" @bind="_oneTimeDate" />
+                        </div>
+                        <div class="frow">
+                            <label>Execution Time</label>
+                            <input class="finput" type="time" @bind="_oneTimeTime" />
+                        </div>
+                    }
+                    else if (string.Equals(_schedulerType, "Event", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <div class="frow">
+                            <label>Event Name</label>
+                            <input class="finput" @bind="_eventName" placeholder="e.g. data.ingestion.completed" />
+                        </div>
+                    }
+                    <div class="frow">
+                        <label>Timezone</label>
+                        <select class="finput" @bind="_timeZoneId">
+                            <option>UTC</option>
+                            <option>America/New_York</option>
+                            <option>America/Chicago</option>
+                            <option>America/Denver</option>
+                            <option>America/Los_Angeles</option>
+                            <option>Europe/London</option>
+                        </select>
+                    </div>
+                    <div class="frow" style="flex-direction:row;align-items:center;gap:11px;">
+                        <span class="sw @(_isEnabled ? "on" : "")" role="button" @onclick="() => _isEnabled = !_isEnabled"></span>
+                        <label style="margin:0;">Enabled</label>
+                    </div>
+                    <div class="actions" style="margin-top:8px;">
+                        <button class="btn btn-primary" @onclick="() => CreateSchedule(ctx)" disabled="@_isSaving">
+                            @(_isSaving ? "Creating..." : "Create Schedule")
+                        </button>
+                        <button class="btn btn-secondary" @onclick="GoBack">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </ChildContent>
+</ScheduleProvider>
+
+@code {
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    [Inject] private IPipelineClient PipelineClient { get; set; } = default!;
+
+    private IReadOnlyList<PipelineSummaryResponse> _pipelines = [];
+    private string _name = "";
+    private string _pipelineName = "";
+    private string _schedulerType = "Cron";
+    private string _cronExpression = "";
+    private int _intervalValue = 5;
+    private string _intervalUnit = "Minutes";
+    private DateOnly _oneTimeDate = DateOnly.FromDateTime(DateTime.Today);
+    private TimeOnly _oneTimeTime = TimeOnly.FromTimeSpan(TimeSpan.FromHours(9));
+    private string _eventName = "";
+    private string _timeZoneId = "UTC";
+    private bool _isEnabled = true;
+    private bool _isSaving;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await PipelineClient.List();
+        _pipelines = result.IsSuccess && result.Value is not null
+            ? result.Value.ToList()
+            : [];
+    }
+
+    private int ComputeIntervalSeconds() => _intervalUnit switch
+    {
+        "Minutes" => _intervalValue * 60,
+        "Hours" => _intervalValue * 3600,
+        "Days" => _intervalValue * 86400,
+        _ => _intervalValue
+    };
+
+    private async Task CreateSchedule(ScheduleContext ctx)
+    {
+        if (string.IsNullOrWhiteSpace(_name) || string.IsNullOrWhiteSpace(_pipelineName))
+        {
+            _errorMessage = "Name and Pipeline are required.";
+            return;
+        }
+
+        _isSaving = true;
+        _errorMessage = null;
+        try
+        {
+            DateTimeOffset? oneTimeDateTime = null;
+            if (string.Equals(_schedulerType, "OneTime", StringComparison.OrdinalIgnoreCase))
+            {
+                var localDt = _oneTimeDate.ToDateTime(_oneTimeTime);
+                oneTimeDateTime = new DateTimeOffset(localDt, TimeSpan.Zero);
+            }
+
+            var request = new CreateScheduleClientRequest
+            {
+                Name = _name,
+                PipelineName = _pipelineName,
+                SchedulerType = _schedulerType,
+                CronExpression = string.Equals(_schedulerType, "Cron", StringComparison.OrdinalIgnoreCase) ? _cronExpression : null,
+                IntervalSeconds = string.Equals(_schedulerType, "Interval", StringComparison.OrdinalIgnoreCase) ? ComputeIntervalSeconds() : null,
+                OneTimeDateTime = oneTimeDateTime,
+                EventName = string.Equals(_schedulerType, "Event", StringComparison.OrdinalIgnoreCase) ? _eventName : null,
+                TimeZoneId = _timeZoneId,
+                IsEnabled = _isEnabled,
+            };
+            var success = await ctx.OnCreateSchedule(request);
+            if (success)
+            {
+                Nav.NavigateTo("/schedules");
+            }
+            else
+            {
+                _errorMessage = "Failed to create schedule.";
+            }
+        }
+        catch
+        {
+            _errorMessage = "An error occurred creating the schedule.";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void GoBack() => Nav.NavigateTo("/schedules");
+}

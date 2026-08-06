@@ -1,0 +1,169 @@
+@page "/messages"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject NavigationManager Navigation
+
+<PageTitle>Messages - Cyberdyne</PageTitle>
+
+<MessageProvider AutoLoad="true">
+    <MessageListContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">System</div>
+                <h1>Messages</h1>
+                <div class="sub">View and manage system notifications.</div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-secondary" @onclick="@(() => ctx.OnMarkAllRead())">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Mark All Read
+                </button>
+            </div>
+        </div>
+
+        @* Filters *@
+        <div class="filters">
+            <span class="lbl">Status</span>
+            @foreach (var status in new[] { "All", "Unread", "Read", "Archived" })
+            {
+                <span class="@(string.Equals(_statusFilter, status, StringComparison.Ordinal) ? "chip on" : "chip")"
+                      @onclick="@(() => { _statusFilter = status; })">
+                    @status
+                </span>
+            }
+            <div class="seg" style="margin-left:auto;">
+                <select class="finput mono" style="background:transparent;padding:5px 8px;" @bind="_typeFilter">
+                    <option value="">All Types</option>
+                    <option value="SystemNotification">System</option>
+                    <option value="AccessRequest">Access Request</option>
+                    <option value="Alert">Alert</option>
+                </select>
+            </div>
+            <div class="seg">
+                <select class="finput mono" style="background:transparent;padding:5px 8px;" @bind="_severityFilter">
+                    <option value="">All Severities</option>
+                    <option value="Critical">Critical</option>
+                    <option value="High">High</option>
+                    <option value="Normal">Normal</option>
+                    <option value="Low">Low</option>
+                </select>
+            </div>
+        </div>
+
+        @* Message List *@
+        <div class="card">
+            <div class="card-h"><h3>Inbox</h3><span class="meta">@ctx.UnreadCount UNREAD</span></div>
+            <div class="card-b" style="padding:6px 8px 10px;">
+                @if (ctx.IsLoading)
+                {
+                    <div class="act"><div class="a"><p class="t mono mut">Loading…</p></div></div>
+                }
+                else if (!string.IsNullOrEmpty(ctx.ErrorMessage))
+                {
+                    <div class="act"><div class="a"><p class="t mono" style="color:var(--signal);">@ctx.ErrorMessage</p></div></div>
+                }
+                else if (FilteredMessages(ctx.Messages).Count == 0)
+                {
+                    <div class="act"><div class="a"><p class="t mono mut">No messages</p></div></div>
+                }
+                else
+                {
+                    <div class="act">
+                        @foreach (var message in FilteredMessages(ctx.Messages))
+                        {
+                            <div class="a" style="cursor:pointer;" @onclick="@(() => OpenMessage(message))">
+                                <span class="d @GetSeverityDotClass(message.Severity)"></span>
+                                <div style="flex:1;min-width:0;">
+                                    <p class="t @(message.IsUnread ? "" : "mut")">@message.Subject</p>
+                                    <p class="ts">@message.MessageType · @FormatTimestamp(message.CreatedAt)</p>
+                                </div>
+                                <div style="display:flex;gap:4px;align-items:center;">
+                                    @if (message.DismissedAt is null && message.ArchivedAt is null)
+                                    {
+                                        <button class="btn btn-ghost btn-sm" title="Dismiss"
+                                                @onclick="@(async () => await ctx.OnDismiss(message.Id))" @onclick:stopPropagation="true">
+                                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    }
+                                    @if (message.ArchivedAt is null)
+                                    {
+                                        <button class="btn btn-ghost btn-sm" title="Archive"
+                                                @onclick="@(async () => await ctx.OnArchive(message.Id))" @onclick:stopPropagation="true">
+                                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                            </svg>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </MessageListContent>
+</MessageProvider>
+
+@code {
+    private string _statusFilter = "All";
+    private string _typeFilter = "";
+    private string _severityFilter = "";
+
+    private IReadOnlyList<MessagePayload> FilteredMessages(IReadOnlyList<MessagePayload> messages)
+    {
+        var filtered = messages.AsEnumerable();
+
+        if (!string.Equals(_statusFilter, "All", StringComparison.OrdinalIgnoreCase))
+        {
+            filtered = _statusFilter switch
+            {
+                "Unread" => filtered.Where(m => m.IsUnread),
+                "Read" => filtered.Where(m => m.ReadAt is not null),
+                "Archived" => filtered.Where(m => m.ArchivedAt is not null),
+                _ => filtered
+            };
+        }
+        if (!string.IsNullOrEmpty(_typeFilter))
+        {
+            filtered = filtered.Where(m => string.Equals(m.MessageType, _typeFilter, StringComparison.OrdinalIgnoreCase));
+        }
+        if (!string.IsNullOrEmpty(_severityFilter))
+        {
+            filtered = filtered.Where(m => string.Equals(m.Severity, _severityFilter, StringComparison.OrdinalIgnoreCase));
+        }
+        return filtered.ToList();
+    }
+
+    private void OpenMessage(MessagePayload message)
+    {
+        Navigation.NavigateTo($"/messages/{message.Id}");
+    }
+
+    private static string GetSeverityDotClass(string severity) => severity switch
+    {
+        "Critical" => "dot-red",
+        "High" => "dot-amber",
+        "Normal" => "dot-glacier",
+        "Low" => "dot-violet",
+        _ => "dot-glacier"
+    };
+
+    private static MarkupString GetSeverityIconMarkup(string severity) => severity switch
+    {
+        "Critical" => new("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z\" />"),
+        "High" => new("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z\" />"),
+        "Low" => new("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z\" />"),
+        _ => new("<path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z\" />")
+    };
+
+    private static string FormatTimestamp(DateTime createdAt)
+    {
+        var diff = DateTime.UtcNow - createdAt;
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        return $"{(int)diff.TotalDays}d ago";
+    }
+}

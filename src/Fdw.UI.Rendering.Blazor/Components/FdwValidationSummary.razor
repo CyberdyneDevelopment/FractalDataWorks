@@ -1,0 +1,17 @@
+@* Validation summary shown when a Save fails page validation. *@
+@if (Validation is { IsValid: false })
+{
+    <div class="fdw-ui-validation-summary" role="alert">
+        <ul>
+            @foreach (var message in Validation.Messages)
+            {
+                <li class="@($"fdw-ui-validation-{message.Severity.Name.ToLowerInvariant()}")">@message.Message</li>
+            }
+        </ul>
+    </div>
+}
+
+@code {
+    /// <summary>The validation result to display; hidden when null or valid.</summary>
+    [Parameter] public ValidationResult? Validation { get; set; }
+}

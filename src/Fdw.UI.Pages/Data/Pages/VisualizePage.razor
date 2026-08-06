@@ -1,0 +1,129 @@
+@page "/visualize"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using Fdw.Data.Components.Visualization
+@using Fdw.UI.Abstractions.Charts
+@using Fdw.UI.Charts.Blazor.Host
+@using System
+@using System.Collections.Generic
+@using System.Linq
+
+<PageTitle>Visualize - Cyberdyne</PageTitle>
+
+<VisualizePageProvider>
+    <ChildContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">Data Sources</div>
+                <h1>Visualize</h1>
+                <div class="sub">Select a DataSet, choose a chart type, and map columns to encoding roles to render a chart.</div>
+            </div>
+        </div>
+
+        @* ── Dataset picker ─────────────────────────────────────────────────────── *@
+        <div class="card">
+            <div class="card-h"><h3>Dataset</h3></div>
+            <div class="card-b" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                <select class="fin"
+                        style="width:280px;"
+                        value="@ctx.SelectedDataSetName"
+                        @onchange="@(e => ctx.OnSelectDataSet(e.Value?.ToString() ?? string.Empty))">
+                    <option value="">— select a dataset —</option>
+                    @foreach (var ds in ctx.DataSets)
+                    {
+                        <option value="@ds.Name">@(string.IsNullOrWhiteSpace(ds.DisplayName) ? ds.Name : ds.DisplayName)</option>
+                    }
+                </select>
+
+                @if (ctx.IsLoading)
+                {
+                    <div class="spin" style="width:18px;height:18px;"></div>
+                }
+            </div>
+        </div>
+
+        @* ── Error message ─────────────────────────────────────────────────────── *@
+        @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
+        {
+            <div class="card">
+                <div class="card-b">
+                    <div class="alert alert-err">@ctx.ErrorMessage</div>
+                </div>
+            </div>
+        }
+
+        @* ── Chart configuration (only shown after a dataset is loaded with rows) ── *@
+        @if (ctx.Columns.Count > 0 && !ctx.IsLoading)
+        {
+            @* ── Chart type picker ───────────────────────────────────────────────── *@
+            <div class="card">
+                <div class="card-h"><h3>Chart Type</h3></div>
+                <div class="card-b">
+                    <div class="seg">
+                        @foreach (var ct in ctx.ChartTypes)
+                        {
+                            <button class="@(string.Equals(ctx.SelectedChartTypeName, ct.Name, StringComparison.Ordinal) ? "on" : null)"
+                                    @onclick="() => ctx.OnSelectChartType(ct.Name)">
+                                @ct.DisplayName
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            @* ── Encoding mappings ─────────────────────────────────────────────── *@
+            var selectedType = ChartTypes.ByName(ctx.SelectedChartTypeName);
+            var relevantRoles = selectedType != ChartTypes.NotFound
+                ? selectedType.RequiredEncodings.Concat(selectedType.OptionalEncodings).ToList()
+                : new List<string> { "X", "Y", "Series" };
+            <div class="card">
+                <div class="card-h"><h3>Encoding</h3></div>
+                <div class="card-b" style="display:flex;flex-direction:column;gap:8px;">
+                    @foreach (var roleName in relevantRoles)
+                    {
+                        var role = ChartEncodingRoles.ByName(roleName);
+                        if (role == ChartEncodingRoles.NotFound) continue;
+                        var currentBinding = ctx.EncodingBindings.TryGetValue(roleName, out var bound) ? bound : string.Empty;
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="min-width:80px;font-size:12px;color:#94a3b8;">@role.DisplayName</span>
+                            <select class="fin"
+                                    style="width:220px;"
+                                    value="@currentBinding"
+                                    @onchange="@(e => ctx.OnBindEncoding(roleName, e.Value?.ToString() ?? string.Empty))">
+                                <option value="">— unbound —</option>
+                                @foreach (var col in ctx.Columns)
+                                {
+                                    <option value="@col">@col</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @* ── Chart render area ─────────────────────────────────────────────── *@
+            @if (ctx.ChartModel is not null)
+            {
+                <div class="card">
+                    <div class="card-h"><h3>@ctx.ChartModel.Title</h3></div>
+                    <div class="card-b" style="height:420px;position:relative;">
+                        <ChartHost Model="@ctx.ChartModel"
+                                   Rows="@ctx.Rows"
+                                   ChartTypeChanged="@ctx.OnChartTypeChanged" />
+                    </div>
+                </div>
+            }
+        }
+        else if (!ctx.IsLoading && !string.IsNullOrEmpty(ctx.SelectedDataSetName) && string.IsNullOrEmpty(ctx.ErrorMessage))
+        {
+            <div class="card">
+                <div class="card-b">
+                    <div class="empty">No rows returned from the selected dataset. Select a different dataset to visualize.</div>
+                </div>
+            </div>
+        }
+    </ChildContent>
+</VisualizePageProvider>
+
+@code {
+    [Inject] private Microsoft.AspNetCore.Components.NavigationManager Nav { get; set; } = default!;
+}

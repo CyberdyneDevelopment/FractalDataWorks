@@ -1,0 +1,69 @@
+@namespace Fdw.Data.UI.Components.DataCommand.Skins
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.UI.CommandBuilders.Abstractions
+
+@* Update command skin — Target container + SET clauses + WHERE filter.
+   Tailwind-only. *@
+
+@if (Context is null)
+{
+    <div class="fhint mono">No command context.</div>
+}
+else
+{
+    <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="frow" style="margin-bottom:0;">
+            <label class="flbl">Target Container</label>
+            <DataContainerPicker Containers="@Context.AvailableContainers"
+                                 SelectedContainerId="@_targetId"
+                                 SelectedContainerIdChanged="@OnTargetChanged"
+                                 Placeholder="Select target container..." />
+        </div>
+
+        <SetClauseEditor AvailableFields="@_targetFields"
+                         Clauses="@((IReadOnlyList<DataCommandSetClause>)Context.CurrentSpec.Set)"
+                         ClausesChanged="@OnSetChanged" />
+
+        <FilterExpressionEditor AvailableFields="@_qualifiedFields"
+                                Filter="@Context.CurrentSpec.Filter"
+                                FilterChanged="@OnFilterChanged" />
+    </div>
+}
+
+@code {
+    [Parameter] public DataCommandContext? Context { get; set; }
+    public string SupportedKind => "Update";
+    public Type ContextType => typeof(DataCommandContext);
+
+    private Guid _targetId;
+    private IReadOnlyList<DataFieldSummary> _targetFields = [];
+    private List<DataCommandField> _qualifiedFields = [];
+
+    protected override void OnParametersSet()
+    {
+        if (Context is null) return;
+        _targetId = Context.CurrentSpec.Target?.ContainerId ?? Guid.Empty;
+        _targetFields = Context.GetFields(_targetId);
+        _qualifiedFields = _targetFields.Select(f => new DataCommandField { FieldName = f.Name }).ToList();
+    }
+
+    private async Task OnTargetChanged(Guid id)
+    {
+        _targetId = id;
+        _targetFields = Context?.GetFields(id) ?? [];
+        _qualifiedFields = _targetFields.Select(f => new DataCommandField { FieldName = f.Name }).ToList();
+        if (Context is not null) await Context.SetTarget(id).ConfigureAwait(false);
+    }
+
+    private async Task OnSetChanged(IReadOnlyList<DataCommandSetClause> clauses)
+    {
+        if (Context is not null) await Context.SetSetClauses(clauses).ConfigureAwait(false);
+    }
+
+    private async Task OnFilterChanged(DataCommandFilter? filter)
+    {
+        if (Context is not null) await Context.SetFilter(filter).ConfigureAwait(false);
+    }
+}

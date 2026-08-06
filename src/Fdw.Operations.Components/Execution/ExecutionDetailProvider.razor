@@ -1,0 +1,165 @@
+@namespace Fdw.Operations.Components.Execution
+@using Fdw.UI.Providers
+@using Fdw.Results
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Operations.Clients
+@using Fdw.Operations.Clients.Models
+@using Fdw.Operations.Components.Logging
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    // ── Parameters ──────────────────────────────────────────────────────────────
+
+    [Parameter] public RenderFragment<ExecutionDetailContext>? ChildContent { get; set; }
+    [Parameter] public Guid ExecutionId { get; set; }
+
+    // ── Injected Services ───────────────────────────────────────────────────────
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private ExecutionApiClient? _executionApi;
+    [Inject] private ILogger<ExecutionDetailProvider>? LoggerParam { get; set; }
+
+    private ILogger<ExecutionDetailProvider> _logger = NullLogger<ExecutionDetailProvider>.Instance;
+
+    // ── State ───────────────────────────────────────────────────────────────────
+
+    private ExecutionSummaryPayload? _execution;
+    private IReadOnlyList<ExecutionSummaryPayload> _children = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private ExecutionDetailContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ───────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _executionApi = new ExecutionApiClient(HttpClientFactory.CreateClient("ExecutionClient"), LoggerFactory?.CreateLogger<ExecutionApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<ExecutionDetailProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            if (ExecutionId != Guid.Empty)
+            {
+                await LoadExecution(ExecutionId);
+            }
+        }
+    }
+
+    // ── Methods ─────────────────────────────────────────────────────────────────
+
+    private async Task<IGenericResult> LoadExecution(Guid id, CancellationToken ct = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        ExecutionDetailProviderLog.LoadingExecution(_logger, id);
+
+        try
+        {
+            var result = await _executionApi!.Get(id, ct);
+            if (!result.IsSuccess)
+            {
+                ExecutionDetailProviderLog.LoadExecutionFailed(_logger, id);
+                _lastResult = result;
+                _execution = null;
+                _children = [];
+                return result;
+            }
+
+            _execution = result.Value;
+            ExecutionDetailProviderLog.LoadedExecution(_logger, id);
+
+            await LoadChildren(id, ct);
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            return ProviderContextBase.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ExecutionDetailProviderLog.LoadExecutionException(_logger, ex, id));
+            _execution = null;
+            _children = [];
+            return _lastResult;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadChildren(Guid parentId, CancellationToken ct = default)
+    {
+        ExecutionDetailProviderLog.LoadingChildren(_logger, parentId);
+
+        try
+        {
+            var result = await _executionApi!.GetChildren(parentId, ct);
+            if (!result.IsSuccess)
+            {
+                ExecutionDetailProviderLog.LoadChildrenFailed(_logger, parentId);
+                _children = [];
+                return;
+            }
+
+            _children = result.Value?.ToList() ?? [];
+            ExecutionDetailProviderLog.LoadedChildren(_logger, _children.Count, parentId);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            ExecutionDetailProviderLog.LoadChildrenException(_logger, ex, parentId);
+            _children = [];
+        }
+    }
+
+    // Why: a refresh before anything is loaded is a genuine no-op, not a failure — there is no id
+    // to re-fetch. It reports success because nothing went wrong, not to paper over a missing value.
+    private async Task<IGenericResult> Refresh() =>
+        _execution is null
+            ? GenericResult.Success()
+            : await LoadExecution(_execution.Id);
+
+    // ── Private Helpers ─────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new ExecutionDetailContext
+        {
+            Execution = _execution,
+            Children = _children,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnLoadExecution = id => LoadExecution(id),
+            OnRefresh = () => Refresh()
+        };
+    }
+}

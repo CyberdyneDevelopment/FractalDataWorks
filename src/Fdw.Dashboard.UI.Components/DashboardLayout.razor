@@ -1,0 +1,143 @@
+@namespace Fdw.Dashboard.UI.Components
+
+<div>
+    <!-- Header -->
+    <div class="pagehead">
+        <div>
+            <div class="ey">Dashboard</div>
+            <h1>System Overview</h1>
+        </div>
+        <div class="actions"></div>
+    </div>
+
+    <!-- Health Gauges -->
+    @if (HealthContext.SystemHealth is not null)
+    {
+        <a href="/health" class="card" style="display:block;margin-bottom:14px;">
+            <div class="card-h">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="badge @(HealthContext.SystemHealth.OverallStatus.IsHealthy ? "b-ok" : "b-fail")"><span class="bd"></span>System Health</span>
+                </div>
+                <span class="meta">CLICK FOR DETAILS</span>
+            </div>
+            <div class="card-b">
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+                    @{
+                        var services = HealthContext.SystemHealth.Services;
+                        if (services.Count > 0)
+                        {
+                            var avgResponse = services.Average(s => s.ResponseTimeMs);
+                            var maxResponse = services.Max(s => s.ResponseTimeMs);
+                            var healthyCount = services.Count(s => s.Status.IsHealthy);
+                            var totalErrors = HealthContext.ServiceThroughput.Values.Sum(t => t.ErrorRate);
+                            var avgRps = HealthContext.ServiceThroughput.Values.Sum(t => t.RequestsPerSecond);
+
+                            <SvgGauge Value="@avgResponse" Min="0" Max="500" Label="Avg Response" Unit="ms" Width="80" WarningThreshold="200" CriticalThreshold="400" />
+                            <SvgGauge Value="@maxResponse" Min="0" Max="1000" Label="Max Response" Unit="ms" Width="80" WarningThreshold="300" CriticalThreshold="600" />
+                            <SvgGauge Value="@healthyCount" Min="0" Max="@services.Count" Label="Healthy" Unit="" Width="80" WarningThreshold="@(services.Count * 0.7)" CriticalThreshold="@(services.Count * 0.5)" ColorOverride="@(healthyCount == services.Count ? "#22c55e" : "#eab308")" />
+                            <SvgGauge Value="@avgRps" Min="0" Max="1000" Label="Req/s" Unit="" Width="80" WarningThreshold="700" CriticalThreshold="900" ColorOverride="#06b6d4" />
+                            <SvgGauge Value="@(totalErrors * 100)" Min="0" Max="100" Label="Error %" Unit="%" Width="80" WarningThreshold="5" CriticalThreshold="15" />
+                        }
+                        else
+                        {
+                            <SvgGauge Value="0" Label="Avg Response" Unit="ms" Width="80" />
+                            <SvgGauge Value="0" Label="Max Response" Unit="ms" Width="80" />
+                            <SvgGauge Value="0" Label="Healthy" Width="80" ColorOverride="#22c55e" />
+                            <SvgGauge Value="0" Label="Req/s" Width="80" ColorOverride="#06b6d4" />
+                            <SvgGauge Value="0" Label="Error %" Unit="%" Width="80" />
+                        }
+                    }
+                </div>
+            </div>
+        </a>
+    }
+
+    <!-- Stats Grid -->
+    <StatCardRow ConnectionContext="ConnectionContext" PipelineContext="PipelineContext" ScheduleContext="ScheduleContext" />
+
+    <!-- Two Column Layout -->
+    <div class="grid2">
+        <div class="card">
+            <div class="card-h">
+                <h3>Throughput Analysis</h3>
+            </div>
+            <div class="card-b">
+                @if (AnalyticsContext.AnalyticsData?.TimeSeries is { Count: > 0 } series)
+                {
+                    var maxExec = series.Max(p => p.ExecutionCount);
+                    if (maxExec == 0) { maxExec = 1; }
+                    <div class="chartwrap" style="display:flex;align-items:flex-end;gap:3px;">
+                        @foreach (var point in series)
+                        {
+                            var pct = (double)point.ExecutionCount / maxExec * 100;
+                            var hasErrors = point.ErrorCount > 0;
+                            <div title="@point.Timestamp.ToString("MMM d HH:mm") — @point.ExecutionCount exec@(hasErrors ? $" ({point.ErrorCount} err)" : "")"
+                                 style="flex:1;border-radius:3px 3px 0 0;height:@(pct)%;min-height:2px;background:@(hasErrors ? "var(--signal)" : "var(--glacier)");">
+                            </div>
+                        }
+                    </div>
+                    <div class="chart-x">
+                        <span>@series.First().Timestamp.ToString("MMM d")</span>
+                        <span>@series.Last().Timestamp.ToString("MMM d")</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="chartwrap" style="display:flex;align-items:center;justify-content:center;color:var(--n-500);font-size:13px;">
+                        <div style="text-align:center;">
+                            <p>No throughput data available</p>
+                            <p class="hint">Data appears after pipeline executions</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card">
+            <div class="card-h">
+                <h3>Recent Activity</h3>
+            </div>
+            <div class="card-b">
+                <div class="act">
+                    @if (OperationsContext.Activities.Any())
+                    {
+                        @foreach (var activity in OperationsContext.Activities)
+                        {
+                            <div class="a">
+                                <span class="d @GetStatusColor(activity.Severity)"></span>
+                                <div>
+                                    <p class="t">@activity.Title</p>
+                                    <p class="ts">@activity.Timestamp.ToString("t")</p>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p style="color:var(--n-500);font-size:12px;font-style:italic;">No recent activity detected.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ConnectionDashboardContext ConnectionContext { get; set; } = default!;
+    [Parameter, EditorRequired] public PipelineDashboardContext PipelineContext { get; set; } = default!;
+    [Parameter, EditorRequired] public ScheduleDashboardContext ScheduleContext { get; set; } = default!;
+    [Parameter, EditorRequired] public AnalyticsDashboardContext AnalyticsContext { get; set; } = default!;
+    [Parameter, EditorRequired] public OperationsDashboardContext OperationsContext { get; set; } = default!;
+    [Parameter, EditorRequired] public HealthDashboardContext HealthContext { get; set; } = default!;
+
+    [CascadingParameter(Name = "BlazorTheme")] private IBlazorTheme? Theme { get; set; }
+
+    private string GetStatusColor(string status) => status switch
+    {
+        "success" => "dot-green",
+        "error" => "dot-red",
+        "warning" => "dot-amber",
+        _ => "dot-glacier"
+    };
+}

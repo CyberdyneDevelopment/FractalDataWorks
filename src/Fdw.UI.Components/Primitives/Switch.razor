@@ -1,0 +1,22 @@
+<div class="frow" style="margin-bottom:0;">
+    <label style="display:flex;align-items:center;gap:10px;cursor:@(ReadOnly ? "default" : "pointer");text-transform:none;letter-spacing:normal;font-family:var(--font);font-size:13px;color:var(--n-300);">
+        <input
+            type="checkbox"
+            style="position:absolute;opacity:0;width:0;height:0;"
+            checked="@Value"
+            disabled="@ReadOnly"
+            @onchange="HandleChange" />
+
+        <span class="sw @(Value ? "on" : "")"></span>
+
+        @if (!string.IsNullOrEmpty(Label))
+        {
+            <span>@Label</span>
+        }
+    </label>
+
+    @if (!string.IsNullOrEmpty(HelpText))
+    {
+        <small class="hint">@HelpText</small>
+    }
+</div>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+  <Metadata>
+    <Identity Id="FractalDataWorks.ServiceWizard" Version="1.0.0" Language="en-US" Publisher="FractalDataWorks" />
+    <DisplayName>FractalDataWorks Service Wizard</DisplayName>
+    <Description xml:space="preserve">Create FractalDataWorks service domains and implementations with a menu-driven wizard. Scaffolds abstractions, service types, providers, and concrete implementations following the three-phase registration pattern.</Description>
+    <MoreInfo>https://github.com/FractalDataWorks</MoreInfo>
+    <License>LICENSE.txt</License>
+    <GettingStartedGuide>https://github.com/FractalDataWorks/wiki/Service-Templates</GettingStartedGuide>
+    <ReleaseNotes>Initial release with service domain and implementation templates.</ReleaseNotes>
+    <Tags>FractalDataWorks, Service, Template, Wizard, ServiceType</Tags>
+  </Metadata>
+  <Installation>
+    <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0,18.0)" />
+    <InstallationTarget Id="Microsoft.VisualStudio.Professional" Version="[17.0,18.0)" />
+    <InstallationTarget Id="Microsoft.VisualStudio.Enterprise" Version="[17.0,18.0)" />
+  </Installation>
+  <Dependencies>
+    <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.7.2,)" />
+  </Dependencies>
+  <Assets>
+    <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
+    <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" AssemblyName="|%CurrentProject%;AssemblyName|" />
+    <Asset Type="Microsoft.VisualStudio.ProjectTemplate" d:Source="Project" d:ProjectName="%CurrentProject%" d:TargetPath="|%CurrentProject%;TemplateProjectOutputGroup|" Path="ProjectTemplates" d:VsixSubPath="ProjectTemplates" />
+  </Assets>
+</PackageManifest>

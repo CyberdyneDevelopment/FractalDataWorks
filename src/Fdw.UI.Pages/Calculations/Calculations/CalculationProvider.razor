@@ -1,0 +1,458 @@
+@namespace Fdw.Calculations.Components.Calculations
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.Results
+@using Fdw.Web.Calculations.Clients.ApiClients
+@using Fdw.Web.Calculations.Clients.Models
+@using Fdw.Calculations.Components.Logging
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    [Parameter] public RenderFragment<CalculationContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private CalculationApiClient? _calculationApi;
+    [Inject] private ILogger<CalculationProvider>? LoggerParam { get; set; }
+
+    private ILogger<CalculationProvider> _logger = NullLogger<CalculationProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<CalculationSummaryPayload> _calculations = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private string _searchString = string.Empty;
+    private CalculationContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _calculationApi = new CalculationApiClient(HttpClientFactory.CreateClient("CalculationClient"), LoggerFactory?.CreateLogger<CalculationApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<CalculationProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadCalculations();
+        }
+    }
+
+    // ── Methods (exposed as callbacks via CalculationContext) ───────────────
+
+    private async Task LoadCalculations(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _calculationApi!.GetCalculations(cancellationToken);
+            if (result.IsSuccess)
+            {
+                _calculations = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                CalculationProviderLog.LoadCalculationsFailed(_logger);
+                _lastResult = result;
+                _calculations = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(CalculationProviderLog.LoadCalculationsException(_logger, ex));
+            _calculations = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private Task OnSearchChanged(string search)
+    {
+        _searchString = search;
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private IReadOnlyList<CalculationSummaryPayload> GetFilteredCalculations()
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return _calculations;
+
+        return _calculations.Where(c => c.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+                                        c.TargetDataSet.Contains(_searchString, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    private async Task<CalculationDetailPayload?> GetCalculationDetails(Guid id, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _calculationApi!.GetCalculation(id, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(CalculationProviderLog.LoadCalculationDetailFailed(_logger, id.ToString()));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(CalculationProviderLog.LoadCalculationDetailException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<CalculationDetailPayload?> CreateCalculation(CreateCalculationDefinitionRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _calculationApi!.CreateCalculation(request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadCalculations(cancellationToken);
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(CalculationProviderLog.CreateCalculationFailed(_logger));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(CalculationProviderLog.CreateCalculationException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<CalculationDetailPayload?> UpdateCalculation(Guid id, UpdateCalculationDefinitionRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _calculationApi!.UpdateCalculation(id, request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadCalculations(cancellationToken);
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(CalculationProviderLog.UpdateCalculationFailed(_logger, id.ToString()));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(CalculationProviderLog.UpdateCalculationException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> DeleteCalculation(Guid id, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _calculationApi!.DeleteCalculation(id, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadCalculations(cancellationToken);
+                return true;
+            }
+
+            _lastResult = GenericResult.Failure(CalculationProviderLog.DeleteCalculationFailed(_logger, id.ToString()));
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(CalculationProviderLog.DeleteCalculationException(_logger, ex));
+            return false;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<PreviewFormulaResponse?> ValidateFormula(string formula, string dataSet, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _calculationApi!.ValidateFormula(new ValidateFormulaPayload { Formula = formula, TargetDataSet = dataSet }, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(CalculationProviderLog.ValidateFormulaFailed(_logger));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(CalculationProviderLog.ValidateFormulaException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<IReadOnlyList<Fdw.Web.Calculations.Clients.Models.DataSetFieldPayload>?> GetDataSetFields(string dataSetName, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _calculationApi!.GetDataSetFields(dataSetName, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(CalculationProviderLog.GetDataSetFieldsFailed(_logger));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(CalculationProviderLog.GetDataSetFieldsException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<CalculationTypesResponse?> GetCalculationTypes(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _calculationApi!.GetCalculationTypes(cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(CalculationProviderLog.GetCalculationTypesFailed(_logger));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(CalculationProviderLog.GetCalculationTypesException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<PreviewCalculationResponse?> PreviewCalculation(PreviewCalculationRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _calculationApi!.PreviewCalculation(request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(CalculationProviderLog.PreviewCalculationFailed(_logger));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(CalculationProviderLog.PreviewCalculationException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<ExecuteCalculationResponse?> ExecuteCalculation(ExecuteCalculationRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _calculationApi!.ExecuteCalculation(request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(CalculationProviderLog.ExecuteCalculationFailed(_logger));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(CalculationProviderLog.ExecuteCalculationException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new CalculationContext
+        {
+            Calculations = _calculations,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            SearchString = _searchString,
+            FilteredCalculations = GetFilteredCalculations(),
+            OnLoadCalculations = () => LoadCalculations(),
+            OnSearchChanged = search => OnSearchChanged(search),
+            OnGetCalculationDetails = id => GetCalculationDetails(id),
+            OnCreateCalculation = request => CreateCalculation(request),
+            OnUpdateCalculation = (id, request) => UpdateCalculation(id, request),
+            OnDeleteCalculation = id => DeleteCalculation(id),
+            OnValidateFormula = (formula, dataSet) => ValidateFormula(formula, dataSet),
+            OnGetDataSetFields = dataSetName => GetDataSetFields(dataSetName),
+            OnGetCalculationTypes = () => GetCalculationTypes(),
+            OnPreviewCalculation = request => PreviewCalculation(request),
+            OnExecuteCalculation = request => ExecuteCalculation(request)
+        };
+    }
+}

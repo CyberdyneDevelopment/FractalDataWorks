@@ -1,0 +1,31 @@
+@using Fdw.Collections
+@typeparam TOption where TOption : class, ITypeOption
+
+<div class="frow">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label>@Label</label>
+    }
+
+    <select
+        class="finput"
+        value="@SelectedId"
+        disabled="@ReadOnly"
+        @onchange="HandleChange">
+
+        @if (!string.IsNullOrEmpty(Placeholder))
+        {
+            <option value="0">@Placeholder</option>
+        }
+
+        @foreach (var option in Options)
+        {
+            <option value="@GetOptionId(option)">@option.Name</option>
+        }
+    </select>
+
+    @if (!string.IsNullOrEmpty(HelpText))
+    {
+        <small class="hint">@HelpText</small>
+    }
+</div>

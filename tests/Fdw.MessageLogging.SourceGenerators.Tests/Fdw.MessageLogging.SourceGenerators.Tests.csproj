@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <LangVersion>preview</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Abstractions\Fdw.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- Only include Fdw.MessageLogging.SourceGenerators in coverage -->
+    <Include>[Fdw.MessageLogging.SourceGenerators]*</Include>
+    <!-- Exclude everything else -->
+    <Exclude>[xunit.*]*,[Moq]*,[Shouldly]*,[Microsoft.CodeAnalysis.*]*</Exclude>
+    <!-- Source generators have defensive code paths - lower thresholds -->
+    <!-- Integration tests skipped due to specialized infrastructure needs -->
+    <Threshold>0</Threshold>
+    <ThresholdType>line,branch,method</ThresholdType>
+  </PropertyGroup>
+</Project>

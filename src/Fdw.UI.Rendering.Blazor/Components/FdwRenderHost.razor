@@ -1,0 +1,26 @@
+@* Host component: renders what the BlazorUIRenderer composed into a BlazorRenderContext.
+   Consumers place this in markup, call the renderer with the same context, and the host
+   re-renders whenever the renderer changes the context. *@
+@implements IDisposable
+
+<div class="fdw-ui-render-host">
+    @foreach (var fragment in Context.Fragments)
+    {
+        @fragment
+    }
+    @if (Context.ActiveFragment is not null)
+    {
+        @Context.ActiveFragment
+    }
+</div>
+
+@code {
+    /// <summary>The render context this host displays.</summary>
+    [Parameter, EditorRequired] public BlazorRenderContext Context { get; set; } = default!;
+
+    protected override void OnInitialized() => Context.StateChanged += Refresh;
+
+    private void Refresh(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Context.StateChanged -= Refresh;
+}

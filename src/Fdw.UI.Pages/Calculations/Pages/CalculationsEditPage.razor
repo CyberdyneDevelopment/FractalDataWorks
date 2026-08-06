@@ -1,0 +1,254 @@
+@page "/calculations/{Id:guid}/edit"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Edit Calculation - Cyberdyne</PageTitle>
+
+<CalculationProvider>
+    <ChildContent Context="ctx">
+        @{ CaptureContext(ctx); }
+        <div style="max-width:920px;">
+            <div class="pagehead">
+                <div>
+                    <div class="ey">Transformations / Calculations / Edit</div>
+                    <h1>Edit Calculation</h1>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-secondary btn-sm" @onclick='() => Nav.NavigateTo("/calculations")'>
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            @if (ctx.ErrorMessage is not null)
+            {
+                <div class="card b-fail" style="margin-bottom:14px;padding:14px 16px;">
+                    <span class="mono" style="font-size:12px;color:var(--signal);">@ctx.ErrorMessage</span>
+                </div>
+            }
+
+            @if (_isPageLoading)
+            {
+                <div class="card" style="padding:48px;text-align:center;">
+                    <span class="mono" style="color:var(--n-500);">Loading calculation…</span>
+                </div>
+            }
+            else if (_loadFailed)
+            {
+                <div class="card b-fail" style="padding:24px;text-align:center;">
+                    <p class="mono" style="color:var(--signal);">Failed to load calculation. It may have been deleted.</p>
+                    <button class="btn btn-secondary btn-sm" style="margin-top:12px;" @onclick='() => Nav.NavigateTo("/calculations")'>
+                        Back to Calculations
+                    </button>
+                </div>
+            }
+            else
+            {
+                <!-- Basic Fields -->
+                <section class="card" style="margin-bottom:14px;">
+                    <div class="card-h"><h3>Basic Information</h3></div>
+                    <div class="card-b">
+                        <div class="frow">
+                            <label>Name *</label>
+                            <input type="text" class="finput" placeholder="e.g. TotalRevenue" @bind="_name" />
+                        </div>
+
+                        <div class="frow">
+                            <label>Target DataSet</label>
+                            <input type="text" class="finput mono"
+                                   style="background:var(--s2);color:var(--n-400);cursor:not-allowed;"
+                                   value="@_targetDataSet" readonly />
+                            <p class="hint" style="margin:4px 0 0 0;font-size:11px;">Target DataSet cannot be changed after creation.</p>
+                        </div>
+
+                        <div class="frow">
+                            <label>Result Field Name *</label>
+                            <input type="text" class="finput" placeholder="e.g. TotalRevenue" @bind="_resultFieldName" />
+                        </div>
+
+                        <div class="frow">
+                            <label>Result Data Type *</label>
+                            <input type="text" class="finput" placeholder="e.g. decimal, string, int" @bind="_resultDataType" />
+                        </div>
+
+                        <div class="frow">
+                            <label>Description</label>
+                            <textarea class="finput" style="height:72px;resize:none;" placeholder="Optional description" @bind="_description"></textarea>
+                        </div>
+
+                        <label style="display:flex;align-items:center;gap:11px;cursor:pointer;margin-top:6px;">
+                            <input type="checkbox" @bind="_isEnabled" />
+                            <span style="font-size:13px;color:var(--n-200);">Enabled</span>
+                        </label>
+                    </div>
+                </section>
+
+                <!-- Formula Builder -->
+                <CalculationFormBuilder
+                    Context="_builderContext"
+                    Formula="@_formula"
+                    FormulaChanged="OnFormulaChanged"
+                    TargetDataSet="@_targetDataSet" />
+
+                @if (!string.IsNullOrEmpty(_validationError))
+                {
+                    <div class="card b-fail" style="margin-bottom:14px;padding:12px 16px;">
+                        <span class="mono" style="font-size:12px;color:var(--signal);">@_validationError</span>
+                    </div>
+                }
+
+                <!-- Save -->
+                <div class="actions" style="justify-content:flex-end;margin-top:4px;">
+                    <button class="btn btn-secondary btn-sm" @onclick='() => Nav.NavigateTo("/calculations")'>Cancel</button>
+                    <button class="btn btn-primary" @onclick="() => Save(ctx)" disabled="@(ctx.IsLoading || _isPageLoading)">
+                        Save Changes
+                    </button>
+                </div>
+            }
+        </div>
+    </ChildContent>
+</CalculationProvider>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private string _name = string.Empty;
+    private string _targetDataSet = string.Empty;
+    private string _resultFieldName = string.Empty;
+    private string _resultDataType = string.Empty;
+    private string? _description;
+    private bool _isEnabled;
+    private string _formula = string.Empty;
+    private string? _validationError;
+    private bool _isPageLoading = true;
+    private bool _loadFailed;
+
+    // Why: the builder context is rebuilt when language changes or field-loading completes.
+    private CalculationFormBuilderContext _builderContext = new();
+
+    // Why: captured context reference from ChildContent so OnAfterRenderAsync can trigger
+    // the detail load after the first render, when the context callbacks are fully wired.
+    private CalculationContext? _capturedContext;
+    private bool _loaded;
+
+    private void CaptureContext(CalculationContext ctx)
+    {
+        _capturedContext = ctx;
+    }
+
+    private Task OnFormulaChanged(string formula)
+    {
+        _formula = formula;
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_loaded && _capturedContext is not null)
+        {
+            _loaded = true;
+            await EnsureLoaded(_capturedContext);
+        }
+    }
+
+    private async Task EnsureLoaded(CalculationContext ctx)
+    {
+        _isPageLoading = true;
+        _loadFailed = false;
+        StateHasChanged();
+
+        var detail = await ctx.OnGetCalculationDetails(Id);
+        if (detail is null)
+        {
+            _loadFailed = true;
+            _isPageLoading = false;
+            StateHasChanged();
+            return;
+        }
+
+        _name = detail.Name;
+        _targetDataSet = detail.TargetDataSet;
+        _resultFieldName = detail.ResultFieldName;
+        _resultDataType = detail.ResultDataType;
+        _description = detail.Description;
+        _isEnabled = detail.IsEnabled;
+        _formula = detail.Formula;
+
+        _builderContext = BuildContext(ctx);
+
+        _isPageLoading = false;
+        StateHasChanged();
+    }
+
+    private CalculationFormBuilderContext BuildContext(CalculationContext ctx)
+    {
+        return new CalculationFormBuilderContext
+        {
+            IsLoading = ctx.IsLoading,
+            LastResult = ctx.LastResult,
+            SelectedLanguage = _builderContext.SelectedLanguage,
+            PreviewResult = _builderContext.PreviewResult,
+            DataSetFields = _builderContext.DataSetFields,
+            OnValidateFormula = (formula, dataSet) => ctx.OnValidateFormula(formula, dataSet),
+            OnGetDataSetFields = dataSetName => ctx.OnGetDataSetFields(dataSetName),
+            OnLanguageChanged = lang =>
+            {
+                _builderContext = new CalculationFormBuilderContext
+                {
+                    IsLoading = _builderContext.IsLoading,
+                    LastResult = _builderContext.LastResult,
+                    SelectedLanguage = lang,
+                    PreviewResult = _builderContext.PreviewResult,
+                    DataSetFields = _builderContext.DataSetFields,
+                    OnValidateFormula = _builderContext.OnValidateFormula,
+                    OnGetDataSetFields = _builderContext.OnGetDataSetFields,
+                    OnLanguageChanged = _builderContext.OnLanguageChanged
+                };
+                StateHasChanged();
+                return Task.CompletedTask;
+            }
+        };
+    }
+
+    private async Task Save(CalculationContext ctx)
+    {
+        _validationError = null;
+
+        if (string.IsNullOrWhiteSpace(_name))
+        {
+            _validationError = "Name is required.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_resultFieldName))
+        {
+            _validationError = "Result Field Name is required.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_resultDataType))
+        {
+            _validationError = "Result Data Type is required.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_formula))
+        {
+            _validationError = "Formula is required.";
+            return;
+        }
+
+        var request = new UpdateCalculationDefinitionRequest
+        {
+            Name = _name,
+            ResultFieldName = _resultFieldName,
+            ResultDataType = _resultDataType,
+            Formula = _formula,
+            Description = string.IsNullOrWhiteSpace(_description) ? null : _description,
+            IsEnabled = _isEnabled
+        };
+
+        var result = await ctx.OnUpdateCalculation(Id, request);
+        if (result is not null)
+        {
+            Nav.NavigateTo("/calculations");
+        }
+    }
+}

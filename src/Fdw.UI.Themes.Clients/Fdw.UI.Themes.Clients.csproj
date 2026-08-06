@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.UI.Themes.Clients</RootNamespace>
+    <PackageId>Fdw.UI.Themes.Clients</PackageId>
+    <Title>Fdw Themes API Clients</Title>
+    <Description>API clients and DTOs for theme management operations.</Description>
+    <PackageTags>api;clients;themes</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Fdw.Web.Clients/Fdw.Web.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.Web.Endpoints\Fdw.Web.Endpoints.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Web.Http.Authentication\Fdw.Web.Http.Authentication.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Themes.Abstractions\Fdw.UI.Themes.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

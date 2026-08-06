@@ -1,0 +1,153 @@
+@page "/promotions"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Promotions - Cyberdyne</PageTitle>
+
+<PromotionProvider>
+    <ChildContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">System</div>
+                <h1>Promotions</h1>
+                <div class="sub">Move configuration between environments with review.</div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-secondary" @onclick="async () => await ctx.OnRefresh()" disabled="@ctx.IsLoading">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh
+                </button>
+                <button class="btn btn-primary" @onclick="() => _showCreate = true" disabled="@ctx.IsLoading">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
+                    </svg>
+                    New promotion
+                </button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
+        {
+            <div class="danger" style="margin-bottom:14px;">
+                <div class="t"><p>@ctx.ErrorMessage</p></div>
+            </div>
+        }
+
+        @if (_showCreate)
+        {
+            <div class="card" style="margin-bottom:14px;">
+                <div class="card-h"><h3>Create Promotion Request</h3></div>
+                <div class="card-b">
+                    <div class="fgrid" style="grid-template-columns:repeat(3,1fr);">
+                        <div class="frow">
+                            <label>Name</label>
+                            <input class="finput" @bind="_createName" placeholder="Promotion name" />
+                        </div>
+                        <div class="frow">
+                            <label>Source Environment</label>
+                            <input class="finput" @bind="_createSource" placeholder="e.g. Development" />
+                        </div>
+                        <div class="frow">
+                            <label>Target Environment</label>
+                            <input class="finput" @bind="_createTarget" placeholder="e.g. Production" />
+                        </div>
+                    </div>
+                    <div class="actions" style="justify-content:flex-end;">
+                        <button class="btn btn-ghost btn-sm" @onclick="() => _showCreate = false">Cancel</button>
+                        <button class="btn btn-primary btn-sm" @onclick="async () => await SubmitCreate(ctx)" disabled="@ctx.IsLoading">Create</button>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (ctx.IsLoading && !ctx.Requests.Any())
+        {
+            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="mut" style="color:var(--n-500);">Loading promotions&hellip;</p></div></div>
+        }
+        else if (!ctx.Requests.Any())
+        {
+            <div class="card">
+                <div class="card-b" style="padding:48px 20px;text-align:center;">
+                    <p style="color:var(--n-300);">No promotion requests</p>
+                    <p class="sub" style="margin-top:6px;">Create a promotion request to move configurations between environments</p>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card">
+                <div class="card-h"><h3>Promotions</h3></div>
+                <div class="card-b" style="padding:0 10px 12px;">
+                    <table class="tbl">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Source</th>
+                                <th>Target</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var req in ctx.Requests)
+                            {
+                                <tr>
+                                    <td><div class="cellpad nm">@req.Name</div></td>
+                                    <td class="mut">@req.SourceEnvironment</td>
+                                    <td class="mut">@req.TargetEnvironment</td>
+                                    <td class="mut">
+                                        <span class="@GetStatusBadge(req.Status)"><span class="bd"></span>@req.Status</span>
+                                    </td>
+                                    <td>
+                                        <div class="actions">
+                                            <a href="/promotions/@req.Id/review" class="btn btn-ghost btn-sm">Review</a>
+                                            @if (string.Equals(req.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                <button class="btn btn-ghost btn-sm" @onclick="async () => await ctx.OnApprove(req.Id)" disabled="@ctx.IsLoading">Approve</button>
+                                                <button class="btn btn-ghost btn-sm" @onclick="async () => await ctx.OnReject(req.Id)" disabled="@ctx.IsLoading">Reject</button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </ChildContent>
+</PromotionProvider>
+
+@code {
+
+    private bool _showCreate;
+    private string _createName = string.Empty;
+    private string _createSource = string.Empty;
+    private string _createTarget = string.Empty;
+
+    private async Task SubmitCreate(PromotionContext ctx)
+    {
+        if (string.IsNullOrWhiteSpace(_createName)) return;
+
+        await ctx.OnCreate(new CreatePromotionPayload
+        {
+            Name = _createName,
+            SourceEnvironment = _createSource,
+            TargetEnvironment = _createTarget
+        });
+
+        _createName = string.Empty;
+        _createSource = string.Empty;
+        _createTarget = string.Empty;
+        _showCreate = false;
+    }
+
+    private static string GetStatusBadge(string status) => status switch
+    {
+        "Approved" => "badge b-ok",
+        "Rejected" => "badge b-fail",
+        "Pending" => "badge b-warn",
+        _ => "badge b-idle"
+    };
+}

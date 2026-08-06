@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Commands.Data.Abstractions\Fdw.Commands.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data\Fdw.Data.csproj" />
+  </ItemGroup>
+  <ItemGroup><!-- Test packages are managed centrally in Directory.Packages.props -->
+  
+    <ProjectReference Include="..\..\src\Fdw.Commands.Data.Extensions\Fdw.Commands.Data.Extensions.csproj" />
+  
+    <ProjectReference Include="..\..\src\Fdw.Messages\Fdw.Messages.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Temporarily exclude tests for future federated query commands that haven't been implemented yet -->
+    <Compile Remove="PostJoinFilterTests.cs" />
+    <Compile Remove="FederatedQueryIntegrationTests.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Why: xunit.v3.common transitively pins Microsoft.Bcl.AsyncInterfaces 6.0.0
+         (minimum bound), conflicting with the 10.0.x demanded by the FDW chain.
+         A direct reference here promotes it to primary so the central pin wins. -->
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+  </ItemGroup>
+</Project>

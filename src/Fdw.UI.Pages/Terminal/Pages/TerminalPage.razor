@@ -1,0 +1,134 @@
+@page "/terminal"
+@using Fdw.Services.Terminal.Components.Terminal
+@using Fdw.Services.Terminal
+@implements IDisposable
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ITerminalService TerminalService
+
+<PageTitle>Terminal | Cyberdyne</PageTitle>
+
+<CascadingValue Value="this">
+    <div class="content" style="display:flex;flex-direction:column;height:100%;">
+        <!-- Header -->
+        <div class="pagehead">
+            <div>
+                <div class="ey">System</div>
+                <h1>Terminal</h1>
+                <div class="sub mono">
+                    @(_activeSessionId == Guid.Empty ? "WAITING_FOR_SESSION" : $"SID: {_activeSessionId}")
+                </div>
+            </div>
+            <div class="actions">
+                <select @bind="_selectedAgent" class="finput mono" style="padding:7px 12px;">
+                    <option value="bash">Standard Bash</option>
+                    <option value="claude">Claude Code</option>
+                    <option value="ollama">Ollama (Qwen2.5)</option>
+                    <option value="gemini">Gemini Flash</option>
+                </select>
+
+                <button @onclick="CreateNewSession" class="btn btn-primary">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    New Session
+                </button>
+
+                <button @onclick="ToggleFullscreen" class="btn btn-ghost">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        @if (_isFullscreen)
+                        {
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9L4 4m0 0l5 0m-5 0l0 5m11 1l5 5m0 0l-5 0m5 0l0-5" />
+                        }
+                        else
+                        {
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                        }
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Terminal Container -->
+        <div class="card" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+            <div class="card-h"><h3>fdw — admin console</h3><span class="meta">AUDITED</span></div>
+            <HeadlessTerminal UserId="_userId" SessionId="_activeSessionId" Command="@_selectedAgent" OnSessionCreated="HandleSessionCreated">
+                <ChildContent Context="terminal">
+                    <XTermTerminal Context="terminal" Class="term" />
+                    
+                    <!-- Mobile Toolbar -->
+                    <div class="seg" style="display:flex;align-items:center;gap:8px;padding:8px;border-top:1px solid var(--hair);overflow-x:auto;">
+                        <button @onclick='() => terminal.SendCommand("\x1b")'>ESC</button>
+                        <button class="@(_ctrlActive ? "on" : "")" @onclick='() => _ctrlActive = !_ctrlActive'>CTRL</button>
+                        <button class="@(_altActive ? "on" : "")" @onclick='() => _altActive = !_altActive'>ALT</button>
+                        <button @onclick='() => terminal.SendCommand("\t")'>TAB</button>
+
+                        <div style="flex:1;"></div>
+
+                        <button @onclick='() => terminal.SendCommand("\x1b[A")'><svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M5 15l7-7 7 7" stroke-width="2"/></svg></button>
+                        <button @onclick='() => terminal.SendCommand("\x1b[D")'><svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M15 19l-7-7 7-7" stroke-width="2"/></svg></button>
+                        <button @onclick='() => terminal.SendCommand("\x1b[B")'><svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 9l-7 7-7-7" stroke-width="2"/></svg></button>
+                        <button @onclick='() => terminal.SendCommand("\x1b[C")'><svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 5l7 7-7 7" stroke-width="2"/></svg></button>
+                    </div>
+                </ChildContent>
+            </HeadlessTerminal>
+        </div>
+    </div>
+</CascadingValue>
+
+@code {
+    [CascadingParameter] public MainLayoutBase? Layout { get; set; }
+
+    private bool _isFullscreen;
+    private Guid _userId;
+    private Guid _activeSessionId = Guid.Empty;
+    private string _selectedAgent = "bash";
+    private bool _ctrlActive;
+    private bool _altActive;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userIdClaim = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+        
+        if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var id))
+        {
+            _userId = id;
+            
+            var sessions = await TerminalService.GetUserSessions(_userId);
+            if (sessions.IsSuccess && sessions.Value is { Count: > 0 } list)
+            {
+                _activeSessionId = list[0].SessionId;
+            }
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Layout?.SetNoPadding(true);
+    }
+
+    public void Dispose()
+    {
+        Layout?.SetNoPadding(false);
+    }
+
+    private void HandleSessionCreated(Guid sessionId)
+    {
+        _activeSessionId = sessionId;
+        StateHasChanged();
+    }
+
+    private async Task CreateNewSession()
+    {
+        _activeSessionId = Guid.Empty;
+        await Task.Delay(10);
+        StateHasChanged();
+    }
+
+    private void ToggleFullscreen()
+    {
+        _isFullscreen = !_isFullscreen;
+        Layout?.SetFullscreen(_isFullscreen);
+    }
+}

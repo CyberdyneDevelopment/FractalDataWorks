@@ -1,0 +1,290 @@
+@namespace Fdw.Services.Etl.Projects.UI.Components.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using System.Net.Http
+@using Fdw.Results
+@using Fdw.Services.Etl.Projects.Clients
+@using Fdw.Services.Etl.Projects.Abstractions.Configuration
+@using Fdw.Services.Etl.Projects.UI.Components.Logging
+
+@*
+    Headless component that provides Stage Management logic and state for a specific Project.
+    Loads stages from the parent project's nested configuration (ProjectConfiguration.Stages).
+*@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for stage management within a project. Owns stage loading and CRUD logic.
+    /// No UI markup.
+    /// </summary>
+    [Parameter] public RenderFragment<StageContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    [Inject] private ILogger<StageProvider>? LoggerParam { get; set; }
+    private ILogger<StageProvider> _logger = NullLogger<StageProvider>.Instance;
+
+    private ProjectApiClient? _projectApi;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<StageConfiguration> _stages = [];
+    private StageConfiguration? _currentStage;
+    private Guid? _projectId;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private StageContext _context = new();
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _projectApi = new ProjectApiClient(HttpClientFactory.CreateClient("ProjectClient"), LoggerFactory?.CreateLogger<ProjectApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<StageProvider>.Instance;
+        RebuildContext();
+    }
+
+    // ── Methods (exposed as callbacks via StageContext) ────────────────────────
+
+    private async Task LoadStages(Guid projectId, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        _projectId = projectId;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _projectApi!.GetProject(projectId, cancellationToken);
+            if (result.IsSuccess && result.Value is not null)
+            {
+                // Why: Stages are stored as nested children on ProjectConfiguration.
+                // We extract and expose them as a flat list ordered by Ordinal.
+                _stages = result.Value.Stages
+                    .OrderBy(s => s.Ordinal)
+                    .ToList();
+            }
+            else
+            {
+                StageProviderLog.LoadStagesFailed(_logger, projectId.ToString());
+                _lastResult = result;
+                _stages = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(StageProviderLog.LoadStagesException(_logger, ex));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<StageConfiguration?> CreateStage(StageConfiguration request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            // Why: Stage creation goes through the project update path — we add the stage
+            // to the project's Stages collection and save the project.
+            if (_projectId is null)
+            {
+                _lastResult = GenericResult.Failure(StageProviderLog.StageCreateFailed(_logger));
+                return null;
+            }
+
+            var projectResult = await _projectApi!.GetProject(_projectId.Value, cancellationToken);
+            if (!projectResult.IsSuccess || projectResult.Value is null)
+            {
+                _lastResult = GenericResult.Failure(StageProviderLog.StageCreateFailed(_logger));
+                return null;
+            }
+
+            projectResult.Value.Stages.Add(request);
+            var updateResult = await _projectApi!.UpdateProject(_projectId.Value, projectResult.Value, cancellationToken);
+            if (updateResult.IsSuccess)
+            {
+                await LoadStages(_projectId.Value, cancellationToken);
+                return request;
+            }
+
+            _lastResult = GenericResult.Failure(StageProviderLog.StageCreateFailed(_logger));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(StageProviderLog.StageCreateException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<StageConfiguration?> UpdateStage(Guid stageId, StageConfiguration request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            if (_projectId is null)
+            {
+                _lastResult = GenericResult.Failure(StageProviderLog.StageUpdateFailed(_logger, stageId.ToString()));
+                return null;
+            }
+
+            var projectResult = await _projectApi!.GetProject(_projectId.Value, cancellationToken);
+            if (!projectResult.IsSuccess || projectResult.Value is null)
+            {
+                _lastResult = GenericResult.Failure(StageProviderLog.StageUpdateFailed(_logger, stageId.ToString()));
+                return null;
+            }
+
+            var idx = projectResult.Value.Stages.ToList().FindIndex(s => s.Id == stageId);
+            if (idx >= 0)
+            {
+                projectResult.Value.Stages[idx] = request;
+            }
+
+            var updateResult = await _projectApi!.UpdateProject(_projectId.Value, projectResult.Value, cancellationToken);
+            if (updateResult.IsSuccess)
+            {
+                await LoadStages(_projectId.Value, cancellationToken);
+                return request;
+            }
+
+            _lastResult = GenericResult.Failure(StageProviderLog.StageUpdateFailed(_logger, stageId.ToString()));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(StageProviderLog.StageUpdateException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> DeleteStage(Guid stageId, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            if (_projectId is null)
+            {
+                _lastResult = GenericResult.Failure(StageProviderLog.StageDeleteFailed(_logger, stageId.ToString()));
+                return false;
+            }
+
+            var projectResult = await _projectApi!.GetProject(_projectId.Value, cancellationToken);
+            if (!projectResult.IsSuccess || projectResult.Value is null)
+            {
+                _lastResult = GenericResult.Failure(StageProviderLog.StageDeleteFailed(_logger, stageId.ToString()));
+                return false;
+            }
+
+            var toRemove = projectResult.Value.Stages.FirstOrDefault(s => s.Id == stageId);
+            if (toRemove is not null)
+            {
+                projectResult.Value.Stages.Remove(toRemove);
+            }
+
+            var updateResult = await _projectApi!.UpdateProject(_projectId.Value, projectResult.Value, cancellationToken);
+            if (updateResult.IsSuccess)
+            {
+                await LoadStages(_projectId.Value, cancellationToken);
+                return true;
+            }
+
+            _lastResult = GenericResult.Failure(StageProviderLog.StageDeleteFailed(_logger, stageId.ToString()));
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(StageProviderLog.StageDeleteException(_logger, ex));
+            return false;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private void SelectStage(StageConfiguration? stage)
+    {
+        _currentStage = stage;
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new StageContext
+        {
+            Stages = _stages,
+            CurrentStage = _currentStage,
+            ProjectId = _projectId,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnLoadStages = id => LoadStages(id),
+            OnCreateStage = request => CreateStage(request),
+            OnUpdateStage = (id, request) => UpdateStage(id, request),
+            OnDeleteStage = id => DeleteStage(id),
+            OnSelectStage = SelectStage
+        };
+    }
+}

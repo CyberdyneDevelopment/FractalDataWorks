@@ -1,0 +1,56 @@
+@* Numeric input primitive over the NON-generic IInputComponentModel surface.
+   Why: NumericInputModel<T> is generic; renderers dispatch on IInputComponentModel and
+   convert via ValueType, mirroring SpectreUIRenderer.RenderNumericInput. *@
+@if (Model.IsVisible)
+{
+    <div class="fdw-ui-field fdw-ui-numeric-input" id="@Model.Id">
+        <label class="fdw-ui-label">
+            @(Model.Label ?? Model.Id)
+            @if (Model.IsRequired)
+            {
+                <span class="fdw-ui-required">*</span>
+            }
+        </label>
+        @if (!string.IsNullOrEmpty(Model.HelpText))
+        {
+            <div class="fdw-ui-help">@Model.HelpText</div>
+        }
+        @if (IsDisplayOnly)
+        {
+            <span class="fdw-ui-value">@(Model.ValueAsObject?.ToString() ?? "(empty)")</span>
+        }
+        else
+        {
+            <input class="fdw-ui-input"
+                   type="number"
+                   value="@Model.ValueAsObject"
+                   @onchange="OnChanged" />
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The numeric input model to render.</summary>
+    [Parameter, EditorRequired] public IInputComponentModel Model { get; set; } = default!;
+
+    /// <summary>The active render mode.</summary>
+    [Parameter, EditorRequired] public IRenderMode Mode { get; set; } = default!;
+
+    private bool IsDisplayOnly =>
+        string.Equals(Mode.Name, "Display", StringComparison.Ordinal) || Model.IsReadOnly;
+
+    private void OnChanged(ChangeEventArgs e)
+    {
+        var text = e.Value?.ToString();
+        if (string.IsNullOrEmpty(text))
+        {
+            Model.ValueAsObject = null;
+            return;
+        }
+
+        // Why: the model owns its value type; convert to it so ValueAsObject round-trips
+        // as the model's T (Nullable<T> unwrapped for Convert).
+        var targetType = Nullable.GetUnderlyingType(Model.ValueType) ?? Model.ValueType;
+        Model.ValueAsObject = Convert.ChangeType(text, targetType, System.Globalization.CultureInfo.InvariantCulture);
+    }
+}

@@ -1,0 +1,158 @@
+@* Interactive list page: header, table of rows, list/row actions and Back. Retained-mode counterpart
+   of Spectre's ListPageRenderer — the same behavioural contract applies (list actions, row actions,
+   RequiresConfirmation gate, and an always-present Back), but completion is callback-driven instead
+   of a blocking prompt. *@
+@using System.Globalization
+@using System.Linq
+@using Fdw.UI.Abstractions.Pages
+@* Why: Fdw.UI.Abstractions.Rendering also declares an IPageAction (keyed by int). A list page's
+   actions come from IListPageModel.ListActions, which are the Pages variant — bind it explicitly. *@
+@using IPageAction = Fdw.UI.Abstractions.Pages.IPageAction
+<div class="fdw-ui-list-page" id="@Page.Id">
+    <header class="fdw-ui-page-header">
+        <h2>@Page.Title</h2>
+        @if (!string.IsNullOrEmpty(Page.Description))
+        {
+            <p class="fdw-ui-page-description">@Page.Description</p>
+        }
+    </header>
+
+    <table class="fdw-ui-list-table">
+        <thead>
+            <tr>
+                @foreach (var column in VisibleColumns)
+                {
+                    <th class="fdw-ui-col fdw-ui-col-@Align(column)">@column.Header</th>
+                }
+                @if (Page.RowActions.Count > 0)
+                {
+                    <th class="fdw-ui-col-actions"></th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @if (Page.Rows.Count == 0)
+            {
+                <tr class="fdw-ui-list-empty">
+                    <td colspan="@ColumnSpan">No @Page.EntityTypeName found.</td>
+                </tr>
+            }
+            else
+            {
+                @for (var i = 0; i < Page.Rows.Count; i++)
+                {
+                    var index = i;
+                    var row = Page.Rows[index];
+                    <tr class="fdw-ui-list-row fdw-ui-row-@row.Status.Name.ToLowerInvariant()">
+                        @foreach (var column in VisibleColumns)
+                        {
+                            <td class="fdw-ui-col fdw-ui-col-@Align(column)">@FormatCell(row, column)</td>
+                        }
+                        @if (Page.RowActions.Count > 0)
+                        {
+                            <td class="fdw-ui-col-actions">
+                                @foreach (var rowAction in Page.RowActions.Where(a => a.IsEnabled))
+                                {
+                                    <button class="fdw-ui-action" @onclick="@(() => Choose(rowAction, row.Id, index))">@rowAction.Label</button>
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+    <div class="fdw-ui-actions">
+        @if (_pending is not null)
+        {
+            <span class="fdw-ui-confirm-text">Are you sure you want to @_pending.Label.ToLowerInvariant()?</span>
+            <button class="fdw-ui-action fdw-ui-action-confirm" @onclick="ConfirmPending">Yes</button>
+            <button class="fdw-ui-action fdw-ui-action-cancel" @onclick="CancelPending">No</button>
+        }
+        else
+        {
+            @foreach (var action in Page.ListActions.Where(a => a.IsEnabled))
+            {
+                <button class="fdw-ui-action @(action.IsDestructive ? "fdw-ui-action-destructive" : null)"
+                        @onclick="@(() => Choose(action, null, null))">@action.Label</button>
+            }
+            @* Why: Back is always offered, mirroring ListPageRenderer which injects its own back choice. *@
+            <button class="fdw-ui-action fdw-ui-action-cancel" @onclick="@(() => OnBack?.Invoke())">Back</button>
+        }
+    </div>
+</div>
+
+@code {
+    private IPageAction? _pending;
+    private object? _pendingRowId;
+    private int? _pendingRowIndex;
+
+    /// <summary>Gets or sets the list page model to render.</summary>
+    [Parameter, EditorRequired]
+    public IListPageModel Page { get; set; } = default!;
+
+    /// <summary>Gets or sets the callback invoked when the user chooses an action.</summary>
+    [Parameter]
+    public Action<IPageAction, object?, int?>? OnAction { get; set; }
+
+    /// <summary>Gets or sets the callback invoked when the user goes back without choosing an action.</summary>
+    [Parameter]
+    public Action? OnBack { get; set; }
+
+    private IEnumerable<IListColumnDefinition> VisibleColumns => Page.Columns.Where(c => c.IsVisible);
+
+    private int ColumnSpan => Page.Columns.Count(c => c.IsVisible) + (Page.RowActions.Count > 0 ? 1 : 0);
+
+    private static string Align(IListColumnDefinition column) => column.Alignment.Name.ToLowerInvariant();
+
+    // Why: mirrors ListPageRenderer's confirmation gate — a RequiresConfirmation action is held until
+    // the user confirms, so both backends enforce the same rule rather than each renderer deciding.
+    private void Choose(IPageAction action, object? rowId, int? rowIndex)
+    {
+        if (action.RequiresConfirmation)
+        {
+            _pending = action;
+            _pendingRowId = rowId;
+            _pendingRowIndex = rowIndex;
+            return;
+        }
+
+        OnAction?.Invoke(action, rowId, rowIndex);
+    }
+
+    private void ConfirmPending()
+    {
+        var action = _pending;
+        var rowId = _pendingRowId;
+        var rowIndex = _pendingRowIndex;
+        CancelPending();
+
+        if (action is not null)
+        {
+            OnAction?.Invoke(action, rowId, rowIndex);
+        }
+    }
+
+    private void CancelPending()
+    {
+        _pending = null;
+        _pendingRowId = null;
+        _pendingRowIndex = null;
+    }
+
+    private static string FormatCell(IListRowModel row, IListColumnDefinition column)
+    {
+        if (!row.Values.TryGetValue(column.Id, out var value) || value is null)
+        {
+            return "-";
+        }
+
+        if (!string.IsNullOrEmpty(column.FormatString) && value is IFormattable formattable)
+        {
+            return formattable.ToString(column.FormatString, CultureInfo.CurrentCulture) ?? "-";
+        }
+
+        return value.ToString() ?? "-";
+    }
+}

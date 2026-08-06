@@ -1,0 +1,157 @@
+@namespace Fdw.Services.Messaging.Components.Bell
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Globalization
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Messaging.Clients
+@using Fdw.Services.Messaging.Components.Logging
+@using System.Net.Http
+@* Why: Fdw.Services.Messaging (server-side) is accessible via ancestor-namespace
+   lookup from this @namespace. Namespace alias bypasses ancestor-namespace lookup — ClientModels
+   is not in any ancestor namespace, so ClientModels.MessagePayload is unambiguous. *@
+@using ClientModels = Fdw.Services.Messaging.Clients.Models
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    // -- Parameters --
+
+    [Parameter] public RenderFragment<NotificationBellContext>? ChildContent { get; set; }
+
+    // -- Injected Services --
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private MessageApiClient? _messageApi;
+    [Inject] private ILogger<NotificationBellProvider>? LoggerParam { get; set; }
+
+    private ILogger<NotificationBellProvider> _logger = NullLogger<NotificationBellProvider>.Instance;
+
+    // -- State --
+
+    private int _unreadCount;
+    private IReadOnlyList<ClientModels.MessagePayload> _recentMessages = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private NotificationBellContext _context = new();
+    private bool _initialized;
+
+    // -- Lifecycle --
+
+    protected override void OnInitialized()
+    {
+        _messageApi = new MessageApiClient(HttpClientFactory.CreateClient("MessageClient"), LoggerFactory?.CreateLogger<MessageApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<NotificationBellProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await Refresh();
+        }
+    }
+
+    // -- Methods --
+
+    private async Task<IGenericResult> Refresh(CancellationToken ct = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        NotificationBellProviderLog.LoadStarted(_logger);
+
+        try
+        {
+            _unreadCount = await _messageApi!.GetUnreadCount(ct);
+            _recentMessages = await _messageApi!.GetMessages(status: null, skip: 0, take: 5, cancellationToken: ct);
+            NotificationBellProviderLog.LoadCompleted(_logger, _unreadCount);
+            return GenericResult.Success();
+        }
+        catch (OperationCanceledException)
+        {
+            return ProviderContextBase.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { NotificationBellProviderLog.LoadException(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _unreadCount = 0;
+            _recentMessages = [];
+            return _lastResult;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task MarkRead(Guid id, CancellationToken ct = default)
+    {
+        var idString = id.ToString("D", CultureInfo.InvariantCulture);
+        NotificationBellProviderLog.MarkReadStarted(_logger, idString);
+
+        try
+        {
+            await _messageApi!.MarkRead(id, ct);
+            await Refresh(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            NotificationBellProviderLog.MarkReadException(_logger, ex, idString);
+        }
+    }
+
+    private async Task MarkAllRead(CancellationToken ct = default)
+    {
+        NotificationBellProviderLog.MarkAllReadStarted(_logger);
+
+        try
+        {
+            await _messageApi!.MarkAllRead(ct);
+            await Refresh(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            NotificationBellProviderLog.MarkAllReadException(_logger, ex);
+        }
+    }
+
+    // -- Private Helpers --
+
+    private void RebuildContext()
+    {
+        _context = new NotificationBellContext
+        {
+            UnreadCount = _unreadCount,
+            RecentMessages = _recentMessages,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnRefresh = () => Refresh(),
+            OnMarkRead = id => MarkRead(id),
+            OnMarkAllRead = () => MarkAllRead()
+        };
+    }
+}

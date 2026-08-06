@@ -1,0 +1,67 @@
+@namespace Fdw.UI.Aui.Components
+@using System.Linq
+@using Fdw.Aui
+@using Fdw.Aui.Models
+@implements IDisposable
+
+@if (ChildContent != null)
+{
+    <CascadingValue Value="this" IsFixed="true">
+        @ChildContent
+    </CascadingValue>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? PageDescription { get; set; }
+    
+    private readonly List<AuiTool> _tools = new();
+    private readonly List<AuiResource> _resources = new();
+
+    /// <summary>
+    /// Registers a tool with the current AUI bridge.
+    /// </summary>
+    public void RegisterTool(AuiTool tool)
+    {
+        if (tool == null) return;
+        if (!_tools.Any(t => t.Name == tool.Name))
+        {
+            _tools.Add(tool);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Registers a resource with the current AUI bridge.
+    /// </summary>
+    public void RegisterResource(AuiResource resource)
+    {
+        if (resource == null) return;
+        if (!_resources.Any(r => r.Uri == resource.Uri))
+        {
+            _resources.Add(resource);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Gets the current aggregated manifest for this bridge.
+    /// </summary>
+    public AuiManifest GetManifest(string route)
+    {
+        return new AuiManifest
+        {
+            Route = route,
+            Description = PageDescription ?? $"Agent interface for {route}",
+            Tools = _tools.AsReadOnly(),
+            Resources = _resources.AsReadOnly(),
+            Context = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+        };
+    }
+
+    public void Dispose()
+    {
+        _tools.Clear();
+        _resources.Clear();
+    }
+}

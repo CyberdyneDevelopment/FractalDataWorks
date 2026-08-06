@@ -1,0 +1,164 @@
+@namespace Fdw.Services.Connections.UI.Components
+@using System.Globalization
+
+@*
+    ConnectionLimitsEditor — renders the active limits collection for a connection.
+
+    Usage (inside a connection edit page "Limits" tab):
+      <ConnectionLimitsEditor Limits="_limits"
+                              LimitTypes="_limitTypes"
+                              OnAddLimit="HandleAddLimit"
+                              OnRemoveLimit="HandleRemoveLimit" />
+
+    Each limit in the collection is displayed with its type label and type-specific
+    field values rendered from the IConnectionLimitType.ConfigurationFields descriptor.
+    Add/Remove callbacks are delegated to the parent provider.
+*@
+
+<div class="card">
+    <div class="card-h">
+        <h3>Connection Limits</h3>
+        <div class="actions">
+            <select class="finput" style="min-width:200px;"
+                    @bind="_selectedLimitType">
+                <option value="">— Select limit type —</option>
+                @foreach (var lt in LimitTypes)
+                {
+                    var displayName = (lt as ConnectionLimitTypeBase)?.DisplayName ?? lt.Name;
+                    <option value="@lt.Name">@displayName</option>
+                }
+            </select>
+            <button class="btn btn-primary btn-sm"
+                    disabled="@(string.IsNullOrEmpty(_selectedLimitType))"
+                    @onclick="AddLimit">
+                Add Limit
+            </button>
+        </div>
+    </div>
+    <div class="card-b">
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="danger" style="margin-bottom:14px;">
+                <div class="t"><p style="color:var(--signal);">@_errorMessage</p></div>
+            </div>
+        }
+
+        @if (Limits.Count == 0)
+        {
+            <p style="color:var(--n-500);font-size:13px;text-align:center;padding:18px 0;margin:0;">
+                No limits configured. Add a limit above to protect this connection.
+            </p>
+        }
+        else
+        {
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                @foreach (var limit in Limits)
+                {
+                    var limitType = LimitTypes.FirstOrDefault(lt =>
+                        string.Equals(lt.Name, limit.LimitType, StringComparison.OrdinalIgnoreCase));
+                    <div class="card" style="background:var(--s2);">
+                        <div class="card-h">
+                            <div>
+                                @{
+                                    var baseLimitType = limitType as ConnectionLimitTypeBase;
+                                    var displayLabel = baseLimitType?.DisplayName ?? limitType?.Name ?? limit.LimitType;
+                                    var displayDesc = baseLimitType?.Description;
+                                }
+                                <h3>@displayLabel</h3>
+                                @if (!string.IsNullOrEmpty(displayDesc))
+                                {
+                                    <p style="font-size:11px;color:var(--n-500);margin:4px 0 0;">@displayDesc</p>
+                                }
+                            </div>
+                            <button class="btn btn-danger btn-sm"
+                                    @onclick="() => RemoveLimit(limit)"
+                                    title="Remove limit">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        @* Render type-specific enforcement values *@
+                        @if (limit is ConnectionLimitConfiguration baseCfg)
+                        {
+                            <div class="card-b">
+                                <dl class="kv">
+                                    @if (baseCfg.EnforceMaxPerSecond.HasValue)
+                                    {
+                                        <dt>Max Per Second</dt>
+                                        <dd class="mono">@baseCfg.EnforceMaxPerSecond.Value.ToString(CultureInfo.InvariantCulture)</dd>
+                                    }
+                                    @if (baseCfg.EnforceBurstSize.HasValue)
+                                    {
+                                        <dt>Burst Size</dt>
+                                        <dd class="mono">@baseCfg.EnforceBurstSize.Value.ToString(CultureInfo.InvariantCulture)</dd>
+                                    }
+                                    @if (baseCfg.EnforceMaxConcurrent.HasValue)
+                                    {
+                                        <dt>Max Concurrent</dt>
+                                        <dd class="mono">@baseCfg.EnforceMaxConcurrent.Value.ToString(CultureInfo.InvariantCulture)</dd>
+                                    }
+                                    @if (baseCfg.EnforceTimeoutSeconds.HasValue)
+                                    {
+                                        <dt>Timeout (s)</dt>
+                                        <dd class="mono">@baseCfg.EnforceTimeoutSeconds.Value.ToString(CultureInfo.InvariantCulture)</dd>
+                                    }
+                                    @if (baseCfg.EnforceMaxRows.HasValue)
+                                    {
+                                        <dt>Max Rows</dt>
+                                        <dd class="mono">@baseCfg.EnforceMaxRows.Value.ToString(CultureInfo.InvariantCulture)</dd>
+                                    }
+                                    @if (baseCfg.EnforceMaxQueriesPerDay.HasValue)
+                                    {
+                                        <dt>Max Queries/Day</dt>
+                                        <dd class="mono">@baseCfg.EnforceMaxQueriesPerDay.Value.ToString(CultureInfo.InvariantCulture)</dd>
+                                    }
+                                    @if (baseCfg.EnforceMaxBytesPerDay.HasValue)
+                                    {
+                                        <dt>Max Bytes/Day</dt>
+                                        <dd class="mono">@baseCfg.EnforceMaxBytesPerDay.Value.ToString(CultureInfo.InvariantCulture)</dd>
+                                    }
+                                </dl>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ConnectionLimitConfiguration> Limits { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<IConnectionLimitType> LimitTypes { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<string> OnAddLimit { get; set; }
+
+    [Parameter]
+    public EventCallback<ConnectionLimitConfiguration> OnRemoveLimit { get; set; }
+
+    private string _selectedLimitType = string.Empty;
+    private string? _errorMessage;
+
+    private async Task AddLimit()
+    {
+        if (string.IsNullOrEmpty(_selectedLimitType))
+            return;
+
+        _errorMessage = null;
+        await OnAddLimit.InvokeAsync(_selectedLimitType);
+        _selectedLimitType = string.Empty;
+    }
+
+    private async Task RemoveLimit(ConnectionLimitConfiguration limit)
+    {
+        _errorMessage = null;
+        await OnRemoveLimit.InvokeAsync(limit);
+    }
+}

@@ -1,0 +1,312 @@
+@namespace Fdw.Services.Authorization.Components.Roles
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.Services.Authorization.Clients
+@using Fdw.Services.Authorization.Clients.Models
+@using Fdw.Results
+@using Fdw.Services.Authorization.Components.Logging
+@using System.Net.Http
+
+@*
+    Headless component that provides Role & Permission management logic and state.
+*@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for role and permission management operations. Owns role/permission loading,
+    /// CRUD, and permission assignment logic. No UI markup.
+    /// </summary>
+    /// <remarks>
+    /// Headless chain:
+    /// <list type="bullet">
+    ///   <item><description>Consumer (before): page shells with markup and ctx.OnXxx() calls</description></item>
+    ///   <item><description>This (provider): <see cref="RoleProvider"/> — owns all state and logic, exposes via <see cref="RoleContext"/></description></item>
+    ///   <item><description>Context (after): <see cref="RoleContext"/> — sealed; passed to consumer RenderFragment</description></item>
+    /// </list>
+    /// </remarks>
+    [Parameter] public RenderFragment<RoleContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private RoleApiClient? _roleApi;
+    [Inject] private ILogger<RoleProvider>? LoggerParam { get; set; }
+
+    private ILogger<RoleProvider> _logger = NullLogger<RoleProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<RoleSummaryPayload> _roles = [];
+    private IReadOnlyList<PermissionGroupPayload> _permissionGroups = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private RoleContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _roleApi = new RoleApiClient(HttpClientFactory.CreateClient("RoleClient"), LoggerFactory?.CreateLogger<RoleApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<RoleProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadRoles();
+        }
+    }
+
+    // ── Methods (exposed as callbacks via RoleContext) ─────────────────────────
+
+    private async Task LoadRoles(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _roleApi!.GetRoles(cancellationToken);
+            if (result.IsSuccess)
+            {
+                _roles = result.Value!.OrderBy(r => r.SortOrder).ToList();
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(RoleProviderLog.LoadRolesFailed(_logger));
+                _roles = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { RoleProviderLog.LoadRolesException(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _roles = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadPermissionGroups(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _roleApi!.GetPermissionsGrouped(cancellationToken);
+            if (result.IsSuccess)
+            {
+                _permissionGroups = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(RoleProviderLog.LoadPermissionGroupsFailed(_logger));
+                _permissionGroups = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(RoleProviderLog.LoadPermissionGroupsException(_logger, ex));
+            _permissionGroups = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<RoleDetailPayload?> GetRoleDetails(string name, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _roleApi!.GetRole(name, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(RoleProviderLog.RoleDetailLoadFailed(_logger, name));
+            return default;
+        }
+        catch (OperationCanceledException)
+        {
+            return default;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(RoleProviderLog.RoleDetailLoadException(_logger, ex));
+            return default;
+        }
+    }
+
+    private async Task<RoleDetailPayload?> CreateRole(CreateRolePayload request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _roleApi!.CreateRole(request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadRoles(cancellationToken);
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(RoleProviderLog.RoleCreateFailed(_logger));
+            return default;
+        }
+        catch (OperationCanceledException)
+        {
+            return default;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(RoleProviderLog.RoleCreateException(_logger, ex));
+            return default;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<RoleDetailPayload?> UpdateRole(string name, UpdateRolePayload request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _roleApi!.UpdateRole(name, request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadRoles(cancellationToken);
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(RoleProviderLog.RoleUpdateFailed(_logger, name));
+            return default;
+        }
+        catch (OperationCanceledException)
+        {
+            return default;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(RoleProviderLog.RoleUpdateException(_logger, ex));
+            return default;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> DeleteRole(string name, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _roleApi!.DeleteRole(name, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _roles = _roles.Where(r => !string.Equals(r.Name, name, StringComparison.Ordinal)).ToList();
+                RebuildContext();
+                StateHasChanged();
+            }
+            return result.IsSuccess;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(RoleProviderLog.RoleDeleteException(_logger, ex));
+            RebuildContext();
+            StateHasChanged();
+            return false;
+        }
+    }
+
+    private async Task<bool> SavePermissions(string roleName, List<string> permissionNames, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _roleApi!.SetRolePermissions(roleName, new SetRolePermissionsPayload { PermissionNames = permissionNames }, cancellationToken);
+            return result.IsSuccess;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(RoleProviderLog.SavePermissionsException(_logger, ex, roleName));
+            RebuildContext();
+            StateHasChanged();
+            return false;
+        }
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new RoleContext
+        {
+            Roles = _roles,
+            PermissionGroups = _permissionGroups,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnLoadRoles = () => LoadRoles(),
+            OnLoadPermissionGroups = () => LoadPermissionGroups(),
+            OnGetRoleDetails = name => GetRoleDetails(name),
+            OnCreateRole = request => CreateRole(request),
+            OnUpdateRole = (name, request) => UpdateRole(name, request),
+            OnDeleteRole = name => DeleteRole(name),
+            OnSavePermissions = (roleName, permissions) => SavePermissions(roleName, permissions)
+        };
+    }
+}

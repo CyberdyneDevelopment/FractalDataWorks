@@ -1,0 +1,351 @@
+@namespace Fdw.Data.Components.DataSets
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.Services.Data.Clients
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Results
+@using Fdw.Data.Components.Logging
+@using System.Net.Http
+@using Fdw.UI.Components.Logging
+@using Microsoft.AspNetCore.Components.Routing
+
+@*
+    Headless component that provides DataSet Management logic and state.
+*@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for data set management operations. Owns list/detail loading,
+    /// CRUD, and filtering logic. No UI markup.
+    /// </summary>
+    /// <remarks>
+    /// Headless chain:
+    /// <list type="bullet">
+    ///   <item><description>Consumer (before): page shells with markup and ctx.OnXxx() calls</description></item>
+    ///   <item><description>This (provider): <see cref="DataSetProvider"/> — owns all state and logic, exposes via <see cref="DataSetContext"/></description></item>
+    ///   <item><description>Context (after): <see cref="DataSetContext"/> — sealed; passed to consumer RenderFragment</description></item>
+    /// </list>
+    /// </remarks>
+    [Parameter] public RenderFragment<DataSetContext>? ChildContent { get; set; }
+    [Parameter] public string? DataSetName { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private DataSetApiClient? _dataSetApi;
+    [Inject] private ILogger<DataSetProvider>? LoggerParam { get; set; }
+
+    private ILogger<DataSetProvider> _logger = NullLogger<DataSetProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<DataSetSummaryPayload> _dataSets = [];
+    private DataSetDetailPayload? _currentDataSet;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private string _searchString = string.Empty;
+    private string _categoryFilter = string.Empty;
+    private DataSetContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _dataSetApi = new DataSetApiClient(HttpClientFactory.CreateClient("DataSetClient"), LoggerFactory?.CreateLogger<DataSetApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<DataSetProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            if (!string.IsNullOrEmpty(DataSetName))
+                await LoadDataSet(DataSetName);
+            else
+                await LoadDataSets();
+        }
+    }
+
+    // ── Methods (exposed as callbacks via DataSetContext) ──────────────────────
+
+    private async Task LoadDataSets(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _dataSetApi!.GetDataSets(cancellationToken);
+            if (result.IsSuccess)
+            {
+                _dataSets = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(DataSetProviderLog.LoadDataSetsFailed(_logger));
+                _dataSets = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetProviderLog.LoadDataSetsException(_logger, ex));
+            _dataSets = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadDataSet(string name, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var dataSetResult = await _dataSetApi!.GetDataSet(name, cancellationToken);
+            if (dataSetResult.IsSuccess)
+            {
+                _currentDataSet = dataSetResult.Value;
+            }
+            else
+            {
+                DataSetProviderLog.DataSetDetailLoadFailed(_logger, name);
+                _lastResult = dataSetResult;
+                _currentDataSet = null;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetProviderLog.DataSetDetailLoadException(_logger, ex));
+            _currentDataSet = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private IEnumerable<DataSetSummaryPayload> GetFilteredDataSets()
+    {
+        IEnumerable<DataSetSummaryPayload> q = _dataSets;
+
+        if (!string.IsNullOrWhiteSpace(_categoryFilter))
+        {
+            q = q.Where(d => string.Equals(d.Category, _categoryFilter, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return q;
+
+        return q.Where(d =>
+            d.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+            (d.DisplayName ?? string.Empty).Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+            (d.Abbreviation ?? string.Empty).Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+            (d.Category ?? string.Empty).Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+            (d.Description ?? string.Empty).Contains(_searchString, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task<DataSetDetailPayload?> CreateDataSet(CreateDataSetPayload request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _dataSetApi!.CreateDataSet(request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadDataSets(cancellationToken);
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(DataSetProviderLog.DataSetCreateFailed(_logger));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetProviderLog.DataSetCreateException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<DataSetDetailPayload?> UpdateDataSet(string name, UpdateDataSetPayload request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _dataSetApi!.UpdateDataSet(name, request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadDataSets(cancellationToken);
+                if (string.Equals(_currentDataSet?.Name, name, StringComparison.Ordinal)) _currentDataSet = result.Value;
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(DataSetProviderLog.DataSetUpdateFailed(_logger, name));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetProviderLog.DataSetUpdateException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> DeleteDataSet(string name, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _dataSetApi!.DeleteDataSet(name, cancellationToken);
+            if (result.IsSuccess)
+            {
+                if (string.Equals(_currentDataSet?.Name, name, StringComparison.Ordinal)) _currentDataSet = null;
+                await LoadDataSets(cancellationToken);
+                return true;
+            }
+
+            _lastResult = GenericResult.Failure(DataSetProviderLog.DataSetDeleteFailed(_logger, name));
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetProviderLog.DataSetDeleteException(_logger, ex));
+            return false;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private void SetSearchString(string value)
+    {
+        _searchString = value;
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    private void SetCategoryFilter(string value)
+    {
+        _categoryFilter = value;
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    private Task HandleStartPipeline(string dataSetName)
+    {
+        DataSetProviderLog.StartPipelineFromDataSet(_logger, dataSetName);
+        Nav.NavigateTo($"/pipelines/new?sourceDataSet={Uri.EscapeDataString(dataSetName)}");
+        return Task.CompletedTask;
+    }
+
+    private Task HandleDeriveDataSet(string dataSetName)
+    {
+        DataSetProviderLog.DeriveDataSetFromDetail(_logger, dataSetName);
+        Nav.NavigateTo($"/datasets/new?baseDataSet={Uri.EscapeDataString(dataSetName)}");
+        return Task.CompletedTask;
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new DataSetContext
+        {
+            DataSets = _dataSets,
+            CurrentDataSet = _currentDataSet,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            SearchString = _searchString,
+            CategoryFilter = _categoryFilter,
+            Categories = _dataSets
+                .Select(d => d.Category)
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Select(c => c!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            FilteredDataSets = GetFilteredDataSets(),
+            OnLoadDataSets = () => LoadDataSets(),
+            OnLoadDataSet = name => LoadDataSet(name),
+            OnCreateDataSet = request => CreateDataSet(request),
+            OnUpdateDataSet = (name, request) => UpdateDataSet(name, request),
+            OnDeleteDataSet = name => DeleteDataSet(name),
+            OnSearchStringChanged = SetSearchString,
+            OnCategoryFilterChanged = SetCategoryFilter,
+            OnStartPipeline = name => HandleStartPipeline(name),
+            OnDeriveDataSet = name => HandleDeriveDataSet(name)
+        };
+    }
+}

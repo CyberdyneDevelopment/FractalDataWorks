@@ -1,0 +1,246 @@
+@namespace Fdw.Data.UI.Components
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Net.Http
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Data.Clients
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Data.UI.Components.Logging
+
+@* DataSet picker: shows a dropdown with "None (ad-hoc)", existing DataSets, and "Create new DataSet...".
+   When "Create new..." is chosen the dropdown is replaced by an inline DataSetInlineEditor.
+   When an existing DataSet is chosen, read-only summary info is shown below the dropdown.
+   Tailwind-only — no MudBlazor. *@
+
+@if (_showInlineEditor)
+{
+    @* Inline creation mode: replace dropdown with inline form *@
+    <DataSetInlineEditor AvailableDataStores="AvailableDataStores"
+                         OnSubmit="HandleInlineCreate"
+                         OnCancel="CancelInlineCreate"
+                         IsSubmitting="@_isCreating" />
+}
+else
+{
+    @* Dropdown mode *@
+    <div class="frow" style="margin-bottom:0;">
+        <select class="fin mono"
+                value="@SelectedDataSetName"
+                @onchange="HandleSelectionChanged">
+            <option value="">None (ad-hoc)</option>
+            @foreach (var ds in AvailableDataSets)
+            {
+                <option value="@ds.Name">@(string.IsNullOrEmpty(ds.DisplayName) ? ds.Name : ds.DisplayName)</option>
+            }
+            <option value="__create__">Create new DataSet...</option>
+        </select>
+
+        @* Read-only details for the selected DataSet *@
+        @if (!string.IsNullOrEmpty(SelectedDataSetName) && _selectedDetail is not null)
+        {
+            <dl class="kv" style="margin-top:10px;">
+                @* Primary source: DataStore + Container *@
+                @{
+                    var primary = _selectedDetail.Sources.FirstOrDefault(s => s.IsPrimary)
+                                  ?? _selectedDetail.Sources.FirstOrDefault();
+                }
+                @if (primary is not null)
+                {
+                    <dt>DataStore</dt>
+                    <dd class="mono">@primary.DataStoreName</dd>
+                    @if (!string.IsNullOrEmpty(primary.ContainerName))
+                    {
+                        <dt>Container</dt>
+                        <dd class="mono">@primary.ContainerName</dd>
+                    }
+                }
+
+                @* Key fields as read-only chips *@
+                @if (_selectedDetail.KeyFields.Count > 0)
+                {
+                    <dt>Keys</dt>
+                    <dd>
+                        @foreach (var key in _selectedDetail.KeyFields)
+                        {
+                            <span class="tpill" style="margin-right:4px;">@key</span>
+                        }
+                    </dd>
+                }
+            </dl>
+        }
+        else if (!string.IsNullOrEmpty(SelectedDataSetName) && _isLoadingDetail)
+        {
+            <div class="hint mono">Loading DataSet details...</div>
+        }
+    </div>
+}
+
+@code {
+    // ── Parameters ──────────────────────────────────────────────────────────────
+
+    /// <summary>The currently selected DataSet name, or null/empty for ad-hoc (None).</summary>
+    [Parameter] public string? SelectedDataSetName { get; set; }
+
+    /// <summary>Raised when the selection changes. Value is null/empty for ad-hoc.</summary>
+    [Parameter] public EventCallback<string?> SelectedDataSetNameChanged { get; set; }
+
+    /// <summary>The list of available DataSets shown in the dropdown.</summary>
+    [Parameter] public IReadOnlyList<DataSetSummaryPayload> AvailableDataSets { get; set; } = [];
+
+    /// <summary>DataStores to offer in the inline creation form.</summary>
+    [Parameter] public IReadOnlyList<DataStoreSummaryPayload> AvailableDataStores { get; set; } = [];
+
+    /// <summary>Invoked when the user completes inline DataSet creation.
+    /// The parent (PipelineBuilderProvider) performs the API call.</summary>
+    [Parameter] public EventCallback<CreateDataSetPayload> OnCreateDataSet { get; set; }
+
+    // ── Services (injected by DI — see Data.UI.Components DI scope) ─────────────
+
+    [Inject] private IHttpClientFactory? HttpClientFactory { get; set; }
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+    [Inject] private ILogger<DataSetPicker>? LoggerParam { get; set; }
+
+    // ── Local State ─────────────────────────────────────────────────────────────
+
+    private ILogger<DataSetPicker> _logger = NullLogger<DataSetPicker>.Instance;
+    private DataSetApiClient? _dataSetApi;
+    private bool _showInlineEditor;
+    private bool _isCreating;
+    private bool _isLoadingDetail;
+    private DataSetDetailPayload? _selectedDetail;
+    private string? _lastLoadedDetailName;
+
+    // ── Lifecycle ────────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<DataSetPicker>.Instance;
+
+        // Why: DataSetPicker needs the API client only to load detail on selection.
+        //      The client factory may not be available in all host contexts (tests/SSG).
+        if (HttpClientFactory is not null)
+        {
+            var logger = LoggerFactory?.CreateLogger<DataSetApiClient>()
+                         ?? NullLogger<DataSetApiClient>.Instance;
+            _dataSetApi = new DataSetApiClient(HttpClientFactory.CreateClient("DataSetClient"), logger);
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Load detail whenever the selection changes to a different DataSet name.
+        if (!string.IsNullOrEmpty(SelectedDataSetName)
+            && !string.Equals(SelectedDataSetName, _lastLoadedDetailName, StringComparison.Ordinal))
+        {
+            await LoadSelectedDetail(SelectedDataSetName);
+        }
+        else if (string.IsNullOrEmpty(SelectedDataSetName))
+        {
+            _selectedDetail = null;
+            _lastLoadedDetailName = null;
+        }
+    }
+
+    // ── Event Handlers ───────────────────────────────────────────────────────────
+
+    private async Task HandleSelectionChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+
+        if (string.Equals(value, "__create__", StringComparison.Ordinal))
+        {
+            // Why: switching to inline editor — do not propagate this sentinel value as a real name.
+            _showInlineEditor = true;
+            return;
+        }
+
+        var name = string.IsNullOrEmpty(value) ? null : value;
+        await SelectedDataSetNameChanged.InvokeAsync(name);
+    }
+
+    private async Task HandleInlineCreate(CreateDataSetPayload request)
+    {
+        _isCreating = true;
+        StateHasChanged();
+
+        DataSetPickerLog.CreatingDataSet(_logger, request.Name);
+
+        try
+        {
+            // Why: delegate to the parent via callback; the parent (PipelineBuilderProvider)
+            //      owns the API call so that it can refresh its DataSets list after creation.
+            await OnCreateDataSet.InvokeAsync(request);
+
+            // If the parent raised no exception, assume success: switch back to dropdown
+            // and pre-select the newly created DataSet.
+            _showInlineEditor = false;
+            DataSetPickerLog.DataSetCreated(_logger, request.Name);
+            await SelectedDataSetNameChanged.InvokeAsync(request.Name);
+        }
+        catch (OperationCanceledException)
+        {
+            // Silent — user navigation cancelled.
+        }
+        catch (Exception ex)
+        {
+            DataSetPickerLog.CreateDataSetException(_logger, ex, request.Name);
+            // Why: leave the inline editor open so the user can correct and retry.
+        }
+        finally
+        {
+            _isCreating = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CancelInlineCreate()
+    {
+        _showInlineEditor = false;
+    }
+
+    // ── Private Helpers ──────────────────────────────────────────────────────────
+
+    private async Task LoadSelectedDetail(string name, CancellationToken cancellationToken = default)
+    {
+        if (_dataSetApi is null)
+            return;
+
+        _isLoadingDetail = true;
+        _selectedDetail = null;
+        _lastLoadedDetailName = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await _dataSetApi.GetDataSet(name, cancellationToken);
+            if (!result.IsSuccess)
+            {
+                DataSetPickerLog.CreateDataSetFailed(_logger, name);
+                _selectedDetail = null;
+                return;
+            }
+
+            _selectedDetail = result.Value;
+            _lastLoadedDetailName = name;
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            DataSetPickerLog.CreateDataSetException(_logger, ex, name);
+            _selectedDetail = null;
+        }
+        finally
+        {
+            _isLoadingDetail = false;
+            StateHasChanged();
+        }
+    }
+}

@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Fdw",
+  "classifications": [
+    "Source Generator",
+    "Roslyn",
+    "Code Generation"
+  ],
+  "identity": "Fdw.SourceGeneratorSolution",
+  "name": "Source Generator Solution",
+  "shortName": "sourcegen",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "__Name__",
+  "preferNameDirectory": true,
+  "symbols": {
+    "RootNamespace": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "Fdw",
+      "replaces": "__RootNamespace__",
+      "description": "The root namespace for your project"
+    },
+    "EmbedGenerator": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "true",
+      "description": "Whether to embed the generator in a package project (true) or keep it standalone (false)"
+    },
+    "EmbedProjectName": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "Abstractions",
+      "description": "Name suffix for the project that embeds the generator (only if EmbedGenerator=true)",
+      "replaces": "__EmbedProjectName__"
+    },
+    "UseExistingRuntime": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Use an existing Runtime package instead of creating one"
+    },
+    "ExistingRuntimePackage": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "MyCompany.Runtime",
+      "description": "The existing Runtime package name (only used if UseExistingRuntime is true)",
+      "replaces": "__ExistingRuntimePackage__"
+    },
+    "UseSharedHelpers": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "true",
+      "description": "Include Fdw shared generator helpers"
+    },
+    "EnableDebug": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "true",
+      "description": "Enable EmitCompilerGeneratedFiles for debugging"
+    },
+    "TargetFrameworks": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "netstandard2.0;net10.0",
+      "replaces": "__TargetFrameworks__",
+      "description": "Target frameworks for Runtime project"
+    },
+    "CreateRuntime": {
+      "type": "computed",
+      "value": "(!UseExistingRuntime)"
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "exclude": [
+            "**/*.ps1",
+            "**/TEMPLATE_INSTALL.md",
+            "**/Pack-Template.ps1",
+            "**/New-SourceGeneratorProject.ps1",
+            "**/.template.config/**"
+          ]
+        },
+        {
+          "condition": "(UseExistingRuntime)",
+          "exclude": [
+            "__Name__.Runtime/**"
+          ]
+        },
+        {
+          "condition": "(!EmbedGenerator)",
+          "exclude": [
+            "__Name__.__EmbedProjectName__/**"
+          ]
+        }
+      ]
+    }
+  ],
+  "postActions": [
+    {
+      "description": "Add projects to solution manually",
+      "manualInstructions": [
+        {
+          "text": "Run: dotnet sln add **/*.csproj"
+        }
+      ],
+      "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
+      "continueOnError": true
+    }
+  ]
+}

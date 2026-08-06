@@ -1,0 +1,102 @@
+@page "/roles"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Roles - Fdw</PageTitle>
+
+<RoleProvider>
+    <ChildContent Context="ctx">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="pagehead">
+                <div>
+                    <div class="ey">Admin</div>
+                    <h1>Roles &amp; Permissions</h1>
+                    <div class="sub">Define access roles and manage their security matrix.</div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" @onclick="ShowCreateDialog">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" /></svg>
+                        New Role
+                    </button>
+                </div>
+            </div>
+
+            @if (_showCreateDialog)
+            {
+                <div class="card">
+                    <div class="card-h"><h3>Create Role</h3></div>
+                    <div class="card-b">
+                        <div class="frow">
+                            <label>Name</label>
+                            <input class="finput" @bind="_newRoleName" placeholder="Role name" />
+                        </div>
+                        <div class="frow">
+                            <label>Description</label>
+                            <input class="finput" @bind="_newRoleDescription" placeholder="Description" />
+                        </div>
+                        <div class="actions" style="justify-content:flex-end;">
+                            <button class="btn btn-secondary" @onclick="CloseCreateDialog">Cancel</button>
+                            <button class="btn btn-primary" @onclick="() => CreateRole(ctx)">Create</button>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (ctx.IsLoading && !ctx.Roles.Any())
+            {
+                <div class="card"><div class="card-b" style="display:flex;justify-content:center;padding:48px;"><span class="badge b-run"><span class="bd"></span>Loading</span></div></div>
+            }
+            else
+            {
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">
+                    @foreach (var role in ctx.Roles)
+                    {
+                        <div class="card">
+                            <div class="card-b" style="padding:18px 20px;">
+                                <div class="dhead" style="margin-bottom:14px;">
+                                    <div class="ic ic-glacier" style="width:36px;height:36px;border-radius:9px;">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M12 3l8 4v5c0 5-4 8-8 9-4-1-8-4-8-9V7z" /></svg>
+                                    </div>
+                                    <h3 style="font-size:16px;">@role.Name</h3>
+                                </div>
+                                <p class="sub" style="margin:0 0 14px;">@(role.Description ?? "No description provided.")</p>
+                                <div class="kv" style="grid-template-columns:80px 1fr;">
+                                    <dt>Scope</dt><dd>@(role.IsTenantScoped ? "Tenant" : "Global")</dd>
+                                    <dt>Order</dt><dd>@role.SortOrder</dd>
+                                </div>
+                                <div class="actions" style="justify-content:space-between;margin-top:16px;border-top:1px solid var(--hair);padding-top:14px;">
+                                    <a href="/roles/@role.Name" class="btn btn-ghost btn-sm">Edit Permissions</a>
+                                    <button class="btn btn-ghost btn-sm" @onclick="() => ctx.OnDeleteRole(role.Name)">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="#e05c4a"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 7h14M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m1 0v12a2 2 0 01-2 2H8a2 2 0 01-2-2V7" /></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </ChildContent>
+</RoleProvider>
+
+@code {
+
+    private bool _showCreateDialog;
+    private string _newRoleName = "";
+    private string _newRoleDescription = "";
+
+    private void ShowCreateDialog() => _showCreateDialog = true;
+    private void CloseCreateDialog() => _showCreateDialog = false;
+
+    private async Task CreateRole(RoleContext ctx)
+    {
+        if (string.IsNullOrWhiteSpace(_newRoleName)) return;
+        var result = await ctx.OnCreateRole(new CreateRolePayload { Name = _newRoleName, Description = _newRoleDescription });
+        if (result is not null)
+        {
+            _showCreateDialog = false;
+            _newRoleName = "";
+            _newRoleDescription = "";
+            await ctx.OnLoadRoles();
+        }
+    }
+}

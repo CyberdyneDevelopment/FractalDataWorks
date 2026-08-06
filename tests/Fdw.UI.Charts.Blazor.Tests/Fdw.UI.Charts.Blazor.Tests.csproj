@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.UI.Charts.Blazor\Fdw.UI.Charts.Blazor.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.UI.Abstractions\Fdw.UI.Abstractions.csproj" />
+    <!-- Why: Registration.SourceGenerators emits the module initializer that registers [TypeOption]
+         instances (ChartTypes, ChartRendererTypes) so TypeCollection.All()/ByName() work in tests. -->
+    <ProjectReference Include="..\..\src\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Why: xunit.v3, xunit.runner.visualstudio, Shouldly, Moq, coverlet.collector are
+         auto-included for all *.Tests projects via tests/Directory.Build.props — declaring
+         them again here trips NU1504 (duplicate PackageReference). Only the extras unique to
+         this bUnit project are listed. -->
+    <PackageReference Include="AngleSharp" />
+    <PackageReference Include="bunit" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+
+</Project>

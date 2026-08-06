@@ -1,0 +1,362 @@
+@namespace Fdw.Services.Scheduling.Components.Schedules
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.Operations.Clients.Models
+@using Fdw.Results
+@using Fdw.Services.Scheduling.Clients.Abstractions
+@using Fdw.Services.Scheduling.Components.Logging
+@using Fdw.UI.Components.Logging
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    [Parameter] public RenderFragment<ScheduleContext>? ChildContent { get; set; }
+
+    [Inject] private IScheduleClient ScheduleClient { get; set; } = default!;
+    [Inject] private ILogger<ScheduleProvider>? LoggerParam { get; set; }
+
+    private ILogger<ScheduleProvider> _logger = NullLogger<ScheduleProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<ScheduleInfoDto> _schedules = [];
+    private IReadOnlyList<ConfigurationTypeSummary> _scheduleTypes = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private string _searchString = "";
+    private ScheduleContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<ScheduleProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await Task.WhenAll(LoadData(), LoadScheduleTypes());
+        }
+    }
+
+    // ── Methods (exposed as callbacks via ScheduleContext) ──────────────────────
+
+    private async Task LoadData(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await ScheduleClient.List(cancellationToken);
+            if (result.IsSuccess)
+            {
+                _schedules = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                UiProviderLog.LoadFailed(_logger, "ScheduleProvider", "schedules");
+                _lastResult = result;
+                _schedules = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.LoadException(_logger, ex, "ScheduleProvider", "schedules"));
+            _schedules = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadScheduleTypes(CancellationToken cancellationToken = default)
+    {
+        ScheduleTypeProviderLog.LoadingScheduleTypes(_logger);
+
+        try
+        {
+            // Why: use the domain-specific endpoint instead of GetTypesByCategory("Schedule") which
+            // walks the IDataPath schema-container tree (matching physical schema names, not ServiceCategory)
+            // and returns 0 results for the Schedule category.
+            var result = await ScheduleClient.GetScheduleTypes(cancellationToken);
+            if (!result.IsSuccess)
+            {
+                ScheduleTypeProviderLog.LoadScheduleTypesFailed(_logger);
+                _lastResult = result;
+                _scheduleTypes = [];
+                RebuildContext();
+                StateHasChanged();
+                return;
+            }
+
+            // Why: map ScheduleTypeSummary → ConfigurationTypeSummary to keep ScheduleContext's
+            // public contract stable; UI pages bind to ConfigurationTypeSummary.TypeName / DisplayName.
+            _scheduleTypes = (result.Value ?? [])
+                .Select(s => new ConfigurationTypeSummary
+                {
+                    TypeName = s.TypeName,
+                    DisplayName = s.DisplayName,
+                    Description = s.Description,
+                    Category = s.Category
+                })
+                .ToList();
+            ScheduleTypeProviderLog.LoadedScheduleTypes(_logger, _scheduleTypes.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ScheduleTypeProviderLog.LoadScheduleTypesException(_logger, ex));
+            _scheduleTypes = [];
+        }
+        finally
+        {
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private IReadOnlyList<ScheduleInfoDto> GetFilteredSchedules() =>
+        string.IsNullOrWhiteSpace(_searchString)
+            ? _schedules
+            : _schedules.Where(s => s.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+                                    s.PipelineName.Contains(_searchString, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    private async Task<ScheduleInfoDto?> GetScheduleDetails(string name, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await ScheduleClient.Get(name, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(UiProviderLog.DetailLoadFailed(_logger, "ScheduleProvider", "schedule", name));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.LoadException(_logger, ex, "ScheduleProvider", "schedule"));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> ToggleSchedule(string name, bool enabled, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var request = new UpdateScheduleClientRequest { IsEnabled = enabled };
+            var result = await ScheduleClient.UpdateSchedule(name, request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                var schedule = _schedules.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.Ordinal));
+                if (schedule != null) schedule.IsEnabled = enabled;
+                return true;
+            }
+
+            _lastResult = GenericResult.Failure(UiProviderLog.OperationFailed(_logger, "ScheduleProvider", "toggle schedule"));
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.ToggleException(_logger, ex, "ScheduleProvider", "schedule"));
+            return false;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> CreateSchedule(CreateScheduleClientRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await ScheduleClient.CreateSchedule(request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadData(cancellationToken);
+                return true;
+            }
+
+            _lastResult = GenericResult.Failure(UiProviderLog.CreateFailed(_logger, "ScheduleProvider", "schedule"));
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.CreateException(_logger, ex, "ScheduleProvider", "schedule"));
+            return false;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> UpdateSchedule(string name, UpdateScheduleClientRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await ScheduleClient.UpdateSchedule(name, request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadData(cancellationToken);
+                return true;
+            }
+
+            _lastResult = GenericResult.Failure(UiProviderLog.UpdateFailed(_logger, "ScheduleProvider", "schedule", name));
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.UpdateException(_logger, ex, "ScheduleProvider", "schedule"));
+            return false;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> DeleteSchedule(string name, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await ScheduleClient.DeleteSchedule(name, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadData(cancellationToken);
+                return true;
+            }
+
+            _lastResult = GenericResult.Failure(UiProviderLog.DeleteFailed(_logger, "ScheduleProvider", "schedule", name));
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.DeleteException(_logger, ex, "ScheduleProvider", "schedule"));
+            return false;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private Task SearchChanged(string search)
+    {
+        _searchString = search;
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new ScheduleContext
+        {
+            Schedules = _schedules,
+            FilteredSchedules = GetFilteredSchedules(),
+            ScheduleTypes = _scheduleTypes,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            SearchString = _searchString,
+            OnLoadData = () => LoadData(),
+            OnGetScheduleDetails = name => GetScheduleDetails(name),
+            OnToggleSchedule = (name, enabled) => ToggleSchedule(name, enabled),
+            OnCreateSchedule = req => CreateSchedule(req),
+            OnUpdateSchedule = (name, req) => UpdateSchedule(name, req),
+            OnDeleteSchedule = name => DeleteSchedule(name),
+            OnSearchChanged = search => SearchChanged(search)
+        };
+    }
+}

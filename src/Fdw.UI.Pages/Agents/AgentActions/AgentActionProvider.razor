@@ -1,0 +1,190 @@
+@namespace Fdw.Agents.Components.AgentActions
+@using System.Net.Http
+@using Microsoft.Extensions.Logging.Abstractions
+
+@*
+    Headless provider for agent action review queue operations.
+    Owns list/detail loading, approve, and deny logic. No UI markup.
+*@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>The render fragment that consumes the <see cref="AgentActionContext"/>.</summary>
+    [Parameter] public RenderFragment<AgentActionContext>? ChildContent { get; set; }
+
+    /// <summary>When true, loads the action list on first render.</summary>
+    [Parameter] public bool AutoLoadList { get; set; }
+
+    /// <summary>When set, loads the single action with this ID on initialization.</summary>
+    [Parameter] public int? ActionId { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private AgentActionClient? _api;
+    private ILogger<AgentActionProvider> _logger = NullLogger<AgentActionProvider>.Instance;
+    private ILogger<AgentActionClient> _clientLogger = NullLogger<AgentActionClient>.Instance;
+
+    private IReadOnlyList<AgentActionPayload> _actions = [];
+    private AgentActionPayload? _currentAction;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private AgentActionContext _context = new();
+    private bool _initialized;
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerFactory?.CreateLogger<AgentActionProvider>() ?? NullLogger<AgentActionProvider>.Instance;
+        _clientLogger = LoggerFactory?.CreateLogger<AgentActionClient>() ?? NullLogger<AgentActionClient>.Instance;
+        _api = new AgentActionClient(
+            HttpClientFactory.CreateClient("AgentActionClient"),
+            _clientLogger);
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _initialized) return;
+        _initialized = true;
+
+        if (AutoLoadList)
+        {
+            await LoadActions();
+        }
+        else if (ActionId.HasValue)
+        {
+            await GetAction(ActionId.Value);
+        }
+    }
+
+    private async Task LoadActions(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+        try
+        {
+            var result = await _api!.List(cancellationToken);
+            if (result.IsSuccess)
+            {
+                _actions = result.Value ?? [];
+            }
+            else
+            {
+                AgentActionProviderLog.LoadActionsFailed(_logger);
+                _lastResult = result;
+                _actions = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(AgentActionProviderLog.LoadActionsException(_logger, ex));
+            _actions = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<AgentActionPayload?> GetAction(int actionId, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+        try
+        {
+            var result = await _api!.Get(actionId, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _currentAction = result.Value;
+                return _currentAction;
+            }
+
+            _lastResult = GenericResult.Failure(AgentActionProviderLog.GetActionFailed(_logger, actionId));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(AgentActionProviderLog.GetActionException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> ApproveAction(int actionId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _api!.Approve(actionId, cancellationToken);
+            if (!result.IsSuccess)
+                _lastResult = GenericResult.Failure(AgentActionProviderLog.ApproveActionFailed(_logger, actionId));
+            return result.IsSuccess;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(AgentActionProviderLog.ApproveActionException(_logger, ex));
+            return false;
+        }
+    }
+
+    private async Task<bool> DenyAction(int actionId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _api!.Deny(actionId, cancellationToken);
+            if (!result.IsSuccess)
+                _lastResult = GenericResult.Failure(AgentActionProviderLog.DenyActionFailed(_logger, actionId));
+            return result.IsSuccess;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(AgentActionProviderLog.DenyActionException(_logger, ex));
+            return false;
+        }
+    }
+
+    private void RebuildContext()
+    {
+        _context = new AgentActionContext
+        {
+            Actions = _actions,
+            CurrentAction = _currentAction,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnLoadActions = () => LoadActions(),
+            OnGetAction = actionId => GetAction(actionId),
+            OnApprove = actionId => ApproveAction(actionId),
+            OnDeny = actionId => DenyAction(actionId),
+        };
+    }
+}

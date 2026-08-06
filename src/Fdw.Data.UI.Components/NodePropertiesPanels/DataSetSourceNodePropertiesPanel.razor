@@ -1,0 +1,177 @@
+@namespace Fdw.Data.UI.Components.NodePropertiesPanels
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading.Tasks
+@using Fdw.Data.Components
+@using Fdw.Data.UI.Components.Logging
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.Extensions.Logging
+
+@* Why: DataSetSource node properties panel for CalculatedDesigner. Headless — no @page directive.
+   Renders the DataStore → Path → Container drill-down via NestedObjectPicker (same control used
+   by the existing Source panel in CalculatedDesigner) plus a Source Name field so each source
+   within the DataSet graph is addressable by name.
+   OnConfigurationChanged is raised only after all three required fields are populated.
+   Incomplete state is highlighted red; incomplete graphs are rejected at compile time,
+   not at save time. *@
+
+<div class="frow" style="margin-bottom:8px;">
+    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Source Name</label>
+    <input class="finput mono @(string.IsNullOrWhiteSpace(_sourceName) && _validationTriggered ? "input-error" : string.Empty)"
+           value="@_sourceName"
+           @onchange="OnSourceNameChanged"
+           placeholder="e.g. Primary"
+           style="font-size:10px;" />
+</div>
+
+<div class="frow" style="margin-bottom:8px;">
+    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Source Container</label>
+    @if (IsLoadingDataStores)
+    {
+        <div class="mono" style="font-size:10px;color:var(--n-500);font-style:italic;">Loading data stores…</div>
+    }
+    else if (DataStoreRoots is null || DataStoreRoots.Count == 0)
+    {
+        <div class="mono" style="font-size:10px;color:var(--n-500);font-style:italic;">No data stores available</div>
+    }
+    else
+    {
+        <NestedObjectPicker TNode="DataStoreNode"
+            Items="@DataStoreRoots"
+            GetChildren="GetDataStoreChildrenSafe"
+            IsLeaf="@(n => n.Kind.Equals(DataStoreNodeKind.Container, StringComparison.Ordinal))"
+            LabelSelector="@(n => n.Name)"
+            KeySelector="@(n => n.Id == Guid.Empty ? n.Name : n.Id.ToString())"
+            Label="Data Store"
+            ChildLabel="Container"
+            SelectionChanged="OnContainerSelected" />
+    }
+</div>
+
+<div class="frow" style="margin-bottom:8px;">
+    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Connection Name</label>
+    <input class="finput mono @(string.IsNullOrWhiteSpace(_connectionName) && _validationTriggered ? "input-error" : string.Empty)"
+           value="@_connectionName"
+           @onchange="OnConnectionNameChanged"
+           placeholder="connection name"
+           style="font-size:10px;" />
+</div>
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="mono" style="font-size:10px;color:var(--signal);margin-top:4px;">@_errorMessage</div>
+}
+
+@code {
+    /// <summary>Gets or sets the current node configuration dictionary.</summary>
+    [Parameter] public Dictionary<string, object?> Configuration { get; set; } = new(StringComparer.Ordinal);
+
+    /// <summary>Gets or sets the list of available DataStore root nodes.</summary>
+    [Parameter] public IReadOnlyList<DataStoreNode>? DataStoreRoots { get; set; }
+
+    /// <summary>Gets or sets whether the DataStore list is being loaded.</summary>
+    [Parameter] public bool IsLoadingDataStores { get; set; }
+
+    /// <summary>Gets or sets the delegate that returns children of a DataStoreNode.</summary>
+    [Parameter] public Func<DataStoreNode, Task<IReadOnlyList<DataStoreNode>>>? GetDataStoreChildren { get; set; }
+
+    /// <summary>Gets or sets the callback to invoke when the configuration changes.</summary>
+    [Parameter] public EventCallback<Dictionary<string, object?>> OnConfigurationChanged { get; set; }
+
+    /// <summary>Gets or sets the logger used by the panel.</summary>
+    [Parameter] public ILogger? Logger { get; set; }
+
+    private string _sourceName = string.Empty;
+    private string _dataStoreName = string.Empty;
+    private string _containerName = string.Empty;
+    private string _connectionName = string.Empty;
+    private string? _errorMessage;
+    private bool _validationTriggered;
+
+    protected override void OnParametersSet()
+    {
+        _sourceName = ReadString("SourceName");
+        _dataStoreName = ReadString("DataStoreName");
+        _containerName = ReadString("ContainerName");
+        _connectionName = ReadString("ConnectionName");
+        _errorMessage = null;
+        _validationTriggered = false;
+    }
+
+    private string ReadString(string key, string defaultValue = "")
+    {
+        if (Configuration.TryGetValue(key, out var val) && val is not null)
+            return val.ToString() ?? defaultValue;
+        return defaultValue;
+    }
+
+    private Task OnSourceNameChanged(ChangeEventArgs e)
+    {
+        _sourceName = e.Value?.ToString() ?? string.Empty;
+        return NotifyChanged();
+    }
+
+    private Task OnConnectionNameChanged(ChangeEventArgs e)
+    {
+        _connectionName = e.Value?.ToString() ?? string.Empty;
+        return NotifyChanged();
+    }
+
+    private Task OnContainerSelected(IReadOnlyList<DataStoreNode> chain)
+    {
+        var dataStore = chain.FirstOrDefault(n => n.Kind.Equals(DataStoreNodeKind.DataStore, StringComparison.Ordinal));
+        var container = chain.LastOrDefault(n => n.Kind.Equals(DataStoreNodeKind.Container, StringComparison.Ordinal));
+        _dataStoreName = dataStore?.Name ?? _dataStoreName;
+        _containerName = container?.Name ?? _containerName;
+        return NotifyChanged();
+    }
+
+    private async Task<IReadOnlyList<DataStoreNode>> GetDataStoreChildrenSafe(DataStoreNode node)
+    {
+        if (GetDataStoreChildren is null)
+            return Array.Empty<DataStoreNode>();
+        return await GetDataStoreChildren(node);
+    }
+
+    private Task NotifyChanged()
+    {
+        _validationTriggered = true;
+        _errorMessage = null;
+
+        // Why: validate required fields and surface the first missing field.
+        // The callback is always raised so save can persist partial state;
+        // compile validation is what rejects incomplete nodes.
+        if (string.IsNullOrWhiteSpace(_sourceName))
+        {
+            var msg = DesignerNodePropertiesPanelLog.NodeFieldsIncomplete(
+                Logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+                "DataSetSource", "SourceName");
+            _errorMessage = msg.Message;
+        }
+        else if (string.IsNullOrWhiteSpace(_dataStoreName))
+        {
+            var msg = DesignerNodePropertiesPanelLog.NodeFieldsIncomplete(
+                Logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+                "DataSetSource", "DataStoreName");
+            _errorMessage = msg.Message;
+        }
+        else if (string.IsNullOrWhiteSpace(_containerName))
+        {
+            var msg = DesignerNodePropertiesPanelLog.NodeFieldsIncomplete(
+                Logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+                "DataSetSource", "ContainerName");
+            _errorMessage = msg.Message;
+        }
+
+        var updated = new Dictionary<string, object?>(Configuration, StringComparer.Ordinal)
+        {
+            ["SourceName"] = _sourceName,
+            ["DataStoreName"] = _dataStoreName,
+            ["ContainerName"] = _containerName,
+            ["ConnectionName"] = _connectionName,
+        };
+
+        return OnConfigurationChanged.InvokeAsync(updated);
+    }
+}

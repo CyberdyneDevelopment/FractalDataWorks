@@ -1,0 +1,374 @@
+@namespace Fdw.Services.Notifications.Components.Settings
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Globalization
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Net.Http
+@using Fdw.Services.Notifications.Endpoints
+@using Fdw.Operations.Clients
+@using Fdw.Services.Notifications.Clients
+@using Fdw.Services.Notifications.Components.Logging
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    private Guid _previousUserId;
+    private bool _initialized;
+
+    // ── Parameters ──────────────────────────────────────────────────────────────
+
+    /// <summary>The child content fragment receiving the <see cref="NotificationsContext"/>.</summary>
+    [Parameter] public RenderFragment<NotificationsContext>? ChildContent { get; set; }
+
+    /// <summary>The current user's identifier, used to load user preferences.</summary>
+    [Parameter] public Guid UserId { get; set; }
+
+    // ── Injected Services ───────────────────────────────────────────────────────
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+    [Inject] private ILogger<NotificationsProvider>? LoggerParam { get; set; }
+
+    private ILogger<NotificationsProvider> _logger = NullLogger<NotificationsProvider>.Instance;
+
+    // Why: NotificationApiClient carries the domain list operations; NotificationPreferencesApiClient
+    // handles user preferences. Both are wired via IHttpClientFactory so consumers configure named
+    // clients in their DI setup without Components knowing the transport.
+    private NotificationApiClient? _notificationsApi;
+    private NotificationPreferencesApiClient? _preferencesApi;
+
+    // ── State ───────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<NotificationSummaryDto> _notifications = [];
+    private IReadOnlyList<NotificationRuleSummaryDto> _rules = [];
+    private IReadOnlyList<NotificationListSummaryDto> _lists = [];
+    private IReadOnlyList<UserNotificationPreferenceDto> _preferences = [];
+    private bool _isLoading;
+    private bool _isRefreshing;
+    private IGenericResult? _lastResult;
+    private NotificationsContext _context = new();
+
+    // ── Lifecycle ───────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<NotificationsProvider>.Instance;
+        _notificationsApi = new NotificationApiClient(
+            HttpClientFactory.CreateClient("NotificationClient"),
+            LoggerFactory?.CreateLogger<NotificationApiClient>() ?? NullLogger<NotificationApiClient>.Instance);
+        _preferencesApi = new NotificationPreferencesApiClient(
+            HttpClientFactory.CreateClient("NotificationPreferencesClient"),
+            LoggerFactory?.CreateLogger<NotificationPreferencesApiClient>() ?? NullLogger<NotificationPreferencesApiClient>.Instance);
+        RebuildContext();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (UserId != Guid.Empty && UserId != _previousUserId)
+        {
+            _previousUserId = UserId;
+            await LoadPreferences();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            // Why: load all domain lists in parallel on first render; user preferences load
+            // separately via OnParametersSetAsync when UserId is available.
+            await Task.WhenAll(
+                LoadNotifications(),
+                LoadRules(),
+                LoadLists());
+        }
+    }
+
+    // ── Public Methods ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Loads notification configurations from the API.
+    /// </summary>
+    public async Task LoadNotifications(CancellationToken ct = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        NotificationsProviderLog.NotificationsLoadStarted(_logger);
+
+        try
+        {
+            var result = await _notificationsApi!.ListNotifications(ct);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(NotificationsProviderLog.NotificationsLoadFailed(_logger));
+                _notifications = [];
+                _isLoading = false;
+                RebuildContext();
+                StateHasChanged();
+                return;
+            }
+
+            _notifications = result.Value ?? [];
+            NotificationsProviderLog.NotificationsLoadCompleted(_logger, _notifications.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { NotificationsProviderLog.NotificationsLoadException(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _notifications = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Loads notification rules from the API.
+    /// </summary>
+    public async Task LoadRules(CancellationToken ct = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        NotificationsProviderLog.RulesLoadStarted(_logger);
+
+        try
+        {
+            var result = await _notificationsApi!.ListRules(ct);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(NotificationsProviderLog.RulesLoadFailed(_logger));
+                _rules = [];
+                _isLoading = false;
+                RebuildContext();
+                StateHasChanged();
+                return;
+            }
+
+            _rules = result.Value ?? [];
+            NotificationsProviderLog.RulesLoadCompleted(_logger, _rules.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { NotificationsProviderLog.RulesLoadException(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _rules = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Loads notification recipient lists from the API.
+    /// </summary>
+    public async Task LoadLists(CancellationToken ct = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        NotificationsProviderLog.ListsLoadStarted(_logger);
+
+        try
+        {
+            var result = await _notificationsApi!.ListNotificationLists(ct);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(NotificationsProviderLog.ListsLoadFailed(_logger));
+                _lists = [];
+                _isLoading = false;
+                RebuildContext();
+                StateHasChanged();
+                return;
+            }
+
+            _lists = result.Value ?? [];
+            NotificationsProviderLog.ListsLoadCompleted(_logger, _lists.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { NotificationsProviderLog.ListsLoadException(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _lists = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Loads user notification preferences for the current user.
+    /// </summary>
+    public async Task LoadPreferences(CancellationToken ct = default)
+    {
+        if (UserId == Guid.Empty)
+            return;
+
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        var userIdString = UserId.ToString("D", CultureInfo.InvariantCulture);
+        NotificationsProviderLog.PreferencesLoadStarted(_logger, userIdString);
+
+        try
+        {
+            var result = await _preferencesApi!.GetPreferences(UserId, ct);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(NotificationsProviderLog.PreferencesLoadFailed(_logger, userIdString));
+                _preferences = [];
+                _isLoading = false;
+                RebuildContext();
+                StateHasChanged();
+                return;
+            }
+
+            var raw = result.Value ?? [];
+            _preferences = raw
+                .Select(p => new UserNotificationPreferenceDto
+                {
+                    NotificationType = p.NotificationType,
+                    Channel = p.Channel,
+                    IsEnabled = p.IsEnabled
+                })
+                .ToArray();
+            NotificationsProviderLog.PreferencesLoadCompleted(_logger, _preferences.Count, userIdString);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { NotificationsProviderLog.PreferencesLoadException(_logger, ex, userIdString) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _preferences = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Saves user notification preferences.
+    /// </summary>
+    public async Task SavePreferences(IReadOnlyList<UserNotificationPreferenceDto> prefs, CancellationToken ct = default)
+    {
+        if (UserId == Guid.Empty)
+            return;
+
+        _isRefreshing = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        var userIdString = UserId.ToString("D", CultureInfo.InvariantCulture);
+        NotificationsProviderLog.PreferencesSaveStarted(_logger, prefs.Count, userIdString);
+
+        try
+        {
+            var dtos = prefs
+                .Select(p => new NotificationPreferencePayload
+                {
+                    NotificationType = p.NotificationType,
+                    Channel = p.Channel,
+                    IsEnabled = p.IsEnabled
+                })
+                .ToArray();
+
+            var result = await _preferencesApi!.UpdatePreferences(UserId, dtos, ct);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(NotificationsProviderLog.PreferencesSaveFailed(_logger, userIdString));
+                _isRefreshing = false;
+                RebuildContext();
+                StateHasChanged();
+                return;
+            }
+
+            var raw = result.Value ?? [];
+            _preferences = raw
+                .Select(p => new UserNotificationPreferenceDto
+                {
+                    NotificationType = p.NotificationType,
+                    Channel = p.Channel,
+                    IsEnabled = p.IsEnabled
+                })
+                .ToArray();
+            NotificationsProviderLog.PreferencesSaveCompleted(_logger, userIdString);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(NotificationsProviderLog.PreferencesSaveException(_logger, ex, userIdString));
+        }
+        finally
+        {
+            _isRefreshing = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Private Helpers ─────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new NotificationsContext
+        {
+            Notifications = _notifications,
+            Rules = _rules,
+            Lists = _lists,
+            Preferences = _preferences,
+            IsLoading = _isLoading,
+            IsRefreshing = _isRefreshing,
+            LastResult = _lastResult,
+            OnLoadNotifications = () => LoadNotifications(),
+            OnLoadRules = () => LoadRules(),
+            OnLoadLists = () => LoadLists(),
+            OnLoadPreferences = () => LoadPreferences(),
+            OnSavePreferences = prefs => SavePreferences(prefs)
+        };
+    }
+}

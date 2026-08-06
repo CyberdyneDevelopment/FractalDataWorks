@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Description>Curated bundle: transitively pulls Fdw MsSql connection and MsSql secret-manager implementations.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Services.Connections.MsSql\Fdw.Services.Connections.MsSql.csproj" />
+  </ItemGroup>
+
+</Project>

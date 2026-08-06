@@ -1,0 +1,133 @@
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Threading;
+using System.Threading.Tasks;
+// Why: Fdw.Services.Messaging.MessagePayload (server-side) is accessible via
+// ancestor-namespace lookup from this namespace (Services.Messaging.Clients), causing
+// ambiguity with the client-side DTOs. A namespace alias (not type alias) creates a unique
+// identifier that bypasses the ancestor-namespace lookup, so ClientModels.MessagePayload is
+// unambiguous regardless of what the ancestor namespace contains.
+using ClientModels = Fdw.Services.Messaging.Clients.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace Fdw.Services.Messaging.Clients;
+
+/// <summary>
+/// HTTP client for the messaging API endpoints.
+/// Shared between ManagementUI (MudBlazor) and ManagementUI-Tailwind skins.
+/// </summary>
+/// <remarks>
+/// Headless chain:
+/// <list type="bullet">
+///   <item><description>Consumer (before): MessageProvider (Fdw.Services.Messaging.Components) wraps this client</description></item>
+///   <item><description>This (client): <see cref="MessageApiClient"/> — owns HTTP communication with the messaging API</description></item>
+/// </list>
+/// </remarks>
+public class MessageApiClient
+{
+    private readonly HttpClient _httpClient;
+    private readonly ILogger<MessageApiClient> _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MessageApiClient"/> class.
+    /// </summary>
+    public MessageApiClient(HttpClient httpClient, ILogger<MessageApiClient>? logger)
+    {
+        _httpClient = httpClient;
+        _logger = logger ?? NullLogger<MessageApiClient>.Instance;
+    }
+
+    /// <summary>Gets a filtered, paged list of messages.</summary>
+    /// <returns>The matching messages.</returns>
+    public virtual async Task<IReadOnlyList<ClientModels.MessagePayload>> GetMessages(
+        string? messageType = null,
+        string? severity = null,
+        string? status = null,
+        int skip = 0,
+        int take = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var query = $"messages?skip={skip}&take={take}";
+        if (!string.IsNullOrEmpty(messageType))
+        {
+            query += $"&messageType={Uri.EscapeDataString(messageType)}";
+        }
+        if (!string.IsNullOrEmpty(severity))
+        {
+            query += $"&severity={Uri.EscapeDataString(severity)}";
+        }
+        if (!string.IsNullOrEmpty(status))
+        {
+            query += $"&status={Uri.EscapeDataString(status)}";
+        }
+
+        var result = await _httpClient.GetFromJsonAsync<IReadOnlyList<ClientModels.MessagePayload>>(query, cancellationToken).ConfigureAwait(false);
+        return result ?? [];
+    }
+
+    /// <summary>Gets a single message by identifier.</summary>
+    /// <returns>The message, or <c>null</c> if not found.</returns>
+    public virtual Task<ClientModels.MessagePayload?> GetMessage(Guid id, CancellationToken cancellationToken = default)
+        => _httpClient.GetFromJsonAsync<ClientModels.MessagePayload>($"messages/{id}", cancellationToken);
+
+    /// <summary>Gets the count of unread messages for the current user.</summary>
+    /// <returns>The unread message count.</returns>
+    public virtual async Task<int> GetUnreadCount(CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.GetFromJsonAsync<UnreadCountResponse>("messages/unread-count", cancellationToken).ConfigureAwait(false);
+        return response?.Count ?? 0;
+    }
+
+    // Why: the server routes these state changes as PUT (DismissMessageEndpointBase et al.);
+    // the client previously POSTed (405) and used "messages/read-all" instead of the server's
+    // "messages/mark-all-read" (404). Align verb + path to the server contract.
+
+    /// <summary>Marks a single message as read.</summary>
+    public virtual Task MarkRead(Guid id, CancellationToken cancellationToken = default)
+        => _httpClient.PutAsync($"messages/{id}/read", null, cancellationToken);
+
+    /// <summary>Marks all of the current user's messages as read.</summary>
+    public virtual Task MarkAllRead(CancellationToken cancellationToken = default)
+        => _httpClient.PutAsync("messages/mark-all-read", null, cancellationToken);
+
+    /// <summary>Dismisses a single message.</summary>
+    public virtual Task Dismiss(Guid id, CancellationToken cancellationToken = default)
+        => _httpClient.PutAsync($"messages/{id}/dismiss", null, cancellationToken);
+
+    /// <summary>Archives a single message.</summary>
+    public virtual Task Archive(Guid id, CancellationToken cancellationToken = default)
+        => _httpClient.PutAsync($"messages/{id}/archive", null, cancellationToken);
+
+    /// <summary>Gets the current user's access requests.</summary>
+    /// <returns>The access requests.</returns>
+    public virtual async Task<IReadOnlyList<ClientModels.AccessRequestPayload>> GetAccessRequests(CancellationToken cancellationToken = default)
+    {
+        var result = await _httpClient.GetFromJsonAsync<IReadOnlyList<ClientModels.AccessRequestPayload>>("access-requests", cancellationToken).ConfigureAwait(false);
+        return result ?? [];
+    }
+
+    /// <summary>Creates a new access request.</summary>
+    /// <returns>The created access request, or <c>null</c> if the response carried no body.</returns>
+    public virtual async Task<ClientModels.AccessRequestPayload?> CreateAccessRequest(ClientModels.CreateAccessRequestModel model, CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.PostAsJsonAsync("access-requests", model, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ClientModels.AccessRequestPayload>(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Approves an access request, optionally with reviewer notes.</summary>
+    public virtual Task ApproveAccessRequest(Guid id, string? notes = null, CancellationToken cancellationToken = default)
+        => _httpClient.PostAsJsonAsync($"access-requests/{id}/approve", new { Notes = notes }, cancellationToken);
+
+    /// <summary>Denies an access request, optionally with reviewer notes.</summary>
+    public virtual Task DenyAccessRequest(Guid id, string? notes = null, CancellationToken cancellationToken = default)
+        => _httpClient.PostAsJsonAsync($"access-requests/{id}/deny", new { Notes = notes }, cancellationToken);
+
+    private sealed class UnreadCountResponse
+    {
+        public int Count { get; set; }
+    }
+}

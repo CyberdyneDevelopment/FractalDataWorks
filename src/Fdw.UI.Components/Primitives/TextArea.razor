@@ -1,0 +1,19 @@
+<div class="frow">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label>@Label</label>
+    }
+
+    <textarea
+        class="finput"
+        rows="@Rows"
+        maxlength="@MaxLength"
+        placeholder="@Placeholder"
+        readonly="@ReadOnly"
+        @oninput="HandleInput">@Value</textarea>
+
+    @if (!string.IsNullOrEmpty(HelpText))
+    {
+        <small class="hint">@HelpText</small>
+    }
+</div>

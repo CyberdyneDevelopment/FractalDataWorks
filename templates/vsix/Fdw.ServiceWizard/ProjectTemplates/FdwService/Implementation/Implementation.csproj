@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>$namespace$.$serviceName$.$implName$</RootNamespace>
+    <Description>$implName$ implementation for $serviceName$ services in Fdw</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\$serviceName$\$serviceName$.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Fdw.Collections" Version="$$(FractalDataWorksVersion)" />
+    <PackageReference Include="Fdw.Configuration.Persistence" Version="$$(FractalDataWorksVersion)" />
+    <PackageReference Include="Fdw.Configuration.Persistence.SourceGenerators" Version="$$(FractalDataWorksVersion)" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+  </ItemGroup>
+
+</Project>

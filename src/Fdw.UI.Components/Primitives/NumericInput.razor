@@ -1,0 +1,23 @@
+@typeparam TValue
+
+<div class="frow">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label>@Label</label>
+    }
+
+    <input
+        type="number"
+        class="finput mono"
+        value="@Value"
+        min="@Min"
+        max="@Max"
+        step="@Step"
+        readonly="@ReadOnly"
+        @oninput="HandleInput" />
+
+    @if (!string.IsNullOrEmpty(HelpText))
+    {
+        <small class="hint">@HelpText</small>
+    }
+</div>

@@ -1,0 +1,195 @@
+@namespace Fdw.Data.UI.Components
+@using Fdw.Data
+@using Fdw.Data.Abstractions
+@using Fdw.Data.Components.Visualization
+
+@if (Context is null)
+{
+    <div class="empty">Filter panel not available.</div>
+}
+else
+{
+    <div class="card">
+        <div class="card-h">
+            <h3>Filters</h3>
+            <button class="btn btn-secondary btn-sm" @onclick="AddRow">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Filter
+            </button>
+        </div>
+        <div class="card-b" style="display:flex;flex-direction:column;gap:12px;">
+            @if (_rows.Count == 0)
+            {
+                <div class="empty">No filters applied. Click "Add Filter" to begin.</div>
+            }
+            else
+            {
+                @for (var i = 0; i < _rows.Count; i++)
+                {
+                    var idx = i;
+                    var row = _rows[idx];
+
+                    @if (idx > 0)
+                    {
+                        <div style="display:flex;justify-content:center;">
+                            <button class="chip @(row.UseOr ? "on" : "")"
+                                    @onclick="() => ToggleGrouping(idx)">
+                                @(row.UseOr ? "OR" : "AND")
+                            </button>
+                        </div>
+                    }
+
+                    <div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:8px;align-items:center;">
+                        <select class="fin" @bind="row.Column">
+                            <option value="">Select column...</option>
+                            @foreach (var col in Context.AvailableColumns)
+                            {
+                                <option value="@col">@col</option>
+                            }
+                        </select>
+                        <select class="fin" @bind="row.Operator">
+                            <option value="">Select operator...</option>
+                            @foreach (var op in Context.AvailableOperators)
+                            {
+                                <option value="@op">@op</option>
+                            }
+                        </select>
+                        <input class="fin" placeholder="Value" @bind="row.Value"
+                               disabled="@IsNullOperator(row.Operator)" />
+                        <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => RemoveRow(idx)">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                }
+            }
+
+            @if (!string.IsNullOrEmpty(Context.ErrorMessage))
+            {
+                <div class="alert alert-err">@Context.ErrorMessage</div>
+            }
+
+            @if (_rows.Count > 0)
+            {
+                <div class="card-h" style="padding:12px 0 0;border-top:1px solid var(--hair);justify-content:flex-end;">
+                    <div class="actions">
+                        <button class="btn btn-secondary btn-sm" @onclick="ClearAll">Clear</button>
+                        <button class="btn btn-primary btn-sm" @onclick="ApplyFilters" disabled="@(!Context.IsDirty && !_localDirty)">Apply</button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public FilterPanelContext? Context { get; set; }
+    [CascadingParameter] private SessionStateContext? Session { get; set; }
+
+    private const string SessionKey = "datapreview:filters";
+    private List<FilterRow> _rows = new();
+    private bool _localDirty;
+    private bool _sessionRestored;
+
+    protected override void OnParametersSet()
+    {
+        if (_sessionRestored || Session is null || Session.IsLoading) return;
+        if (!Session.State.TryGetValue(SessionKey, out var raw) || raw is not System.Text.Json.JsonElement json) return;
+        _sessionRestored = true;
+
+        if (json.ValueKind != System.Text.Json.JsonValueKind.Array) return;
+        foreach (var element in json.EnumerateArray())
+        {
+            var row = new FilterRow();
+            if (element.TryGetProperty("column", out var c)) row.Column = c.GetString() ?? "";
+            if (element.TryGetProperty("operator", out var o)) row.Operator = o.GetString() ?? "";
+            if (element.TryGetProperty("value", out var v)) row.Value = v.GetString() ?? "";
+            if (element.TryGetProperty("useOr", out var u)) row.UseOr = u.GetBoolean();
+            _rows.Add(row);
+        }
+    }
+
+    private void AddRow()
+    {
+        _rows.Add(new FilterRow());
+        _localDirty = true;
+    }
+
+    private void RemoveRow(int index)
+    {
+        if (index >= 0 && index < _rows.Count)
+        {
+            _rows.RemoveAt(index);
+            _localDirty = true;
+        }
+    }
+
+    private void ToggleGrouping(int index)
+    {
+        if (index > 0 && index < _rows.Count)
+        {
+            _rows[index].UseOr = !_rows[index].UseOr;
+            _localDirty = true;
+        }
+    }
+
+    private async Task ApplyFilters()
+    {
+        if (Context is null) return;
+
+        var conditions = new List<FilterCondition>();
+        foreach (var row in _rows)
+        {
+            if (string.IsNullOrEmpty(row.Column) || string.IsNullOrEmpty(row.Operator)) continue;
+
+            var op = FilterOperators.ByName(row.Operator);
+            conditions.Add(new FilterCondition
+            {
+                PropertyName = row.Column,
+                Operator = op,
+                Value = IsNullOperator(row.Operator) ? null : row.Value
+            });
+        }
+
+        await Context.OnApply.Invoke();
+        await SaveSessionState();
+        _localDirty = false;
+    }
+
+    private async Task ClearAll()
+    {
+        if (Context is null) return;
+        _rows.Clear();
+        _localDirty = false;
+        await Context.OnClear.Invoke();
+        await SaveSessionState();
+    }
+
+    private async Task SaveSessionState()
+    {
+        if (Session is null) return;
+        var state = _rows.Select(r => new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["column"] = r.Column,
+            ["operator"] = r.Operator,
+            ["value"] = r.Value,
+            ["useOr"] = r.UseOr
+        }).ToList();
+        await Session.OnSaveState(SessionKey, state);
+    }
+
+    private static bool IsNullOperator(string operatorName)
+        => string.Equals(operatorName, "IsNull", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(operatorName, "IsNotNull", StringComparison.OrdinalIgnoreCase);
+
+    private sealed class FilterRow
+    {
+        public string Column { get; set; } = "";
+        public string Operator { get; set; } = "";
+        public string Value { get; set; } = "";
+        public bool UseOr { get; set; }
+    }
+}

@@ -1,0 +1,372 @@
+@page "/users"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Users - Fdw</PageTitle>
+
+<RoleProvider>
+    <ChildContent Context="roleCtx">
+        <UserProvider>
+            <ChildContent Context="ctx">
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                    <div class="pagehead">
+                        <div>
+                            <div class="ey">Admin</div>
+                            <h1>Users</h1>
+                            <div class="sub">Manage system users and their access levels.</div>
+                        </div>
+                        <div class="actions">
+                            <button @onclick="ShowCreateForm" class="btn btn-primary">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" /></svg>
+                                New User
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-h">
+                            <h3>Members</h3>
+                            <div class="search" style="width:280px;margin-left:0;">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.3-4.3M11 18a7 7 0 100-14 7 7 0 000 14z" /></svg>
+                                <input type="text"
+                                       value="@ctx.SearchString"
+                                       @oninput="e => ctx.OnSearchChanged(e.Value?.ToString() ?? string.Empty)"
+                                       class="finput"
+                                       style="background:transparent;padding:0;flex:1;"
+                                       placeholder="Search users..." />
+                            </div>
+                        </div>
+
+                        @if (ctx.IsLoading && !ctx.FilteredUsers.Any())
+                        {
+                            <div class="card-b" style="display:flex;justify-content:center;padding:48px;">
+                                <span class="badge b-run"><span class="bd"></span>Loading</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="card-b" style="padding:0 10px 12px;overflow-x:auto;">
+                                <table class="tbl">
+                                    <thead>
+                                        <tr>
+                                            <th>User</th>
+                                            <th>Status</th>
+                                            <th>Roles</th>
+                                            <th>Last Login</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var user in ctx.FilteredUsers)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <div class="cellpad nm">
+                                                        <span class="ico">
+                                                            <span class="ti">@(string.IsNullOrEmpty(user.Username) ? "?" : user.Username[0].ToString().ToUpper())</span>
+                                                            <span>@user.Username<small class="mut" style="display:block;">@user.Email</small></span>
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td class="mut">
+                                                    @if (user.IsActive)
+                                                    {
+                                                        <span class="badge b-ok"><span class="bd"></span>Active</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge b-fail"><span class="bd"></span>Inactive</span>
+                                                    }
+                                                </td>
+                                                <td class="mut">
+                                                    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                                                        @foreach (var role in user.Roles)
+                                                        {
+                                                            <span class="tpill">@role</span>
+                                                        }
+                                                    </div>
+                                                </td>
+                                                <td class="mut">
+                                                    @(user.LastLoginAt?.ToString("MMM dd, yyyy HH:mm") ?? "Never")
+                                                </td>
+                                                <td class="mut">
+                                                    <div class="actions" style="justify-content:flex-end;">
+                                                        <button @onclick="() => EditUser(user)" class="btn btn-ghost btn-sm">
+                                                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.4-9.4a2 2 0 113 3L12 16l-4 1 1-4 9.6-9.4z" /></svg>
+                                                        </button>
+                                                        <button @onclick="() => ShowResetForm(user)" class="btn btn-ghost btn-sm" title="Reset password">
+                                                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                                        </button>
+                                                        <button @onclick="() => ctx.OnDeleteUser(user.Id)" class="btn btn-ghost btn-sm">
+                                                            <svg fill="none" viewBox="0 0 24 24" stroke="#e05c4a"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 7h14M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m1 0v12a2 2 0 01-2 2H8a2 2 0 01-2-2V7" /></svg>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                    @if (_resetUser is not null)
+                    {
+                        <div class="card">
+                            <div class="card-h">
+                                <h3>Reset password &mdash; @_resetUser.Username</h3>
+                                <button class="btn btn-ghost btn-sm" @onclick="CancelReset">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                            </div>
+                            <div class="card-b">
+                                @if (!string.IsNullOrEmpty(_resetError))
+                                {
+                                    <div class="danger" style="margin-bottom:16px;"><div class="t"><p>@_resetError</p></div></div>
+                                }
+                                <div class="frow">
+                                    <label>New password</label>
+                                    <input type="password" class="finput" @bind="_resetPassword" placeholder="Min 8 characters" />
+                                </div>
+                                <div class="actions" style="justify-content:flex-end;">
+                                    <button class="btn btn-secondary" @onclick="CancelReset">Cancel</button>
+                                    <button class="btn btn-primary" @onclick="() => SubmitReset(ctx)" disabled="@_resetting">
+                                        @(_resetting ? "Resetting..." : "Reset password")
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    @if (_showForm)
+                    {
+                        <div class="card">
+                            <div class="card-h">
+                                <h3>@(_editingUser != null ? "Edit User" : "Create User")</h3>
+                                <button class="btn btn-ghost btn-sm" @onclick="CancelForm">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                            </div>
+                            <div class="card-b">
+                                @if (!string.IsNullOrEmpty(_formError))
+                                {
+                                    <div class="danger" style="margin-bottom:16px;"><div class="t"><p>@_formError</p></div></div>
+                                }
+
+                                <div class="fgrid">
+                                    <div class="frow">
+                                        <label>Username</label>
+                                        <input class="finput" @bind="_formUsername" disabled="@(_editingUser != null)" placeholder="Username" />
+                                    </div>
+                                    <div class="frow">
+                                        <label>Email</label>
+                                        <input class="finput" @bind="_formEmail" placeholder="Email address" />
+                                    </div>
+                                    @if (_editingUser == null)
+                                    {
+                                        <div class="frow">
+                                            <label>Password</label>
+                                            <input type="password" class="finput" @bind="_formPassword" placeholder="Min 8 characters" />
+                                        </div>
+                                    }
+                                    <div class="frow full">
+                                        <label>Roles</label>
+                                        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                                            @foreach (var role in roleCtx.Roles)
+                                            {
+                                                <button type="button"
+                                                        class="@(_selectedRoles.Contains(role.Name) ? "chip on" : "chip")"
+                                                        @onclick="() => ToggleRole(role.Name)">
+                                                    @role.Name
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="frow" style="margin-bottom:16px;">
+                                    <label>Status</label>
+                                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                                        <input type="checkbox" @bind="_formIsActive" style="position:absolute;opacity:0;" />
+                                        <span class="@(_formIsActive ? "sw on" : "sw")"></span>
+                                        <span class="mut">Active</span>
+                                    </label>
+                                </div>
+
+                                <div class="actions" style="justify-content:flex-end;">
+                                    <button class="btn btn-secondary" @onclick="CancelForm">Cancel</button>
+                                    <button class="btn btn-primary" @onclick="() => SubmitForm(ctx)" disabled="@_submitting">
+                                        @(_submitting ? "Saving..." : (_editingUser != null ? "Update" : "Create"))
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </ChildContent>
+        </UserProvider>
+    </ChildContent>
+</RoleProvider>
+
+@code {
+
+    // Form state
+    private bool _showForm;
+    private bool _submitting;
+    private string? _formError;
+    private UserSummaryPayload? _editingUser;
+    private string _formUsername = "";
+    private string _formPassword = "";
+    private string? _formEmail;
+    private bool _formIsActive = true;
+    private HashSet<string> _selectedRoles = new(StringComparer.OrdinalIgnoreCase);
+    private List<string> _initialRoles = [];
+
+    private UserSummaryPayload? _resetUser;
+    private string _resetPassword = "";
+    private string? _resetError;
+    private bool _resetting;
+
+    private void ShowResetForm(UserSummaryPayload user)
+    {
+        _resetUser = user;
+        _resetPassword = "";
+        _resetError = null;
+    }
+
+    private void CancelReset()
+    {
+        _resetUser = null;
+        _resetError = null;
+    }
+
+    private async Task SubmitReset(UserContext ctx)
+    {
+        // Why: mirrors the create-form rule. The server-side validator is the authority; this only
+        // saves a round-trip on the obvious case.
+        if (string.IsNullOrWhiteSpace(_resetPassword) || _resetPassword.Length < 8)
+        {
+            _resetError = "Password must be at least 8 characters";
+            return;
+        }
+
+        _resetError = null;
+        _resetting = true;
+        try
+        {
+            if (await ctx.OnResetPassword(_resetUser!.Id, _resetPassword))
+                _resetUser = null;
+            else
+                _resetError = ctx.LastResult?.CurrentMessage ?? "Failed to reset password";
+        }
+        finally
+        {
+            _resetting = false;
+        }
+    }
+
+    private void ShowCreateForm()
+    {
+        _editingUser = null;
+        _formUsername = "";
+        _formPassword = "";
+        _formEmail = null;
+        _formIsActive = true;
+        _selectedRoles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        _initialRoles = [];
+        _formError = null;
+        _showForm = true;
+    }
+
+    private void EditUser(UserSummaryPayload user)
+    {
+        _editingUser = user;
+        _formUsername = user.Username;
+        _formPassword = "";
+        _formEmail = user.Email;
+        _formIsActive = user.IsActive;
+        _initialRoles = user.Roles.ToList();
+        _selectedRoles = new HashSet<string>(user.Roles, StringComparer.OrdinalIgnoreCase);
+        _formError = null;
+        _showForm = true;
+    }
+
+    private void CancelForm()
+    {
+        _showForm = false;
+        _editingUser = null;
+        _formError = null;
+    }
+
+    private void ToggleRole(string roleName)
+    {
+        if (!_selectedRoles.Remove(roleName))
+        {
+            _selectedRoles.Add(roleName);
+        }
+    }
+
+    private async Task SubmitForm(UserContext ctx)
+    {
+        _formError = null;
+        _submitting = true;
+
+        try
+        {
+            if (_editingUser != null)
+            {
+                var request = new UpdateUserPayload { Email = _formEmail, IsActive = _formIsActive };
+                var success = await ctx.OnUpdateUser(_editingUser.Id, request, _selectedRoles, _initialRoles);
+                if (success)
+                {
+                    _showForm = false;
+                    _editingUser = null;
+                    await ctx.OnLoadUsers();
+                }
+                else
+                {
+                    _formError = ctx.ErrorMessage ?? "Failed to update user";
+                }
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(_formUsername) || _formUsername.Length < 3)
+                {
+                    _formError = "Username must be at least 3 characters";
+                    return;
+                }
+                if (string.IsNullOrWhiteSpace(_formPassword) || _formPassword.Length < 8)
+                {
+                    _formError = "Password must be at least 8 characters";
+                    return;
+                }
+
+                var request = new CreateUserRequest
+                {
+                    Username = _formUsername,
+                    Password = _formPassword,
+                    Email = _formEmail,
+                    Roles = _selectedRoles.ToList()
+                };
+                var response = await ctx.OnCreateUser(request);
+                if (response is not null)
+                {
+                    _showForm = false;
+                    await ctx.OnLoadUsers();
+                }
+                else
+                {
+                    _formError = ctx.ErrorMessage ?? "Failed to create user";
+                }
+            }
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private string GetRolePillClass(string role) => role switch
+    {
+        "Admin" => "inline-flex items-center rounded-md bg-red-50 dark:bg-red-900/20 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400 ring-1 ring-inset ring-red-600/10",
+        "Operator" => "inline-flex items-center rounded-md bg-[var(--primary)]/10 px-2 py-1 text-xs font-medium text-[var(--primary)] ring-1 ring-inset ring-[var(--ring)]",
+        _ => "inline-flex items-center rounded-md bg-gray-50 dark:bg-gray-700/50 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 ring-1 ring-inset ring-gray-500/10"
+    };
+}

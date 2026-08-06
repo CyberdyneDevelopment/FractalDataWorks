@@ -1,0 +1,336 @@
+@namespace Fdw.Data.Components.DataStores
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.Services.Data.Clients
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Results
+@using Fdw.Data.Components.Logging
+@using System.Net.Http
+@using Fdw.UI.Components.Logging
+
+@*
+    Headless component that provides DataStore Management logic and state.
+*@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for data store management operations. Owns list loading,
+    /// CRUD, container discovery, and filtering logic. No UI markup.
+    /// </summary>
+    /// <remarks>
+    /// Headless chain:
+    /// <list type="bullet">
+    ///   <item><description>Consumer (before): page shells with markup and ctx.OnXxx() calls</description></item>
+    ///   <item><description>This (provider): <see cref="DataStoreProvider"/> — owns all state and logic, exposes via <see cref="DataStoreContext"/></description></item>
+    ///   <item><description>Context (after): <see cref="DataStoreContext"/> — sealed; passed to consumer RenderFragment</description></item>
+    /// </list>
+    /// </remarks>
+    [Parameter] public RenderFragment<DataStoreContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private DataStoreApiClient? _dataStoreApi;
+    [Inject] private ILogger<DataStoreProvider>? LoggerParam { get; set; }
+
+    private ILogger<DataStoreProvider> _logger = NullLogger<DataStoreProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<DataStoreSummaryPayload> _dataStores = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private string _searchString = string.Empty;
+    private DataStoreContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _dataStoreApi = new DataStoreApiClient(HttpClientFactory.CreateClient("DataStoreClient"), LoggerFactory?.CreateLogger<DataStoreApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<DataStoreProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadDataStores();
+        }
+    }
+
+    // ── Methods (exposed as callbacks via DataStoreContext) ────────────────────
+
+    private async Task LoadDataStores(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _dataStoreApi!.GetDataStores(cancellationToken);
+            if (result.IsSuccess)
+            {
+                _dataStores = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                DataStoreProviderLog.LoadFailed(_logger);
+                _lastResult = result;
+                _dataStores = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataStoreProviderLog.LoadException(_logger, ex));
+            _dataStores = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private IEnumerable<DataStoreSummaryPayload> GetFilteredDataStores()
+    {
+        return string.IsNullOrWhiteSpace(_searchString)
+            ? _dataStores
+            : _dataStores.Where(d => d.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+                                     d.ConnectionName.Contains(_searchString, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task<DataStoreDetailPayload?> GetDataStoreDetails(string name, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _dataStoreApi!.GetDataStore(name, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(DataStoreProviderLog.DetailLoadFailed(_logger, name));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataStoreProviderLog.DetailLoadException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<DataStoreDetailPayload?> CreateDataStore(CreateDataStoreWithPathsRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _dataStoreApi!.CreateDataStore(request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadDataStores(cancellationToken);
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(DataStoreProviderLog.CreateFailed(_logger));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataStoreProviderLog.CreateException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<DataStoreDetailPayload?> UpdateDataStore(string name, UpdateDataStoreWithPathsRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _dataStoreApi!.UpdateDataStore(name, request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadDataStores(cancellationToken);
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(DataStoreProviderLog.UpdateFailed(_logger, name));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataStoreProviderLog.UpdateException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> DeleteDataStore(string name, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _dataStoreApi!.DeleteDataStore(name, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadDataStores(cancellationToken);
+                return true;
+            }
+
+            _lastResult = GenericResult.Failure(DataStoreProviderLog.DeleteFailed(_logger, name));
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataStoreProviderLog.DeleteException(_logger, ex));
+            return false;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<IReadOnlyList<ContainerDiscoveryResult>?> DiscoverContainers(string connectionName, string path, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            // Why: POST datastores/-/discover introspects the store and PERSISTS its containers/fields
+            // server-side, returning a summary (DiscoveryResultPayload: counts), not an enumerated list.
+            // The newly-discovered containers surface through the normal datastore load — this action
+            // just triggers discovery. (connectionName carries the data store name; the whole store is
+            // introspected, so the old per-path argument is no longer part of the discover contract.)
+            var result = await _dataStoreApi!.DiscoverContainers(
+                new DiscoverDataStoreRequest { Name = connectionName, Refresh = true }, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return [];
+            }
+
+            _lastResult = GenericResult.Failure(DataStoreProviderLog.DiscoverContainersFailed(_logger));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataStoreProviderLog.DiscoverContainersException(_logger, ex));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private void SetSearchString(string value)
+    {
+        _searchString = value;
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new DataStoreContext
+        {
+            DataStores = _dataStores,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            SearchString = _searchString,
+            FilteredDataStores = GetFilteredDataStores(),
+            OnLoadDataStores = () => LoadDataStores(),
+            OnGetDataStoreDetails = name => GetDataStoreDetails(name),
+            OnCreateDataStore = request => CreateDataStore(request),
+            OnUpdateDataStore = (name, request) => UpdateDataStore(name, request),
+            OnDeleteDataStore = name => DeleteDataStore(name),
+            OnDiscoverContainers = (connectionName, path) => DiscoverContainers(connectionName, path),
+            OnSearchStringChanged = SetSearchString
+        };
+    }
+}

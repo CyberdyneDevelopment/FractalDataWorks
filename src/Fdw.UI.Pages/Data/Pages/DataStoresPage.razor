@@ -1,0 +1,109 @@
+@page "/datastores"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>DataStores - Cyberdyne</PageTitle>
+
+<DataStoreProvider>
+    <ChildContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">Data Sources</div>
+                <h1>DataStores</h1>
+                <div class="sub">Logical DataSet &rarr; physical DataStore &rarr; DataPath &rarr; DataContainer.</div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/datastores/new")'>
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
+                    </svg>
+                    New DataStore
+                </button>
+            </div>
+        </div>
+
+        @if (ctx.IsLoading && !ctx.DataStores.Any())
+        {
+            <div class="loadwrap"><div class="spin"></div></div>
+        }
+        else if (!ctx.DataStores.Any())
+        {
+            <div class="card"><div class="card-b"><div class="empty">No DataStores configured. Register a DataStore to map physical storage paths.</div></div></div>
+        }
+        else
+        {
+            <div class="card">
+                <div class="card-h"><h3>All DataStores</h3></div>
+                <div class="card-b" style="padding:0 10px 12px;">
+                    <table class="tbl">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Connection</th>
+                                <th>Paths</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var store in ctx.FilteredDataStores)
+                            {
+                                <tr style="cursor:pointer;" @onclick='() => Nav.NavigateTo($"/datastores/{store.Name}")'>
+                                    <td><div class="cellpad nm">@store.Name</div></td>
+                                    <td class="mut">@store.ConnectionName</td>
+                                    <td class="num">@store.PathCount</td>
+                                    <td>
+                                        <div class="actions">
+                                            <button class="btn btn-ghost btn-sm" @onclick='() => Nav.NavigateTo($"/datastores/{store.Name}/edit")' @onclick:stopPropagation="true">
+                                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </button>
+                                            <button class="btn btn-ghost btn-sm danger" @onclick="() => ConfirmDelete(store.Name)" @onclick:stopPropagation="true">
+                                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        @if (_deleteTarget != null)
+        {
+            <div class="overlay">
+                <div class="modal">
+                    <div class="card-h"><h3>Confirm Delete</h3></div>
+                    <div class="card-b">
+                        <p style="font-size:13px;color:var(--n-400);margin:0 0 18px;">Are you sure you want to delete data store <span class="mono danger">@_deleteTarget</span>? This action cannot be undone.</p>
+                        <div class="actions" style="justify-content:flex-end;">
+                            <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancel</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => ExecuteDelete(ctx)">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </ChildContent>
+</DataStoreProvider>
+
+@code {
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    private string? _deleteTarget;
+
+    private void ConfirmDelete(string name)
+    {
+        _deleteTarget = name;
+    }
+
+    private async Task ExecuteDelete(DataStoreContext ctx)
+    {
+        if (_deleteTarget == null) return;
+        var name = _deleteTarget;
+        await ctx.OnDeleteDataStore(name);
+        _deleteTarget = null;
+    }
+}

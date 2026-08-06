@@ -1,0 +1,85 @@
+<Project>
+
+  <!--
+    Stages a publish-ready VS Code extension layout into $(FdwVsCodeStageDir):
+
+      $(FdwVsCodeStageDir)/
+        extension.js          ← bootstrap from this NuGet package
+        package.json          ← rendered from package.json.template
+        bundle/
+          $(FdwVsCodeEntryDll) ← consumer's published .NET host
+          (all other publish output)
+
+    Run with:  dotnet publish -c Release -t:FdwVsCodeStageExtension
+    Then:      cd $(FdwVsCodeStageDir) and run vsce package to produce a .vsix.
+  -->
+
+  <Target Name="FdwVsCodeStageExtension" AfterTargets="Publish">
+    <PropertyGroup>
+      <_FdwShellContent>$(MSBuildThisFileDirectory)..\contentFiles\any\any\</_FdwShellContent>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(FdwVsCodeStageDir);$(FdwVsCodeStageDir)bundle\" />
+
+    <Copy SourceFiles="$(_FdwShellContent)extension.js"
+          DestinationFolder="$(FdwVsCodeStageDir)"
+          SkipUnchangedFiles="true" />
+
+    <!--
+      Copy published .NET host into bundle/ FIRST. The contributes export below runs that host, so the
+      bundle has to be complete before it; rendering package.json is what consumes the export, so it
+      has to come last. Order here is load-bearing, not incidental.
+    -->
+    <ItemGroup>
+      <_FdwPublishedFiles Include="$(PublishDir)**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_FdwPublishedFiles)"
+          DestinationFolder="$(FdwVsCodeStageDir)bundle\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+
+    <!--
+      Ask the published host which commands it contributes. Only the entry-point host can answer:
+      commands declared in referenced packages register through its generated module initializer, so
+      neither a source generator nor MSBuild can enumerate them.
+    -->
+    <PropertyGroup>
+      <_FdwContributesFile>$(IntermediateOutputPath)fdw-vscode-contributes.json</_FdwContributesFile>
+    </PropertyGroup>
+    <Exec Command="dotnet &quot;$(FdwVsCodeStageDir)bundle/$(FdwVsCodeEntryDll)&quot; --fdw-export-vscode-contributes &quot;$(_FdwContributesFile)&quot;"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          StandardOutputImportance="low" />
+
+    <!--
+      Why ReadAllText and not ReadLinesFromFile: the latter yields MSBuild ITEMS, and an unescaped ';'
+      inside a command title would split the JSON into fragments. Reading the raw text sidesteps item
+      semantics entirely.
+    -->
+    <PropertyGroup>
+      <_FdwContributes>$([System.IO.File]::ReadAllText('$(_FdwContributesFile)').Trim())</_FdwContributes>
+    </PropertyGroup>
+
+    <!-- Render package.json from template -->
+    <ItemGroup>
+      <_FdwPackageJsonTemplate Include="$(_FdwShellContent)package.json.template" />
+    </ItemGroup>
+    <ReadLinesFromFile File="@(_FdwPackageJsonTemplate)">
+      <Output TaskParameter="Lines" ItemName="_FdwPackageJsonLines" />
+    </ReadLinesFromFile>
+    <PropertyGroup>
+      <_FdwPackageJson>@(_FdwPackageJsonLines, '%0A')</_FdwPackageJson>
+      <_FdwPackageJson>$(_FdwPackageJson.Replace('$ExtensionId$', '$(FdwVsCodeExtensionId)'))</_FdwPackageJson>
+      <_FdwPackageJson>$(_FdwPackageJson.Replace('$DisplayName$', '$(FdwVsCodeDisplayName)'))</_FdwPackageJson>
+      <_FdwPackageJson>$(_FdwPackageJson.Replace('$Description$', '$(FdwVsCodeDescription)'))</_FdwPackageJson>
+      <_FdwPackageJson>$(_FdwPackageJson.Replace('$Version$', '$(FdwVsCodeVersion)'))</_FdwPackageJson>
+      <_FdwPackageJson>$(_FdwPackageJson.Replace('$Publisher$', '$(FdwVsCodePublisher)'))</_FdwPackageJson>
+      <_FdwPackageJson>$(_FdwPackageJson.Replace('$EntryDll$', '$(FdwVsCodeEntryDll)'))</_FdwPackageJson>
+      <_FdwPackageJson>$(_FdwPackageJson.Replace('$Contributes$', '$(_FdwContributes)'))</_FdwPackageJson>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(FdwVsCodeStageDir)package.json"
+                      Lines="$(_FdwPackageJson)"
+                      Overwrite="true" />
+
+    <Message Importance="high" Text="FDW VS Code extension staged at $(FdwVsCodeStageDir) — run 'vsce package' from there to produce a .vsix." />
+  </Target>
+
+</Project>

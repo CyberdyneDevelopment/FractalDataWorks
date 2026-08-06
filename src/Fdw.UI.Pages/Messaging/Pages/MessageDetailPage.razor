@@ -1,0 +1,135 @@
+@page "/messages/{Id:guid}"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
+
+<PageTitle>Message - Cyberdyne</PageTitle>
+
+<MessageProvider AutoLoadMessageId="Id">
+    <MessageDetailContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">System · Messages</div>
+                <h1>@(ctx.Message?.Subject ?? "Message")</h1>
+                <div class="sub">Notification detail · actor, action, result.</div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-ghost" @onclick="@(() => Navigation.NavigateTo("/messages"))">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Back to Messages
+                </button>
+            </div>
+        </div>
+
+        @if (ctx.IsLoading)
+        {
+            <div class="card"><div class="card-b mono mut">Loading…</div></div>
+        }
+        else if (ctx.Message is null)
+        {
+            <div class="card"><div class="card-b"><span class="badge b-warn"><span class="bd"></span>Not found</span></div></div>
+        }
+        else
+        {
+            <div class="card">
+                <div class="card-h">
+                    <h3>@ctx.Message.Subject</h3>
+                    <span class="badge @GetSeverityBadge(ctx.Message.Severity)"><span class="bd"></span>@ctx.Message.Severity</span>
+                </div>
+                <div class="card-b">
+                    <div class="filters" style="margin-bottom:16px;">
+                        <span class="tpill">@ctx.Message.MessageType</span>
+                        <span class="mono mut" style="font-size:12px;">@ctx.Message.CreatedAt.ToString("g")</span>
+                        @if (!string.IsNullOrEmpty(ctx.Message.ReferenceId))
+                        {
+                            <span class="mono mut" style="font-size:12px;">
+                                Ref: @ctx.Message.ReferenceId
+                                <button class="btn btn-ghost btn-sm" @onclick="@(() => CopyToClipboard(ctx.Message.ReferenceId))">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                </button>
+                            </span>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(ctx.Message.Body))
+                    {
+                        <div class="term" style="min-height:0;margin-bottom:16px;">@ctx.Message.Body</div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(ctx.Message.ResourceType))
+                    {
+                        <dl class="kv" style="margin-bottom:16px;">
+                            <dt>Resource</dt>
+                            <dd>
+                                @ctx.Message.ResourceType
+                                @if (!string.IsNullOrEmpty(ctx.Message.ResourceId))
+                                {
+                                    <span class="mut"> (@ctx.Message.ResourceId)</span>
+                                }
+                            </dd>
+                        </dl>
+                    }
+
+                    @if (!string.IsNullOrEmpty(ctx.Message.ActionUrl))
+                    {
+                        <div style="margin-bottom:16px;">
+                            <a href="@ctx.Message.ActionUrl" class="btn btn-primary">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                @(ctx.Message.ActionType ?? "Take Action")
+                            </a>
+                        </div>
+                    }
+
+                    <div class="actions">
+                        @if (ctx.Message.DismissedAt is null && ctx.Message.ArchivedAt is null)
+                        {
+                            <button class="btn btn-secondary btn-sm" @onclick="@(async () => { await ctx.OnDismiss(); Navigation.NavigateTo("/messages"); })">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Dismiss
+                            </button>
+                        }
+                        @if (ctx.Message.ArchivedAt is null)
+                        {
+                            <button class="btn btn-secondary btn-sm" @onclick="@(async () => { await ctx.OnArchive(); Navigation.NavigateTo("/messages"); })">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                </svg>
+                                Archive
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </MessageDetailContent>
+</MessageProvider>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private async Task CopyToClipboard(string? text)
+    {
+        if (!string.IsNullOrEmpty(text))
+        {
+            await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text).ConfigureAwait(false);
+        }
+    }
+
+    private static string GetSeverityBadge(string severity) => severity switch
+    {
+        "Critical" => "b-fail",
+        "High" => "b-warn",
+        "Normal" => "b-idle",
+        "Low" => "b-run",
+        _ => "b-idle"
+    };
+}

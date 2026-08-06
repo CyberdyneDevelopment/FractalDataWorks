@@ -1,0 +1,256 @@
+@namespace Fdw.Data.UI.Components
+@using Fdw.Data.Components.Visualization
+
+@if (VizContext?.Data is null || VizContext.VisualizationType is null)
+{
+    <div class="empty">No data or visualization type selected.</div>
+}
+else if (_chartSvg is not null)
+{
+    <div class="card">
+        <div class="card-h">
+            <h3>@VizContext.VisualizationType.DisplayName</h3>
+        </div>
+        <div class="card-b">
+            <div class="chartwrap" style="height:auto;">
+                @_chartSvg
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="empty">Unsupported chart type: @VizContext.VisualizationType.DisplayName</div>
+}
+
+@code {
+    [Parameter] public VisualizationContext? VizContext { get; set; }
+
+    private MarkupString? _chartSvg;
+
+    private static readonly string[] ChartColors =
+    [
+        "var(--glacier, #79a8cc)",
+        "var(--amber, #d99a3f)",
+        "var(--success, #56b070)",
+        "var(--signal, #e05c4a)",
+        "var(--violet, #9b8cd6)",
+        "var(--warn, #e0a64a)",
+        "var(--glacier-soft, #a6c3da)",
+        "var(--amber-400, #e9b163)"
+    ];
+
+    protected override void OnParametersSet()
+    {
+        _chartSvg = null;
+        if (VizContext?.Data is null || VizContext.VisualizationType is null) return;
+
+        var vizName = VizContext.VisualizationType.Name;
+        if (string.Equals(vizName, "BarChart", StringComparison.OrdinalIgnoreCase))
+            _chartSvg = new MarkupString(BuildBarChart());
+        else if (string.Equals(vizName, "LineChart", StringComparison.OrdinalIgnoreCase))
+            _chartSvg = new MarkupString(BuildLineChart());
+        else if (string.Equals(vizName, "PieChart", StringComparison.OrdinalIgnoreCase))
+            _chartSvg = new MarkupString(BuildPieChart());
+    }
+
+    private (List<string> Labels, List<double> Values) ExtractData()
+    {
+        var labels = new List<string>();
+        var values = new List<double>();
+
+        if (VizContext?.Data?.Rows is null || VizContext.Data.Columns is null || VizContext.Data.Columns.Count == 0)
+            return (labels, values);
+
+        var columns = VizContext.Data.Columns;
+        var labelCol = columns[0].Name;
+        var valueCol = columns.Count > 1 ? columns[1].Name : labelCol;
+
+        var maxPoints = VizContext.Config.MaxDataPoints;
+        var count = 0;
+
+        foreach (var row in VizContext.Data.Rows)
+        {
+            if (count >= maxPoints) break;
+
+            var label = row.TryGetValue(labelCol, out var lv) ? lv?.ToString() ?? "" : "";
+            var numStr = row.TryGetValue(valueCol, out var nv) ? nv?.ToString() ?? "" : "";
+
+            if (double.TryParse(numStr, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var num))
+            {
+                labels.Add(label);
+                values.Add(num);
+                count++;
+            }
+        }
+
+        return (labels, values);
+    }
+
+    private string BuildBarChart()
+    {
+        var (labels, values) = ExtractData();
+        if (values.Count == 0) return "<p class=\"empty\">No numeric data to display.</p>";
+
+        var maxVal = values.Max();
+        var minVal = Math.Min(0, values.Min());
+        var range = maxVal - minVal;
+        if (range == 0) range = 1;
+
+        var barCount = values.Count;
+        const int chartWidth = 600;
+        const int chartHeight = 300;
+        const int padding = 60;
+        var barWidth = Math.Max(8, (chartWidth - padding * 2) / barCount - 4);
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append($"<svg viewBox=\"0 0 {chartWidth} {chartHeight + 40}\" class=\"chart-svg\" preserveAspectRatio=\"xMidYMid meet\">");
+
+        for (var tick = 0; tick <= 4; tick++)
+        {
+            var yVal = minVal + range * tick / 4.0;
+            var yPos = chartHeight - padding - (chartHeight - padding * 2) * tick / 4.0;
+            sb.Append($"<text x=\"{padding - 8}\" y=\"{yPos:F1}\" text-anchor=\"end\" dominant-baseline=\"middle\" fill=\"var(--n-500)\" style=\"font-size: 10px; font-family: monospace;\">{Encode(yVal.ToString("N0"))}</text>");
+            sb.Append($"<line x1=\"{padding}\" y1=\"{yPos:F1}\" x2=\"{chartWidth - padding}\" y2=\"{yPos:F1}\" stroke=\"currentColor\" stroke-opacity=\"0.1\" stroke-width=\"1\" />");
+        }
+
+        for (var i = 0; i < values.Count; i++)
+        {
+            var x = padding + i * ((chartWidth - padding * 2.0) / barCount) + 2;
+            var barHeight = (values[i] - minVal) / range * (chartHeight - padding * 2);
+            var y = chartHeight - padding - barHeight;
+            var color = ChartColors[i % ChartColors.Length];
+            var tooltip = $"{Encode(labels[i])}: {values[i]:N2}";
+
+            sb.Append($"<rect x=\"{x:F1}\" y=\"{y:F1}\" width=\"{barWidth}\" height=\"{Math.Max(1, barHeight):F1}\" fill=\"{color}\" rx=\"2\" opacity=\"0.85\"><title>{tooltip}</title></rect>");
+
+            var labelX = x + barWidth / 2.0;
+            var labelY = chartHeight - padding + 14;
+            sb.Append($"<text x=\"{labelX:F1}\" y=\"{labelY:F1}\" text-anchor=\"middle\" fill=\"var(--n-500)\" style=\"font-size: 9px; font-family: monospace;\" transform=\"rotate(-45, {labelX:F1}, {labelY:F1})\">{Encode(Truncate(labels[i], 10))}</text>");
+        }
+
+        sb.Append($"<line x1=\"{padding}\" y1=\"{chartHeight - padding}\" x2=\"{chartWidth - padding}\" y2=\"{chartHeight - padding}\" stroke=\"currentColor\" stroke-opacity=\"0.3\" stroke-width=\"1\" />");
+        sb.Append($"<line x1=\"{padding}\" y1=\"{padding}\" x2=\"{padding}\" y2=\"{chartHeight - padding}\" stroke=\"currentColor\" stroke-opacity=\"0.3\" stroke-width=\"1\" />");
+        sb.Append("</svg>");
+
+        return sb.ToString();
+    }
+
+    private string BuildLineChart()
+    {
+        var (labels, values) = ExtractData();
+        if (values.Count == 0) return "<p class=\"empty\">No numeric data to display.</p>";
+
+        var maxVal = values.Max();
+        var minVal = values.Min();
+        var range = maxVal - minVal;
+        if (range == 0) range = 1;
+
+        const int chartWidth = 600;
+        const int chartHeight = 300;
+        const int padding = 60;
+        var plotWidth = chartWidth - padding * 2.0;
+        var plotHeight = chartHeight - padding * 2.0;
+
+        var points = new List<(double X, double Y)>();
+        for (var i = 0; i < values.Count; i++)
+        {
+            var x = padding + (values.Count > 1 ? i * plotWidth / (values.Count - 1) : plotWidth / 2.0);
+            var y = chartHeight - padding - (values[i] - minVal) / range * plotHeight;
+            points.Add((x, y));
+        }
+
+        var polyline = string.Join(" ", points.Select(p => $"{p.X:F1},{p.Y:F1}"));
+        var areaPath = $"M {points[0].X:F1},{chartHeight - padding} " +
+                       string.Join(" ", points.Select(p => $"L {p.X:F1},{p.Y:F1}")) +
+                       $" L {points[^1].X:F1},{chartHeight - padding} Z";
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append($"<svg viewBox=\"0 0 {chartWidth} {chartHeight + 40}\" class=\"chart-svg\" preserveAspectRatio=\"xMidYMid meet\">");
+
+        for (var tick = 0; tick <= 4; tick++)
+        {
+            var yVal = minVal + range * tick / 4.0;
+            var yPos = chartHeight - padding - plotHeight * tick / 4.0;
+            sb.Append($"<text x=\"{padding - 8}\" y=\"{yPos:F1}\" text-anchor=\"end\" dominant-baseline=\"middle\" fill=\"var(--n-500)\" style=\"font-size: 10px; font-family: monospace;\">{Encode(yVal.ToString("N0"))}</text>");
+            sb.Append($"<line x1=\"{padding}\" y1=\"{yPos:F1}\" x2=\"{chartWidth - padding}\" y2=\"{yPos:F1}\" stroke=\"currentColor\" stroke-opacity=\"0.1\" stroke-width=\"1\" />");
+        }
+
+        sb.Append($"<path d=\"{areaPath}\" fill=\"var(--amber, #d99a3f)\" opacity=\"0.1\" />");
+        sb.Append($"<polyline points=\"{polyline}\" fill=\"none\" stroke=\"var(--amber, #d99a3f)\" stroke-width=\"2\" stroke-linejoin=\"round\" />");
+
+        for (var i = 0; i < points.Count; i++)
+        {
+            var tooltip = $"{Encode(labels[i])}: {values[i]:N2}";
+            sb.Append($"<circle cx=\"{points[i].X:F1}\" cy=\"{points[i].Y:F1}\" r=\"3\" fill=\"var(--amber, #d99a3f)\" stroke=\"var(--s1, #15171c)\" stroke-width=\"1.5\"><title>{tooltip}</title></circle>");
+        }
+
+        var labelStep = Math.Max(1, points.Count / 10);
+        for (var i = 0; i < points.Count; i += labelStep)
+        {
+            var lx = points[i].X;
+            var ly = chartHeight - padding + 14.0;
+            sb.Append($"<text x=\"{lx:F1}\" y=\"{ly:F1}\" text-anchor=\"middle\" fill=\"var(--n-500)\" style=\"font-size: 9px; font-family: monospace;\" transform=\"rotate(-45, {lx:F1}, {ly:F1})\">{Encode(Truncate(labels[i], 10))}</text>");
+        }
+
+        sb.Append($"<line x1=\"{padding}\" y1=\"{chartHeight - padding}\" x2=\"{chartWidth - padding}\" y2=\"{chartHeight - padding}\" stroke=\"currentColor\" stroke-opacity=\"0.3\" stroke-width=\"1\" />");
+        sb.Append($"<line x1=\"{padding}\" y1=\"{padding}\" x2=\"{padding}\" y2=\"{chartHeight - padding}\" stroke=\"currentColor\" stroke-opacity=\"0.3\" stroke-width=\"1\" />");
+        sb.Append("</svg>");
+
+        return sb.ToString();
+    }
+
+    private string BuildPieChart()
+    {
+        var (labels, values) = ExtractData();
+        if (values.Count == 0) return "<p class=\"empty\">No numeric data to display.</p>";
+
+        var total = values.Sum();
+        if (total == 0) return "<p class=\"empty\">All values are zero.</p>";
+
+        const int size = 400;
+        var cx = size / 2.0;
+        var cy = size / 2.0;
+        const double radius = 140.0;
+        var currentAngle = -Math.PI / 2;
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append($"<svg viewBox=\"0 0 {size} {size}\" class=\"chart-svg\" style=\"max-width:28rem;margin:0 auto;\" preserveAspectRatio=\"xMidYMid meet\">");
+
+        for (var i = 0; i < values.Count; i++)
+        {
+            var pct = values[i] / total;
+            var angle = pct * 2 * Math.PI;
+            var startX = cx + radius * Math.Cos(currentAngle);
+            var startY = cy + radius * Math.Sin(currentAngle);
+            var endX = cx + radius * Math.Cos(currentAngle + angle);
+            var endY = cy + radius * Math.Sin(currentAngle + angle);
+            var largeArc = angle > Math.PI ? 1 : 0;
+            var color = ChartColors[i % ChartColors.Length];
+            var midAngle = currentAngle + angle / 2;
+            var labelR = radius + 20;
+            var labelX = cx + labelR * Math.Cos(midAngle);
+            var labelY = cy + labelR * Math.Sin(midAngle);
+
+            var tooltip = $"{Encode(labels[i])}: {values[i]:N2} ({(pct * 100):F1}%)";
+            sb.Append($"<path d=\"M {cx:F1} {cy:F1} L {startX:F1} {startY:F1} A {radius} {radius} 0 {largeArc} 1 {endX:F1} {endY:F1} Z\" fill=\"{color}\" stroke=\"var(--s1, #15171c)\" stroke-width=\"2\" opacity=\"0.85\"><title>{tooltip}</title></path>");
+
+            if (pct > 0.04)
+            {
+                var pctLabel = $"{Encode(Truncate(labels[i], 8))} {(pct * 100):F0}%";
+                sb.Append($"<text x=\"{labelX:F1}\" y=\"{labelY:F1}\" text-anchor=\"middle\" dominant-baseline=\"middle\" fill=\"var(--n-300)\" style=\"font-size: 10px; font-family: monospace;\">{pctLabel}</text>");
+            }
+
+            currentAngle += angle;
+        }
+
+        sb.Append("</svg>");
+        return sb.ToString();
+    }
+
+    private static string Encode(string value) => System.Net.WebUtility.HtmlEncode(value);
+
+    private static string Truncate(string value, int maxLength)
+        => value.Length <= maxLength ? value : string.Concat(value.AsSpan(0, maxLength - 1), "\u2026");
+}

@@ -1,0 +1,5 @@
+# EditorConfig for FractalDataWorks.Commands.Abstractions
+
+# Suppress file name must match type name for interface files with multiple related types
+[*.cs]
+dotnet_diagnostic.MA0048.severity = none

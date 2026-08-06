@@ -1,0 +1,116 @@
+@namespace Fdw.Data.Components.Visualization
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading.Tasks
+@using Fdw.Data.Abstractions
+@using Fdw.Data.Components.Logging
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for a dynamic filter builder panel.
+    /// Manages filter condition state and exposes callbacks via <see cref="FilterPanelContext"/>.
+    /// </summary>
+    [Parameter] public RenderFragment<FilterPanelContext>? ChildContent { get; set; }
+
+    /// <summary>Gets or sets the available column names for filtering.</summary>
+    [Parameter] public IReadOnlyList<string> AvailableColumns { get; set; } = [];
+
+    /// <summary>Gets or sets the available filter operator names.</summary>
+    [Parameter] public IReadOnlyList<string> AvailableOperators { get; set; } = [];
+
+    /// <summary>Callback invoked when the user applies the current set of filter conditions.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<FilterCondition>> OnFiltersApplied { get; set; }
+
+    [Inject] private ILogger<FilterPanelProvider>? LoggerParam { get; set; }
+
+    private ILogger<FilterPanelProvider> _logger = NullLogger<FilterPanelProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private List<FilterCondition> _conditions = [];
+    private bool _isDirty;
+    private FilterPanelContext _context = new();
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<FilterPanelProvider>.Instance;
+        RebuildContext();
+    }
+
+    // ── Methods ──────────────────────────────────────────────────────────────
+
+    private Task AddCondition(FilterCondition condition)
+    {
+        _conditions.Add(condition);
+        _isDirty = true;
+        FilterPanelProviderLog.ConditionAdded(_logger, condition.PropertyName, condition.Operator.Name);
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task RemoveCondition(int index)
+    {
+        if (index >= 0 && index < _conditions.Count)
+        {
+            FilterPanelProviderLog.ConditionRemoved(_logger, index);
+            _conditions.RemoveAt(index);
+            _isDirty = true;
+            RebuildContext();
+            StateHasChanged();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task Apply()
+    {
+        FilterPanelProviderLog.FiltersApplied(_logger, _conditions.Count);
+        _isDirty = false;
+        RebuildContext();
+        StateHasChanged();
+
+        if (OnFiltersApplied.HasDelegate)
+        {
+            await OnFiltersApplied.InvokeAsync(_conditions.AsReadOnly());
+        }
+    }
+
+    private Task Clear()
+    {
+        _conditions.Clear();
+        _isDirty = false;
+        FilterPanelProviderLog.FiltersCleared(_logger);
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new FilterPanelContext
+        {
+            Conditions = _conditions.AsReadOnly(),
+            AvailableColumns = AvailableColumns,
+            AvailableOperators = AvailableOperators,
+            IsDirty = _isDirty,
+            OnAddCondition = condition => AddCondition(condition),
+            OnRemoveCondition = index => RemoveCondition(index),
+            OnApply = () => Apply(),
+            OnClear = () => Clear()
+        };
+    }
+}

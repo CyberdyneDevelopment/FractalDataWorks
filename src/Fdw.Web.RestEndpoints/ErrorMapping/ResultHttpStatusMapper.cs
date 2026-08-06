@@ -1,0 +1,88 @@
+using Microsoft.AspNetCore.Http;
+using Fdw.Results;
+using Fdw.Results.Abstractions;
+using Fdw.Web.RestEndpoints.Models;
+
+namespace Fdw.Web.RestEndpoints.ErrorMapping;
+
+/// <summary>
+/// Maps IGenericResult failures to HTTP status codes and user-safe error responses.
+/// Sensitive information (server addresses, SQL text, usernames) is never included in the response —
+/// only a generic, category-derived message is returned.
+/// </summary>
+/// <remarks>
+/// Why: HTTP handling is derived from the result code's CATEGORY, not per-code strings. Every
+/// categorized ResultCode's number encodes its handling category (number / 10000), and each
+/// <see cref="IResultCategory"/> carries the authoritative <see cref="IResultCategory.HttpStatus"/>
+/// and <see cref="IResultCategory.IsRetryable"/>. Mapping off the category keeps this correct as
+/// codes are added or renumbered — the previous per-code string table silently drifted out of sync
+/// the moment a code's Code string changed (e.g. the catalog renumbering), mapping real failures to
+/// a generic 500 instead of their intended status.
+/// </remarks>
+public static class ResultHttpStatusMapper
+{
+    /// <summary>
+    /// Maps an IGenericResult to an HTTP status code and structured ErrorResponse.
+    /// </summary>
+    /// <param name="result">The result containing failure information.</param>
+    /// <param name="httpContext">The HTTP context for correlation ID extraction.</param>
+    /// <returns>A tuple of HTTP status code and ErrorResponse.</returns>
+    public static (int StatusCode, ErrorResponse Response) Map(IGenericResult result, HttpContext httpContext)
+    {
+        var referenceId = httpContext.TraceIdentifier;
+        var code = ExtractResultCode(result);
+
+        // Why: the leading digit of the code's number (number / 10000) is the handling category;
+        // ById returns the NotFound sentinel (never null) for anything outside the 1..9 band.
+        if (code is not null && code.Id >= 10000)
+        {
+            var category = ResultCategories.ById(code.Id / 10000);
+            if (!ReferenceEquals(category, ResultCategories.NotFound) && category.IsFailure)
+            {
+                // Why: status, retryability, and the client-safe copy all travel with the category
+                // option (set via its constructor) — no per-code table and no dispatch on the id here.
+                return (category.HttpStatus, new ErrorResponse
+                {
+                    Code = code.Code,
+                    Message = category.ClientMessage,
+                    ReferenceId = referenceId,
+                    IsRetryable = category.IsRetryable,
+                    Action = category.ClientAction,
+                });
+            }
+        }
+
+        // Default: 500 with a generic message (uncategorized/legacy code, or no code at all).
+        return (500, new ErrorResponse
+        {
+            Code = code?.Code ?? "UNKNOWN_ERROR",
+            Message = "An unexpected error occurred",
+            ReferenceId = referenceId,
+            IsRetryable = false,
+            Action = "Contact your administrator",
+        });
+    }
+
+    private static IResultCode? ExtractResultCode(IGenericResult result)
+    {
+        // Primary: the result's own code.
+        if (result.Code is IResultCode resultCode && !string.IsNullOrEmpty(resultCode.Code))
+        {
+            return resultCode;
+        }
+
+        // Secondary: the first non-empty code in the chain.
+        if (result.CodeChain is { Count: > 0 })
+        {
+            foreach (var chainCode in result.CodeChain)
+            {
+                if (chainCode is not null && !string.IsNullOrEmpty(chainCode.Code))
+                {
+                    return chainCode;
+                }
+            }
+        }
+
+        return null;
+    }
+}

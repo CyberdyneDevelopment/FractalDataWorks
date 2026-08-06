@@ -1,0 +1,148 @@
+@page "/settings/notifications"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using System.Security.Claims
+@using Fdw.Services.Notifications.Clients
+@using Fdw.Services.Notifications.Clients.Models
+
+<PageTitle>Notification Preferences - Cyberdyne</PageTitle>
+
+<div class="pagehead">
+    <div>
+        <div class="ey">Settings</div>
+        <h1>Notification Preferences</h1>
+        <div class="sub">Configure how you receive notifications for each message type.</div>
+    </div>
+    <div class="actions">
+        <button class="btn btn-ghost" onclick="history.back()">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Settings
+        </button>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="card" style="margin-bottom:14px;"><div class="card-b mono" style="color:var(--signal);">@_errorMessage</div></div>
+}
+
+@if (_isLoading)
+{
+    <div class="card"><div class="card-b mono mut">Loading…</div></div>
+}
+else if (_preferences is not null)
+{
+    <div class="card">
+        <div class="card-h"><h3>Channels</h3></div>
+        <div class="card-b">
+            @foreach (var pref in _preferences)
+            {
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--hair);">
+                    <div>
+                        <span style="color:var(--n-100);">@pref.NotificationType</span>
+                        <span class="mono mut" style="margin-left:8px;font-size:11px;">(@pref.Channel)</span>
+                    </div>
+                    <span class="@(pref.IsEnabled ? "sw on" : "sw")" style="cursor:pointer;" @onclick="() => pref.IsEnabled = !pref.IsEnabled"></span>
+                </div>
+            }
+            <div class="actions" style="justify-content:flex-end;margin-top:16px;">
+                <button class="btn btn-secondary btn-sm" @onclick="ResetPreferences">Reset</button>
+                <button class="btn btn-primary btn-sm" @onclick="HandleSave" disabled="@_isSaving">
+                    @(_isSaving ? "Saving..." : "Save")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private NotificationApiClient? _notificationApi;
+
+    private Guid _userId;
+    private List<NotificationPreferenceItem>? _preferences;
+    private bool _isLoading;
+    private bool _isSaving;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _notificationApi = new NotificationApiClient(HttpClientFactory.CreateClient("NotificationClient"), LoggerFactory?.CreateLogger<NotificationApiClient>()!);
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        // Why: the OIDC subject is carried on the "sub" claim (matching the server-side
+        // resolution order); only some principals remap it to NameIdentifier. Checking sub first
+        // avoids the previous Guid.Empty fallthrough that silently queried/saved an empty user.
+        var userIdValue = authState.User.FindFirst("sub")?.Value
+            ?? authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (Guid.TryParse(userIdValue, out var id) && id != Guid.Empty)
+        {
+            _userId = id;
+            await LoadPreferences();
+        }
+        else
+        {
+            // Why: no valid user id means there is nothing to load/save — surface it instead of
+            // silently round-tripping against Guid.Empty (which appears to "lose" every toggle).
+            _errorMessage = "Unable to determine the current user. Please sign in again.";
+        }
+    }
+
+    private async Task LoadPreferences()
+    {
+        _isLoading = true;
+        var result = await _notificationApi!.GetPreferences(_userId);
+        if (result.IsSuccess && result.Value is not null)
+        {
+            _preferences = result.Value.Select(r => new NotificationPreferenceItem
+            {
+                NotificationType = r.NotificationType,
+                Channel = r.Channel,
+                IsEnabled = r.IsEnabled,
+            }).ToList();
+        }
+        _isLoading = false;
+    }
+
+    private async Task HandleSave()
+    {
+        if (_preferences is null || _userId == Guid.Empty) return;
+        _isSaving = true;
+        var request = new UpdateUserPreferencesPayload
+        {
+            UserId = _userId,
+            Preferences = _preferences.Select(i => new UserNotificationPreferenceResponse
+            {
+                NotificationType = i.NotificationType,
+                Channel = i.Channel,
+                IsEnabled = i.IsEnabled,
+            }).ToList(),
+        };
+        var result = await _notificationApi!.SavePreferences(_userId, request);
+        if (result.IsSuccess && result.Value is not null)
+        {
+            _preferences = result.Value.Select(r => new NotificationPreferenceItem
+            {
+                NotificationType = r.NotificationType,
+                Channel = r.Channel,
+                IsEnabled = r.IsEnabled,
+            }).ToList();
+        }
+        _isSaving = false;
+    }
+
+    private async Task ResetPreferences()
+    {
+        await LoadPreferences();
+    }
+
+    private class NotificationPreferenceItem
+    {
+        public string NotificationType { get; set; } = "";
+        public string Channel { get; set; } = "";
+        public bool IsEnabled { get; set; }
+    }
+}

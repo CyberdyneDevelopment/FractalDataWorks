@@ -1,0 +1,107 @@
+@namespace Fdw.Services.Scheduling.Components.Dashboard
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.Services.Scheduling.Clients.Abstractions
+@using Fdw.Results
+@using Fdw.UI.Components.Logging
+@using Fdw.UI.Components.Base
+
+@inherits UIComponentBase
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for the schedule dashboard widget.
+    /// Fetches schedule counts and active status.
+    /// </summary>
+    [Parameter] public RenderFragment<ScheduleDashboardContext>? ChildContent { get; set; }
+
+    [Inject] private IScheduleClient ScheduleClient { get; set; } = default!;
+    [Inject] private ILogger<ScheduleDashboardProvider>? LoggerParam { get; set; }
+
+    private ILogger<ScheduleDashboardProvider> _logger = NullLogger<ScheduleDashboardProvider>.Instance;
+
+    private int _totalSchedules;
+    private int _activeSchedules;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private ScheduleDashboardContext _context = new();
+    private bool _initialized;
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<ScheduleDashboardProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadSummary();
+        }
+    }
+
+    private async Task<IGenericResult> LoadSummary(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await ScheduleClient.List(cancellationToken);
+            if (result.IsSuccess)
+            {
+                _totalSchedules = result.Value?.Count ?? 0;
+                _activeSchedules = result.Value?.Count(s => s.IsEnabled) ?? 0;
+            }
+            else
+            {
+                _totalSchedules = 0;
+                _activeSchedules = 0;
+            }
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            return ProviderContextBase.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.LoadException(_logger, ex, "ScheduleDashboardProvider", "schedules"));
+            return _lastResult;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private void RebuildContext()
+    {
+        _context = new ScheduleDashboardContext
+        {
+            TotalSchedules = _totalSchedules,
+            ActiveSchedules = _activeSchedules,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnRefresh = () => LoadSummary()
+        };
+    }
+}

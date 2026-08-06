@@ -1,0 +1,948 @@
+@page "/datasets/{Name}"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>@(Name ?? "DataSet") - Cyberdyne</PageTitle>
+
+<DataSetProvider @ref="_provider" DataSetName="@Name">
+    <ChildContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey"><a href="/datasets">DataSets</a></div>
+                <div class="dhead">
+                    <div class="ic">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="#d99a3f"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v14H4zM4 10h16M10 10v9" /></svg>
+                    </div>
+                    <h1>@Name</h1>
+                    @if (ctx.CurrentDataSet != null)
+                    {
+                        <span class="badge b-ok"><span class="bd"></span>Active</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (ctx.IsLoading)
+        {
+            <div class="loadwrap"><div class="spin"></div></div>
+        }
+        else if (ctx.CurrentDataSet == null)
+        {
+            <div class="card"><div class="card-b"><div class="empty">DataSet not found.</div></div></div>
+        }
+        else
+        {
+            @* ── Journey actions ─────────────────────────────────────────────────────── *@
+            <div class="actions" style="margin-bottom:12px;">
+                <button class="btn btn-primary btn-sm"
+                        @onclick='async () => await ctx.OnStartPipeline(ctx.CurrentDataSet!.Name)'
+                        title="Open Pipeline Builder with this DataSet as the source">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Use in new Pipeline
+                </button>
+                <button class="btn btn-secondary btn-sm"
+                        @onclick='async () => await ctx.OnDeriveDataSet(ctx.CurrentDataSet!.Name)'
+                        title="Create a new DataSet derived from this one (join or aggregate)">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Derive new DataSet
+                </button>
+            </div>
+
+            <div class="tabs">
+                <a class="@(_activeTab == "fields" ? "on" : null)" @onclick='() => _activeTab = "fields"'>Fields (@ctx.CurrentDataSet.Fields.Count)</a>
+                <a class="@(_activeTab == "sources" ? "on" : null)" @onclick='() => _activeTab = "sources"'>Sources (@ctx.CurrentDataSet.Sources.Count)</a>
+                <a class="@(_activeTab == "compose" ? "on" : null)" @onclick='() => _activeTab = "compose"'>Compose</a>
+                <a class="@(_activeTab == "lineage" ? "on" : null)" @onclick='() => _activeTab = "lineage"'>Lineage</a>
+                <a class="@(_activeTab == "preview" ? "on" : null)" @onclick='() => _activeTab = "preview"'>Preview</a>
+                <a class="@(_activeTab == "annotations" ? "on" : null)" @onclick='() => _activeTab = "annotations"'>Annotations</a>
+            </div>
+
+            @if (_activeTab == "fields")
+            {
+                <div class="card">
+                    <div class="card-h"><h3>Fields</h3><span class="meta">@ctx.CurrentDataSet.Fields.Count defined</span></div>
+                    <div class="card-b" style="padding:0 10px 12px;">
+                        <table class="tbl">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Key</th>
+                                    <th>Nullable</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var field in ctx.CurrentDataSet.Fields.OrderBy(f => f.Ordinal))
+                                {
+                                    <tr>
+                                        <td class="num">@field.Ordinal</td>
+                                        <td><div class="cellpad nm mono">@field.Name</div></td>
+                                        <td class="mut"><span class="tpill">@field.DataType</span></td>
+                                        <td>
+                                            @if (field.IsKey)
+                                            {
+                                                <span class="badge b-warn"><span class="bd"></span>Key</span>
+                                            }
+                                        </td>
+                                        <td class="mut">@(!field.IsRequired ? "Yes" : "No")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+            else if (_activeTab == "sources")
+            {
+                <div class="card">
+                    <div class="card-h">
+                        <h3>Sources</h3>
+                        <button class="btn btn-secondary btn-sm" @onclick='() => Nav.NavigateTo("/mapper")'>
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                            Map Fields
+                        </button>
+                    </div>
+                    <div class="card-b" style="padding:0 10px 12px;">
+                        @if (ctx.CurrentDataSet.Sources.Count == 0)
+                        {
+                            <div class="empty">No sources configured.</div>
+                        }
+                        else
+                        {
+                            <table class="tbl">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>DataStore</th>
+                                        <th>DataPath</th>
+                                        <th>Primary</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var source in ctx.CurrentDataSet.Sources)
+                                    {
+                                        <tr>
+                                            <td><div class="cellpad nm">@source.SourceName</div></td>
+                                            <td class="mut mono">@source.DataStoreName</td>
+                                            <td class="mut mono">@source.Path</td>
+                                            <td>
+                                                @if (source.IsPrimary)
+                                                {
+                                                    <span class="badge b-ok"><span class="bd"></span>Primary</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                </div>
+
+                @if (ctx.CurrentDataSet.Sources.Any(s => s.FieldMappings.Count > 0))
+                {
+                    <div style="height:14px;"></div>
+                    <div class="card">
+                        <div class="card-h"><h3>Field Mappings</h3></div>
+                        <div class="card-b" style="padding:0 10px 12px;">
+                            <table class="tbl">
+                                <thead>
+                                    <tr>
+                                        <th>DataSet Field</th>
+                                        <th></th>
+                                        <th>Source</th>
+                                        <th>Source Field</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var m in ctx.CurrentDataSet.Sources.SelectMany(s => s.FieldMappings))
+                                    {
+                                        <tr>
+                                            <td><div class="cellpad nm mono">@m.DataSetFieldName</div></td>
+                                            <td class="mut">
+                                                <svg style="width:15px;height:15px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                                </svg>
+                                            </td>
+                                            <td class="mut">@m.SourceName</td>
+                                            <td class="mut mono">@m.SourceFieldName</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            }
+            else if (_activeTab == "compose")
+            {
+                <DataSetDetailProvider DataSetName="@Name">
+                    <ChildContent Context="compCtx">
+                        @if (compCtx.IsLoading)
+                        {
+                            <div class="loadwrap"><div class="spin"></div></div>
+                        }
+                        else if (compCtx.ErrorMessage is not null)
+                        {
+                            <div class="card"><div class="card-b"><div class="alert alert-err">@compCtx.ErrorMessage</div></div></div>
+                        }
+                        else
+                        {
+                            <div class="card">
+                                <div class="card-h">
+                                    <h3>Compose</h3>
+                                    <span class="meta">@compCtx.CompositionMode</span>
+                                    <div style="display:flex;gap:8px;margin-left:auto;">
+                                        <button class="btn btn-primary btn-sm"
+                                                disabled="@compCtx.IsSaving"
+                                                @onclick='() => compCtx.OnSaveDataSet()'>
+                                            @if (compCtx.IsSaving)
+                                            {
+                                                <span>Saving…</span>
+                                            }
+                                            else
+                                            {
+                                                <span>Save</span>
+                                            }
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="height:14px;"></div>
+
+                            @* ── Sources ─────────────────────────────────────────────────────────── *@
+                            <div class="card">
+                                <div class="card-h">
+                                    <h3>Sources</h3>
+                                    <span class="meta">@compCtx.WorkingSources.Count</span>
+                                    <button class="btn btn-secondary btn-sm" style="margin-left:auto;"
+                                            @onclick="() => _showAddSource = !_showAddSource">
+                                        + Add Source
+                                    </button>
+                                </div>
+                                @if (_showAddSource)
+                                {
+                                    <div class="card-b">
+                                        <div class="fgrid">
+                                            <div class="frow">
+                                                <label>Source Alias</label>
+                                                <input class="fin" @bind="_addSourceAlias" placeholder="e.g. orders" />
+                                            </div>
+                                            <div class="frow">
+                                                <label>DataStore</label>
+                                                <input class="fin" @bind="_addSourceDataStore" placeholder="e.g. NflStats" />
+                                            </div>
+                                            <div class="frow">
+                                                <label>Path</label>
+                                                <input class="fin" @bind="_addSourcePath" placeholder="e.g. dbo" />
+                                            </div>
+                                            <div class="frow">
+                                                <label>Container (Table)</label>
+                                                <input class="fin" @bind="_addSourceContainer" placeholder="e.g. Orders" />
+                                            </div>
+                                        </div>
+                                        <div class="actions" style="justify-content:flex-end;">
+                                            <button class="btn btn-secondary btn-sm" @onclick="() => _showAddSource = false">Cancel</button>
+                                            <button class="btn btn-primary btn-sm"
+                                                    @onclick='() => SubmitAddSource(compCtx)'>
+                                                Add
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                                @if (compCtx.WorkingSources.Count > 0)
+                                {
+                                    <div class="card-b" style="padding:0 10px 12px;">
+                                        <table class="tbl">
+                                            <thead>
+                                                <tr>
+                                                    <th>Alias</th>
+                                                    <th>DataStore</th>
+                                                    <th>Path</th>
+                                                    <th>Container</th>
+                                                    <th>Primary</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var src in compCtx.WorkingSources)
+                                                {
+                                                    <tr>
+                                                        <td><div class="cellpad nm mono">@src.SourceName</div></td>
+                                                        <td class="mut mono">@src.DataStoreName</td>
+                                                        <td class="mut mono">@src.Path</td>
+                                                        <td class="mut mono">@src.ContainerName</td>
+                                                        <td>
+                                                            @if (src.IsPrimary)
+                                                            {
+                                                                <span class="badge b-ok"><span class="bd"></span>Primary</span>
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            @if (src.CanRemove)
+                                                            {
+                                                                <button class="btn btn-danger btn-sm"
+                                                                        @onclick='() => compCtx.OnRemoveSource(src.SourceName)'>
+                                                                    Remove
+                                                                </button>
+                                                            }
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </div>
+
+                            <div style="height:14px;"></div>
+
+                            @* ── Joins ──────────────────────────────────────────────────────────── *@
+                            @if (compCtx.WorkingSources.Count > 1)
+                            {
+                                <div class="card">
+                                    <div class="card-h">
+                                        <h3>Joins</h3>
+                                        <span class="meta">@compCtx.WorkingJoins.Count</span>
+                                        <button class="btn btn-secondary btn-sm" style="margin-left:auto;"
+                                                @onclick="() => _showAddJoin = !_showAddJoin">
+                                            + Add Join
+                                        </button>
+                                    </div>
+                                    @if (_showAddJoin)
+                                    {
+                                        <div class="card-b">
+                                            <div class="fgrid">
+                                                <div class="frow">
+                                                    <label>Left Source</label>
+                                                    <select class="fin" @bind="_addJoinLeftSource">
+                                                        <option value="">-- Select --</option>
+                                                        @foreach (var src in compCtx.WorkingSources)
+                                                        {
+                                                            <option value="@src.SourceName">@src.SourceName</option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                                <div class="frow">
+                                                    <label>Left Key Field</label>
+                                                    <input class="fin" @bind="_addJoinLeftField" placeholder="e.g. CustomerId" />
+                                                </div>
+                                                <div class="frow">
+                                                    <label>Join Type</label>
+                                                    <select class="fin" @bind="_addJoinType">
+                                                        <option value="Inner">Inner</option>
+                                                        <option value="Left">Left</option>
+                                                        <option value="Right">Right</option>
+                                                        <option value="Full">Full</option>
+                                                        <option value="Cross">Cross</option>
+                                                    </select>
+                                                </div>
+                                                <div class="frow">
+                                                    <label>Right Source</label>
+                                                    <select class="fin" @bind="_addJoinRightSource">
+                                                        <option value="">-- Select --</option>
+                                                        @foreach (var src in compCtx.WorkingSources)
+                                                        {
+                                                            <option value="@src.SourceName">@src.SourceName</option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                                <div class="frow">
+                                                    <label>Right Key Field</label>
+                                                    <input class="fin" @bind="_addJoinRightField" placeholder="e.g. Id" />
+                                                </div>
+                                            </div>
+                                            <div class="actions" style="justify-content:flex-end;">
+                                                <button class="btn btn-secondary btn-sm" @onclick="() => _showAddJoin = false">Cancel</button>
+                                                <button class="btn btn-primary btn-sm"
+                                                        @onclick='() => SubmitAddJoin(compCtx)'>
+                                                    Add
+                                                </button>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (compCtx.WorkingJoins.Count > 0)
+                                    {
+                                        <div class="card-b" style="padding:0 10px 12px;">
+                                            <table class="tbl">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Left Source</th>
+                                                        <th>Left Key</th>
+                                                        <th>Type</th>
+                                                        <th>Right Source</th>
+                                                        <th>Right Key</th>
+                                                        <th></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var join in compCtx.WorkingJoins)
+                                                    {
+                                                        <tr>
+                                                            <td class="mut mono">@join.LeftSourceName</td>
+                                                            <td class="mut mono">@join.LeftKeyField</td>
+                                                            <td><span class="tpill">@join.JoinType</span></td>
+                                                            <td class="mut mono">@join.RightSourceName</td>
+                                                            <td class="mut mono">@join.RightKeyField</td>
+                                                            <td>
+                                                                @if (join.CanRemove)
+                                                                {
+                                                                    <button class="btn btn-danger btn-sm"
+                                                                            @onclick='() => compCtx.OnRemoveJoin(join.JoinId.ToString())'>
+                                                                        Remove
+                                                                    </button>
+                                                                }
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div style="height:14px;"></div>
+                            }
+
+                            @* ── Calculations ────────────────────────────────────────────────────── *@
+                            <div class="card">
+                                <div class="card-h">
+                                    <h3>Calculations</h3>
+                                    <span class="meta">@compCtx.WorkingCalculations.Count</span>
+                                    <button class="btn btn-secondary btn-sm" style="margin-left:auto;"
+                                            @onclick="() => _showAddCalc = !_showAddCalc">
+                                        + Add Calculation
+                                    </button>
+                                </div>
+                                @if (_showAddCalc)
+                                {
+                                    <div class="card-b">
+                                        <div class="fgrid">
+                                            <div class="frow">
+                                                <label>Field Name</label>
+                                                <input class="fin" @bind="_addCalcName" placeholder="e.g. TotalRevenue" />
+                                            </div>
+                                            <div class="frow">
+                                                <label>Formula</label>
+                                                <input class="fin" @bind="_addCalcFormula" placeholder="e.g. Quantity * UnitPrice" />
+                                            </div>
+                                            <div class="frow">
+                                                <label>Data Type</label>
+                                                <input class="fin" @bind="_addCalcDataType" placeholder="e.g. decimal" />
+                                            </div>
+                                        </div>
+                                        <div class="actions" style="justify-content:flex-end;">
+                                            <button class="btn btn-secondary btn-sm" @onclick="() => _showAddCalc = false">Cancel</button>
+                                            <button class="btn btn-primary btn-sm"
+                                                    @onclick='() => SubmitAddCalculation(compCtx)'>
+                                                Add
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                                @if (compCtx.WorkingCalculations.Count > 0)
+                                {
+                                    <div class="card-b" style="padding:0 10px 12px;">
+                                        <table class="tbl">
+                                            <thead>
+                                                <tr>
+                                                    <th>Name</th>
+                                                    <th>Formula</th>
+                                                    <th>Type</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var calc in compCtx.WorkingCalculations)
+                                                {
+                                                    <tr>
+                                                        <td><div class="cellpad nm mono">@calc.Name</div></td>
+                                                        <td class="mut mono">@calc.Formula</td>
+                                                        <td><span class="tpill">@calc.DataType</span></td>
+                                                        <td>
+                                                            @if (calc.CanRemove)
+                                                            {
+                                                                <button class="btn btn-danger btn-sm"
+                                                                        @onclick='() => compCtx.OnRemoveCalculation(calc.Name)'>
+                                                                    Remove
+                                                                </button>
+                                                            }
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </div>
+
+                            <div style="height:14px;"></div>
+
+                            @* ── Aggregations ────────────────────────────────────────────────────── *@
+                            <div class="card">
+                                <div class="card-h">
+                                    <h3>Aggregations</h3>
+                                    <span class="meta">@compCtx.WorkingAggregations.Count</span>
+                                    <button class="btn btn-secondary btn-sm" style="margin-left:auto;"
+                                            @onclick="() => _showAddAgg = !_showAddAgg">
+                                        + Add Aggregation
+                                    </button>
+                                </div>
+                                @if (_showAddAgg)
+                                {
+                                    <div class="card-b">
+                                        <div class="fgrid">
+                                            <div class="frow">
+                                                <label>Output Field Name</label>
+                                                <input class="fin" @bind="_addAggName" placeholder="e.g. TotalOrders" />
+                                            </div>
+                                            <div class="frow">
+                                                <label>Function</label>
+                                                @* Why: options are sourced from the canonical AggregationFunctions TypeCollection
+                                                   via the API so the UI stays in sync with what the server can execute.
+                                                   While loading, the select shows only the first item pre-selected or "Sum" as
+                                                   the fallback default when the API result arrives. *@
+                                                <select class="fin" @bind="_addAggFunction">
+                                                    @foreach (var fn in compCtx.AggregationFunctionNames)
+                                                    {
+                                                        <option value="@fn">@fn</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="frow">
+                                                <label>Source Field</label>
+                                                <input class="fin" @bind="_addAggSourceField" placeholder="e.g. Amount" />
+                                            </div>
+                                            <div class="frow">
+                                                <label>Group By Fields (comma-separated)</label>
+                                                <input class="fin" @bind="_addAggGroupBy" placeholder="e.g. CustomerId, Region" />
+                                            </div>
+                                        </div>
+                                        <div class="actions" style="justify-content:flex-end;">
+                                            <button class="btn btn-secondary btn-sm" @onclick="() => _showAddAgg = false">Cancel</button>
+                                            <button class="btn btn-primary btn-sm"
+                                                    @onclick='() => SubmitAddAggregation(compCtx)'>
+                                                Add
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                                @if (compCtx.WorkingAggregations.Count > 0)
+                                {
+                                    <div class="card-b" style="padding:0 10px 12px;">
+                                        <table class="tbl">
+                                            <thead>
+                                                <tr>
+                                                    <th>Name</th>
+                                                    <th>Function</th>
+                                                    <th>Source Field</th>
+                                                    <th>Group By</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var agg in compCtx.WorkingAggregations)
+                                                {
+                                                    <tr>
+                                                        <td><div class="cellpad nm mono">@agg.Name</div></td>
+                                                        <td><span class="tpill">@agg.AggregationFunction</span></td>
+                                                        <td class="mut mono">@agg.SourceField</td>
+                                                        <td class="mut">@string.Join(", ", agg.GroupByFields)</td>
+                                                        <td>
+                                                            @if (agg.CanRemove)
+                                                            {
+                                                                <button class="btn btn-danger btn-sm"
+                                                                        @onclick='() => compCtx.OnRemoveAggregation(agg.Name)'>
+                                                                    Remove
+                                                                </button>
+                                                            }
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </div>
+
+                            <div style="height:14px;"></div>
+
+                            @* ── Live Preview ─────────────────────────────────────────────────────── *@
+                            <div class="card">
+                                <div class="card-h">
+                                    <h3>Live Preview</h3>
+                                    <button class="btn btn-primary btn-sm"
+                                            disabled="@(compCtx.IsPreviewLoading || compCtx.WorkingSources.Count == 0)"
+                                            @onclick='() => compCtx.OnPreview()'>
+                                        @if (compCtx.IsPreviewLoading)
+                                        {
+                                            <span>Running…</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Run Preview</span>
+                                        }
+                                    </button>
+                                </div>
+                                @if (compCtx.IsPreviewLoading)
+                                {
+                                    <div class="card-b"><div class="loadwrap"><div class="spin"></div></div></div>
+                                }
+                                else if (compCtx.PreviewRows.Count == 0)
+                                {
+                                    <div class="card-b"><div class="empty">Click Run Preview to see data from the current composition.</div></div>
+                                }
+                                else
+                                {
+                                    <div class="card-b" style="padding:0 10px 12px;overflow-x:auto;">
+                                        <table class="tbl">
+                                            <thead>
+                                                <tr>
+                                                    @foreach (var col in compCtx.PreviewRows[0].Keys)
+                                                    {
+                                                        <th>@col</th>
+                                                    }
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var row in compCtx.PreviewRows)
+                                                {
+                                                    <tr>
+                                                        @foreach (var val in row.Values)
+                                                        {
+                                                            <td class="mut">@(val?.ToString() ?? "-")</td>
+                                                        }
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </ChildContent>
+                </DataSetDetailProvider>
+            }
+            else if (_activeTab == "lineage")
+            {
+                <div class="card">
+                    <div class="card-b" style="text-align:center;padding:40px 20px;">
+                        <p style="color:var(--n-400);margin:0 0 18px;">View data lineage for this DataSet in the full lineage explorer.</p>
+                        <button class="btn btn-primary btn-sm" @onclick='() => Nav.NavigateTo($"/lineage/DataSet/{Name}")'>Open Lineage Explorer</button>
+                    </div>
+                </div>
+            }
+            else if (_activeTab == "preview")
+            {
+                <DataSetDetailPreviewPane @ref="_previewPane" DataSetName="@Name">
+                    <ChildContent Context="prevCtx">
+                        <div class="card">
+                            <div class="card-h">
+                                <h3>Preview</h3>
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <select class="fin" style="width:auto;" value="@prevCtx.RowLimit" @onchange='e => { if (int.TryParse(e.Value?.ToString(), out var lim)) prevCtx.OnRowLimitChanged(lim); }'>
+                                        <option value="10">10 rows</option>
+                                        <option value="25">25 rows</option>
+                                        <option value="50">50 rows</option>
+                                        <option value="100">100 rows</option>
+                                    </select>
+                                    <button class="btn btn-primary btn-sm"
+                                            disabled="@(ctx.CurrentDataSet!.Sources.Count == 0)"
+                                            @onclick='() => prevCtx.OnLoadPreview()'>Run Query</button>
+                                </div>
+                            </div>
+                        </div>
+                        @if (prevCtx.IsLoading)
+                        {
+                            <div class="loadwrap"><div class="spin"></div></div>
+                        }
+                        else if (prevCtx.ErrorMessage is not null)
+                        {
+                            <div class="card"><div class="card-b"><div class="alert alert-err">@prevCtx.ErrorMessage</div></div></div>
+                        }
+                        else if (prevCtx.Columns.Count > 0)
+                        {
+                            <PreviewPanel Columns="prevCtx.Columns" Rows="prevCtx.Rows" OnExportCsv="EventCallback.Factory.Create(this, prevCtx.OnExportCsv)" />
+                        }
+                        else
+                        {
+                            <div class="card"><div class="card-b"><div class="empty">Select a row limit and click Run Query to preview data from this DataSet's primary source.</div></div></div>
+                        }
+                    </ChildContent>
+                </DataSetDetailPreviewPane>
+            }
+            else if (_activeTab == "annotations")
+            {
+                <AnnotationProvider DataSetName="@Name">
+                    <ChildContent Context="annCtx">
+                        @if (annCtx.IsLoading)
+                        {
+                            <div class="loadwrap"><div class="spin"></div></div>
+                        }
+                        else if (annCtx.ErrorMessage is not null)
+                        {
+                            <div class="card"><div class="card-b"><div class="alert alert-err">@annCtx.ErrorMessage</div></div></div>
+                        }
+                        else
+                        {
+                            @if (annCtx.Annotations.Count == 0)
+                            {
+                                <div class="card"><div class="card-b"><div class="empty">No annotations for this DataSet. Add metadata below.</div></div></div>
+                            }
+                            else
+                            {
+                                <div class="card">
+                                    <div class="card-h"><h3>Catalog Metadata</h3><span class="meta">@annCtx.Annotations.Count annotation(s)</span></div>
+                                    <div class="card-b" style="padding:0 10px 12px;">
+                                        <table class="tbl">
+                                            <thead>
+                                                <tr>
+                                                    <th>Owner</th>
+                                                    <th>Steward</th>
+                                                    <th>Classification</th>
+                                                    <th>Tags</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var ann in annCtx.Annotations)
+                                                {
+                                                    <tr>
+                                                        <td><div class="cellpad nm">@(ann.Owner ?? "-")</div></td>
+                                                        <td class="mut">@(ann.Steward ?? "-")</td>
+                                                        <td>
+                                                            @if (!string.IsNullOrEmpty(ann.Classification))
+                                                            {
+                                                                <span class="badge b-ok"><span class="bd"></span>@ann.Classification</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="mut">-</span>
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            <div class="filters" style="margin:0;gap:6px;">
+                                                                @foreach (var tag in ann.Tags)
+                                                                {
+                                                                    <span class="tpill">@tag</span>
+                                                                }
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div style="height:14px;"></div>
+                            }
+
+                            <div class="card">
+                                <div class="card-h"><h3>Add Annotation</h3></div>
+                                <div class="card-b">
+                                    <div class="fgrid">
+                                        <div class="frow">
+                                            <label>Owner</label>
+                                            <input class="fin" @bind="_annotationModel.Owner" placeholder="Data owner" />
+                                        </div>
+                                        <div class="frow">
+                                            <label>Steward</label>
+                                            <input class="fin" @bind="_annotationModel.Steward" placeholder="Data steward" />
+                                        </div>
+                                        <div class="frow">
+                                            <label>Classification</label>
+                                            <select class="fin" @bind="_annotationModel.Classification">
+                                                <option value="">-- Select --</option>
+                                                <option>Public</option>
+                                                <option>Internal</option>
+                                                <option>Confidential</option>
+                                                <option>Restricted</option>
+                                            </select>
+                                        </div>
+                                        <div class="frow">
+                                            <label>Tags (comma-separated)</label>
+                                            <input class="fin" @bind="_tagInput" placeholder="finance, compliance" />
+                                        </div>
+                                    </div>
+                                    <div class="actions" style="justify-content:flex-end;">
+                                        <button class="btn btn-primary btn-sm" @onclick="() => SubmitAnnotation(annCtx)">Save Annotation</button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </ChildContent>
+                </AnnotationProvider>
+            }
+        }
+    </ChildContent>
+</DataSetProvider>
+
+@code {
+    [Parameter] public string Name { get; set; } = "";
+
+    /// <summary>Retained for backward-compatible public API; tab styling now uses console.css .tabs.</summary>
+    [Parameter] public string TabActiveColor { get; set; } = "on";
+    /// <summary>Retained for backward-compatible public API; tab styling now uses console.css .tabs.</summary>
+    [Parameter] public string TabInactiveColor { get; set; } = "";
+
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private DataSetProvider _provider = null!;
+    private DataSetDetailPreviewPane _previewPane = null!;
+    private string _activeTab = "fields";
+
+    private CreateAnnotationRequest _annotationModel = new();
+    private string _tagInput = string.Empty;
+
+    // ── Compose workbench form state ──────────────────────────────────────────
+
+    private bool _showAddSource;
+    private string _addSourceAlias = string.Empty;
+    private string _addSourceDataStore = string.Empty;
+    private string _addSourcePath = string.Empty;
+    private string _addSourceContainer = string.Empty;
+
+    private bool _showAddJoin;
+    private string _addJoinLeftSource = string.Empty;
+    private string _addJoinLeftField = string.Empty;
+    private string _addJoinType = "Inner";
+    private string _addJoinRightSource = string.Empty;
+    private string _addJoinRightField = string.Empty;
+
+    private bool _showAddCalc;
+    private string _addCalcName = string.Empty;
+    private string _addCalcFormula = string.Empty;
+    private string _addCalcDataType = string.Empty;
+
+    private bool _showAddAgg;
+    private string _addAggName = string.Empty;
+    private string _addAggFunction = "Sum";
+    private string _addAggSourceField = string.Empty;
+    private string _addAggGroupBy = string.Empty;
+
+    // ── Annotation helpers ────────────────────────────────────────────────────
+
+    private async Task SubmitAnnotation(AnnotationContext annCtx)
+    {
+        _annotationModel.Tags = _tagInput
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+        await annCtx.OnCreate(_annotationModel);
+        _annotationModel = new CreateAnnotationRequest();
+        _tagInput = string.Empty;
+    }
+
+    // ── Compose workbench submit helpers ─────────────────────────────────────
+
+    private async Task SubmitAddSource(DataSetDetailContext compCtx)
+    {
+        if (string.IsNullOrWhiteSpace(_addSourceAlias) ||
+            string.IsNullOrWhiteSpace(_addSourceDataStore))
+            return;
+
+        var dto = new DataSetSourceEditorPayload
+        {
+            SourceName = _addSourceAlias.Trim(),
+            DataStoreName = _addSourceDataStore.Trim(),
+            Path = _addSourcePath.Trim(),
+            ContainerName = _addSourceContainer.Trim(),
+            IsPrimary = false,
+            FieldMappings = [],
+            CanRemove = true
+        };
+
+        await compCtx.OnAddSource(dto);
+        _addSourceAlias = string.Empty;
+        _addSourceDataStore = string.Empty;
+        _addSourcePath = string.Empty;
+        _addSourceContainer = string.Empty;
+        _showAddSource = false;
+    }
+
+    private async Task SubmitAddJoin(DataSetDetailContext compCtx)
+    {
+        if (string.IsNullOrWhiteSpace(_addJoinLeftSource) ||
+            string.IsNullOrWhiteSpace(_addJoinRightSource))
+            return;
+
+        var joinType = string.IsNullOrWhiteSpace(_addJoinType) ? "Inner" : _addJoinType;
+
+        var dto = new DataSetJoinEditorPayload
+        {
+            JoinId = Guid.NewGuid(),
+            LeftSourceName = _addJoinLeftSource,
+            RightSourceName = _addJoinRightSource,
+            JoinType = joinType,
+            LeftKeyField = _addJoinLeftField.Trim(),
+            RightKeyField = _addJoinRightField.Trim(),
+            CanRemove = true
+        };
+
+        await compCtx.OnAddJoin(dto);
+        _addJoinLeftSource = string.Empty;
+        _addJoinLeftField = string.Empty;
+        _addJoinType = "Inner";
+        _addJoinRightSource = string.Empty;
+        _addJoinRightField = string.Empty;
+        _showAddJoin = false;
+    }
+
+    private async Task SubmitAddCalculation(DataSetDetailContext compCtx)
+    {
+        if (string.IsNullOrWhiteSpace(_addCalcName) ||
+            string.IsNullOrWhiteSpace(_addCalcFormula))
+            return;
+
+        var dto = new DataSetCalculationEditorPayload
+        {
+            CalculationId = Guid.NewGuid(),
+            Name = _addCalcName.Trim(),
+            Formula = _addCalcFormula.Trim(),
+            DataType = _addCalcDataType.Trim(),
+            CanRemove = true
+        };
+
+        await compCtx.OnAddCalculation(dto);
+        _addCalcName = string.Empty;
+        _addCalcFormula = string.Empty;
+        _addCalcDataType = string.Empty;
+        _showAddCalc = false;
+    }
+
+    private async Task SubmitAddAggregation(DataSetDetailContext compCtx)
+    {
+        if (string.IsNullOrWhiteSpace(_addAggName) ||
+            string.IsNullOrWhiteSpace(_addAggSourceField))
+            return;
+
+        var aggFunc = string.IsNullOrWhiteSpace(_addAggFunction) ? "Sum" : _addAggFunction;
+
+        var groupByFields = _addAggGroupBy
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+
+        var dto = new DataSetAggregationEditorPayload
+        {
+            AggregationId = Guid.NewGuid(),
+            Name = _addAggName.Trim(),
+            AggregationFunction = aggFunc,
+            SourceField = _addAggSourceField.Trim(),
+            GroupByFields = groupByFields,
+            CanRemove = true
+        };
+
+        await compCtx.OnAddAggregation(dto);
+        _addAggName = string.Empty;
+        _addAggFunction = "Sum";
+        _addAggSourceField = string.Empty;
+        _addAggGroupBy = string.Empty;
+        _showAddAgg = false;
+    }
+}

@@ -1,0 +1,150 @@
+@* Execution panel — shown during a test run.
+   Top section: overall status + Pause/Resume/Step/Stop toolbar buttons.
+   Middle: scrollable log tail (last 100 lines from SignalR).
+   Bottom: Inspector content (populated when a node or edge is clicked).
+   Collapsible via _isPanelOpen state owned by Builder.razor. *@
+
+<div class="card" style="display:flex;flex-direction:column;height:100%;font-size:12px;border-radius:0;">
+    <!-- Execution status header -->
+    <div class="card-h" style="padding:12px 14px;border-bottom:1px solid var(--hair);">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span class="mono" style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--glacier);">Test Run</span>
+            @if (!string.IsNullOrEmpty(ExecutionStatus))
+            {
+                <span class="badge @GetStatusBadgeClass(ExecutionStatus)"><span class="bd"></span>@ExecutionStatus.ToUpperInvariant()</span>
+            }
+        </div>
+        @if (OnClose.HasDelegate)
+        {
+            <button class="btn btn-ghost btn-sm" @onclick="OnClose" title="Close execution panel">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        }
+    </div>
+
+    <!-- Control buttons -->
+    <div style="display:flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid var(--hair);">
+        @if (IsPaused)
+        {
+            <button class="btn btn-secondary btn-sm" style="color:var(--success);"
+                    @onclick="OnResume"
+                    title="Resume execution">
+                <svg fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                </svg>
+                Resume
+            </button>
+        }
+        else
+        {
+            <button class="btn btn-secondary btn-sm" style="color:var(--warn);"
+                    @onclick="OnPause"
+                    disabled="@(!IsRunning)"
+                    title="Pause execution">
+                <svg fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                </svg>
+                Pause
+            </button>
+        }
+        <button class="btn btn-secondary btn-sm" style="color:var(--glacier);"
+                @onclick="OnStep"
+                disabled="@(!IsPaused)"
+                title="Step one batch">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Step
+        </button>
+        <button class="btn btn-secondary btn-sm" style="color:var(--signal);margin-left:auto;"
+                @onclick="OnStop"
+                disabled="@(!IsRunning && !IsPaused)"
+                title="Stop execution">
+            <svg fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 6h12v12H6z" />
+            </svg>
+            Stop
+        </button>
+    </div>
+
+    <!-- Log tail -->
+    <div class="term" style="flex:1;overflow-y:auto;font-size:10px;min-height:80px;max-height:192px;border-radius:0;padding:10px 14px;">
+        @if (LogLines.Count == 0)
+        {
+            <div class="mut" style="text-align:center;margin-top:8px;font-style:italic;">Waiting for log output...</div>
+        }
+        else
+        {
+            @foreach (var line in LogLines)
+            {
+                <div>@line</div>
+            }
+        }
+    </div>
+
+    <!-- Inspector section (populated on node/edge click) -->
+    <div style="border-top:1px solid var(--hair);flex:none;max-height:50%;">
+        <PipelineInspectorPanel
+            TaskState="@InspectorTaskState"
+            EdgeState="@InspectorEdgeState"
+            ItemLabel="@InspectorItemLabel"
+            OnClose="@OnInspectorClose" />
+    </div>
+</div>
+
+@code {
+    /// <summary>Current execution status string (e.g., "Running", "Paused", "Complete").</summary>
+    [Parameter] public string ExecutionStatus { get; set; } = "";
+
+    /// <summary>True while the execution is actively running (not paused, not terminal).</summary>
+    [Parameter] public bool IsRunning { get; set; }
+
+    /// <summary>True while the execution is paused.</summary>
+    [Parameter] public bool IsPaused { get; set; }
+
+    /// <summary>Rolling log lines (last 100 from SignalR broadcast).</summary>
+    [Parameter] public IReadOnlyList<string> LogLines { get; set; } = Array.Empty<string>();
+
+    /// <summary>Task inspector state for the currently selected node (null if none/edge selected).</summary>
+    [Parameter] public Fdw.Services.Etl.Abstractions.Execution.TaskInspectorState? InspectorTaskState { get; set; }
+
+    /// <summary>Edge inspector state for the currently selected edge (null if none/node selected).</summary>
+    [Parameter] public Fdw.Services.Etl.Abstractions.Execution.EdgeInspectorState? InspectorEdgeState { get; set; }
+
+    /// <summary>Display label for the currently inspected item.</summary>
+    [Parameter] public string? InspectorItemLabel { get; set; }
+
+    /// <summary>Fired when the user clicks Pause.</summary>
+    [Parameter] public EventCallback OnPause { get; set; }
+
+    /// <summary>Fired when the user clicks Resume.</summary>
+    [Parameter] public EventCallback OnResume { get; set; }
+
+    /// <summary>Fired when the user clicks Step (one batch).</summary>
+    [Parameter] public EventCallback OnStep { get; set; }
+
+    /// <summary>Fired when the user clicks Stop/Abort.</summary>
+    [Parameter] public EventCallback OnStop { get; set; }
+
+    /// <summary>Fired when the user closes the execution panel.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Fired when the user closes the inspector sub-panel.</summary>
+    [Parameter] public EventCallback OnInspectorClose { get; set; }
+
+    private static string GetStatusBadgeClass(string status)
+    {
+        if (string.Equals(status, "Running", StringComparison.OrdinalIgnoreCase))
+            return "b-ok";
+        if (string.Equals(status, "Paused", StringComparison.OrdinalIgnoreCase))
+            return "b-warn";
+        if (string.Equals(status, "Complete", StringComparison.OrdinalIgnoreCase))
+            return "b-run";
+        if (string.Equals(status, "Failed", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            return "b-fail";
+        return "b-idle";
+    }
+}

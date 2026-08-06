@@ -1,0 +1,135 @@
+@namespace Fdw.Data.Components.Visualization
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Data.Abstractions.Visualization
+@using Fdw.Data.Components.Logging
+@using Fdw.Results
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for per-column statistics display.
+    /// Computes and exposes statistical summaries via <see cref="StatSetContext"/>.
+    /// </summary>
+    [Parameter] public RenderFragment<StatSetContext>? ChildContent { get; set; }
+
+    /// <summary>Gets or sets the stat set service for computing statistics.</summary>
+    [Parameter, EditorRequired] public IStatSetService StatSetService { get; set; } = default!;
+
+    /// <summary>Gets or sets the stat set request template (connection/container info).</summary>
+    [Parameter] public StatSetRequest? RequestTemplate { get; set; }
+
+    /// <summary>Gets or sets whether to auto-compute on first render.</summary>
+    [Parameter] public bool AutoCompute { get; set; }
+
+    [Inject] private ILogger<StatSetProvider>? LoggerParam { get; set; }
+
+    private ILogger<StatSetProvider> _logger = NullLogger<StatSetProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private StatSetResponse? _stats;
+    private string? _selectedColumn;
+    private IReadOnlyList<string> _availableColumns = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private StatSetContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<StatSetProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && AutoCompute && RequestTemplate is not null && !_initialized)
+        {
+            _initialized = true;
+            await ComputeStats(RequestTemplate);
+        }
+    }
+
+    // ── Methods ──────────────────────────────────────────────────────────────
+
+    private async Task ComputeStats(StatSetRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        StatSetProviderLog.ComputingStats(_logger, request.ColumnNames.Count);
+
+        try
+        {
+            var result = await StatSetService.ComputeStatSet(request, cancellationToken);
+            if (result.IsSuccess && result.Value is not null)
+            {
+                _stats = result.Value;
+                _availableColumns = _stats.ColumnStats.Keys.ToList();
+                StatSetProviderLog.StatsComputed(_logger, _availableColumns.Count);
+            }
+            else
+            {
+                _stats = null;
+                _availableColumns = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { StatSetProviderLog.StatsComputationFailed(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _stats = null;
+            _availableColumns = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private Task SelectColumn(string columnName, CancellationToken cancellationToken = default)
+    {
+        _selectedColumn = columnName;
+        StatSetProviderLog.ColumnSelected(_logger, columnName);
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new StatSetContext
+        {
+            Stats = _stats,
+            SelectedColumn = _selectedColumn,
+            AvailableColumns = _availableColumns,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnComputeStats = request => ComputeStats(request),
+            OnSelectColumn = column => SelectColumn(column)
+        };
+    }
+}

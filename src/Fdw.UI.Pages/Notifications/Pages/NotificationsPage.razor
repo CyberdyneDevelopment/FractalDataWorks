@@ -1,0 +1,215 @@
+@page "/admin/notifications"
+@attribute [Authorize(Policy = "notifications:read")]
+@using System.Security.Claims
+
+<PageTitle>Notifications - Cyberdyne</PageTitle>
+
+<NotificationsProvider UserId="_currentUserId">
+    <ChildContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">Administration</div>
+                <h1>Notifications</h1>
+                <div class="sub">Manage notification configurations, rules, and recipient lists.</div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-ghost" @onclick="() => ctx.OnLoadNotifications()">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
+        {
+            <div class="card" style="margin-bottom:14px;">
+                <div class="card-b mono" style="color:var(--signal);">@ctx.ErrorMessage</div>
+            </div>
+        }
+
+        @if (ctx.IsLoading && ctx.Notifications.Count == 0 && ctx.Rules.Count == 0 && ctx.Lists.Count == 0)
+        {
+            <div class="card">
+                <div class="card-b" style="padding:48px 20px;text-align:center;">
+                    <p class="mut" style="color:var(--n-500);">Loading notifications&hellip;</p>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="tabs" style="margin-bottom:16px;">
+                <button class="tab-btn @(_activeTab == 0 ? "active" : "")" @onclick="() => _activeTab = 0">
+                    Notifications (@ctx.Notifications.Count)
+                </button>
+                <button class="tab-btn @(_activeTab == 1 ? "active" : "")" @onclick="() => _activeTab = 1">
+                    Rules (@ctx.Rules.Count)
+                </button>
+                <button class="tab-btn @(_activeTab == 2 ? "active" : "")" @onclick="() => _activeTab = 2">
+                    Lists (@ctx.Lists.Count)
+                </button>
+            </div>
+
+            @if (_activeTab == 0)
+            {
+                @if (ctx.Notifications.Count == 0)
+                {
+                    <div class="card">
+                        <div class="card-b" style="padding:48px 20px;text-align:center;">
+                            <p style="color:var(--n-500);">No notification configurations found.</p>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card">
+                        <div class="card-h"><h3>Notification Configurations</h3></div>
+                        <div class="card-b" style="padding:0 10px 12px;">
+                            <table class="tbl">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>Description</th>
+                                        <th>Enabled</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var notification in ctx.Notifications)
+                                    {
+                                        <tr>
+                                            <td><div class="cellpad nm">@notification.Name</div></td>
+                                            <td class="mut">@(notification.ServiceOptionType ?? "—")</td>
+                                            <td class="mut">@(notification.Description ?? "—")</td>
+                                            <td class="mut">
+                                                <span class="sw @(notification.IsEnabled ? "on" : "")" title="@(notification.IsEnabled ? "Enabled" : "Disabled")"></span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            }
+            else if (_activeTab == 1)
+            {
+                @if (ctx.Rules.Count == 0)
+                {
+                    <div class="card">
+                        <div class="card-b" style="padding:48px 20px;text-align:center;">
+                            <p style="color:var(--n-500);">No notification rules found.</p>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card">
+                        <div class="card-h"><h3>Notification Rules</h3></div>
+                        <div class="card-b" style="padding:0 10px 12px;">
+                            <table class="tbl">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Service</th>
+                                        <th>Severity</th>
+                                        <th>Enabled</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var rule in ctx.Rules)
+                                    {
+                                        <tr>
+                                            <td><div class="cellpad nm">@rule.Name</div></td>
+                                            <td class="mut">@rule.NotificationServiceType (@rule.NotificationServiceName)</td>
+                                            <td>
+                                                <span class="badge @GetSeverityClass(rule.Severity)">@rule.Severity</span>
+                                            </td>
+                                            <td class="mut">
+                                                <span class="sw @(rule.IsEnabled ? "on" : "")" title="@(rule.IsEnabled ? "Enabled" : "Disabled")"></span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                @if (ctx.Lists.Count == 0)
+                {
+                    <div class="card">
+                        <div class="card-b" style="padding:48px 20px;text-align:center;">
+                            <p style="color:var(--n-500);">No notification lists found.</p>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card">
+                        <div class="card-h"><h3>Notification Lists</h3></div>
+                        <div class="card-b" style="padding:0 10px 12px;">
+                            <table class="tbl">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Description</th>
+                                        <th>Members</th>
+                                        <th>Enabled</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var list in ctx.Lists)
+                                    {
+                                        <tr>
+                                            <td><div class="cellpad nm">@list.Name</div></td>
+                                            <td class="mut">@(list.Description ?? "—")</td>
+                                            <td class="num">@list.MemberCount</td>
+                                            <td class="mut">
+                                                <span class="sw @(list.IsEnabled ? "on" : "")" title="@(list.IsEnabled ? "Enabled" : "Disabled")"></span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            }
+        }
+    </ChildContent>
+</NotificationsProvider>
+
+@code {
+    [Inject] private Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
+
+    private Guid _currentUserId;
+    // Why: auto-property, not a field — the tab index is only ever written from @onclick lambdas in
+    // markup, which the Razor generator's flow analysis misses, tripping CS0649 (warning-as-error in
+    // Release). A property sidesteps CS0649 while keeping the same name for the existing references.
+    private int _activeTab { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        // Why: the OIDC subject is carried on the "sub" claim (matching the server-side resolution
+        // order); only some principals remap it to NameIdentifier. Checking sub first avoids a
+        // Guid.Empty round-trip that would silently load/save nothing.
+        var userIdValue = authState.User.FindFirst("sub")?.Value
+            ?? authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (Guid.TryParse(userIdValue, out var id) && id != Guid.Empty)
+            _currentUserId = id;
+    }
+
+    private static string GetSeverityClass(string severity) =>
+        severity.ToUpperInvariant() switch
+        {
+            "CRITICAL" => "badge-danger",
+            "HIGH" or "ERROR" => "badge-warning",
+            "MEDIUM" or "WARNING" => "badge-caution",
+            _ => "badge-idle"
+        };
+}

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <!-- Default output path for generated DDL files -->
+    <DdlOutputPath Condition="'$(DdlOutputPath)' == ''">$(SolutionDir)database</DdlOutputPath>
+
+    <!-- Target database system (MsSql, PostgreSql, MySql, etc.) -->
+    <DdlTargetDatabase Condition="'$(DdlTargetDatabase)' == ''">MsSql</DdlTargetDatabase>
+
+    <!-- Enable DDL generation on build (default: false) -->
+    <GenerateDdlOnBuild Condition="'$(GenerateDdlOnBuild)' == ''">false</GenerateDdlOnBuild>
+  </PropertyGroup>
+
+  <!--
+    Target: GenerateDatabaseProject
+
+    Generates DDL files from TypeCollection metadata after successful build.
+
+    Usage:
+      Set <GenerateDdlOnBuild>true</GenerateDdlOnBuild> in your project file
+      OR
+      Run: dotnet build /p:GenerateDdlOnBuild=true
+  -->
+  <Target Name="GenerateDatabaseProject"
+          AfterTargets="Build"
+          Condition="'$(GenerateDdlOnBuild)' == 'true' AND '$(TargetFramework)' != ''">
+
+    <Message Text="Generating DDL files to $(DdlOutputPath)" Importance="high" />
+    <Message Text="Target Database: $(DdlTargetDatabase)" Importance="high" />
+
+    <!-- Invoke the DDL generation task -->
+    <GenerateDdlFiles
+      AssemblyPath="$(TargetPath)"
+      OutputPath="$(DdlOutputPath)"
+      TargetDatabase="$(DdlTargetDatabase)" />
+
+  </Target>
+
+  <!--
+    Import custom MSBuild task
+    The task assembly will be packaged in tools/ folder
+  -->
+  <UsingTask
+    TaskName="GenerateDdlFiles"
+    AssemblyFile="$(MSBuildThisFileDirectory)..\tools\Fdw.Schema.Ddl.Tasks.dll"
+    Condition="Exists('$(MSBuildThisFileDirectory)..\tools\Fdw.Schema.Ddl.Tasks.dll')" />
+
+</Project>

@@ -1,0 +1,118 @@
+@namespace Fdw.Data.UI.Components.DataCommand.Skins
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.UI.CommandBuilders.Abstractions
+
+@* Bulk Insert command skin — Target container + source mapping + BatchSize.
+   Tailwind-only. *@
+
+@if (Context is null)
+{
+    <div class="fhint mono">No command context.</div>
+}
+else
+{
+    <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="frow" style="margin-bottom:0;">
+            <label class="flbl">Target Container</label>
+            <DataContainerPicker Containers="@Context.AvailableContainers"
+                                 SelectedContainerId="@_targetId"
+                                 SelectedContainerIdChanged="@OnTargetChanged"
+                                 Placeholder="Select target container..." />
+        </div>
+
+        @* Field mapping: source field → target field *@
+        <div class="frow" style="margin-bottom:0;">
+            <div class="card-h" style="padding:0;">
+                <label class="flbl">Field Mapping (source → target)</label>
+                <button class="btn btn-secondary btn-sm" @onclick="AddRow">+ Field</button>
+            </div>
+            @if (_values.Count == 0)
+            {
+                <p class="fhint mono">Add field mappings to define the insert shape.</p>
+            }
+            else
+            {
+                @for (var i = 0; i < _values.Count; i++)
+                {
+                    var idx = i;
+                    var v = _values[idx];
+                    <div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:4px;align-items:center;">
+                        <input class="fin mono" placeholder="source field"
+                               value="@v.Value"
+                               @oninput="@(e => SetSourceField(idx, e.Value?.ToString() ?? string.Empty))" />
+                        <span class="mono" style="color:var(--n-500);padding:0 4px;">→</span>
+                        @if (_targetFields.Any())
+                        {
+                            <select class="fin"
+                                    value="@v.Field"
+                                    @onchange="@(e => SetTargetField(idx, e.Value?.ToString() ?? string.Empty))">
+                                <option value="">Target field...</option>
+                                @foreach (var f in _targetFields)
+                                {
+                                    <option value="@f.Name">@f.DisplayLabel</option>
+                                }
+                            </select>
+                        }
+                        else
+                        {
+                            <input class="fin mono" placeholder="target field"
+                                   value="@v.Field"
+                                   @oninput="@(e => SetTargetField(idx, e.Value?.ToString() ?? string.Empty))" />
+                        }
+                        <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => RemoveRow(idx)">✕</button>
+                    </div>
+                }
+            }
+        </div>
+
+        <div class="frow" style="margin-bottom:0;">
+            <label class="flbl">Batch Size (0 = connection default)</label>
+            <input class="fin" type="number" min="0"
+                   value="@Context.CurrentSpec.BatchSize"
+                   @oninput="@(e => OnBatchSizeChanged(e))" />
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public DataCommandContext? Context { get; set; }
+    public string SupportedKind => "BulkInsert";
+    public Type ContextType => typeof(DataCommandContext);
+
+    private Guid _targetId;
+    private IReadOnlyList<DataFieldSummary> _targetFields = [];
+    private List<DataCommandValueEntry> _values = [];
+
+    protected override void OnParametersSet()
+    {
+        if (Context is null) return;
+        _targetId = Context.CurrentSpec.Target?.ContainerId ?? Guid.Empty;
+        _targetFields = Context.GetFields(_targetId);
+        _values = Context.CurrentSpec.Values.ToList();
+    }
+
+    private async Task OnTargetChanged(Guid id)
+    {
+        _targetId = id;
+        _targetFields = Context?.GetFields(id) ?? [];
+        if (Context is not null) await Context.SetTarget(id).ConfigureAwait(false);
+    }
+
+    private void AddRow() { _values.Add(new DataCommandValueEntry()); _ = Sync(); }
+    private void RemoveRow(int idx) { if (idx >= 0 && idx < _values.Count) _values.RemoveAt(idx); _ = Sync(); }
+    private void SetSourceField(int idx, string v) { if (idx < _values.Count) _values[idx] = _values[idx] with { Value = v }; _ = Sync(); }
+    private void SetTargetField(int idx, string v) { if (idx < _values.Count) _values[idx] = _values[idx] with { Field = v }; _ = Sync(); }
+
+    private async Task OnBatchSizeChanged(ChangeEventArgs e)
+    {
+        if (Context is not null && int.TryParse(e.Value?.ToString(), out var val))
+            await Context.SetBatchSize(val).ConfigureAwait(false);
+    }
+
+    private async Task Sync()
+    {
+        if (Context is not null) await Context.SetValues(_values).ConfigureAwait(false);
+    }
+}

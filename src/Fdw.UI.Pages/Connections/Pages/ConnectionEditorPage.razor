@@ -1,0 +1,111 @@
+@page "/connections/{Name}/configure"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>@(_isEdit ? "Edit" : "New") Connection - Cyberdyne</PageTitle>
+
+<ConnectionProvider>
+    <ChildContent Context="ctx">
+        <div style="max-width:680px;margin:0 auto;">
+            <div class="pagehead">
+                <div>
+                    <div class="ey">Data Sources · Connections</div>
+                    <h1>@(_isEdit ? "Edit Connection" : "New Connection")</h1>
+                    <div class="sub">Configure connection-agnostic access settings.</div>
+                </div>
+                <div class="actions">
+                    <a class="btn btn-ghost" href="/connections">Cancel</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-h">
+                    <h3>Connection Configuration</h3>
+                </div>
+                <div class="card-b">
+                    @if (_isLoading)
+                    {
+                        <div style="padding:32px;text-align:center;">
+                            <span class="badge b-run"><span class="bd"></span>Loading</span>
+                        </div>
+                    }
+                    else
+                    {
+                        @if (!string.IsNullOrEmpty(_errorMessage))
+                        {
+                            <div class="danger" style="margin-bottom:16px;">
+                                <div class="t"><p style="color:var(--signal);">@_errorMessage</p></div>
+                            </div>
+                        }
+
+                        <div class="frow">
+                            <label>Name</label>
+                            <input class="finput mono" @bind="_name" disabled="@_isEdit" placeholder="Connection name" />
+                        </div>
+
+                        @if (ctx.ConnectionTypes.Any())
+                        {
+                            <div class="frow">
+                                <label>Connection Type</label>
+                                <select class="finput" @bind="_connectionType" disabled="@_isEdit">
+                                    <option value="">Select type...</option>
+                                    @foreach (var t in ctx.ConnectionTypes)
+                                    {
+                                        @* Why: option value must be the type name (ConnectionTypePayload.Id is empty); Name is the ServiceType key. *@
+                                        <option value="@t.Name">@t.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+
+                        <div class="actions" style="padding-top:8px;">
+                            <button class="btn btn-primary" @onclick="() => Save(ctx)" disabled="@_isSaving">
+                                @(_isSaving ? "Saving..." : "Save")
+                            </button>
+                            <a href="/connections" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </ChildContent>
+</ConnectionProvider>
+
+@code {
+    [Parameter] public string? Name { get; set; }
+
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private bool _isEdit => !string.IsNullOrEmpty(Name);
+    private bool _isLoading = false;
+    private bool _isSaving;
+    private string? _errorMessage;
+    private string _name = "";
+    private string _connectionType = "";
+
+    private async Task Save(ConnectionContext ctx)
+    {
+        if (string.IsNullOrWhiteSpace(_name)) return;
+        _isSaving = true;
+        _errorMessage = null;
+
+        try
+        {
+            if (_isEdit)
+            {
+                var result = await ctx.OnUpdateConnection(_name, new UpdateConnectionClientRequest());
+                if (result is not null) Nav.NavigateTo("/connections");
+                else _errorMessage = "Failed to update connection";
+            }
+            else
+            {
+                var result = await ctx.OnCreateConnection(new CreateConnectionClientRequest { Name = _name, ServiceType = _connectionType });
+                if (result is not null) Nav.NavigateTo("/connections");
+                else _errorMessage = "Failed to create connection";
+            }
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

@@ -1,0 +1,280 @@
+@namespace Fdw.Data.Components.DataSets
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.UI.Pipelines.Clients
+@using Fdw.UI.Pipelines.Clients.Models
+@using Fdw.Data.Components.Logging
+@using Fdw.Results
+@using Fdw.Web.Calculations.Clients
+@using Fdw.Web.Calculations.Clients.CalculationEntities
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for calculated DataSet designer: loads an existing pipeline graph
+    /// by DataSet name and provides create/update for pipeline designer state.
+    /// </summary>
+    /// <remarks>
+    /// The pipeline load/save operations formerly depended on the retired
+    /// <c>FileSystemDesignerPipelineStore</c> (via the old <c>IPipelineDesignerClient</c> CRUD
+    /// methods). Those store-CRUD methods have been removed. Load and save are now no-ops that
+    /// return structured failure messages until this component is migrated to use
+    /// <c>IPipelineClient</c> or <c>PipelineServiceConfigurationProvider</c> directly.
+    /// The calculation compile path is unaffected.
+    /// </remarks>
+    [Parameter] public RenderFragment<CalculatedDataSetContext>? ChildContent { get; set; }
+
+    [Parameter] public string? DataSetName { get; set; }
+
+    [Inject] private ICalculationApiClient CalculationClient { get; set; } = default!;
+    [Inject] private ILogger<CalculatedDataSetProvider>? LoggerParam { get; set; }
+
+    private ILogger<CalculatedDataSetProvider> _logger = NullLogger<CalculatedDataSetProvider>.Instance;
+
+    private string? _previousDataSetName;
+
+    // ── State ───────────────────────────────────────────────────────────────────
+
+    private Guid? _pipelineId;
+    private IReadOnlyList<TaskPayload> _initialTasks = [];
+    private IReadOnlyList<TaskConnectionPayload> _initialConnections = [];
+    private bool _isLoading;
+    private bool _isCompiling;
+    private IGenericResult? _lastResult;
+    private CalculatedDataSetContext _context = new();
+
+    // ── Lifecycle ───────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<CalculatedDataSetProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(DataSetName) && !string.Equals(DataSetName, _previousDataSetName, StringComparison.Ordinal))
+        {
+            _previousDataSetName = DataSetName;
+            await LoadExistingDesigner(DataSetName);
+        }
+    }
+
+    // ── Public Methods ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Attempts to load an existing calculated-DataSet pipeline by name.
+    /// </summary>
+    /// <remarks>
+    /// The load-by-name path formerly called the retired <c>FileSystemDesignerPipelineStore</c>.
+    /// It now logs a warning and returns with empty state. Migrating to the real pipeline provider
+    /// is tracked as a follow-up (use <c>IPipelineClient.List()</c> + <c>Get(name)</c>).
+    /// </remarks>
+    public Task LoadExistingDesigner(string dataSetName, CancellationToken cancellationToken = default)
+    {
+        _isLoading = false;
+        _lastResult = GenericResult.Failure(CalculatedDataSetProviderLog.LoadPipelinesFailed(_logger, dataSetName));
+        _initialTasks = [];
+        _initialConnections = [];
+        _pipelineId = null;
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Saves the calculated dataset by compiling its graph into a real calculation entity.
+    /// </summary>
+    /// <remarks>
+    /// Why: a calculated dataset is persisted as a calculation entity in the Calculations domain —
+    /// saving IS compiling the graph through the calculation API (the retired filesystem draft store
+    /// is gone). Delegates to <see cref="Compile"/>; returns the entity id on success, or null on a
+    /// (logged, fail-loud) compile failure.
+    /// </remarks>
+    public async Task<Guid?> Save(
+        IReadOnlyList<TaskPayload> tasks,
+        IReadOnlyList<TaskConnectionPayload> connections,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await Compile(tasks, connections, cancellationToken).ConfigureAwait(false);
+        return result.IsSuccess ? result.Value : null;
+    }
+
+    /// <summary>
+    /// Compiles the pipeline graph into a calculation entity via the Calculations API.
+    /// </summary>
+    public async Task<IGenericResult<Guid>> Compile(
+        IReadOnlyList<TaskPayload> tasks,
+        IReadOnlyList<TaskConnectionPayload> connections,
+        CancellationToken cancellationToken = default)
+    {
+        var name = DataSetName;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return GenericResult<Guid>.Failure(
+                CalculatedDataSetProviderLog.CompileGraphFailed(_logger, "(unnamed)", "DataSetName is required to compile a calculation"));
+        }
+
+        _isCompiling = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        CalculatedDataSetProviderLog.CompilingGraph(_logger, name);
+
+        try
+        {
+            // Locate required nodes
+            var sourceNode = tasks.FirstOrDefault(t => string.Equals(t.TaskType, "Source", StringComparison.Ordinal));
+            if (sourceNode is null)
+            {
+                var msg = CalculatedDataSetProviderLog.CompileNodeMissing(_logger, name, "Source");
+                _lastResult = GenericResult.Failure(msg);
+                return GenericResult<Guid>.Failure(msg);
+            }
+
+            var formulaNode = tasks.FirstOrDefault(t => string.Equals(t.TaskType, "Formula", StringComparison.Ordinal));
+            if (formulaNode is null)
+            {
+                var msg = CalculatedDataSetProviderLog.CompileNodeMissing(_logger, name, "Formula");
+                _lastResult = GenericResult.Failure(msg);
+                return GenericResult<Guid>.Failure(msg);
+            }
+
+            var outputNode = tasks.FirstOrDefault(t => string.Equals(t.TaskType, "Output", StringComparison.Ordinal));
+
+            // Extract Source config
+            var sourceCfg = sourceNode.Configuration ?? new Dictionary<string, object?>(StringComparer.Ordinal);
+            if (!sourceCfg.TryGetValue("DataStoreName", out var dataStoreObj) || dataStoreObj is null)
+            {
+                var msg = CalculatedDataSetProviderLog.CompileConfigurationMissing(_logger, name, "Source", "DataStoreName");
+                _lastResult = GenericResult.Failure(msg);
+                return GenericResult<Guid>.Failure(msg);
+            }
+            if (!sourceCfg.TryGetValue("ContainerName", out var containerObj) || containerObj is null)
+            {
+                var msg = CalculatedDataSetProviderLog.CompileConfigurationMissing(_logger, name, "Source", "ContainerName");
+                _lastResult = GenericResult.Failure(msg);
+                return GenericResult<Guid>.Failure(msg);
+            }
+
+            // Build output result field name from optional output node config
+            var resultFieldName = "Result";
+            if (outputNode?.Configuration?.TryGetValue("ResultFieldName", out var rfObj) == true && rfObj is not null)
+                resultFieldName = rfObj.ToString() ?? "Result";
+
+            // Build the input as a Container-kind declaration (data lives in the connection, not a DataSet)
+            var inputModel = new CalculationEntityInputModel
+            {
+                InputAlias = "input",
+                InputKind = "Container",
+                ConnectionName = dataStoreObj.ToString(),
+                ContainerPath = containerObj.ToString()
+            };
+
+            // Why: look up the calculation entity by name via the list endpoint; the API has no
+            // dedicated get-by-name route so we filter the summary list client-side.
+            var listResult = await CalculationClient.GetCalculationEntities(cancellationToken).ConfigureAwait(false);
+            if (!listResult.IsSuccess)
+            {
+                var msg = CalculatedDataSetProviderLog.CompileGraphFailed(_logger, name, "Failed to retrieve calculation entities from API");
+                _lastResult = GenericResult.Failure(msg);
+                return GenericResult<Guid>.Failure(msg);
+            }
+
+            var existing = listResult.Value?.FirstOrDefault(
+                e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase));
+
+            IGenericResult<CalculationEntityDetailModel> opResult;
+            if (existing is not null)
+            {
+                opResult = await CalculationClient.UpdateCalculationEntity(
+                    existing.Id,
+                    new UpdateCalculationEntityModel
+                    {
+                        Id = existing.Id,
+                        Name = name,
+                        CalculationEntityType = "Formula",
+                        Inputs = new List<CalculationEntityInputModel> { inputModel },
+                        OutputDataSetName = name,
+                        ResultFieldName = resultFieldName,
+                        ResultDataTypeName = "Decimal",
+                        IsEnabled = true
+                    },
+                    cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                opResult = await CalculationClient.CreateCalculationEntity(
+                    new CreateCalculationEntityModel
+                    {
+                        Name = name,
+                        CalculationEntityType = "Formula",
+                        Inputs = new List<CalculationEntityInputModel> { inputModel },
+                        OutputDataSetName = name,
+                        ResultFieldName = resultFieldName,
+                        ResultDataTypeName = "Decimal"
+                    },
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            if (opResult.IsFailure)
+            {
+                var msg = CalculatedDataSetProviderLog.CompileGraphFailed(_logger, name, "Calculation API returned failure");
+                _lastResult = GenericResult.Failure(msg);
+                return GenericResult<Guid>.Failure(msg);
+            }
+
+            var entityId = opResult.Value!.Id;
+            CalculatedDataSetProviderLog.CompiledGraph(_logger, name, entityId);
+            return GenericResult<Guid>.Success(entityId);
+        }
+        catch (OperationCanceledException)
+        {
+            return GenericResult<Guid>.Failure(CalculatedDataSetProviderLog.CompileGraphCancelled(_logger, name));
+        }
+        catch (Exception ex)
+        {
+            var msg = CalculatedDataSetProviderLog.CompileGraphFailed(_logger, name, ex.Message);
+            _lastResult = GenericResult.Failure(msg);
+            return GenericResult<Guid>.Failure(msg);
+        }
+        finally
+        {
+            _isCompiling = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Private Helpers ─────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new CalculatedDataSetContext
+        {
+            PipelineId = _pipelineId,
+            InitialTasks = _initialTasks,
+            InitialConnections = _initialConnections,
+            IsLoading = _isLoading,
+            // Why: Save delegates to Compile, so the "saving" indicator tracks the compile flag.
+            IsSaving = _isCompiling,
+            IsCompiling = _isCompiling,
+            LastResult = _lastResult,
+            OnLoadExistingDesigner = name => LoadExistingDesigner(name),
+            OnSave = (tasks, connections) => Save(tasks, connections),
+            OnCompile = (tasks, connections) => Compile(tasks, connections)
+        };
+    }
+}

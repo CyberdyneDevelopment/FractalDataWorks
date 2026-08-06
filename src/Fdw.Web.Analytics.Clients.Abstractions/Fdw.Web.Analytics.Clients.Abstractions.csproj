@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.Web.Analytics.Clients</RootNamespace>
+    <PackageId>Fdw.Web.Analytics.Clients.Abstractions</PackageId>
+    <Title>Fdw Analytics Client Abstractions</Title>
+    <Description>DTO models for analytics, profiling, and promotion API client operations.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Web.Clients.Abstractions\Fdw.Web.Clients.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

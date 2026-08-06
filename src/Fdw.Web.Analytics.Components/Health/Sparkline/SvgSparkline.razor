@@ -1,0 +1,57 @@
+@namespace Fdw.Web.Analytics.Components.Health.Sparkline
+
+<svg width="@Width" height="@Height" viewBox="0 0 @Width @Height" class="overflow-visible">
+    @if (_points.Count >= 2)
+    {
+        var polyline = string.Join(" ", _points.Select(p => $"{p.X.ToString("F1")},{p.Y.ToString("F1")}"));
+        var fillPath = $"{_points[0].X.ToString("F1")},{Height} {polyline} {_points[^1].X.ToString("F1")},{Height}";
+
+        <!-- Fill area -->
+        <polygon points="@fillPath" fill="@Color" opacity="0.12" />
+        <!-- Line -->
+        <polyline points="@polyline" fill="none" stroke="@Color" stroke-width="1.5"
+                  stroke-linecap="round" stroke-linejoin="round" />
+        <!-- End dot -->
+        <circle cx="@_points[^1].X.ToString("F1")" cy="@_points[^1].Y.ToString("F1")" r="3" fill="@Color" />
+    }
+</svg>
+
+@code {
+    [Parameter] public IReadOnlyList<double> Values { get; set; } = [];
+    [Parameter] public int Width { get; set; } = 120;
+    [Parameter] public int Height { get; set; } = 40;
+    [Parameter] public string Color { get; set; } = "#06b6d4";
+
+    private record struct Point(double X, double Y);
+    private List<Point> _points = [];
+
+    protected override void OnParametersSet()
+    {
+        _points = ComputePoints();
+    }
+
+    private List<Point> ComputePoints()
+    {
+        if (Values.Count < 2)
+        {
+            return [];
+        }
+
+        var padding = 4;
+        var chartW = Width - (padding * 2);
+        var chartH = Height - (padding * 2);
+        var min = Values.Min();
+        var max = Values.Max();
+        var range = max - min;
+        if (range < 0.001) range = 1;
+
+        var stepX = (double)chartW / (Values.Count - 1);
+        var pts = new List<Point>(Values.Count);
+        for (var i = 0; i < Values.Count; i++)
+        {
+            var norm = (Values[i] - min) / range;
+            pts.Add(new Point(padding + (i * stepX), padding + chartH - (norm * chartH)));
+        }
+        return pts;
+    }
+}

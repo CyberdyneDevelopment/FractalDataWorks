@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Why: SUT — SqlDataCommandTranslatorBase<TCommand> lives here -->
+    <ProjectReference Include="..\..\src\Fdw.Services.Connections.Sql\Fdw.Services.Connections.Sql.csproj" />
+    <!-- Why: provides MsSqlQueryTranslator for the fail-loud non-IDatabasePath contract test;
+         transitively provides Fdw.Data (filter/ordering types) and
+         Fdw.Results (GenericResult) -->
+    <ProjectReference Include="..\..\src\Fdw.Services.Connections.MsSql\Fdw.Services.Connections.MsSql.csproj" />
+    <!-- Why: provides OrderingExpression, PagingExpression, and FilterExpression concrete types -->
+    <ProjectReference Include="..\..\src\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

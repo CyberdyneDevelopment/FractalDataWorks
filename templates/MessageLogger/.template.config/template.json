@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Fdw",
+  "classifications": ["Fdw", "Logging", "Messages"],
+  "identity": "Fdw.MessageLogger",
+  "name": "Fdw Message Logger",
+  "shortName": "fdw-logger",
+  "tags": {
+    "language": "C#",
+    "type": "item"
+  },
+  "sourceName": "ServiceLogger",
+  "preferNameDirectory": false,
+  "symbols": {
+    "namespace": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "Fdw.YourNamespace",
+      "defaultValue": "Fdw.Services",
+      "description": "The namespace for the logger class"
+    },
+    "loggerName": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "ServiceLogger",
+      "defaultValue": "ServiceLogger",
+      "description": "The name of the logger class"
+    },
+    "includeExamples": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "true",
+      "description": "Include example logging methods"
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "condition": "(!includeExamples)",
+          "exclude": [
+            "**/*.examples.cs"
+          ]
+        }
+      ]
+    }
+  ]
+}

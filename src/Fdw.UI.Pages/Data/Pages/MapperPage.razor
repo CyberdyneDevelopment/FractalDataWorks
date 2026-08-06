@@ -1,0 +1,186 @@
+@page "/mapper"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.Extensions.Logging
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Results
+@using Fdw.Data.Components
+@using Fdw.Data.Components.Annotations
+@using Fdw.Data.Components.DataPreview
+@using Fdw.Data.Components.DataSets
+@using Fdw.Data.Components.DataStores
+@using Fdw.Schema.Components.Schema
+@using Fdw.Services.Catalog.Clients.Models
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Data.Components.DataMapper
+@using Fdw.Data.Components.Models
+@using Fdw.Data.UI.Components
+@using Fdw.Data.UI.Pages.Logging
+@using Fdw.Data.DataSets.Abstractions
+@using Fdw.UI.Components.Primitives
+
+<PageTitle>Field Mapper - Cyberdyne</PageTitle>
+
+<DataMapperProvider>
+    <ChildContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">Data Sources</div>
+                <h1>Field Mapper</h1>
+                <div class="sub">Map source fields onto target fields, then persist the mapping.</div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-secondary btn-sm" @onclick="() => ctx.OnAutoMap()">Auto-Map</button>
+                <button class="btn btn-secondary btn-sm" @onclick="async () => await ctx.OnValidate()">Validate</button>
+                <button class="btn btn-primary btn-sm" @onclick="async () => await ctx.OnSave()" disabled="@(ctx.Mappings.Count == 0)">Save Mappings</button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
+        {
+            <div class="card"><div class="card-b"><div class="alert alert-err">@ctx.ErrorMessage</div></div></div>
+        }
+
+        <div class="grid2e">
+            <div class="frow" style="margin-bottom:0;">
+                <NestedObjectPicker TNode="DataStoreNode"
+                                    Items="ctx.DataStorePickerItems"
+                                    GetChildren="ctx.GetSourcePickerChildren"
+                                    IsLeaf="@(n => string.Equals(n.Kind, DataStoreNodeKind.Container, StringComparison.Ordinal))"
+                                    LabelSelector="@(n => n.Name)"
+                                    Label="Source DataStore"
+                                    ChildLabel="Path / Container"
+                                    Placeholder="Select..."
+                                    SelectionChanged="ctx.OnSourcePickerSelectionChanged" />
+            </div>
+            <div class="frow" style="margin-bottom:0;">
+                <NestedObjectPicker TNode="DataStoreNode"
+                                    Items="ctx.DataStorePickerItems"
+                                    GetChildren="ctx.GetTargetPickerChildren"
+                                    IsLeaf="@(n => string.Equals(n.Kind, DataStoreNodeKind.Container, StringComparison.Ordinal))"
+                                    LabelSelector="@(n => n.Name)"
+                                    Label="Target DataStore"
+                                    ChildLabel="Path / Container"
+                                    Placeholder="Select..."
+                                    SelectionChanged="ctx.OnTargetPickerSelectionChanged" />
+            </div>
+        </div>
+
+        @if (ctx.IsLoading || ctx.IsLoadingSchema)
+        {
+            <div class="loadwrap"><div class="spin"></div></div>
+        }
+        else
+        {
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+                <div class="card">
+                    <div class="card-h"><h3>Source Fields</h3><span class="meta">@(string.IsNullOrEmpty(ctx.SourceContainer) ? "Select a source" : ctx.SourceContainer)</span></div>
+                    <div class="card-b" style="padding:0 8px 12px;">
+                        <div class="pick">
+                            @foreach (var field in ctx.SourceFields)
+                            {
+                                var isMapped = ctx.Mappings.Any(m => string.Equals(m.SourceField, field.Name, StringComparison.Ordinal));
+                                <button type="button" style="@($"display:flex;align-items:center;justify-content:space-between;width:100%;{(isMapped ? "opacity:.5;" : "")}")"
+                                        @onclick="() => { _pendingSource = field.Name; TryAddMapping(ctx); }">
+                                    <span>
+                                        <span class="pn mono">@field.Name</span>
+                                        <span class="pk" style="margin-left:8px;">@field.NativeDataType</span>
+                                    </span>
+                                    @if (!isMapped)
+                                    {
+                                        <svg style="width:15px;height:15px;color:var(--n-500);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    }
+                                    else
+                                    {
+                                        <svg style="width:15px;height:15px;color:var(--success);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    }
+                                </button>
+                            }
+                            @if (ctx.SourceFields.Count == 0)
+                            {
+                                <div class="empty">Select a source to load fields</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-h"><h3>Mappings</h3><span class="meta">@ctx.Mappings.Count mapped</span></div>
+                    <div class="card-b">
+                        @if (ctx.Mappings.Count == 0)
+                        {
+                            <div class="empty">Select source and target fields to create mappings</div>
+                        }
+                        else
+                        {
+                            <div class="pick">
+                                @foreach (var mapping in ctx.Mappings)
+                                {
+                                    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s2);border-radius:8px;">
+                                        <span class="mono" style="flex:1;color:var(--glacier-soft);font-size:12px;overflow:hidden;text-overflow:ellipsis;">@mapping.SourceField</span>
+                                        <svg style="width:15px;height:15px;color:var(--n-500);flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                        </svg>
+                                        <span class="mono" style="flex:1;color:var(--success);font-size:12px;text-align:right;overflow:hidden;text-overflow:ellipsis;">@mapping.TargetField</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-h"><h3>Target Fields</h3><span class="meta">@(string.IsNullOrEmpty(ctx.TargetContainer) ? "Select a target" : ctx.TargetContainer)</span></div>
+                    <div class="card-b" style="padding:0 8px 12px;">
+                        <div class="pick">
+                            @foreach (var field in ctx.TargetFields)
+                            {
+                                var isMapped = ctx.Mappings.Any(m => string.Equals(m.TargetField, field.Name, StringComparison.Ordinal));
+                                <button type="button" style="@($"display:flex;align-items:center;justify-content:space-between;width:100%;{(isMapped ? "opacity:.5;" : "")}")"
+                                        @onclick="() => { _pendingTarget = field.Name; TryAddMapping(ctx); }">
+                                    <svg style="width:15px;height:15px;color:var(--n-500);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                    </svg>
+                                    <span style="text-align:right;">
+                                        <span class="pn mono">@field.Name</span>
+                                        <span class="pk" style="margin-left:8px;">@field.NativeDataType</span>
+                                    </span>
+                                </button>
+                            }
+                            @if (ctx.TargetFields.Count == 0)
+                            {
+                                <div class="empty">Select a DataStore to load fields</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </ChildContent>
+</DataMapperProvider>
+
+@code {
+    private string? _pendingSource;
+    private string? _pendingTarget;
+
+    private void TryAddMapping(DataMapperContext ctx)
+    {
+        if (_pendingSource != null && _pendingTarget != null)
+        {
+            var updated = ctx.Mappings.ToList();
+            updated.Add(new FieldMappingDto { SourceField = _pendingSource, TargetField = _pendingTarget });
+            ctx.OnMappingsChanged(updated);
+            _pendingSource = null;
+            _pendingTarget = null;
+        }
+    }
+}

@@ -1,0 +1,205 @@
+@namespace Fdw.Web.Analytics.Components.PromotionReview
+@using Fdw.UI.Providers
+@using Fdw.Results
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Web.Analytics.Clients.ApiClients
+@using Fdw.Web.Analytics.Clients.Models
+@using Fdw.Web.Analytics.Components.Logging
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    // ── Parameters ──────────────────────────────────────────────────────────────
+
+    [Parameter, EditorRequired] public Guid PromotionId { get; set; }
+    [Parameter] public RenderFragment<PromotionReviewContext>? ChildContent { get; set; }
+    [Parameter] public EventCallback OnActionCompleted { get; set; }
+
+    // ── Injected Services ───────────────────────────────────────────────────────
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private PromotionApiClient? _promotionApi;
+    [Inject] private ILogger<PromotionReviewProvider>? LoggerParam { get; set; }
+
+    private ILogger<PromotionReviewProvider> _logger = NullLogger<PromotionReviewProvider>.Instance;
+
+    // ── State ───────────────────────────────────────────────────────────────────
+
+    private PromotionPayload? _request;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private PromotionReviewContext _context = new();
+    private Guid _loadedId;
+
+    // ── Lifecycle ───────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _promotionApi = new PromotionApiClient(HttpClientFactory.CreateClient("PromotionClient"), LoggerFactory?.CreateLogger<PromotionApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<PromotionReviewProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (PromotionId == Guid.Empty || PromotionId == _loadedId)
+        {
+            return;
+        }
+
+        _loadedId = PromotionId;
+        await LoadRequest();
+    }
+
+    // ── Private Operations ─────────────────────────────────────────────────────
+
+    private async Task LoadRequest(CancellationToken ct = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        PromotionReviewProviderLog.LoadStarted(_logger, _loadedId);
+
+        try
+        {
+            var result = await _promotionApi!.GetPendingPromotions(ct);
+            if (!result.IsSuccess)
+            {
+                PromotionReviewProviderLog.LoadFailed(_logger, _loadedId);
+                _lastResult = result;
+                _request = null;
+                return;
+            }
+
+            _request = result.Value?.FirstOrDefault(p => p.Id == _loadedId);
+            if (_request is null)
+            {
+                PromotionReviewProviderLog.LoadFailed(_logger, _loadedId);
+                _lastResult = result;
+                return;
+            }
+
+            PromotionReviewProviderLog.LoadCompleted(_logger, _loadedId);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(PromotionReviewProviderLog.LoadException(_logger, ex, _loadedId));
+            _request = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleApprove(CancellationToken ct = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        PromotionReviewProviderLog.Approving(_logger, _loadedId);
+
+        try
+        {
+            var result = await _promotionApi!.ApprovePromotion(_loadedId, ct);
+            if (!result.IsSuccess)
+            {
+                PromotionReviewProviderLog.ApproveFailed(_logger, _loadedId);
+                _lastResult = result;
+                return;
+            }
+
+            PromotionReviewProviderLog.Approved(_logger, _loadedId);
+            await OnActionCompleted.InvokeAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(PromotionReviewProviderLog.ApproveException(_logger, ex, _loadedId));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleReject(CancellationToken ct = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        PromotionReviewProviderLog.Rejecting(_logger, _loadedId);
+
+        try
+        {
+            var result = await _promotionApi!.RejectPromotion(_loadedId, ct);
+            if (!result.IsSuccess)
+            {
+                PromotionReviewProviderLog.RejectFailed(_logger, _loadedId);
+                _lastResult = result;
+                return;
+            }
+
+            PromotionReviewProviderLog.Rejected(_logger, _loadedId);
+            await OnActionCompleted.InvokeAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(PromotionReviewProviderLog.RejectException(_logger, ex, _loadedId));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new PromotionReviewContext
+        {
+            Request = _request,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnApprove = () => HandleApprove(),
+            OnReject = () => HandleReject()
+        };
+    }
+}

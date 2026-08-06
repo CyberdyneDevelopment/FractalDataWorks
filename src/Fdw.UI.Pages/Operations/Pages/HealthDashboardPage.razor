@@ -1,0 +1,112 @@
+@page "/health"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using Fdw.Services.Abstractions.Health
+
+<PageTitle>Health Dashboard - Cyberdyne</PageTitle>
+
+<HealthDashboardProvider ThroughputWindow="TimeSpan.FromMinutes(5)" RefreshInterval="TimeSpan.FromSeconds(30)">
+    <ChildContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">Admin</div>
+                <h1>System Health</h1>
+                @if (ctx.SystemHealth is not null)
+                {
+                    <div class="sub">@ctx.SystemHealth.Services.Count services · @ctx.SystemHealth.OverallStatus.Name · throughput window 5m</div>
+                }
+            </div>
+            <div class="actions">
+                <button class="btn btn-secondary" @onclick="ctx.OnRefresh">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M20 8a8 8 0 00-14-3M4 16a8 8 0 0014 3" />
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+        </div>
+
+        @if (ctx.SystemHealth is null && ctx.IsLoading)
+        {
+            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="mut" style="color:var(--n-500);">Loading system health&hellip;</p></div></div>
+        }
+        else if (ctx.SystemHealth is null && ctx.ErrorMessage is not null)
+        {
+            <div class="danger" style="margin-bottom:14px;"><div class="t"><p>@ctx.ErrorMessage</p></div></div>
+        }
+
+        @if (ctx.SystemHealth?.Services is { Count: > 0 })
+        {
+            <div class="card" style="margin-bottom:14px;">
+                <div class="card-h"><h3>Service map</h3><span class="meta">REFRESH 30S</span></div>
+                <div class="card-b">
+                    <div class="board">
+                        @foreach (var svc in ctx.SystemHealth.Services)
+                        {
+                            <div class="svc">
+                                <div class="sh">
+                                    <span class="d" style="background:@(svc.Status.IsHealthy ? "var(--success)" : "var(--signal)");"></span>
+                                    <b>@svc.Name</b>
+                                    <span class="p">@svc.Status.Name</span>
+                                </div>
+                                <div class="m"><span>@svc.ResponseTimeMs ms avg</span></div>
+                                <div class="m"><span>up @FormatUptime(svc.Uptime)</span></div>
+                                @if (ctx.ServiceThroughput.TryGetValue(svc.Name, out var tp))
+                                {
+                                    <div class="m"><span>@tp.RequestsPerSecond.ToString("F1") req/s</span><span style="color:@(tp.ErrorRate > 0.05 ? "var(--signal)" : "var(--n-400)");">@((tp.ErrorRate * 100).ToString("F1"))% err</span></div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (ctx.ServiceThroughput.Count > 0)
+        {
+            <div class="card">
+                <div class="card-h"><h3>Throughput details</h3></div>
+                <div class="card-b">
+                    @foreach (var kvp in ctx.ServiceThroughput)
+                    {
+                        <div style="margin-bottom:14px;">
+                            <div class="mono" style="font-size:11px;letter-spacing:0.06em;color:var(--n-400);margin-bottom:8px;">@kvp.Key</div>
+                            <ThroughputPanel Context="@CreateThroughputContext(kvp.Value)" />
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </ChildContent>
+</HealthDashboardProvider>
+
+@code {
+    private string FormatUptime(TimeSpan uptime)
+    {
+        if (uptime.TotalDays >= 1) return $"{uptime.Days}d {uptime.Hours}h";
+        if (uptime.TotalHours >= 1) return $"{uptime.Hours}h {uptime.Minutes}m";
+        return $"{uptime.Minutes}m {uptime.Seconds}s";
+    }
+
+    private static ThroughputContext CreateThroughputContext(
+        Fdw.Services.Abstractions.Health.Monitoring.ThroughputData data)
+    {
+        var historyPoints = data.DataPoints
+            .Select(dp => new Fdw.Web.Analytics.Clients.Models.TimeSeriesDataPoint
+            {
+                Timestamp = dp.Timestamp,
+                ExecutionCount = dp.RequestCount,
+                AverageDurationMs = dp.AverageLatencyMs,
+                ErrorCount = dp.ErrorCount
+            })
+            .ToList();
+
+        return new ThroughputContext
+        {
+            RequestsPerSecond = data.RequestsPerSecond,
+            AvgLatencyMs = data.AvgLatencyMs,
+            P95LatencyMs = data.P95LatencyMs,
+            ErrorRate = data.ErrorRate,
+            HistoryDataPoints = historyPoints
+        };
+    }
+}

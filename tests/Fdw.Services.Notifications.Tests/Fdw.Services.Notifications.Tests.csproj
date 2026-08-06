@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Services.Notifications\Fdw.Services.Notifications.csproj" />
+  </ItemGroup>
+  <PropertyGroup>
+    <!-- Only include Fdw.Services.Notifications in coverage -->
+    <Include>[Fdw.Services.Notifications]*</Include>
+    <!-- Exclude everything else -->
+    <Exclude>[Fdw.*.Abstractions]*,[Fdw.Messages]*,[Fdw.Collections]*,[Fdw.Abstractions]*</Exclude>
+  </PropertyGroup>
+</Project>

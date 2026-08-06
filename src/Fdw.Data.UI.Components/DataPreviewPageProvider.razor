@@ -1,0 +1,332 @@
+@namespace Fdw.Data.UI.Components
+@using SchemaDataPreviewRequest = Fdw.Schema.Clients.Models.SchemaPreviewRequest
+@using System.Net.Http
+@using Fdw.Data.Components
+@using Fdw.Services.Data.Clients
+
+@inject IJSRuntime JS
+@inject ILogger<DataPreviewPageProvider> LoggerParam
+@inject IHttpClientFactory HttpClientFactory
+@inject ILoggerFactory? LoggerFactoryParam
+
+<DataPreviewProvider>
+    <ChildContent Context="previewCtx">
+        @{ _previewCtx = previewCtx; }
+        <SchemaProvider>
+            <ChildContent Context="schemaCtx">
+                @{ _schemaCtx = schemaCtx; }
+                @ChildContent?.Invoke(BuildContext())
+            </ChildContent>
+        </SchemaProvider>
+    </ChildContent>
+</DataPreviewProvider>
+
+@code {
+    [Parameter] public RenderFragment<DataPreviewPageContext>? ChildContent { get; set; }
+
+    [CascadingParameter] private SessionStateContext? Session { get; set; }
+
+    private ILogger<DataPreviewPageProvider> _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DataPreviewPageProvider>.Instance;
+
+    private DataPreviewContext _previewCtx = new();
+    private SchemaContext _schemaCtx = new();
+
+    private const string SessionKey = "datapreview:query:config";
+
+    private string _previewMode = PreviewMode.Table;
+    private string _selectedDataStoreName = "";
+    private string _selectedPathName = "";
+    private string _selectedContainerName = "";
+    private int _rowLimit = 25;
+    private string _selectedVizType = "Table";
+    private List<PreviewFilterCondition> _filters = new();
+    private bool _sessionRestored;
+
+    // DataStore tree loaded on first render
+    private DataStoreApiClient? _dataStoreApi;
+    private IReadOnlyList<DataStoreSummaryPayload> _availableDataStores = [];
+    // Why: stable-reference cache so BuildContext() does not create a new list on every render,
+    // which would trigger ObjectPicker's _items rebuild on each render cycle.
+    private IReadOnlyList<DataStoreNode> _dataStorePickerItems = [];
+    private DataStoreDetailPayload? _selectedDataStoreDetail;
+    private bool _initialized;
+
+    private static readonly IReadOnlyList<IVisualizationType> _availableVizTypes =
+        VisualizationTypes.All()
+            .Where(t => !string.Equals(t.Name, "_Empty", StringComparison.Ordinal))
+            .ToList();
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<DataPreviewPageProvider>.Instance;
+        _dataStoreApi = new DataStoreApiClient(
+            HttpClientFactory.CreateClient("DataStoreClient"),
+            LoggerFactoryParam?.CreateLogger<DataStoreApiClient>()!);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_sessionRestored || Session is null || Session.IsLoading) return;
+        if (!Session.State.TryGetValue(SessionKey, out var raw) || raw is not System.Text.Json.JsonElement json) return;
+        _sessionRestored = true;
+
+        if (json.TryGetProperty("previewMode", out var pm)) _previewMode = pm.GetString() ?? PreviewMode.Table;
+        if (json.TryGetProperty("selectedDataStoreName", out var ds)) _selectedDataStoreName = ds.GetString() ?? "";
+        if (json.TryGetProperty("selectedPathName", out var pn)) _selectedPathName = pn.GetString() ?? "";
+        if (json.TryGetProperty("selectedContainerName", out var cn)) _selectedContainerName = cn.GetString() ?? "";
+        if (json.TryGetProperty("rowLimit", out var rl)) _rowLimit = rl.GetInt32();
+
+        DataPreviewPageLog.SessionStateRestored(_logger);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadDataStores();
+        }
+    }
+
+    // ── Data loading ───────────────────────────────────────────────────────────
+
+    private async Task LoadDataStores(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _dataStoreApi!.GetDataStores(cancellationToken);
+            if (!result.IsSuccess)
+            {
+                DataPreviewPageLog.LoadDataStoresFailed(
+                    _logger, new InvalidOperationException(result.CurrentMessage ?? "API returned failure"));
+                _availableDataStores = [];
+                _dataStorePickerItems = [];
+                StateHasChanged();
+                return;
+            }
+
+            _availableDataStores = result.Value ?? [];
+            _dataStorePickerItems = _availableDataStores
+                .Select(ds => new DataStoreNode(ds.Name, DataStoreNodeKind.DataStore))
+                .ToList();
+            DataPreviewPageLog.DataStoresLoaded(_logger, _availableDataStores.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            DataPreviewPageLog.LoadDataStoresFailed(_logger, ex);
+            _availableDataStores = [];
+            _dataStorePickerItems = [];
+        }
+
+        StateHasChanged();
+    }
+
+    // ── Picker callbacks ───────────────────────────────────────────────────────
+
+    // Why: NestedObjectPicker calls this to load children for the selected node. For a DataStore
+    // node, we fetch the detail (paths). For a Path node, we return its containers from the
+    // already-loaded detail. Container nodes are leaves — the IsLeaf predicate on the picker
+    // prevents GetPickerChildren being called for them.
+    private async Task<IReadOnlyList<DataStoreNode>> GetPickerChildren(DataStoreNode node)
+    {
+        if (string.Equals(node.Kind, DataStoreNodeKind.DataStore, StringComparison.Ordinal))
+        {
+            await LoadDataStoreDetail(node.Name);
+            if (_selectedDataStoreDetail is null) return [];
+            return _selectedDataStoreDetail.Paths
+                .Select(p => new DataStoreNode(p.Name, DataStoreNodeKind.Path))
+                .ToList();
+        }
+        if (string.Equals(node.Kind, DataStoreNodeKind.Path, StringComparison.Ordinal) && _selectedDataStoreDetail is not null)
+        {
+            var path = _selectedDataStoreDetail.Paths
+                .FirstOrDefault(p => string.Equals(p.Name, node.Name, StringComparison.OrdinalIgnoreCase));
+            if (path is null) return [];
+            return path.Containers
+                .Select(c => new DataStoreNode(c.Name, DataStoreNodeKind.Container, c.Id))
+                .ToList();
+        }
+        return [];
+    }
+
+    private async Task OnPickerSelectionChanged(IReadOnlyList<DataStoreNode> chain)
+    {
+        _selectedDataStoreName = chain.Count > 0 ? chain[0].Name : "";
+        _selectedPathName = chain.Count > 1 ? chain[1].Name : "";
+        _selectedContainerName = chain.Count > 2 ? chain[2].Name : "";
+        await SaveSessionState();
+        StateHasChanged();
+    }
+
+    // ── Other callbacks ────────────────────────────────────────────────────────
+
+    private async Task SetTableMode()
+    {
+        _previewMode = PreviewMode.Table;
+        // Why: symmetric with SetDataSetMode — notify the inner preview context so it can
+        // reset DataSet-mode state when the user switches back to Table mode.
+        await _previewCtx.OnModeChanged(PreviewMode.Table);
+        await SaveSessionState();
+        StateHasChanged();
+    }
+
+    private async Task SetDataSetMode()
+    {
+        _previewMode = PreviewMode.DataSet;
+        await _previewCtx.OnModeChanged(PreviewMode.DataSet);
+        await SaveSessionState();
+        StateHasChanged();
+    }
+
+    private void OnRowLimitChanged(int value)
+    {
+        _rowLimit = value;
+        StateHasChanged();
+    }
+
+    private async Task LoadDataStoreDetail(string dataStoreName, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _dataStoreApi!.GetDataStore(dataStoreName, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _selectedDataStoreDetail = result.Value;
+            }
+            else
+            {
+                _selectedDataStoreDetail = null;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled — do not update state
+        }
+        catch (Exception ex)
+        {
+            DataPreviewPageLog.LoadDataStoresFailed(_logger, ex);
+            _selectedDataStoreDetail = null;
+        }
+    }
+
+    private async Task OnExecute()
+    {
+        // Why: copy _filters into the request so the server applies user-specified row filters.
+        var request = new SchemaDataPreviewRequest
+        {
+            MaxRows = _rowLimit,
+            Filters = _filters.Count > 0 ? _filters.ToList() : null,
+        };
+
+        if (string.Equals(_previewMode, PreviewMode.DataSet, StringComparison.Ordinal))
+        {
+            request.DataSetName = _previewCtx.SelectedDataSetName;
+        }
+        else
+        {
+            request.DataStoreName = _selectedDataStoreName;
+            request.PathName = _selectedPathName;
+            request.ContainerName = _selectedContainerName;
+            DataPreviewPageLog.PreviewExecuted(_logger, _selectedDataStoreName, _selectedPathName, _selectedContainerName);
+        }
+
+        await _schemaCtx.OnPreviewData(request);
+        await SaveSessionState();
+    }
+
+    private void OnVizTypeSelected(string vizTypeName)
+    {
+        _selectedVizType = vizTypeName;
+        StateHasChanged();
+    }
+
+    private async Task OnExportCsv()
+    {
+        var columns = _schemaCtx.PreviewResult?.Columns.Select(c => c.Name).ToList() ?? new();
+        var rows = _schemaCtx.PreviewResult?.Rows.ToList() ?? new();
+        if (columns.Count == 0 || rows.Count == 0) return;
+
+        DataPreviewPageLog.ExportingCsv(_logger, rows.Count);
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(string.Join(",", columns.Select(EscapeCsv)));
+        foreach (var row in rows)
+        {
+            var values = columns.Select(c =>
+            {
+                row.TryGetValue(c, out var val);
+                return EscapeCsv(val?.ToString() ?? "");
+            });
+            sb.AppendLine(string.Join(",", values));
+        }
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+        var base64 = Convert.ToBase64String(bytes);
+        var fileName = string.Equals(_previewMode, PreviewMode.DataSet, StringComparison.Ordinal)
+            ? "dataset_preview.csv"
+            : $"{_selectedDataStoreName}_{_selectedPathName}_{_selectedContainerName}_preview.csv";
+
+        await JS.InvokeVoidAsync("eval", $"""
+            var a = document.createElement('a');
+            a.href = 'data:text/csv;base64,{base64}';
+            a.download = '{fileName}';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            """);
+    }
+
+    // ── Context builder ────────────────────────────────────────────────────────
+
+    private DataPreviewPageContext BuildContext() => new()
+    {
+        Mode = _previewMode,
+        SelectedDataStoreName = _selectedDataStoreName,
+        SelectedPathName = _selectedPathName,
+        SelectedContainerName = _selectedContainerName,
+        RowLimit = _rowLimit,
+        DataStorePickerItems = _dataStorePickerItems,
+        GetPickerChildren = GetPickerChildren,
+        OnPickerSelectionChanged = OnPickerSelectionChanged,
+        Filters = _filters,
+        Columns = _schemaCtx.PreviewResult?.Columns.Select(c => c.Name).ToList() ?? [],
+        Rows = _schemaCtx.PreviewResult?.Rows.ToList() ?? [],
+        SelectedVizType = _selectedVizType,
+        AvailableVizTypes = _availableVizTypes,
+        IsLoading = _schemaCtx.IsLoading,
+        LastResult = _schemaCtx.LastResult,
+        SchemaContext = _schemaCtx,
+        PreviewProvider = _previewCtx,
+        OnSetTableMode = SetTableMode,
+        OnSetDataSetMode = SetDataSetMode,
+        OnRowLimitChanged = OnRowLimitChanged,
+        OnExecute = OnExecute,
+        OnVizTypeSelected = OnVizTypeSelected,
+        OnExportCsv = OnExportCsv,
+    };
+
+    private async Task SaveSessionState()
+    {
+        if (Session is null) return;
+        var state = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["previewMode"] = _previewMode,
+            ["selectedDataStoreName"] = _selectedDataStoreName,
+            ["selectedPathName"] = _selectedPathName,
+            ["selectedContainerName"] = _selectedContainerName,
+            ["rowLimit"] = _rowLimit,
+        };
+        await Session.OnSaveState(SessionKey, state);
+    }
+
+    private static string EscapeCsv(string value)
+    {
+        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
+            return $"\"{value.Replace("\"", "\"\"")}\"";
+        return value;
+    }
+}

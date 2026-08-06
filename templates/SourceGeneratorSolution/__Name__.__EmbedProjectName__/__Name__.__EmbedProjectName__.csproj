@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- Enable generator debugging (optional - can be removed for production) -->
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
+
+    <!-- NuGet Package Configuration -->
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)..\..\artifacts\packages</PackageOutputPath>
+    <Description>Abstractions for __Name__ with embedded source generators.</Description>
+    <PackageTags>__Name__;Abstractions;SourceGenerator</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Reference Runtime for base classes and attributes -->
+<!--#if (CreateRuntime) -->
+    <ProjectReference Include="..\__Name__.Runtime\__Name__.Runtime.csproj" />
+<!--#else -->
+    <PackageReference Include="__ExistingRuntimePackage__" />
+<!--#endif -->
+
+<!--#if (EmbedGenerator) -->
+    <!-- Reference the source generator as Analyzer for local dev -->
+    <!-- PrivateAssets=none allows it to flow to consumers -->
+    <ProjectReference Include="..\__Name__.SourceGenerators\__Name__.SourceGenerators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="none" />
+<!--#endif -->
+  </ItemGroup>
+
+<!--#if (EmbedGenerator) -->
+  <ItemGroup>
+    <!-- Explicitly embed the generator DLL in the NuGet package -->
+    <!-- This makes it work automatically when consumers install the package -->
+    <None Include="..\__Name__.SourceGenerators\bin\$(Configuration)\netstandard2.0\__Name__.SourceGenerators.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false"
+          Condition="Exists('..\__Name__.SourceGenerators\bin\$(Configuration)\netstandard2.0\__Name__.SourceGenerators.dll')" />
+  </ItemGroup>
+<!--#endif -->
+
+  <ItemGroup>
+    <!-- Add any runtime dependencies here (e.g., Microsoft.Extensions.*) -->
+  </ItemGroup>
+
+</Project>

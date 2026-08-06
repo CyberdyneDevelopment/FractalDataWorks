@@ -1,0 +1,42 @@
+@namespace Fdw.Configuration.UI.Components
+
+<ConfigurationProvider>
+    <ChildContent Context="ctx">
+        @ChildContent(new ConfigurationPageContext(
+            Inner: ctx,
+            TypeProperties: _typeProperties,
+            OnLoadTypeDetail: LoadTypeDetail
+        ))
+    </ChildContent>
+</ConfigurationProvider>
+
+@code {
+    [Parameter] public RenderFragment<ConfigurationPageContext> ChildContent { get; set; } = default!;
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+    private ConfigurationApiClient? _configApi;
+
+    private IReadOnlyList<ConfigurationPropertyInfo> _typeProperties = [];
+
+    protected override void OnInitialized()
+    {
+        _configApi = new ConfigurationApiClient(HttpClientFactory.CreateClient("ConfigurationClient"), LoggerFactory?.CreateLogger<ConfigurationApiClient>()!);
+    }
+
+    private async Task LoadTypeDetail(string category, string serviceType)
+    {
+        try
+        {
+            var result = await _configApi!.GetTypeDetail(category, serviceType);
+            _typeProperties = result.IsSuccess && result.Value != null
+                ? result.Value.Properties
+                : [];
+        }
+        catch
+        {
+            _typeProperties = [];
+        }
+        StateHasChanged();
+    }
+}

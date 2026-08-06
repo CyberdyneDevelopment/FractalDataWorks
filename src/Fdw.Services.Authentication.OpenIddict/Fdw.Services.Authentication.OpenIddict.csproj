@@ -1,0 +1,88 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Fdw.Services.Authentication.OpenIddict</RootNamespace>
+
+    <Title>Fdw OpenIddict Authentication Service</Title>
+    <Description>DataGateway-backed OpenIddict stores and hosting extensions for Fdw OAuth2/OIDC authority.</Description>
+    <PackageTags>authentication;oauth2;openiddict;openid;authorization</PackageTags>
+
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Why: DynamicProxyGenAssembly2 allows Moq to create mocks of internal types in unit tests. -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" PublicKey="0024000004800000940000000602000000240000525341310004000001000100c547cac37abd99c8db225ef2f6c8a3602f3b3606cc9891605d02baa56104f4cfc0734aa39b93bf7852f7d9266654753cc297e7d2edfe0bac1cdcf9f717241550e0a7b191195b7667bb4f64bcb8e2121380fd1d9d46ad2d92d2d15605093924cceaf74c4861eff62abf69b9291ed0a340e113be11e6a7d3113e92484cf7045cc7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
+    <ProjectReference Include="..\Fdw.Commands.Data.Extensions\Fdw.Commands.Data.Extensions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+
+    <!-- Auth seam + ServiceType machinery -->
+    <ProjectReference Include="..\Fdw.Services.Authentication\Fdw.Services.Authentication.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
+
+    <!-- Permission + org resolution for claim baking -->
+    <ProjectReference Include="..\Fdw.Services.Authorization.Abstractions\Fdw.Services.Authorization.Abstractions.csproj" />
+    <!-- Why: DefaultPrincipalResolver (core Authentication package) needs UserRoleConfigurationProvider and
+         RoleConfigurationProvider (concrete providers), which this project registers in DI, to load user role
+         assignments and resolve role names for JWT "roles" claim baking. -->
+    <ProjectReference Include="..\Fdw.Services.Authorization\Fdw.Services.Authorization.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Multitenancy.Abstractions\Fdw.Services.Multitenancy.Abstractions.csproj" />
+
+    <!-- Secret manager for signing key loading -->
+    <ProjectReference Include="..\Fdw.Services.SecretManagers.Abstractions\Fdw.Services.SecretManagers.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.SecretManagers\Fdw.Services.SecretManagers.csproj" />
+
+    <!-- User credential validation for password/agent_key grants -->
+    <ProjectReference Include="..\Fdw.Services.Users.Abstractions\Fdw.Services.Users.Abstractions.csproj" />
+
+    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <!-- Why: Collections.SourceGenerators processes [TypeOption] attributes and generates module initializers
+         that register POCO mappers with PocoMapperCollection at runtime. Without this, the mapper classes
+         exist but are never registered and PocoMapperCollection.ByName returns NotFound. -->
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <!-- Why: ConfigurationSourceGenerators generates [ManagedConfiguration] + [GenerateMapper]-needed
+         DDL artifacts and the ManagedConfigurationAttribute itself (internal per-assembly) for
+         OpenIddictAuthenticationConfiguration, exactly as it does for MsSqlConnectionConfiguration. -->
+    <ProjectReference Include="..\Fdw.Configuration.SourceGenerators\Fdw.Configuration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Services.TokenManagers\Fdw.Services.TokenManagers.csproj" />
+    <ProjectReference Include="..\Fdw.Services.TokenManagers.Abstractions\Fdw.Services.TokenManagers.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.ExternalIdentityProviders\Fdw.Services.ExternalIdentityProviders.csproj" />
+    <ProjectReference Include="..\Fdw.Services.ExternalIdentityProviders.Abstractions\Fdw.Services.ExternalIdentityProviders.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Why: FrameworkReference provides all ASP.NET Core APIs without bundling them in the output. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Why: ConnectTokenEndpoint is a FastEndpoints endpoint (the FDW way) — not an MVC controller —
+         so the OpenIddict assembly is never registered as an MVC ApplicationPart, which would pollute
+         the shared ApplicationPartManager that FastEndpoints scans. Version pinned centrally to match
+         the sibling Fdw.Services.Authentication.Endpoints package. -->
+    <PackageReference Include="FastEndpoints" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- OpenIddict 7.5.0: Apache-2.0, OpenID-certified -->
+    <PackageReference Include="OpenIddict.Abstractions" />
+    <PackageReference Include="OpenIddict.Core" />
+    <PackageReference Include="OpenIddict.Server.AspNetCore" />
+    <PackageReference Include="OpenIddict.Validation.AspNetCore" />
+    <PackageReference Include="OpenIddict.Validation.ServerIntegration" />
+    <PackageReference Include="OpenIddict.Validation.SystemNetHttp" />
+  </ItemGroup>
+
+</Project>

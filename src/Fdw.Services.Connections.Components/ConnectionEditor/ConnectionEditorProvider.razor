@@ -1,0 +1,367 @@
+@namespace Fdw.Services.Connections.Components.ConnectionEditor
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Connections.Clients
+@using Fdw.Services.Connections.Clients.Models
+@using Fdw.Operations.Clients
+@using Fdw.Operations.Clients.Models
+@using Fdw.Results
+@using Fdw.Services.Connections.Components.Logging
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for connection editor logic: load connection types, populate form
+    /// from existing connection (edit mode), and create/update submission.
+    /// </summary>
+    [Parameter] public string? ConnectionName { get; set; }
+    [Parameter] public RenderFragment<ConnectionEditorContext>? ChildContent { get; set; }
+    [Parameter] public EventCallback<ConnectionDetailResponse> OnSaved { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private ConnectionApiClient? _connectionApi;
+    private ConfigurationApiClient? _configurationApi;
+    [Inject] private ILogger<ConnectionEditorProvider>? LoggerParam { get; set; }
+
+    private ILogger<ConnectionEditorProvider> _logger = NullLogger<ConnectionEditorProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private CreateConnectionClientRequest _model = new();
+    private bool _isNew = true;
+    private bool _isActive = true;
+    // Why: ConnectionApiClient.GetConnectionTypes() hits connections/types (200); the old
+    // ConfigurationApiClient.GetTypesByCategory("Connection") hit configuration/types?category=Connection (404).
+    private IReadOnlyList<ConnectionTypePayload> _connectionTypes = [];
+    private IReadOnlyList<TypeCollectionValueSummary> _authenticationTypes = [];
+    private bool _isLoadingAuthTypes;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private ConnectionEditorContext _context = new();
+    private bool _initialized;
+    private string? _loadedConnectionName;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _connectionApi = new ConnectionApiClient(HttpClientFactory.CreateClient("ConnectionClient"), LoggerFactory?.CreateLogger<ConnectionApiClient>()!);
+        _configurationApi = new ConfigurationApiClient(HttpClientFactory.CreateClient("ConfigurationClient"), LoggerFactory?.CreateLogger<ConfigurationApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<ConnectionEditorProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrEmpty(ConnectionName) || string.Equals(ConnectionName, _loadedConnectionName, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _loadedConnectionName = ConnectionName;
+        _isNew = false;
+
+        await LoadExistingConnection(ConnectionName);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadConnectionTypes();
+        }
+    }
+
+    // ── Private Operations ─────────────────────────────────────────────────────
+
+    private async Task LoadConnectionTypes(CancellationToken cancellationToken = default)
+    {
+        ConnectionEditorProviderLog.LoadingConnectionTypes(_logger);
+
+        try
+        {
+            var result = await _connectionApi!.GetConnectionTypes(cancellationToken);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(ConnectionEditorProviderLog.LoadConnectionTypesFailed(_logger));
+                _connectionTypes = [];
+                return;
+            }
+
+            _connectionTypes = result.Value?.ToList() ?? [];
+            ConnectionEditorProviderLog.LoadedConnectionTypes(_logger, _connectionTypes.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { ConnectionEditorProviderLog.LoadConnectionTypesFailed(_logger) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _connectionTypes = [];
+        }
+        finally
+        {
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadExistingConnection(string name, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        ConnectionEditorProviderLog.LoadingConnection(_logger, name);
+
+        try
+        {
+            var result = await _connectionApi!.GetConnection(name, cancellationToken);
+            if (!result.IsSuccess || result.Value is null)
+            {
+                _lastResult = GenericResult.Failure(ConnectionEditorProviderLog.LoadConnectionFailed(_logger, name));
+                return;
+            }
+
+            var detail = result.Value;
+            _model = new CreateConnectionClientRequest
+            {
+                Name = detail.Name,
+                ServiceType = detail.ServiceType,
+                Server = detail.Server,
+                Port = detail.Port > 0 ? detail.Port : 1433,
+                Database = detail.Database,
+                AuthenticationType = detail.AuthenticationType,
+                Authentication = string.IsNullOrEmpty(detail.AuthenticationType)
+                    ? null
+                    : new ConnectionAuthenticationRequest
+                    {
+                        Username = detail.Username
+                    },
+                TrustServerCertificate = detail.TrustServerCertificate,
+                Encrypt = detail.Encrypt
+            };
+            _isActive = detail.IsActive;
+
+            ConnectionEditorProviderLog.LoadedConnection(_logger, name);
+
+            if (!string.IsNullOrEmpty(detail.ServiceType))
+            {
+                await LoadAuthTypes(detail.ServiceType, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { ConnectionEditorProviderLog.LoadConnectionFailed(_logger, name) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAuthTypes(string serviceType, CancellationToken cancellationToken = default)
+    {
+        _isLoadingAuthTypes = true;
+        RebuildContext();
+        StateHasChanged();
+
+        ConnectionEditorProviderLog.LoadingAuthTypes(_logger, serviceType);
+
+        try
+        {
+            var collectionName = $"{serviceType}AuthenticationTypes";
+            var result = await _configurationApi!.GetTypeCollectionValues(collectionName, cancellationToken);
+            if (!result.IsSuccess)
+            {
+                ConnectionEditorProviderLog.LoadAuthTypesFailed(_logger, serviceType);
+                _authenticationTypes = [];
+                return;
+            }
+
+            _authenticationTypes = result.Value?.ToList() ?? [];
+            ConnectionEditorProviderLog.LoadedAuthTypes(_logger, _authenticationTypes.Count, serviceType);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { ConnectionEditorProviderLog.LoadAuthTypesFailed(_logger, serviceType) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _authenticationTypes = [];
+        }
+        finally
+        {
+            _isLoadingAuthTypes = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleServiceTypeChanged(string serviceType)
+    {
+        _model.ServiceType = serviceType;
+        _model.Authentication = null;
+        _authenticationTypes = [];
+        RebuildContext();
+        StateHasChanged();
+
+        if (!string.IsNullOrEmpty(serviceType))
+        {
+            await LoadAuthTypes(serviceType);
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            IGenericResult<ConnectionDetailResponse> result;
+
+            if (_isNew)
+            {
+                ConnectionEditorProviderLog.CreatingConnection(_logger, _model.Name);
+                result = await _connectionApi!.CreateConnection(_model);
+                if (result.IsSuccess)
+                {
+                    ConnectionEditorProviderLog.ConnectionCreated(_logger, _model.Name);
+                }
+                else
+                {
+                    _lastResult = GenericResult.Failure(ConnectionEditorProviderLog.CreateConnectionFailed(_logger, _model.Name));
+                    return;
+                }
+            }
+            else
+            {
+                var name = _loadedConnectionName ?? _model.Name;
+                ConnectionEditorProviderLog.UpdatingConnection(_logger, name);
+
+                var updateRequest = new UpdateConnectionClientRequest
+                {
+                    // Why: ServiceType drives ResolveUpdateRoute — without it every update goes to
+                    // the MsSql endpoint and silently loses Http/PostgreSql/FileSystem fields.
+                    ServiceType = _model.ServiceType,
+                    Server = _model.Server,
+                    Port = _model.Port,
+                    Database = _model.Database,
+                    AuthenticationType = _model.AuthenticationType,
+                    Authentication = _model.Authentication,
+                    TrustServerCertificate = _model.TrustServerCertificate,
+                    Encrypt = _model.Encrypt,
+                    IsActive = _isActive,
+                    // Http / FileSystem / RoslynWorkspace fields
+                    BaseUrl = _model.BaseUrl,
+                    Protocol = _model.Protocol,
+                    TimeoutSeconds = _model.TimeoutSeconds,
+                    SecurityType = _model.SecurityType,
+                    UseMtls = _model.UseMtls
+                };
+
+                result = await _connectionApi!.UpdateConnection(name, updateRequest);
+                if (result.IsSuccess)
+                {
+                    ConnectionEditorProviderLog.ConnectionUpdated(_logger, name);
+                }
+                else
+                {
+                    _lastResult = GenericResult.Failure(ConnectionEditorProviderLog.CreateConnectionFailed(_logger, name));
+                    return;
+                }
+            }
+
+            if (result.IsSuccess && result.Value is not null)
+            {
+                await OnSaved.InvokeAsync(result.Value);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ConnectionEditorProviderLog.CreateConnectionException(_logger, ex, _model.Name));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private void HandleActiveChanged(bool isActive)
+    {
+        // Why: _isActive is the value HandleSubmit puts on the update request; the toggle must
+        // mutate it (previously the markup wrote a dead local and the loaded value was submitted).
+        _isActive = isActive;
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    private bool CheckAuthTypeRequiresProperty(string propertyName)
+    {
+        var currentAuthType = _model.AuthenticationType;
+        if (string.IsNullOrEmpty(currentAuthType)) return false;
+
+        var summary = _authenticationTypes.FirstOrDefault(a =>
+            string.Equals(a.Name, currentAuthType, StringComparison.OrdinalIgnoreCase));
+
+        if (summary is null) return false;
+
+        return summary.RequiredProperties.Contains(propertyName, StringComparer.OrdinalIgnoreCase)
+            || summary.ExpectedProperties.Contains(propertyName, StringComparer.OrdinalIgnoreCase);
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new ConnectionEditorContext
+        {
+            Model = _model,
+            IsNew = _isNew,
+            IsActive = _isActive,
+            ConnectionTypes = _connectionTypes,
+            AuthenticationTypes = _authenticationTypes,
+            IsLoadingAuthTypes = _isLoadingAuthTypes,
+            IsLoading = _isLoading,
+            IsReadOnly = false,
+            LastResult = _lastResult,
+            OnServiceTypeChanged = serviceType => HandleServiceTypeChanged(serviceType),
+            OnSubmit = () => HandleSubmit(),
+            OnActiveChanged = isActive => HandleActiveChanged(isActive),
+            AuthTypeRequiresProperty = propertyName => CheckAuthTypeRequiresProperty(propertyName)
+        };
+    }
+}

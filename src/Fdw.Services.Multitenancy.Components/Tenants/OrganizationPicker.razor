@@ -1,0 +1,136 @@
+@namespace Fdw.Services.Multitenancy.Components.Tenants
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Net.Http
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Multitenancy.Clients
+@using Fdw.Services.Multitenancy.Clients.Models
+
+@* Why: Reusable organization (tenant) picker, same shape as CategoryPicker.
+   Selects an existing tenant by Id; "+ Add new" is gated by fdw:tenants:create.
+   Used when a form needs to assign an owning organization rather than inherit
+   the current user's tenant from middleware. *@
+
+<div class="frow">
+    <label>@Label</label>
+    <div style="display:flex;align-items:center;gap:9px;">
+        <select class="finput sel"
+                style="flex:1;"
+                value="@(Value?.ToString() ?? string.Empty)"
+                @onchange="OnChangeHandler"
+                disabled="@_isLoading">
+            <option value="">@(Required ? "Select an organization..." : "(no organization)")</option>
+            @foreach (var t in _tenants)
+            {
+                <option value="@t.Id">@t.Name</option>
+            }
+        </select>
+        <AuthorizeView Policy="fdw:tenants:create">
+            <Authorized>
+                @if (_isAdding)
+                {
+                    <input class="finput" style="width:200px;" @bind="_newName" placeholder="New organization name..." />
+                    <button type="button" class="btn btn-primary btn-sm" @onclick="CreateNewOrganization" disabled="@(string.IsNullOrWhiteSpace(_newName))">Add</button>
+                    <button type="button" class="btn btn-ghost btn-sm" @onclick="() => { _isAdding = false; _newName = string.Empty; }">Cancel</button>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _isAdding = true">+ Add new</button>
+                }
+            </Authorized>
+        </AuthorizeView>
+    </div>
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="hint" style="color:var(--signal);">@_errorMessage</div>
+    }
+</div>
+
+@code {
+    /// <summary>Current selected tenant Id (bound).</summary>
+    [Parameter] public Guid? Value { get; set; }
+
+    /// <summary>Raised when the user picks or creates an organization.</summary>
+    [Parameter] public EventCallback<Guid?> ValueChanged { get; set; }
+
+    /// <summary>Label shown above the dropdown.</summary>
+    [Parameter] public string Label { get; set; } = "Organization";
+
+    /// <summary>Whether a value must be selected.</summary>
+    [Parameter] public bool Required { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private TenantApiClient? _tenantApi;
+    private List<TenantSummaryPayload> _tenants = new();
+    private bool _isLoading;
+    private bool _isAdding;
+    private string _newName = string.Empty;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _tenantApi = new TenantApiClient(
+            HttpClientFactory.CreateClient("TenantClient"),
+            LoggerFactory?.CreateLogger<TenantApiClient>() ?? NullLogger<TenantApiClient>.Instance);
+        await LoadTenants();
+    }
+
+    private async Task LoadTenants()
+    {
+        if (_tenantApi is null) return;
+        _isLoading = true;
+        _errorMessage = null;
+        try
+        {
+            var result = await _tenantApi.GetTenants();
+            _tenants = result.IsSuccess && result.Value is not null
+                ? result.Value.OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).ToList()
+                : new List<TenantSummaryPayload>();
+            if (!result.IsSuccess)
+                _errorMessage = result.CurrentMessage ?? "Failed to load organizations";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OnChangeHandler(ChangeEventArgs e)
+    {
+        var raw = e.Value?.ToString();
+        Guid? newValue = string.IsNullOrEmpty(raw) || !Guid.TryParse(raw, out var g) ? null : g;
+        Value = newValue;
+        await ValueChanged.InvokeAsync(newValue);
+    }
+
+    private async Task CreateNewOrganization()
+    {
+        if (_tenantApi is null || string.IsNullOrWhiteSpace(_newName)) return;
+        _errorMessage = null;
+        var request = new CreateTenantRequest
+        {
+            Name = _newName.Trim()
+        };
+        var result = await _tenantApi.CreateTenant(request);
+        if (!result.IsSuccess || result.Value is null)
+        {
+            _errorMessage = result.CurrentMessage ?? "Failed to create organization";
+            return;
+        }
+
+        _newName = string.Empty;
+        _isAdding = false;
+        await LoadTenants();
+        // Why: Auto-select the newly-created org so the user sees the result of their action.
+        Value = result.Value.Id;
+        await ValueChanged.InvokeAsync(result.Value.Id);
+    }
+}

@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Web.Http.Abstractions\Fdw.Web.Http.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

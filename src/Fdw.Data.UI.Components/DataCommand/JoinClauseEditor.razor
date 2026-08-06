@@ -1,0 +1,108 @@
+@namespace Fdw.Data.UI.Components.DataCommand
+@using System
+@using System.Collections.Generic
+@using System.Linq
+
+@* Single JOIN clause editor — kind picker, right-side container picker,
+   alias input, and ON-condition list.
+   Tailwind-only. *@
+
+<div class="card card-b" style="padding:8px;display:flex;flex-direction:column;gap:8px;">
+    <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;">
+        @* Join kind *@
+        <select class="fin"
+                value="@Join.Kind"
+                @onchange="@(e => SetKind(e.Value?.ToString() ?? "Inner"))">
+            @foreach (var k in _joinKinds)
+            {
+                <option value="@k">@k</option>
+            }
+        </select>
+
+        @* Right-side container picker *@
+        <DataContainerPicker Containers="@AllContainers"
+                             SelectedContainerId="@Join.ContainerId"
+                             SelectedContainerIdChanged="@SetContainerId"
+                             Placeholder="Right-side container..." />
+
+        @* Alias *@
+        <input class="fin mono" style="width:5rem;"
+               placeholder="alias"
+               value="@Join.Alias"
+               @oninput="@(e => SetAlias(e.Value?.ToString() ?? string.Empty))" />
+
+        @* Remove join *@
+        <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="RemoveJoin">✕</button>
+    </div>
+
+    @* ON conditions *@
+    <div style="display:flex;flex-direction:column;gap:4px;padding-left:8px;">
+        <div style="display:flex;align-items:center;gap:4px;">
+            <span class="flbl" style="margin-bottom:0;">ON</span>
+            <button class="btn btn-ghost btn-sm" style="color:var(--success);" @onclick="AddOnCondition">+ condition</button>
+        </div>
+        @for (var i = 0; i < Join.On.Count; i++)
+        {
+            var idx = i;
+            var cond = Join.On[idx];
+            <div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:4px;align-items:center;">
+                <DataFieldPicker Fields="@PrimaryFields"
+                                 Alias="@PrimaryAlias"
+                                 SelectedField="@cond.LeftField"
+                                 SelectedFieldChanged="@(v => SetOnLeft(idx, v))"
+                                 Placeholder="left.field" />
+                <span class="mono" style="color:var(--n-500);padding:0 4px;">=</span>
+                <DataFieldPicker Fields="@RightFields"
+                                 Alias="@Join.Alias"
+                                 SelectedField="@cond.RightField"
+                                 SelectedFieldChanged="@(v => SetOnRight(idx, v))"
+                                 Placeholder="right.field" />
+                <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => RemoveOnCondition(idx)">✕</button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public DataCommandJoin Join { get; set; } = new();
+    [Parameter] public EventCallback<DataCommandJoin> JoinChanged { get; set; }
+    [Parameter] public EventCallback OnRemove { get; set; }
+    [Parameter] public IReadOnlyList<DataContainerSummary> AllContainers { get; set; } = [];
+    [Parameter] public IReadOnlyList<DataFieldSummary> PrimaryFields { get; set; } = [];
+    [Parameter] public string PrimaryAlias { get; set; } = string.Empty;
+    [Parameter] public IReadOnlyList<DataFieldSummary> RightFields { get; set; } = [];
+
+    private static readonly string[] _joinKinds = ["Inner", "Left", "Right", "Full", "Cross"];
+
+    private async Task Notify() => await JoinChanged.InvokeAsync(Join).ConfigureAwait(false);
+
+    private async Task RemoveJoin() => await OnRemove.InvokeAsync().ConfigureAwait(false);
+
+    private async Task SetKind(string kind) { Join.Kind = kind; await Notify().ConfigureAwait(false); }
+    private async Task SetContainerId(Guid id) { Join.ContainerId = id; await Notify().ConfigureAwait(false); }
+    private async Task SetAlias(string alias) { Join.Alias = alias; await Notify().ConfigureAwait(false); }
+
+    private async Task AddOnCondition()
+    {
+        Join.On.Add(new DataCommandJoinCondition());
+        await Notify().ConfigureAwait(false);
+    }
+
+    private async Task RemoveOnCondition(int idx)
+    {
+        if (idx >= 0 && idx < Join.On.Count) Join.On.RemoveAt(idx);
+        await Notify().ConfigureAwait(false);
+    }
+
+    private async Task SetOnLeft(int idx, string value)
+    {
+        if (idx < Join.On.Count) Join.On[idx] = Join.On[idx] with { LeftField = value };
+        await Notify().ConfigureAwait(false);
+    }
+
+    private async Task SetOnRight(int idx, string value)
+    {
+        if (idx < Join.On.Count) Join.On[idx] = Join.On[idx] with { RightField = value };
+        await Notify().ConfigureAwait(false);
+    }
+}

@@ -1,0 +1,143 @@
+@namespace Fdw.Services.Terminal.Components.Terminal
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using Microsoft.JSInterop
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Terminal
+@using Fdw.Services.Terminal.Components.Logging
+
+@*
+    Renders the DOM element that xterm.js attaches to.
+    Calls fdwTerminal.init(elementRef, sessionId) after first render.
+    Subscribes to Context.OutputReceived to forward terminal output via
+    fdwTerminal.write(sessionId, data).
+*@
+
+<div @ref="_terminalElement" class="@Class"></div>
+
+@code {
+    /// <summary>
+    /// The <see cref="TerminalContext"/> provided by an enclosing <see cref="HeadlessTerminal"/>.
+    /// </summary>
+    [Parameter] public TerminalContext? Context { get; set; }
+
+    /// <summary>Optional CSS class applied to the terminal container div.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    [Inject] private IJSRuntime Js { get; set; } = default!;
+    [Inject] private ILogger<XTermTerminal>? LoggerParam { get; set; }
+
+    private ILogger<XTermTerminal> _logger = NullLogger<XTermTerminal>.Instance;
+    private ElementReference _terminalElement;
+    private TerminalContext? _subscribedContext;
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<XTermTerminal>.Instance;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(_subscribedContext, Context))
+        {
+            if (_subscribedContext is not null)
+            {
+                _subscribedContext.OutputReceived -= OnOutputReceived;
+                _subscribedContext.SessionExited -= OnSessionExited;
+            }
+
+            _subscribedContext = Context;
+
+            if (_subscribedContext is not null)
+            {
+                _subscribedContext.OutputReceived += OnOutputReceived;
+                _subscribedContext.SessionExited += OnSessionExited;
+            }
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized && Context is not null && Context.SessionId != Guid.Empty)
+        {
+            _initialized = true;
+            await InitXTerm(Context.SessionId);
+        }
+    }
+
+    // ── JS Interop ─────────────────────────────────────────────────────────────
+
+    private async Task InitXTerm(Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        TerminalComponentLog.XTermInitialising(_logger, sessionId);
+
+        try
+        {
+            await Js.InvokeVoidAsync("fdwTerminal.init", cancellationToken, _terminalElement, sessionId.ToString());
+        }
+        catch (OperationCanceledException)
+        {
+            // Swallow — component is being torn down.
+        }
+        catch (Exception ex)
+        {
+            TerminalComponentLog.XTermInitFailed(_logger, sessionId, ex);
+        }
+    }
+
+    /// <summary>Writes terminal output data to the xterm.js instance.</summary>
+    public async Task WriteOutput(string data, CancellationToken cancellationToken = default)
+    {
+        if (Context is null)
+        {
+            return;
+        }
+
+        TerminalComponentLog.XTermWritingOutput(_logger, Context.SessionId);
+
+        try
+        {
+            await Js.InvokeVoidAsync("fdwTerminal.write", cancellationToken, Context.SessionId.ToString(), data);
+        }
+        catch (OperationCanceledException)
+        {
+            // Swallow — component is being torn down.
+        }
+        catch (Exception ex)
+        {
+            TerminalComponentLog.XTermWriteFailed(_logger, Context.SessionId, ex);
+        }
+    }
+
+    // ── Context Event Handlers ─────────────────────────────────────────────────
+
+    private void OnOutputReceived(object? sender, TerminalDataEventArgs args)
+    {
+        // Fire-and-forget; exceptions are logged inside WriteOutput.
+        _ = InvokeAsync(async () => await WriteOutput(args.Data));
+    }
+
+    private void OnSessionExited(object? sender, TerminalExitEventArgs args)
+    {
+        // Nothing to do at the JS layer — the session ended.
+    }
+
+    // ── Disposal ───────────────────────────────────────────────────────────────
+
+    public void Dispose()
+    {
+        if (_subscribedContext is not null)
+        {
+            _subscribedContext.OutputReceived -= OnOutputReceived;
+            _subscribedContext.SessionExited -= OnSessionExited;
+            _subscribedContext = null;
+        }
+    }
+}

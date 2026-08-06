@@ -1,0 +1,556 @@
+@page "/connections/new"
+@page "/connections/{Name}/edit"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>@(_isEdit ? "Edit" : "New") Connection - Cyberdyne</PageTitle>
+
+@if (_isEdit)
+{
+    <ConnectionEditorProvider ConnectionName="@Name" OnSaved="OnSaved">
+        <ChildContent Context="ctx">
+
+            <div style="max-width:768px;margin:0 auto;">
+                @* Header *@
+                <div class="pagehead">
+                    <div>
+                        <div class="ey">Data Sources · Connections</div>
+                        <h1>@Name</h1>
+                        <div class="sub">Edit connection configuration.</div>
+                    </div>
+                    <div class="actions">
+                        <a class="btn btn-ghost" href="/connections">Cancel</a>
+                    </div>
+                </div>
+
+                @if (ctx.IsLoading && !ctx.ConnectionTypes.Any())
+                {
+                    <div class="card">
+                        <div class="card-b" style="padding:48px;text-align:center;">
+                            <span class="badge b-run"><span class="bd"></span>Loading</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card">
+                        <div class="card-h">
+                            <h3>Edit Connection</h3>
+                        </div>
+                        <div class="card-b">
+
+                            @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
+                            {
+                                <div class="danger" style="margin-bottom:16px;">
+                                    <div class="t"><p style="color:var(--signal);">@ctx.ErrorMessage</p></div>
+                                </div>
+                            }
+
+                            <div class="fgrid">
+                                @* Connection Name (readonly in edit mode) *@
+                                <div class="frow">
+                                    <label>Connection Name</label>
+                                    <input class="finput mono" style="opacity:0.6;" value="@ctx.Model.Name" disabled />
+                                </div>
+
+                                @* Connection Type (readonly in edit mode) *@
+                                <div class="frow">
+                                    <label>Connection Type</label>
+                                    <input class="finput mono" style="opacity:0.6;" value="@ctx.Model.ServiceType" disabled />
+                                </div>
+
+                                @* Server Details *@
+                                <div class="frow">
+                                    <label>Server Host</label>
+                                    <input class="finput" @bind="ctx.Model.Server" placeholder="e.g. sql.example.com" />
+                                </div>
+                                <div class="frow">
+                                    <label>Port</label>
+                                    <input class="finput mono" type="number" @bind="ctx.Model.Port" />
+                                </div>
+
+                                <div class="frow full">
+                                    <label>Database</label>
+                                    <input class="finput" @bind="ctx.Model.Database" placeholder="e.g. ProductionDb" />
+                                </div>
+
+                                @* Authentication *@
+                                @if (ctx.AuthenticationTypes.Any())
+                                {
+                                    <div class="frow">
+                                        <label>Auth Type</label>
+                                        <select class="finput" value="@(ctx.Model.AuthenticationType ?? string.Empty)"
+                                                @onchange="async e => ctx.Model.AuthenticationType = e.Value?.ToString() ?? string.Empty">
+                                            @foreach (var a in ctx.AuthenticationTypes)
+                                            {
+                                                <option value="@a.Name">@a.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                }
+
+                                @if (ctx.AuthTypeRequiresProperty("Username") || ctx.AuthTypeRequiresProperty("username"))
+                                {
+                                    <div class="frow">
+                                        <label>Username</label>
+                                        <input class="finput" @bind="ctx.Model.Authentication!.Username" placeholder="db_user" />
+                                    </div>
+                                }
+
+                                @if (ctx.AuthTypeRequiresProperty("SecretKeyName") || ctx.AuthTypeRequiresProperty("secretkeyname"))
+                                {
+                                    <div class="frow full">
+                                        <label>Secret Key Name</label>
+                                        @if (ctx.Model.Authentication is not null)
+                                        {
+                                            <input class="finput mono" @bind="ctx.Model.Authentication.SecretKeyName" placeholder="Key name from secret manager" />
+                                        }
+                                        <p class="hint">Password is resolved at runtime from the configured secret manager.</p>
+                                    </div>
+                                }
+                            </div>
+
+                            @* Options *@
+                            <div style="margin-top:16px;border-top:1px solid var(--hair);">
+                                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--hair);">
+                                    <div>
+                                        <p style="font-size:13px;color:var(--n-200);margin:0;">Encrypt</p>
+                                        <p style="font-size:11px;color:var(--n-500);margin:2px 0 0;">Encrypt the connection with TLS/SSL</p>
+                                    </div>
+                                    <span class="sw @(ctx.Model.Encrypt ? "on" : "")" @onclick="() => ctx.Model.Encrypt = !ctx.Model.Encrypt" style="cursor:pointer;"></span>
+                                </div>
+                                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--hair);">
+                                    <div>
+                                        <p style="font-size:13px;color:var(--n-200);margin:0;">Trust Server Certificate</p>
+                                        <p style="font-size:11px;color:var(--n-500);margin:2px 0 0;">Skip certificate validation (not recommended in production)</p>
+                                    </div>
+                                    <span class="sw @(ctx.Model.TrustServerCertificate ? "on" : "")" @onclick="() => ctx.Model.TrustServerCertificate = !ctx.Model.TrustServerCertificate" style="cursor:pointer;"></span>
+                                </div>
+                                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;">
+                                    <div>
+                                        <p style="font-size:13px;color:var(--n-200);margin:0;">Active</p>
+                                        <p style="font-size:11px;color:var(--n-500);margin:2px 0 0;">Connection is available for use</p>
+                                    </div>
+                                    <span class="sw @(ctx.IsActive ? "on" : "")" @onclick="() => ctx.OnActiveChanged(!ctx.IsActive)" style="cursor:pointer;"></span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    @* Navigation *@
+                    <div style="display:flex;justify-content:space-between;margin-top:14px;">
+                        <button class="btn btn-secondary" @onclick='() => Nav.NavigateTo("/connections")'>Cancel</button>
+                        <button class="btn btn-primary" @onclick="async () => await ctx.OnSubmit()" disabled="@ctx.IsLoading">
+                            @(ctx.IsLoading ? "Saving..." : "Save Changes")
+                        </button>
+                    </div>
+                }
+
+            </div>
+
+        </ChildContent>
+    </ConnectionEditorProvider>
+}
+else
+{
+    <ConnectionWizardProvider OnCompleted="OnCompleted">
+        <ChildContent Context="ctx">
+
+            <div style="max-width:768px;margin:0 auto;">
+                @* Header *@
+                <div class="pagehead">
+                    <div>
+                        <div class="ey">Data Sources · Connections</div>
+                        <h1>New Connection</h1>
+                        <div class="sub">Connection-agnostic access — MsSql, Http, FileSystem, RoslynWorkspace.</div>
+                    </div>
+                    <div class="actions">
+                        <a class="btn btn-ghost" href="/connections">Cancel</a>
+                    </div>
+                </div>
+
+                @* Step Indicator *@
+                <div class="stepper">
+                    @for (int i = 0; i < 3; i++)
+                    {
+                        var stepIndex = i;
+                        <div class="step @(stepIndex < ctx.Step ? "done" : stepIndex == ctx.Step ? "on" : "")">
+                            <span class="num">
+                                @if (stepIndex < ctx.Step)
+                                {
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:13px;height:13px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                                }
+                                else
+                                {
+                                    @(stepIndex + 1)
+                                }
+                            </span>
+                            <span class="sl">@WizardStepTitle(stepIndex)</span>
+                        </div>
+                        @if (stepIndex < 2)
+                        {
+                            <div class="bar"></div>
+                        }
+                    }
+                </div>
+
+                @if (ctx.IsComplete)
+                {
+                    <div class="card">
+                        <div class="card-b" style="padding:48px;text-align:center;">
+                            <div style="font-size:32px;color:var(--success);margin-bottom:14px;">✓</div>
+                            <p style="color:var(--n-200);margin:0 0 16px;">Connection created successfully.</p>
+                            <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/connections")'>Back to Connections</button>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    @* Step Card *@
+                    <div class="card">
+                        <div class="card-h">
+                            <h3>@WizardStepTitle(ctx.Step)</h3>
+                            <span class="meta">@WizardStepId(ctx.Step)</span>
+                        </div>
+                        <div class="card-b">
+
+                            @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
+                            {
+                                <div class="danger" style="margin-bottom:16px;">
+                                    <div class="t"><p class="mono" style="color:var(--signal);">@ctx.ErrorMessage</p></div>
+                                </div>
+                            }
+
+                            @* -- Step 0: Configure -- *@
+                            @if (ctx.Step == 0)
+                            {
+                                <div class="frow">
+                                    <label>Connection Name</label>
+                                    <input class="finput mono" @bind="ctx.ConnectionConfig.Name" placeholder="e.g. PROD_MSSQL" />
+                                </div>
+
+                                @if (ctx.ConnectionTypes.Any())
+                                {
+                                    <div class="frow">
+                                        <label>Connection Type</label>
+                                        <select class="finput" value="@ctx.ConnectionConfig.ServiceType"
+                                                @onchange="async e => await ctx.OnServiceTypeChanged(e.Value?.ToString() ?? string.Empty)">
+                                            <option value="">-- Select Type --</option>
+                                            @foreach (var t in ctx.ConnectionTypes)
+                                            {
+                                                @* Why: option value must be the type name (what OnServiceTypeChanged/persistence expects); ConnectionTypePayload.Id is empty. *@
+                                                <option value="@t.Name">@t.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="hint" style="font-style:italic;">Loading connection types...</p>
+                                }
+
+                                @if (IsHttpType(ctx.ConnectionConfig.ServiceType))
+                                {
+                                    @* HTTP-specific: Base URL instead of Server/Port/Database.
+                                       Why: bind to BaseUrl (not Server) so the typed HTTP body and the
+                                       mandatory test step carry baseUrl — binding into Server lost it and 400'd. *@
+                                    <div class="frow">
+                                        <label>Base URL</label>
+                                        <input class="finput mono" @bind="ctx.ConnectionConfig.BaseUrl" placeholder="e.g. https://api.example.com/v1" />
+                                        <p class="hint">Full base URL for the HTTP endpoint.</p>
+                                    </div>
+                                }
+                                else
+                                {
+                                    @* Standard database connections: Server/Port/Database *@
+                                    <div class="fgrid">
+                                        <div class="frow">
+                                            <label>Server Host</label>
+                                            <input class="finput" @bind="ctx.ConnectionConfig.Server"
+                                                   placeholder="@GetServerPlaceholder(ctx.ConnectionConfig.ServiceType)" />
+                                        </div>
+                                        <div class="frow">
+                                            <label>Port</label>
+                                            <input class="finput mono" type="number" @bind="ctx.ConnectionConfig.Port" />
+                                            @if (IsPostgreSqlType(ctx.ConnectionConfig.ServiceType) && ctx.ConnectionConfig.Port == 0)
+                                            {
+                                                <p class="hint">Default: 5432</p>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <div class="frow">
+                                        <label>Database</label>
+                                        <input class="finput" @bind="ctx.ConnectionConfig.Database"
+                                               placeholder="@GetDatabasePlaceholder(ctx.ConnectionConfig.ServiceType)" />
+                                    </div>
+                                }
+
+                                @if (ctx.AuthenticationTypes.Any())
+                                {
+                                    <div class="frow">
+                                        <label>Auth Type</label>
+                                        <select class="finput" value="@(ctx.ConnectionConfig.AuthenticationType ?? string.Empty)"
+                                                @onchange="e => { ctx.ConnectionConfig.AuthenticationType = e.Value?.ToString() ?? string.Empty; ctx.ConnectionConfig.Authentication ??= new Fdw.Services.Connections.Clients.Models.ConnectionAuthenticationRequest(); }">
+                                            @foreach (var a in ctx.AuthenticationTypes)
+                                            {
+                                                <option value="@a.Name">@a.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(ctx.ConnectionConfig.AuthenticationType))
+                                    {
+                                        @if (ctx.AuthenticationTypes.FirstOrDefault(a => string.Equals(a.Name, ctx.ConnectionConfig.AuthenticationType, StringComparison.OrdinalIgnoreCase)) is { } selectedAuth
+                                             && (selectedAuth.RequiredProperties.Contains("Username", StringComparer.OrdinalIgnoreCase) || selectedAuth.ExpectedProperties.Contains("Username", StringComparer.OrdinalIgnoreCase)))
+                                        {
+                                            <div class="frow">
+                                                <label>Username</label>
+                                                <input class="finput" @bind="ctx.ConnectionConfig.Authentication!.Username" placeholder="db_user" />
+                                            </div>
+
+                                            @* Secret Manager selection (only when managers are available) *@
+                                            @if (ctx.AvailableSecretManagers.Count > 0)
+                                            {
+                                                <div class="frow">
+                                                    <label>Secret Manager</label>
+                                                    <select class="finput" value="@(ctx.SelectedSecretManagerName ?? string.Empty)"
+                                                            @onchange="e => ctx.OnSecretManagerChanged(e.Value?.ToString() ?? string.Empty)">
+                                                        @if (ctx.SelectedSecretManagerName is null)
+                                                        {
+                                                            <option value="">-- Select Secret Manager --</option>
+                                                        }
+                                                        @foreach (var m in ctx.AvailableSecretManagers)
+                                                        {
+                                                            <option value="@m">@m</option>
+                                                        }
+                                                    </select>
+                                                </div>
+
+                                                @if (ctx.SelectedSecretManagerName is not null)
+                                                {
+                                                    @* Mode toggle: store new password vs reference existing key *@
+                                                    <div class="seg" style="display:flex;margin-bottom:16px;">
+                                                        <button class="@(ctx.SecretStorageMode == "new" ? "on" : "")"
+                                                                @onclick='() => ctx.OnSecretStorageModeChanged("new")'>
+                                                            Store New Password
+                                                        </button>
+                                                        <button class="@(ctx.SecretStorageMode == "existing" ? "on" : "")"
+                                                                @onclick='() => ctx.OnSecretStorageModeChanged("existing")'>
+                                                            Use Existing Key
+                                                        </button>
+                                                    </div>
+
+                                                    @if (ctx.SecretStorageMode == "new")
+                                                    {
+                                                        @if (ctx.StoredSecretKeyName is not null)
+                                                        {
+                                                            <div class="frow">
+                                                                <label>Password</label>
+                                                                <div style="display:flex;align-items:center;gap:10px;">
+                                                                    <input class="finput mono" style="flex:1;opacity:0.6;" value="@ctx.StoredSecretKeyName" disabled />
+                                                                    <span class="mono" style="font-size:11px;color:var(--success);white-space:nowrap;">✓ stored</span>
+                                                                </div>
+                                                                <p class="hint">Stored in <span style="color:var(--n-300);">@ctx.SelectedSecretManagerName</span> as <span style="color:var(--n-300);">@ctx.StoredSecretKeyName</span></p>
+                                                            </div>
+                                                        }
+                                                        else
+                                                        {
+                                                            <div class="frow">
+                                                                <label>Password</label>
+                                                                <input class="finput" type="password"
+                                                                       value="@ctx.PlainPassword"
+                                                                       @oninput="e => ctx.OnPasswordChanged(e.Value?.ToString() ?? string.Empty)"
+                                                                       placeholder="Password — stored in secret manager on Next" />
+                                                                <p class="hint">Stored in <span style="color:var(--n-300);">@ctx.SelectedSecretManagerName</span> when you click Next.</p>
+                                                            </div>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="frow">
+                                                            <label>Secret Key Name</label>
+                                                            <input class="finput mono" @bind="ctx.ConnectionConfig.Authentication.SecretKeyName"
+                                                                   placeholder="e.g. connection-prod-sql-password" />
+                                                            <p class="hint">Key name in <span style="color:var(--n-300);">@ctx.SelectedSecretManagerName</span> — resolved at runtime.</p>
+                                                        </div>
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                @* No secret manager configured — plain key name input *@
+                                                <div class="frow">
+                                                    <label>Secret Key Name</label>
+                                                    <input class="finput mono" @bind="ctx.ConnectionConfig.Authentication.SecretKeyName" placeholder="Key name from secret manager" />
+                                                    <p class="hint">Password resolved at runtime from configured secret manager.</p>
+                                                </div>
+                                            }
+                                        }
+                                    }
+                                }
+
+                                <div style="border-top:1px solid var(--hair);margin-top:8px;">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--hair);">
+                                        <div>
+                                            <p style="font-size:13px;color:var(--n-200);margin:0;">Encrypt</p>
+                                            <p style="font-size:11px;color:var(--n-500);margin:2px 0 0;">Encrypt the connection with TLS/SSL</p>
+                                        </div>
+                                        <span class="sw @(ctx.ConnectionConfig.Encrypt ? "on" : "")" @onclick="() => ctx.ConnectionConfig.Encrypt = !ctx.ConnectionConfig.Encrypt" style="cursor:pointer;"></span>
+                                    </div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;">
+                                        <div>
+                                            <p style="font-size:13px;color:var(--n-200);margin:0;">Trust Server Certificate</p>
+                                            <p style="font-size:11px;color:var(--n-500);margin:2px 0 0;">Skip certificate validation (not recommended in production)</p>
+                                        </div>
+                                        <span class="sw @(ctx.ConnectionConfig.TrustServerCertificate ? "on" : "")" @onclick="() => ctx.ConnectionConfig.TrustServerCertificate = !ctx.ConnectionConfig.TrustServerCertificate" style="cursor:pointer;"></span>
+                                    </div>
+                                </div>
+                            }
+
+                            @* -- Step 1: Test -- *@
+                            else if (ctx.Step == 1)
+                            {
+                                <div class="term" style="min-height:0;font-size:11px;margin-bottom:16px;"><span class="mut">NAME ............. </span><span class="gl">@ctx.ConnectionConfig.Name</span>
+<span class="mut">TYPE ............. </span><span class="gl">@ctx.ConnectionConfig.ServiceType</span>
+@if (IsHttpType(ctx.ConnectionConfig.ServiceType))
+{
+<span class="mut">BASE_URL ......... </span><span class="gl">@ctx.ConnectionConfig.BaseUrl</span>
+}
+else
+{
+<span class="mut">SERVER ........... </span><span class="gl">@ctx.ConnectionConfig.Server:@ctx.ConnectionConfig.Port</span>
+<span class="mut">DATABASE ......... </span><span class="gl">@ctx.ConnectionConfig.Database</span>
+}
+<span class="mut">ENCRYPT .......... </span><span class="@(ctx.ConnectionConfig.Encrypt ? "ok" : "mut")">@(ctx.ConnectionConfig.Encrypt ? "YES" : "NO")</span>
+<span class="mut">TRUST_CERT ....... </span><span class="@(ctx.ConnectionConfig.TrustServerCertificate ? "rd" : "ok")">@(ctx.ConnectionConfig.TrustServerCertificate ? "YES" : "NO")</span></div>
+
+                                @if (ctx.IsLoading)
+                                {
+                                    <div class="mono" style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--n-400);margin-bottom:16px;">
+                                        <span class="badge b-run"><span class="bd"></span>Testing connection...</span>
+                                    </div>
+                                }
+                                else if (ctx.TestResult is not null)
+                                {
+                                    <div class="danger" style="margin-bottom:16px;@(ctx.TestResult.Success ? "background:var(--success-dim);" : "")">
+                                        <div class="t"><p class="mono" style="@(ctx.TestResult.Success ? "color:var(--success);" : "color:var(--signal);")">@(ctx.TestResult.Success ? "✓ " : "✗ ")@ctx.TestResult.Message</p></div>
+                                    </div>
+                                }
+
+                                <button class="btn btn-secondary" @onclick="async () => await ctx.OnTestConnection()" disabled="@ctx.IsLoading">
+                                    Run Test
+                                </button>
+                            }
+
+                            @* -- Step 2: Save -- *@
+                            else if (ctx.Step == 2)
+                            {
+                                @if (ctx.TestResult is not null)
+                                {
+                                    <div class="danger" style="margin-bottom:16px;@(ctx.TestResult.Success ? "background:var(--success-dim);" : "background:var(--warn-dim);")">
+                                        <div class="t"><p class="mono" style="@(ctx.TestResult.Success ? "color:var(--success);" : "color:var(--warn);")">Test: @(ctx.TestResult.Success ? "✓ Passed" : "⚠ Failed — saving anyway")</p></div>
+                                    </div>
+                                }
+
+                                <div class="term" style="min-height:0;font-size:11px;"><span class="mut">NAME ............. </span><span class="gl">@ctx.ConnectionConfig.Name</span>
+<span class="mut">TYPE ............. </span><span class="gl">@ctx.ConnectionConfig.ServiceType</span>
+@if (IsHttpType(ctx.ConnectionConfig.ServiceType))
+{
+<span class="mut">BASE_URL ......... </span><span class="gl">@ctx.ConnectionConfig.BaseUrl</span>
+}
+else
+{
+<span class="mut">SERVER ........... </span><span class="gl">@ctx.ConnectionConfig.Server:@ctx.ConnectionConfig.Port</span>
+<span class="mut">DATABASE ......... </span><span class="gl">@ctx.ConnectionConfig.Database</span>
+}
+<span class="mut">AUTH ............. </span><span class="gl">@(ctx.ConnectionConfig.AuthenticationType ?? "—")</span>
+<span class="mut">ENCRYPT .......... </span><span class="@(ctx.ConnectionConfig.Encrypt ? "ok" : "mut")">@(ctx.ConnectionConfig.Encrypt ? "YES" : "NO")</span>
+<span class="mut">TRUST_CERT ....... </span><span class="@(ctx.ConnectionConfig.TrustServerCertificate ? "rd" : "ok")">@(ctx.ConnectionConfig.TrustServerCertificate ? "YES" : "NO")</span></div>
+                            }
+
+                        </div>
+                    </div>
+
+                    @* Navigation *@
+                    <div style="display:flex;justify-content:space-between;margin-top:14px;">
+                        <button class="btn btn-secondary" @onclick='() => Nav.NavigateTo("/connections")'>Cancel</button>
+                        <div class="actions">
+                            @if (!ctx.IsFirstStep)
+                            {
+                                <button class="btn btn-secondary" @onclick="() => ctx.OnPreviousStep()">← Back</button>
+                            }
+                            @if (!ctx.IsLastStep)
+                            {
+                                <button class="btn btn-primary" @onclick="async () => await ctx.OnNextStep()"
+                                        disabled="@(ctx.IsLoading || !CanAdvanceWizard(ctx))">
+                                    Continue →
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-primary" @onclick="async () => await ctx.OnSaveConnection()" disabled="@ctx.IsLoading">
+                                    @(ctx.IsLoading ? "Saving..." : "Create Connection")
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+
+            </div>
+
+        </ChildContent>
+    </ConnectionWizardProvider>
+}
+
+@code {
+    [Parameter] public string? Name { get; set; }
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private bool _isEdit => !string.IsNullOrEmpty(Name);
+
+    private void OnSaved(Fdw.Services.Connections.Clients.Models.ConnectionDetailResponse _)
+        => Nav.NavigateTo("/connections");
+
+    private void OnCompleted(Fdw.Services.Connections.Clients.Models.ConnectionDetailResponse _)
+        => Nav.NavigateTo("/connections");
+
+    private static bool CanAdvanceWizard(ConnectionWizardContext ctx) => ctx.Step switch
+    {
+        0 => !string.IsNullOrWhiteSpace(ctx.ConnectionConfig.Name) && !string.IsNullOrWhiteSpace(ctx.ConnectionConfig.ServiceType),
+        _ => true
+    };
+
+    private static string WizardStepTitle(int step) => step switch
+    {
+        0 => "Configure",
+        1 => "Test Connection",
+        _ => "Review & Save"
+    };
+
+    private static string WizardStepId(int step) => step switch
+    {
+        0 => "CONFIG_01",
+        1 => "TEST_02",
+        _ => "SAVE_03"
+    };
+
+    private static bool IsPostgreSqlType(string? serviceType) =>
+        !string.IsNullOrEmpty(serviceType) &&
+        serviceType.Contains("PostgreSql", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsHttpType(string? serviceType) =>
+        !string.IsNullOrEmpty(serviceType) &&
+        serviceType.Contains("Http", StringComparison.OrdinalIgnoreCase);
+
+    private static string GetServerPlaceholder(string? serviceType)
+    {
+        if (IsPostgreSqlType(serviceType)) return "e.g. pg.example.com";
+        return "e.g. sql.example.com";
+    }
+
+    private static string GetDatabasePlaceholder(string? serviceType)
+    {
+        if (IsPostgreSqlType(serviceType)) return "e.g. analytics";
+        return "e.g. ProductionDb";
+    }
+}

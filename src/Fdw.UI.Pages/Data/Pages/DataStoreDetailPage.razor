@@ -1,0 +1,370 @@
+@page "/datastores/{Name}"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using Fdw.UI.DrillDown
+
+<PageTitle>@(Name ?? "DataStore") - Cyberdyne</PageTitle>
+
+<DataStoreDetailProvider DataStoreName="@Name">
+    <ChildContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">
+                    <a href="/datastores">DataStores</a>
+                    @if (ctx.DrillDown.BreadcrumbPath.Count > 0)
+                    {
+                        @foreach (var crumb in ctx.DrillDown.BreadcrumbPath)
+                        {
+                            <span> / </span>
+                            <button class="btn-ghost" style="padding:0;font:inherit;letter-spacing:inherit;color:inherit;" @onclick="() => ctx.DrillDown.OnNodeSelected(crumb)">@crumb.Label</button>
+                        }
+                    }
+                </div>
+                <div class="dhead">
+                    <div class="ic">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="#d99a3f"><path stroke-linecap="round" stroke-linejoin="round" d="M5 4h14v5H5zM5 11h14v5H5zM7 6.5h.01M7 13.5h.01" /></svg>
+                    </div>
+                    <h1>@Name</h1>
+                    @if (ctx.DataStore != null)
+                    {
+                        <span class="badge @(ctx.DataStore.IsActive ? "b-ok" : "b-idle")"><span class="bd"></span>@(ctx.DataStore.IsActive ? "Active" : "Inactive")</span>
+                    }
+                </div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-secondary" @onclick="() => ctx.DrillDown.OnRefresh()">Refresh</button>
+                <button class="btn btn-secondary" @onclick='() => Nav.NavigateTo($"/datastores/{Name}/edit")'>
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit
+                </button>
+            </div>
+        </div>
+
+        @if (ctx.DrillDown.IsLoading)
+        {
+            <div class="loadwrap"><div class="spin"></div></div>
+        }
+        else if (ctx.DrillDown.ErrorMessage is not null)
+        {
+            <div class="card"><div class="card-b"><div class="alert alert-err">@ctx.DrillDown.ErrorMessage</div></div></div>
+        }
+        else if (ctx.DataStore == null)
+        {
+            <div class="card"><div class="card-b"><div class="empty">DataStore not found.</div></div></div>
+        }
+        else
+        {
+            <div class="split">
+                <div>
+                    @if (ctx.DrillDown.SelectedNode is null)
+                    {
+                        <div class="card">
+                            <div class="card-h"><h3>DataStore Overview</h3></div>
+                            <div class="card-b">
+                                <dl class="kv">
+                                    <dt>Name</dt>
+                                    <dd class="mono">@ctx.DataStore.Name</dd>
+                                    @if (!string.IsNullOrEmpty(ctx.DataStore.DisplayName))
+                                    {
+                                        <dt>Display Name</dt>
+                                        <dd>@ctx.DataStore.DisplayName</dd>
+                                    }
+                                    <dt>Type</dt>
+                                    <dd class="mono">@ctx.DataStore.StoreType</dd>
+                                    <dt>Connection</dt>
+                                    <dd>@ctx.DataStore.ConnectionName</dd>
+                                    <dt>Paths</dt>
+                                    <dd>@ctx.DataStore.Paths.Count</dd>
+                                    @if (ctx.DataStore.WriteMode is not null)
+                                    {
+                                        <dt>Write Mode</dt>
+                                        <dd>@ctx.DataStore.WriteMode</dd>
+                                    }
+                                    <dt>Created</dt>
+                                    <dd class="mono">@ctx.DataStore.CreatedAt.ToString("yyyy-MM-dd HH:mm")</dd>
+                                    <dt>Updated</dt>
+                                    <dd class="mono">@(ctx.DataStore.ModifiedAt?.ToString("yyyy-MM-dd HH:mm") ?? "---")</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    }
+                    else if (ctx.SelectedPath is not null)
+                    {
+                        <div class="card">
+                            <div class="card-h"><h3>Path: @ctx.SelectedPath.Name</h3></div>
+                            <div class="card-b">
+                                <dl class="kv">
+                                    <dt>Physical Path</dt>
+                                    <dd class="mono">@ctx.SelectedPath.PhysicalPath</dd>
+                                    <dt>Path Type</dt>
+                                    <dd class="mono">@ctx.SelectedPath.PathType</dd>
+                                    <dt>Containers</dt>
+                                    <dd>@ctx.SelectedPath.Containers.Count</dd>
+                                    @if (!string.IsNullOrEmpty(ctx.SelectedPath.Description))
+                                    {
+                                        <dt>Description</dt>
+                                        <dd>@ctx.SelectedPath.Description</dd>
+                                    }
+                                    @if (!string.IsNullOrEmpty(ctx.SelectedPath.SourceDescription))
+                                    {
+                                        <dt>Source Description</dt>
+                                        <dd>@ctx.SelectedPath.SourceDescription</dd>
+                                    }
+                                </dl>
+                            </div>
+                        </div>
+
+                        @if (ctx.SelectedPath.Containers.Count > 0)
+                        {
+                            <div style="height:14px;"></div>
+                            <div class="card">
+                                <div class="card-h"><h3>Containers</h3></div>
+                                <div class="card-b" style="padding:0 10px 12px;">
+                                    <table class="tbl">
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Type</th>
+                                                <th>Fields</th>
+                                                <th>Operations</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var container in ctx.SelectedPath.Containers)
+                                            {
+                                                <tr>
+                                                    <td><div class="cellpad nm mono">@container.Name</div></td>
+                                                    <td class="mut"><span class="tpill">@container.ContainerType</span></td>
+                                                    <td class="num">@container.Fields.Count</td>
+                                                    <td class="mut">@string.Join(", ", container.SupportedOperations)</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        }
+
+                        <div style="height:14px;"></div>
+                        <div class="card">
+                            <div class="card-h"><h3>Add Container</h3></div>
+                            <div class="card-b">
+                                @if (ctx.AddContainerError is not null)
+                                {
+                                    <div class="alert alert-err" style="margin-bottom:10px;">@ctx.AddContainerError</div>
+                                }
+                                <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+                                    <div>
+                                        <label class="flabel">Container Name</label>
+                                        <input class="fin" placeholder="e.g. orders" @bind="_addContainerName" />
+                                    </div>
+                                    <div>
+                                        <label class="flabel">Type (optional)</label>
+                                        <input class="fin" placeholder="e.g. Table" @bind="_addContainerType" />
+                                    </div>
+                                    <button class="btn btn-primary" disabled="@(string.IsNullOrWhiteSpace(_addContainerName))"
+                                            @onclick="async () => { await ctx.OnAddContainer(ctx.SelectedPath!.Name, _addContainerName, string.IsNullOrWhiteSpace(_addContainerType) ? null : _addContainerType); if (ctx.AddContainerError is null) { _addContainerName = string.Empty; _addContainerType = string.Empty; } }">
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else if (ctx.SelectedContainer is not null)
+                    {
+                        <div class="card">
+                            <div class="card-h"><h3>Container: @ctx.SelectedContainer.Name</h3></div>
+                            <div class="card-b">
+                                <dl class="kv">
+                                    <dt>Physical Name</dt>
+                                    <dd class="mono">@ctx.SelectedContainer.PhysicalName</dd>
+                                    <dt>Container Type</dt>
+                                    <dd class="mono">@ctx.SelectedContainer.ContainerType</dd>
+                                    <dt>Fields</dt>
+                                    <dd>@ctx.SelectedContainer.Fields.Count</dd>
+                                    @if (ctx.SelectedContainer.SurrogateKeyFields.Count > 0)
+                                    {
+                                        <dt>Surrogate Keys</dt>
+                                        <dd class="mono">@string.Join(", ", ctx.SelectedContainer.SurrogateKeyFields)</dd>
+                                    }
+                                    @if (ctx.SelectedContainer.NaturalKeyFields.Count > 0)
+                                    {
+                                        <dt>Natural Keys</dt>
+                                        <dd class="mono">@string.Join(", ", ctx.SelectedContainer.NaturalKeyFields)</dd>
+                                    }
+                                    @if (ctx.SelectedContainer.SupportedOperations.Count > 0)
+                                    {
+                                        <dt>Operations</dt>
+                                        <dd>@string.Join(", ", ctx.SelectedContainer.SupportedOperations)</dd>
+                                    }
+                                </dl>
+                            </div>
+                        </div>
+
+                        @if (ctx.SelectedContainer.Fields.Count > 0)
+                        {
+                            <div style="height:14px;"></div>
+                            <div class="card">
+                                <div class="card-h"><h3>Fields</h3></div>
+                                <div class="card-b" style="padding:0 10px 12px;">
+                                    <table class="tbl">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Field</th>
+                                                <th>Type</th>
+                                                <th>Nullable</th>
+                                                <th>Key</th>
+                                                <th>Max Length</th>
+                                                <th>Precision</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var field in ctx.SelectedContainer.Fields.OrderBy(f => f.Ordinal))
+                                            {
+                                                <tr>
+                                                    <td class="num">@field.Ordinal</td>
+                                                    <td><div class="cellpad nm mono">@field.Name</div></td>
+                                                    <td class="mut"><span class="tpill">@field.NativeDataType</span></td>
+                                                    <td class="mut">@(field.IsNullable ? "Yes" : "No")</td>
+                                                    <td>
+                                                        @if (field.IsKey)
+                                                        {
+                                                            <span class="badge b-ok"><span class="bd"></span>PK</span>
+                                                        }
+                                                    </td>
+                                                    <td class="num">@(field.MaxLength?.ToString() ?? "-")</td>
+                                                    <td class="num">
+                                                        @if (field.Precision.HasValue)
+                                                        {
+                                                            @($"{field.Precision},{field.Scale ?? 0}")
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else if (ctx.SelectedField is not null)
+                    {
+                        <div class="card">
+                            <div class="card-h"><h3>Field: @ctx.SelectedField.Name</h3></div>
+                            <div class="card-b">
+                                <dl class="kv">
+                                    <dt>Data Type</dt>
+                                    <dd class="mono">@ctx.SelectedField.NativeDataType</dd>
+                                    <dt>Nullable</dt>
+                                    <dd>@(ctx.SelectedField.IsNullable ? "Yes" : "No")</dd>
+                                    <dt>Key</dt>
+                                    <dd>@(ctx.SelectedField.IsKey ? "Yes" : "No")</dd>
+                                    <dt>Ordinal</dt>
+                                    <dd>@ctx.SelectedField.Ordinal</dd>
+                                    @if (ctx.SelectedField.MaxLength.HasValue)
+                                    {
+                                        <dt>Max Length</dt>
+                                        <dd>@ctx.SelectedField.MaxLength</dd>
+                                    }
+                                    @if (ctx.SelectedField.Precision.HasValue)
+                                    {
+                                        <dt>Precision</dt>
+                                        <dd>@ctx.SelectedField.Precision</dd>
+                                    }
+                                    @if (ctx.SelectedField.Scale.HasValue)
+                                    {
+                                        <dt>Scale</dt>
+                                        <dd>@ctx.SelectedField.Scale</dd>
+                                    }
+                                </dl>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div>
+                    <div class="card">
+                        <div class="card-h"><h3>Structure</h3><span class="meta">@ctx.DataStore.Paths.Count paths</span></div>
+                        <div class="card-b" style="padding:0 8px 12px;">
+                            @if (ctx.DrillDown.Nodes.Count == 0)
+                            {
+                                <div class="empty">No paths discovered. Import schema to populate.</div>
+                            }
+                            else
+                            {
+                                <div class="pick">
+                                    @foreach (var node in ctx.DrillDown.Nodes)
+                                    {
+                                        @RenderTreeNode(ctx, node)
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div style="height:14px;"></div>
+                    <div class="card">
+                        <div class="card-h"><h3>Actions</h3></div>
+                        <div class="card-b">
+                            <div class="snav">
+                                <button @onclick='() => Nav.NavigateTo($"/lineage/DataStore/{Name}")'>View Lineage</button>
+                                <button @onclick='() => Nav.NavigateTo("/data-preview")'>Preview Data</button>
+                                <button @onclick="() => ctx.OnImportSchema(ctx.DataStore.ConnectionName)">Import Schema</button>
+                                <button @onclick="() => ctx.OnSyncSchema(ctx.DataStore.ConnectionName)">Sync Schema</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </ChildContent>
+</DataStoreDetailProvider>
+
+@code {
+    /// <summary>Gets or sets the DataStore name from the route.</summary>
+    [Parameter] public string Name { get; set; } = "";
+
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private string _addContainerName = string.Empty;
+    private string _addContainerType = string.Empty;
+
+    private RenderFragment RenderTreeNode(DataStoreDetailContext ctx, DrillDownNode<object> node) => __builder =>
+    {
+        var indent = node.Depth * 16;
+
+        <button class="@(node.IsSelected ? "on" : null)" type="button" style="@($"display:flex;align-items:center;width:100%;padding-left:{indent + 8}px;")"
+                @onclick="() => ctx.DrillDown.OnNodeSelected(node)">
+            @if (!node.IsLeaf)
+            {
+                <span style="margin-right:4px;flex-shrink:0;color:var(--n-500);"
+                      @onclick="() => ctx.DrillDown.OnToggleExpand(node)"
+                      @onclick:stopPropagation="true">
+                    <svg style="@($"width:14px;height:14px;transition:transform .12s;{(node.IsExpanded ? "transform:rotate(90deg);" : "")}")"
+                         fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </span>
+            }
+            else
+            {
+                <span style="margin-right:4px;width:14px;flex-shrink:0;"></span>
+            }
+            <span class="@(node.IsLeaf ? "pk mono" : "pn")">@node.Label</span>
+            @if (!string.IsNullOrEmpty(node.Subtitle))
+            {
+                <span class="pk" style="margin-left:8px;">@node.Subtitle</span>
+            }
+        </button>
+
+        @if (node.IsExpanded && node.Children.Count > 0)
+        {
+            @foreach (var child in node.Children)
+            {
+                @RenderTreeNode(ctx, child)
+            }
+        }
+    };
+}

@@ -1,0 +1,81 @@
+@* Palette: browses the ComponentCatalog so a user can add a component to a view. Enumerates the
+   TypeCollection rather than a hand-kept list, so an app's own registered components appear here
+   the moment they are registered — the catalogue IS the palette. *@
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.UI.Abstractions.Composition
+@using Microsoft.AspNetCore.Components
+
+<div class="fdw-component-palette">
+    @if (!Grouped().Any())
+    {
+        @* Why say this rather than render nothing: an empty palette and a palette that failed to
+           load look identical, and "no components are registered" is the actionable message. *@
+        <p class="fdw-palette-empty">No components are registered in the catalogue.</p>
+    }
+    else
+    {
+        @foreach (var group in Grouped())
+        {
+            <section class="fdw-palette-group">
+                <h4 class="fdw-palette-category">@group.Key</h4>
+                <ul class="fdw-palette-items">
+                    @foreach (var descriptor in group)
+                    {
+                        <li class="fdw-palette-item">
+                            <button type="button"
+                                    class="fdw-palette-add"
+                                    title="@descriptor.Description"
+                                    disabled="@(!CanPlace(descriptor))"
+                                    @onclick="() => Add(descriptor)">
+                                @descriptor.DisplayName
+                            </button>
+                            @if (!CanPlace(descriptor))
+                            {
+                                <span class="fdw-palette-toowide">needs @descriptor.MinimumWidth columns</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>The layout a chosen component is added to.</summary>
+    [Parameter, EditorRequired] public ComposedViewLayout Layout { get; set; } = default!;
+
+    /// <summary>Raised after a component is added, so the host can persist and re-render.</summary>
+    [Parameter] public EventCallback<ComposedViewLayout> OnLayoutChanged { get; set; }
+
+    /// <summary>
+    /// Supplies the identity for a new placement.
+    /// </summary>
+    /// <remarks>
+    /// Injected rather than generated here so the caller owns id creation — Guid.CreateVersion7 is
+    /// unavailable on this package's netstandard2.0 target, and a host that persists layouts may
+    /// want ids from its own sequence.
+    /// </remarks>
+    [Parameter] public Func<Guid> NewPlacementId { get; set; } = Guid.NewGuid;
+
+    private IEnumerable<IGrouping<string, IComponentDescriptor>> Grouped() =>
+        ComponentCatalog.All()
+            .OrderBy(d => d.Category, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(d => d.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(d => d.Category, StringComparer.OrdinalIgnoreCase);
+
+    // Why disable rather than hide: a component that cannot fit this grid still exists, and hiding
+    // it makes the palette look like it does not, which is a different and misleading statement.
+    private bool CanPlace(IComponentDescriptor descriptor) =>
+        Math.Max(descriptor.DefaultWidth, descriptor.MinimumWidth) <= Layout.ColumnCount;
+
+    private async Task Add(IComponentDescriptor descriptor)
+    {
+        if (ComposedViewLayoutEditor.Add(Layout, descriptor, NewPlacementId()) is not null)
+        {
+            await OnLayoutChanged.InvokeAsync(Layout);
+        }
+    }
+}

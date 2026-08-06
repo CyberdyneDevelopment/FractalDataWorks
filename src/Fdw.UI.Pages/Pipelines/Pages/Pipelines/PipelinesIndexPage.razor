@@ -1,0 +1,124 @@
+@page "/pipelines"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Pipelines - Cyberdyne</PageTitle>
+
+<PipelineProvider @ref="_provider">
+    <ChildContent Context="provider">
+        <div>
+            @* Why: Run/Execute previously gave no user feedback — both success and failure
+               collapsed into the provider's unrendered ErrorMessage (FINDINGS bug #3).
+               Render an explicit result banner so the outcome is visible. *@
+            @if (!string.IsNullOrEmpty(_runBanner))
+            {
+                <div class="card @(_runBannerIsError ? "b-fail" : "b-ok")" style="margin-bottom:14px;padding:11px 16px;display:flex;justify-content:space-between;align-items:center;"
+                     role="alert">
+                    <span class="mono" style="font-size:12px;">@_runBanner</span>
+                    <button class="btn btn-ghost btn-sm" @onclick="() => _runBanner = null" title="Dismiss">✕</button>
+                </div>
+            }
+
+            <div class="pagehead">
+                <div>
+                    <div class="ey">Pipelines &amp; Scheduling · @provider.Pipelines.Count</div>
+                    <h1>Pipelines</h1>
+                    <div class="sub">Process-stage executors with SignalR status. Trigger by API, manual, event, or schedule.</div>
+                </div>
+                <div class="actions">
+                    <a href="/pipelines/new" class="btn btn-primary">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
+                        </svg>
+                        New Pipeline
+                    </a>
+                </div>
+            </div>
+
+            @if (provider.IsLoading && !provider.Pipelines.Any())
+            {
+                <div class="card" style="padding:48px;text-align:center;">
+                    <span class="mono" style="color:var(--n-500);">Loading pipelines…</span>
+                </div>
+            }
+            else if (!provider.Pipelines.Any())
+            {
+                <div class="card" style="padding:48px;text-align:center;">
+                    <p style="color:var(--n-500);">No pipelines configured</p>
+                </div>
+            }
+            else
+            {
+                <div class="card">
+                    <div class="card-h"><h3>All Pipelines</h3></div>
+                    <div class="card-b" style="padding:0 10px 12px;">
+                        <table class="tbl">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in provider.FilteredPipelines)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a href="/pipelines/builder/@p.Id" class="cellpad nm">
+                                                @p.Name
+                                            </a>
+                                        </td>
+                                        <td class="mut">@p.PipelineType</td>
+                                        <td>
+                                            <button class="btn btn-ghost btn-sm"
+                                                    @onclick="() => RunPipeline(provider, p.Name)"
+                                                    title="Execute">
+                                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                                </svg>
+                                            </button>
+                                            <a href="/pipelines/builder/@p.Id" class="btn btn-ghost btn-sm" title="Edit">
+                                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        </div>
+    </ChildContent>
+</PipelineProvider>
+
+@code {
+    private PipelineProvider _provider = null!;
+
+    private string? _runBanner;
+    private bool _runBannerIsError;
+
+    // Why: TriggerJob returns the response on success or null on failure (provider records the
+    // reason in ErrorMessage). Surface both as a visible banner so Run/Execute is no longer silent.
+    private async Task RunPipeline(PipelineContext provider, string pipelineName)
+    {
+        _runBanner = null;
+        var response = await provider.OnTriggerJob(pipelineName, null);
+        if (response is not null)
+        {
+            _runBannerIsError = false;
+            _runBanner = $"Pipeline '{pipelineName}' triggered (execution {response.ExecutionId}).";
+        }
+        else
+        {
+            // Why: read the freshly-rebuilt provider error via the @ref, not the captured render
+            // context (that snapshot predates the trigger call and still holds a null error).
+            _runBannerIsError = true;
+            _runBanner = _provider.LastResult?.CurrentMessage is { Length: > 0 } err
+                ? err
+                : $"Failed to trigger pipeline '{pipelineName}'.";
+        }
+    }
+}

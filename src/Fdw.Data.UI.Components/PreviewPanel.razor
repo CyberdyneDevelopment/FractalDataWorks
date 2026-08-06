@@ -1,0 +1,57 @@
+@namespace Fdw.Data.UI.Components
+
+@if (IsLoading)
+{
+    <div class="loadwrap"><div class="spin"></div></div>
+}
+else if (Columns.Count > 0 && Rows.Count > 0)
+{
+    <div class="card">
+        <div class="card-h">
+            <div>
+                <h3>Results</h3>
+                <div class="meta">@Rows.Count rows returned</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" @onclick="OnExportCsv">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export CSV
+            </button>
+        </div>
+        <div class="card-b" style="padding:0 10px 12px;overflow-x:auto;">
+            <table class="tbl">
+                <thead>
+                    <tr>
+                        @foreach (var col in Columns)
+                        {
+                            <th>@col</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Rows)
+                    {
+                        <tr>
+                            @foreach (var col in Columns)
+                            {
+                                <td class="num"><div class="cellpad">@(row.TryGetValue(col, out var val) ? val?.ToString() ?? "" : "")</div></td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else if (Columns.Count > 0 && Rows.Count == 0 && !IsLoading)
+{
+    <div class="empty">No results returned</div>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<string> Columns { get; set; } = [];
+    [Parameter] public IReadOnlyList<IReadOnlyDictionary<string, object?>> Rows { get; set; } = [];
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback OnExportCsv { get; set; }
+}

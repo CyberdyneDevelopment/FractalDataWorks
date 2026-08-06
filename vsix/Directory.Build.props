@@ -1,0 +1,9 @@
+<Project>
+  <!-- Disable global settings for VSIX projects -->
+  <PropertyGroup>
+    <!-- Don't import parent Directory.Build.props -->
+    <ImportDirectoryBuildProps>false</ImportDirectoryBuildProps>
+    <!-- Suppress the verbose pruning output -->
+    <NuGetPruneVerbosity>quiet</NuGetPruneVerbosity>
+  </PropertyGroup>
+</Project>

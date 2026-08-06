@@ -1,0 +1,102 @@
+@page "/catalog"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Catalog - Cyberdyne</PageTitle>
+
+@* Why: the inventory entry point to the workbench. CatalogProvider (the headless triple) lives in
+   Fdw.Services.Catalog.Components and auto-loads on first render; this page is a logic-lite
+   skin over its context. (The previous stub's "no provider exists" note was stale — it does.) *@
+
+<CatalogProvider>
+    <ChildContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">Governance</div>
+                <h1>Catalog</h1>
+                <div class="sub">Searchable inventory of DataSets and containers — start here to build a dataset.</div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-secondary btn-sm" @onclick="async () => await ctx.OnRefresh()" disabled="@ctx.IsLoading">Refresh</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-b">
+                <div class="fgrid" style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+                    <input class="fin" style="flex:1;" placeholder="Search the catalog…" @bind="_query" @bind:event="oninput"
+                           @onkeyup="async e => await OnSearchKey(e, ctx)" />
+                    <button class="btn btn-primary btn-sm" @onclick="async () => await ctx.OnSearch(_query)" disabled="@ctx.IsLoading">Search</button>
+                </div>
+
+                @if (ctx.ErrorMessage is not null)
+                {
+                    <div class="alert" style="margin-bottom:12px;">@ctx.ErrorMessage</div>
+                }
+
+                @if (ctx.IsLoading)
+                {
+                    <p class="mono" style="font-size:11px;color:var(--n-500);margin:0;">Loading catalog…</p>
+                }
+                else if (ctx.DataSets.Count == 0)
+                {
+                    <p style="color:var(--n-400);margin:0;">
+                        No catalog entries@(string.IsNullOrWhiteSpace(ctx.SearchQuery) ? "." : $" match \"{ctx.SearchQuery}\".")
+                    </p>
+                }
+                else
+                {
+                    <table class="tbl">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entity in ctx.DataSets)
+                            {
+                                <tr>
+                                    <td>@entity.Name</td>
+                                    <td><span class="badge">@entity.EntityType</span></td>
+                                    <td style="text-align:right;">
+                                        @if (IsDataSet(entity))
+                                        {
+                                            <a class="btn btn-secondary btn-sm" href="@($"/datasets/{entity.Name}")">Open</a>
+                                            <a class="btn btn-secondary btn-sm" href="@($"/lineage/DataSet/{entity.Name}")" style="margin-left:6px;">Explore Lineage</a>
+                                            <button class="btn btn-secondary btn-sm" style="margin-left:6px;"
+                                                    @onclick="async () => await ctx.OnStartBuilder(entity.Name)"
+                                                    title="Open Pipeline Builder with this DataSet as source">
+                                                Start Builder
+                                            </button>
+                                            <button class="btn btn-secondary btn-sm" style="margin-left:6px;"
+                                                    @onclick="async () => await ctx.OnDeriveDataSet(entity.Name)"
+                                                    title="Create a new DataSet derived from this one">
+                                                Derive DataSet
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </ChildContent>
+</CatalogProvider>
+
+@code {
+    private string _query = string.Empty;
+
+    private static bool IsDataSet(CatalogEntityPayload entity)
+        => string.Equals(entity.EntityType, "DataSet", StringComparison.OrdinalIgnoreCase);
+
+    // Why: Enter in the search box triggers the same search as the button, so search is reachable
+    // without leaving the keyboard. Any other key just updates the bound query.
+    private async Task OnSearchKey(KeyboardEventArgs args, CatalogContext ctx)
+    {
+        if (string.Equals(args.Key, "Enter", StringComparison.Ordinal))
+            await ctx.OnSearch(_query);
+    }
+}

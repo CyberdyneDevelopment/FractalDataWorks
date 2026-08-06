@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Why: Microsoft.Build.Locator refuses (MSBL001) any Microsoft.Build.* PackageReference that
+         lacks ExcludeAssets=runtime/PrivateAssets=all. Transitive pinning materializes exactly
+         such a reference for Microsoft.Build.Framework, so this project opts out. -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Roslyn command translators are inherently branchy - raise conventions thresholds -->
+    <FDW_MaxCyclomaticComplexity>35</FDW_MaxCyclomaticComplexity>
+    <FDW_MaxMethodLines>120</FDW_MaxMethodLines>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Core Framework Dependencies -->
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Roslyn.Commands.Abstractions\Fdw.Roslyn.Commands.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Workspace.Roslyn\Fdw.Workspace.Roslyn.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+
+    <!-- Source Generators (Analyzer only) -->
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Roslyn Dependencies -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Why: transitive of MSBuild family — Build.Locator's MSBL001 check forbids its runtime DLL
+         being copied to bin/ (would conflict with MSBuild's in-process copy). Compile-only. -->
+    <PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

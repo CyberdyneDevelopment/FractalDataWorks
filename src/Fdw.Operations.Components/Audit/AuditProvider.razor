@@ -1,0 +1,150 @@
+@namespace Fdw.Operations.Components.Audit
+@using Fdw.UI.Providers
+@using Fdw.Results
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Operations.Clients
+@using Fdw.Operations.Clients.Models
+@using Fdw.Operations.Components.Logging
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    // ── Parameters ──────────────────────────────────────────────────────────────
+
+    [Parameter] public RenderFragment<AuditContext>? ChildContent { get; set; }
+    [Parameter] public string? FilterItemType { get; set; }
+    [Parameter] public string? FilterState { get; set; }
+    [Parameter] public int Skip { get; set; }
+    [Parameter] public int Take { get; set; } = 50;
+
+    // ── Injected Services ───────────────────────────────────────────────────────
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private ExecutionApiClient? _executionApi;
+    [Inject] private ILogger<AuditProvider>? LoggerParam { get; set; }
+
+    private ILogger<AuditProvider> _logger = NullLogger<AuditProvider>.Instance;
+
+    // ── State ───────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<ExecutionSummaryPayload> _entries = [];
+    private int _totalCount;
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private AuditContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ───────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _executionApi = new ExecutionApiClient(HttpClientFactory.CreateClient("ExecutionClient"), LoggerFactory?.CreateLogger<ExecutionApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<AuditProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadHistory();
+        }
+    }
+
+    // ── Public Methods ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Loads execution history entries from the API with current filter parameters.
+    /// </summary>
+    public async Task<IGenericResult> LoadHistory(CancellationToken ct = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        AuditProviderLog.LoadStarted(_logger);
+
+        try
+        {
+            var result = await _executionApi!.List(FilterItemType, FilterState, Skip, Take, ct);
+            if (!result.IsSuccess)
+            {
+                AuditProviderLog.LoadFailed(_logger);
+                _lastResult = result;
+                _entries = [];
+                _totalCount = 0;
+                RebuildContext();
+                StateHasChanged();
+                return result;
+            }
+
+            _entries = result.Value ?? [];
+            _totalCount = _entries.Count;
+            AuditProviderLog.LoadCompleted(_logger, _totalCount);
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            return ProviderContextBase.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(AuditProviderLog.LoadException(_logger, ex));
+            _entries = [];
+            _totalCount = 0;
+            return _lastResult;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Updates filter parameters and reloads history.
+    /// </summary>
+    public async Task OnFilterChanged(string? itemType, string? state, CancellationToken ct = default)
+    {
+        FilterItemType = itemType;
+        FilterState = state;
+        Skip = 0;
+
+        AuditProviderLog.FilterChanged(_logger, itemType ?? "", state ?? "");
+
+        await LoadHistory(ct);
+    }
+
+    // ── Private Helpers ─────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new AuditContext
+        {
+            Entries = _entries,
+            TotalCount = _totalCount,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            FilterItemType = FilterItemType,
+            FilterState = FilterState,
+            OnLoadHistory = () => LoadHistory(),
+            OnRefresh = () => LoadHistory(),
+            OnFilterChanged = (itemType, state) => OnFilterChanged(itemType, state)
+        };
+    }
+}

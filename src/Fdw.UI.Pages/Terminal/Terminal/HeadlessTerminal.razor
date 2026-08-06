@@ -1,0 +1,249 @@
+@namespace Fdw.Services.Terminal.Components.Terminal
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Terminal
+@using Fdw.Services.Terminal.Components.Logging
+
+@*
+    Headless component that manages a terminal session lifecycle.
+    Owns session creation/load, subscription to output events, and command dispatch.
+    No UI markup — exposes state and operations via TerminalContext to ChildContent.
+*@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for terminal session management.
+    /// On first render, creates a new session (if <see cref="SessionId"/> is <see cref="Guid.Empty"/>)
+    /// or loads the specified existing session.
+    /// Subscribes to <see cref="ITerminalSession"/> output events and re-broadcasts them via
+    /// <see cref="TerminalContext"/>.
+    /// </summary>
+    /// <remarks>
+    /// Headless chain:
+    /// <list type="bullet">
+    ///   <item><description>Consumer (before): page shells with markup and ctx.OnSendCommand() calls</description></item>
+    ///   <item><description>This (provider): <see cref="HeadlessTerminal"/> — owns all state and logic, exposes via <see cref="TerminalContext"/></description></item>
+    ///   <item><description>Context (after): <see cref="TerminalContext"/> — sealed; passed to consumer RenderFragment</description></item>
+    /// </list>
+    /// </remarks>
+
+    /// <summary>The user identifier used when creating a new session.</summary>
+    [Parameter] public Guid UserId { get; set; }
+
+    /// <summary>
+    /// When set to a non-empty value the component will load the existing session
+    /// rather than creating a new one.
+    /// </summary>
+    [Parameter] public Guid SessionId { get; set; }
+
+    /// <summary>The command to execute when creating a new session (e.g. /bin/bash, pwsh).</summary>
+    [Parameter] public string Command { get; set; } = string.Empty;
+
+    /// <summary>Fires after a new session is successfully created, passing the new session ID.</summary>
+    [Parameter] public EventCallback<Guid> OnSessionCreated { get; set; }
+
+    /// <summary>Content rendered with the <see cref="TerminalContext"/>.</summary>
+    [Parameter] public RenderFragment<TerminalContext>? ChildContent { get; set; }
+
+    [Inject] private ITerminalService TerminalService { get; set; } = default!;
+    [Inject] private ILogger<HeadlessTerminal>? LoggerParam { get; set; }
+
+    private ILogger<HeadlessTerminal> _logger = NullLogger<HeadlessTerminal>.Instance;
+    private ITerminalSession? _session;
+    private TerminalContext _context = new();
+    private bool _initialized;
+    private IGenericResult? _lastResult;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<HeadlessTerminal>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await InitialiseSession();
+        }
+    }
+
+    // ── Session Initialisation ─────────────────────────────────────────────────
+
+    private async Task InitialiseSession(CancellationToken cancellationToken = default)
+    {
+        if (SessionId != Guid.Empty)
+        {
+            await LoadSession(SessionId, cancellationToken);
+        }
+        else
+        {
+            await CreateSession(cancellationToken);
+        }
+    }
+
+    private async Task CreateSession(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await TerminalService.CreateSession(
+                UserId,
+                name: Command,
+                command: Command,
+                ct: cancellationToken);
+
+            if (result.IsSuccess && result.Value is not null)
+            {
+                _session = result.Value;
+                _lastResult = null;
+                TerminalComponentLog.SessionCreated(_logger, _session.SessionId, UserId);
+                SubscribeToSession(_session);
+                RebuildContext();
+                StateHasChanged();
+
+                await OnSessionCreated.InvokeAsync(_session.SessionId);
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(TerminalComponentLog.SessionCreateFailed(_logger, UserId));
+                RebuildContext();
+                StateHasChanged();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Swallow — component is being torn down.
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { TerminalComponentLog.SessionCreateException(_logger, UserId, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadSession(Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await TerminalService.GetSession(sessionId, cancellationToken);
+
+            if (result.IsSuccess && result.Value is not null)
+            {
+                _session = result.Value;
+                _lastResult = null;
+                TerminalComponentLog.SessionLoaded(_logger, sessionId);
+                SubscribeToSession(_session);
+                RebuildContext();
+                StateHasChanged();
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(TerminalComponentLog.SessionLoadFailed(_logger, sessionId));
+                RebuildContext();
+                StateHasChanged();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Swallow — component is being torn down.
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { TerminalComponentLog.SessionLoadException(_logger, sessionId, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Session Event Subscription ─────────────────────────────────────────────
+
+    private void SubscribeToSession(ITerminalSession session)
+    {
+        session.DataReceived += OnDataReceived;
+        session.Exited += OnSessionExited;
+    }
+
+    private void UnsubscribeFromSession(ITerminalSession session)
+    {
+        session.DataReceived -= OnDataReceived;
+        session.Exited -= OnSessionExited;
+    }
+
+    private void OnDataReceived(object? sender, TerminalDataEventArgs args)
+    {
+        _context.RaiseOutputReceived(args);
+    }
+
+    private void OnSessionExited(object? sender, TerminalExitEventArgs args)
+    {
+        _context.RaiseSessionExited(args);
+        RebuildContext();
+        InvokeAsync(StateHasChanged);
+    }
+
+    // ── Command Dispatch ───────────────────────────────────────────────────────
+
+    private async Task SendCommand(string command, CancellationToken cancellationToken = default)
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        TerminalComponentLog.SendingCommand(_logger, _session.SessionId);
+
+        try
+        {
+            var result = await _session.Write(command, cancellationToken);
+            if (!result.IsSuccess)
+            {
+                TerminalComponentLog.SendCommandFailed(_logger, _session.SessionId,
+                    new InvalidOperationException(result.ToString()));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Swallow.
+        }
+        catch (Exception ex)
+        {
+            TerminalComponentLog.SendCommandFailed(_logger, _session.SessionId, ex);
+        }
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new TerminalContext
+        {
+            SessionId = _session?.SessionId ?? SessionId,
+            IsSessionActive = _session?.IsActive ?? false,
+            LastResult = _lastResult,
+            OnSendCommand = SendCommand,
+        };
+    }
+
+    // ── Disposal ───────────────────────────────────────────────────────────────
+
+    public void Dispose()
+    {
+        if (_session is not null)
+        {
+            UnsubscribeFromSession(_session);
+        }
+    }
+}

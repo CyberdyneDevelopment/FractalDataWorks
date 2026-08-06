@@ -1,0 +1,57 @@
+@namespace Fdw.Web.Analytics.Components.Health.Throughput
+@using Fdw.Web.Analytics.Components.Health.Gauge
+@using Fdw.Web.Analytics.Components.Health.Sparkline
+
+<div class="health" style="@(Compact ? "display:flex;align-items:center;gap:10px;" : "grid-template-columns:repeat(3,1fr);")">
+    <!-- Requests/sec gauge -->
+    <div class="h" style="display:flex;flex-direction:column;align-items:center;">
+        <SvgGauge Value="@Context.RequestsPerSecond" Min="0" Max="@MaxRps"
+                  Label="Req/s" Unit="" Width="@(Compact ? 80 : 120)"
+                  WarningThreshold="@(MaxRps * 0.7)" CriticalThreshold="@(MaxRps * 0.9)"
+                  ColorOverride="#79a8cc" />
+    </div>
+
+    <!-- Latency sparkline -->
+    <div class="h">
+        <div class="hl">Latency (ms)</div>
+        <div style="display:flex;align-items:flex-end;gap:8px;">
+            <span class="hv">@Context.AvgLatencyMs.ToString("F0")<small>avg</small></span>
+            <span class="mono" style="font-size:13px;font-weight:600;color:var(--amber-400);margin-left:8px;">@Context.P95LatencyMs.ToString("F0")<small style="color:var(--n-500);font-weight:400;margin-left:3px;">p95</small></span>
+        </div>
+        @if (Context.HistoryDataPoints.Count >= 2)
+        {
+            <div style="margin-top:8px;">
+                <SvgSparkline Values="@Context.HistoryDataPoints.Select(dp => dp.AverageDurationMs).ToList()"
+                              Width="@(Compact ? 100 : 200)" Height="@(Compact ? 24 : 36)"
+                              Color="@GetLatencyColor()" />
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(Context.LatencyTrend.Name) && !string.Equals(Context.LatencyTrend.Name, "Flat", StringComparison.OrdinalIgnoreCase))
+        {
+            <div class="mono" style="font-size:10px;margin-top:4px;color:@(string.Equals(Context.LatencyTrend.Name, "Up", StringComparison.OrdinalIgnoreCase) ? "var(--signal)" : "var(--success)");">
+                @(string.Equals(Context.LatencyTrend.Name, "Up", StringComparison.OrdinalIgnoreCase) ? "▲" : "▼") @Math.Abs(Context.LatencyChangePercent).ToString("F1")%
+            </div>
+        }
+    </div>
+
+    <!-- Error rate gauge -->
+    <div class="h" style="display:flex;flex-direction:column;align-items:center;">
+        <SvgGauge Value="@(Context.ErrorRate * 100)" Min="0" Max="100"
+                  Label="Error %" Unit="%"
+                  Width="@(Compact ? 80 : 120)"
+                  WarningThreshold="5" CriticalThreshold="15" />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ThroughputContext Context { get; set; } = new();
+    [Parameter] public bool Compact { get; set; }
+    [Parameter] public double MaxRps { get; set; } = 1000;
+
+    private string GetLatencyColor()
+    {
+        if (Context.P95LatencyMs > 500) return "#ef4444";
+        if (Context.P95LatencyMs > 200) return "#eab308";
+        return "#06b6d4";
+    }
+}

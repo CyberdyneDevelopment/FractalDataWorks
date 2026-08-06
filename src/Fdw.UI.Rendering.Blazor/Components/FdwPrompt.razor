@@ -1,0 +1,29 @@
+@* Interactive prompt: one input component + Submit/Cancel. Retained-mode counterpart of
+   SpectreUIRenderer.Prompt<T> — the value binds into the model; Submit revalidates and the
+   renderer resolves the awaited PromptResult. *@
+<div class="fdw-ui-prompt" id="@($"prompt-{Model.Id}")">
+    <FdwComponent Model="Model" Mode="Mode" />
+    <FdwValidationSummary Validation="_validation" />
+    <div class="fdw-ui-actions">
+        <button class="fdw-ui-action fdw-ui-action-submit" @onclick="Submit">Submit</button>
+        <button class="fdw-ui-action fdw-ui-action-cancel" @onclick="@(() => OnCancel())">Cancel</button>
+    </div>
+</div>
+
+@code {
+    private ValidationResult? _validation;
+
+    /// <summary>The input model to prompt for.</summary>
+    [Parameter, EditorRequired] public IComponentModel Model { get; set; } = default!;
+
+    /// <summary>The active render mode.</summary>
+    [Parameter, EditorRequired] public IRenderMode Mode { get; set; } = default!;
+
+    /// <summary>Invoked on Submit; returns the failed validation to display, or null when accepted.</summary>
+    [Parameter, EditorRequired] public Func<ValidationResult?> OnSubmit { get; set; } = default!;
+
+    /// <summary>Invoked on Cancel.</summary>
+    [Parameter, EditorRequired] public Action OnCancel { get; set; } = default!;
+
+    private void Submit() => _validation = OnSubmit();
+}

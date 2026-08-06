@@ -1,0 +1,254 @@
+@namespace Fdw.Services.Connections.UI.Components
+
+<div class="pagehead">
+    <div>
+        <div class="ey">Data Sources · @GetDisplayedConnections().Count() configured</div>
+        <h1>Connections</h1>
+        <div class="sub">Connection-agnostic access — MsSql, Http, FileSystem, RoslynWorkspace.</div>
+    </div>
+    <div class="actions">
+        <button class="btn btn-primary" @onclick="OnNewConnection">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
+            </svg>
+            New Connection
+        </button>
+    </div>
+</div>
+
+@* Filters *@
+<div class="filters">
+    <span class="lbl">Search</span>
+    <input class="finput" style="min-width:240px;" placeholder="Search connections..." @bind="SearchText" @bind:after="OnSearchChanged" />
+    <span class="lbl">Type</span>
+    <select class="finput" @bind="ConnectionTypeFilter" @bind:after="InvokeFilterChanged">
+        <option value="">All Types</option>
+        @foreach (var type in Context.FilteredConnections.Select(c => c.ConnectionType).Distinct().OrderBy(t => t, StringComparer.OrdinalIgnoreCase))
+        {
+            <option value="@type">@type</option>
+        }
+    </select>
+    <span class="lbl">Sort</span>
+    <select class="finput" @bind="SortOrder" @bind:after="InvokeFilterChanged">
+        <option value="name-asc">Name A-Z</option>
+        <option value="name-desc">Name Z-A</option>
+        <option value="type">By Type</option>
+        <option value="health">By Health</option>
+    </select>
+</div>
+
+@if (!string.IsNullOrEmpty(_testResultMessage))
+{
+    <div class="danger" style="margin-bottom:14px;@(_testResultSuccess ? "background:var(--success-dim);" : "")">
+        <div class="t">
+            <p style="@(_testResultSuccess ? "color:var(--success);" : "color:var(--signal);")">@_testResultMessage</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" @onclick="() => _testResultMessage = null">Dismiss</button>
+    </div>
+}
+
+@if (Context.IsLoading && !Context.FilteredConnections.Any())
+{
+    <div class="card">
+        <div class="card-b" style="padding:48px;text-align:center;">
+            <span class="badge b-run"><span class="bd"></span>Loading</span>
+        </div>
+    </div>
+}
+else if (!GetDisplayedConnections().Any())
+{
+    @* Why: the displayed set is narrower than Context.FilteredConnections because the
+       component also applies a client-side SearchText and ConnectionTypeFilter. Checking
+       the displayed set shows the empty-state message when a search/filter yields no matches,
+       rather than a blank grid with no feedback. *@
+    <div class="card">
+        <div class="card-b" style="padding:48px;text-align:center;">
+            <svg style="width:48px;height:48px;margin:0 auto 14px;color:var(--n-600);display:block;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+            </svg>
+            <p style="color:var(--n-500);">No connections configured</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-h"><h3>All Connections</h3></div>
+        <div class="card-b" style="padding:0 10px 12px;">
+            <table class="tbl">
+                <thead>
+                    <tr><th>Name</th><th>Type</th><th>Last Tested</th><th>Status</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var conn in GetDisplayedConnections())
+                    {
+                        @* Why: @key by stable identity (Name) so Blazor diffs rows by identity, not list
+                           position. Without it, a search/filter that mutates the rendered set (e.g. 25 rows
+                           narrowing to 1) makes Blazor reuse the position-0 DOM node and its per-row click
+                           handlers (TEST/trash) bind to stale/disposed handler ids — the circuit then silently
+                           drops the click, so the delete confirm modal never opens after a search. *@
+                        <tr @key="conn.Name" style="cursor:pointer;" @onclick="() => OnCardClick.InvokeAsync(conn.Name)">
+                            <td><div class="cellpad nm">@conn.Name</div></td>
+                            <td class="mut"><span class="tpill">@conn.ConnectionType</span></td>
+                            <td class="mut">@(conn.LastTestedAt.HasValue ? conn.LastTestedAt.Value.ToString("t") : "Never")</td>
+                            <td class="mut">
+                                <span class="badge @GetHealthBadgeClass(conn)"><span class="bd"></span>@GetHealthBadgeText(conn)</span>
+                            </td>
+                            <td>
+                                <div class="actions" style="justify-content:flex-end;">
+                                    <button class="btn btn-secondary btn-sm" @onclick="() => StartTest(conn.Name)"
+                                            @onclick:stopPropagation="true"
+                                            disabled="@(_testingConnection == conn.Name)">
+                                        @(_testingConnection == conn.Name ? "Testing..." : "Test")
+                                    </button>
+                                    <button class="btn btn-danger btn-sm"
+                                            @onclick="() => ConfirmDelete(conn.Name)"
+                                            @onclick:stopPropagation="true"
+                                            title="Delete connection">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@if (_deleteTarget != null)
+{
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:50;">
+        <div class="card" style="width:384px;">
+            <div class="card-h"><h3>Confirm Delete</h3></div>
+            <div class="card-b">
+                <p style="color:var(--n-400);font-size:13px;margin:0 0 20px;">Are you sure you want to delete connection <span class="mono" style="color:var(--signal);">@_deleteTarget</span>? This action cannot be undone.</p>
+                <div class="actions" style="justify-content:flex-end;">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancel</button>
+                    <button class="btn btn-danger btn-sm" @onclick="ExecuteDelete">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public ConnectionContext Context { get; set; } = default!;
+    [Parameter] public string SearchText { get; set; } = "";
+    [Parameter] public EventCallback<string> SearchTextChanged { get; set; }
+    [Parameter] public string ConnectionTypeFilter { get; set; } = "";
+    [Parameter] public EventCallback<string> ConnectionTypeFilterChanged { get; set; }
+    [Parameter] public string SortOrder { get; set; } = "name-asc";
+    [Parameter] public EventCallback<string> SortOrderChanged { get; set; }
+    [Parameter] public EventCallback OnNewConnection { get; set; }
+    [Parameter] public EventCallback OnFilterChanged { get; set; }
+    [Parameter] public EventCallback<string> OnCardClick { get; set; }
+
+    private string? _testingConnection;
+    private string? _testResultMessage;
+    private bool _testResultSuccess;
+    private string? _deleteTarget;
+
+    private async Task OnSearchChanged()
+    {
+        await SearchTextChanged.InvokeAsync(SearchText);
+        await OnFilterChanged.InvokeAsync();
+    }
+
+    // Why: @bind on HTML elements sets the local field but does NOT fire the EventCallback.
+    // The parent's backing field stays stale and resets the value on the next re-render, making
+    // the sort and type-filter appear as no-ops. Explicitly propagate changed values here so
+    // the parent's state is updated before OnFilterChanged triggers the parent re-render.
+    private async Task InvokeFilterChanged()
+    {
+        await SortOrderChanged.InvokeAsync(SortOrder);
+        await ConnectionTypeFilterChanged.InvokeAsync(ConnectionTypeFilter);
+        await OnFilterChanged.InvokeAsync();
+    }
+
+    // Why: tri-state badge — Unknown (never tested) must render distinctly from a known failure,
+    // rather than collapsing null into "Unhealthy" (see FDW-559 investigation). "b-idle" is the
+    // established muted badge class elsewhere in the UI for "no status yet" (e.g. disabled rows).
+    private static string GetHealthBadgeClass(ConnectionPayload conn) => conn.LastTestSuccess switch
+    {
+        true => "b-ok",
+        false => "b-fail",
+        null => "b-idle",
+    };
+
+    private static string GetHealthBadgeText(ConnectionPayload conn) => conn.LastTestSuccess switch
+    {
+        true => "Healthy",
+        false => "Unhealthy",
+        null => "Unknown",
+    };
+
+    private IEnumerable<ConnectionPayload> GetDisplayedConnections()
+    {
+        var connections = Context.FilteredConnections.AsEnumerable();
+
+        if (!string.IsNullOrEmpty(SearchText))
+        {
+            connections = connections.Where(c =>
+                c.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                || c.ConnectionType.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrEmpty(ConnectionTypeFilter))
+        {
+            connections = connections.Where(c =>
+                string.Equals(c.ConnectionType, ConnectionTypeFilter, StringComparison.OrdinalIgnoreCase));
+        }
+
+        connections = SortOrder switch
+        {
+            "name-desc" => connections.OrderByDescending(c => c.Name, StringComparer.OrdinalIgnoreCase),
+            "type" => connections.OrderBy(c => c.ConnectionType, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase),
+            // Why: worst-first-visible ordering places a known failure ahead of an unknown/never-tested
+            // row, which in turn is ahead of a known-healthy row — Unknown is "needs attention" but not
+            // as urgent as a confirmed failure.
+            "health" => connections.OrderBy(c => c.LastTestSuccess switch { false => 0, null => 1, true => 2 })
+                .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase),
+            _ => connections.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase),
+        };
+
+        return connections;
+    }
+
+    private async Task StartTest(string connName)
+    {
+        _testingConnection = connName;
+        _testResultMessage = null;
+        var response = await Context.OnTestConnection(connName);
+        _testingConnection = null;
+        if (response is not null)
+        {
+            _testResultMessage = string.IsNullOrEmpty(response.Message)
+                ? (response.Success ? "Connection test succeeded" : "Connection test failed")
+                : response.Message;
+            _testResultSuccess = response.Success;
+        }
+        else
+        {
+            _testResultMessage = "Connection test failed";
+            _testResultSuccess = false;
+        }
+    }
+
+    private void ConfirmDelete(string name)
+    {
+        _deleteTarget = name;
+    }
+
+    private async Task ExecuteDelete()
+    {
+        if (_deleteTarget == null) return;
+        var name = _deleteTarget;
+        _deleteTarget = null;
+        await Context.OnDeleteConnection(name);
+    }
+}

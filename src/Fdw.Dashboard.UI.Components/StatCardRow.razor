@@ -1,0 +1,25 @@
+@namespace Fdw.Dashboard.UI.Components
+
+<div class="metrics">
+    @if (ConnectionContext.IsLoading || PipelineContext.IsLoading || ScheduleContext.IsLoading)
+    {
+        @* Why: "Records/Processed (Today)" was a hardcoded 0 with no backing client — dropped until a real metric source exists. *@
+        <StatCard Title="Active Pipelines" Value="..." Color="red" />
+        <StatCard Title="Connections" Value="..." Color="cyan" />
+        <StatCard Title="Schedules" Value="..." Color="yellow" />
+    }
+    else
+    {
+        <StatCard Title="Total Pipelines" Value="@PipelineContext.TotalPipelines.ToString()" Color="red" />
+        <StatCard Title="Connections" Value="@ConnectionContext.TotalConnections.ToString()" Color="cyan" />
+        <StatCard Title="Schedules" Value="@ScheduleContext.ActiveSchedules.ToString()" Color="yellow" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ConnectionDashboardContext ConnectionContext { get; set; } = default!;
+    [Parameter, EditorRequired] public PipelineDashboardContext PipelineContext { get; set; } = default!;
+    [Parameter, EditorRequired] public ScheduleDashboardContext ScheduleContext { get; set; } = default!;
+
+    [CascadingParameter(Name = "BlazorTheme")] private IBlazorTheme? Theme { get; set; }
+}

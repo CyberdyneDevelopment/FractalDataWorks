@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Services.ExternalIdentityProviders\Fdw.Services.ExternalIdentityProviders.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.ExternalIdentityProviders.Abstractions\Fdw.Services.ExternalIdentityProviders.Abstractions.csproj" />
+    <!-- Why: emits the module-init that registers every [TypeOption] (incl. ConfigurationCommands)
+         into its collection, so the real DefaultConfigurationProvider.Get path can resolve Commands().
+         Without it ConfigurationCommands is empty in-test and any real Get() throws. Mirrors the
+         working Fdw.Services.Tests / Fdw.Services.Users.Tests test projects. -->
+    <ProjectReference Include="..\..\src\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,96 @@
+@page "/datasets"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>DataSets - Cyberdyne</PageTitle>
+
+<DataSetProvider>
+    <ChildContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">Data Sources</div>
+                <h1>DataSets</h1>
+                <div class="sub">Logical views over one or more sources. Calculated sets derive fields with the formula engine.</div>
+            </div>
+            <div class="actions">
+                <input class="fin" style="width:240px;" placeholder="Search name, abbrev, category..."
+                       value="@_search" @oninput="@(e => { _search = e.Value?.ToString() ?? string.Empty; ctx.OnSearchStringChanged(_search); })" />
+                <select class="fin" style="width:170px;" @bind="_categoryFilter" @bind:after="() => ctx.OnCategoryFilterChanged(_categoryFilter)">
+                    <option value="">All categories</option>
+                    @foreach (var cat in ctx.Categories)
+                    {
+                        <option value="@cat">@cat</option>
+                    }
+                </select>
+                <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/datasets/new")'>
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
+                    </svg>
+                    New DataSet
+                </button>
+            </div>
+        </div>
+
+        @if (ctx.IsLoading && !ctx.DataSets.Any())
+        {
+            <div class="loadwrap"><div class="spin"></div></div>
+        }
+        else if (!ctx.DataSets.Any())
+        {
+            <div class="card"><div class="card-b"><div class="empty">No DataSets configured. Create a DataSet to define logical data schemas.</div></div></div>
+        }
+        else
+        {
+            <div class="card">
+                <div class="card-h"><h3>All DataSets</h3></div>
+                <div class="card-b" style="padding:0 10px 12px;">
+                    <table class="tbl">
+                        <thead>
+                            <tr>
+                                <th>Abbr</th>
+                                <th>Display Name</th>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @* Why: Field/source counts intentionally NOT shown here — computing them
+                               requires cascading children for every list row, which is the perf
+                               problem that used to slow this page down. Counts appear on the detail
+                               page where the cascade is loaded anyway. *@
+                            @foreach (var ds in ctx.FilteredDataSets)
+                            {
+                                <tr style="cursor:pointer;" @onclick='() => Nav.NavigateTo($"/datasets/{ds.Name}")'>
+                                    <td>
+                                        <div class="cellpad">
+                                            @if (!string.IsNullOrWhiteSpace(ds.Abbreviation))
+                                            {
+                                                <span class="tpill">@ds.Abbreviation</span>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td><div class="cellpad nm">@(string.IsNullOrWhiteSpace(ds.DisplayName) ? ds.Name : ds.DisplayName)</div></td>
+                                    <td class="mut">@(string.IsNullOrWhiteSpace(ds.DisplayName) || string.Equals(ds.DisplayName, ds.Name, StringComparison.Ordinal) ? string.Empty : ds.Name)</td>
+                                    <td class="mut">
+                                        @if (!string.IsNullOrWhiteSpace(ds.Category))
+                                        {
+                                            <span class="tpill">@ds.Category</span>
+                                        }
+                                    </td>
+                                    <td class="mut">@ds.Description</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </ChildContent>
+</DataSetProvider>
+
+@code {
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private string _search = string.Empty;
+    private string _categoryFilter = string.Empty;
+}

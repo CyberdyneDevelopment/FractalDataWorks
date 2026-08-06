@@ -1,0 +1,103 @@
+@using Excubo.Blazor.Canvas
+@using Excubo.Blazor.Canvas.Contexts
+@using Fdw.UI.Themes.Components.Theme
+@inherits Microsoft.AspNetCore.Components.ComponentBase
+
+<div class="canvas-widget" style="width: @(Width)px; height: @(Height)px;">
+    <Canvas @ref="_canvas" width="@Width" height="@Height" class="@CssClass" />
+</div>
+
+@code {
+    /// <summary>
+    /// Width of the canvas in pixels.
+    /// </summary>
+    [Parameter]
+    public int Width { get; set; } = 300;
+
+    /// <summary>
+    /// Height of the canvas in pixels.
+    /// </summary>
+    [Parameter]
+    public int Height { get; set; } = 200;
+
+    /// <summary>
+    /// Additional CSS class for the canvas element.
+    /// </summary>
+    [Parameter]
+    public string? CssClass { get; set; }
+
+    /// <summary>
+    /// Theme configuration for styling.
+    /// </summary>
+    [CascadingParameter]
+    protected UiThemeConfiguration? Theme { get; set; }
+
+    /// <summary>
+    /// Child content to render inside the canvas container.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private Canvas _canvas = null!;
+    private bool _initialized;
+
+    /// <summary>
+    /// Gets the 2D rendering context for the canvas.
+    /// </summary>
+    protected async Task<Context2D> GetContext2DAsync()
+    {
+        return await _canvas.GetContext2DAsync();
+    }
+
+    /// <summary>
+    /// Called after render to perform drawing operations.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _initialized = true;
+            await DrawAsync();
+        }
+    }
+
+    /// <summary>
+    /// Override to perform custom drawing. Called after first render.
+    /// </summary>
+    protected virtual Task DrawAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Triggers a redraw of the canvas.
+    /// </summary>
+    protected async Task InvalidateAsync()
+    {
+        if (_initialized)
+        {
+            await DrawAsync();
+        }
+    }
+
+    /// <summary>
+    /// Clears the entire canvas.
+    /// </summary>
+    protected async Task ClearAsync()
+    {
+        await using var ctx = await GetContext2DAsync();
+        await ctx.ClearRectAsync(0, 0, Width, Height);
+    }
+
+    /// <summary>
+    /// Gets a color string from the theme or returns default.
+    /// </summary>
+    protected string GetThemeColor(System.Func<UiColorScheme, string> selector, string defaultColor = "#ffffff")
+    {
+        if (Theme?.Colors is { } colors)
+        {
+            return selector(colors);
+        }
+        return defaultColor;
+    }
+}

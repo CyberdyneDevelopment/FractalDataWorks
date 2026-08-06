@@ -1,0 +1,758 @@
+@namespace Fdw.Data.Components.DataSets
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Net.Http
+@using Fdw.Services.Data.Clients
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Operations.Clients
+@using Fdw.Operations.Clients.Models
+@using Fdw.Results
+@using Fdw.Data.Components.Logging
+
+@*
+    Headless provider for the DataSet in-place composition workbench.
+    Owns loading, source/join/calculation/aggregation mutation, incremental preview, and save.
+    No UI markup — exposes all state and callbacks through DataSetDetailContext.
+*@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider that drives the DataSet composition workbench.
+    /// Loads the DataSet by name, owns the working composition state, and exposes
+    /// callbacks for add-source, add-join, add-calculation, add-aggregation, preview, and save.
+    /// </summary>
+    /// <remarks>
+    /// Headless chain:
+    /// <list type="bullet">
+    ///   <item><description>Consumer: page markup calls ctx.OnXxx() callbacks</description></item>
+    ///   <item><description>This (provider): <see cref="DataSetDetailProvider"/> — owns all state and logic</description></item>
+    ///   <item><description>Context: <see cref="DataSetDetailContext"/> — sealed; passed to consumer RenderFragment</description></item>
+    /// </list>
+    /// </remarks>
+    [Parameter, EditorRequired] public string DataSetName { get; set; } = string.Empty;
+    [Parameter] public RenderFragment<DataSetDetailContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    [Inject] private ILogger<DataSetDetailProvider>? LoggerParam { get; set; }
+
+    private DataSetApiClient? _dataSetApi;
+    private ConfigurationApiClient? _configurationApi;
+    private ILogger<DataSetDetailProvider> _logger = NullLogger<DataSetDetailProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<string> _aggregationFunctionNames = [];
+    private DataSetDetailPayload? _currentDataSet;
+    private IReadOnlyList<DataSetFieldPayload> _workingFields = [];
+    private IReadOnlyList<DataSetSourceEditorPayload> _workingSources = [];
+    private IReadOnlyList<DataSetJoinEditorPayload> _workingJoins = [];
+    private IReadOnlyList<DataSetCalculationEditorPayload> _workingCalculations = [];
+    private IReadOnlyList<DataSetAggregationEditorPayload> _workingAggregations = [];
+    private IReadOnlyList<Dictionary<string, object?>> _previewRows = [];
+    private bool _isLoading;
+    private bool _isSaving;
+    private bool _isPreviewLoading;
+    private IGenericResult? _lastResult;
+    private DataSetDetailContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _dataSetApi = new DataSetApiClient(
+            HttpClientFactory.CreateClient("DataSetClient"),
+            LoggerFactory?.CreateLogger<DataSetApiClient>()!);
+        _configurationApi = new ConfigurationApiClient(
+            HttpClientFactory.CreateClient("ConfigurationClient"),
+            LoggerFactory?.CreateLogger<ConfigurationApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<DataSetDetailProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _initialized)
+            return;
+
+        _initialized = true;
+
+        if (string.IsNullOrEmpty(DataSetName))
+        {
+            _lastResult = GenericResult.Failure(DataSetDetailProviderLog.DataSetNameRequired(_logger));
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+            return;
+        }
+
+        // Why: load aggregation function names and DataSet detail in parallel; both are needed
+        // before the workbench is interactive, and neither depends on the other.
+        await Task.WhenAll(LoadAggregationFunctionNames(), LoadDataSetDetail());
+    }
+
+    // ── Load ──────────────────────────────────────────────────────────────────
+
+    private async Task LoadAggregationFunctionNames(CancellationToken cancellationToken = default)
+    {
+        DataSetDetailProviderLog.LoadingAggregationFunctions(_logger);
+
+        try
+        {
+            var result = await _configurationApi!.GetTypeCollectionValues("AggregationFunctions", cancellationToken);
+            if (!result.IsSuccess)
+            {
+                DataSetDetailProviderLog.LoadAggregationFunctionsFailed(
+                    _logger, new InvalidOperationException(result.CurrentMessage));
+                _lastResult = result;
+                _aggregationFunctionNames = [];
+                RebuildContext();
+                StateHasChanged();
+                return;
+            }
+
+            _aggregationFunctionNames = result.Value?.Select(v => v.Name).ToList() ?? [];
+            DataSetDetailProviderLog.LoadedAggregationFunctions(_logger, _aggregationFunctionNames.Count);
+            RebuildContext();
+            StateHasChanged();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { DataSetDetailProviderLog.LoadAggregationFunctionsFailed(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _aggregationFunctionNames = [];
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadDataSetDetail(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _dataSetApi!.GetDataSet(DataSetName, cancellationToken);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(DataSetDetailProviderLog.LoadDataSetDetailFailed(_logger, DataSetName));
+                _currentDataSet = null;
+                _workingFields = [];
+                _workingSources = [];
+                _workingJoins = [];
+                _workingCalculations = [];
+                _workingAggregations = [];
+                return;
+            }
+
+            _currentDataSet = result.Value;
+            InitializeWorkingSetFromDataSet(_currentDataSet!);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetDetailProviderLog.LoadDataSetDetailException(_logger, ex));
+            _currentDataSet = null;
+            _workingFields = [];
+            _workingSources = [];
+            _workingJoins = [];
+            _workingCalculations = [];
+            _workingAggregations = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Working-set initialization from the loaded DataSet ────────────────────
+
+    private void InitializeWorkingSetFromDataSet(DataSetDetailPayload dataSet)
+    {
+        // Why: the working set starts as a snapshot of the persisted DataSet so the
+        // user's edits are additive; each mutation rebuilds from these lists in memory
+        // and the API is only called for preview/save, not on every UI interaction.
+        _workingFields = dataSet.Fields.ToList();
+        _workingSources = dataSet.Sources
+            .Select(s => new DataSetSourceEditorPayload
+            {
+                SourceName = s.SourceName,
+                DataStoreName = s.DataStoreName,
+                Path = s.Path,
+                ContainerName = s.ContainerName,
+                IsPrimary = s.IsPrimary,
+                FieldMappings = s.FieldMappings,
+                CanRemove = !s.IsPrimary || dataSet.Sources.Count > 1
+            })
+            .ToList();
+        _workingJoins = dataSet.Joins
+            .Select(j => new DataSetJoinEditorPayload
+            {
+                JoinId = Guid.NewGuid(),
+                // Why: DataSetJoinPayload carries LeftSource/RightSource strings, not Guids
+                LeftSourceName = j.LeftSource,
+                RightSourceName = j.RightSource,
+                JoinType = ParseJoinType(j.JoinType),
+                LeftKeyField = j.LeftField,
+                RightKeyField = j.RightField,
+                CanRemove = true
+            })
+            .ToList();
+        _workingCalculations = [];
+        _workingAggregations = [];
+    }
+
+    private static string ParseJoinType(string value)
+    {
+        if (string.Equals(value, "Left", StringComparison.OrdinalIgnoreCase)) return "Left";
+        if (string.Equals(value, "Right", StringComparison.OrdinalIgnoreCase)) return "Right";
+        if (string.Equals(value, "Full", StringComparison.OrdinalIgnoreCase)) return "Full";
+        if (string.Equals(value, "Cross", StringComparison.OrdinalIgnoreCase)) return "Cross";
+        return "Inner";
+    }
+
+    // ── Source mutations ──────────────────────────────────────────────────────
+
+    private async Task AddSource(DataSetSourceEditorPayload source, CancellationToken cancellationToken = default)
+    {
+        _lastResult = null;
+
+        try
+        {
+            var updated = _workingSources.ToList();
+            updated.Add(new DataSetSourceEditorPayload
+            {
+                SourceName = source.SourceName,
+                DataStoreName = source.DataStoreName,
+                Path = source.Path,
+                ContainerName = source.ContainerName,
+                IsPrimary = source.IsPrimary,
+                FieldMappings = source.FieldMappings,
+                CanRemove = true
+            });
+            _workingSources = updated;
+
+            // Update CanRemove on primary source when it now has siblings
+            if (_workingSources.Count > 1)
+            {
+                _workingSources = _workingSources
+                    .Select(s => new DataSetSourceEditorPayload
+                    {
+                        SourceName = s.SourceName,
+                        DataStoreName = s.DataStoreName,
+                        Path = s.Path,
+                        ContainerName = s.ContainerName,
+                        IsPrimary = s.IsPrimary,
+                        FieldMappings = s.FieldMappings,
+                        CanRemove = true
+                    })
+                    .ToList();
+            }
+
+            RebuildContext();
+            StateHasChanged();
+
+            await RunPreview(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetDetailProviderLog.AddSourceException(_logger, ex));
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task RemoveSource(string sourceName, CancellationToken cancellationToken = default)
+    {
+        _lastResult = null;
+
+        try
+        {
+            var match = _workingSources.FirstOrDefault(
+                s => string.Equals(s.SourceName, sourceName, StringComparison.Ordinal));
+
+            if (match is null)
+            {
+                _lastResult = GenericResult.Failure(DataSetDetailProviderLog.RemoveSourceFailed(_logger, sourceName));
+                RebuildContext();
+                StateHasChanged();
+                return;
+            }
+
+            var updated = _workingSources
+                .Where(s => !string.Equals(s.SourceName, sourceName, StringComparison.Ordinal))
+                .ToList();
+
+            // After removal only one source remains: the primary can no longer be removed
+            if (updated.Count == 1)
+            {
+                var sole = updated[0];
+                updated[0] = new DataSetSourceEditorPayload
+                {
+                    SourceName = sole.SourceName,
+                    DataStoreName = sole.DataStoreName,
+                    Path = sole.Path,
+                    ContainerName = sole.ContainerName,
+                    IsPrimary = sole.IsPrimary,
+                    FieldMappings = sole.FieldMappings,
+                    CanRemove = false
+                };
+            }
+
+            _workingSources = updated;
+
+            // Remove joins that referenced the removed source
+            _workingJoins = _workingJoins
+                .Where(j =>
+                    !string.Equals(j.LeftSourceName, sourceName, StringComparison.Ordinal) &&
+                    !string.Equals(j.RightSourceName, sourceName, StringComparison.Ordinal))
+                .ToList();
+
+            RebuildContext();
+            StateHasChanged();
+
+            await RunPreview(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetDetailProviderLog.RemoveSourceException(_logger, ex));
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Join mutations ────────────────────────────────────────────────────────
+
+    private async Task AddJoin(DataSetJoinEditorPayload join, CancellationToken cancellationToken = default)
+    {
+        _lastResult = null;
+
+        try
+        {
+            var joinWithId = new DataSetJoinEditorPayload
+            {
+                JoinId = join.JoinId == Guid.Empty ? Guid.NewGuid() : join.JoinId,
+                LeftSourceName = join.LeftSourceName,
+                RightSourceName = join.RightSourceName,
+                JoinType = join.JoinType,
+                LeftKeyField = join.LeftKeyField,
+                RightKeyField = join.RightKeyField,
+                CanRemove = true
+            };
+            _workingJoins = _workingJoins.ToList().Append(joinWithId).ToList();
+
+            RebuildContext();
+            StateHasChanged();
+
+            await RunPreview(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetDetailProviderLog.AddJoinException(_logger, ex));
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task RemoveJoin(string joinId, CancellationToken cancellationToken = default)
+    {
+        _lastResult = null;
+
+        try
+        {
+            if (!Guid.TryParse(joinId, out var parsedId))
+            {
+                _lastResult = GenericResult.Failure(DataSetDetailProviderLog.RemoveJoinFailed(_logger, joinId));
+                RebuildContext();
+                StateHasChanged();
+                return;
+            }
+
+            _workingJoins = _workingJoins
+                .Where(j => j.JoinId != parsedId)
+                .ToList();
+
+            RebuildContext();
+            StateHasChanged();
+
+            await RunPreview(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetDetailProviderLog.RemoveJoinException(_logger, ex));
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Calculation mutations ─────────────────────────────────────────────────
+
+    private async Task AddCalculation(DataSetCalculationEditorPayload calculation, CancellationToken cancellationToken = default)
+    {
+        _lastResult = null;
+
+        try
+        {
+            var calcWithId = new DataSetCalculationEditorPayload
+            {
+                CalculationId = calculation.CalculationId == Guid.Empty ? Guid.NewGuid() : calculation.CalculationId,
+                Name = calculation.Name,
+                Formula = calculation.Formula,
+                DataType = calculation.DataType,
+                Description = calculation.Description,
+                CanRemove = true
+            };
+            _workingCalculations = _workingCalculations.ToList().Append(calcWithId).ToList();
+
+            RebuildContext();
+            StateHasChanged();
+
+            await RunPreview(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetDetailProviderLog.AddCalculationException(_logger, ex));
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task RemoveCalculation(string calculationName, CancellationToken cancellationToken = default)
+    {
+        _lastResult = null;
+
+        try
+        {
+            var match = _workingCalculations.FirstOrDefault(
+                c => string.Equals(c.Name, calculationName, StringComparison.Ordinal));
+
+            if (match is null)
+            {
+                _lastResult = GenericResult.Failure(DataSetDetailProviderLog.RemoveCalculationFailed(_logger, calculationName));
+                RebuildContext();
+                StateHasChanged();
+                return;
+            }
+
+            _workingCalculations = _workingCalculations
+                .Where(c => !string.Equals(c.Name, calculationName, StringComparison.Ordinal))
+                .ToList();
+
+            RebuildContext();
+            StateHasChanged();
+
+            await RunPreview(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetDetailProviderLog.RemoveCalculationException(_logger, ex));
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Aggregation mutations ─────────────────────────────────────────────────
+
+    private async Task AddAggregation(DataSetAggregationEditorPayload aggregation, CancellationToken cancellationToken = default)
+    {
+        _lastResult = null;
+
+        try
+        {
+            var aggWithId = new DataSetAggregationEditorPayload
+            {
+                AggregationId = aggregation.AggregationId == Guid.Empty ? Guid.NewGuid() : aggregation.AggregationId,
+                Name = aggregation.Name,
+                AggregationFunction = aggregation.AggregationFunction,
+                SourceField = aggregation.SourceField,
+                GroupByFields = aggregation.GroupByFields,
+                Description = aggregation.Description,
+                CanRemove = true
+            };
+            _workingAggregations = _workingAggregations.ToList().Append(aggWithId).ToList();
+
+            RebuildContext();
+            StateHasChanged();
+
+            await RunPreview(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetDetailProviderLog.AddAggregationException(_logger, ex));
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task RemoveAggregation(string aggregationName, CancellationToken cancellationToken = default)
+    {
+        _lastResult = null;
+
+        try
+        {
+            var match = _workingAggregations.FirstOrDefault(
+                a => string.Equals(a.Name, aggregationName, StringComparison.Ordinal));
+
+            if (match is null)
+            {
+                _lastResult = GenericResult.Failure(DataSetDetailProviderLog.RemoveAggregationFailed(_logger, aggregationName));
+                RebuildContext();
+                StateHasChanged();
+                return;
+            }
+
+            _workingAggregations = _workingAggregations
+                .Where(a => !string.Equals(a.Name, aggregationName, StringComparison.Ordinal))
+                .ToList();
+
+            RebuildContext();
+            StateHasChanged();
+
+            await RunPreview(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetDetailProviderLog.RemoveAggregationException(_logger, ex));
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Preview ───────────────────────────────────────────────────────────────
+
+    private async Task RunPreview(CancellationToken cancellationToken = default)
+    {
+        if (_workingSources.Count == 0)
+        {
+            _previewRows = [];
+            RebuildContext();
+            StateHasChanged();
+            return;
+        }
+
+        _isPreviewLoading = true;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            // Why: preview executes against the persisted DataSet using the standard preview endpoint;
+            // in-workbench working-set changes (adds/removes) are reflected only after save.
+            var previewRequest = new DataPreviewRequestPayload { MaxRows = 25 };
+            var result = await _dataSetApi!.PreviewDataSet(DataSetName, previewRequest, cancellationToken);
+
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(DataSetDetailProviderLog.PreviewFailed(_logger, DataSetName));
+                _previewRows = [];
+            }
+            else
+            {
+                // Why: DataPreviewResponsePayload carries Rows as IReadOnlyList<IReadOnlyDictionary<string,object?>> or similar;
+                // we project to Dictionary<string, object?> for compatibility with the context contract.
+                var rows = result.Value?.Rows ?? [];
+                _previewRows = rows
+                    .Select(r => r.ToDictionary(
+                        kvp => kvp.Key,
+                        kvp => kvp.Value,
+                        StringComparer.Ordinal))
+                    .ToList<Dictionary<string, object?>>();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetDetailProviderLog.PreviewException(_logger, ex));
+            _previewRows = [];
+        }
+        finally
+        {
+            _isPreviewLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Save ──────────────────────────────────────────────────────────────────
+
+    private async Task SaveDataSet(CancellationToken cancellationToken = default)
+    {
+        _isSaving = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            if (_currentDataSet is null)
+            {
+                _lastResult = GenericResult.Failure(DataSetDetailProviderLog.SaveDataSetFailed(_logger, DataSetName));
+                return;
+            }
+
+            // Why: map the working-set sources back to API request objects; field mappings are
+            // carried through unchanged from the original source (workbench edits are source-level).
+            var sourcesRequest = _workingSources
+                .Select(s => new CreateDataSetSourcePayload
+                {
+                    SourceName = s.SourceName,
+                    DataStoreName = s.DataStoreName,
+                    Path = s.Path,
+                    ContainerName = s.ContainerName,
+                    IsPrimary = s.IsPrimary,
+                    FieldMappings = s.FieldMappings.ToList()
+                })
+                .ToList();
+
+            // Why: map working joins back to the DataSetJoinPayload format that the API accepts.
+            var joinsRequest = _workingJoins
+                .Select(j => new DataSetJoinPayload
+                {
+                    LeftSource = j.LeftSourceName,
+                    RightSource = j.RightSourceName,
+                    JoinType = j.JoinType,
+                    LeftField = j.LeftKeyField,
+                    RightField = j.RightKeyField
+                })
+                .ToList();
+
+            var request = new UpdateDataSetPayload
+            {
+                Description = _currentDataSet.Description,
+                Version = _currentDataSet.Version,
+                Category = _currentDataSet.Category,
+                ServiceOptionType = _currentDataSet.ServiceOptionType,
+                RecordTypeName = _currentDataSet.RecordTypeName,
+                Sources = sourcesRequest,
+                Joins = joinsRequest,
+                Caching = _currentDataSet.Caching,
+                Filters = _currentDataSet.Filters
+            };
+
+            var result = await _dataSetApi!.UpdateDataSet(DataSetName, request, cancellationToken);
+            if (!result.IsSuccess)
+            {
+                _lastResult = GenericResult.Failure(DataSetDetailProviderLog.SaveDataSetFailed(_logger, DataSetName));
+                return;
+            }
+
+            _currentDataSet = result.Value;
+            if (_currentDataSet is not null)
+                InitializeWorkingSetFromDataSet(_currentDataSet);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(DataSetDetailProviderLog.SaveDataSetException(_logger, ex));
+        }
+        finally
+        {
+            _isSaving = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Composition mode derivation ───────────────────────────────────────────
+
+    private string DeriveCompositionMode()
+    {
+        if (_workingSources.Count <= 1)
+            return "Singular";
+
+        var distinctStores = _workingSources
+            .Select(s => s.DataStoreName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+
+        return distinctStores > 1
+            ? "Distributed"
+            : "MultiSource";
+    }
+
+    // ── Context builder ───────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new DataSetDetailContext
+        {
+            CurrentDataSet = _currentDataSet,
+            CompositionMode = DeriveCompositionMode(),
+            WorkingFields = _workingFields,
+            WorkingSources = _workingSources,
+            WorkingJoins = _workingJoins,
+            WorkingCalculations = _workingCalculations,
+            WorkingAggregations = _workingAggregations,
+            PreviewRows = _previewRows,
+            AggregationFunctionNames = _aggregationFunctionNames,
+            IsLoading = _isLoading,
+            IsSaving = _isSaving,
+            IsPreviewLoading = _isPreviewLoading,
+            LastResult = _lastResult,
+            OnAddSource = source => AddSource(source),
+            OnRemoveSource = name => RemoveSource(name),
+            OnAddJoin = join => AddJoin(join),
+            OnRemoveJoin = id => RemoveJoin(id),
+            OnAddCalculation = calc => AddCalculation(calc),
+            OnRemoveCalculation = name => RemoveCalculation(name),
+            OnAddAggregation = agg => AddAggregation(agg),
+            OnRemoveAggregation = name => RemoveAggregation(name),
+            OnPreview = () => RunPreview(),
+            OnSaveDataSet = () => SaveDataSet()
+        };
+    }
+}

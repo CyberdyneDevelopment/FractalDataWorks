@@ -1,0 +1,376 @@
+@namespace Fdw.Configuration.Components.Configuration
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.Operations.Clients
+@using Fdw.Operations.Clients.Models
+@using Fdw.Results
+@using Fdw.Configuration.Components.Logging
+@using System.Net.Http
+@using Fdw.UI.Components.Logging
+
+@*
+    Headless component that provides Configuration Management logic and state.
+*@
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for configuration management operations. Owns instance/type loading,
+    /// CRUD, and filtering logic. No UI markup.
+    /// </summary>
+    /// <remarks>
+    /// Headless chain:
+    /// <list type="bullet">
+    ///   <item><description>Consumer (before): page shells with markup and ctx.OnXxx() calls</description></item>
+    ///   <item><description>This (provider): <see cref="ConfigurationProvider"/> — owns all state and logic, exposes via <see cref="ConfigurationContext"/></description></item>
+    ///   <item><description>Context (after): <see cref="ConfigurationContext"/> — sealed; passed to consumer RenderFragment</description></item>
+    /// </list>
+    /// </remarks>
+    [Parameter] public RenderFragment<ConfigurationContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private ConfigurationApiClient? _configurationApi;
+    [Inject] private ILogger<ConfigurationProvider>? LoggerParam { get; set; }
+
+    private ILogger<ConfigurationProvider> _logger = NullLogger<ConfigurationProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<ConfigurationInstanceSummaryPayload> _instances = [];
+    private IReadOnlyList<ConfigurationTypeSummary> _types = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private string _searchString = string.Empty;
+    private ConfigurationContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _configurationApi = new ConfigurationApiClient(HttpClientFactory.CreateClient("ConfigurationClient"), LoggerFactory?.CreateLogger<ConfigurationApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<ConfigurationProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            // Why: the category sidebar binds to ctx.Types; without loading the root types here
+            // it stays empty ("No configuration types found") and CRUD is unreachable. Load both
+            // root types and instances on first render.
+            await Task.WhenAll(LoadRootTypes(), LoadInstances());
+        }
+    }
+
+    private async Task LoadRootTypes(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _configurationApi!.GetRootTypes(cancellationToken);
+            if (result.IsSuccess)
+            {
+                _types = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(ConfigurationProviderLog.LoadTypesFailed(_logger));
+                _types = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { ConfigurationProviderLog.LoadTypesException(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _types = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Methods (exposed as callbacks via ConfigurationContext) ────────────────
+
+    private async Task LoadInstances(string? category = null, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _configurationApi!.GetInstances(category, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _instances = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(ConfigurationProviderLog.LoadInstancesFailed(_logger));
+                _instances = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { ConfigurationProviderLog.LoadInstancesException(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            _instances = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadTypes(string category, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _configurationApi!.GetTypesByCategory(category, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _types = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(ConfigurationProviderLog.LoadTypesFailed(_logger));
+                _types = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ConfigurationProviderLog.LoadTypesException(_logger, ex));
+            _types = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private IEnumerable<ConfigurationInstanceSummaryPayload> GetFilteredInstances()
+    {
+        return string.IsNullOrWhiteSpace(_searchString)
+            ? _instances
+            : _instances.Where(i => i.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+                                    i.ServiceType.Contains(_searchString, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task<ConfigurationInstanceDetailPayload?> GetInstanceDetails(string category, string name, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _configurationApi!.GetInstance(category, name, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(ConfigurationProviderLog.InstanceDetailFailed(_logger, name));
+            return default;
+        }
+        catch (OperationCanceledException)
+        {
+            return default;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ConfigurationProviderLog.InstanceDetailException(_logger, ex));
+            return default;
+        }
+    }
+
+    private async Task<ConfigurationInstanceDetailPayload?> CreateInstance(string category, CreateConfigurationInstanceRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _configurationApi!.CreateInstance(category, request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadInstances(category, cancellationToken);
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(ConfigurationProviderLog.CreateInstanceFailed(_logger));
+            return default;
+        }
+        catch (OperationCanceledException)
+        {
+            return default;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ConfigurationProviderLog.CreateInstanceException(_logger, ex));
+            return default;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<ConfigurationInstanceDetailPayload?> UpdateInstance(string category, string name, UpdateConfigurationInstanceRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await _configurationApi!.UpdateInstance(category, name, request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadInstances(category, cancellationToken);
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(ConfigurationProviderLog.UpdateInstanceFailed(_logger, name));
+            return default;
+        }
+        catch (OperationCanceledException)
+        {
+            return default;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ConfigurationProviderLog.UpdateInstanceException(_logger, ex));
+            return default;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<IReadOnlyList<ConfigurationTypeSummary>?> GetRootTypes(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _configurationApi!.GetRootTypes(cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(ConfigurationProviderLog.LoadTypesFailed(_logger));
+            return default;
+        }
+        catch (OperationCanceledException)
+        {
+            return default;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ConfigurationProviderLog.LoadTypesException(_logger, ex));
+            return default;
+        }
+    }
+
+    private async Task<bool> DeleteInstance(string category, string name, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _configurationApi!.DeleteInstance(category, name, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _instances = _instances.Where(i => !(string.Equals(i.Name, name, StringComparison.Ordinal) && string.Equals(i.Category, category, StringComparison.Ordinal))).ToList();
+                RebuildContext();
+                StateHasChanged();
+            }
+            return result.IsSuccess;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ConfigurationProviderLog.DeleteInstanceException(_logger, ex));
+            RebuildContext();
+            StateHasChanged();
+            return false;
+        }
+    }
+
+    private void SetSearchString(string value)
+    {
+        _searchString = value;
+        RebuildContext();
+        StateHasChanged();
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new ConfigurationContext
+        {
+            Instances = _instances,
+            Types = _types,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            SearchString = _searchString,
+            FilteredInstances = GetFilteredInstances(),
+            OnLoadInstances = category => LoadInstances(category),
+            OnLoadTypes = category => LoadTypes(category),
+            OnGetInstanceDetails = (category, name) => GetInstanceDetails(category, name),
+            OnCreateInstance = (category, request) => CreateInstance(category, request),
+            OnUpdateInstance = (category, name, request) => UpdateInstance(category, name, request),
+            OnGetRootTypes = () => GetRootTypes(),
+            OnDeleteInstance = (category, name) => DeleteInstance(category, name),
+            OnSearchStringChanged = SetSearchString
+        };
+    }
+}

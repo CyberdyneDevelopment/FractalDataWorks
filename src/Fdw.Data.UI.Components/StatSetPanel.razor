@@ -1,0 +1,63 @@
+@namespace Fdw.Data.UI.Components
+@using Fdw.Services.Data.Abstractions.Visualization
+
+@if (StatSet is null)
+{
+    <div class="empty">No statistics available. Execute a query first.</div>
+}
+else
+{
+    <div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr));">
+        @foreach (var entry in StatSet.ColumnStats)
+        {
+            var col = entry.Value;
+            var range = col.Max - col.Min;
+            <div class="card card-b" style="padding:16px;">
+                <div class="card-h" style="padding:0 0 12px;">
+                    <h3 class="mono">@entry.Key</h3>
+                    <span class="meta">@col.Count rows</span>
+                </div>
+
+                <!-- Mini sparkline bar (distribution approximation) -->
+                <div style="display:flex;align-items:flex-end;gap:1px;height:32px;margin-bottom:12px;">
+                    @{
+                        var bars = new[] { col.Min, col.P25, col.Median, col.Mean, col.P75, col.P95, col.Max };
+                        var barMax = col.Max;
+                        var barMin = col.Min;
+                        var barRange = barMax - barMin;
+                    }
+                    @foreach (var val in bars)
+                    {
+                        var pct = barRange > 0 ? (val - barMin) / barRange * 100 : 50;
+                        var height = Math.Max(4, pct);
+                        <div style="flex:1;background:var(--glacier-dim);border-radius:2px;height: @($"{height:F0}")%"></div>
+                    }
+                </div>
+
+                <!-- Stats grid -->
+                <dl class="kv" style="grid-template-columns:1fr 1fr;">
+                    <dt>Min</dt>
+                    <dd class="mono">@col.Min.ToString("N2")</dd>
+                    <dt>Max</dt>
+                    <dd class="mono">@col.Max.ToString("N2")</dd>
+                    <dt>Mean</dt>
+                    <dd class="mono">@col.Mean.ToString("N2")</dd>
+                    <dt>Median</dt>
+                    <dd class="mono">@col.Median.ToString("N2")</dd>
+                    <dt>StdDev</dt>
+                    <dd class="mono">@col.StdDev.ToString("N2")</dd>
+                    <dt>P25/P75</dt>
+                    <dd class="mono">@col.P25.ToString("N1") / @col.P75.ToString("N1")</dd>
+                    <dt>Nulls</dt>
+                    <dd class="mono">@col.NullCount</dd>
+                    <dt>Distinct</dt>
+                    <dd class="mono">@col.DistinctCount</dd>
+                </dl>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public StatSetResponse? StatSet { get; set; }
+}

@@ -1,0 +1,317 @@
+@namespace Fdw.Services.Pipelines.Components.Pipelines
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq
+@using Fdw.Results
+@using Fdw.Services.Pipelines.Clients.Abstractions
+@using Fdw.UI.Components.Logging
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    [Parameter] public RenderFragment<PipelineContext>? ChildContent { get; set; }
+
+    [Inject] private IPipelineClient PipelineClient { get; set; } = default!;
+    [Inject] private IPipelineJobClient PipelineJobClient { get; set; } = default!;
+    [Inject] private ILogger<PipelineProvider>? LoggerParam { get; set; }
+
+    private ILogger<PipelineProvider> _logger = NullLogger<PipelineProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<PipelineSummaryResponse> _pipelines = [];
+    private IReadOnlyList<TriggerPipelineResponse> _recentJobs = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private string _searchString = "";
+    private PipelineContext _context = new();
+    private bool _initialized;
+
+    /// <summary>Gets the most recent operation result, for @ref callers that need the freshly-updated value after an operation.</summary>
+    public IGenericResult? LastResult => _lastResult;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<PipelineProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadData();
+        }
+    }
+
+    // ── Methods (exposed as callbacks via PipelineContext) ──────────────────────
+
+    private async Task LoadData(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await PipelineClient.List(cancellationToken);
+            if (result.IsSuccess)
+            {
+                _pipelines = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(UiProviderLog.LoadFailed(_logger, "PipelineProvider", "pipelines"));
+                _pipelines = [];
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.LoadException(_logger, ex, "PipelineProvider", "pipelines"));
+            _pipelines = [];
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private IReadOnlyList<PipelineSummaryResponse> GetFilteredPipelines() =>
+        string.IsNullOrWhiteSpace(_searchString)
+            ? _pipelines
+            : _pipelines.Where(p => p.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+                                     p.PipelineType.Contains(_searchString, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    private async Task<PipelineDetailResponse?> GetPipelineDetails(string name, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await PipelineClient.Get(name, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(UiProviderLog.DetailLoadFailed(_logger, "PipelineProvider", "pipeline", name));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.LoadException(_logger, ex, "PipelineProvider", "pipeline"));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<TriggerPipelineResponse?> TriggerJob(string pipelineName, string? scheduleName = null, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var request = new TriggerPipelineRequest
+            {
+                Name = pipelineName,
+                TriggerSource = "UI",
+                ScheduleName = scheduleName
+            };
+
+            var result = await PipelineJobClient.Trigger(request, cancellationToken);
+            if (result.IsSuccess && result.Value != null)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(UiProviderLog.OperationFailed(_logger, "PipelineProvider", "trigger job"));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.OperationException(_logger, ex, "PipelineProvider", "trigger job"));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<TriggerPipelineResponse?> GetJobStatus(Guid executionId, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await PipelineJobClient.GetStatus(executionId, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(UiProviderLog.OperationFailed(_logger, "PipelineProvider", "get job status"));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.OperationException(_logger, ex, "PipelineProvider", "get job status"));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<PipelineDetailResponse?> CreatePipeline(CreatePipelineClientRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await PipelineClient.CreatePipeline(request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadData(cancellationToken);
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(UiProviderLog.CreateFailed(_logger, "PipelineProvider", "pipeline"));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.CreateException(_logger, ex, "PipelineProvider", "pipeline"));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task<PipelineDetailResponse?> UpdatePipeline(string name, UpdatePipelineClientRequest request, CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            var result = await PipelineClient.UpdatePipeline(name, request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                await LoadData(cancellationToken);
+                return result.Value;
+            }
+
+            _lastResult = GenericResult.Failure(UiProviderLog.UpdateFailed(_logger, "PipelineProvider", "pipeline", name));
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(UiProviderLog.UpdateException(_logger, ex, "PipelineProvider", "pipeline"));
+            return null;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private Task SearchChanged(string search)
+    {
+        _searchString = search;
+        RebuildContext();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new PipelineContext
+        {
+            Pipelines = _pipelines,
+            FilteredPipelines = GetFilteredPipelines(),
+            RecentJobs = _recentJobs,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            SearchString = _searchString,
+            OnLoadData = () => LoadData(),
+            OnGetPipelineDetails = name => GetPipelineDetails(name),
+            OnTriggerJob = (name, schedule) => TriggerJob(name, schedule),
+            OnGetJobStatus = id => GetJobStatus(id),
+            OnCreatePipeline = req => CreatePipeline(req),
+            OnUpdatePipeline = (name, req) => UpdatePipeline(name, req),
+            OnSearchChanged = search => SearchChanged(search)
+        };
+    }
+}

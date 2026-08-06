@@ -1,0 +1,117 @@
+@namespace Fdw.Data.UI.Components
+@using Fdw.Data.Components.DataSets
+@using Fdw.Services.Data.Clients.Models
+
+@* FieldMappingRowEditor — an FDW Data.UI.Components row for one field-mapping entry in the DataSet
+   wizard's mapping step. Summary row (Logical Target | Physical Source) with an expand toggle; when
+   expanded it hosts the FDW FieldMappingTransformProvider and a COMPACT chain editor (list + add +
+   remove) so transforms can be managed without leaving the wizard.
+
+   Why FDW (not reference-ui): DataSetWizard is an FDW page, so the component it embeds must be an FDW
+   component — it cannot reference a reference-ui skin (that is a backwards dependency). The provider it
+   wraps is the same headless FieldMappingTransformProvider; reference-ui skins this via CSS only. The
+   richer per-parameter editor (TransformStepCard/TransformTypeSelector) stays in reference-ui's
+   dedicated TransformChainEditor; this compact editor covers add/list/remove inline in the wizard. *@
+
+<tr>
+    <td><div class="cellpad mut mono">@Mapping.DataSetFieldName</div></td>
+    <td><input @bind="Mapping.SourceFieldName" class="fin" /></td>
+    <td>
+        <div class="actions">
+            <button type="button"
+                    class="btn btn-ghost btn-sm @(IsExpanded ? "on" : null)"
+                    title="@(IsExpanded ? "Collapse transform chain" : "Expand transform chain")"
+                    @onclick="() => OnToggleExpand?.Invoke(Mapping.DataSetFieldName)">
+                <span class="mono" style="font-size:10px;font-weight:600;">TRANSFORMS</span>
+            </button>
+        </div>
+    </td>
+</tr>
+@if (IsExpanded && Mapping.Id != Guid.Empty)
+{
+    <tr>
+        <td colspan="3" style="padding:0;">
+            <div class="card" style="margin:8px 0;background:var(--s2);border-radius:6px;">
+                <div class="card-b" style="padding:12px;">
+                    <FieldMappingTransformProvider FieldMappingId="@Mapping.Id" FieldMappingName="@Mapping.DataSetFieldName">
+                        <ChildContent Context="ctx">
+                            @if (ctx.ErrorMessage is not null)
+                            {
+                                <div class="alert" style="margin-bottom:8px;">@ctx.ErrorMessage</div>
+                            }
+
+                            @if (ctx.IsLoading)
+                            {
+                                <p class="mono" style="font-size:11px;color:var(--n-500);margin:0;">Loading transforms…</p>
+                            }
+                            else
+                            {
+                                @if (ctx.Transforms.Count == 0)
+                                {
+                                    <p style="color:var(--n-400);margin:0 0 8px;font-size:12px;">No transforms configured.</p>
+                                }
+                                else
+                                {
+                                    <ol class="mono" style="font-size:12px;margin:0 0 8px;padding-left:18px;">
+                                        @foreach (var t in ctx.Transforms.OrderBy(t => t.Ordinal))
+                                        {
+                                            <li style="display:flex;align-items:center;gap:8px;padding:2px 0;">
+                                                <span>@t.TransformType</span>
+                                                <button type="button" class="btn btn-ghost btn-sm"
+                                                        disabled="@ctx.IsSaving"
+                                                        @onclick="() => ctx.OnDeleteTransform(t.Id)">remove</button>
+                                            </li>
+                                        }
+                                    </ol>
+                                }
+
+                                <div class="fgrid" style="display:flex;gap:6px;align-items:center;">
+                                    <select class="fin" value="@_addType" @onchange="e => _addType = e.Value?.ToString() ?? string.Empty">
+                                        <option value="">— add transform —</option>
+                                        @foreach (var tt in ctx.AvailableTransformTypes)
+                                        {
+                                            <option value="@tt.Name">@(string.IsNullOrEmpty(tt.DisplayName) ? tt.Name : tt.DisplayName)</option>
+                                        }
+                                    </select>
+                                    <button type="button" class="btn btn-primary btn-sm"
+                                            disabled="@(ctx.IsSaving || string.IsNullOrEmpty(_addType))"
+                                            @onclick="() => AddTransform(ctx)">Add</button>
+                                </div>
+                            }
+                        </ChildContent>
+                    </FieldMappingTransformProvider>
+                </div>
+            </div>
+        </td>
+    </tr>
+}
+
+@code {
+    /// <summary>Gets or sets the field mapping data for this row. Required.</summary>
+    [Parameter, EditorRequired]
+    public DataSetFieldMappingPayload Mapping { get; set; } = null!;
+
+    /// <summary>Gets or sets whether this row's transform chain panel is currently expanded.</summary>
+    // Why: expansion state lives on the parent (the wizard) so re-renders don't lose it; this component
+    // carries no local expansion bool.
+    [Parameter]
+    public bool IsExpanded { get; set; }
+
+    /// <summary>Gets or sets the callback invoked when the expand/collapse button is clicked,
+    /// receiving the mapping's logical field name so the parent can key expansion state.</summary>
+    [Parameter]
+    public Action<string>? OnToggleExpand { get; set; }
+
+    // Why: a property (not a field) — written only from the @onchange markup lambda, which the Razor
+    // generator's flow analysis misses, tripping CS0649 under warnings-as-errors.
+    private string _addType { get; set; } = string.Empty;
+
+    private async Task AddTransform(FieldMappingTransformContext ctx)
+    {
+        if (string.IsNullOrEmpty(_addType))
+            return;
+
+        await ctx.OnAddTransform(_addType);
+        _addType = string.Empty;
+    }
+}

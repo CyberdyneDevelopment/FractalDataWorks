@@ -1,0 +1,29 @@
+@namespace Fdw.Data.UI.Components.DataCommand
+@using System
+@using System.Collections.Generic
+
+@* Single-field picker — fully-qualified alias.fieldName dropdown.
+   Accepts an optional alias prefix to qualify field references in joins.
+   Tailwind-only. *@
+
+<select class="input text-sm"
+        value="@SelectedField"
+        @onchange="HandleChange">
+    <option value="">@(Placeholder ?? "Select field...")</option>
+    @foreach (var f in Fields)
+    {
+        var qualified = string.IsNullOrEmpty(Alias) ? f.Name : $"{Alias}.{f.Name}";
+        <option value="@qualified">@(string.IsNullOrEmpty(Alias) ? f.DisplayLabel : $"{Alias}.{f.DisplayLabel}")</option>
+    }
+</select>
+
+@code {
+    [Parameter] public IReadOnlyList<DataFieldSummary> Fields { get; set; } = [];
+    [Parameter] public string? Alias { get; set; }
+    [Parameter] public string SelectedField { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> SelectedFieldChanged { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+
+    private async Task HandleChange(ChangeEventArgs e)
+        => await SelectedFieldChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty).ConfigureAwait(false);
+}

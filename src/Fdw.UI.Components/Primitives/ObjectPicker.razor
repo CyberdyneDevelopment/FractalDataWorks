@@ -1,0 +1,66 @@
+@namespace Fdw.UI.Components.Primitives
+@typeparam TItem
+@using Microsoft.AspNetCore.Components
+
+@* Why: Generic, dependency-light single/multi picker over ANY typed set — not just ITypeOption
+   (that is OptionPicker's job). Consumers supply a LabelSelector (required, headless rendering hook)
+   and a KeySelector, plus either a static Items list or an async ItemsSource loader. This is the
+   reusable primitive that NestedObjectPicker and other surfaces compose.
+   Uses value="..." + @onchange (the proven OrganizationPicker/DataContainerPicker pattern) rather
+   than @bind:get/@bind:set so the selection is driven by an explicit handler. *@
+
+<div class="frow">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label>@Label</label>
+    }
+    @if (AllowMultiple)
+    {
+        <select class="finput"
+                multiple
+                disabled="@(_isLoading || Disabled)"
+                @bind:get="_selectedKeys"
+                @bind:set="HandleMultiChange">
+            @foreach (var item in _items)
+            {
+                <option value="@KeyOf(item)">@LabelSelector(item)</option>
+            }
+        </select>
+    }
+    else
+    {
+        <select class="finput"
+                disabled="@(_isLoading || Disabled)"
+                @bind:get="_selectedKey"
+                @bind:set="HandleSingleChange">
+            <option value="">@(Required ? (Placeholder ?? "Select...") : (Placeholder ?? "(none)"))</option>
+            @foreach (var item in _items)
+            {
+                <option value="@KeyOf(item)">@LabelSelector(item)</option>
+            }
+        </select>
+    }
+    @if (AllowCreate && OnCreate.HasDelegate)
+    {
+        @if (_isCreating)
+        {
+            <div style="display:flex;align-items:center;gap:9px;margin-top:6px;">
+                <input class="finput" style="flex:1;" @bind="_newLabel" placeholder="@(CreatePlaceholder ?? "New item name...")" />
+                <button type="button" class="btn btn-primary btn-sm"
+                        @onclick="InvokeCreate"
+                        disabled="@(string.IsNullOrWhiteSpace(_newLabel))">Add</button>
+                <button type="button" class="btn btn-ghost btn-sm" @onclick="CancelCreate">Cancel</button>
+            </div>
+        }
+        else
+        {
+            <button type="button" class="btn btn-secondary btn-sm" style="margin-top:6px;"
+                    @onclick="() => _isCreating = true"
+                    disabled="@(_isLoading || Disabled)">+ Add new</button>
+        }
+    }
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="hint" style="color:var(--signal);">@_errorMessage</div>
+    }
+</div>

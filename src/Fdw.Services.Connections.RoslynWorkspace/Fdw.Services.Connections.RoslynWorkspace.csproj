@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Why: Microsoft.Build.Locator refuses (MSBL001) any Microsoft.Build.* PackageReference that
+         lacks ExcludeAssets=runtime/PrivateAssets=all. Transitive pinning materializes exactly
+         such a reference for Microsoft.Build.Framework, so this project opts out. -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <!-- Why: MSBuildWorkspace loading is inherently branchy (project/target conditional builds).
+         Allow higher complexity in the workspace loading and snapshot paths. -->
+    <FDW_MaxCyclomaticComplexity>20</FDW_MaxCyclomaticComplexity>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Services.Connections.RoslynWorkspace.Abstractions\Fdw.Services.Connections.RoslynWorkspace.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Connections.Abstractions\Fdw.Services.Connections.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Connections\Fdw.Services.Connections.csproj" />
+    <ProjectReference Include="..\Fdw.Configuration.Abstractions\Fdw.Configuration.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Configuration\Fdw.Configuration.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Configuration.SourceGenerators\Fdw.Configuration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Results.Abstractions\Fdw.Results.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services\Fdw.Services.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+    <!-- Why: Reuse existing MSBuildWorkspace loading logic from Workspace.Roslyn.
+         RoslynWorkspaceConnection wraps IRoslynWorkspace — it does not duplicate the loading
+         logic. The IRoslynWorkspaceFactory.CreateFromSolution() call is the single seam. -->
+    <ProjectReference Include="..\Fdw.Workspace.Roslyn\Fdw.Workspace.Roslyn.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Fdw.Services.Connections.RoslynWorkspace.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <!-- Why: Roslyn/MSBuild packages are brought in transitively via the Workspace.Roslyn project ref.
+         Listing them here directly triggers MSBL001 — MSBuild.Locator enforces that consumers
+         don't re-declare Microsoft.Build.Framework without the correct asset exclusions. -->
+
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Why: transitive of MSBuild family — Build.Locator's MSBL001 check forbids its runtime DLL
+         being copied to bin/ (would conflict with MSBuild's in-process copy). Compile-only. -->
+    <PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

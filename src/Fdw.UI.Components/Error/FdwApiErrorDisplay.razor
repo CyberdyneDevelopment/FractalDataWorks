@@ -1,0 +1,63 @@
+@namespace Fdw.UI.Components.Error
+@using Microsoft.AspNetCore.Components
+
+@if (!string.IsNullOrEmpty(ErrorMessage) && Content is not null)
+{
+    @Content(_context)
+}
+
+@code {
+    /// <summary>
+    /// Gets or sets the error message to display.
+    /// </summary>
+    [Parameter]
+    public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the error code, if available.
+    /// </summary>
+    [Parameter]
+    public string? ErrorCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the render fragment that defines the error display.
+    /// </summary>
+    [Parameter]
+    public RenderFragment<ApiErrorContext>? Content { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the error is dismissed.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnDismissed { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked to retry the failed operation.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnRetry { get; set; }
+
+    private ApiErrorContext _context = default!;
+
+    protected override void OnParametersSet()
+    {
+        bool isNetworkError = ErrorMessage is not null &&
+            (ErrorMessage.Contains("network", System.StringComparison.OrdinalIgnoreCase) ||
+             ErrorMessage.Contains("timeout", System.StringComparison.OrdinalIgnoreCase) ||
+             ErrorMessage.Contains("connection refused", System.StringComparison.OrdinalIgnoreCase));
+
+        _context = new ApiErrorContext(
+            ErrorMessage ?? string.Empty,
+            ErrorCode,
+            isNetworkError,
+            () =>
+            {
+                ErrorMessage = null;
+                OnDismissed.InvokeAsync();
+                StateHasChanged();
+            },
+            OnRetry.HasDelegate
+                ? async () => await OnRetry.InvokeAsync()
+                : null);
+    }
+}

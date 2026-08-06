@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+
+    <!-- Package Information -->
+    <PackageId>Fdw.UI.Components.RazorConsole</PackageId>
+    <Title>Fdw RazorConsole Components</Title>
+    <Description>Razor syntax for terminal UIs that compiles to Spectre.Console. Declarative terminal UI framework.</Description>
+    <PackageTags>razor;console;terminal;tui;spectre;ui;components</PackageTags>
+
+    <!-- Razor Configuration -->
+    <AddRazorSupportForMvc>false</AddRazorSupportForMvc>
+    <RazorLangVersion>Latest</RazorLangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Project References -->
+    <ProjectReference Include="..\Fdw.UI.Abstractions\Fdw.UI.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Components.TUI\Fdw.UI.Components.TUI.csproj" />
+
+    <!-- Spectre.Console -->
+    <PackageReference Include="Spectre.Console" />
+
+    <!-- Razor (for component base classes) -->
+    <PackageReference Include="Microsoft.AspNetCore.Components" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Source Generator Project -->
+    <ProjectReference Include="..\Fdw.UI.Components.RazorConsole.SourceGenerators\Fdw.UI.Components.RazorConsole.SourceGenerators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

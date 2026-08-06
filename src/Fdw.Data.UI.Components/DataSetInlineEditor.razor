@@ -1,0 +1,262 @@
+@namespace Fdw.Data.UI.Components
+@using Microsoft.AspNetCore.Components
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading.Tasks
+@using Fdw.Services.Data.Clients.Models
+@using Fdw.Services.Connections.Clients.Models
+
+@* Inline DataSet creation form — Tailwind only, no MudBlazor.
+   Validates name (required) and connection (required) before submitting.
+   Parent (DataSetPicker) handles the API call; this component owns only
+   local edit state and validation display. *@
+
+<div class="card card-b" style="padding:16px;">
+    <h4 class="flbl">New DataSet</h4>
+
+    @* Name *@
+    <div class="frow">
+        <label class="flbl">Name <span style="color:var(--signal);">*</span></label>
+        <input class="@InputClass(_nameTouched && string.IsNullOrWhiteSpace(_name))"
+               @bind="_name"
+               @bind:event="oninput"
+               @onblur="() => _nameTouched = true"
+               placeholder="DATASET_NAME" />
+        @if (_nameTouched && string.IsNullOrWhiteSpace(_name))
+        {
+            <p class="fhint mono" style="color:var(--signal);">Name is required</p>
+        }
+    </div>
+
+    @* DataStore / Connection *@
+    <div class="frow">
+        <label class="flbl">DataStore <span style="color:var(--signal);">*</span></label>
+        <select class="@InputClass(_datastoreTouched && string.IsNullOrWhiteSpace(_dataStoreName))"
+                @bind="_dataStoreName"
+                @onblur="() => _datastoreTouched = true">
+            <option value="">— select datastore —</option>
+            @foreach (var ds in AvailableDataStores)
+            {
+                <option value="@ds.Name">@ds.Name</option>
+            }
+        </select>
+        @if (_datastoreTouched && string.IsNullOrWhiteSpace(_dataStoreName))
+        {
+            <p class="fhint mono" style="color:var(--signal);">DataStore is required</p>
+        }
+    </div>
+
+    @* Container / Table *@
+    <div class="frow">
+        <label class="flbl">Container / Table</label>
+        <input class="fin mono"
+               @bind="_containerName"
+               placeholder="schema.TableName" />
+    </div>
+
+    @* Fields (repeating rows) *@
+    <div class="frow">
+        <div class="card-h" style="padding:0 0 4px;">
+            <label class="flbl" style="margin-bottom:0;">Fields</label>
+            <button type="button"
+                    class="btn btn-secondary btn-sm"
+                    @onclick="AddField">
+                + Add Field
+            </button>
+        </div>
+
+        @if (_fields.Count > 0)
+        {
+            <div style="display:flex;flex-direction:column;gap:6px;">
+                <div style="display:grid;grid-template-columns:5fr 4fr 2fr 1fr;gap:4px;" class="flbl">
+                    <div>Name</div>
+                    <div>Type</div>
+                    <div>Key</div>
+                    <div></div>
+                </div>
+                @for (int i = 0; i < _fields.Count; i++)
+                {
+                    var idx = i;
+                    <div style="display:grid;grid-template-columns:5fr 4fr 2fr 1fr;gap:4px;align-items:center;">
+                        <input class="fin mono"
+                               value="@_fields[idx].Name"
+                               @oninput="e => _fields[idx].Name = e.Value?.ToString() ?? string.Empty"
+                               placeholder="field_name" />
+                        <select class="fin mono"
+                                value="@_fields[idx].DataType"
+                                @onchange="e => _fields[idx].DataType = e.Value?.ToString() ?? string.Empty">
+                            <option value="Alphanumeric">Alphanumeric</option>
+                            <option value="Numeric">Numeric</option>
+                            <option value="Date">Date</option>
+                            <option value="Boolean">Boolean</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <div style="display:flex;justify-content:center;">
+                            <input type="checkbox"
+                                   style="width:16px;height:16px;accent-color:var(--amber);"
+                                   checked="@_fields[idx].IsKey"
+                                   @onchange="e => _fields[idx].IsKey = (bool)(e.Value ?? false)" />
+                        </div>
+                        <button type="button"
+                                class="btn btn-ghost btn-sm"
+                                @onclick="() => RemoveField(idx)"
+                                title="Remove field">
+                            ✕
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="fhint mono">No fields defined — DataSet will use ad-hoc discovery at runtime.</p>
+        }
+    </div>
+
+    @* Error display *@
+    @if (!string.IsNullOrEmpty(_validationError))
+    {
+        <div class="alert alert-err mono" style="margin-bottom:16px;">
+            @_validationError
+        </div>
+    }
+
+    @* Action row *@
+    <div class="card-h" style="padding:12px 0 0;border-top:1px solid var(--hair);justify-content:flex-end;">
+        <div class="actions">
+            <button type="button"
+                    class="btn btn-secondary btn-sm"
+                    @onclick="Cancel"
+                    disabled="@IsSubmitting">
+                Cancel
+            </button>
+            <button type="button"
+                    class="btn btn-primary btn-sm"
+                    @onclick="Submit"
+                    disabled="@IsSubmitting">
+                @(IsSubmitting ? "Creating..." : "Create DataSet")
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    // ── Parameters ──────────────────────────────────────────────────────────────
+
+    /// <summary>DataStores available for the DataStore selection dropdown.</summary>
+    [Parameter] public IReadOnlyList<DataStoreSummaryPayload> AvailableDataStores { get; set; } = [];
+
+    /// <summary>Invoked when the user submits the form with a valid request.</summary>
+    [Parameter] public EventCallback<CreateDataSetPayload> OnSubmit { get; set; }
+
+    /// <summary>Invoked when the user cancels the inline creation.</summary>
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>Whether a create operation is in progress (drives the disabled state).</summary>
+    [Parameter] public bool IsSubmitting { get; set; }
+
+    // ── Local Edit State ────────────────────────────────────────────────────────
+
+    private string _name = string.Empty;
+    private string _dataStoreName = string.Empty;
+    private string _containerName = string.Empty;
+    private bool _nameTouched;
+    private bool _datastoreTouched;
+    private string? _validationError;
+
+    // Why: using a local mutable list so each row's fields can be edited in place.
+    private readonly List<FieldRow> _fields = [];
+
+    // ── Helpers ─────────────────────────────────────────────────────────────────
+
+    // Why: console.css has no error-border helper; the validation hint text conveys the error state,
+    //      so both paths share the .fin.mono base.
+    private static string InputClass(bool hasError) => "fin mono";
+
+    private void AddField()
+    {
+        _fields.Add(new FieldRow { DataType = "Alphanumeric", Ordinal = _fields.Count });
+    }
+
+    private void RemoveField(int index)
+    {
+        if (index >= 0 && index < _fields.Count)
+            _fields.RemoveAt(index);
+    }
+
+    private void Cancel()
+    {
+        ResetState();
+        _ = OnCancel.InvokeAsync();
+    }
+
+    private void ResetState()
+    {
+        _name = string.Empty;
+        _dataStoreName = string.Empty;
+        _containerName = string.Empty;
+        _nameTouched = false;
+        _datastoreTouched = false;
+        _validationError = null;
+        _fields.Clear();
+    }
+
+    private async Task Submit()
+    {
+        _nameTouched = true;
+        _datastoreTouched = true;
+        _validationError = null;
+
+        if (string.IsNullOrWhiteSpace(_name))
+        {
+            _validationError = "Name is required.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_dataStoreName))
+        {
+            _validationError = "DataStore is required.";
+            return;
+        }
+
+        var request = new CreateDataSetPayload
+        {
+            Name = _name.Trim(),
+            ServiceOptionType = "Standard",
+            Sources = string.IsNullOrWhiteSpace(_dataStoreName)
+                ? []
+                : [new CreateDataSetSourcePayload
+                {
+                    SourceName = "Primary",
+                    DataStoreName = _dataStoreName,
+                    ContainerName = _containerName.Trim(),
+                    IsPrimary = true
+                }],
+            Fields = _fields
+                .Where(f => !string.IsNullOrWhiteSpace(f.Name))
+                .Select((f, i) => new CreateDataSetFieldRequest
+                {
+                    Name = f.Name.Trim(),
+                    DataType = f.DataType,
+                    IsKey = f.IsKey,
+                    Ordinal = i
+                })
+                .ToList()
+        };
+
+        await OnSubmit.InvokeAsync(request);
+        // Why: reset is deferred to parent — parent decides whether to reset
+        //      after confirming the API call succeeded (avoids losing user input on failure).
+    }
+
+    // ── Nested Types ────────────────────────────────────────────────────────────
+
+    private sealed class FieldRow
+    {
+        public string Name { get; set; } = string.Empty;
+        public string DataType { get; set; } = "Alphanumeric";
+        public bool IsKey { get; set; }
+        public int Ordinal { get; set; }
+    }
+}

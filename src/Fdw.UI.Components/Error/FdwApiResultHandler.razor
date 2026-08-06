@@ -1,0 +1,57 @@
+@namespace Fdw.UI.Components.Error
+@using Microsoft.AspNetCore.Components
+
+@if (Content is not null)
+{
+    @Content(_context)
+}
+
+@code {
+    /// <summary>
+    /// Gets or sets whether the operation succeeded.
+    /// </summary>
+    [Parameter]
+    public bool IsSuccess { get; set; }
+
+    /// <summary>
+    /// Gets or sets the success message.
+    /// </summary>
+    [Parameter]
+    public string? SuccessMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the error message.
+    /// </summary>
+    [Parameter]
+    public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the result code.
+    /// </summary>
+    [Parameter]
+    public string? Code { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the operation is in progress.
+    /// </summary>
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    /// <summary>
+    /// Gets or sets the render fragment for displaying the result.
+    /// </summary>
+    [Parameter]
+    public RenderFragment<ApiResultContext>? Content { get; set; }
+
+    private ApiResultContext _context = default!;
+
+    protected override void OnParametersSet()
+    {
+        _context = new ApiResultContext(
+            IsSuccess,
+            SuccessMessage,
+            ErrorMessage,
+            Code,
+            IsLoading);
+    }
+}

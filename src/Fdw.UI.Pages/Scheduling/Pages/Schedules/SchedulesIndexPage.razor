@@ -1,0 +1,187 @@
+@page "/schedules"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Schedules - Cyberdyne</PageTitle>
+
+<ScheduleProvider>
+    <ChildContent Context="ctx">
+        <div class="pagehead">
+            <div>
+                <div class="ey">Pipelines &amp; Scheduling</div>
+                <h1>Schedules</h1>
+                <div class="sub">Cron / Interval / Once / Manual. A background service dispatches due jobs through resiliency pipelines.</div>
+            </div>
+            <div class="actions">
+                <a href="/schedules/new" class="btn btn-primary">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
+                    </svg>
+                    New Schedule
+                </a>
+            </div>
+        </div>
+
+        @if (ctx.IsLoading && ctx.Schedules.Count == 0)
+        {
+            <div class="card">
+                <div class="card-b" style="padding:48px 20px;text-align:center;">
+                    <p class="mut" style="color:var(--n-500);">Loading schedules&hellip;</p>
+                </div>
+            </div>
+        }
+        else if (ctx.Schedules.Count == 0)
+        {
+            <div class="card">
+                <div class="card-b" style="padding:48px 20px;text-align:center;">
+                    <p style="color:var(--n-500);">No schedules configured</p>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card">
+                <div class="card-h"><h3>Active Schedules</h3></div>
+                <div class="card-b" style="padding:0 10px 12px;">
+                    <table class="tbl">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Pipeline</th>
+                                <th>Cadence</th>
+                                <th>Next Run</th>
+                                <th>Enabled</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var schedule in ctx.FilteredSchedules)
+                            {
+                                <tr>
+                                    <td><div class="cellpad nm">@schedule.Name</div></td>
+                                    <td class="mut">@schedule.PipelineName</td>
+                                    <td class="num">
+                                        @if (!string.IsNullOrEmpty(schedule.CronExpression))
+                                        {
+                                            @schedule.CronExpression
+                                        }
+                                        else if (schedule.IntervalSeconds.HasValue)
+                                        {
+                                            <span>Every @(schedule.IntervalSeconds.Value < 60 ? $"{schedule.IntervalSeconds.Value}s" : schedule.IntervalSeconds.Value < 3600 ? $"{schedule.IntervalSeconds.Value / 60}m" : $"{schedule.IntervalSeconds.Value / 3600}h")</span>
+                                        }
+                                        else
+                                        {
+                                            <span style="color:var(--n-500);">Manual</span>
+                                        }
+                                    </td>
+                                    <td class="mut">@FormatDateTime(schedule.NextRunTime)</td>
+                                    <td class="mut">
+                                        <span class="sw @(schedule.IsEnabled ? "on" : "")"
+                                              role="button"
+                                              title="@(schedule.IsEnabled ? "Pause" : "Resume")"
+                                              @onclick="() => ctx.OnToggleSchedule(schedule.Name, !schedule.IsEnabled)"></span>
+                                    </td>
+                                    <td>
+                                        <div class="actions">
+                                            <button class="btn btn-ghost btn-sm" title="Edit"
+                                                    @onclick="() => StartEdit(schedule)">
+                                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </button>
+                                            <button class="btn btn-ghost btn-sm" title="Delete"
+                                                    @onclick="() => ctx.OnDeleteSchedule(schedule.Name)">
+                                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        @if (_editingSchedule is not null)
+        {
+            <div class="card" style="margin-top:14px;">
+                <div class="card-h"><h3>Edit Schedule: @_editingSchedule.Name</h3></div>
+                <div class="card-b">
+                    <div class="fgrid">
+                        <div class="frow">
+                            <label>Pipeline</label>
+                            <select class="finput" @bind="_editPipeline">
+                                @foreach (var p in _availablePipelines)
+                                {
+                                    <option value="@p.Name">@p.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="frow">
+                            <label>Cron Expression</label>
+                            <input class="finput mono" @bind="_editCron" placeholder="0 */5 * * *" />
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-primary btn-sm" @onclick="() => SaveEdit(ctx)">Save</button>
+                        <button class="btn btn-secondary btn-sm" @onclick="CancelEdit">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </ChildContent>
+</ScheduleProvider>
+
+@code {
+    [Inject] private IPipelineClient PipelineClient { get; set; } = default!;
+
+    private IReadOnlyList<PipelineSummaryResponse> _availablePipelines = [];
+    private ScheduleInfoDto? _editingSchedule;
+    private string _editPipeline = "";
+    private string _editCron = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var pipelineResult = await PipelineClient.List();
+        _availablePipelines = pipelineResult.IsSuccess && pipelineResult.Value is not null
+            ? pipelineResult.Value.ToList()
+            : [];
+    }
+
+    private void StartEdit(ScheduleInfoDto schedule)
+    {
+        _editingSchedule = schedule;
+        _editPipeline = schedule.PipelineName;
+        _editCron = schedule.CronExpression ?? "";
+    }
+
+    private void CancelEdit()
+    {
+        _editingSchedule = null;
+    }
+
+    private async Task SaveEdit(ScheduleContext ctx)
+    {
+        if (_editingSchedule is null) return;
+        await ctx.OnUpdateSchedule(_editingSchedule.Name, new UpdateScheduleClientRequest
+        {
+            PipelineName = _editPipeline,
+            CronExpression = _editCron,
+            IsEnabled = _editingSchedule.IsEnabled,
+        });
+        _editingSchedule = null;
+        await ctx.OnLoadData();
+    }
+
+    private static string FormatDateTime(DateTimeOffset? dateTime)
+    {
+        if (!dateTime.HasValue) return "Never";
+        return dateTime.Value.ToString("MMM dd HH:mm");
+    }
+
+    private static string GetStatusBadge(bool isActive) => isActive
+        ? "badge-success"
+        : "badge-idle";
+}

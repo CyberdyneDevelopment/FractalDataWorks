@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Web.Api\Fdw.Web.Api.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Messages\Fdw.Messages.csproj" />
+    <!-- Why: TypeOptionModuleInitializerGenerator only emits a cross-assembly registration module
+         initializer for EXECUTABLE compilations (it skips OutputKind.DynamicallyLinkedLibrary). This
+         test project is Exe-shaped, so it needs the analyzer directly to register TransformTypes'
+         options (AggregateTransformType etc., defined in Fdw.Services.Etl, a separate assembly from
+         the TransformTypes collection in Fdw.Services.Etl.Abstractions) before TransformTypes.ByName
+         is ever called. -->
+    <ProjectReference Include="..\..\src\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+  <PropertyGroup>
+    <!-- Only include Fdw.Web.Api in coverage -->
+    <Include>[Fdw.Web.Api]*</Include>
+    <Exclude>[xunit.*]*,[Moq]*,[Shouldly]*</Exclude>
+  </PropertyGroup>
+</Project>

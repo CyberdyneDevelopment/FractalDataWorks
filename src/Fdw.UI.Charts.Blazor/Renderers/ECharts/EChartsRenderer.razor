@@ -1,0 +1,25 @@
+@namespace Fdw.UI.Charts.Blazor.Renderers.ECharts
+@using Fdw.UI.Abstractions.Charts
+
+@* Why: EChartsRenderer is a headless renderer component — no @page directive. It is resolved
+   and mounted exclusively by ChartHost via DynamicComponent. The Model parameter carries the
+   render-agnostic chart spec; Rows carries the data to plot. *@
+
+@if (Model is null)
+{
+    return;
+}
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:16px;">
+        <span style="font-family:monospace;font-size:12px;color:#ef4444;">@_errorMessage</span>
+    </div>
+}
+else
+{
+    @* Why: render inside a div that expands to fill the host container so the ECharts instance
+       fills the available space without requiring the caller to know the chart library. The
+       @ref captures the element so the JS interop module can call echarts.init(element). *@
+    <div class="fdw-chart-host" style="width:100%;height:100%;" @ref="_el"></div>
+}

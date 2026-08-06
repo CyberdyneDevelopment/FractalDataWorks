@@ -1,0 +1,51 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Aegis\Fdw.Aegis.csproj" />
+    <ProjectReference Include="..\Fdw.Aegis.Abstractions\Fdw.Aegis.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Aegis.Configuration\Fdw.Aegis.Configuration.csproj" />
+    <ProjectReference Include="..\Fdw.Services.SecretManagers\Fdw.Services.SecretManagers.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Connections.Http\Fdw.Services.Connections.Http.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+    <!-- Analyzer-only: emits the [ModuleInitializer] that registers cross-assembly [TypeOption]/
+         [ServiceTypeOption]s (e.g. EnvironmentVariableSecretManagerType, HttpConnectionType) into
+         their TypeCollections at assembly load. This entry-point exe is the one place this
+         Registration.SourceGenerators reference belongs (registration-sourcegenerators-scope). -->
+    <ProjectReference Include="..\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="ModelContextProtocol" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Extensions.Logging" />
+    <PackageReference Include="Serilog.Settings.Configuration" />
+    <PackageReference Include="Serilog.Sinks.File" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="aegisSchema.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Ships the Serilog sink + level configuration. Program.cs fails loud when the "Serilog"
+         section is absent, so this file is a hard requirement of the deployed layout, not an
+         optional override. -->
+    <None Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <!-- dotnet tool packaging, mirroring RoslynMcp's Fdw.Roslyn.Commands.Mcp.Stdio. -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>aegis-mcp</ToolCommandName>
+    <PackageId>Fdw.Aegis.McpServer</PackageId>
+    <Title>Fdw Aegis MCP Server</Title>
+    <Description>Standalone stdio MCP server exposing the Aegis Gateway's deterministic approval-policy evaluation and secret-below-the-boundary injection (Phase 1: PreApproved commands only, ConfigurationDb-free).</Description>
+    <PackageDescription>$(Description)</PackageDescription>
+  </PropertyGroup>
+
+</Project>

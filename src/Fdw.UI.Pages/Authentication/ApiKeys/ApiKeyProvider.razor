@@ -1,0 +1,302 @@
+@namespace Fdw.Services.Authentication.Components.ApiKeys
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Authentication.Clients
+@using Fdw.Services.Authentication.Clients.Models
+@using Fdw.Results
+@using Fdw.Services.Authentication.Components.Logging
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for API key management: load personal access tokens and agent keys,
+    /// handle create, revoke, and delete operations.
+    /// </summary>
+    [Parameter] public RenderFragment<ApiKeyContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private AuthenticationApiClient? _authenticationApi;
+    [Inject] private ILogger<ApiKeyProvider>? LoggerParam { get; set; }
+
+    private ILogger<ApiKeyProvider> _logger = NullLogger<ApiKeyProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<PersonalAccessTokenSummaryPayload> _personalTokens = [];
+    private IReadOnlyList<AgentKeySummaryPayload> _agentKeys = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private string? _newTokenValue;
+    private ApiKeyContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _authenticationApi = new AuthenticationApiClient(HttpClientFactory.CreateClient("AuthenticationClient"), LoggerFactory?.CreateLogger<AuthenticationApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<ApiKeyProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadKeys();
+        }
+    }
+
+    // ── Private Operations ─────────────────────────────────────────────────────
+
+    private async Task<IGenericResult> LoadKeys(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        _newTokenValue = null;
+        RebuildContext();
+        StateHasChanged();
+
+        ApiKeyProviderLog.LoadingTokens(_logger);
+
+        try
+        {
+            var tokensResult = await _authenticationApi!.GetTokens(cancellationToken);
+            if (tokensResult.IsSuccess && tokensResult.Value is not null)
+            {
+                _personalTokens = tokensResult.Value.ToList();
+                ApiKeyProviderLog.LoadedTokens(_logger, _personalTokens.Count);
+            }
+            else
+            {
+                ApiKeyProviderLog.LoadTokensFailed(_logger);
+                _lastResult = tokensResult;
+                _personalTokens = [];
+            }
+
+            var keysResult = await _authenticationApi!.GetAgentKeys(cancellationToken);
+            if (keysResult.IsSuccess && keysResult.Value is not null)
+            {
+                _agentKeys = keysResult.Value.ToList();
+                ApiKeyProviderLog.LoadedAgentKeys(_logger, _agentKeys.Count);
+            }
+            else
+            {
+                ApiKeyProviderLog.LoadAgentKeysFailed(_logger);
+                _lastResult = keysResult;
+                _agentKeys = [];
+            }
+            return keysResult;
+        }
+        catch (OperationCanceledException)
+        {
+            return ProviderContextBase.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { ApiKeyProviderLog.LoadTokensFailed(_logger) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            return _lastResult;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleCreateToken(CreateTokenRequest request)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        _newTokenValue = null;
+        RebuildContext();
+        StateHasChanged();
+
+        ApiKeyProviderLog.CreatingToken(_logger, request.Label);
+
+        try
+        {
+            var result = await _authenticationApi!.CreateToken(request);
+            if (result.IsSuccess && result.Value is not null)
+            {
+                _newTokenValue = result.Value.RawToken;
+                ApiKeyProviderLog.TokenCreated(_logger, request.Label);
+                await LoadKeys();
+                return;
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(ApiKeyProviderLog.CreateTokenFailed(_logger, request.Label));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { ApiKeyProviderLog.CreateTokenException(_logger, ex, request.Label) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleRevokeToken(Guid tokenId)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        _newTokenValue = null;
+        RebuildContext();
+        StateHasChanged();
+
+        ApiKeyProviderLog.RevokingToken(_logger, tokenId);
+
+        try
+        {
+            var result = await _authenticationApi!.RevokeToken(tokenId);
+            if (result.IsSuccess)
+            {
+                ApiKeyProviderLog.TokenRevoked(_logger, tokenId);
+                await LoadKeys();
+                return;
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(ApiKeyProviderLog.RevokeTokenFailed(_logger, tokenId));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { ApiKeyProviderLog.RevokeTokenFailed(_logger, tokenId) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleCreateAgentKey(CreateAgentKeyRequest request)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        _newTokenValue = null;
+        RebuildContext();
+        StateHasChanged();
+
+        ApiKeyProviderLog.CreatingAgentKey(_logger, request.Label);
+
+        try
+        {
+            var result = await _authenticationApi!.CreateAgentKey(request);
+            if (result.IsSuccess && result.Value is not null)
+            {
+                _newTokenValue = result.Value.RawKey;
+                ApiKeyProviderLog.AgentKeyCreated(_logger, request.Label);
+                await LoadKeys();
+                return;
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(ApiKeyProviderLog.CreateAgentKeyFailed(_logger, request.Label));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { ApiKeyProviderLog.CreateAgentKeyException(_logger, ex, request.Label) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleDeleteAgentKey(Guid keyId)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        _newTokenValue = null;
+        RebuildContext();
+        StateHasChanged();
+
+        ApiKeyProviderLog.DeletingAgentKey(_logger, keyId);
+
+        try
+        {
+            var result = await _authenticationApi!.DeleteAgentKey(keyId);
+            if (result.IsSuccess)
+            {
+                ApiKeyProviderLog.AgentKeyDeleted(_logger, keyId);
+                await LoadKeys();
+                return;
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(ApiKeyProviderLog.DeleteAgentKeyFailed(_logger, keyId));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { ApiKeyProviderLog.DeleteAgentKeyFailed(_logger, keyId) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new ApiKeyContext
+        {
+            PersonalTokens = _personalTokens,
+            AgentKeys = _agentKeys,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            NewTokenValue = _newTokenValue,
+            OnCreateToken = request => HandleCreateToken(request),
+            OnRevokeToken = tokenId => HandleRevokeToken(tokenId),
+            OnCreateAgentKey = request => HandleCreateAgentKey(request),
+            OnDeleteAgentKey = keyId => HandleDeleteAgentKey(keyId),
+            OnRefresh = () => LoadKeys()
+        };
+    }
+}

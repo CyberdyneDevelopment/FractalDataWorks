@@ -1,0 +1,152 @@
+@namespace Fdw.Operations.Components.Dashboard
+@using Fdw.UI.Providers
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Net.Http
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Operations.Clients
+@using Fdw.Operations.Clients.Models
+@using Fdw.Results
+@using Fdw.UI.Components.Logging
+@using Fdw.UI.Components.Base
+
+@inherits UIComponentBase
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for the operations dashboard widget.
+    /// Fetches recent executions from the execution history endpoint and projects them
+    /// into the activity feed.
+    /// </summary>
+    [Parameter] public RenderFragment<OperationsDashboardContext>? ChildContent { get; set; }
+
+    /// <summary>Maximum number of recent activity entries to show.</summary>
+    [Parameter] public int MaxEntries { get; set; } = 10;
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+    [Inject] private ILogger<OperationsDashboardProvider>? LoggerParam { get; set; }
+
+    private ILogger<OperationsDashboardProvider> _logger = NullLogger<OperationsDashboardProvider>.Instance;
+    private ExecutionApiClient? _executionApi;
+
+    private IReadOnlyList<ActivityEntryPayload> _activities = [];
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private bool _initialized;
+    private OperationsDashboardContext _context = new();
+
+    protected override void OnInitialized()
+    {
+        _logger = LoggerParam ?? NullLogger<OperationsDashboardProvider>.Instance;
+        _executionApi = new ExecutionApiClient(
+            HttpClientFactory.CreateClient("ExecutionClient"),
+            LoggerFactory?.CreateLogger<ExecutionApiClient>() ?? NullLogger<ExecutionApiClient>.Instance);
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadActivities();
+        }
+    }
+
+    private async Task<IGenericResult> LoadActivities(CancellationToken ct = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        RebuildContext();
+        StateHasChanged();
+
+        try
+        {
+            // Why: recent executions are the dashboard's activity source — the execution
+            // history endpoint returns newest-first summaries we project into the feed.
+            var result = await _executionApi!.List(skip: 0, take: MaxEntries, ct: ct);
+            if (!result.IsSuccess)
+            {
+                _lastResult = result;
+                _activities = [];
+            }
+            else
+            {
+                _activities = (result.Value ?? [])
+                    .Select(ToActivity)
+                    .ToList();
+            }
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            return ProviderContextBase.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(ExceptionResultExtensions.FlattenException(ex));
+            _activities = [];
+            return _lastResult;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private static ActivityEntryPayload ToActivity(ExecutionSummaryPayload execution)
+    {
+        return new ActivityEntryPayload
+        {
+            Id = execution.Id,
+            Type = ResolveType(execution.State),
+            Title = $"{execution.ItemType}: {execution.Name}",
+            Description = $"State: {execution.State}",
+            Severity = ResolveSeverity(execution.State),
+            Timestamp = execution.CompletedAt ?? execution.CreatedAt,
+        };
+    }
+
+    private static IActivityType? ResolveType(string state)
+    {
+        var typeName = state switch
+        {
+            "Completed" or "Succeeded" => "PipelineCompleted",
+            "Failed" or "Cancelled" => "PipelineFailed",
+            _ => "PipelineStarted",
+        };
+        var resolved = ActivityTypes.ByName(typeName);
+        return resolved == ActivityTypes.NotFound ? null : resolved;
+    }
+
+    private static string ResolveSeverity(string state) => state switch
+    {
+        "Failed" or "Cancelled" => "error",
+        "Completed" or "Succeeded" => "success",
+        _ => "info",
+    };
+
+    private void RebuildContext()
+    {
+        _context = new OperationsDashboardContext
+        {
+            Activities = _activities,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            OnRefresh = () => LoadActivities()
+        };
+    }
+}

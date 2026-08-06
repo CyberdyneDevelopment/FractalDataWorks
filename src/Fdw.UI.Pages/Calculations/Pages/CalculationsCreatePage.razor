@@ -1,0 +1,210 @@
+@page "/calculations/create"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Create Calculation - Cyberdyne</PageTitle>
+
+<CalculationProvider>
+    <ChildContent Context="ctx">
+        @{ CaptureContext(ctx); }
+        <div style="max-width:920px;">
+            <div class="pagehead">
+                <div>
+                    <div class="ey">Transformations / Calculations / Create</div>
+                    <h1>Create Calculation</h1>
+                    <div class="sub">Define a new derived field via the formula engine.</div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-secondary btn-sm" @onclick='() => Nav.NavigateTo("/calculations")'>
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            @if (ctx.ErrorMessage is not null)
+            {
+                <div class="card b-fail" style="margin-bottom:14px;padding:14px 16px;">
+                    <span class="mono" style="font-size:12px;color:var(--signal);">@ctx.ErrorMessage</span>
+                </div>
+            }
+
+            <!-- Basic Fields -->
+            <section class="card" style="margin-bottom:14px;">
+                <div class="card-h"><h3>Basic Information</h3></div>
+                <div class="card-b">
+                    <div class="frow">
+                        <label>Name *</label>
+                        <input type="text" class="finput" placeholder="e.g. TotalRevenue" @bind="_name" />
+                    </div>
+
+                    <div class="frow">
+                        <label>Target DataSet *</label>
+                        <input type="text" class="finput" placeholder="e.g. OrderFacts" @bind="_targetDataSet" />
+                    </div>
+
+                    <div class="frow">
+                        <label>Result Field Name *</label>
+                        <input type="text" class="finput" placeholder="e.g. TotalRevenue" @bind="_resultFieldName" />
+                    </div>
+
+                    <div class="frow">
+                        <label>Result Data Type *</label>
+                        <input type="text" class="finput" placeholder="e.g. decimal, string, int" @bind="_resultDataType" />
+                    </div>
+
+                    <div class="frow">
+                        <label>Description</label>
+                        <textarea class="finput" style="height:72px;resize:none;" placeholder="Optional description" @bind="_description"></textarea>
+                    </div>
+
+                    <label style="display:flex;align-items:center;gap:11px;cursor:pointer;margin-top:6px;">
+                        <input type="checkbox" @bind="_isEnabled" />
+                        <span style="font-size:13px;color:var(--n-200);">Enabled</span>
+                    </label>
+                </div>
+            </section>
+
+            <!-- Formula Builder -->
+            <CalculationFormBuilder
+                Context="_builderContext"
+                Formula="@_formula"
+                FormulaChanged="OnFormulaChanged"
+                TargetDataSet="@_targetDataSet" />
+
+            @if (!string.IsNullOrEmpty(_validationError))
+            {
+                <div class="card b-fail" style="margin-bottom:14px;padding:12px 16px;">
+                    <span class="mono" style="font-size:12px;color:var(--signal);">@_validationError</span>
+                </div>
+            }
+
+            <!-- Save -->
+            <div class="actions" style="justify-content:flex-end;margin-top:4px;">
+                <button class="btn btn-secondary btn-sm" @onclick='() => Nav.NavigateTo("/calculations")'>Cancel</button>
+                <button class="btn btn-primary" @onclick="() => Save(ctx)" disabled="@ctx.IsLoading">
+                    Create Calculation
+                </button>
+            </div>
+        </div>
+    </ChildContent>
+</CalculationProvider>
+
+@code {
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private string _name = string.Empty;
+    private string _targetDataSet = string.Empty;
+    private string _resultFieldName = string.Empty;
+    private string _resultDataType = string.Empty;
+    private string? _description;
+    private bool _isEnabled = true;
+    private string _formula = string.Empty;
+    private string? _validationError;
+
+    // Why: builder context is rebuilt via RebuildBuilderContext() once the CalculationContext
+    // is captured on first render so that validate/field-load callbacks are fully wired.
+    private CalculationFormBuilderContext _builderContext = new();
+
+    // Why: captured on every render pass so RebuildBuilderContext stays consistent with
+    // the live CalculationContext (which is rebuilt by CalculationProvider on each state change).
+    private CalculationContext? _capturedContext;
+    private bool _contextWired;
+
+    private void CaptureContext(CalculationContext ctx)
+    {
+        _capturedContext = ctx;
+    }
+
+    private Task OnFormulaChanged(string formula)
+    {
+        _formula = formula;
+        return Task.CompletedTask;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && !_contextWired && _capturedContext is not null)
+        {
+            _contextWired = true;
+            RebuildBuilderContext(_capturedContext);
+            StateHasChanged();
+        }
+    }
+
+    private void RebuildBuilderContext(CalculationContext ctx)
+    {
+        _builderContext = new CalculationFormBuilderContext
+        {
+            IsLoading = ctx.IsLoading,
+            LastResult = ctx.LastResult,
+            SelectedLanguage = _builderContext.SelectedLanguage,
+            PreviewResult = _builderContext.PreviewResult,
+            DataSetFields = _builderContext.DataSetFields,
+            OnValidateFormula = (formula, dataSet) => ctx.OnValidateFormula(formula, dataSet),
+            OnGetDataSetFields = dataSetName => ctx.OnGetDataSetFields(dataSetName),
+            OnLanguageChanged = lang =>
+            {
+                _builderContext = new CalculationFormBuilderContext
+                {
+                    IsLoading = _builderContext.IsLoading,
+                    LastResult = _builderContext.LastResult,
+                    SelectedLanguage = lang,
+                    PreviewResult = _builderContext.PreviewResult,
+                    DataSetFields = _builderContext.DataSetFields,
+                    OnValidateFormula = _builderContext.OnValidateFormula,
+                    OnGetDataSetFields = _builderContext.OnGetDataSetFields,
+                    OnLanguageChanged = _builderContext.OnLanguageChanged
+                };
+                StateHasChanged();
+                return Task.CompletedTask;
+            }
+        };
+    }
+
+    private async Task Save(CalculationContext ctx)
+    {
+        _validationError = null;
+
+        if (string.IsNullOrWhiteSpace(_name))
+        {
+            _validationError = "Name is required.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_targetDataSet))
+        {
+            _validationError = "Target DataSet is required.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_resultFieldName))
+        {
+            _validationError = "Result Field Name is required.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_resultDataType))
+        {
+            _validationError = "Result Data Type is required.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_formula))
+        {
+            _validationError = "Formula is required.";
+            return;
+        }
+
+        var request = new CreateCalculationDefinitionRequest
+        {
+            Name = _name,
+            TargetDataSet = _targetDataSet,
+            ResultFieldName = _resultFieldName,
+            ResultDataType = _resultDataType,
+            Formula = _formula,
+            Description = string.IsNullOrWhiteSpace(_description) ? null : _description,
+            IsEnabled = _isEnabled
+        };
+
+        var result = await ctx.OnCreateCalculation(request);
+        if (result is not null)
+        {
+            Nav.NavigateTo("/calculations");
+        }
+    }
+}

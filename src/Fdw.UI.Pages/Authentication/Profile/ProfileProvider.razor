@@ -1,0 +1,216 @@
+@namespace Fdw.Services.Authentication.Components.Profile
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Logging.Abstractions
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Fdw.Services.Authentication.Clients
+@using Fdw.Services.Authentication.Clients.Models
+@using Fdw.Results
+@using Fdw.Services.Authentication.Components.Logging
+@using System.Net.Http
+
+@if (ChildContent is not null)
+{
+    @ChildContent(_context)
+}
+
+@code {
+    /// <summary>
+    /// Headless provider for user profile logic: load profile and preferences,
+    /// handle password change and preference updates.
+    /// </summary>
+    [Parameter] public RenderFragment<ProfileContext>? ChildContent { get; set; }
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
+
+    private AuthenticationApiClient? _authenticationApi;
+    [Inject] private ILogger<ProfileProvider>? LoggerParam { get; set; }
+
+    private ILogger<ProfileProvider> _logger = NullLogger<ProfileProvider>.Instance;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    private GetMePayload? _profile;
+    private IReadOnlyDictionary<string, string> _preferences = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    private bool _isLoading;
+    private IGenericResult? _lastResult;
+    private string? _successMessage;
+    private ProfileContext _context = new();
+    private bool _initialized;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _authenticationApi = new AuthenticationApiClient(HttpClientFactory.CreateClient("AuthenticationClient"), LoggerFactory?.CreateLogger<AuthenticationApiClient>()!);
+        _logger = LoggerParam ?? NullLogger<ProfileProvider>.Instance;
+        RebuildContext();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await LoadProfile();
+        }
+    }
+
+    // ── Private Operations ─────────────────────────────────────────────────────
+
+    private async Task<IGenericResult> LoadProfile(CancellationToken cancellationToken = default)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        _successMessage = null;
+        RebuildContext();
+        StateHasChanged();
+
+        ProfileProviderLog.LoadingProfile(_logger);
+
+        try
+        {
+            var profileResult = await _authenticationApi!.GetMe(cancellationToken);
+            if (!profileResult.IsSuccess || profileResult.Value is null)
+            {
+                ProfileProviderLog.LoadProfileFailed(_logger);
+                _lastResult = profileResult;
+                return profileResult;
+            }
+
+            _profile = profileResult.Value;
+            ProfileProviderLog.LoadedProfile(_logger, _profile.Username);
+
+            var prefsResult = await _authenticationApi!.GetPreferences(cancellationToken);
+            if (prefsResult.IsSuccess && prefsResult.Value is not null)
+            {
+                _preferences = prefsResult.Value;
+                ProfileProviderLog.LoadedPreferences(_logger, _preferences.Count);
+            }
+            else
+            {
+                ProfileProviderLog.LoadPreferencesFailed(_logger);
+                _preferences = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+            return prefsResult;
+        }
+        catch (OperationCanceledException)
+        {
+            return ProviderContextBase.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { ProfileProviderLog.LoadProfileFailed(_logger) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+            return _lastResult;
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleChangePassword(ChangePasswordRequest request)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        _successMessage = null;
+        RebuildContext();
+        StateHasChanged();
+
+        ProfileProviderLog.ChangingPassword(_logger);
+
+        try
+        {
+            var result = await _authenticationApi!.ChangePassword(request);
+            if (result.IsSuccess)
+            {
+                _successMessage = ProfileProviderLog.PasswordChanged(_logger).Message;
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(ProfileProviderLog.ChangePasswordFailed(_logger));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { ProfileProviderLog.ChangePasswordException(_logger, ex) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleSetPreference(string key, string value)
+    {
+        _isLoading = true;
+        _lastResult = null;
+        _successMessage = null;
+        RebuildContext();
+        StateHasChanged();
+
+        ProfileProviderLog.SettingPreference(_logger, key);
+
+        try
+        {
+            var request = new UpdatePreferencesRequest();
+            request.Preferences[key] = value;
+
+            var result = await _authenticationApi!.UpdatePreferences(request);
+            if (result.IsSuccess)
+            {
+                ProfileProviderLog.PreferenceSet(_logger, key);
+                await LoadProfile();
+                return;
+            }
+            else
+            {
+                _lastResult = GenericResult.Failure(ProfileProviderLog.SetPreferenceFailed(_logger, key));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _lastResult = GenericResult.Failure(new[] { ProfileProviderLog.SetPreferenceFailed(_logger, key) }.Concat(ExceptionResultExtensions.FlattenException(ex)));
+        }
+        finally
+        {
+            _isLoading = false;
+            RebuildContext();
+            StateHasChanged();
+        }
+    }
+
+    // ── Context Builder ────────────────────────────────────────────────────────
+
+    private void RebuildContext()
+    {
+        _context = new ProfileContext
+        {
+            Profile = _profile,
+            Preferences = _preferences,
+            IsLoading = _isLoading,
+            LastResult = _lastResult,
+            SuccessMessage = _successMessage,
+            OnChangePassword = request => HandleChangePassword(request),
+            OnSetPreference = (key, value) => HandleSetPreference(key, value),
+            OnRefresh = () => LoadProfile()
+        };
+    }
+}

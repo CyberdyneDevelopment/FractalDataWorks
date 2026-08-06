@@ -1,0 +1,146 @@
+@page "/roles/{RoleName}"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Role Details - @RoleName</PageTitle>
+
+<RoleProvider @ref="_provider">
+    <ChildContent Context="ctx">
+        @{ _ctx = ctx; }
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                    <div class="pagehead">
+                        <div class="dhead" style="margin-bottom:0;">
+                            <a href="/roles" class="ic" style="text-decoration:none;">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 19l-7-7 7-7" /></svg>
+                            </a>
+                            <div>
+                                <div class="ey">Admin / Roles</div>
+                                <h1>@RoleName</h1>
+                                <div class="sub">@(_role?.Description ?? "Role configuration and permissions.")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (ctx.IsLoading)
+                    {
+                        <div class="card"><div class="card-b" style="display:flex;justify-content:center;padding:48px;"><span class="badge b-run"><span class="bd"></span>Loading</span></div></div>
+                    }
+                    else if (ctx.ErrorMessage != null)
+                    {
+                        <div class="danger"><div class="t"><p>@ctx.ErrorMessage</p></div></div>
+                    }
+                    else if (_role != null)
+                    {
+                        <div class="split">
+                            <div class="card">
+                                <div class="card-h">
+                                    <h3>Security Matrix</h3>
+                                    <button @onclick="@(() => SaveChanges(ctx))" class="btn btn-primary btn-sm" disabled="@_isSaving">
+                                        @if (_isSaving) { <span>Saving...</span> } else { <span>Save Matrix</span> }
+                                    </button>
+                                </div>
+                                <div class="card-b" style="padding:0 18px 16px;overflow-x:auto;">
+                                    <table class="matrix">
+                                        <thead>
+                                            <tr>
+                                                <th>Resource</th>
+                                                <th>Read</th>
+                                                <th>Write</th>
+                                                <th>Delete</th>
+                                                <th>Exec</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var group in ctx.PermissionGroups)
+                                            {
+                                                <tr>
+                                                    <td>@group.Resource</td>
+                                                    <td>@RenderCheckbox(ctx, group, "Read")</td>
+                                                    <td>@RenderCheckbox(ctx, group, "Write")</td>
+                                                    <td>@RenderCheckbox(ctx, group, "Delete")</td>
+                                                    <td>@RenderCheckbox(ctx, group, "Execute")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="card" style="align-self:flex-start;">
+                                <div class="card-h"><h3>Core Metadata</h3></div>
+                                <div class="card-b">
+                                    <dl class="kv">
+                                        <dt>Display Name</dt><dd>@(_role.DisplayName ?? _role.Name)</dd>
+                                        <dt>Parent Role</dt><dd>@(_role.ParentRoleName ?? "None")</dd>
+                                        <dt>Scope</dt><dd>@(_role.IsTenantScoped ? "Tenant Scoped" : "Global System")</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+    </ChildContent>
+</RoleProvider>
+
+@code {
+    [Parameter] public string RoleName { get; set; } = "";
+
+    private RoleProvider _provider = null!;
+    private RoleDetailPayload? _role;
+    private HashSet<string> _selectedPermissionNames = [];
+    private bool _isSaving;
+
+    private RoleContext? _ctx;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _ctx != null)
+        {
+            await LoadInitialData(_ctx);
+        }
+    }
+
+    private async Task LoadInitialData(RoleContext ctx)
+    {
+        var roleTask = ctx.OnGetRoleDetails(RoleName);
+        var groupsTask = ctx.OnLoadPermissionGroups();
+
+        await Task.WhenAll(roleTask, groupsTask);
+
+        _role = await roleTask;
+        if (_role != null)
+        {
+            _selectedPermissionNames = new HashSet<string>(_role.Permissions.Select(p => p.Name));
+        }
+        StateHasChanged();
+    }
+
+    private RenderFragment RenderCheckbox(RoleContext ctx, PermissionGroupPayload group, string action)
+    {
+        var permission = group.Permissions.FirstOrDefault(p => p.Action.Equals(action, StringComparison.OrdinalIgnoreCase));
+        if (permission == null) return @<span class="mut">—</span>;
+
+        return @<input type="checkbox"
+                       checked="@_selectedPermissionNames.Contains(permission.Name)"
+                       @onchange="@(v => OnPermissionChanged(permission.Name, (bool)v.Value!))"
+                       style="width:16px;height:16px;accent-color:var(--amber);cursor:pointer;" />;
+    }
+
+    private void OnPermissionChanged(string permissionName, bool isSelected)
+    {
+        if (isSelected) _selectedPermissionNames.Add(permissionName);
+        else _selectedPermissionNames.Remove(permissionName);
+    }
+
+    private async Task SaveChanges(RoleContext ctx)
+    {
+        _isSaving = true;
+        try
+        {
+            await ctx.OnSavePermissions(RoleName, _selectedPermissionNames.ToList());
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}
