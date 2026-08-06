@@ -24,8 +24,9 @@ public class InProcMcpToolSourceTests
             TimeSpan.FromSeconds(30), cancellationToken: cts.Token);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value.Topic.ShouldBe("mcp/test/echo/result");
-        var payload = JsonDocument.Parse(System.Text.Encoding.UTF8.GetString(result.Value.Payload.Span));
+        result.Value.ShouldNotBeNull();
+        result.Value!.Topic.ShouldBe("mcp/test/echo/result");
+        var payload = JsonDocument.Parse(System.Text.Encoding.UTF8.GetString(result.Value!.Payload.Span));
         payload.RootElement.GetProperty("echoed").GetInt32().ShouldBe(42);
     }
 

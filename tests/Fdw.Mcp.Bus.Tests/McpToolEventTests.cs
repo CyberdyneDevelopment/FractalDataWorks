@@ -78,8 +78,9 @@ public class McpToolEventTests
             cancellationToken: TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value.Topic.ShouldBe("mcp/mssql/echo/result");
-        var doc = JsonDocument.Parse(Encoding.UTF8.GetString(result.Value.Payload.Span));
+        result.Value.ShouldNotBeNull();
+        result.Value!.Topic.ShouldBe("mcp/mssql/echo/result");
+        var doc = JsonDocument.Parse(Encoding.UTF8.GetString(result.Value!.Payload.Span));
         doc.RootElement.GetProperty("echoed").GetBoolean().ShouldBeTrue();
     }
 
