@@ -8,6 +8,8 @@ using Fdw.Services.Calculations.Abstractions.CalculationSources;
 using Fdw.Services.Calculations.Abstractions.Caching;
 using Fdw.Services.Calculations.Caching;
 using Fdw.Services.Calculations.Commands;
+using Fdw.Services.Calculations.Configuration;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.ServiceTypes;
@@ -75,7 +77,15 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
             builder.Services.TryAddSingleton<CacheKeyGenerator>();
             builder.Services.TryAddSingleton<ICalculationCacheService, CalculationCacheService>();
 
-            CalculationConfigurationProvider.RegisterDomainConfiguration(builder.Services);
+            builder.Services.TryAddSingleton<CalculationConfigurationProvider>(sp =>
+                new CalculationConfigurationProvider(
+                    sp.GetService<ILogger<CalculationConfigurationProvider>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+            builder.Services.TryAddSingleton<DefaultConfigurationProvider<CalculationEntityConfiguration, CalculationEntityConfigurationCommand>>(
+                sp => sp.GetRequiredService<CalculationConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<CalculationEntityConfiguration>>(
+                sp => sp.GetRequiredService<CalculationConfigurationProvider>());
 
             // Why: the polymorphic typed body (Formula/Windowed) is composed by the keystone base dictionary —
             // register one plain DefaultConfigurationProvider per typed body so RegisterFactory can attach it

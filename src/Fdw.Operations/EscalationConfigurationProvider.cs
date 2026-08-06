@@ -22,23 +22,6 @@ namespace Fdw.Operations;
 /// <summary>Configuration provider for escalation policy configurations.</summary>
 public class EscalationConfigurationProvider : DefaultConfigurationProvider<EscalationPolicyConfiguration, EscalationPolicyConfigurationCommand>
 {
-    /// <summary>
-    /// Registers the EscalationConfigurationProvider with DI, targeting this domain's own default
-    /// location. To override, call <c>SetConfiguration</c> on the resolved singleton.
-    /// </summary>
-    public static void RegisterDomainConfiguration(IServiceCollection services, IConfiguration configuration)
-    {
-        services.TryAddSingleton<EscalationConfigurationProvider>(sp =>
-            new EscalationConfigurationProvider(
-                sp.GetService<ILogger<EscalationConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
-        services.TryAddSingleton<DefaultConfigurationProvider<EscalationPolicyConfiguration, EscalationPolicyConfigurationCommand>>(
-            sp => sp.GetRequiredService<EscalationConfigurationProvider>());
-        services.TryAddSingleton<IServiceConfigurationProvider<EscalationPolicyConfiguration>>(
-            sp => sp.GetRequiredService<EscalationConfigurationProvider>());
-    }
-
     /// <summary>Initializes a new instance of the <see cref="EscalationConfigurationProvider"/> class.</summary>
     public EscalationConfigurationProvider(
         ILogger<EscalationConfigurationProvider> logger,

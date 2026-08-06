@@ -16,23 +16,6 @@ namespace Fdw.Services.Workflows;
 /// <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>.</summary>
 public class WorkflowConfigurationProvider : DefaultConfigurationProvider<WorkflowConfiguration, WorkflowConfigurationCommand>
 {
-    /// <summary>
-    /// Registers the WorkflowConfigurationProvider with DI, targeting this domain's own default
-    /// location. To override, call <c>SetConfiguration</c> on the resolved singleton.
-    /// </summary>
-    public static void RegisterDomainConfiguration(IServiceCollection services)
-    {
-        services.TryAddSingleton<WorkflowConfigurationProvider>(sp =>
-            new WorkflowConfigurationProvider(
-                sp.GetService<ILogger<WorkflowConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
-        services.TryAddSingleton<DefaultConfigurationProvider<WorkflowConfiguration, WorkflowConfigurationCommand>>(
-            sp => sp.GetRequiredService<WorkflowConfigurationProvider>());
-        services.TryAddSingleton<IServiceConfigurationProvider<WorkflowConfiguration>>(
-            sp => sp.GetRequiredService<WorkflowConfigurationProvider>());
-    }
-
     /// <summary>Initializes a new instance of the <see cref="WorkflowConfigurationProvider"/> class.</summary>
     public WorkflowConfigurationProvider(
         ILogger<WorkflowConfigurationProvider> logger,
