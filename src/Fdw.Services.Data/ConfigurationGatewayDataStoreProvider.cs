@@ -145,14 +145,10 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
             type.Register(services);
         }
 
-        // Phase 1b: Register schema discovery type services
-        foreach (var discoveryType in SchemaDiscoveryTypes.All())
-        {
-            discoveryType.Register(services);
-        }
-
-        var logger2 = loggerFactory?.CreateLogger(typeof(ConfigurationGatewayDataStoreProvider)) ?? NullLogger.Instance;
-        DataStoreTypesLog.RegisteredInfrastructureServices(logger2);
+        // Register runs pre-Build, so there is no container to resolve a logger from — the factory the
+        // host hands in is the only source available in this phase.
+        var logger = loggerFactory?.CreateLogger(typeof(ConfigurationGatewayDataStoreProvider)) ?? NullLogger.Instance;
+        DataStoreTypesLog.RegisteredInfrastructureServices(logger);
 
         return builder;
     }
@@ -168,12 +164,17 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     /// </remarks>
     public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
-        var services = host.Services;
+        // Why the scope: this provider is Scoped, so resolving it from the root provider throws under
+        // Development ValidateScopes.
+        using var scope = host.Services.CreateScope();
+        var provider = scope.ServiceProvider.GetRequiredService<IDataStoreProvider>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<ConfigurationGatewayDataStoreProvider>>();
+
         // Why: Initialize is the synchronous fail-fast startup phase (the swept shape requires a void
         // Initialize); the async config load is blocked-on exactly once at startup, no sync context —
         // the same sanctioned sync-over-async seam OpenIddictSigningKeyConfigurator uses.
 #pragma warning disable VSTHRD002
-        LoadStores(services, loggerFactory).GetAwaiter().GetResult();
+        LoadStores(scope.ServiceProvider, provider, logger).GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
     
         return host;
@@ -182,30 +183,11 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     // Why: Initialize is a one-time startup method with sequential logging over all loaded entities;
     // complexity comes from log-every-entity loops, not branching logic.
     [ConventionOverride(MaxCyclomaticComplexity = 25)]
-    private static async Task LoadStores(IServiceProvider services, ILoggerFactory? loggerFactory = null)
+    private static async Task LoadStores(
+        IServiceProvider services,
+        IDataStoreProvider provider,
+        ILogger<ConfigurationGatewayDataStoreProvider> logger)
     {
-        // Why: ConfigurationGatewayDataStoreProvider (and IDataStoreProvider) are now Scoped — resolving them
-        // directly from the root `services` (app.Services) throws "Cannot resolve scoped service from root
-        // provider" under Development ValidateScopes. This is a one-time startup call (registering each
-        // transport's typed config provider into the singleton DataStoreConfigurationProvider — see
-        // RegisterFactory implementations below), so a throwaway scope is the correct, minimal-lifetime way
-        // to reach it.
-        using var scope = services.CreateScope();
-        var provider = scope.ServiceProvider.GetRequiredService<IDataStoreProvider>();
-        var logger = loggerFactory?.CreateLogger<ConfigurationGatewayDataStoreProvider>()
-            ?? services.GetService<ILoggerFactory>()?.CreateLogger<ConfigurationGatewayDataStoreProvider>()
-            ?? NullLogger<ConfigurationGatewayDataStoreProvider>.Instance;
-
-        foreach (var type in DataStoreTypes.All())
-        {
-            // Why: none of the current DataStoreType.RegisterFactory implementations (MsSql/Http/FileSystem)
-            // mutate `provider` — they register their typed config provider on the singleton
-            // DataStoreConfigurationProvider resolved from `scope.ServiceProvider`. Passing the scope's
-            // provider for both args (mirroring the ServiceTypeCollectionGenerator's per-scope resolver
-            // pattern) keeps this correct if a future transport ever needs a scoped dependency here.
-            type.RegisterFactory(provider, scope.ServiceProvider);
-        }
-
         // Why: Load from the dual-source provider (system via IOptionsMonitor, user via DataGateway).
         var configProvider = services.GetRequiredService<DataStoreConfigurationProvider>();
         var configResult = await configProvider.Get().ConfigureAwait(false);

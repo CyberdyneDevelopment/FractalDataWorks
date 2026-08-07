@@ -46,13 +46,6 @@ public interface IDataStoreType : ITypeOption<Guid, IDataStoreType>
     IServiceCollection Register(IServiceCollection services);
 
     /// <summary>
-    /// Registers the factory and configuration provider with the DataStoreProvider.
-    /// </summary>
-    /// <param name="provider">The data store provider.</param>
-    /// <param name="services">The service provider for resolving dependencies.</param>
-    void RegisterFactory(IDataStoreProvider provider, IServiceProvider services);
-
-    /// <summary>
     /// Supplies the per-transport <see cref="IDataStoreBuilder"/> that assembles this transport's
     /// <see cref="IDataStore"/> tree (store → paths → containers → fields → keys).
     /// </summary>

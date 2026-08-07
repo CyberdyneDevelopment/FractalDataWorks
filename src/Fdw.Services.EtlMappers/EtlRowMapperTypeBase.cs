@@ -80,6 +80,4 @@ public abstract class EtlRowMapperTypeBase<TMapper, TFactory, TConfiguration>
     /// <inheritdoc />
     public abstract IServiceCollection Register(IServiceCollection services, ILoggerFactory? loggerFactory = null);
 
-    /// <inheritdoc />
-    public abstract void RegisterFactory(IEtlRowMapperProvider provider, IServiceProvider services);
 }

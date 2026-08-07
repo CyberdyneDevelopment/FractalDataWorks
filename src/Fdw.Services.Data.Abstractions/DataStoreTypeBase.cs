@@ -82,11 +82,6 @@ public abstract class DataStoreTypeBase<TConfiguration> :
     public abstract IServiceCollection Register(IServiceCollection services);
 
     /// <summary>
-    /// Registers the factory and configuration provider with the DataStoreProvider.
-    /// </summary>
-    public abstract void RegisterFactory(IDataStoreProvider provider, IServiceProvider services);
-
-    /// <summary>
     /// Supplies the per-transport <see cref="IDataStoreBuilder"/> for this transport.
     /// </summary>
     /// <param name="logger">Logger for build diagnostics.</param>
