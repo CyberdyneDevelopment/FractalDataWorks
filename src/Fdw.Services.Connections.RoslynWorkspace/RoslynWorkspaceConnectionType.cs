@@ -47,8 +47,9 @@ public sealed class RoslynWorkspaceConnectionType
         // Why Initialize and not Register: this wiring needs a LIVE container (it resolves the
         // domain provider and its typed-body providers), and Register runs while the container
         // is still being built. Initialize runs after Build() with a real IServiceProvider.
-        Initialization((services, loggerFactory) =>
+        Initialization((host, loggerFactory) =>
         {
+            var services = host.Services;
             var provider = (DefaultConnectionProvider)services.GetRequiredService<IConnectionProvider>();
 
             // Why: attach the typed-body provider to the HEADER provider so conn.RoslynWorkspaceConnection is
@@ -57,10 +58,10 @@ public sealed class RoslynWorkspaceConnectionType
             // conn.Connection row with ServiceOptionType 'RoslynWorkspace' could not be read (ComposeTypedBody
             // hit OnNoTypedProvider) and its body row could never be retired.
             services.GetRequiredService<ConnectionConfigurationProvider>()
-                .RegisterTypedProvider(
+                .Register(
                     Name, services.GetRequiredService<RoslynWorkspaceConnectionConfigurationProvider>());
     
-            return services;
+            return host;
         });
 
         Configuration(builder =>

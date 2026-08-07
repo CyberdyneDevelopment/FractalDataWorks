@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Fdw.Collections;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -51,8 +53,8 @@ public class ServiceTypeCollectionRegistrationTests
             IHostApplicationBuilder builder, ILoggerFactory? loggerFactory,
             string dataStoreName, string pathName, string containerName) => builder;
 
-        public IServiceProvider Initialize(IServiceProvider services, ILoggerFactory? loggerFactory = null)
-            => services;
+        public IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+            => host;
     }
 
     [Fact]
@@ -81,7 +83,7 @@ public class ServiceTypeCollectionRegistrationTests
         var option = new Option("Duplicate");
         BetaCollection.RegisterMember(option);
 
-        BetaCollection.Initialize(new NullServiceProvider());   // closes the set
+        BetaCollection.Initialize(new NullHost());   // closes the set
         BetaCollection.Members.Length.ShouldBe(1, "the option must be in the closed set");
 
         Should.NotThrow(() => BetaCollection.RegisterMember(option));
@@ -95,7 +97,7 @@ public class ServiceTypeCollectionRegistrationTests
         // The set has been read, so a member added now would never appear in any lookup. Silently
         // accepting it is the failure the closed set exists to prevent.
         GammaCollection.RegisterMember(new Option("First"));
-        GammaCollection.Initialize(new NullServiceProvider());
+        GammaCollection.Initialize(new NullHost());
 
         Should.Throw<InvalidOperationException>(() => GammaCollection.RegisterMember(new Option("Late")));
     }
@@ -106,8 +108,23 @@ public class ServiceTypeCollectionRegistrationTests
     public void RegisteringNullThrows()
         => Should.Throw<ArgumentNullException>(() => AlphaCollection.RegisterMember(null!));
 
-    private sealed class NullServiceProvider : IServiceProvider
+    // Why a stub rather than Host.CreateApplicationBuilder().Build(): these tests close the member set
+    // and never reach into the container, so the only thing phase 3 needs here is *an* IHost. Building
+    // a real one would put a Microsoft.Extensions.Hosting reference on this project to no purpose —
+    // IHost itself comes from Hosting.Abstractions, which is already referenced.
+    private sealed class NullHost : IHost
     {
-        public object? GetService(Type serviceType) => null;
+        public IServiceProvider Services { get; } = new NullServiceProvider();
+
+        public void Dispose() { }
+
+        public Task StartAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task StopAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        private sealed class NullServiceProvider : IServiceProvider
+        {
+            public object? GetService(Type serviceType) => null;
+        }
     }
 }

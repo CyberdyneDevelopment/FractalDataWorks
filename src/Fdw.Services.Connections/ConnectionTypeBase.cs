@@ -52,7 +52,7 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
         string pathName,
         string containerName)
     {
-        DefaultConnectionProvider.RegisterFactory(
+        DefaultConnectionProvider.Register(
             Name,
             sp => (IServiceFactory<IGenericConnection>)sp.GetRequiredService<TFactory>()!);
 

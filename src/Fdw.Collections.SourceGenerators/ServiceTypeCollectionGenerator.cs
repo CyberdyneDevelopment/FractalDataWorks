@@ -716,7 +716,7 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         bodySb.AppendLine($"                {{");
         if (collection.ConfigurationTypeName != null)
         {
-            bodySb.AppendLine($"                    if (sp.GetService<Fdw.Services.Abstractions.IServiceConfigurationProvider<{collection.ConfigurationTypeName}>>() is {{}} cfg) provider.RegisterParentProvider(cfg);");
+            bodySb.AppendLine($"                    if (sp.GetService<Fdw.Services.Abstractions.IServiceConfigurationProvider<{collection.ConfigurationTypeName}>>() is {{}} cfg) provider.Register(cfg);");
         }
         bodySb.AppendLine($"                }}");
         bodySb.AppendLine($"                catch (System.Exception ex)");

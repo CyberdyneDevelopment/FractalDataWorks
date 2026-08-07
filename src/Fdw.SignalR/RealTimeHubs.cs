@@ -94,11 +94,11 @@ public abstract partial class RealTimeHubs : TypeCollectionBase<RealTimeHubOptio
     /// directly in <see cref="Register"/>. Declared only so the <c>[PlatformServiceProvider]</c>
     /// three-phase shape requirement is satisfied by ServiceTypeCollectionBase.
     /// </summary>
-    /// <param name="services">The built service provider.</param>
+    /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">Unused.</param>
-    public static IServiceProvider Initialize(IServiceProvider services, ILoggerFactory? loggerFactory = null)
+    public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
     
-        return services;
+        return host;
     }
 }

@@ -62,13 +62,14 @@ public sealed class SyntheticSecretManagerType
 
         // Why Initialization and not Registration: handing the factory to the provider needs a LIVE
         // container, and Registration runs while the container is still being built.
-        Initialization((services, loggerFactory) =>
+        Initialization((host, loggerFactory) =>
         {
+            var services = host.Services;
             services
                 .GetRequiredService<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>()
                 .Register(Name, services.GetRequiredService<ISyntheticSecretManagerFactory>());
 
-            return services;
+            return host;
         });
     }
 }

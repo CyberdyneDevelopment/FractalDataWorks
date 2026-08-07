@@ -33,7 +33,7 @@ public sealed class PlatformServicesTests : IDisposable
             collectionType,
             (builder, _) => { ConfigureCalls++; return builder; },
             (builder, _) => { RegisterCalls++; return builder; },
-            (services, _) => { InitializeCalls++; return services; });
+            (host, _) => { InitializeCalls++; return host; });
     }
 
     [Fact]
@@ -105,9 +105,8 @@ public sealed class PlatformServicesTests : IDisposable
 
         var builder = Host.CreateApplicationBuilder();
 
-        var services = builder.Services;
         PlatformServices.Register(builder);
-        PlatformServices.Initialize(services.BuildServiceProvider());
+        PlatformServices.Initialize(builder.Build());
 
         // The swept domain runs in the sweep; the Manual domain is skipped by it.
         swept.RegisterCalls.ShouldBe(1);
@@ -127,8 +126,8 @@ public sealed class PlatformServicesTests : IDisposable
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
 
-        entry.Initialize(EmptyServiceProvider());
-        entry.Initialize(EmptyServiceProvider());
+        entry.Initialize(EmptyHost());
+        entry.Initialize(EmptyHost());
 
         counter.InitializeCalls.ShouldBe(1);
         entry.Initialized.ShouldBeTrue();
@@ -170,10 +169,10 @@ public sealed class PlatformServicesTests : IDisposable
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
 
         // Manual, dot-walked initialize (mirrors PlatformServices.Widget?.Initialize(...) usage).
-        entry.Initialize(EmptyServiceProvider());
+        entry.Initialize(EmptyHost());
         counter.InitializeCalls.ShouldBe(1);
 
-        PlatformServices.Initialize(EmptyServiceProvider());
+        PlatformServices.Initialize(EmptyHost());
 
         // Initialize must not re-run the already-initialized entry.
         counter.InitializeCalls.ShouldBe(1);
@@ -187,7 +186,7 @@ public sealed class PlatformServicesTests : IDisposable
         PlatformServices.Add("B", counterB.Descriptor("B", typeof(string)), 1);
         PlatformServices.Add("A", counterA.Descriptor("A", typeof(int)), 0);
 
-        PlatformServices.Initialize(EmptyServiceProvider());
+        PlatformServices.Initialize(EmptyHost());
 
         counterA.InitializeCalls.ShouldBe(1);
         counterB.InitializeCalls.ShouldBe(1);
@@ -206,61 +205,61 @@ public sealed class PlatformServicesTests : IDisposable
         counter.RegisterCalls.ShouldBe(1);
     }
 
-    // ── Phase-delegate override (author-variant selection; keyset stays frozen) ──────────────────────
+    // ── Phase-delegate replacement (author-variant selection; keyset stays frozen) ──────────────────────
 
     [Fact]
-    public void OverrideRegisterReplacesDescriptorRegisterDelegate()
+    public void RegistrationReplacesDescriptorRegisterDelegate()
     {
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
-        var overrideRan = 0;
-        entry.OverrideRegister((builder, _) => { overrideRan++; return builder; });
+        var replacementRan = 0;
+        entry.Registration((builder, _) => { replacementRan++; return builder; });
 
         entry.Register(Host.CreateApplicationBuilder());
 
-        overrideRan.ShouldBe(1);
+        replacementRan.ShouldBe(1);
         counter.RegisterCalls.ShouldBe(0); // descriptor default did NOT run
         entry.Registered.ShouldBeTrue();
     }
 
     [Fact]
-    public void OverrideInitializeReplacesDescriptorInitializeDelegate()
+    public void InitializationReplacesDescriptorInitializeDelegate()
     {
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
-        var overrideRan = 0;
-        entry.OverrideInitialize((services, _) => { overrideRan++; return services; });
+        var replacementRan = 0;
+        entry.Initialization((host, _) => { replacementRan++; return host; });
 
-        entry.Initialize(EmptyServiceProvider());
+        entry.Initialize(EmptyHost());
 
-        overrideRan.ShouldBe(1);
+        replacementRan.ShouldBe(1);
         counter.InitializeCalls.ShouldBe(0);
         entry.Initialized.ShouldBeTrue();
     }
 
     [Fact]
-    public void OverrideConfigureReplacesDescriptorConfigureDelegate()
+    public void ConfigurationReplacesDescriptorConfigureDelegate()
     {
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
-        var overrideRan = 0;
-        entry.OverrideConfigure((builder, _) => { overrideRan++; return builder; });
+        var replacementRan = 0;
+        entry.Configuration((builder, _) => { replacementRan++; return builder; });
 
         entry.Configure(EmptyHostApplicationBuilder());
 
-        overrideRan.ShouldBe(1);
+        replacementRan.ShouldBe(1);
         counter.ConfigureCalls.ShouldBe(0);
     }
 
     [Fact]
-    public void WithoutOverrideTheDescriptorDefaultRunsVerbatim()
+    public void WithoutAReplacementTheDescriptorDefaultRunsVerbatim()
     {
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
 
         entry.Configure(EmptyHostApplicationBuilder());
         entry.Register(Host.CreateApplicationBuilder());
-        entry.Initialize(EmptyServiceProvider());
+        entry.Initialize(EmptyHost());
 
         counter.ConfigureCalls.ShouldBe(1);
         counter.RegisterCalls.ShouldBe(1);
@@ -268,59 +267,91 @@ public sealed class PlatformServicesTests : IDisposable
     }
 
     [Fact]
-    public void OverrideRegisterAfterRegisterHasRunThrows()
+    public void RegistrationAfterRegisterHasRunThrows()
     {
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
         entry.Register(Host.CreateApplicationBuilder());
 
-        Should.Throw<InvalidOperationException>(() => entry.OverrideRegister((builder, _) => builder));
+        Should.Throw<InvalidOperationException>(() => entry.Registration((builder, _) => builder));
     }
 
     [Fact]
-    public void OverrideInitializeAfterInitializeHasRunThrows()
+    public void InitializationAfterInitializeHasRunThrows()
     {
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
-        entry.Initialize(EmptyServiceProvider());
+        entry.Initialize(EmptyHost());
 
-        Should.Throw<InvalidOperationException>(() => entry.OverrideInitialize((services, _) => services));
+        Should.Throw<InvalidOperationException>(() => entry.Initialization((host, _) => host));
     }
 
     [Fact]
-    public void OverrideConfigureAfterConfigureHasRunThrows()
+    public void ConfigurationAfterConfigureHasRunThrows()
     {
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
         entry.Configure(EmptyHostApplicationBuilder());
 
-        Should.Throw<InvalidOperationException>(() => entry.OverrideConfigure((b, _) => b));
+        Should.Throw<InvalidOperationException>(() => entry.Configuration((b, _) => b));
     }
 
     [Fact]
-    public void RegisterSweepUsesTheSelectedOverride()
+    public void RegisterSweepUsesTheSelectedReplacement()
     {
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
-        var overrideRan = 0;
-        entry.OverrideRegister((builder, _) => { overrideRan++; return builder; });
+        var replacementRan = 0;
+        entry.Registration((builder, _) => { replacementRan++; return builder; });
 
         PlatformServices.Register(Host.CreateApplicationBuilder());
 
-        overrideRan.ShouldBe(1);
+        replacementRan.ShouldBe(1);
         counter.RegisterCalls.ShouldBe(0);
     }
 
+    // Why this test exists separately from ConfigurationReplacesDescriptorConfigureDelegate: that one
+    // calls entry.Configure directly, so it passed while the SWEEP reached past the entry to the
+    // descriptor and ran the default instead. A replacement that works when invoked by hand and is
+    // ignored by the sweep is the failure worth pinning, and only a sweep-level test sees it.
     [Fact]
-    public void OverrideReturnsSameEntryForFluentChaining()
+    public void ConfigureSweepUsesTheSelectedReplacement()
+    {
+        var counter = new CallCounter();
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var replacementRan = 0;
+        entry.Configuration((builder, _) => { replacementRan++; return builder; });
+
+        PlatformServices.Configure(Host.CreateApplicationBuilder());
+
+        replacementRan.ShouldBe(1);
+        counter.ConfigureCalls.ShouldBe(0);
+    }
+
+    [Fact]
+    public void InitializeSweepUsesTheSelectedReplacement()
+    {
+        var counter = new CallCounter();
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var replacementRan = 0;
+        entry.Initialization((host, _) => { replacementRan++; return host; });
+
+        PlatformServices.Initialize(EmptyHost());
+
+        replacementRan.ShouldBe(1);
+        counter.InitializeCalls.ShouldBe(0);
+    }
+
+    [Fact]
+    public void ReplacementReturnsSameEntryForFluentChaining()
     {
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
 
-        entry.OverrideRegister((builder, _) => builder).ShouldBeSameAs(entry);
+        entry.Registration((builder, _) => builder).ShouldBeSameAs(entry);
     }
 
-    private static IServiceProvider EmptyServiceProvider() => new ServiceCollection().BuildServiceProvider();
+    private static IHost EmptyHost() => Host.CreateApplicationBuilder().Build();
 
     private static IHostApplicationBuilder EmptyHostApplicationBuilder() => Host.CreateApplicationBuilder();
 }

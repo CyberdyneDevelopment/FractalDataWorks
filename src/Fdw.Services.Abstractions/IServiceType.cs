@@ -100,5 +100,5 @@ public interface IServiceType : IServiceType<Guid>, IServiceTypeRegistration
 
     /// <summary>Sets this option's Initialize body.</summary>
     /// <param name="method">The replacement delegate.</param>
-    void Initialization(Func<IServiceProvider, ILoggerFactory?, IServiceProvider> method);
+    void Initialization(Func<IHost, ILoggerFactory?, IHost> method);
 }

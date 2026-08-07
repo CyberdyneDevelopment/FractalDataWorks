@@ -49,7 +49,7 @@ public class CalculationConfigurationProviderTests
             new Lazy<IConfigurationGateway>(() => gateway),
             "ConfigurationDb",
             "calc");
-        provider.RegisterTypedProvider("Formula", formulaProvider);
+        provider.Register("Formula", formulaProvider);
 
         var result = await provider.Get(EntityId, TestContext.Current.CancellationToken);
 

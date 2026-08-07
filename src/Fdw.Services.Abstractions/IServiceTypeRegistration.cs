@@ -64,8 +64,8 @@ public interface IServiceTypeRegistration : ITypeOption
         string containerName);
 
     /// <summary>Phase 3 — post-Build initialization for this option.</summary>
-    /// <param name="services">The built service provider.</param>
+    /// <param name="host">The built host. Its <c>Services</c> is the provider this phase used to take.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
-    /// <returns>The service provider, for chaining.</returns>
-    IServiceProvider Initialize(IServiceProvider services, ILoggerFactory? loggerFactory = null);
+    /// <returns>The host, for chaining.</returns>
+    IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null);
 }

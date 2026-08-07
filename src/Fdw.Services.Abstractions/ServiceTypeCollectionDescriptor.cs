@@ -21,4 +21,4 @@ public sealed record ServiceTypeCollectionDescriptor(
     Type CollectionType,
     Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> Configure,
     Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> Register,
-    Func<IServiceProvider, ILoggerFactory?, IServiceProvider> Initialize) : IServiceTypeCollection;
+    Func<IHost, ILoggerFactory?, IHost> Initialize) : IServiceTypeCollection;

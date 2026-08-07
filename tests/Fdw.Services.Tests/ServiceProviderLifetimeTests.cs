@@ -139,8 +139,8 @@ public class ServiceProviderLifetimeTests
 
         // Why: DefaultServiceProvider.Get(name/id) now requires a parent provider for
         // O(1) name-to-type resolution via ServiceOptionType.
-        public new IGenericResult RegisterParentProvider(IServiceConfigurationProvider<TestServiceConfiguration> parentProvider)
-            => base.RegisterParentProvider(parentProvider);
+        public new IGenericResult Register(IServiceConfigurationProvider<TestServiceConfiguration> parentProvider)
+            => base.Register(parentProvider);
     }
 
     /// <summary>
@@ -346,7 +346,7 @@ public class ServiceProviderLifetimeTests
             var configProvider = new TestServiceConfigurationProvider(configs);
             var factory = new TestServiceFactory();
             provider.Register("TypeA", configProvider);
-            provider.RegisterParentProvider(configProvider);
+            provider.Register(configProvider);
             provider.Register("TypeA", factory);
         }
 
@@ -381,7 +381,7 @@ public class ServiceProviderLifetimeTests
         var configProvider = new TestServiceConfigurationProvider(configs);
         var factory = new TestServiceFactory();
         provider.Register("TypeA", configProvider);
-        provider.RegisterParentProvider(configProvider);
+        provider.Register(configProvider);
         provider.Register("TypeA", factory);
 
         // Act - Get multiple services
@@ -413,7 +413,7 @@ public class ServiceProviderLifetimeTests
         var configProvider = new TestServiceConfigurationProvider(configs);
         var factory = new TestServiceFactory();
         provider.Register("TypeA", configProvider);
-        provider.RegisterParentProvider(configProvider);
+        provider.Register(configProvider);
         provider.Register("TypeA", factory);
 
         // Act - Get service twice
@@ -440,7 +440,7 @@ public class ServiceProviderLifetimeTests
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register("TypeA", configProvider);
-        provider.RegisterParentProvider(configProvider);
+        provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
         // Act
@@ -465,7 +465,7 @@ public class ServiceProviderLifetimeTests
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register("TypeA", configProvider);
-        provider.RegisterParentProvider(configProvider);
+        provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
         // Service1 exists
@@ -501,7 +501,7 @@ public class ServiceProviderLifetimeTests
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register("TypeA", configProvider);
-        provider.RegisterParentProvider(configProvider);
+        provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
         // Both services exist
@@ -548,7 +548,7 @@ public class ServiceProviderLifetimeTests
         provider.Register("TypeA", new TestServiceFactory());
         provider.Register("TypeB", configProviderB);
         provider.Register("TypeB", new TestServiceFactory());
-        provider.RegisterParentProvider(new AggregateConfigProvider(configProviderA, configProviderB));
+        provider.Register(new AggregateConfigProvider(configProviderA, configProviderB));
 
         // All services exist
         (await provider.Get("ServiceA1", TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
@@ -603,7 +603,7 @@ public class ServiceProviderLifetimeTests
         provider.Register("TypeA", factoryA);
         provider.Register("TypeB", configProviderB);
         provider.Register("TypeB", factoryB);
-        provider.RegisterParentProvider(new AggregateConfigProvider(configProviderA, configProviderB));
+        provider.Register(new AggregateConfigProvider(configProviderA, configProviderB));
 
         var resultA = await provider.Get("ServiceA", TestContext.Current.CancellationToken);
         var resultB = await provider.Get("ServiceB", TestContext.Current.CancellationToken);
@@ -634,7 +634,7 @@ public class ServiceProviderLifetimeTests
 
         // Act
         provider.Register("TypeA", configProvider);
-        provider.RegisterParentProvider(configProvider);
+        provider.Register(configProvider);
         provider.Register("TypeA", factory1);
         provider.Register("TypeA", factory2); // Overwrite
 
@@ -675,7 +675,7 @@ public class ServiceProviderLifetimeTests
         provider.Register("MsSql", msSqlFactory);
         provider.Register("Rest", restConfigProvider);
         provider.Register("Rest", restFactory);
-        provider.RegisterParentProvider(new AggregateConfigProvider(msSqlConfigProvider, restConfigProvider));
+        provider.Register(new AggregateConfigProvider(msSqlConfigProvider, restConfigProvider));
 
         // Act
         var dbResult = await provider.Get("DatabaseConnection", TestContext.Current.CancellationToken);
@@ -707,7 +707,7 @@ public class ServiceProviderLifetimeTests
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register("TypeA", configProvider);
-        provider.RegisterParentProvider(configProvider);
+        provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
         // Act
@@ -736,7 +736,7 @@ public class ServiceProviderLifetimeTests
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register("TypeA", configProvider);
-        provider.RegisterParentProvider(configProvider);
+        provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
         // Act - Look up by name since Get(configuration) was removed
@@ -761,7 +761,7 @@ public class ServiceProviderLifetimeTests
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register("TypeA", configProvider);
-        provider.RegisterParentProvider(configProvider);
+        provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
         // Act
@@ -788,7 +788,7 @@ public class ServiceProviderLifetimeTests
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register("TypeA", configProvider);
-        provider.RegisterParentProvider(configProvider);
+        provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
         // Act
@@ -821,7 +821,7 @@ public class ServiceProviderLifetimeTests
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register("TypeA", configProvider);
-        provider.RegisterParentProvider(configProvider);
+        provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
         // Act - Get services concurrently using Parallel.For
@@ -838,33 +838,6 @@ public class ServiceProviderLifetimeTests
         // Assert - All should succeed
         results.ShouldAllBe(r => r.IsSuccess);
         results.Select(r => r.Value!.ConfigurationValue).Distinct().Count().ShouldBe(100);
-    }
-
-    [Fact(Skip = "Concurrent factory registration is not a realistic scenario - registration happens at startup via ServiceTypeCollection")]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void ConcurrentFactoryRegistrationIsThreadSafe()
-    {
-        // Arrange
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
-
-        // Act - Register factories concurrently using Parallel.For
-        // Register now returns void, so just verify no exceptions
-        var exceptions = new List<Exception>();
-        Parallel.For(0, 50, i =>
-        {
-            try
-            {
-                provider.Register($"Type{i}", new TestServiceFactory());
-            }
-            catch (Exception ex)
-            {
-                lock (exceptions) { exceptions.Add(ex); }
-            }
-        });
-
-        // Assert - All registrations should succeed without exceptions
-        exceptions.ShouldBeEmpty();
     }
 
     #endregion
@@ -902,7 +875,7 @@ public class ServiceProviderLifetimeTests
         testProvider.Register("TypeA", factory);
         testProvider.Register("TypeB", configProviderB);
         testProvider.Register("TypeB", factory);
-        testProvider.RegisterParentProvider(new AggregateConfigProvider(configProviderA, configProviderB));
+        testProvider.Register(new AggregateConfigProvider(configProviderA, configProviderB));
 
         // Act
         var result1 = await testProvider.Get("PrimaryService", TestContext.Current.CancellationToken);
@@ -944,7 +917,7 @@ public class ServiceProviderLifetimeTests
         provider.Register("MsSql", msSqlFactory);
         provider.Register("Rest", restConfigProvider);
         provider.Register("Rest", restFactory);
-        provider.RegisterParentProvider(new AggregateConfigProvider(msSqlConfigProvider, restConfigProvider));
+        provider.Register(new AggregateConfigProvider(msSqlConfigProvider, restConfigProvider));
 
         // Act
         var ordersResult = await provider.Get("OrdersDb", TestContext.Current.CancellationToken);

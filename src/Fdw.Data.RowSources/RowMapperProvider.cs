@@ -37,7 +37,7 @@ public sealed class RowMapperProvider : IRowMapperProvider
     }
 
     /// <inheritdoc />
-    public void RegisterFactory(string typeName, IRowMapperFactory factory)
+    public void Register(string typeName, IRowMapperFactory factory)
     {
         _factories[typeName] = factory;
     }

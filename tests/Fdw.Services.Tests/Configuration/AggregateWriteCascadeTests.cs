@@ -130,7 +130,7 @@ public sealed class AggregateWriteCascadeTests
     {
         var gateway = new RecordingGateway();
         var provider = MakeProvider(gateway);
-        provider.RegisterTypedProvider(
+        provider.Register(
             "Default",
             new DefaultConfigurationProvider<TestBodyConfiguration, TestBodyCommand>(
                 NullLogger<DefaultConfigurationProvider<TestBodyConfiguration, TestBodyCommand>>.Instance,

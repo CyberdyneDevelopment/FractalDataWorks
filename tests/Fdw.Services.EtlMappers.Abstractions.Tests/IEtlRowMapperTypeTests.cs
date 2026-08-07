@@ -178,24 +178,6 @@ public class IEtlRowMapperTypeTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void IEtlRowMapperTypeHasRegisterFactoryMethod()
-    {
-        // Act
-        var method = typeof(IEtlRowMapperType).GetMethod(nameof(IEtlRowMapperType.RegisterFactory));
-
-        // Assert
-        method.ShouldNotBeNull();
-        method.ReturnType.ShouldBe(typeof(void));
-
-        var parameters = method.GetParameters();
-        parameters.Length.ShouldBe(2);
-        parameters[0].ParameterType.ShouldBe(typeof(IEtlRowMapperProvider));
-        parameters[1].ParameterType.ShouldBe(typeof(IServiceProvider));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
     public void IEtlRowMapperTypeGenericInterfaceExists()
     {
         // Act

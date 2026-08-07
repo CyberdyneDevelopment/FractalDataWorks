@@ -47,8 +47,9 @@ public sealed class FileSystemConnectionType
         // Why Initialize and not Register: this wiring needs a LIVE container (it resolves the
         // domain provider and its typed-body providers), and Register runs while the container
         // is still being built. Initialize runs after Build() with a real IServiceProvider.
-        Initialization((services, loggerFactory) =>
+        Initialization((host, loggerFactory) =>
         {
+            var services = host.Services;
             var provider = (DefaultConnectionProvider)services.GetRequiredService<IConnectionProvider>();
 
             // Why: Typed body providers are registered with the header provider (ConnectionConfigurationProvider)
@@ -56,10 +57,10 @@ public sealed class FileSystemConnectionType
             // ConnectionConfiguration — it implements IConnectionConfiguration directly.
             var headerProvider = services.GetRequiredService<ConnectionConfigurationProvider>();
             var configProvider = services.GetRequiredService<FileSystemConnectionConfigurationProvider>();
-            headerProvider.RegisterTypedProvider(Name, configProvider);
+            headerProvider.Register(Name, configProvider);
 
     
-            return services;
+            return host;
         });
 
         Configuration(builder =>

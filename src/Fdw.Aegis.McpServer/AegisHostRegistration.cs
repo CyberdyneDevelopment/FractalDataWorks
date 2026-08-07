@@ -159,16 +159,18 @@ public static class AegisHostRegistration
     /// configuration (declared JSON instead of ConfigurationDb) and leaves the resolution path
     /// identical, so <c>AegisInjector</c> holds no directory and names no specific secret manager.
     /// </remarks>
-    public static void Initialize(IServiceProvider services, ConfigurationSchema schema, ILoggerFactory? loggerFactory = null)
+    public static void Initialize(IHost host, ConfigurationSchema schema, ILoggerFactory? loggerFactory = null)
     {
-        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(schema);
 
-        SecretManagerTypes.Initialize(services, loggerFactory);
+        var services = host.Services;
+
+        SecretManagerTypes.Initialize(host, loggerFactory);
 
         var parentResult = services
             .GetRequiredService<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>()
-            .RegisterParentProvider(new DeclaredSecretManagerConfigurationProvider([.. schema.SecretManagers]));
+            .Register(new DeclaredSecretManagerConfigurationProvider([.. schema.SecretManagers]));
 
         if (!parentResult.IsSuccess)
             throw new InvalidOperationException(

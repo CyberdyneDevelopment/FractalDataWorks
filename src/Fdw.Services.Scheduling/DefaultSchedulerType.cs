@@ -44,8 +44,9 @@ public sealed class DefaultSchedulerType
         // Why Initialize and not Register: this wiring needs a LIVE container (it resolves the
         // domain provider and its typed-body providers), and Register runs while the container
         // is still being built. Initialize runs after Build() with a real IServiceProvider.
-        Initialization((services, loggerFactory) =>
+        Initialization((host, loggerFactory) =>
         {
+            var services = host.Services;
             var provider = services.GetRequiredService<IFdwServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration>>();
 
             var factory = services.GetRequiredService<ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>>();
@@ -57,13 +58,13 @@ public sealed class DefaultSchedulerType
             // Why one combined guard: each of these leaves schedulerProvider.Get("DefaultScheduler")
             // unable to resolve sched.Scheduler rows at runtime, and Initialize has no result to return,
             // so every failure takes the same exit. Separate identical branches would just be noise.
-            var parentRegResult = provider.RegisterParentProvider(configProvider);
+            var parentRegResult = provider.Register(configProvider);
             if (!factoryRegResult.IsSuccess || !configRegResult.IsSuccess || !parentRegResult.IsSuccess)
             {
-                return services;
+                return host;
             }
     
-            return services;
+            return host;
         });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>

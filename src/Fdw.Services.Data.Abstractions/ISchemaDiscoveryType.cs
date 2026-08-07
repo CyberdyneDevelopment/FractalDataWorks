@@ -1,20 +1,18 @@
 using Fdw.Collections;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Fdw.Services.Data.Abstractions;
 
 /// <summary>
 /// Interface for schema discovery type options.
-/// Each implementation represents a store-type-specific schema discoverer
-/// (e.g., MsSql, PostgreSql) that can register its DI services.
+/// Each implementation represents a store-type-specific schema discoverer (e.g., MsSql, PostgreSql).
 /// </summary>
+/// <remarks>
+/// Why no Register member here: registration is a phase, and the phases come from
+/// <c>PhasedTypeOptionBase</c> with the same shape every registering option uses — a replaceable
+/// <c>Registration(...)</c> body over <c>IHostApplicationBuilder</c>. Declaring a second, domain-local
+/// <c>Register(IServiceCollection)</c> gave this domain its own contract for the same idea, and the raw
+/// service collection with it.
+/// </remarks>
 public interface ISchemaDiscoveryType : ITypeOption<int, SchemaDiscoveryTypeBase>
 {
-    /// <summary>
-    /// Registers the required services for this schema discovery type with the DI container.
-    /// Called during Phase 1 (before Build).
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <returns>The service collection for chaining.</returns>
-    IServiceCollection Register(IServiceCollection services);
 }

@@ -46,8 +46,8 @@ public static class Program
 
             var host = builder.Build();
 
-            // Phase 3: eager initialize every swept domain (fail fast).
-            PlatformServices.Initialize(host.Services);
+            // Phase 3: eager initialize every registered domain (fail fast).
+            PlatformServices.Initialize(host);
 
             var app = host.Services.GetRequiredService<ManagementApp>();
             return await app.Run().ConfigureAwait(false);

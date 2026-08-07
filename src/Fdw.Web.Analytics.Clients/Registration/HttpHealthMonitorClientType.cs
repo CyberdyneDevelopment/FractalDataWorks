@@ -55,7 +55,7 @@ public sealed class HttpHealthMonitorClientType
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
         {
-            DefaultHealthMonitorProvider.RegisterFactory(Name, sp => sp.GetRequiredService<HttpHealthMonitorFactory>());
+            DefaultHealthMonitorProvider.Register(Name, sp => sp.GetRequiredService<HttpHealthMonitorFactory>());
             builder.Services.TryAddSingleton<HttpHealthMonitorFactory>();
             HealthMonitorConfigurationProvider.RegisterDomainConfiguration(builder.Services);
             return builder;

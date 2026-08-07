@@ -45,14 +45,6 @@ public sealed class FileSystemDataStoreType
 
     /// <inheritdoc />
     /// <remarks>
-    /// Nothing to register: FileSystem is a body-less store (see <see cref="RegisterFactory"/>), and
-    /// DataStore instances are assembled by the per-transport IDataStoreBuilder (SupplyBuilder) — there
-    /// is no IDataStoreFactory to register (that legacy build path was removed).
-    /// </remarks>
-    public override IServiceCollection Register(IServiceCollection services) => services;
-
-    /// <inheritdoc />
-    /// <remarks>
     /// Registers no typed config provider — FileSystem carries its whole configuration on the header row.
     /// </remarks>
 
@@ -70,42 +62,5 @@ public sealed class FileSystemDataStoreType
     public override IDataStoreBuilder SupplyBuilder(ILogger? logger = null)
         => new FileSystemDataStoreBuilder(ConnectionTypes.ByName("FileSystem").DefaultResponseFormat, logger);
 
-
-    /// <inheritdoc />
-    // Why this is NOT a ServiceTypeBase phase: IDataStoreType declares its own RegisterFactory
-    // contract, driven by ConfigurationGatewayDataStoreProvider against IDataStoreProvider — a
-    // different mechanism from the option phases, and it stays.
-    public override void RegisterFactory(IDataStoreProvider provider, IServiceProvider services)
-    {
-
-        var loggerFactory = services.GetService<ILoggerFactory>();
-        // Why: hold a real logger so the registration milestone/failure partials below actually emit;
-        // NullLogger<T>.Instance is the only sanctioned ?? fallback.
-        var typeLogger = loggerFactory?.CreateLogger<FileSystemDataStoreType>() ?? NullLogger<FileSystemDataStoreType>.Instance;
-
-        // Why NO typed provider: FileSystem is a TRANSPORT, and a transport is not what varies here.
-        // data.FileSystemDataStore carries identity + audit columns and nothing else — no payload, and
-        // zero rows in devConfigurationDb — because there is nothing store-specific about "the file
-        // system". That makes FileSystem a body-less store today, exactly like Http, and it takes the
-        // documented rule in DataStoreConfigurationProvider.OnNoTypedProvider: the header IS the
-        // complete configuration.
-        //
-        // Registering an empty body keyed on the transport would model the wrong axis. A file store's
-        // variation is its FORMAT: a structured file (Json/Xml/Parquet) is self-describing and behaves
-        // like MsSqlDataStore — discovered schema metadata — while a delimited file is NOT
-        // self-describing and needs its own type carrying delimiter/quote/header-row. Those are two
-        // different typed bodies selected by format, not one selected by transport. The container
-        // already owns the structured half (Format, RecordSelector, FlattenNestedObjects,
-        // FlattenSeparator); the delimited half has no configuration surface anywhere yet
-        // (DelimitedRowWriterOptions is a writer option class, not persisted configuration), so
-        // inventing a transport-keyed body now would entrench the wrong shape.
-        //
-        // The header's own Paths collection is populated by the generic child cascade
-        // (DefaultConfigurationProvider.ComposeChildren) with no typed provider involved.
-
-        // Why: no factory registration — DataStore instances are assembled by the per-transport
-        // IDataStoreBuilder (SupplyBuilder), not an IDataStoreFactory (that legacy path was removed).
-        FileSystemDataStoreTypeLog.RegistrationCompleted(typeLogger, Name);
-    }
 
 }

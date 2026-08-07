@@ -62,8 +62,9 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
         // Why Initialize and not Register: this wiring needs a LIVE container (it resolves the
         // domain provider and its typed-body providers), and Register runs while the container
         // is still being built. Initialize runs after Build() with a real IServiceProvider.
-        Initialization((services, loggerFactory) =>
+        Initialization((host, loggerFactory) =>
         {
+            var services = host.Services;
             var provider = services.GetRequiredService<IFdwServiceProvider<IEtlPipeline, PipelineConfiguration>>();
 
             // Resolve factory from DI (registered in Phase 1)
@@ -72,7 +73,7 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
             // Register factory instance with provider
             var factoryResult = provider.Register(Name, factory);
             if (!factoryResult.IsSuccess)
-                return services;
+                return host;
 
             // Why: Resolve from DI — provider was registered with Lazy<IConfigurationGateway> in the option's Register phase.
             // Not registered with the runtime IFdwServiceProvider (which is typed to the ETL-kind
@@ -87,12 +88,12 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
             // and run against the real singletons (RegisterFactory executes inside the collection's provider
             // resolver against the app sp), so the keystone's ComposeTypedBody recurses Pipeline→Etl→engine.
             var etlKindProvider = services.GetRequiredService<EtlPipelineConfigurationProvider>();
-            etlKindProvider.RegisterTypedProvider(Name, configProvider);
+            etlKindProvider.Register(Name, configProvider);
 
             var survivor = services.GetRequiredService<PipelineServiceConfigurationProvider>();
-            survivor.RegisterTypedProvider("Etl", etlKindProvider);
+            survivor.Register("Etl", etlKindProvider);
     
-            return services;
+            return host;
         });
 
         Configuration(builder =>

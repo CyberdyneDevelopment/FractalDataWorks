@@ -111,8 +111,16 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
         = static (builder, loggerFactory, dataStoreName, pathName, containerName) => builder;
 
     /// <summary>Gets this option's Initialize body.</summary>
-    protected Func<IServiceProvider, ILoggerFactory?, IServiceProvider> InitializationMethod { get; private set; }
-        = static (services, loggerFactory) => services;
+    /// <remarks>
+    /// Why the host and not its <see cref="IServiceProvider"/>: an option whose initialization needs
+    /// something the host owns — a middleware stage, an endpoint route — could not say so through a
+    /// bare provider, because the host is not resolvable from the container it built. It had to be
+    /// wired by hand at the composition root instead, far from the option that required it, where
+    /// nothing connects the two. Taking the host means the requirement is stated by the option that
+    /// has it. <c>host.Services</c> is the same provider this used to receive.
+    /// </remarks>
+    protected Func<IHost, ILoggerFactory?, IHost> InitializationMethod { get; private set; }
+        = static (host, loggerFactory) => host;
 
     // ── Which body is installed ─────────────────────────────────────────────────────────────────
     // Set by the gerund setters, read by the invokers, so each phase can say at Info whether the
@@ -149,7 +157,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
 
     /// <summary>Sets this option's Initialize body.</summary>
     /// <param name="method">The replacement delegate.</param>
-    public void Initialization(Func<IServiceProvider, ILoggerFactory?, IServiceProvider> method)
+    public void Initialization(Func<IHost, ILoggerFactory?, IHost> method)
     {
         InitializationMethod = method ?? throw new ArgumentNullException(nameof(method));
         InitializationIsCustom = true;
@@ -191,9 +199,9 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// <remarks>
     /// Called by the generated collection's phase-3 sweep, after the host has been built.
     /// </remarks>
-    public virtual IServiceProvider Initialize(IServiceProvider services, ILoggerFactory? loggerFactory = null)
+    public virtual IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null)
         => RunPhase(loggerFactory, "Initialize", InitializationIsCustom, ServiceTypePhaseSequence.Initialize,
-            () => InitializationMethod(services, loggerFactory));
+            () => InitializationMethod(host, loggerFactory));
 
     // Why the body arrives as a thunk rather than the func itself: the three phases take different
     // arguments, and closing over them here keeps one logging contract instead of three that drift.

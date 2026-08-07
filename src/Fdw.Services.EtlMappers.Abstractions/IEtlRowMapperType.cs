@@ -58,12 +58,6 @@ public interface IEtlRowMapperType : ITypeOption<Guid, IEtlRowMapperType>
     /// <returns>The service collection for chaining.</returns>
     IServiceCollection Register(IServiceCollection services, ILoggerFactory? loggerFactory = null);
 
-    /// <summary>
-    /// Registers the factory with the EtlRowMapperProvider.
-    /// </summary>
-    /// <param name="provider">The mapper provider.</param>
-    /// <param name="services">The service provider for resolving dependencies.</param>
-    void RegisterFactory(IEtlRowMapperProvider provider, IServiceProvider services);
 }
 
 /// <summary>

@@ -6,6 +6,7 @@ using Fdw.Services.EtlMappers.Abstractions;
 using Fdw.Services.EtlMappers.Abstractions.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.EtlMappers;
@@ -51,16 +52,30 @@ public partial class EtlRowMapperTypes : TypeCollectionBase<
     }
 
     /// <summary>
-    /// Phase 2: Initializes by registering factories with the EtlRowMapperProvider.
+    /// Phase 3: fills the <see cref="IEtlRowMapperProvider"/> with each mapper type's factory.
     /// Call after Build().
     /// </summary>
-    public static void Initialize(IServiceProvider services, ILoggerFactory? loggerFactory = null)
+    /// <param name="host">The built host.</param>
+    /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
+    /// <returns>The host, for chaining.</returns>
+    /// <remarks>
+    /// Why the provider is filled from here rather than each option pushing itself in: an option knows
+    /// its factory TYPE (<see cref="IEtlRowMapperType.FactoryType"/>) and its name, and the container
+    /// knows how to build that type — so the mapping the provider needs is recoverable without a
+    /// per-option <c>RegisterFactory</c> member existing purely to be called by a loop here. The service
+    /// that needs the factories resolved is the one resolving them.
+    /// </remarks>
+    public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
+        var services = host.Services;
         var provider = services.GetRequiredService<IEtlRowMapperProvider>();
 
         foreach (var type in All())
         {
-            type.RegisterFactory(provider, services);
+            // GetRequiredService, not GetService: the option's own Register put this factory in the
+            // container, so its absence is a broken container, not an optional feature — and a missing
+            // factory would otherwise surface as a mapper that silently cannot be created.
+            provider.Register(type.Name, (IEtlRowMapperFactory)services.GetRequiredService(type.FactoryType));
         }
 
         if (provider is EtlRowMapperProvider concreteProvider)
@@ -70,9 +85,9 @@ public partial class EtlRowMapperTypes : TypeCollectionBase<
 
         if (loggerFactory != null)
         {
-            var logger = loggerFactory.CreateLogger<EtlRowMapperTypes>();
-            var mapperCount = All().Count;
-            EtlRowMapperLog.ProviderInitialized(logger, mapperCount);
+            EtlRowMapperLog.ProviderInitialized(loggerFactory.CreateLogger<EtlRowMapperTypes>(), All().Count);
         }
+
+        return host;
     }
 }

@@ -107,12 +107,12 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     /// Phase 2: Initializes DataSet infrastructure.
     /// Call after Build().
     /// </summary>
-    /// <param name="services">The built service provider.</param>
+    /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">Optional logger factory.</param>
-    public static IServiceProvider Initialize(IServiceProvider services, ILoggerFactory? loggerFactory = null)
+    public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
         var logger = loggerFactory?.CreateLogger<DataSetProvider>()
-            ?? services.GetRequiredService<ILoggerFactory>().CreateLogger<DataSetProvider>();
+            ?? host.Services.GetRequiredService<ILoggerFactory>().CreateLogger<DataSetProvider>();
 
         // Why: DataSetTypes holds the static strategy KINDS (Simple/Compound/Federated) — it is NOT a
         // registry of dataset instances. Dataset instances are resolved live from the configuration
@@ -121,7 +121,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         // into DataSetTypes is deleted — it froze runtime-created datasets out of execution).
         DataSetTypesLog.DataSetTypesInitializedNoConfig(logger, DataSetTypes.All().Count);
     
-        return services;
+        return host;
     }
 
     // ============================================================

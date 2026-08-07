@@ -18,7 +18,7 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
     private const string Scaffold = """
         using System;
 
-        namespace Microsoft.Extensions.Hosting { public interface IHostApplicationBuilder { } }
+        namespace Microsoft.Extensions.Hosting { public interface IHostApplicationBuilder { } public interface IHost { } }
         namespace Microsoft.Extensions.Logging { public interface ILoggerFactory { } }
 
         namespace Fdw.Collections.Attributes
@@ -34,7 +34,7 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
     private const string AllThreePhases = """
                 public static IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory) => builder;
                 public static IHostApplicationBuilder Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory) => builder;
-                public static IServiceProvider Initialize(IServiceProvider services, ILoggerFactory? loggerFactory) => services;
+                public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory) => host;
         """;
 
     [Fact]
@@ -91,7 +91,7 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
             test,
             new DiagnosticResult(ServiceTypeCollectionPhaseMethodsAnalyzer.DiagnosticId, Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
                 .WithLocation(0)
-                .WithArguments("MissingInitializeTypes", "IServiceProvider Initialize(IServiceProvider, ILoggerFactory?)"));
+                .WithArguments("MissingInitializeTypes", "IHost Initialize(IHost, ILoggerFactory?)"));
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
                 .WithArguments("BareProvider", "IHostApplicationBuilder Register(IHostApplicationBuilder, ILoggerFactory?)"),
             new DiagnosticResult(ServiceTypeCollectionPhaseMethodsAnalyzer.DiagnosticId, Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
                 .WithLocation(0)
-                .WithArguments("BareProvider", "IServiceProvider Initialize(IServiceProvider, ILoggerFactory?)"));
+                .WithArguments("BareProvider", "IHost Initialize(IHost, ILoggerFactory?)"));
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
                 {
                     public static IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory) => builder;
                     public static void Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory) { }
-                    public static IServiceProvider Initialize(IServiceProvider services, ILoggerFactory? loggerFactory) => services;
+                    public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory) => host;
                 }
             }
             """;
@@ -185,7 +185,7 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
                 {
                     public static IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null) => builder;
                     public static IHostApplicationBuilder Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null) => builder;
-                    public static IServiceProvider Initialize(IServiceProvider services, ILoggerFactory? loggerFactory = null) => services;
+                    public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null) => host;
                 }
 
                 [ServiceTypeCollection]

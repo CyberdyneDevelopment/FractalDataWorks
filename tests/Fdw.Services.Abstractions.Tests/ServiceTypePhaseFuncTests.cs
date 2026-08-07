@@ -110,10 +110,10 @@ public class ServiceTypePhaseFuncTests
     public void InitializationReplacesTheInitializeBodyAndItsReturnValueIsUsed()
     {
         var serviceType = new TestServiceType();
-        var replacement = new ServiceCollection().BuildServiceProvider();
+        var replacement = Host.CreateApplicationBuilder().Build();
         serviceType.Initialization((_, _) => replacement);
 
-        serviceType.Initialize(new ServiceCollection().BuildServiceProvider(), null)
+        serviceType.Initialize(Host.CreateApplicationBuilder().Build(), null)
             .ShouldBeSameAs(replacement);
     }
 

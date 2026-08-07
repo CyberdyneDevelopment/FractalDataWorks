@@ -39,7 +39,7 @@ public class DefaultConnectionProviderTests
         _provider = new DefaultConnectionProvider(new ServiceCollection().BuildServiceProvider(), _mockLogger.Object);
         // Why: the header provider is the provider's ONLY configuration source — it composes the
         // aggregate (header + typed body) and DefaultConnectionProvider dispatches straight off it.
-        _provider.RegisterParentProvider(_configProvider);
+        _provider.Register(_configProvider);
     }
 
     /// <summary>

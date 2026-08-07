@@ -37,7 +37,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
 
         // Why: DefaultServiceProvider.Get(name/id) now requires a parent provider for
         // O(1) name-to-type resolution. Register _mockConfigProvider as the parent.
-        _provider.RegisterParentProvider(_mockConfigProvider.Object);
+        _provider.Register(_mockConfigProvider.Object);
     }
 
     [Fact]
