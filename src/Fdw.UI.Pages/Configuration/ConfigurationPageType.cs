@@ -15,7 +15,7 @@ public sealed class ConfigurationPageType : PageTypeBase
     public ConfigurationPageType()
         : base(3, "Configuration",
         [
-            new Page("Configuration", typeof(global::Fdw.UI.Pages.Configuration.Pages.ConfigurationPage), new NavItem("Settings", "settings", NavSections.Configuration, 90), "configurations:read"),
+            new Page("Configuration", typeof(global::Fdw.UI.Pages.Configuration.Pages.ConfigurationPage), new NavItem("Settings", "settings", NavSections.Configuration, 90), PageAccess.RequiringPermission("configurations:read")),
         ])
     { }
 }

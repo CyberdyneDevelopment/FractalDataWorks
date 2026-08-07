@@ -15,8 +15,8 @@ public sealed class CatalogPageType : PageTypeBase
     public CatalogPageType()
         : base(9, "Catalog",
         [
-            new Page("Catalog", typeof(global::Fdw.UI.Pages.Catalog.Pages.CatalogPage), new NavItem("Catalog", "book", NavSections.Catalog, 60), null),
-            new Page("Index", typeof(global::Fdw.UI.Pages.Catalog.Pages.Glossary.GlossaryIndexPage), new NavItem("Glossary", "bookmark", NavSections.Catalog, 60), null),
+            new Page("Catalog", typeof(global::Fdw.UI.Pages.Catalog.Pages.CatalogPage), new NavItem("Catalog", "book", NavSections.Catalog, 60), PageAccess.Authenticated),
+            new Page("Index", typeof(global::Fdw.UI.Pages.Catalog.Pages.Glossary.GlossaryIndexPage), new NavItem("Glossary", "bookmark", NavSections.Catalog, 60), PageAccess.Authenticated),
         ])
     { }
 }

@@ -15,7 +15,7 @@ public sealed class AuthenticationPageType : PageTypeBase
     public AuthenticationPageType()
         : base(7, "Authentication",
         [
-            new Page("ApiKeys", typeof(global::Fdw.UI.Pages.Authentication.Pages.ApiKeysPage), new NavItem("API Keys", "key", NavSections.Security, 80), null),
+            new Page("ApiKeys", typeof(global::Fdw.UI.Pages.Authentication.Pages.ApiKeysPage), new NavItem("API Keys", "key", NavSections.Security, 80), PageAccess.Authenticated),
         ])
     { }
 }

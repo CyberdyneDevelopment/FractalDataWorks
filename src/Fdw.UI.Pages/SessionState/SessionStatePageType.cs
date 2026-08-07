@@ -15,7 +15,7 @@ public sealed class SessionStatePageType : PageTypeBase
     public SessionStatePageType()
         : base(60, "SessionState",
         [
-            new Page("SessionState", typeof(global::Fdw.UI.Pages.SessionState.Pages.SessionStatePage), new NavItem("Session State", "database", NavSections.DeveloperTools, 100), null),
+            new Page("SessionState", typeof(global::Fdw.UI.Pages.SessionState.Pages.SessionStatePage), new NavItem("Session State", "database", NavSections.DeveloperTools, 100), PageAccess.Authenticated),
         ])
     { }
 }
