@@ -185,23 +185,36 @@ public class FormulaCalculationEntityTypeTests
         value.ShouldBe(0m);
     }
 
-    // Why: quarantined pending a production fix — FormulaCalculationEntityType.ParseUnary recurses into
-    // ParsePrimary (not ParseUnary) for a leading '-' operand, so "--5" is mis-parsed (silent truncation,
-    // a NO-FALLBACKS violation). This test documents that real defect; un-skip once ParseUnary is fixed to
-    // either negate twice (=+5) or fail loud. Kept (not deleted) so the defect isn't lost.
-    [Fact(Skip = "Documents real ParseUnary double-unary-minus defect; un-skip after the parser fix.")]
-    public async Task ExecuteDoubleUnaryMinusDoesNotNegateTwice()
+    [Fact]
+    public async Task ExecuteDoubleUnaryMinusNegatesTwice()
     {
-        // Why (defect): ParseUnary recurses into ParsePrimary (not ParseUnary) for the operand of a
-        // leading '-', so a second leading '-' is not itself parsed as a unary operator — ParsePrimary
-        // sees a non-digit, non-'(' character and silently returns 0. "--5" therefore evaluates to 0,
-        // not +5, and the trailing "5" is dropped without any validation error (NO-FALLBACKS violation:
-        // malformed input should fail loud, not silently truncate).
         var type = new FormulaCalculationEntityType();
 
         var value = await EvaluateAsync(type, "--5");
 
-        value.ShouldBe(0m);
+        value.ShouldBe(5m);
+    }
+
+    [Fact]
+    public async Task ExecuteTripleUnaryMinusNegatesThreeTimes()
+    {
+        // Why a third level: two negations could be satisfied by a special case for "--". Recursion is
+        // what makes the operator compose, and only an odd count proves the sign is actually tracked.
+        var type = new FormulaCalculationEntityType();
+
+        var value = await EvaluateAsync(type, "---5");
+
+        value.ShouldBe(-5m);
+    }
+
+    [Fact]
+    public async Task ExecuteUnaryMinusAfterOperatorNegatesTheRightOperand()
+    {
+        var type = new FormulaCalculationEntityType();
+
+        var value = await EvaluateAsync(type, "3*-4");
+
+        value.ShouldBe(-12m);
     }
 
     [Fact]

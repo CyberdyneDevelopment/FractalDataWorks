@@ -258,12 +258,17 @@ public sealed class FormulaCalculationEntityType : CalculationEntityBase<Formula
         return left;
     }
 
+    // Why the operand is parsed by ParseUnary and not ParsePrimary: a unary minus may be applied to
+    // another unary minus. Descending straight to ParsePrimary meant the second '-' was never treated
+    // as an operator — ParsePrimary matched no digits, returned zero, and left the operand unconsumed,
+    // so "--5" evaluated to 0 with the 5 silently dropped. Fdw.Expressions.FormulaParser.ParseUnary
+    // already recurses into itself for exactly this reason.
     private static decimal ParseUnary(string expr, ref int pos)
     {
         if (pos < expr.Length && expr[pos] == '-')
         {
             pos++;
-            return -ParsePrimary(expr, ref pos);
+            return -ParseUnary(expr, ref pos);
         }
         return ParsePrimary(expr, ref pos);
     }
