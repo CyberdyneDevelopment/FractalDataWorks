@@ -39,7 +39,7 @@ public sealed class LocalStatusClassMapperAnalyzer : DiagnosticAnalyzer
     /// <summary>
     /// Diagnostic ID for the component-local status-to-CSS-class mapper violation.
     /// </summary>
-    public const string DiagnosticId = "FDW046";
+    public const string DiagnosticId = "FDW048";
 
     private const string Title = "Status value is mapped to CSS classes by a local helper";
     private const string MessageFormat = "Method '{0}' maps a status value to CSS class strings; use the Fdw.UI.Components StatusVariants/StatusColors TypeCollection (via StatusBadgeMapper) instead of a component-local mapper";

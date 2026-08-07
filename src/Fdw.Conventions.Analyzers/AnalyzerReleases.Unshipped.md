@@ -14,4 +14,4 @@ FDW018 | Design | Warning | TypeCollectionOpportunityAnalyzer - Switch on enum t
 FDW019 | Design | Warning | TypeCollectionOpportunityAnalyzer - If/else chain comparing enum values suggests TypeCollection ByName dispatch
 FDW020 | Design | Info | UnimplementedAbstractTypeAnalyzer - Abstract type has no implementation in the compilation
 FDW021 | Design | Info | UnusedTypeAnalyzer - Type is not referenced anywhere in the compilation
-FDW046 | Design | Warning | LocalStatusClassMapperAnalyzer - Component-local status-to-CSS-class mapper instead of StatusVariants/StatusColors
+FDW048 | Design | Warning | LocalStatusClassMapperAnalyzer - Component-local status-to-CSS-class mapper instead of StatusVariants/StatusColors

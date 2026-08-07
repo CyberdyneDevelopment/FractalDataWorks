@@ -7,7 +7,7 @@ using VerifyCS = Microsoft.CodeAnalysis.CSharp.Testing.CSharpAnalyzerVerifier<
 namespace Fdw.Conventions.Analyzers.Tests;
 
 /// <summary>
-/// Tests for <see cref="LocalStatusClassMapperAnalyzer"/> (FDW046). The positive cases are the
+/// Tests for <see cref="LocalStatusClassMapperAnalyzer"/> (FDW048). The positive cases are the
 /// literal shapes found in Fdw.UI.Pages; the negative cases are the near-misses the heuristic must
 /// leave alone.
 /// </summary>
@@ -39,7 +39,7 @@ public class LocalStatusClassMapperAnalyzerTests
 
         await VerifyCS.VerifyAnalyzerAsync(
             test,
-            VerifyCS.Diagnostic("FDW046").WithLocation(0).WithArguments("GetStateBadge"));
+            VerifyCS.Diagnostic("FDW048").WithLocation(0).WithArguments("GetStateBadge"));
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class LocalStatusClassMapperAnalyzerTests
 
         await VerifyCS.VerifyAnalyzerAsync(
             test,
-            VerifyCS.Diagnostic("FDW046").WithLocation(0).WithArguments("GetStatusBadgeClass"));
+            VerifyCS.Diagnostic("FDW048").WithLocation(0).WithArguments("GetStatusBadgeClass"));
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class LocalStatusClassMapperAnalyzerTests
 
         await VerifyCS.VerifyAnalyzerAsync(
             test,
-            VerifyCS.Diagnostic("FDW046").WithLocation(0).WithArguments("GetStatusBadge"));
+            VerifyCS.Diagnostic("FDW048").WithLocation(0).WithArguments("GetStatusBadge"));
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public class LocalStatusClassMapperAnalyzerTests
 
         await VerifyCS.VerifyAnalyzerAsync(
             test,
-            VerifyCS.Diagnostic("FDW046").WithLocation(0).WithArguments("GetHealthBadgeClass"));
+            VerifyCS.Diagnostic("FDW048").WithLocation(0).WithArguments("GetHealthBadgeClass"));
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class LocalStatusClassMapperAnalyzerTests
 
         await VerifyCS.VerifyAnalyzerAsync(
             test,
-            VerifyCS.Diagnostic("FDW046").WithLocation(0).WithArguments("GetDotColor"));
+            VerifyCS.Diagnostic("FDW048").WithLocation(0).WithArguments("GetDotColor"));
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public class LocalStatusClassMapperAnalyzerTests
 
         await VerifyCS.VerifyAnalyzerAsync(
             test,
-            VerifyCS.Diagnostic("FDW046").WithLocation(0).WithArguments("GetTestStatusBorderColor"));
+            VerifyCS.Diagnostic("FDW048").WithLocation(0).WithArguments("GetTestStatusBorderColor"));
     }
 
     [Fact]
@@ -296,7 +296,7 @@ public class LocalStatusClassMapperAnalyzerTests
     [Trait("Category", "Conventions")]
     public async Task PublicStatusMapper_NoDiagnostic()
     {
-        // A public helper is a deliberate shared API; FDW046 targets component-local forks.
+        // A public helper is a deliberate shared API; FDW048 targets component-local forks.
         var test = """
             namespace TestNamespace
             {
