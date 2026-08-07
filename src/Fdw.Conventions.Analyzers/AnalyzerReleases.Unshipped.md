@@ -16,3 +16,4 @@ FDW020 | Design | Info | UnimplementedAbstractTypeAnalyzer - Abstract type has n
 FDW021 | Design | Info | UnusedTypeAnalyzer - Type is not referenced anywhere in the compilation
 FDW046 | Design | Warning | InlineStyleAttributeAnalyzer - Inline style attribute in Razor markup
 FDW047 | Design | Warning | RawSvgMarkupAnalyzer - Raw svg element in Razor markup
+FDW048 | Design | Warning | LocalStatusClassMapperAnalyzer - Component-local value-to-CSS-class mapper
