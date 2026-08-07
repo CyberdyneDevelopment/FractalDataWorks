@@ -382,4 +382,60 @@ public class LocalStatusClassMapperAnalyzerTests
 
         await VerifyCS.VerifyAnalyzerAsync(test);
     }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Conventions")]
+    public async Task RoleToPillClasses_NoStatusVocabulary_ReportsDiagnostic()
+    {
+        // Shape copied from Fdw.UI.Pages/Authorization/Pages/UsersPage.razor (GetRolePillClass).
+        // Nothing in the name, parameter or type says status/state/severity/health/badge -- this is
+        // the case the earlier status-vocabulary gate missed for no principled reason.
+        var test = """
+            namespace TestNamespace
+            {
+                public class UsersPage
+                {
+                    private static string {|#0:GetRolePillClass|}(string role) => role switch
+                    {
+                        "Admin" => "bg-red-100 text-red-800 ring-red-200",
+                        "Operator" => "bg-blue-100 text-blue-800 ring-blue-200",
+                        _ => "bg-slate-100 text-slate-800 ring-slate-200"
+                    };
+                }
+            }
+            """;
+
+        await VerifyCS.VerifyAnalyzerAsync(
+            test,
+            VerifyCS.Diagnostic("FDW048").WithLocation(0).WithArguments("GetRolePillClass"));
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Conventions")]
+    public async Task NodeTypeToHexColours_NoStatusVocabulary_ReportsDiagnostic()
+    {
+        // Shape copied from Fdw.UI.Pages/Calculations/Pages/CalculatedDesignerPage.razor
+        // (GetNodeColor) -- structurally identical to GetTestStatusBorderColor, which the
+        // vocabulary gate did catch. Both are component-local presentation mapping.
+        var test = """
+            namespace TestNamespace
+            {
+                public class CalculatedDesignerPage
+                {
+                    private static string {|#0:GetNodeColor|}(string nodeType) => nodeType switch
+                    {
+                        "Input" => "#4f8ef7",
+                        "Operation" => "#e0a33a",
+                        _ => "#8a8f98"
+                    };
+                }
+            }
+            """;
+
+        await VerifyCS.VerifyAnalyzerAsync(
+            test,
+            VerifyCS.Diagnostic("FDW048").WithLocation(0).WithArguments("GetNodeColor"));
+    }
 }

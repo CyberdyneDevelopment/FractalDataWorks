@@ -11,20 +11,17 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Fdw.Conventions.Analyzers;
 
 /// <summary>
-/// Analyzer that warns when a component-local helper maps a status/severity/state value to CSS
-/// class strings instead of using the Fdw.UI.Components StatusVariants / StatusColors
-/// TypeCollection (surfaced through StatusBadgeMapper).
+/// Analyzer that warns when a component-local helper maps a value to CSS class strings instead of
+/// the mapping living in a shared component or helper.
 /// </summary>
 /// <remarks>
 /// <para>
 /// The rule is deliberately conservative — it prefers missing a violation to reporting a
-/// well-behaved helper. All four gates below must hold before anything is reported:
+/// well-behaved helper. All three gates below must hold before anything is reported:
 /// </para>
 /// <list type="number">
 /// <item><description>Shape: a non-public, single-parameter method returning <see langword="string"/>
 /// that is not an override and not an explicit interface implementation.</description></item>
-/// <item><description>Vocabulary: the method name, the parameter name, or the parameter type name
-/// contains a whole word from the status vocabulary (status, state, severity, health, badge).</description></item>
 /// <item><description>Payload: every string literal in result position is a styling literal
 /// (a marker-prefixed CSS class list, a hex colour, a <c>var(--x)</c> reference, or a CSS
 /// declaration), and at least two of them are distinct.</description></item>
@@ -32,6 +29,12 @@ namespace Fdw.Conventions.Analyzers;
 /// <c>@code</c> blocks qualify (they map to the <c>.razor</c> file); machine-generated
 /// <c>*.g.cs</c> does not.</description></item>
 /// </list>
+/// <para>
+/// What is being mapped is deliberately NOT consulted. Statuses are the most common case and have
+/// an existing home in <c>StatusVariants</c>/<c>StatusColors</c>, but roles, HTTP verbs and node
+/// types get the same treatment in <c>Fdw.UI.Pages</c> today; keying on a status vocabulary made the
+/// rule fire on some of those and miss others for no principled reason.
+/// </para>
 /// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class LocalStatusClassMapperAnalyzer : DiagnosticAnalyzer
@@ -41,22 +44,10 @@ public sealed class LocalStatusClassMapperAnalyzer : DiagnosticAnalyzer
     /// </summary>
     public const string DiagnosticId = "FDW048";
 
-    private const string Title = "Status value is mapped to CSS classes by a local helper";
-    private const string MessageFormat = "Method '{0}' maps a status value to CSS class strings; use the Fdw.UI.Components StatusVariants/StatusColors TypeCollection (via StatusBadgeMapper) instead of a component-local mapper";
-    private const string Description = "Fdw convention: status, severity, state and health values map to presentation through the StatusVariants/StatusColors TypeCollection so every surface renders the same status identically. A per-component switch over CSS class literals forks that mapping and drifts.";
+    private const string Title = "Value is mapped to CSS classes by a component-local helper";
+    private const string MessageFormat = "Method '{0}' maps a value to CSS class strings in the component; move the mapping to a shared component or helper (for status/severity/state/health, the Fdw.UI.Components StatusVariants/StatusColors TypeCollection already exists)";
+    private const string Description = "Fdw convention: presentation mapping belongs in one shared place, not re-derived per component. A private switch over CSS class literals forks that mapping and drifts -- Fdw.UI.Pages carries 17 such helpers under five different names, mapping statuses, roles, HTTP verbs and node types. Where the value is a status, severity, state or health, the StatusVariants/StatusColors TypeCollection is the existing home; otherwise extract a shared component or helper.";
     private const string Category = "Design";
-
-    /// <summary>
-    /// Whole words that mark an identifier as belonging to the status domain.
-    /// </summary>
-    private static readonly string[] StatusWords =
-    [
-        "status",
-        "state",
-        "severity",
-        "health",
-        "badge",
-    ];
 
     /// <summary>
     /// CSS class tokens that, on their own, identify a literal as a styling class rather than
@@ -145,9 +136,15 @@ public sealed class LocalStatusClassMapperAnalyzer : DiagnosticAnalyzer
         if (!HasMapperShape(method))
             return;
 
-        if (!MentionsStatusVocabulary(method))
-            return;
-
+        // Why there is no name-vocabulary gate: an earlier revision required the method name,
+        // parameter name or parameter type to contain status/state/severity/health/badge. That made
+        // the rule "a CSS mapper whose NAME happens to contain one of five words" -- it fired on
+        // MethodBadgeClass (HTTP verbs) and GetNodeTypeBadge (node types), where the suggested
+        // StatusVariants remedy is wrong, and stayed silent on GetRolePillClass and GetNodeColor,
+        // which are the identical anti-pattern. The asymmetry was arbitrary: 'badge' and 'pill' are
+        // both class markers, only 'badge' was a status word. The defect is component-local
+        // presentation mapping regardless of what is being mapped, so the shape and the payload
+        // decide it and the name is not consulted.
         if (!ReturnsOnlyStylingLiterals(method))
             return;
 
@@ -190,27 +187,6 @@ public sealed class LocalStatusClassMapperAnalyzer : DiagnosticAnalyzer
         }
 
         return true;
-    }
-
-    /// <summary>
-    /// Gate 2 — the method is about the status domain. Checked against the method name, the
-    /// parameter name and the parameter type name, because real call sites carry the vocabulary in
-    /// only one of the three (GetNodeTypeBadge, GetHealthBadgeClass(ConnectionPayload conn),
-    /// GetDotColor(string? status)).
-    /// </summary>
-    private static bool MentionsStatusVocabulary(MethodDeclarationSyntax method)
-    {
-        if (ContainsStatusWord(method.Identifier.Text))
-            return true;
-
-        var parameter = method.ParameterList.Parameters[0];
-
-        if (ContainsStatusWord(parameter.Identifier.Text))
-            return true;
-
-        var typeName = GetSimpleTypeName(parameter.Type);
-
-        return typeName.Length > 0 && ContainsStatusWord(typeName);
     }
 
     /// <summary>
@@ -422,21 +398,18 @@ public sealed class LocalStatusClassMapperAnalyzer : DiagnosticAnalyzer
         return string.Equals(GetSimpleTypeName(unwrapped), "String", StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Reduces a type reference to its simple name, unwrapping nullable and qualified forms, so
+    /// <c>System.String</c> and <c>string?</c> both resolve to "String".
+    /// </summary>
     private static string GetSimpleTypeName(TypeSyntax? type)
     {
         while (true)
         {
             switch (type)
             {
-                case null:
-                    return string.Empty;
-
                 case NullableTypeSyntax nullable:
                     type = nullable.ElementType;
-                    continue;
-
-                case ArrayTypeSyntax array:
-                    type = array.ElementType;
                     continue;
 
                 case QualifiedNameSyntax qualified:
@@ -453,76 +426,6 @@ public sealed class LocalStatusClassMapperAnalyzer : DiagnosticAnalyzer
                     return string.Empty;
             }
         }
-    }
-
-    /// <summary>
-    /// Splits an identifier into its PascalCase/camelCase words and tests each against the status
-    /// vocabulary, so "GetStatement" does not match on the "State" prefix.
-    /// </summary>
-    internal static bool ContainsStatusWord(string identifier)
-    {
-        foreach (var word in SplitWords(identifier))
-        {
-            foreach (var statusWord in StatusWords)
-            {
-                if (string.Equals(word, statusWord, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
-        }
-
-        return false;
-    }
-
-    internal static IReadOnlyList<string> SplitWords(string identifier)
-    {
-        var words = new List<string>();
-        if (string.IsNullOrEmpty(identifier))
-            return words;
-
-        var current = new StringBuilder();
-
-        for (var i = 0; i < identifier.Length; i++)
-        {
-            var c = identifier[i];
-
-            if (c == '_')
-            {
-                Flush(words, current);
-                continue;
-            }
-
-            if (char.IsUpper(c) && i > 0 && StartsNewWord(identifier, i))
-                Flush(words, current);
-
-            current.Append(c);
-        }
-
-        Flush(words, current);
-
-        return words;
-    }
-
-    private static bool StartsNewWord(string identifier, int index)
-    {
-        var previous = identifier[index - 1];
-
-        if (char.IsLower(previous) || char.IsDigit(previous))
-            return true;
-
-        // Why: the last capital of an acronym run belongs to the following word — "HTTPStatus"
-        // splits into "HTTP" and "Status", not "HTTPS" and "tatus".
-        return char.IsUpper(previous) &&
-            index + 1 < identifier.Length &&
-            char.IsLower(identifier[index + 1]);
-    }
-
-    private static void Flush(List<string> words, StringBuilder current)
-    {
-        if (current.Length == 0)
-            return;
-
-        words.Add(current.ToString());
-        current.Clear();
     }
 
     private static bool IsGeneratedPath(string path)
