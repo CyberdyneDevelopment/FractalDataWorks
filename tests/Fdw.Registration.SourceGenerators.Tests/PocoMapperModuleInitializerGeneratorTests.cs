@@ -336,14 +336,4 @@ public class Program
         generated.ShouldContain("CustomerPocoMapper");
     }
 
-    [Fact(Skip = "Complex multi-generator scenario - module initializer looks for generated mapper classes, not source types")]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "SourceGen")]
-    public void GeneratorHandlesMultipleAssemblies()
-    {
-        // This test is skipped because it requires running PocoMapperGenerator first to generate
-        // the *PocoMapper classes, then compiling that output, then testing the module initializer.
-        // Unit testing this scenario would require complex multi-stage compilation that's not practical.
-        // The functionality is tested in integration tests where both generators run in sequence.
-    }
 }

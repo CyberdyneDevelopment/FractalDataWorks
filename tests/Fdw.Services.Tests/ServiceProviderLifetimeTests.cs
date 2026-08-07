@@ -840,33 +840,6 @@ public class ServiceProviderLifetimeTests
         results.Select(r => r.Value!.ConfigurationValue).Distinct().Count().ShouldBe(100);
     }
 
-    [Fact(Skip = "Concurrent factory registration is not a realistic scenario - registration happens at startup via ServiceTypeCollection")]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void ConcurrentFactoryRegistrationIsThreadSafe()
-    {
-        // Arrange
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
-
-        // Act - Register factories concurrently using Parallel.For
-        // Register now returns void, so just verify no exceptions
-        var exceptions = new List<Exception>();
-        Parallel.For(0, 50, i =>
-        {
-            try
-            {
-                provider.Register($"Type{i}", new TestServiceFactory());
-            }
-            catch (Exception ex)
-            {
-                lock (exceptions) { exceptions.Add(ex); }
-            }
-        });
-
-        // Assert - All registrations should succeed without exceptions
-        exceptions.ShouldBeEmpty();
-    }
-
     #endregion
 
     #region Full Integration Tests
