@@ -170,7 +170,7 @@ public static class AegisHostRegistration
 
         var parentResult = services
             .GetRequiredService<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>()
-            .RegisterParentProvider(new DeclaredSecretManagerConfigurationProvider([.. schema.SecretManagers]));
+            .Register(new DeclaredSecretManagerConfigurationProvider([.. schema.SecretManagers]));
 
         if (!parentResult.IsSuccess)
             throw new InvalidOperationException(

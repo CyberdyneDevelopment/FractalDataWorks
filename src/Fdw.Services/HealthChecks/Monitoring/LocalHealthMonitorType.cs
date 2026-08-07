@@ -45,7 +45,7 @@ public sealed class LocalHealthMonitorType
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
         {
-            DefaultHealthMonitorProvider.RegisterFactory(Name, sp => sp.GetRequiredService<LocalHealthMonitorFactory>());
+            DefaultHealthMonitorProvider.Register(Name, sp => sp.GetRequiredService<LocalHealthMonitorFactory>());
             builder.Services.TryAddSingleton<LocalHealthMonitorFactory>();
             // Why: RegisterFactory (below) requires the domain config provider to already be registered.
             // Idempotent TryAdd inside — every health monitor option calls it, first registration wins.

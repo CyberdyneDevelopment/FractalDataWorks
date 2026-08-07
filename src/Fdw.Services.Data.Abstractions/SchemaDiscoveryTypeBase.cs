@@ -41,22 +41,10 @@ public abstract class SchemaDiscoveryTypeBase : TypeOptionBase<int, SchemaDiscov
     {
     }
 
-    // Why FNV-1a: it is the hash the generated collections already use to derive an id, so a name derived
-    // here agrees with what the collection computes rather than introducing a second scheme.
+    // Why the type name: TypeCollectionBase derives its own id the same way, so this is the idiom
+    // already in Fdw.Collections rather than a second hashing scheme. Lookup here is ByName —
+    // SchemaDiscoveryTypes.ByName is what MsSqlConnectionType and PostgreSqlConnectionType call — so the
+    // id only has to be distinct, not stable across processes.
     private static int DeriveId(string name)
-    {
-        if (name is null)
-            throw new ArgumentNullException(nameof(name));
-
-        const int FnvPrime = 0x01000193;
-        var hash = unchecked((int)2166136261);
-
-        foreach (var b in Encoding.UTF8.GetBytes(name))
-        {
-            hash ^= b;
-            hash = unchecked(hash * FnvPrime);
-        }
-
-        return hash;
-    }
+        => StringComparer.Ordinal.GetHashCode(name);
 }

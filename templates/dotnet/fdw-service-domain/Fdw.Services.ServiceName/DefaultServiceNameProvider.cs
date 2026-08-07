@@ -49,7 +49,7 @@ public class DefaultServiceNameProvider : ServiceProvider, IServiceNameProvider,
 
     /// <summary>
     /// Registers a factory instance for a named service type.
-    /// Called by ServiceType.RegisterFactory() during Phase 2.
+    /// Called by ServiceType.Register() during Phase 2.
     /// </summary>
     /// <param name="name">The service type name (e.g., "ImplName").</param>
     /// <param name="factory">The factory instance resolved from DI.</param>

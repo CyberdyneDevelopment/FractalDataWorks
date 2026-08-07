@@ -48,12 +48,12 @@ public sealed class ChainedExternalIdentityProvisionerType
 
             // Why: register the Chained typed-body provider with the header provider so ComposeTypedBody
             // dispatches to sec.ChainedExternalIdentityProvisioner rows when the discriminator is "Chained".
-            headerProvider.RegisterTypedProvider("Chained", typedProvider);
+            headerProvider.Register("Chained", typedProvider);
 
             // Why: multiple ExternalIdentityProvisionerTypes options may register against the SAME header
             // provider — RegisterParentProvider is safe to call from every option since they all point at
             // the one sec.ExternalIdentityProvisioner table.
-            var parentResult = provider.RegisterParentProvider(headerProvider);
+            var parentResult = provider.Register(headerProvider);
             if (!parentResult.IsSuccess) return host;
 
             var factoryResult = provider.Register("Chained", factory);

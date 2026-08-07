@@ -106,7 +106,7 @@ public sealed class RecursiveCascadeSaveTests
 
         // Register a typed provider for a DIFFERENT kind: the registry is NON-EMPTY (so this is a header
         // provider, not a leaf) yet cannot resolve "Default" — the missing-provider condition.
-        provider.RegisterTypedProvider(
+        provider.Register(
             "SomeOtherKind",
             new DefaultConfigurationProvider<TestBodyConfiguration, TestBodyCommand>(
                 NullLogger<DefaultConfigurationProvider<TestBodyConfiguration, TestBodyCommand>>.Instance,

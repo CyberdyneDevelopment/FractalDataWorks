@@ -79,7 +79,7 @@ public sealed class RowMapperProviderAdditionalTests
         var provider = new RowMapperProvider();
         var customFactory = new Mock<IRowMapperFactory>();
 
-        provider.RegisterFactory("Custom", customFactory.Object);
+        provider.Register("Custom", customFactory.Object);
         provider.SetDefaultType("NonExistent");
 
         // Act - "NonExistent" not found, should fall back to first available

@@ -42,6 +42,6 @@ public sealed class $implName$$serviceName$Type
         IServiceProvider sp)
     {
         var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-        provider.RegisterFactory(Name, () => new $implName$$serviceName$Factory(loggerFactory));
+        provider.Register(Name, () => new $implName$$serviceName$Factory(loggerFactory));
     }
 }

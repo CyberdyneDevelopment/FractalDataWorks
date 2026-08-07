@@ -23,5 +23,5 @@ public interface IRowMapperProvider
     /// </summary>
     /// <param name="typeName">The mapper type name.</param>
     /// <param name="factory">The factory to register.</param>
-    void RegisterFactory(string typeName, IRowMapperFactory factory);
+    void Register(string typeName, IRowMapperFactory factory);
 }

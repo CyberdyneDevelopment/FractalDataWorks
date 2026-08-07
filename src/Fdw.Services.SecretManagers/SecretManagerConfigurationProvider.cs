@@ -108,7 +108,7 @@ public class SecretManagerConfigurationProvider : DefaultConfigurationProvider<S
     public void RegisterTypedProvider<TDerived>(string serviceOptionType, IServiceConfigurationProvider<TDerived> provider)
         where TDerived : class, ISecretManagerConfiguration, new()
     {
-        base.RegisterTypedProvider(serviceOptionType, provider);
+        base.Register(serviceOptionType, provider);
         _typedConfigTypes[serviceOptionType] = typeof(TDerived);
         // Why: capture the closed-generic ctor here so Save() can build a default typed body without
         // Activator/reflection (TDerived is statically known at the registration call site).

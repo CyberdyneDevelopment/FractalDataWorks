@@ -58,7 +58,7 @@ public sealed class RoslynWorkspaceConnectionType
             // conn.Connection row with ServiceOptionType 'RoslynWorkspace' could not be read (ComposeTypedBody
             // hit OnNoTypedProvider) and its body row could never be retired.
             services.GetRequiredService<ConnectionConfigurationProvider>()
-                .RegisterTypedProvider(
+                .Register(
                     Name, services.GetRequiredService<RoslynWorkspaceConnectionConfigurationProvider>());
     
             return host;

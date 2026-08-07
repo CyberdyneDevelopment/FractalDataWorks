@@ -58,7 +58,7 @@ public sealed class DefaultSchedulerType
             // Why one combined guard: each of these leaves schedulerProvider.Get("DefaultScheduler")
             // unable to resolve sched.Scheduler rows at runtime, and Initialize has no result to return,
             // so every failure takes the same exit. Separate identical branches would just be noise.
-            var parentRegResult = provider.RegisterParentProvider(configProvider);
+            var parentRegResult = provider.Register(configProvider);
             if (!factoryRegResult.IsSuccess || !configRegResult.IsSuccess || !parentRegResult.IsSuccess)
             {
                 return host;

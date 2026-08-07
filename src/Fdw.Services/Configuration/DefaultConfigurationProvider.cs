@@ -107,7 +107,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand> : IServiceConfigura
     /// </summary>
     /// <param name="serviceOptionType">The discriminator (e.g. "MsSql", "Http", "OpenIddict").</param>
     /// <param name="provider">The typed-body configuration provider for that discriminator.</param>
-    public void RegisterTypedProvider(string serviceOptionType, IServiceConfigurationProvider provider)
+    public void Register(string serviceOptionType, IServiceConfigurationProvider provider)
     {
         TypedProviders[serviceOptionType] = provider;
         DefaultConfigurationProviderLog.TypedProviderRegistered(_logger, typeof(TConfig).Name, serviceOptionType);

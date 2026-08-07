@@ -49,11 +49,11 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
             var services = host.Services;
             var header = services.GetRequiredService<CalculationConfigurationProvider>();
 
-            header.RegisterTypedProvider(
+            header.Register(
                 "Formula",
                 services.GetRequiredService<DefaultConfigurationProvider<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>>());
 
-            header.RegisterTypedProvider(
+            header.Register(
                 "Windowed",
                 services.GetRequiredService<DefaultConfigurationProvider<WindowedCalculationConfiguration, WindowedCalculationConfigurationCommand>>());
     

@@ -83,7 +83,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
-                        var parentResult = provider.RegisterParentProvider(cfgProvider);
+                        var parentResult = provider.Register(cfgProvider);
                         if (!parentResult.IsSuccess && stLogger != null)
                             ServiceTypeLog.FactoryRegistrationFailed(stLogger, "ConnectionTypes", parentResult.CurrentMessage ?? "ConnectionTypes");
                     }

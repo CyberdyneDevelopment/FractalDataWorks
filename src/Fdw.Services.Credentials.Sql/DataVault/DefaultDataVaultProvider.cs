@@ -70,7 +70,7 @@ public sealed class DefaultDataVaultProvider
     /// Wires the connection + secret-manager providers used to resolve each vault's connection and
     /// pepper. Called ONCE from <c>CredentialVaultType.RegisterFactory</c> (phase 3) with services
     /// resolved from the built container. This is registration-time wiring (like
-    /// <c>RegisterParentProvider</c>), NOT a per-request init.
+    /// <c>Register</c>), NOT a per-request init.
     /// </summary>
     /// <param name="connectionProvider">Resolves the vault's single data connection by name.</param>
     /// <param name="secretManagerProvider">Resolves the secret manager that holds the pepper.</param>

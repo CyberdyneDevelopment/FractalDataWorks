@@ -57,7 +57,7 @@ public sealed class FileSystemConnectionType
             // ConnectionConfiguration — it implements IConnectionConfiguration directly.
             var headerProvider = services.GetRequiredService<ConnectionConfigurationProvider>();
             var configProvider = services.GetRequiredService<FileSystemConnectionConfigurationProvider>();
-            headerProvider.RegisterTypedProvider(Name, configProvider);
+            headerProvider.Register(Name, configProvider);
 
     
             return host;

@@ -87,10 +87,10 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             // (2) attach the ETL-kind provider to the general header keyed by the KIND discriminator
             // ("Etl"). Both are idempotent and run against the real singletons. See BatchCopyPipelineType.
             var etlKindProvider = services.GetRequiredService<EtlPipelineConfigurationProvider>();
-            etlKindProvider.RegisterTypedProvider(Name, configProvider);
+            etlKindProvider.Register(Name, configProvider);
 
             var survivor = services.GetRequiredService<PipelineServiceConfigurationProvider>();
-            survivor.RegisterTypedProvider("Etl", etlKindProvider);
+            survivor.Register("Etl", etlKindProvider);
     
             return host;
         });

@@ -94,6 +94,6 @@ public sealed class ImplNameServiceNameType
         var factory = services.GetRequiredService<IImplNameServiceNameFactory>();
 
         // Register factory instance with provider
-        ((DefaultServiceNameProvider)provider).RegisterFactory(Name, factory);
+        ((DefaultServiceNameProvider)provider).Register(Name, factory);
     }
 }

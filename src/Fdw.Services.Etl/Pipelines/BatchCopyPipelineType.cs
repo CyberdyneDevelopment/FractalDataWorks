@@ -88,10 +88,10 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
             // and run against the real singletons (RegisterFactory executes inside the collection's provider
             // resolver against the app sp), so the keystone's ComposeTypedBody recurses Pipeline→Etl→engine.
             var etlKindProvider = services.GetRequiredService<EtlPipelineConfigurationProvider>();
-            etlKindProvider.RegisterTypedProvider(Name, configProvider);
+            etlKindProvider.Register(Name, configProvider);
 
             var survivor = services.GetRequiredService<PipelineServiceConfigurationProvider>();
-            survivor.RegisterTypedProvider("Etl", etlKindProvider);
+            survivor.Register("Etl", etlKindProvider);
     
             return host;
         });

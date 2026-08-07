@@ -12,7 +12,7 @@ namespace Fdw.Services.Calculations;
 
 /// <summary>
 /// Default in-memory registry of <see cref="ICalculationEntity"/> instances.
-/// Populated at startup or on-demand via <see cref="RegisterCalculation"/>.
+/// Populated at startup or on-demand via <see cref="Register"/>.
 /// </summary>
 /// <remarks>
 /// This provider performs no I/O. Retrieval of calculation entities from the database
@@ -73,7 +73,7 @@ public sealed class DefaultCalculationEntityProvider : ICalculationEntityProvide
     }
 
     /// <summary>Registers a calculation entity by name and ID.</summary>
-    public void RegisterCalculation(ICalculationEntity entity)
+    public void Register(ICalculationEntity entity)
     {
         _byName[entity.Name] = entity;
         _byId[entity.Id] = entity;

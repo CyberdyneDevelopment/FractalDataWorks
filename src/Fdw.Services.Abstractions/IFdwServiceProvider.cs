@@ -95,7 +95,7 @@ public interface IFdwServiceProvider<TService, TConfiguration> : IFdwServiceProv
     /// <see cref="IGenericConfiguration.ServiceOptionType"/>.
     /// </summary>
     /// <param name="parentProvider">The parent configuration provider.</param>
-    IGenericResult RegisterParentProvider(IServiceConfigurationProvider<TConfiguration> parentProvider);
+    IGenericResult Register(IServiceConfigurationProvider<TConfiguration> parentProvider);
 
 }
 

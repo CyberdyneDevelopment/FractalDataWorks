@@ -23,7 +23,7 @@ public sealed class RowMapperProviderTests
         var provider = new RowMapperProvider();
         var factory = new Mock<IRowMapperFactory>();
 
-        provider.RegisterFactory("Custom", factory.Object);
+        provider.Register("Custom", factory.Object);
 
         provider.GetFactory("Custom").ShouldBe(factory.Object);
     }
@@ -36,7 +36,7 @@ public sealed class RowMapperProviderTests
         var provider = new RowMapperProvider();
         var factory = new Mock<IRowMapperFactory>();
 
-        provider.RegisterFactory("Pooled", factory.Object);
+        provider.Register("Pooled", factory.Object);
 
         provider.GetFactory("pooled").ShouldBe(factory.Object);
         provider.GetFactory("POOLED").ShouldBe(factory.Object);
@@ -50,7 +50,7 @@ public sealed class RowMapperProviderTests
         var provider = new RowMapperProvider();
         var pooledFactory = new Mock<IRowMapperFactory>();
 
-        provider.RegisterFactory("Pooled", pooledFactory.Object);
+        provider.Register("Pooled", pooledFactory.Object);
 
         provider.GetDefaultFactory().ShouldBe(pooledFactory.Object);
     }
@@ -63,7 +63,7 @@ public sealed class RowMapperProviderTests
         var provider = new RowMapperProvider();
         var customFactory = new Mock<IRowMapperFactory>();
 
-        provider.RegisterFactory("Custom", customFactory.Object);
+        provider.Register("Custom", customFactory.Object);
 
         provider.GetDefaultFactory().ShouldBe(customFactory.Object);
     }
@@ -92,8 +92,8 @@ public sealed class RowMapperProviderTests
         var pooledFactory = new Mock<IRowMapperFactory>();
         var dynamicFactory = new Mock<IRowMapperFactory>();
 
-        provider.RegisterFactory("Pooled", pooledFactory.Object);
-        provider.RegisterFactory("Dynamic", dynamicFactory.Object);
+        provider.Register("Pooled", pooledFactory.Object);
+        provider.Register("Dynamic", dynamicFactory.Object);
 
         provider.SetDefaultType("Dynamic");
 
@@ -109,8 +109,8 @@ public sealed class RowMapperProviderTests
         var factory1 = new Mock<IRowMapperFactory>();
         var factory2 = new Mock<IRowMapperFactory>();
 
-        provider.RegisterFactory("Custom", factory1.Object);
-        provider.RegisterFactory("Custom", factory2.Object);
+        provider.Register("Custom", factory1.Object);
+        provider.Register("Custom", factory2.Object);
 
         provider.GetFactory("Custom").ShouldBe(factory2.Object);
     }

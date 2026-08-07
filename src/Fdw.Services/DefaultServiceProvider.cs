@@ -39,7 +39,7 @@ public class DefaultServiceProvider<TService, TConfiguration, TFactory, TConfigu
 
     // ── The factory registry ────────────────────────────────────────────────────────────────────
     // An option's Register method registers whatever DI services its factory needs, then calls
-    // RegisterFactory(Name, func) here. The func is deferred because at that point the container is
+    // Register(Name, func) here. The func is deferred because at that point the container is
     // not built yet; each scope's provider resolves it once, in its constructor.
 
     private static readonly Dictionary<string, Func<IServiceProvider, IServiceFactory<TService>>> _registered
@@ -64,7 +64,7 @@ public class DefaultServiceProvider<TService, TConfiguration, TFactory, TConfigu
     /// <param name="factory">Resolves the factory once the container exists.</param>
     // Why static: Register runs while the container is still being built, so there is no provider
     // instance yet — the provider is scoped and created later, once per scope.
-    public static void RegisterFactory(string serviceOptionType, Func<IServiceProvider, IServiceFactory<TService>> factory)
+    public static void Register(string serviceOptionType, Func<IServiceProvider, IServiceFactory<TService>> factory)
     {
         if (string.IsNullOrEmpty(serviceOptionType))
             throw new ArgumentNullException(nameof(serviceOptionType));
@@ -126,7 +126,7 @@ public class DefaultServiceProvider<TService, TConfiguration, TFactory, TConfigu
     }
 
     /// <inheritdoc />
-    public IGenericResult RegisterParentProvider(IServiceConfigurationProvider<TConfiguration> parentProvider)
+    public IGenericResult Register(IServiceConfigurationProvider<TConfiguration> parentProvider)
     {
         _parentProvider = parentProvider;
         ServiceLogger.ParentProviderRegistered(_logger);

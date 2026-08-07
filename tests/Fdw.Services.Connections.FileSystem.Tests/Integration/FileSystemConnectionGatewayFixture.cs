@@ -103,7 +103,7 @@ public sealed class FileSystemConnectionGatewayFixture : IDisposable
         // RegisterFactory used to make. Nothing in this repo makes it any more, so the fixture does it
         // directly; the name must match the ServiceOptionType stored in the seed data.
         Provider.GetRequiredService<SecretManagerConfigurationProvider>()
-            .RegisterTypedProvider(
+            .Register(
                 "EnvironmentVariable",
                 Provider.GetRequiredService<DefaultConfigurationProvider<EnvironmentVariableConfiguration, EnvironmentVariableConfigurationCommand>>());
     }
