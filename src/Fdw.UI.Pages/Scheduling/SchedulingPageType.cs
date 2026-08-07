@@ -15,8 +15,8 @@ public sealed class SchedulingPageType : PageTypeBase
     public SchedulingPageType()
         : base(14, "Scheduling",
         [
-            new Page("Index", typeof(global::Fdw.UI.Pages.Scheduling.Pages.Schedules.SchedulesIndexPage), new NavItem("Schedules", "clock", NavSections.Scheduling, 40), "schedules:read"),
-            new Page("New", typeof(global::Fdw.UI.Pages.Scheduling.Pages.Schedules.NewSchedulePage), NavItem.Empty, null),
+            new Page("Index", typeof(global::Fdw.UI.Pages.Scheduling.Pages.Schedules.SchedulesIndexPage), new NavItem("Schedules", "clock", NavSections.Scheduling, 40), PageAccess.RequiringPermission("schedules:read")),
+            new Page("New", typeof(global::Fdw.UI.Pages.Scheduling.Pages.Schedules.NewSchedulePage), NavItem.Empty, PageAccess.Authenticated),
         ])
     { }
 }

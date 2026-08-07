@@ -15,12 +15,12 @@ public sealed class ProjectsPageType : PageTypeBase
     public ProjectsPageType()
         : base(17, "Projects",
         [
-            new Page("NodeList", typeof(global::Fdw.UI.Pages.EtlProjects.Pages.Orchestration.NodeListPage), new NavItem("Orchestration", "git-branch", NavSections.Pipelines, 30), null),
-            new Page("NodeTreeEditor", typeof(global::Fdw.UI.Pages.EtlProjects.Pages.Orchestration.NodeTreeEditorPage), NavItem.Empty, null),
-            new Page("ProjectEdit", typeof(global::Fdw.UI.Pages.EtlProjects.Pages.Projects.ProjectEditPage), NavItem.Empty, null),
-            new Page("ProjectExecution", typeof(global::Fdw.UI.Pages.EtlProjects.Pages.Projects.ProjectExecutionPage), NavItem.Empty, null),
-            new Page("ProjectIndex", typeof(global::Fdw.UI.Pages.EtlProjects.Pages.Projects.ProjectIndexPage), new NavItem("Projects", "folder", NavSections.Pipelines, 30), null),
-            new Page("ProjectList", typeof(global::Fdw.UI.Pages.EtlProjects.Pages.Projects.ProjectListPage), NavItem.Empty, null),
+            new Page("NodeList", typeof(global::Fdw.UI.Pages.EtlProjects.Pages.Orchestration.NodeListPage), new NavItem("Orchestration", "git-branch", NavSections.Pipelines, 30), PageAccess.Authenticated),
+            new Page("NodeTreeEditor", typeof(global::Fdw.UI.Pages.EtlProjects.Pages.Orchestration.NodeTreeEditorPage), NavItem.Empty, PageAccess.Authenticated),
+            new Page("ProjectEdit", typeof(global::Fdw.UI.Pages.EtlProjects.Pages.Projects.ProjectEditPage), NavItem.Empty, PageAccess.Authenticated),
+            new Page("ProjectExecution", typeof(global::Fdw.UI.Pages.EtlProjects.Pages.Projects.ProjectExecutionPage), NavItem.Empty, PageAccess.Authenticated),
+            new Page("ProjectIndex", typeof(global::Fdw.UI.Pages.EtlProjects.Pages.Projects.ProjectIndexPage), new NavItem("Projects", "folder", NavSections.Pipelines, 30), PageAccess.Authenticated),
+            new Page("ProjectList", typeof(global::Fdw.UI.Pages.EtlProjects.Pages.Projects.ProjectListPage), NavItem.Empty, PageAccess.Authenticated),
         ])
     { }
 }

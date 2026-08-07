@@ -15,7 +15,7 @@ public sealed class TerminalPageType : PageTypeBase
     public TerminalPageType()
         : base(16, "Terminal",
         [
-            new Page("Terminal", typeof(global::Fdw.UI.Pages.Terminal.Pages.TerminalPage), new NavItem("Terminal", "terminal", NavSections.Observability, 110), null),
+            new Page("Terminal", typeof(global::Fdw.UI.Pages.Terminal.Pages.TerminalPage), new NavItem("Terminal", "terminal", NavSections.Observability, 110), PageAccess.Authenticated),
         ])
     { }
 }

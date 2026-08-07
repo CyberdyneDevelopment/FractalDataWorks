@@ -15,10 +15,10 @@ public sealed class CalculationsPageType : PageTypeBase
     public CalculationsPageType()
         : base(2, "Calculations",
         [
-            new Page("CalculatedDesigner", typeof(global::Fdw.UI.Pages.Calculations.Pages.CalculatedDesignerPage), new NavItem("DataSet Designer", "calculator", NavSections.Transformations, 20), null),
-            new Page("Calculations", typeof(global::Fdw.UI.Pages.Calculations.Pages.CalculationsPage), new NavItem("Calculations", "calculator", NavSections.Transformations, 20), "calculations:read"),
-            new Page("CalculationsCreate", typeof(global::Fdw.UI.Pages.Calculations.Pages.CalculationsCreatePage), NavItem.Empty, null),
-            new Page("CalculationsEdit", typeof(global::Fdw.UI.Pages.Calculations.Pages.CalculationsEditPage), NavItem.Empty, null),
+            new Page("CalculatedDesigner", typeof(global::Fdw.UI.Pages.Calculations.Pages.CalculatedDesignerPage), new NavItem("DataSet Designer", "calculator", NavSections.Transformations, 20), PageAccess.Authenticated),
+            new Page("Calculations", typeof(global::Fdw.UI.Pages.Calculations.Pages.CalculationsPage), new NavItem("Calculations", "calculator", NavSections.Transformations, 20), PageAccess.RequiringPermission("calculations:read")),
+            new Page("CalculationsCreate", typeof(global::Fdw.UI.Pages.Calculations.Pages.CalculationsCreatePage), NavItem.Empty, PageAccess.Authenticated),
+            new Page("CalculationsEdit", typeof(global::Fdw.UI.Pages.Calculations.Pages.CalculationsEditPage), NavItem.Empty, PageAccess.Authenticated),
         ])
     { }
 }

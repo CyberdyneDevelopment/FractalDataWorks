@@ -15,7 +15,7 @@ public sealed class SecretManagersPageType : PageTypeBase
     public SecretManagersPageType()
         : base(15, "SecretManagers",
         [
-            new Page("SecretManagers", typeof(global::Fdw.UI.Pages.SecretManagers.Pages.SecretManagersPage), new NavItem("Secret Managers", "lock", NavSections.Configuration, 90), "secretmanagers:read"),
+            new Page("SecretManagers", typeof(global::Fdw.UI.Pages.SecretManagers.Pages.SecretManagersPage), new NavItem("Secret Managers", "lock", NavSections.Configuration, 90), PageAccess.RequiringPermission("secretmanagers:read")),
         ])
     { }
 }

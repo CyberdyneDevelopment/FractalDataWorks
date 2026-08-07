@@ -15,8 +15,8 @@ public sealed class AgentsPageType : PageTypeBase
     public AgentsPageType()
         : base(1, "Agents",
         [
-            new Page("AgentActions", typeof(global::Fdw.Agents.UI.Pages.Pages.AgentActionsPage), new NavItem("Agent Actions", "cpu", NavSections.Observability, 110), "agent-actions:read"),
-            new Page("ReviewAgentAction", typeof(global::Fdw.Agents.UI.Pages.Pages.ReviewAgentActionPage), NavItem.Empty, null),
+            new Page("AgentActions", typeof(global::Fdw.Agents.UI.Pages.Pages.AgentActionsPage), new NavItem("Agent Actions", "cpu", NavSections.Observability, 110), PageAccess.RequiringPermission("agent-actions:read")),
+            new Page("ReviewAgentAction", typeof(global::Fdw.Agents.UI.Pages.Pages.ReviewAgentActionPage), NavItem.Empty, PageAccess.Authenticated),
         ])
     { }
 }

@@ -15,8 +15,8 @@ public sealed class QualityPageType : PageTypeBase
     public QualityPageType()
         : base(13, "Quality",
         [
-            new Page("Dashboard", typeof(global::Fdw.UI.Pages.Quality.Pages.Quality.QualityDashboardPage), new NavItem("Quality Reports", "bar-chart", NavSections.Quality, 50), null),
-            new Page("Rules", typeof(global::Fdw.UI.Pages.Quality.Pages.Quality.QualityRulesPage), new NavItem("Quality Rules", "check-circle", NavSections.Quality, 50), "quality/rules:read"),
+            new Page("Dashboard", typeof(global::Fdw.UI.Pages.Quality.Pages.Quality.QualityDashboardPage), new NavItem("Quality Reports", "bar-chart", NavSections.Quality, 50), PageAccess.Authenticated),
+            new Page("Rules", typeof(global::Fdw.UI.Pages.Quality.Pages.Quality.QualityRulesPage), new NavItem("Quality Rules", "check-circle", NavSections.Quality, 50), PageAccess.RequiringPermission("quality/rules:read")),
         ])
     { }
 }

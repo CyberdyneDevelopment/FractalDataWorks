@@ -15,7 +15,7 @@ public sealed class SettingsPageType : PageTypeBase
     public SettingsPageType()
         : base(6, "Settings",
         [
-            new Page("Settings", typeof(global::Fdw.UI.Pages.Settings.Pages.SettingsPage), new NavItem("Settings", "gear", NavSections.Administration, 50), null),
+            new Page("Settings", typeof(global::Fdw.UI.Pages.Settings.Pages.SettingsPage), new NavItem("Settings", "gear", NavSections.Administration, 50), PageAccess.Authenticated),
         ])
     { }
 }
