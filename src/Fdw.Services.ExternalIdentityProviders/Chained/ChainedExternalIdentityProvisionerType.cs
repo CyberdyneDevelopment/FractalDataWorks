@@ -34,8 +34,9 @@ public sealed class ChainedExternalIdentityProvisionerType
         // Why Initialize and not Register: this wiring needs a LIVE container (it resolves the
         // domain provider and its typed-body providers), and Register runs while the container
         // is still being built. Initialize runs after Build() with a real IServiceProvider.
-        Initialization((services, hostLoggerFactory) =>
+        Initialization((host, hostLoggerFactory) =>
         {
+            var services = host.Services;
             var provider = services.GetRequiredService<IFdwServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>();
 
             var loggerFactory = services.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance;
@@ -53,17 +54,17 @@ public sealed class ChainedExternalIdentityProvisionerType
             // provider — RegisterParentProvider is safe to call from every option since they all point at
             // the one sec.ExternalIdentityProvisioner table.
             var parentResult = provider.RegisterParentProvider(headerProvider);
-            if (!parentResult.IsSuccess) return services;
+            if (!parentResult.IsSuccess) return host;
 
             var factoryResult = provider.Register("Chained", factory);
-            if (!factoryResult.IsSuccess) return services;
+            if (!factoryResult.IsSuccess) return host;
 
             var headerResult = provider.Register("Chained", headerProvider);
-            if (!headerResult.IsSuccess) return services;
+            if (!headerResult.IsSuccess) return host;
 
             ExternalIdentityProvisionerLog.ProviderRegistered(logger, "Chained");
     
-            return services;
+            return host;
         });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>

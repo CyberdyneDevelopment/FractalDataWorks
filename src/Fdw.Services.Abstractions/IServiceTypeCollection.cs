@@ -29,5 +29,5 @@ public interface IServiceTypeCollection
     Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> Register { get; }
 
     /// <summary>The collection's phase-3 Initialize entry point (e.g. <c>ConnectionTypes.Initialize</c>).</summary>
-    Func<IServiceProvider, ILoggerFactory?, IServiceProvider> Initialize { get; }
+    Func<IHost, ILoggerFactory?, IHost> Initialize { get; }
 }

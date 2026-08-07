@@ -34,7 +34,10 @@ namespace Fdw.Services.Connections.FileSystem.Tests.Integration;
 /// </remarks>
 public sealed class FileSystemConnectionGatewayFixture : IDisposable
 {
-    public ServiceProvider Provider { get; }
+    public IServiceProvider Provider { get; }
+
+    // Why the host is held: it owns the container now, so disposing it is what disposes the provider.
+    private readonly IHost _host;
 
     public string Root { get; }
 
@@ -80,8 +83,12 @@ public sealed class FileSystemConnectionGatewayFixture : IDisposable
         // typed-body provider still get wired; today it is a no-op over an empty collection.
         SecretManagerTypes.Register(builder, null);
 
-        Provider = services.BuildServiceProvider();
-        SecretManagerTypes.Initialize(Provider, null);
+        // Why the host and not services.BuildServiceProvider(): phase 3 takes the host now, and building
+        // the container off the builder keeps this fixture on the same construction path a real host
+        // uses — which is exactly what the resolution note below depends on.
+        _host = builder.Build();
+        Provider = _host.Services;
+        SecretManagerTypes.Initialize(_host, null);
 
         // Why: SecretManagerTypes' generated provider is registered AddScoped, so
         // RegisterFactory (which calls EnvironmentVariableSecretManagerType.RegisterFactory ->
@@ -124,7 +131,7 @@ public sealed class FileSystemConnectionGatewayFixture : IDisposable
 
     public void Dispose()
     {
-        Provider.Dispose();
+        _host.Dispose();
         Directory.Delete(Root, recursive: true);
     }
 }

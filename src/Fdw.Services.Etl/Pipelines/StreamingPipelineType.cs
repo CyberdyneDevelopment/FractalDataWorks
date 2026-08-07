@@ -63,8 +63,9 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
         // Why Initialize and not Register: this wiring needs a LIVE container (it resolves the
         // domain provider and its typed-body providers), and Register runs while the container
         // is still being built. Initialize runs after Build() with a real IServiceProvider.
-        Initialization((services, loggerFactory) =>
+        Initialization((host, loggerFactory) =>
         {
+            var services = host.Services;
             var provider = services.GetRequiredService<IFdwServiceProvider<IEtlPipeline, PipelineConfiguration>>();
 
             // Resolve factory from DI (registered in Phase 1)
@@ -73,7 +74,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             // Register factory instance with provider
             var factoryResult = provider.Register(Name, factory);
             if (!factoryResult.IsSuccess)
-                return services;
+                return host;
 
             // Why: Resolve from DI — provider was registered with Lazy<IConfigurationGateway> in the option's Register phase.
             // Not registered with the runtime IFdwServiceProvider (typed to the ETL-kind EtlPipelineConfiguration,
@@ -91,7 +92,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             var survivor = services.GetRequiredService<PipelineServiceConfigurationProvider>();
             survivor.RegisterTypedProvider("Etl", etlKindProvider);
     
-            return services;
+            return host;
         });
 
         Configuration(builder =>

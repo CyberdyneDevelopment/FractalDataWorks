@@ -51,7 +51,7 @@ public sealed class ServiceTypeCollectionPhaseMethodsAnalyzer : DiagnosticAnalyz
     // parameter and return types are checked, not just the name.
     private const string HostApplicationBuilder = "Microsoft.Extensions.Hosting.IHostApplicationBuilder";
     private const string LoggerFactory = "Microsoft.Extensions.Logging.ILoggerFactory";
-    private const string ServiceProvider = "System.IServiceProvider";
+    private const string Host = "Microsoft.Extensions.Hosting.IHost";
 
     /// <inheritdoc />
     public override void Initialize(AnalysisContext context)
@@ -74,7 +74,7 @@ public sealed class ServiceTypeCollectionPhaseMethodsAnalyzer : DiagnosticAnalyz
         // phase methods for the common case. Only report what is genuinely absent from the merged symbol.
         RequirePhase(context, type, "Configure", HostApplicationBuilder, HostApplicationBuilder);
         RequirePhase(context, type, "Register", HostApplicationBuilder, HostApplicationBuilder);
-        RequirePhase(context, type, "Initialize", ServiceProvider, ServiceProvider);
+        RequirePhase(context, type, "Initialize", Host, Host);
     }
 
     private static bool IsRegisteredIntoPlatformServices(INamedTypeSymbol type)

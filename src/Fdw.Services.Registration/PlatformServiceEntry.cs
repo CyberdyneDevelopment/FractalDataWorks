@@ -46,17 +46,22 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// </remarks>
     public bool Manual { get; init; }
 
-    // ── Phase-delegate overrides (author-curated variant selection; the keyset stays frozen) ─────────
+    // ── Phase-delegate replacements (author-curated variant selection; the keyset stays frozen) ─────────
     // Why: the frozen registry locks the SET of entries (no add/remove), but an entry is a mutable
     // reference type — exactly as Initialized/Registered are mutated post-freeze. That lets a host SELECT
     // an alternative phase delegate BEFORE the sweep runs, without touching discovery determinism. The
     // BLESSED use is an author-curated named variant (a collection's own UseXxx() calls the matching
-    // OverrideXxx with a delegate the AUTHOR wrote — keeps registration FDW-owned); the raw setter is the
-    // documented escape hatch. Each override is locked once its phase has run (lock-at-sweep), so
+    // gerund setter with a delegate the AUTHOR wrote — keeps registration FDW-owned); the raw setter is
+    // the documented escape hatch. Each replacement is locked once its phase has run (lock-at-sweep), so
     // behaviour is deterministic from the first sweep onward.
-    private Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder>? _configureOverride;
-    private Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder>? _registerOverride;
-    private Func<IServiceProvider, ILoggerFactory?, IServiceProvider>? _initializeOverride;
+    //
+    // Why the gerund and not OverrideXxx: `override` means virtual dispatch in C#, and this is not that —
+    // it swaps a delegate. The same word is already spoken for one level down, where ServiceTypeBase
+    // documents overriding the INVOKER as the way to add wiring a replacement cannot clobber. Naming both
+    // "override" would put one word on the two operations that must not be confused.
+    private Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder>? _configurationMethod;
+    private Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder>? _registrationMethod;
+    private Func<IHost, ILoggerFactory?, IHost>? _initializationMethod;
     private bool _configured;
 
     /// <summary>
@@ -66,62 +71,62 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// BEFORE the Configure sweep runs for this entry. Returns <c>this</c> for fluent chaining.
     /// </summary>
     /// <exception cref="InvalidOperationException">The Configure phase has already run for this entry.</exception>
-    public PlatformServiceEntry OverrideConfigure(Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> replacement)
+    public PlatformServiceEntry Configuration(Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> replacement)
     {
         if (replacement is null) throw new ArgumentNullException(nameof(replacement));
         if (_configured)
             throw new InvalidOperationException(
-                $"Cannot override Configure for '{CategoryName}': the Configure phase has already run. " +
-                "Phase overrides must be selected before the sweep (lock-at-sweep).");
-        _configureOverride = replacement;
+                $"Cannot replace Configure for '{CategoryName}': the Configure phase has already run. " +
+                "Phase replacements must be selected before the sweep (lock-at-sweep).");
+        _configurationMethod = replacement;
         return this;
     }
 
     /// <summary>
     /// Selects an alternative Register phase delegate for this entry, replacing the descriptor default.
-    /// See <see cref="OverrideConfigure"/> for intended (author-variant) vs escape-hatch usage. Must be
+    /// See <see cref="Configuration"/> for intended (author-variant) vs escape-hatch usage. Must be
     /// called BEFORE the Register sweep runs for this entry. Returns <c>this</c> for fluent chaining.
     /// </summary>
     /// <exception cref="InvalidOperationException">The Register phase has already run for this entry.</exception>
-    public PlatformServiceEntry OverrideRegister(Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> replacement)
+    public PlatformServiceEntry Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> replacement)
     {
         if (replacement is null) throw new ArgumentNullException(nameof(replacement));
         if (Registered)
             throw new InvalidOperationException(
-                $"Cannot override Register for '{CategoryName}': the Register phase has already run. " +
-                "Phase overrides must be selected before the sweep (lock-at-sweep).");
-        _registerOverride = replacement;
+                $"Cannot replace Register for '{CategoryName}': the Register phase has already run. " +
+                "Phase replacements must be selected before the sweep (lock-at-sweep).");
+        _registrationMethod = replacement;
         return this;
     }
 
     /// <summary>
     /// Selects an alternative Initialize phase delegate for this entry, replacing the descriptor default.
-    /// See <see cref="OverrideConfigure"/> for intended (author-variant) vs escape-hatch usage. Must be
+    /// See <see cref="Configuration"/> for intended (author-variant) vs escape-hatch usage. Must be
     /// called BEFORE the Initialize sweep runs for this entry. Returns <c>this</c> for fluent chaining.
     /// </summary>
     /// <exception cref="InvalidOperationException">The Initialize phase has already run for this entry.</exception>
-    public PlatformServiceEntry OverrideInitialize(Func<IServiceProvider, ILoggerFactory?, IServiceProvider> replacement)
+    public PlatformServiceEntry Initialization(Func<IHost, ILoggerFactory?, IHost> replacement)
     {
         if (replacement is null) throw new ArgumentNullException(nameof(replacement));
         if (Initialized)
             throw new InvalidOperationException(
-                $"Cannot override Initialize for '{CategoryName}': the Initialize phase has already run. " +
-                "Phase overrides must be selected before the sweep (lock-at-sweep).");
-        _initializeOverride = replacement;
+                $"Cannot replace Initialize for '{CategoryName}': the Initialize phase has already run. " +
+                "Phase replacements must be selected before the sweep (lock-at-sweep).");
+        _initializationMethod = replacement;
         return this;
     }
 
     /// <summary>
     /// Runs this domain's Initialize phase, unless it has already run. Lets a caller dot-walk to a
-    /// specific domain (e.g. <c>PlatformServices.Connection?.Initialize(services, loggerFactory)</c>) and
+    /// specific domain (e.g. <c>PlatformServices.Connection?.Initialize(host, loggerFactory)</c>) and
     /// initialize it manually, in whatever order matters, before a later
     /// <see cref="PlatformServices.Initialize"/> sweep skips anything already done.
     /// </summary>
-    public void Initialize(IServiceProvider services, ILoggerFactory? loggerFactory = null)
+    public void Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
         if (Initialized) return;
-        if (_initializeOverride is not null) _initializeOverride(services, loggerFactory);
-        else Descriptor.Initialize(services, loggerFactory);
+        if (_initializationMethod is not null) _initializationMethod(host, loggerFactory);
+        else Descriptor.Initialize(host, loggerFactory);
         Initialized = true;
     }
 
@@ -134,8 +139,8 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     public IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
     {
         _configured = true;
-        return _configureOverride is not null
-            ? _configureOverride(builder, loggerFactory)
+        return _configurationMethod is not null
+            ? _configurationMethod(builder, loggerFactory)
             : Descriptor.Configure(builder, loggerFactory);
     }
 
@@ -150,7 +155,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     public void Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
     {
         if (Registered) return;
-        if (_registerOverride is not null) _registerOverride(builder, loggerFactory);
+        if (_registrationMethod is not null) _registrationMethod(builder, loggerFactory);
         else Descriptor.Register(builder, loggerFactory);
         Registered = true;
     }

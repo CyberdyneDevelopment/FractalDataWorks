@@ -166,8 +166,9 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     /// same three-phase shape every swept domain declares — the actual work (async config load) is in
     /// <see cref="LoadStores"/>, blocked-on here exactly once at startup.
     /// </remarks>
-    public static IServiceProvider Initialize(IServiceProvider services, ILoggerFactory? loggerFactory = null)
+    public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
+        var services = host.Services;
         // Why: Initialize is the synchronous fail-fast startup phase (the swept shape requires a void
         // Initialize); the async config load is blocked-on exactly once at startup, no sync context —
         // the same sanctioned sync-over-async seam OpenIddictSigningKeyConfigurator uses.
@@ -175,7 +176,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         LoadStores(services, loggerFactory).GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
     
-        return services;
+        return host;
     }
 
     // Why: Initialize is a one-time startup method with sequential logging over all loaded entities;

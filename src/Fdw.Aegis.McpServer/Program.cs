@@ -61,7 +61,7 @@ public static class Program
         var app = builder.Build();
 
         // Phase 2 (after Build).
-        AegisHostRegistration.Initialize(app.Services, schema, loggerFactory: null);
+        AegisHostRegistration.Initialize(app, schema, loggerFactory: null);
 
         // Why AegisLog rather than a raw stderr write: this is the server's one startup fact, and it
         // belongs in the same structured stream (carrying the same AEG-prefixed Code) as every other

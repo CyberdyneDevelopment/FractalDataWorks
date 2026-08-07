@@ -117,7 +117,11 @@ public static class PlatformServices
         foreach (var entry in _frozenOrder)
         {
             if (entry.Manual) continue;
-            builder = entry.Descriptor.Configure(builder, loggerFactory);
+            // Why the entry and not its Descriptor: the entry is what consults a phase replacement
+            // and records that the phase ran. Reaching past it to the descriptor made a Configure
+            // replacement silently not run under the sweep, and left _configured unset so the
+            // lock-at-sweep guard never fired either — the exact silent no-op that guard exists for.
+            builder = entry.Configure(builder, loggerFactory);
         }
         return builder;
     }
@@ -142,15 +146,15 @@ public static class PlatformServices
     /// Calls every registered domain's Initialize in dependency-safe order — skipping any domain
     /// already initialized manually via its own dot-walked entry (e.g.
     /// <c>PlatformServices.Connection?.Initialize(...)</c>), since <see cref="PlatformServiceEntry.Initialize"/>
-    /// is idempotent. Replaces the manual, per-domain <c>XxxServiceTypes.Initialize(provider, loggerFactory)</c> calls.
+    /// is idempotent. Replaces the manual, per-domain <c>XxxServiceTypes.Initialize(host, loggerFactory)</c> calls.
     /// </summary>
-    public static void Initialize(IServiceProvider provider, ILoggerFactory? loggerFactory = null)
+    public static void Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
         EnsureFrozen();
         foreach (var entry in _frozenOrder)
         {
             if (entry.Manual) continue;
-            entry.Initialize(provider, loggerFactory);
+            entry.Initialize(host, loggerFactory);
         }
     }
 

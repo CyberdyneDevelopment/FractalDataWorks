@@ -44,8 +44,9 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
         // Why Initialize and not Register: this wiring needs a LIVE container (it resolves the
         // domain provider and its typed-body providers), and Register runs while the container
         // is still being built. Initialize runs after Build() with a real IServiceProvider.
-        Initialization((services, loggerFactory) =>
+        Initialization((host, loggerFactory) =>
         {
+            var services = host.Services;
             var header = services.GetRequiredService<CalculationConfigurationProvider>();
 
             header.RegisterTypedProvider(
@@ -56,7 +57,7 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
                 "Windowed",
                 services.GetRequiredService<DefaultConfigurationProvider<WindowedCalculationConfiguration, WindowedCalculationConfigurationCommand>>());
     
-            return services;
+            return host;
         });
 
         Configuration(builder =>

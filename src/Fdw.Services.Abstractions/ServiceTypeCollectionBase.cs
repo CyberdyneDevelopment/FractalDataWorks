@@ -149,12 +149,12 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
             return builder;
         };
 
-    private static Func<IServiceProvider, ILoggerFactory?, IServiceProvider> _initializationFunc
-        = static (services, loggerFactory) =>
+    private static Func<IHost, ILoggerFactory?, IHost> _initializationFunc
+        = static (host, loggerFactory) =>
         {
             foreach (var option in Options)
-                option.Initialize(services, loggerFactory);
-            return services;
+                option.Initialize(host, loggerFactory);
+            return host;
         };
 
     // ── Which body is installed ─────────────────────────────────────────────────────────────────
@@ -185,7 +185,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     protected static Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> RegisterFunc => _registerFunc;
 
     /// <summary>Gets this collection's Initialize body.</summary>
-    protected static Func<IServiceProvider, ILoggerFactory?, IServiceProvider> InitializationFunc => _initializationFunc;
+    protected static Func<IHost, ILoggerFactory?, IHost> InitializationFunc => _initializationFunc;
 
     /// <summary>Replaces this collection's Configure body. Call before phase 1.</summary>
     /// <param name="method">The replacement delegate.</param>
@@ -205,7 +205,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
 
     /// <summary>Replaces this collection's Initialize body. Call before phase 3.</summary>
     /// <param name="method">The replacement delegate.</param>
-    public static void Initialization(Func<IServiceProvider, ILoggerFactory?, IServiceProvider> method)
+    public static void Initialization(Func<IHost, ILoggerFactory?, IHost> method)
     {
         _initializationFunc = method ?? throw new ArgumentNullException(nameof(method));
         InitializationIsCustom = true;
@@ -241,15 +241,15 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
             ServiceTypePhaseSequence.Register, _registerFunc);
 
     /// <summary>Phase 3 — post-Build initialization.</summary>
-    /// <param name="services">The built service provider.</param>
+    /// <param name="host">The built host. Its <c>Services</c> is the provider this phase used to take.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
-    /// <returns>The service provider, for chaining.</returns>
+    /// <returns>The host, for chaining.</returns>
     /// <remarks>
     /// The <c>xxxTypes</c> class this is called on is written by <c>ServiceTypeCollectionGenerator</c>
     /// from the <c>[ServiceTypeCollection]</c> attribute, not by hand.
     /// </remarks>
-    public static IServiceProvider Initialize(IServiceProvider services, ILoggerFactory? loggerFactory = null)
-        => RunPhase(services, loggerFactory, "Initialize", InitializationIsCustom,
+    public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+        => RunPhase(host, loggerFactory, "Initialize", InitializationIsCustom,
             ServiceTypePhaseSequence.Initialize, _initializationFunc);
 
     // Why one runner rather than three copies of the same ceremony: the phases differ only in what
