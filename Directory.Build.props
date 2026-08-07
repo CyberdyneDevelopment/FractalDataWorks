@@ -145,7 +145,8 @@
     <!-- FDW010 (MisplacedImplementationType): implementation-specific types in base/abstractions assemblies; kept non-error so existing violations surface but don't break the build, pending architectural review. NOTE: FDW010 is NOT a fallback rule — the no-`??`-fallback rule is enforced by convention/review + FDW002/003/004. -->
     <!-- FDW022 (SwallowedException): warnings-only during gradual adoption, promote to error after remediation. FDW023 (broad catch survey) is Info, never an error. -->
     <!-- TC001 (MissingTypeOptionAnalyzer, Fdw.ServiceTypes.Analyzers/Fdw.Collections.Analyzers): Warning-by-design; newly wired globally, fires on pre-existing TypeCollection-derived types missing [TypeOption] — warnings-only during gradual adoption, promote to error after remediation. -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);FDW010;FDW012;FDW013;FDW014;FDW015;FDW016;FDW017;FDW018;FDW019;FDW022;TC001</WarningsNotAsErrors>
+    <!-- FDW046 (LocalStatusClassMapperAnalyzer): fires on the pre-existing component-local status-to-CSS-class helpers in Fdw.UI.Pages — warnings-only until those are migrated to StatusVariants/StatusColors, promote to error after remediation. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);FDW010;FDW012;FDW013;FDW014;FDW015;FDW016;FDW017;FDW018;FDW019;FDW022;FDW046;TC001</WarningsNotAsErrors>
     <WarningLevel>4</WarningLevel>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <RunAnalyzers>true</RunAnalyzers>
