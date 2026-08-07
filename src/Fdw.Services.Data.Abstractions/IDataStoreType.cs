@@ -41,11 +41,6 @@ public interface IDataStoreType : ITypeOption<Guid, IDataStoreType>
     void Configure(IServiceCollection services, IConfiguration configuration, ILoggerFactory? loggerFactory);
 
     /// <summary>
-    /// Registers required services (factory + dependencies) with the DI container.
-    /// </summary>
-    IServiceCollection Register(IServiceCollection services);
-
-    /// <summary>
     /// Supplies the per-transport <see cref="IDataStoreBuilder"/> that assembles this transport's
     /// <see cref="IDataStore"/> tree (store → paths → containers → fields → keys).
     /// </summary>

@@ -77,11 +77,6 @@ public abstract class DataStoreTypeBase<TConfiguration> :
     }
 
     /// <summary>
-    /// Registers required services (factory + dependencies) with the DI container.
-    /// </summary>
-    public abstract IServiceCollection Register(IServiceCollection services);
-
-    /// <summary>
     /// Supplies the per-transport <see cref="IDataStoreBuilder"/> for this transport.
     /// </summary>
     /// <param name="logger">Logger for build diagnostics.</param>

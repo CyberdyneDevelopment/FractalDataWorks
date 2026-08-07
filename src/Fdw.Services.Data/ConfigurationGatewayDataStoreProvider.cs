@@ -140,11 +140,6 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         // containers stay queryable because on-demand reads go through DataGatewayService (caching
         // built in, tag-invalidated on write, tenant-keyed) — no separate CachingDataGateway needed.
 
-        foreach (var type in DataStoreTypes.All())
-        {
-            type.Register(services);
-        }
-
         // Register runs pre-Build, so there is no container to resolve a logger from — the factory the
         // host hands in is the only source available in this phase.
         var logger = loggerFactory?.CreateLogger(typeof(ConfigurationGatewayDataStoreProvider)) ?? NullLogger.Instance;

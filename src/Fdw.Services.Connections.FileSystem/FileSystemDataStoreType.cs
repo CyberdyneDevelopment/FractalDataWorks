@@ -45,14 +45,6 @@ public sealed class FileSystemDataStoreType
 
     /// <inheritdoc />
     /// <remarks>
-    /// Nothing to register: FileSystem is a body-less store, and DataStore instances are assembled by
-    /// the per-transport IDataStoreBuilder (SupplyBuilder) — there is no IDataStoreFactory to register
-    /// (that legacy build path was removed).
-    /// </remarks>
-    public override IServiceCollection Register(IServiceCollection services) => services;
-
-    /// <inheritdoc />
-    /// <remarks>
     /// Registers no typed config provider — FileSystem carries its whole configuration on the header row.
     /// </remarks>
 
