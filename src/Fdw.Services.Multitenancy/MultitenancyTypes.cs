@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Services.Multitenancy;
 
@@ -68,8 +69,8 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
         // Configure/Register before Build(). These stay overridden (rather than left at
         // the generated default) so the ordinary PlatformServices sweep does not ALSO iterate and
         // register every discovered option — this domain runs exactly one.
-        Registration(static (builder, _) => builder);
-        Initialization(static (services, _) => services);
+        Registration(static (builder, _) => GenericResult<IHostApplicationBuilder>.Success(builder));
+        Initialization(static (host, _) => GenericResult<IHost>.Success(host));
     }
 #pragma warning restore CA2255
 
@@ -81,13 +82,16 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
     /// </summary>
     /// <param name="builder">The host application builder.</param>
     /// <param name="loggerFactory">Optional logger factory for startup diagnostics.</param>
-    /// <returns>The builder, unchanged (side effects only — mirrors the generated ConfigurationMethod default shape).</returns>
-    /// <exception cref="InvalidOperationException">
-    /// The host's <see cref="ConfigurationSchema.Multitenancy"/> choice is missing, or names a
-    /// ServiceOptionType that does not match any registered option (NO FALLBACKS — this is a startup
-    /// failure, never a silent default).
-    /// </exception>
-    private static IHostApplicationBuilder SelectAndConfigureSingleOption(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory)
+    /// <returns>
+    /// The builder on success. A failure when the host's <see cref="ConfigurationSchema.Multitenancy"/>
+    /// choice is missing, or names a ServiceOptionType that does not match any registered option
+    /// (NO FALLBACKS — never a silent default).
+    /// </returns>
+    // Why these are returned rather than thrown: both already build a logged message describing exactly
+    // what is wrong, and wrapping that in an exception threw away the message object to carry only its
+    // string. Returning the failure keeps the message — and lets the host decide whether a missing
+    // multitenancy choice stops it, which is not this collection's call to make.
+    private static IGenericResult<IHostApplicationBuilder> SelectAndConfigureSingleOption(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory)
     {
         var logger = loggerFactory?.CreateLogger("MultitenancyTypes") ?? NullLogger.Instance;
 
@@ -103,25 +107,29 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
 
         if (string.IsNullOrWhiteSpace(choice))
         {
-            var missing = MultitenancyLog.ChoiceMissing(logger);
-            throw new InvalidOperationException(missing.Message);
+            return GenericResult<IHostApplicationBuilder>.Failure(MultitenancyLog.ChoiceMissing(logger));
         }
 
         var option = ByName(choice);
         if (option == NotFound)
         {
-            var notFound = MultitenancyLog.ChoiceNotFound(logger, choice);
-            throw new InvalidOperationException(notFound.Message);
+            return GenericResult<IHostApplicationBuilder>.Failure(MultitenancyLog.ChoiceNotFound(logger, choice));
         }
 
         // Why this collection selects ONE option instead of sweeping all of them: multitenancy is a
         // host-wide choice, so exactly the configured option runs its phases.
-        option.Configure(builder);
-        option.Register(
+        var configured = option.Configure(builder);
+        if (configured.IsFailure)
+            return configured;
+
+        var registered = option.Register(
             builder, loggerFactory,
             option.DefaultDataStoreName, option.DefaultPathName, option.DefaultContainerName);
+        if (registered.IsFailure)
+            return registered;
+
         builder.Services.AddSingleton<IMultitenancyType>(option);
 
-        return builder;
+        return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 }

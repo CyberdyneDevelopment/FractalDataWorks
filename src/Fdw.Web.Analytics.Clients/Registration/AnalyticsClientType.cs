@@ -11,6 +11,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Web.Analytics.Clients;
 
@@ -28,7 +29,7 @@ public sealed class AnalyticsClientType : ApiClientTypeBase<AnalyticsApiClient>
         Configuration(builder =>
         {
             builder.Services.AddApiHttpClient(builder.Configuration, Name);
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -43,7 +44,7 @@ public sealed class AnalyticsClientType : ApiClientTypeBase<AnalyticsApiClient>
             // Why: IAnalyticsService was previously registered ad-hoc in application Program.cs files.
             // Singleton because the in-memory implementation uses ConcurrentBag for process-lifetime tracking.
             builder.Services.TryAddSingleton<IAnalyticsService, AnalyticsService>();
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
  }
 

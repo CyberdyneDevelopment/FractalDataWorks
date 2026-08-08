@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Fdw.Results;
 
 namespace Fdw.Services.SessionState;
 
@@ -44,7 +45,7 @@ public sealed class DefaultSessionStateServiceType : SessionStateServiceTypeBase
             {
                 builder.Services.AddScoped<CircuitHandler, SessionStateCircuitHandler>();
             }
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

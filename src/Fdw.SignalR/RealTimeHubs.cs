@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.SignalR;
 
@@ -50,8 +51,8 @@ public abstract partial class RealTimeHubs : TypeCollectionBase<RealTimeHubOptio
     /// <param name="builder">The host application builder.</param>
     /// <param name="loggerFactory">Unused.</param>
     /// <returns><paramref name="builder"/>, unchanged.</returns>
-    public static IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
-        => builder;
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+        => GenericResult<IHostApplicationBuilder>.Success(builder);
 
     /// <summary>
     /// Registers SignalR and every discovered real-time hub's services.
@@ -65,7 +66,7 @@ public abstract partial class RealTimeHubs : TypeCollectionBase<RealTimeHubOptio
     /// referenced assembly is the only step.
     /// </remarks>
     /// <exception cref="ArgumentNullException"><paramref name="builder"/> is <see langword="null"/>.</exception>
-    public static IHostApplicationBuilder Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
         var services = builder.Services;
@@ -86,7 +87,7 @@ public abstract partial class RealTimeHubs : TypeCollectionBase<RealTimeHubOptio
 
         SignalRLog.RealTimeHubsRegistered(logger, hubs.Count);
 
-        return builder;
+        return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
     /// <summary>
@@ -96,9 +97,6 @@ public abstract partial class RealTimeHubs : TypeCollectionBase<RealTimeHubOptio
     /// </summary>
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">Unused.</param>
-    public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null)
-    {
-    
-        return host;
-    }
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+        => GenericResult<IHost>.Success(host);
 }

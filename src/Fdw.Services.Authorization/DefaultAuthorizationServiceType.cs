@@ -24,6 +24,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using IAspNetAuthorizationHandler = Microsoft.AspNetCore.Authorization.IAuthorizationHandler;
 using IAspNetAuthorizationPolicyProvider = Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider;
+using Fdw.Results;
 
 namespace Fdw.Services.Authorization;
 
@@ -146,7 +147,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     sp.GetRequiredService<IOptions<SystemRoleMappingOptions>>(),
                     sp.GetService<ILogger<DefaultSystemRoleConfiguration>>()));
 
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
     
         });
 
@@ -164,7 +165,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             builder.Services.AddOptions<SystemRoleMappingOptions>()
                 .BindConfiguration("authz:SystemRoleMapping");
     
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
     }

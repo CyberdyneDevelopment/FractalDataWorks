@@ -3,6 +3,8 @@ using Fdw.ServiceTypes;
 using Fdw.Services.SecretManagers;
 using Fdw.Services.SecretManagers.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using Fdw.Results;
+using Microsoft.Extensions.Hosting;
 
 namespace Fdw.Services.SecretManagers.TestDouble;
 
@@ -57,7 +59,7 @@ public sealed class SyntheticSecretManagerType
             // with it ISecretManagerProvider, which AegisInjector takes as a constructor dependency.
             // TryAddSingleton inside makes it idempotent; every option calls it, first registration wins.
             SecretManagerConfigurationProvider.RegisterDomainConfiguration(builder.Services);
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
         // Why Initialization and not Registration: handing the factory to the provider needs a LIVE
@@ -69,7 +71,7 @@ public sealed class SyntheticSecretManagerType
                 .GetRequiredService<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>()
                 .Register(Name, services.GetRequiredService<ISyntheticSecretManagerFactory>());
 
-            return host;
+            return GenericResult<IHost>.Success(host);
         });
     }
 }

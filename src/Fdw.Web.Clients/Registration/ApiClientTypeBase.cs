@@ -6,6 +6,7 @@ using Fdw.Web.Http.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Fdw.Results;
 
 namespace Fdw.Web.Clients.Abstractions.Registration;
 
@@ -44,7 +45,7 @@ public abstract class ApiClientTypeBase<TClient>
     // to its named HttpClient via AddBearerTokenHandler(), which only adds it to the pipeline; without
     // this the host throws at first client construction:
     //   No service for type 'Fdw.Web.Http.Authentication.BearerTokenHandler' has been registered.
-    public override IHostApplicationBuilder Register(
+    public override IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory,
         string dataStoreName,

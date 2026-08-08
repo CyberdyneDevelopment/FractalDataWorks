@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Fdw.Results;
 
 namespace Fdw.Services.Messaging;
 
@@ -28,7 +29,7 @@ public sealed class DefaultMessagingServiceType : MessagingServiceTypeBase
         {
             builder.Services.AddScoped<IMessageService, MessageService>();
             builder.Services.AddScoped<IAccessRequestService, AccessRequestService>();
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

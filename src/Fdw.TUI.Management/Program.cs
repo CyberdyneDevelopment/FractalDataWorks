@@ -17,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
+using System.Globalization;
 
 namespace Fdw.TUI.Management;
 
@@ -46,8 +47,22 @@ public static class Program
 
             var host = builder.Build();
 
-            // Phase 3: eager initialize every registered domain (fail fast).
-            PlatformServices.Initialize(host);
+            // Phase 3: eager initialize every registered domain.
+            //
+            // Why this host aborts: the TUI is an interactive admin console, and a domain that failed
+            // to initialize means some commands would fail at the point of use with no way for the
+            // operator to tell a broken deployment from a bad argument. Refusing to start is the right
+            // call FOR THIS APPLICATION — a background worker or a degraded-mode service could read
+            // the same result and legitimately choose to carry on. That choice is the reason the phase
+            // returns a result rather than throwing.
+            var initialized = PlatformServices.Initialize(host);
+            if (initialized.IsFailure)
+            {
+                AnsiConsole.MarkupLineInterpolated(
+                    CultureInfo.CurrentCulture,
+                    $"[red]Startup failed during Initialize:[/] {initialized.CurrentMessage}");
+                return 1;
+            }
 
             var app = host.Services.GetRequiredService<ManagementApp>();
             return await app.Run().ConfigureAwait(false);
@@ -154,9 +169,17 @@ public static class Program
         // the only host that re-targets its clients at a different instance at runtime.
         services.AddTransient<InstanceRoutingHandler>();
 
-        // Phase 1: let every discovered domain (ApiClientTypes among them) configure and register itself.
-        PlatformServices.Configure(builder);
-        PlatformServices.Register(builder);
+        // Phases 1 and 2: let every discovered domain (ApiClientTypes among them) configure and
+        // register itself. A failure here is thrown as an InvalidOperationException rather than
+        // returned, because this method returns void to its caller and the host cannot continue with a
+        // half-registered container — Main's catch turns it into the same operator-facing message.
+        var configured = PlatformServices.Configure(builder);
+        if (configured.IsFailure)
+            throw new InvalidOperationException($"Configure phase failed: {configured.CurrentMessage}");
+
+        var registered = PlatformServices.Register(builder);
+        if (registered.IsFailure)
+            throw new InvalidOperationException($"Register phase failed: {registered.CurrentMessage}");
 
         // Why iterate the collection instead of naming clients: a newly referenced .Clients package
         // registers itself as an ApiClientTypes option, and picks up instance routing automatically.

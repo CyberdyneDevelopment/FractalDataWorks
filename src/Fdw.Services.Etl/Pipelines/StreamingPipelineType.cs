@@ -18,6 +18,7 @@ using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Logging;
 using Fdw.Services.Etl.Pipelines.Commands;
 using Fdw.Services.Pipelines;
+using Fdw.Results;
 
 namespace Fdw.Services.Etl.Pipelines;
 
@@ -74,7 +75,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             // Register factory instance with provider
             var factoryResult = provider.Register(Name, factory);
             if (!factoryResult.IsSuccess)
-                return host;
+                return GenericResult<IHost>.Success(host);
 
             // Why: Resolve from DI — provider was registered with Lazy<IConfigurationGateway> in the option's Register phase.
             // Not registered with the runtime IFdwServiceProvider (typed to the ETL-kind EtlPipelineConfiguration,
@@ -92,14 +93,14 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             var survivor = services.GetRequiredService<PipelineServiceConfigurationProvider>();
             survivor.Register("Etl", etlKindProvider);
     
-            return host;
+            return GenericResult<IHost>.Success(host);
         });
 
         Configuration(builder =>
         {
 
     
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -151,7 +152,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             // can run, so the option that brings the pipeline registers them too. Idempotent TryAdd,
             // so both pipeline options calling it is harmless.
             EtlPipelineTypes.RegisterAdditionalServices(builder.Services);
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Fdw.ServiceTypes;
 using Shouldly;
 using Xunit;
+using Fdw.Results;
 
 namespace Fdw.Services.Registration.Tests;
 
@@ -31,9 +32,9 @@ public sealed class PlatformServicesTests : IDisposable
         public ServiceTypeCollectionDescriptor Descriptor(string category, Type collectionType) => new(
             category,
             collectionType,
-            (builder, _) => { ConfigureCalls++; return builder; },
-            (builder, _) => { RegisterCalls++; return builder; },
-            (host, _) => { InitializeCalls++; return host; });
+            (builder, _) => { ConfigureCalls++; return GenericResult<IHostApplicationBuilder>.Success(builder); },
+            (builder, _) => { RegisterCalls++; return GenericResult<IHostApplicationBuilder>.Success(builder); },
+            (host, _) => { InitializeCalls++; return GenericResult<IHost>.Success(host); });
     }
 
     [Fact]
@@ -118,6 +119,34 @@ public sealed class PlatformServicesTests : IDisposable
         // did not touch it, so this is the first (and only) time its Register runs.
         manualEntry.Register(Host.CreateApplicationBuilder());
         declaredManual.RegisterCalls.ShouldBe(1);
+    }
+
+    [Fact]
+    public void EntryConfigureIsIdempotent()
+    {
+        var counter = new CallCounter();
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+
+        entry.Configure(EmptyHostApplicationBuilder());
+        entry.Configure(EmptyHostApplicationBuilder());
+
+        counter.ConfigureCalls.ShouldBe(1);
+        entry.Configured.ShouldBeTrue();
+    }
+
+    // Why this test exists: running a domain early to put it ahead of the others is the documented
+    // reason the run-tracking exists at all. Configure previously had no skip, so the early call was
+    // paid for twice — once manually and once by the aggregate pass.
+    [Fact]
+    public void ConfigureSweepSkipsAlreadyManuallyConfiguredEntry()
+    {
+        var counter = new CallCounter();
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+
+        entry.Configure(EmptyHostApplicationBuilder());
+        PlatformServices.Configure(EmptyHostApplicationBuilder());
+
+        counter.ConfigureCalls.ShouldBe(1);
     }
 
     [Fact]
@@ -213,7 +242,7 @@ public sealed class PlatformServicesTests : IDisposable
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
         var replacementRan = 0;
-        entry.Registration((builder, _) => { replacementRan++; return builder; });
+        entry.Registration((builder, _) => { replacementRan++; return GenericResult<IHostApplicationBuilder>.Success(builder); });
 
         entry.Register(Host.CreateApplicationBuilder());
 
@@ -228,7 +257,7 @@ public sealed class PlatformServicesTests : IDisposable
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
         var replacementRan = 0;
-        entry.Initialization((host, _) => { replacementRan++; return host; });
+        entry.Initialization((host, _) => { replacementRan++; return GenericResult<IHost>.Success(host); });
 
         entry.Initialize(EmptyHost());
 
@@ -243,7 +272,7 @@ public sealed class PlatformServicesTests : IDisposable
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
         var replacementRan = 0;
-        entry.Configuration((builder, _) => { replacementRan++; return builder; });
+        entry.Configuration((builder, _) => { replacementRan++; return GenericResult<IHostApplicationBuilder>.Success(builder); });
 
         entry.Configure(EmptyHostApplicationBuilder());
 
@@ -273,7 +302,7 @@ public sealed class PlatformServicesTests : IDisposable
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
         entry.Register(Host.CreateApplicationBuilder());
 
-        Should.Throw<InvalidOperationException>(() => entry.Registration((builder, _) => builder));
+        Should.Throw<InvalidOperationException>(() => entry.Registration((builder, _) => GenericResult<IHostApplicationBuilder>.Success(builder)));
     }
 
     [Fact]
@@ -283,7 +312,7 @@ public sealed class PlatformServicesTests : IDisposable
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
         entry.Initialize(EmptyHost());
 
-        Should.Throw<InvalidOperationException>(() => entry.Initialization((host, _) => host));
+        Should.Throw<InvalidOperationException>(() => entry.Initialization((host, _) => GenericResult<IHost>.Success(host)));
     }
 
     [Fact]
@@ -293,7 +322,7 @@ public sealed class PlatformServicesTests : IDisposable
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
         entry.Configure(EmptyHostApplicationBuilder());
 
-        Should.Throw<InvalidOperationException>(() => entry.Configuration((b, _) => b));
+        Should.Throw<InvalidOperationException>(() => entry.Configuration((b, _) => GenericResult<IHostApplicationBuilder>.Success(b)));
     }
 
     [Fact]
@@ -302,7 +331,7 @@ public sealed class PlatformServicesTests : IDisposable
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
         var replacementRan = 0;
-        entry.Registration((builder, _) => { replacementRan++; return builder; });
+        entry.Registration((builder, _) => { replacementRan++; return GenericResult<IHostApplicationBuilder>.Success(builder); });
 
         PlatformServices.Register(Host.CreateApplicationBuilder());
 
@@ -320,7 +349,7 @@ public sealed class PlatformServicesTests : IDisposable
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
         var replacementRan = 0;
-        entry.Configuration((builder, _) => { replacementRan++; return builder; });
+        entry.Configuration((builder, _) => { replacementRan++; return GenericResult<IHostApplicationBuilder>.Success(builder); });
 
         PlatformServices.Configure(Host.CreateApplicationBuilder());
 
@@ -334,7 +363,7 @@ public sealed class PlatformServicesTests : IDisposable
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
         var replacementRan = 0;
-        entry.Initialization((host, _) => { replacementRan++; return host; });
+        entry.Initialization((host, _) => { replacementRan++; return GenericResult<IHost>.Success(host); });
 
         PlatformServices.Initialize(EmptyHost());
 
@@ -348,7 +377,7 @@ public sealed class PlatformServicesTests : IDisposable
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
 
-        entry.Registration((builder, _) => builder).ShouldBeSameAs(entry);
+        entry.Registration((builder, _) => GenericResult<IHostApplicationBuilder>.Success(builder)).ShouldBeSameAs(entry);
     }
 
     private static IHost EmptyHost() => Host.CreateApplicationBuilder().Build();

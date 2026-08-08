@@ -63,11 +63,20 @@ public sealed class DataGatewayService : IDataGateway
     // container commands.
     private readonly IDataStoreProvider? _dataStoreProvider;
     private readonly PredicatePushdownAnalyzer _predicatePushdown;
-    // Why: Container-level RBAC via HTTP context. Both are optional because DataGateway also runs
-    // in non-HTTP contexts (background jobs, ETL). RBAC enforcement is deferred until RequiredPermission
-    // is added to the IDataNode tree (follow-up to Phase 7).
-    private readonly IHttpContextAccessor? _httpContextAccessor;
+    // Why: RBAC enforcement is deferred until RequiredPermission is added to the IDataNode tree
+    // (follow-up to Phase 7). Optional because DataGateway also runs in non-HTTP contexts.
     private readonly IFrameworkAuthorizationService? _authorizationService;
+
+    // Why this accessor and not IHttpContextAccessor: the connection selects its session context from
+    // IAuthenticationContextAccessor.Current, so reading the same source is what makes the cache
+    // partition name the principal the session is actually opened under. A principal established off
+    // the request thread — background jobs, ETL, boot elevation — has an authentication context and no
+    // HttpContext, so an HTTP-sourced key cannot see it and collapses every such caller together.
+    private readonly IAuthenticationContextAccessor? _authenticationContextAccessor;
+
+    // Why: the cache partition is declared by the connection kind, and the kind is named by the
+    // connection configuration the target's DataStore points at.
+    private readonly ConnectionConfigurationProvider? _connectionConfigProvider;
     // Why: cache + options are injected by DI in production; null in test constructors that
     // don't wire caching — a null cache means caching is disabled for that instance.
     private readonly DataGatewayResultCache? _cache;
@@ -82,22 +91,31 @@ public sealed class DataGatewayService : IDataGateway
     /// <param name="connectionProvider">The data connection provider.</param>
     /// <param name="dataSetProvider">The dataset configuration provider for federated queries (lazy to break circular DI).</param>
     /// <param name="dataStoreConfigProvider">The DataStore configuration provider (dual-source).</param>
-    /// <param name="httpContextAccessor">Optional HTTP context accessor for container-level RBAC checks and tenant discrimination.</param>
     /// <param name="authorizationService">Optional authorization service for permission validation.</param>
     /// <param name="dataStoreProvider">On-demand container resolver. When non-null, container commands
     /// resolve the unified container via <c>GetContainer(...)</c>; when null, container routing fails loud.</param>
     /// <param name="cache">Optional process-wide result cache. When null caching is disabled (test paths).</param>
     /// <param name="options">Optional gateway options (EnableCache knob). When null caching is disabled.</param>
+    /// <param name="authenticationContextAccessor">
+    /// Optional accessor for the calling principal, used to partition cached results by the visibility
+    /// scope their session reads under. Read with the same expression the connection uses to select its
+    /// session context, so the partition and the session cannot name different principals.
+    /// </param>
+    /// <param name="connectionConfigProvider">
+    /// Optional provider used to name the connection kind behind a target's DataStore. Required whenever
+    /// caching is enabled — without it the partition cannot be resolved and the read fails loud.
+    /// </param>
     public DataGatewayService(
         ILoggerFactory? loggerFactory,
         IDataConnectionProvider connectionProvider,
         Lazy<IDataSetConfigurationProvider> dataSetProvider,
         DataStoreConfigurationProvider dataStoreConfigProvider,
-        IHttpContextAccessor? httpContextAccessor = null,
         IFrameworkAuthorizationService? authorizationService = null,
         IDataStoreProvider? dataStoreProvider = null,
         DataGatewayResultCache? cache = null,
-        IOptions<DataGatewayOptions>? options = null)
+        IOptions<DataGatewayOptions>? options = null,
+        IAuthenticationContextAccessor? authenticationContextAccessor = null,
+        ConnectionConfigurationProvider? connectionConfigProvider = null)
     {
         var factory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = factory.CreateLogger<DataGatewayService>();
@@ -105,11 +123,12 @@ public sealed class DataGatewayService : IDataGateway
         _connectionProvider = connectionProvider;
         _dataSetProvider = dataSetProvider;
         _dataStoreConfigProvider = dataStoreConfigProvider;
-        _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _dataStoreProvider = dataStoreProvider;
         _cache = cache;
         _options = options;
+        _authenticationContextAccessor = authenticationContextAccessor;
+        _connectionConfigProvider = connectionConfigProvider;
 
         // Get internal implementation details - these are not injected
         _predicatePushdown = new PredicatePushdownAnalyzer(factory.CreateLogger<PredicatePushdownAnalyzer>());
@@ -170,15 +189,31 @@ public sealed class DataGatewayService : IDataGateway
         bool cacheEnabled = enable && CachePolicy.IsEnabled(command);
 
         string? cacheKey = null;
+        // Why the ceiling is captured here rather than the kind: these are the only two things the
+        // write below needs, and taking them together binds both to the one resolution that produced
+        // the key. TimeSpan.MaxValue is the identity for the minimum CachePolicy applies, so it is the
+        // correct starting value for the paths that never consult a kind at all.
+        var cacheCeiling = TimeSpan.MaxValue;
         if (cacheEnabled)
         {
+            // Why the read fails instead of proceeding uncached: without a partition the gateway cannot
+            // tell which callers may share a result, so continuing would either poison the cache for
+            // other principals or serve this caller a result from a different visibility scope.
+            var connectionTypeResult = await ResolveConnectionType(target, cancellationToken).ConfigureAwait(false);
+            if (!connectionTypeResult.IsSuccess || connectionTypeResult.Value is null)
+                return connectionTypeResult.ToNewResult<T>();
+
+            var partition = connectionTypeResult.Value.CachePartition(_authenticationContextAccessor?.Current);
+            cacheCeiling = connectionTypeResult.Value.MaxCacheDuration(_authenticationContextAccessor?.Current);
+
             try
             {
-                // Why: key = tenant/org discriminator + query shape (target + command semantics) + result type.
-                // Tenant prefix keeps the shared singleton cache from serving one tenant's rows to another;
-                // typeof(T).FullName prevents type mismatches across generic invocations with the same query shape.
+                // Why: key = the caller's visibility scope + query shape (target + command semantics) +
+                // result type. A cached row is visible only to callers reading under the same scope, so
+                // the scope is part of the entry's identity; typeof(T).FullName prevents type mismatches
+                // across generic invocations with the same query shape.
                 cacheKey = string.Concat(
-                    TenantDiscriminator(), "|",
+                    partition, "|",
                     CacheKeyBuilder.ComputeCacheKey(command, target), ":", typeof(T).FullName);
             }
             catch (Exception ex)
@@ -203,7 +238,10 @@ public sealed class DataGatewayService : IDataGateway
                 cacheKey,
                 result,
                 CacheKeyBuilder.GetInvalidationTags(command, target),
-                CachePolicy.GetDuration(command, DefaultCacheDuration));
+                CachePolicy.GetDuration(
+                    command,
+                    DefaultCacheDuration,
+                    cacheCeiling));
         }
 
         return result;
@@ -276,17 +314,58 @@ public sealed class DataGatewayService : IDataGateway
         return result;
     }
 
-    // Why: Read tenant_id/org_id off the request principal so cache entries are isolated per tenant.
-    // No principal (background/system work) → "_" sentinel, a distinct partition from any real tenant.
-    private string TenantDiscriminator()
+    // Why the connection kind decides this and not the gateway: what a caller may see is settled at the
+    // connection, by the session context its scheme applies. The gateway holds the token and compares it;
+    // it never parses it and learns nothing about the kind from it. A kind that declares no session-context
+    // concept returns a constant, so its results keep caching globally.
+    private async Task<IGenericResult<IConnectionType>> ResolveConnectionType(
+        DataStoreTarget target,
+        CancellationToken cancellationToken)
     {
-        var user = _httpContextAccessor?.HttpContext?.User;
-        if (user is null)
-            return "_";
+        if (_connectionConfigProvider is null)
+        {
+            return GenericResult<IConnectionType>.Failure(
+                DataGatewayCacheLog.CachePartitionUnavailable(
+                    _logger, target.DataStore, "no connection configuration provider is registered"));
+        }
 
-        var tenant = user.FindFirst("tenant_id")?.Value;
-        var org = user.FindFirst("org_id")?.Value;
-        return string.Concat(tenant ?? "_", "/", org ?? "_");
+        var storeResult = await _dataStoreConfigProvider.Get(target.DataStore, cancellationToken).ConfigureAwait(false);
+        if (!storeResult.IsSuccess || storeResult.Value is null)
+        {
+            return GenericResult<IConnectionType>.Failure(
+                DataGatewayCacheLog.CachePartitionUnavailable(
+                    _logger, target.DataStore, "the DataStore could not be resolved"));
+        }
+
+        var connectionResult = await _connectionConfigProvider
+            .Get(storeResult.Value.ConnectionId, cancellationToken).ConfigureAwait(false);
+        if (!connectionResult.IsSuccess || connectionResult.Value is null)
+        {
+            return GenericResult<IConnectionType>.Failure(
+                DataGatewayCacheLog.CachePartitionUnavailable(
+                    _logger, target.DataStore, "the DataStore's connection configuration could not be resolved"));
+        }
+
+        if (string.IsNullOrWhiteSpace(connectionResult.Value.ServiceOptionType))
+        {
+            return GenericResult<IConnectionType>.Failure(
+                DataGatewayCacheLog.CachePartitionUnavailable(
+                    _logger, target.DataStore, "the connection declares no ServiceOptionType"));
+        }
+
+        // Why fail loud on NotFound: an unregistered kind means we cannot know what its sessions would
+        // show, and a guessed partition would let callers with different visibility share cached rows.
+        if (ReferenceEquals(ConnectionTypes.ByName(connectionResult.Value.ServiceOptionType), ConnectionTypes.NotFound))
+        {
+            return GenericResult<IConnectionType>.Failure(
+                DataGatewayCacheLog.CachePartitionUnavailable(
+                    _logger,
+                    target.DataStore,
+                    $"connection type '{connectionResult.Value.ServiceOptionType}' is not registered"));
+        }
+
+        return GenericResult<IConnectionType>.Success(
+            ConnectionTypes.ByName(connectionResult.Value.ServiceOptionType));
     }
 
     /// <inheritdoc/>

@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Data.Components.DataStores;
 
@@ -45,7 +46,7 @@ public sealed class DataStoreProviderClientType : ApiClientTypeBase<IDataStorePr
                 sp.GetService<ILogger<ConfiguredDataStoreProvider>>(),
                 sp.GetRequiredService<IServiceConfigurationProvider<DataStoreConfiguration>>(),
                 sp.GetRequiredService<IDataStoreBuilderSelector>()));
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
  }
 

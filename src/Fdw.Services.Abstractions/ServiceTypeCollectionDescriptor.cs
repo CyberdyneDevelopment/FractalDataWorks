@@ -1,4 +1,5 @@
 using System;
+using Fdw.Results;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -19,6 +20,6 @@ namespace Fdw.ServiceTypes;
 public sealed record ServiceTypeCollectionDescriptor(
     string ServiceCategory,
     Type CollectionType,
-    Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> Configure,
-    Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> Register,
-    Func<IHost, ILoggerFactory?, IHost> Initialize) : IServiceTypeCollection;
+    Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> Configure,
+    Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> Register,
+    Func<IHost, ILoggerFactory?, IGenericResult<IHost>> Initialize) : IServiceTypeCollection;

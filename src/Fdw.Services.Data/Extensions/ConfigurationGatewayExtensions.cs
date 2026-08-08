@@ -1,6 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Configuration;
@@ -18,7 +23,7 @@ namespace Fdw.Services.Data;
 /// <see cref="IConnectionFactory"/> implementation (and optionally an <see cref="ISecretManager"/>)
 /// at registration time, which the ServiceTypeCollection 3-phase cannot do cleanly.
 /// </summary>
-public static class ConfigurationGatewayExtensions
+public static partial class ConfigurationGatewayExtensions
 {
     // Why: Centralized JsonSerializerOptions for configurationSchema.json deserialization.
     // PropertyNameCaseInsensitive so JSON written with either casing round-trips cleanly.
@@ -78,7 +83,8 @@ public static class ConfigurationGatewayExtensions
                 sp.GetRequiredService<ConfigurationSchema>(),
                 sp.GetService<ILogger<ConfigurationGateway>>(),
                 sp.GetService<DataGatewayResultCache>(),
-                sp.GetService<IOptions<DataGatewayOptions>>()));
+                sp.GetService<IOptions<DataGatewayOptions>>(),
+                sp.GetService<IAuthenticationContextAccessor>()));
         return services;
     }
 
@@ -173,7 +179,8 @@ public static class ConfigurationGatewayExtensions
                 sp.GetRequiredService<ConfigurationSchema>(),
                 sp.GetService<ILogger<ConfigurationGateway>>(),
                 sp.GetService<DataGatewayResultCache>(),
-                sp.GetService<IOptions<DataGatewayOptions>>()));
+                sp.GetService<IOptions<DataGatewayOptions>>(),
+                sp.GetService<IAuthenticationContextAccessor>()));
         return services;
     }
 
@@ -207,9 +214,11 @@ public static class ConfigurationGatewayExtensions
         ConfigurationSchemaRoot? root;
         try
         {
-            root = JsonSerializer.Deserialize<ConfigurationSchemaRoot>(jsonBytes, _schemaJsonOptions);
+            root = JsonSerializer.Deserialize<ConfigurationSchemaRoot>(
+                ResolveEnvironmentPlaceholders(Encoding.UTF8.GetString(jsonBytes), jsonFilePath),
+                _schemaJsonOptions);
         }
-        catch (Exception ex)
+        catch (JsonException ex)
         {
             throw new InvalidOperationException(
                 $"Failed to deserialize configurationSchema.json from '{jsonFilePath}': {ex.Message}", ex);
@@ -220,5 +229,50 @@ public static class ConfigurationGatewayExtensions
                 $"configurationSchema.json at '{jsonFilePath}' is missing the 'ConfigurationSchema' root object.");
 
         return root.ConfigurationSchema;
+    }
+
+    // Why: configurationSchema.json ships in source control and is published publicly, so
+    // deployment-specific values — server addresses above all — cannot be committed literally.
+    // A ${VAR} placeholder names the environment variable that supplies the value at startup,
+    // which keeps the file identical across every environment and keeps infrastructure detail
+    // out of the repository.
+    //
+    // An unset variable is a hard failure, never a blank. Substituting empty would produce a
+    // schema that deserializes cleanly and then fails much later as an opaque connection error
+    // pointing at the wrong layer; this reports the variable name at the point of absence.
+    // Every missing name is collected before throwing so a misconfigured deployment is fixed in
+    // one pass rather than one restart per variable.
+    [GeneratedRegex(
+        @"\$\{(?<name>[A-Za-z_][A-Za-z0-9_]*)\}",
+        RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture,
+        matchTimeoutMilliseconds: 1000)]
+    private static partial Regex EnvironmentPlaceholder();
+
+    private static string ResolveEnvironmentPlaceholders(string json, string jsonFilePath)
+    {
+        var missing = new List<string>();
+
+        var resolved = EnvironmentPlaceholder().Replace(json, match =>
+        {
+            var value = Environment.GetEnvironmentVariable(match.Groups["name"].Value);
+            if (string.IsNullOrEmpty(value))
+            {
+                missing.Add(match.Groups["name"].Value);
+                return match.Value;
+            }
+
+            // Why: the placeholder sits inside a JSON string literal, so the substituted value is
+            // escaped for that context — otherwise a value containing a quote or backslash would
+            // produce invalid JSON, or let an environment variable inject schema structure.
+            return JsonEncodedText.Encode(value).ToString();
+        });
+
+        if (missing.Count > 0)
+            throw new InvalidOperationException(
+                $"configurationSchema.json at '{jsonFilePath}' references environment variable(s) that are not set: " +
+                $"{string.Join(", ", missing.Distinct(StringComparer.Ordinal))}. " +
+                "Set them in the host environment before starting the application.");
+
+        return resolved;
     }
 }

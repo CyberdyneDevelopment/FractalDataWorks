@@ -5,6 +5,7 @@ using Fdw.Collections;
 using Fdw.Services.Agents.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Fdw.Results;
 
 namespace Fdw.Services.Agents;
 
@@ -32,7 +33,7 @@ public sealed class DefaultAgentActionServiceType : AgentActionTypeBase<IGeneric
             // Why Scoped: AgentActionService requires IDataGateway (scoped) via constructor injection.
             // Consumed directly by per-request endpoints — no parent provider indirection to preserve.
             builder.Services.AddScoped<IAgentActionService, AgentActionService>();
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

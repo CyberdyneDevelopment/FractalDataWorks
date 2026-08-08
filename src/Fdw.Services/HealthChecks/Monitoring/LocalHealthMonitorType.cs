@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Services.HealthChecks.Monitoring;
 
@@ -40,7 +41,7 @@ public sealed class LocalHealthMonitorType
             builder.Services.AddOptions<HealthMonitorSelectionOptions>()
                 .BindConfiguration(HealthMonitorSelectionOptions.SectionName);
     
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -50,7 +51,7 @@ public sealed class LocalHealthMonitorType
             // Why: RegisterFactory (below) requires the domain config provider to already be registered.
             // Idempotent TryAdd inside — every health monitor option calls it, first registration wins.
             HealthMonitorConfigurationProvider.RegisterDomainConfiguration(builder.Services);
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
+using Fdw.Results;
+using Microsoft.Extensions.Hosting;
 
 namespace Fdw.Services.HealthChecks.Monitoring;
 
@@ -63,7 +65,15 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
         var sweepOptions = RegisterFunc;
         Registration((builder, loggerFactory) =>
         {
-            sweepOptions(builder, loggerFactory);
+            // Why the sweep's result is read and returned: this body composes ONTO the default sweep,
+            // and it used to discard what the sweep returned — so an option that failed to register was
+            // followed by this method registering the provider anyway and reporting success. The
+            // provider would then resolve and serve a collection that is missing a member. Stopping
+            // here means the caller learns about the first failure instead of a later, stranger one.
+            var swept = sweepOptions(builder, loggerFactory);
+            if (swept.IsFailure)
+                return swept;
+
             builder.Services.AddScoped<IHealthMonitorProvider>(sp =>
             {
                 var provider = new DefaultHealthMonitorProvider(
@@ -91,7 +101,7 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
                 }
                 return provider;
             });
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
     }
 }

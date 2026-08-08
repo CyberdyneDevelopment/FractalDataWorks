@@ -145,7 +145,9 @@
     <!-- FDW010 (MisplacedImplementationType): implementation-specific types in base/abstractions assemblies; kept non-error so existing violations surface but don't break the build, pending architectural review. NOTE: FDW010 is NOT a fallback rule — the no-`??`-fallback rule is enforced by convention/review + FDW002/003/004. -->
     <!-- FDW022 (SwallowedException): warnings-only during gradual adoption, promote to error after remediation. FDW023 (broad catch survey) is Info, never an error. -->
     <!-- TC001 (MissingTypeOptionAnalyzer, Fdw.ServiceTypes.Analyzers/Fdw.Collections.Analyzers): Warning-by-design; newly wired globally, fires on pre-existing TypeCollection-derived types missing [TypeOption] — warnings-only during gradual adoption, promote to error after remediation. -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);FDW010;FDW012;FDW013;FDW014;FDW015;FDW016;FDW017;FDW018;FDW019;FDW022;TC001</WarningsNotAsErrors>
+    <!-- FDW046 (InlineStyleAttribute) / FDW047 (RawSvgMarkup): .razor markup conventions over Fdw.UI.Pages and the *.Components packages. They land on a corpus of ~868 inline style attributes and ~133 raw svg elements, so warnings-only during remediation; promote to error once the markup is cleaned up. These are external-file diagnostics — #pragma inside the .razor cannot suppress them, only NoWarn/.editorconfig. -->
+    <!-- FDW048 (LocalStatusClassMapper): component-local value-to-CSS-class helpers in Fdw.UI.Pages (23 today) — warnings-only until the mapping moves to a shared component/helper, promote to error after remediation. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);FDW010;FDW012;FDW013;FDW014;FDW015;FDW016;FDW017;FDW018;FDW019;FDW022;FDW046;FDW047;FDW048;TC001</WarningsNotAsErrors>
     <WarningLevel>4</WarningLevel>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <RunAnalyzers>true</RunAnalyzers>

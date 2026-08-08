@@ -50,4 +50,23 @@ public static partial class DataGatewayCacheLog
         string commandType,
         string containerName,
         string error);
+
+    /// <summary>
+    /// Logs when the cache partition for the calling principal cannot be resolved, so the read
+    /// cannot be safely cached or served from cache.
+    /// </summary>
+    /// <remarks>
+    /// Error, not warning, and the caller fails the read rather than continuing uncached: an
+    /// unresolvable partition means the gateway cannot tell which callers may share a result. A
+    /// read that proceeds without one either poisons the cache for other principals or is served a
+    /// result belonging to a different visibility scope, so there is no safe degraded mode.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 91003,
+        Level = LogLevel.Error,
+        Message = "DataGateway cannot resolve a cache partition for connection '{connectionName}': {reason}")]
+    public static partial IGenericMessage CachePartitionUnavailable(
+        ILogger logger,
+        string connectionName,
+        string reason);
 }

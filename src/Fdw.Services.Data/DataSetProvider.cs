@@ -46,14 +46,14 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     /// <param name="builder">The host application builder.</param>
     /// <param name="loggerFactory">Optional logger factory for startup diagnostics.</param>
     /// <returns>The builder, for chaining.</returns>
-    public static IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
     {
         if (loggerFactory != null)
         {
             DataStoreTypesLog.ConfiguredDataSetOptionsBindings(loggerFactory.CreateLogger<DataSetProvider>());
         }
 
-        return builder;
+        return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
     /// <summary>
@@ -62,7 +62,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     /// </summary>
     /// <param name="builder">The host application builder.</param>
     /// <param name="loggerFactory">Optional logger factory for startup diagnostics.</param>
-    public static IHostApplicationBuilder Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
     {
         var services = builder.Services;
         // Why: the DataSet domain registers the gateway-backed DataSetConfigurationProvider it
@@ -100,7 +100,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
             DataStoreTypesLog.RegisteredDataSetInfrastructure(loggerFactory.CreateLogger<DataSetProvider>());
         }
 
-        return builder;
+        return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
     /// <summary>
@@ -109,7 +109,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     /// </summary>
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">Optional logger factory.</param>
-    public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
         var logger = loggerFactory?.CreateLogger<DataSetProvider>()
             ?? host.Services.GetRequiredService<ILoggerFactory>().CreateLogger<DataSetProvider>();
@@ -121,7 +121,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         // into DataSetTypes is deleted — it froze runtime-created datasets out of execution).
         DataSetTypesLog.DataSetTypesInitializedNoConfig(logger, DataSetTypes.All().Count);
     
-        return host;
+        return GenericResult<IHost>.Success(host);
     }
 
     // ============================================================

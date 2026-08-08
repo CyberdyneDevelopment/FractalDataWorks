@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Web.Search.Clients;
 
@@ -26,7 +27,7 @@ public sealed class SearchClientType : ApiClientTypeBase<SearchApiClient>
         Configuration(builder =>
         {
             builder.Services.AddApiHttpClient(builder.Configuration, Name);
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -37,7 +38,7 @@ public sealed class SearchClientType : ApiClientTypeBase<SearchApiClient>
                 var logger = sp.GetService<ILogger<SearchApiClient>>() ?? NullLogger<SearchApiClient>.Instance;
                 return new SearchApiClient(factory.CreateClient(Name), logger);
             });
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
  }
 

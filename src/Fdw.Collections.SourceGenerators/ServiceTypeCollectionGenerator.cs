@@ -685,8 +685,8 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         bodySb.AppendLine("        /// <summary>Phase 2 — registers this domain's provider, then sweeps the options.</summary>");
         bodySb.AppendLine("        /// <param name=\"builder\">The host application builder.</param>");
         bodySb.AppendLine("        /// <param name=\"loggerFactory\">The host's logger factory, when one is available.</param>");
-        bodySb.AppendLine("        /// <returns>The builder, for chaining.</returns>");
-        bodySb.AppendLine("        public static new IHostApplicationBuilder Register(");
+        bodySb.AppendLine("        /// <returns>The builder on success; a failure carrying the reason otherwise.</returns>");
+        bodySb.AppendLine("        public static new Fdw.Results.IGenericResult<IHostApplicationBuilder> Register(");
         bodySb.AppendLine("            IHostApplicationBuilder builder,");
         bodySb.AppendLine("            ILoggerFactory? loggerFactory = null)");
         bodySb.AppendLine("        {");

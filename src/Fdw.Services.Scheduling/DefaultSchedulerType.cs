@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Services.Scheduling;
 
@@ -61,10 +62,10 @@ public sealed class DefaultSchedulerType
             var parentRegResult = provider.Register(configProvider);
             if (!factoryRegResult.IsSuccess || !configRegResult.IsSuccess || !parentRegResult.IsSuccess)
             {
-                return host;
+                return GenericResult<IHost>.Success(host);
             }
     
-            return host;
+            return GenericResult<IHost>.Success(host);
         });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -102,7 +103,7 @@ public sealed class DefaultSchedulerType
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<ScheduleConfiguration>>(
                 sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
 
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

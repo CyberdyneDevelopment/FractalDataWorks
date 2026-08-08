@@ -61,14 +61,14 @@ public sealed class RoslynWorkspaceConnectionType
                 .Register(
                     Name, services.GetRequiredService<RoslynWorkspaceConnectionConfigurationProvider>());
     
-            return host;
+            return GenericResult<IHost>.Success(host);
         });
 
         Configuration(builder =>
         {
 
     
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -93,7 +93,7 @@ public sealed class RoslynWorkspaceConnectionType
             // kind calls this; RoslynWorkspace did not, so in a host where it was the only registered
             // connection kind the header provider was never registered at all.
             ConnectionConfigurationProvider.RegisterDomainConfiguration(builder.Services);
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

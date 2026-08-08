@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Agents.Clients;
 
@@ -25,7 +26,7 @@ public sealed class AgentActionClientType : ApiClientTypeBase<AgentActionClient>
         Configuration(builder =>
         {
             builder.Services.AddApiHttpClient(builder.Configuration, Name);
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -36,7 +37,7 @@ public sealed class AgentActionClientType : ApiClientTypeBase<AgentActionClient>
                 var logger = sp.GetService<ILogger<AgentActionClient>>() ?? NullLogger<AgentActionClient>.Instance;
                 return new AgentActionClient(factory.CreateClient(Name), logger);
             });
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
  }
 

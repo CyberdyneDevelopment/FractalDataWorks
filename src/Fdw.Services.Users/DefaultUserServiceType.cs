@@ -17,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using Fdw.Results;
 
 namespace Fdw.Services.Users;
 
@@ -55,7 +56,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
             // provider constructor resolves correctly. means the snapshot
             // is always empty — the gateway is the authoritative source at runtime.
     
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -98,7 +99,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
             // Why: the credential edge hashes-on-arrival and forwards derived hashes to the password
             // credential service (the vault peppers + compares). No command façade — the verbs are the surface.
             builder.Services.TryAddScoped<IUserCredentialService, UserCredentialService>();
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

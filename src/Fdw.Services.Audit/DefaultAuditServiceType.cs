@@ -6,6 +6,7 @@ using Fdw.Services.Audit.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Fdw.Results;
 
 namespace Fdw.Services.Audit;
 
@@ -30,7 +31,7 @@ public sealed class DefaultAuditServiceType : AuditServiceTypeBase
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
         {
             builder.Services.TryAddScoped<IAuditService, AuditService>();
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

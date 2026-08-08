@@ -1,4 +1,5 @@
 using System;
+using Fdw.Results;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -35,9 +36,21 @@ public interface IServiceTypeRegistration : ITypeOption
     /// <summary>Gets the default container (table) name for this option's configuration provider.</summary>
     string DefaultContainerName { get; }
 
-    /// <summary>Phase 1 — binds this option's configuration.</summary>
+    // ── Why every phase returns a result ────────────────────────────────────────────────────────
+    // These returned the builder or the host, which left no way to say "this did not work" — so the
+    // only report a failing phase could make was an exception, and an exception decides for the
+    // consumer that the process ends. That is the framework taking a decision that belongs to the
+    // application: a host may want to abort on a failed domain, or log it and run degraded, and it
+    // can only choose if it is handed the failure instead of being unwound by it.
+    //
+    // The value is still carried, so chaining survives — a successful phase yields the same builder
+    // or host it was given. What changes is that the caller can inspect IsSuccess first, and the
+    // messages and result code that explain a failure travel with it rather than in a stack trace.
+
+    /// <summary>Binds this option's configuration.</summary>
     /// <param name="builder">The host application builder.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
+    /// <returns>The builder on success; a failure carrying the reason otherwise.</returns>
     // Why the builder rather than (IServiceCollection, IConfiguration): it carries both, so an option
     // that needs to read IConfiguration can, while the common case just uses builder.Services. Passing
     // the narrower pair would decide for every option that it never needs anything else.
@@ -45,27 +58,27 @@ public interface IServiceTypeRegistration : ITypeOption
     // Why the logger factory is here as well as on the other two phases: without it this phase alone
     // could not say which body it ran, and a phase that cannot report is the one whose silent failure
     // takes longest to find.
-    IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null);
+    IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null);
 
-    /// <summary>Phase 2 — registers this option's factory and configuration provider.</summary>
+    /// <summary>Registers this option's factory and configuration provider.</summary>
     /// <param name="builder">The host application builder.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <param name="dataStoreName">Where this option's configuration rows live.</param>
     /// <param name="pathName">The schema holding this option's configuration rows.</param>
     /// <param name="containerName">The table holding this option's configuration rows.</param>
-    /// <returns>The builder, for chaining.</returns>
+    /// <returns>The builder on success; a failure carrying the reason otherwise.</returns>
     // Why the builder here too: Register runs before Build(), same as Configure, so an option that
     // needs IConfiguration while registering can reach it rather than being handed Services alone.
-    IHostApplicationBuilder Register(
+    IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory,
         string dataStoreName,
         string pathName,
         string containerName);
 
-    /// <summary>Phase 3 — post-Build initialization for this option.</summary>
+    /// <summary>Post-Build initialization for this option.</summary>
     /// <param name="host">The built host. Its <c>Services</c> is the provider this phase used to take.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
-    /// <returns>The host, for chaining.</returns>
-    IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null);
+    /// <returns>The host on success; a failure carrying the reason otherwise.</returns>
+    IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null);
 }

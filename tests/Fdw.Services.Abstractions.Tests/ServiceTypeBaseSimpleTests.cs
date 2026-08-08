@@ -73,7 +73,7 @@ public class ServiceTypeBaseSimpleTests
         {
 
                 RegisterConfiguration(builder.Services);
-                return builder;
+                return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
         }

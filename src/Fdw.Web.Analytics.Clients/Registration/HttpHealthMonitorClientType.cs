@@ -50,7 +50,7 @@ public sealed class HttpHealthMonitorClientType
             // so a host can point health monitoring at a different endpoint from its other API clients.
             builder.Services.AddApiHttpClient(builder.Configuration, "HealthMonitorClient");
     
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -58,7 +58,7 @@ public sealed class HttpHealthMonitorClientType
             DefaultHealthMonitorProvider.Register(Name, sp => sp.GetRequiredService<HttpHealthMonitorFactory>());
             builder.Services.TryAddSingleton<HttpHealthMonitorFactory>();
             HealthMonitorConfigurationProvider.RegisterDomainConfiguration(builder.Services);
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

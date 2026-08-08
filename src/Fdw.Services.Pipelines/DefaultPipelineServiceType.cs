@@ -3,6 +3,7 @@ using Fdw.Collections;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Services.Pipelines;
 
@@ -28,7 +29,7 @@ public sealed class DefaultPipelineServiceType : PipelineServiceTypeBase
         {
 
             PipelineServiceConfigurationProvider.RegisterDomainConfiguration(builder.Services);
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

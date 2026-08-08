@@ -74,7 +74,7 @@ public class ServiceTypeBaseConfigurationTests
         {
 
                 RegisterConfiguration(builder.Services);
-                return builder;
+                return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
         }

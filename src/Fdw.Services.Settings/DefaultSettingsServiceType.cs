@@ -15,6 +15,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Services.Settings;
 
@@ -43,7 +44,7 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
             builder.Services.Configure<List<TenantSettingConfiguration>>(builder.Configuration.GetSection("Settings:TenantSetting"));
             builder.Services.Configure<List<RoleSettingConfiguration>>(builder.Configuration.GetSection("Settings:RoleSetting"));
     
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -55,7 +56,7 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
             builder.Services.TryAddSingleton<SettingsConfigurationProvider>();
 
             builder.Services.TryAddSingleton<IEffectiveSettingsProvider, DefaultEffectiveSettingsProvider>();
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

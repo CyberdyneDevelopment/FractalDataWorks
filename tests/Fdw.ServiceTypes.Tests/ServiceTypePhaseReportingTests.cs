@@ -5,13 +5,14 @@ using Fdw.Collections;
 using Fdw.ServiceTypes.Tests.TestDoubles;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.ServiceTypes.Tests;
 
 /// <summary>
 /// Covers what the phase invokers report: whether the body about to run is the framework's or an
 /// application's, the position of the collection in the phase and of the option within the
-/// collection, and that a body which throws is logged before the throw continues.
+/// collection, and that a body which throws is logged and converted into a failure result.
 /// </summary>
 /// <remarks>
 /// Each test closes over its OWN interface, because the flags and the funcs are static on a generic
@@ -22,6 +23,8 @@ public class ServiceTypePhaseReportingTests
     public interface IDefaultCase : IServiceTypeRegistration;
     public interface IReplacedCase : IServiceTypeRegistration;
     public interface IThrowingCase : IServiceTypeRegistration;
+    public interface ICodedCase : IServiceTypeRegistration;
+    public interface IPassThroughCase : IServiceTypeRegistration;
     public interface ISweepCase : IServiceTypeRegistration;
 
     public abstract class OptionBase;
@@ -35,6 +38,8 @@ public class ServiceTypePhaseReportingTests
     { public static bool RegisterCustom => RegistrationIsCustom; }
 
     private sealed class ThrowingCaseCollection : ServiceTypeCollectionBase<OptionBase, IThrowingCase>;
+    private sealed class CodedCaseCollection : ServiceTypeCollectionBase<OptionBase, ICodedCase>;
+    private sealed class PassThroughCaseCollection : ServiceTypeCollectionBase<OptionBase, IPassThroughCase>;
 
     private sealed class SweepCaseCollection : ServiceTypeCollectionBase<OptionBase, ISweepCase>;
 
@@ -63,7 +68,7 @@ public class ServiceTypePhaseReportingTests
         ServiceTypeCollectionBase<OptionBase, IReplacedCase>.Registration((builder, loggerFactory) =>
         {
             ran = true;
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
         ServiceTypeCollectionBase<OptionBase, IReplacedCase>.Register(NewBuilder(), log);
 
@@ -87,18 +92,56 @@ public class ServiceTypePhaseReportingTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void CollectionLogsThenRethrowsWhenTheBodyThrows()
+    public void CollectionLogsThenReturnsAFailureWhenTheBodyThrows()
     {
         var log = new CapturingLoggerFactory();
         ServiceTypeCollectionBase<OptionBase, IThrowingCase>.Registration(
             (builder, loggerFactory) => throw new InvalidOperationException("phase blew up"));
 
-        // Why the throw must survive: these phases return the builder, so there is no failure value to
-        // hand back. Swallowing here would let a half-registered domain reach a running application.
-        Should.Throw<InvalidOperationException>(
-            () => ServiceTypeCollectionBase<OptionBase, IThrowingCase>.Register(NewBuilder(), log));
+        // Why the throw must NOT survive: ending the process is a decision about this application, and
+        // the framework is not the thing entitled to make it. The phase converts the exception into a
+        // failure the caller has to read to get the builder back out of — so a half-registered domain
+        // still cannot reach a running application by accident, but "abort" versus "run without this
+        // domain" stays the host's call.
+        var result = ServiceTypeCollectionBase<OptionBase, IThrowingCase>.Register(NewBuilder(), log);
 
+        result.IsSuccess.ShouldBeFalse();
         log.Messages.ShouldContain(m => m.Contains("FAILED", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "CoreFramework")]
+    public void CollectionFailureCarriesTheResultCodeThatNamesThePhase()
+    {
+        var log = new CapturingLoggerFactory();
+        ServiceTypeCollectionBase<OptionBase, ICodedCase>.Registration(
+            (builder, loggerFactory) => throw new InvalidOperationException("phase blew up"));
+
+        // Why the code matters as well as the failure: a caller deciding whether to abort needs to tell
+        // "a phase crashed" from "a domain deliberately refused", and the code is what carries that
+        // distinction across the boundary. A bare IsSuccess=false says only that something went wrong.
+        var result = ServiceTypeCollectionBase<OptionBase, ICodedCase>.Register(NewBuilder(), log);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages.ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "CoreFramework")]
+    public void CollectionSucceedsAndHandsBackTheBuilderItWasGiven()
+    {
+        var log = new CapturingLoggerFactory();
+        var builder = NewBuilder();
+
+        // Why this is worth pinning next to the failure cases: wrapping the phases in a result is only
+        // safe if the success path still yields the same builder. If it did not, every chained caller
+        // would silently configure a different builder than the one it later builds.
+        var result = ServiceTypeCollectionBase<OptionBase, IPassThroughCase>.Configure(builder, log);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBeSameAs(builder);
     }
 
     [Fact]

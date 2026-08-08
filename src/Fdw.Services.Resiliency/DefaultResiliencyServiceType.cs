@@ -6,6 +6,7 @@ using Fdw.Services.Resiliency.Factories;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Fdw.Results;
 
 namespace Fdw.Services.Resiliency;
 
@@ -38,7 +39,7 @@ public sealed class DefaultResiliencyServiceType : ResiliencyServiceTypeBase
             builder.Services.TryAddSingleton<IResiliencyPipelineFactory, ResiliencyPipelineFactory>();
             builder.Services.TryAddSingleton<IResiliencyPolicyProvider, EmptyResiliencyPolicyProvider>();
             builder.Services.TryAddSingleton<IResiliencyExecutor, ResiliencyExecutor>();
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }
