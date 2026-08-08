@@ -4,7 +4,12 @@
     <div class="mt">
         <span class="lbl">@Title</span>
         <span class="ic @GetIconColor()">
-            <Icon Name="@GetIconName()" />
+@* Why StrokeWidth is explicit here: the markup this replaced carried stroke-width="1.7" on the
+   <svg> itself, which its paths inherited. The glyphs are registered with no stroke-width so
+   other call sites can inherit from CSS, so without this the 1.7 would only survive because
+   console.css happens to set the same value on .metric .mt .ic svg — correct on the reference
+   skin, silently 1 on any other host. Equivalence should not depend on the skin. *@
+            <Icon Name="@GetIconName()" StrokeWidth="1.7" />
         </span>
     </div>
     <div class="row">
