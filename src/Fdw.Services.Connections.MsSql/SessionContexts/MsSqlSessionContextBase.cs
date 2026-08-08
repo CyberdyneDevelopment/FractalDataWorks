@@ -34,6 +34,17 @@ namespace Fdw.Services.Connections.MsSql;
 public abstract class MsSqlSessionContextBase : TypeOptionBase<int, ISessionContext>, ISessionContext
 {
     /// <summary>
+    /// Identifies this scheme in the cache-partition tokens its options produce, keeping them
+    /// disjoint from every other scheme's.
+    /// </summary>
+    /// <remarks>
+    /// Names the <i>scheme</i>, not the connection kind: a consumer talking to SQL Server under a
+    /// different row-level-security design ships its own option base with its own prefix, and its
+    /// tokens must never collide with these even though both kinds are "MsSql".
+    /// </remarks>
+    private const string SchemePartitionPrefix = "mssql-rls";
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="MsSqlSessionContextBase"/> class.
     /// </summary>
     /// <param name="id">The unique identifier for this session context.</param>
@@ -58,6 +69,43 @@ public abstract class MsSqlSessionContextBase : TypeOptionBase<int, ISessionCont
     /// </summary>
     /// <param name="authenticationContext">The authentication context this plan is built from.</param>
     public abstract SessionContextPlan Plan(IAuthenticationContext? authenticationContext);
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    /// <b>Derived from <see cref="Plan"/>, and deliberately not overridable.</b> The plan already is
+    /// the complete description of what this scheme tells the store about the caller — every
+    /// <c>SESSION_CONTEXT</c> key <see cref="Apply"/> sets comes from it, and
+    /// <c>security.fn_TenantFilter</c> reads exactly those keys and nothing else. So the visibility
+    /// scope is a total function of the plan, and computing the partition from the plan makes the
+    /// two incapable of disagreeing. An option that computed a partition independently could drift
+    /// from the session it actually applies, which is precisely the defect this member exists to
+    /// prevent; sealing it removes that possibility rather than relying on a test to catch it.
+    /// </para>
+    /// <para>
+    /// All five plan fields participate. <c>UserId</c> alone is insufficient: <c>TenantId</c> and
+    /// <c>CrossTenant</c> select between the predicate's strict and cross-tenant modes, and
+    /// <c>CanReadSecrets</c> gates restricted system rows — two callers identical but for that flag
+    /// legitimately see different rows and must not share a cache entry.
+    /// </para>
+    /// <para>
+    /// The scheme prefix keeps these tokens disjoint from any other scheme's. Option names are
+    /// scheme-local (another scheme may also name an option <c>ForUser</c> and mean something
+    /// different), so the prefix, not the name, is what makes the token globally unambiguous.
+    /// </para>
+    /// </remarks>
+    public string CachePartition(IAuthenticationContext? authenticationContext)
+    {
+        var plan = Plan(authenticationContext);
+
+        return string.Concat(
+            SchemePartitionPrefix,
+            ":", plan.IsSystem ? "1" : "0",
+            ":", plan.UserId.ToString(),
+            ":", plan.TenantId.ToString(),
+            ":", plan.IsCrossTenant ? "1" : "0",
+            ":", plan.CanReadSecrets ? "1" : "0");
+    }
 
     /// <summary>
     /// Writes exactly this session context's <c>SESSION_CONTEXT</c> keys onto an open connection.

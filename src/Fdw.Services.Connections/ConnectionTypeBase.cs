@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Fdw.Services.Abstractions;
@@ -156,6 +158,33 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
     /// </remarks>
     public virtual IReadOnlyCollection<ISessionContext> SessionContextTypes =>
         NoSessionContextTypes.All();
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    /// Applies the declared scheme's own selection to <see cref="SessionContextTypes"/> and returns
+    /// the governing option's token. Nothing here knows which scheme that is — it reads only the
+    /// members the kind declared, so a kind that overrides <see cref="SessionContextTypes"/> gets a
+    /// correct partition with no further work, and a kind that does not gets the constant token
+    /// <c>NoSessionContextTypes</c>'s sole member returns.
+    /// </para>
+    /// <para>
+    /// Why <c>Single</c> and no "none matched" branch: <see cref="ISessionContext.Governs"/> requires
+    /// a scheme's options to partition every authentication context exhaustively and exclusively,
+    /// so exactly one governs any input. <c>Single</c> states that invariant and throws if a scheme
+    /// ever breaks it, rather than quietly picking a winner or inventing a partition — a wrong
+    /// partition here silently shares one caller's rows with another, so failing loud is the only
+    /// safe response.
+    /// </para>
+    /// <para>
+    /// A scheme needing different selection semantics overrides this method on its connection type;
+    /// the base states the common case rather than closing the set.
+    /// </para>
+    /// </remarks>
+    public virtual string CachePartition(IAuthenticationContext? authenticationContext)
+        => SessionContextTypes
+            .Single(sessionContext => sessionContext.Governs(authenticationContext))
+            .CachePartition(authenticationContext);
 
     // which registers configuration loader using IOptions<List<TConfiguration>> lookup by Name
 }

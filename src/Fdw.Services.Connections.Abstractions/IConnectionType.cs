@@ -6,6 +6,7 @@ using Fdw.Configuration;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.ServiceTypes;
+using Fdw.Services.Authentication.Abstractions.Security;
 
 namespace Fdw.Services.Connections.Abstractions;
 
@@ -66,4 +67,29 @@ public interface IConnectionType : IServiceType
     /// </para>
     /// </remarks>
     IReadOnlyCollection<ISessionContext> SessionContextTypes { get; }
+
+    /// <summary>
+    /// Gets the cache partition a caller with <paramref name="authenticationContext"/> reads under
+    /// through this connection kind — an opaque token identifying that caller's visibility scope.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Why the kind exposes this rather than consumers selecting themselves.</b> Choosing which
+    /// of <see cref="SessionContextTypes"/> governs a caller is the scheme's own rule, and the
+    /// remarks on that property forbid outside code from selecting on member names. This method is
+    /// the sanctioned way to get an answer without knowing the scheme: the kind applies its own
+    /// selection and returns only the resulting token.
+    /// </para>
+    /// <para>
+    /// <b>Opaque, and the only thing a result cache needs.</b> Callers concatenate and compare it,
+    /// never parse it. Two callers receiving equal tokens through the same kind may share a cached
+    /// result; two receiving different tokens must not. A kind with no session-context concept
+    /// returns a constant, so its results cache globally exactly as they did before this existed.
+    /// </para>
+    /// </remarks>
+    /// <param name="authenticationContext">
+    /// The authentication context of the current logical call flow, or <see langword="null"/> when
+    /// none has been established.
+    /// </param>
+    string CachePartition(IAuthenticationContext? authenticationContext);
 }
