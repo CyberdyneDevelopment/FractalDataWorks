@@ -1,0 +1,44 @@
+/* ════════════════════════════════════════════════════════════════════════
+   Fdw UI — component shapes
+   Static web asset: _content/Fdw.UI.Components/css/fdw-shapes.css
+   ════════════════════════════════════════════════════════════════════════
+
+   Why this file is separate from fdw-utilities.css:
+   that file holds primitives — one declaration, one single-token value, the
+   measured tail of the inline styles in the .razor corpus — and says in its own
+   header that multi-value shorthands are recurring component SHAPES and are
+   deliberately absent. This is that other half. Every class here was the whole
+   style attribute of one repeating block, at five sites or more.
+
+   Most of these are reached through a component that renders the block —
+   EmptyState and LoadingCard. Two are not: the square empty block appears on
+   eleven cards that carry the padding on the card element itself with no body
+   div, and the table body is a wrapper with nothing to decide. Adding a wrapper
+   element to the first, or a component that renders one div to the second, would
+   have changed markup or added indirection for no meaning, so those sites name
+   the class directly.
+
+   Why !important, same as the utilities file:
+   each rule replaces an inline style="..." of exactly these properties and
+   values. An inline declaration outranks every normal author rule regardless of
+   selector; a plain class does not. The blocks being converted sit on .card and
+   .card-b, whose own padding rule would otherwise win outright. !important is the
+   only host-independent way to keep the cascade position the inline attribute
+   had, so the replacement renders identically rather than identically-on-one-skin.
+
+   Why two spellings of the empty block:
+   the corpus contains both padding:48px and padding:48px 20px, 17 and 19 sites.
+   They are not interchangeable — 48px versus 20px of side padding moves the wrap
+   point of the message — so both ship and the component names which one it draws
+   rather than collapsing them and calling it a cleanup. */
+
+/* ── empty / not-found block: centred message in a card body ── */
+.fdw-empty        { padding: 48px 20px !important; text-align: center !important; }
+.fdw-empty-square { padding: 48px      !important; text-align: center !important; }
+
+/* ── loading block: a single centred badge in a card body ── */
+.fdw-loading { display: flex !important; justify-content: center !important; padding: 48px !important; }
+
+/* ── table body: the card body a .tbl sits in, inset tighter than a plain one ── */
+.fdw-table-body        { padding: 0 10px 12px !important; }
+.fdw-table-body-scroll { padding: 0 10px 12px !important; overflow-x: auto !important; }

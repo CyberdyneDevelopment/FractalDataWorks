@@ -7,6 +7,14 @@
 @using System.Linq
 @using System.Threading.Tasks
 @using Fdw.UI.Themes
+@using Fdw.UI.Components
+
+@* Why: the theme layer is where the class vocabulary the Fdw UI packages emit is defined, so the
+   provider that supplies the theme also supplies the stylesheet those classes come from. Rendering
+   it here — rather than leaving it to each host's App.razor — is what keeps a second skin from
+   having to re-declare the definitions. It renders a <link> and no chrome, so the provider stays
+   headless with respect to layout. *@
+<FdwUiStyles />
 
 <CascadingValue Value="_currentTheme" Name="BlazorTheme">
     @if (ChildContent is not null)

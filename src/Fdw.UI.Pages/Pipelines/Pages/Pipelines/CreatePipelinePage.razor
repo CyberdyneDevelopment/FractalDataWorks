@@ -8,16 +8,11 @@
 
         <div style="max-width:768px;margin:0 auto;">
             @* Header *@
-            <div class="pagehead">
-                <div>
-                    <div class="ey">Pipelines &amp; Scheduling · New Pipeline</div>
-                    <h1>New Pipeline</h1>
-                    <div class="sub">Engine, source, and destination — configured here; transform authoring happens on the canvas.</div>
-                </div>
-                <div class="actions">
+            <PageHeader Eyebrow="Pipelines & Scheduling · New Pipeline" Title="New Pipeline" Subtitle="Engine, source, and destination — configured here; transform authoring happens on the canvas.">
+                <Actions>
                     <a class="btn btn-ghost" href="/pipelines">Cancel</a>
-                </div>
-            </div>
+                </Actions>
+            </PageHeader>
 
             @* Step Indicator *@
             <div class="stepper">
@@ -28,7 +23,7 @@
                         <span class="num">
                             @if (stepIndex < ctx.Step)
                             {
-                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:13px;height:13px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                                <Icon Name="Check" Style="width:13px;height:13px;" />
                             }
                             else
                             {
@@ -47,13 +42,13 @@
             @if (ctx.IsComplete)
             {
                 <div class="card">
-                    <div class="card-b" style="padding:48px;text-align:center;">
+                    <EmptyState InCard="false" SquarePadding="true">
                         <div style="font-size:32px;color:var(--success);margin-bottom:14px;">✓</div>
                         <p style="color:var(--n-200);margin:0 0 16px;">Pipeline '@ctx.Name' created successfully.</p>
                         <button class="btn btn-primary" @onclick='() => Nav.NavigateTo($"/pipelines/builder/{ctx.CreatedPipelineId}")'>
                             Continue to Builder
                         </button>
-                    </div>
+                    </EmptyState>
                 </div>
             }
             else
@@ -66,8 +61,8 @@
 
                         @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
                         {
-                            <div class="danger" style="margin-bottom:16px;">
-                                <div class="t"><p class="mono" style="color:var(--signal);">@ctx.ErrorMessage</p></div>
+                            <div class="danger u-mb-16">
+                                <div class="t"><p class="mono u-fg-signal">@ctx.ErrorMessage</p></div>
                             </div>
                         }
 
@@ -91,11 +86,11 @@
                             }
                             else if (ctx.IsLoading)
                             {
-                                <p class="hint" style="font-style:italic;">Loading engine types...</p>
+                                <p class="hint u-italic">Loading engine types...</p>
                             }
                             else
                             {
-                                <p class="hint" style="font-style:italic;">No pipeline engine types are registered.</p>
+                                <p class="hint u-italic">No pipeline engine types are registered.</p>
                             }
                         }
 

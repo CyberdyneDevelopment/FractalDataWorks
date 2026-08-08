@@ -5,43 +5,36 @@
 
 <ScheduleProvider>
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Pipelines &amp; Scheduling</div>
-                <h1>Schedules</h1>
-                <div class="sub">Cron / Interval / Once / Manual. A background service dispatches due jobs through resiliency pipelines.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="Pipelines & Scheduling" Title="Schedules" Subtitle="Cron / Interval / Once / Manual. A background service dispatches due jobs through resiliency pipelines.">
+            <Actions>
                 <a href="/schedules/new" class="btn btn-primary">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
-                    </svg>
+                    <Icon Name="Add" />
                     New Schedule
                 </a>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @if (ctx.IsLoading && ctx.Schedules.Count == 0)
         {
             <div class="card">
-                <div class="card-b" style="padding:48px 20px;text-align:center;">
-                    <p class="mut" style="color:var(--n-500);">Loading schedules&hellip;</p>
-                </div>
+                <EmptyState InCard="false">
+                    <p class="mut u-fg-n500">Loading schedules&hellip;</p>
+                </EmptyState>
             </div>
         }
         else if (ctx.Schedules.Count == 0)
         {
             <div class="card">
-                <div class="card-b" style="padding:48px 20px;text-align:center;">
-                    <p style="color:var(--n-500);">No schedules configured</p>
-                </div>
+                <EmptyState InCard="false">
+                    <p class="u-fg-n500">No schedules configured</p>
+                </EmptyState>
             </div>
         }
         else
         {
             <div class="card">
                 <div class="card-h"><h3>Active Schedules</h3></div>
-                <div class="card-b" style="padding:0 10px 12px;">
+                <div class="card-b fdw-table-body">
                     <table class="tbl">
                         <thead>
                             <tr>
@@ -70,7 +63,7 @@
                                         }
                                         else
                                         {
-                                            <span style="color:var(--n-500);">Manual</span>
+                                            <span class="u-fg-n500">Manual</span>
                                         }
                                     </td>
                                     <td class="mut">@FormatDateTime(schedule.NextRunTime)</td>
@@ -84,15 +77,11 @@
                                         <div class="actions">
                                             <button class="btn btn-ghost btn-sm" title="Edit"
                                                     @onclick="() => StartEdit(schedule)">
-                                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                </svg>
+                                                <Icon Name="Edit" />
                                             </button>
                                             <button class="btn btn-ghost btn-sm" title="Delete"
                                                     @onclick="() => ctx.OnDeleteSchedule(schedule.Name)">
-                                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
+                                                <Icon Name="Delete" />
                                             </button>
                                         </div>
                                     </td>
@@ -106,7 +95,7 @@
 
         @if (_editingSchedule is not null)
         {
-            <div class="card" style="margin-top:14px;">
+            <div class="card u-mt-14">
                 <div class="card-h"><h3>Edit Schedule: @_editingSchedule.Name</h3></div>
                 <div class="card-b">
                     <div class="fgrid">

@@ -7,17 +7,13 @@
     <ChildContent Context="ctx">
         @{ CaptureContext(ctx); }
         <div style="max-width:920px;">
-            <div class="pagehead">
-                <div>
-                    <div class="ey">Transformations / Calculations / Edit</div>
-                    <h1>Edit Calculation</h1>
-                </div>
-                <div class="actions">
+            <PageHeader Eyebrow="Transformations / Calculations / Edit" Title="Edit Calculation">
+                <Actions>
                     <button class="btn btn-secondary btn-sm" @onclick='() => Nav.NavigateTo("/calculations")'>
                         Cancel
                     </button>
-                </div>
-            </div>
+                </Actions>
+            </PageHeader>
 
             @if (ctx.ErrorMessage is not null)
             {
@@ -28,14 +24,14 @@
 
             @if (_isPageLoading)
             {
-                <div class="card" style="padding:48px;text-align:center;">
-                    <span class="mono" style="color:var(--n-500);">Loading calculation…</span>
+                <div class="card fdw-empty-square">
+                    <span class="mono u-fg-n500">Loading calculation…</span>
                 </div>
             }
             else if (_loadFailed)
             {
                 <div class="card b-fail" style="padding:24px;text-align:center;">
-                    <p class="mono" style="color:var(--signal);">Failed to load calculation. It may have been deleted.</p>
+                    <p class="mono u-fg-signal">Failed to load calculation. It may have been deleted.</p>
                     <button class="btn btn-secondary btn-sm" style="margin-top:12px;" @onclick='() => Nav.NavigateTo("/calculations")'>
                         Back to Calculations
                     </button>
@@ -44,7 +40,7 @@
             else
             {
                 <!-- Basic Fields -->
-                <section class="card" style="margin-bottom:14px;">
+                <section class="card u-mb-14">
                     <div class="card-h"><h3>Basic Information</h3></div>
                     <div class="card-b">
                         <div class="frow">

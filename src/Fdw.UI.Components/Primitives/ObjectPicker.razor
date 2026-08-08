@@ -45,7 +45,7 @@
         @if (_isCreating)
         {
             <div style="display:flex;align-items:center;gap:9px;margin-top:6px;">
-                <input class="finput" style="flex:1;" @bind="_newLabel" placeholder="@(CreatePlaceholder ?? "New item name...")" />
+                <input class="finput u-flex-1" @bind="_newLabel" placeholder="@(CreatePlaceholder ?? "New item name...")" />
                 <button type="button" class="btn btn-primary btn-sm"
                         @onclick="InvokeCreate"
                         disabled="@(string.IsNullOrWhiteSpace(_newLabel))">Add</button>
@@ -54,13 +54,13 @@
         }
         else
         {
-            <button type="button" class="btn btn-secondary btn-sm" style="margin-top:6px;"
+            <button type="button" class="btn btn-secondary btn-sm u-mt-6"
                     @onclick="() => _isCreating = true"
                     disabled="@(_isLoading || Disabled)">+ Add new</button>
         }
     }
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
-        <div class="hint" style="color:var(--signal);">@_errorMessage</div>
+        <div class="hint u-fg-signal">@_errorMessage</div>
     }
 </div>

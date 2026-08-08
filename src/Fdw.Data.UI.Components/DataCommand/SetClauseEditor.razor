@@ -8,8 +8,8 @@
    Tailwind-only. *@
 
 <div style="display:flex;flex-direction:column;gap:8px;">
-    <div class="card-h" style="padding:0;">
-        <span class="flbl" style="margin-bottom:0;">SET Clauses</span>
+    <div class="card-h u-p-0">
+        <span class="flbl u-mb-0">SET Clauses</span>
         <button class="btn btn-secondary btn-sm" @onclick="AddClause">+ Add</button>
     </div>
 
@@ -46,7 +46,7 @@
                 <input class="fin mono" placeholder="value or expression"
                        value="@clause.ValueOrExpr"
                        @oninput="@(e => SetValue(idx, e.Value?.ToString() ?? string.Empty))" />
-                <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => RemoveClause(idx)">✕</button>
+                <button class="btn btn-ghost btn-sm u-fg-signal" @onclick="() => RemoveClause(idx)">✕</button>
             </div>
         }
     }

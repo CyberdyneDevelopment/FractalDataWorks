@@ -67,10 +67,15 @@ internal static class RazorMarkupAnalysis
     /// <param name="context">The additional file analysis context.</param>
     /// <param name="needle">The literal text to search for, matched case-insensitively.</param>
     /// <param name="rule">The descriptor to report.</param>
+    /// <param name="wholeElementName">
+    /// When <see langword="true"/> the needle opens an element and only matches where the tag name ends
+    /// there, so <c>&lt;svg</c> does not also match the component <c>&lt;SvgGauge&gt;</c>.
+    /// </param>
     internal static void ReportMarkupOccurrences(
         AdditionalFileAnalysisContext context,
         string needle,
-        DiagnosticDescriptor rule)
+        DiagnosticDescriptor rule,
+        bool wholeElementName = false)
     {
         // Why: additional files carry every non-compiled item the project feeds the compiler, not just
         // .razor — filter on the extension rather than assuming the item order or count.
@@ -96,6 +101,9 @@ internal static class RazorMarkupAnalysis
                 if (!scanner.IsMarkup(line.Start + column))
                     continue;
 
+                if (wholeElementName && ContinuesTagName(lineText, column + needle.Length))
+                    continue;
+
                 context.ReportDiagnostic(Diagnostic.Create(
                     rule,
                     Location.Create(
@@ -106,5 +114,25 @@ internal static class RazorMarkupAnalysis
                             new LinePosition(line.LineNumber, column + needle.Length)))));
             }
         }
+    }
+
+    /// <summary>
+    /// Determines whether the tag name that began before <paramref name="position"/> carries on past it.
+    /// </summary>
+    /// <param name="lineText">The markup line being scanned.</param>
+    /// <param name="position">The offset just past the matched needle.</param>
+    /// <returns><see langword="true"/> when the element name continues; otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// A tag name runs to whitespace, <c>&gt;</c>, or the <c>/</c> of a self-closing tag; a name character
+    /// there means the match landed inside a longer name — a component whose name merely starts with the
+    /// needle — and not on the element the rule is about.
+    /// </remarks>
+    private static bool ContinuesTagName(string lineText, int position)
+    {
+        if (position >= lineText.Length)
+            return false;
+
+        var next = lineText[position];
+        return char.IsLetterOrDigit(next) || next == '-' || next == '_' || next == '.' || next == ':';
     }
 }

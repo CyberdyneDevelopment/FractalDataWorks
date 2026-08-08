@@ -21,7 +21,7 @@
                 </div>
                 <div class="dhead">
                     <div class="ic">
-                        <svg fill="none" viewBox="0 0 24 24" stroke="#d99a3f"><path stroke-linecap="round" stroke-linejoin="round" d="M5 4h14v5H5zM5 11h14v5H5zM7 6.5h.01M7 13.5h.01" /></svg>
+                        <Icon Name="Server" />
                     </div>
                     <h1>@Name</h1>
                     @if (ctx.DataStore != null)
@@ -33,9 +33,7 @@
             <div class="actions">
                 <button class="btn btn-secondary" @onclick="() => ctx.DrillDown.OnRefresh()">Refresh</button>
                 <button class="btn btn-secondary" @onclick='() => Nav.NavigateTo($"/datastores/{Name}/edit")'>
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
+                    <Icon Name="Edit" />
                     Edit
                 </button>
             </div>
@@ -117,10 +115,10 @@
 
                         @if (ctx.SelectedPath.Containers.Count > 0)
                         {
-                            <div style="height:14px;"></div>
+                            <div class="u-h-14"></div>
                             <div class="card">
                                 <div class="card-h"><h3>Containers</h3></div>
-                                <div class="card-b" style="padding:0 10px 12px;">
+                                <div class="card-b fdw-table-body">
                                     <table class="tbl">
                                         <thead>
                                             <tr>
@@ -146,7 +144,7 @@
                             </div>
                         }
 
-                        <div style="height:14px;"></div>
+                        <div class="u-h-14"></div>
                         <div class="card">
                             <div class="card-h"><h3>Add Container</h3></div>
                             <div class="card-b">
@@ -204,10 +202,10 @@
 
                         @if (ctx.SelectedContainer.Fields.Count > 0)
                         {
-                            <div style="height:14px;"></div>
+                            <div class="u-h-14"></div>
                             <div class="card">
                                 <div class="card-h"><h3>Fields</h3></div>
-                                <div class="card-b" style="padding:0 10px 12px;">
+                                <div class="card-b fdw-table-body">
                                     <table class="tbl">
                                         <thead>
                                             <tr>
@@ -304,7 +302,7 @@
                         </div>
                     </div>
 
-                    <div style="height:14px;"></div>
+                    <div class="u-h-14"></div>
                     <div class="card">
                         <div class="card-h"><h3>Actions</h3></div>
                         <div class="card-b">
@@ -342,10 +340,7 @@
                 <span style="margin-right:4px;flex-shrink:0;color:var(--n-500);"
                       @onclick="() => ctx.DrillDown.OnToggleExpand(node)"
                       @onclick:stopPropagation="true">
-                    <svg style="@($"width:14px;height:14px;transition:transform .12s;{(node.IsExpanded ? "transform:rotate(90deg);" : "")}")"
-                         fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
+                    <Icon Name="ChevronRight" Style="@($"width:14px;height:14px;transition:transform .12s;{(node.IsExpanded ? "transform:rotate(90deg);" : "")}")" />
                 </span>
             }
             else

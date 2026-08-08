@@ -13,7 +13,7 @@
             {
                 <div class="card @(_runBannerIsError ? "b-fail" : "b-ok")" style="margin-bottom:14px;padding:11px 16px;display:flex;justify-content:space-between;align-items:center;"
                      role="alert">
-                    <span class="mono" style="font-size:12px;">@_runBanner</span>
+                    <span class="mono u-fs-12">@_runBanner</span>
                     <button class="btn btn-ghost btn-sm" @onclick="() => _runBanner = null" title="Dismiss">✕</button>
                 </div>
             }
@@ -26,9 +26,7 @@
                 </div>
                 <div class="actions">
                     <a href="/pipelines/new" class="btn btn-primary">
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
-                        </svg>
+                        <Icon Name="Add" />
                         New Pipeline
                     </a>
                 </div>
@@ -36,21 +34,21 @@
 
             @if (provider.IsLoading && !provider.Pipelines.Any())
             {
-                <div class="card" style="padding:48px;text-align:center;">
-                    <span class="mono" style="color:var(--n-500);">Loading pipelines…</span>
+                <div class="card fdw-empty-square">
+                    <span class="mono u-fg-n500">Loading pipelines…</span>
                 </div>
             }
             else if (!provider.Pipelines.Any())
             {
-                <div class="card" style="padding:48px;text-align:center;">
-                    <p style="color:var(--n-500);">No pipelines configured</p>
+                <div class="card fdw-empty-square">
+                    <p class="u-fg-n500">No pipelines configured</p>
                 </div>
             }
             else
             {
                 <div class="card">
                     <div class="card-h"><h3>All Pipelines</h3></div>
-                    <div class="card-b" style="padding:0 10px 12px;">
+                    <div class="card-b fdw-table-body">
                         <table class="tbl">
                             <thead>
                                 <tr>
@@ -73,14 +71,10 @@
                                             <button class="btn btn-ghost btn-sm"
                                                     @onclick="() => RunPipeline(provider, p.Name)"
                                                     title="Execute">
-                                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                                </svg>
+                                                <Icon Name="Play" />
                                             </button>
                                             <a href="/pipelines/builder/@p.Id" class="btn btn-ghost btn-sm" title="Edit">
-                                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                </svg>
+                                                <Icon Name="Edit" />
                                             </a>
                                         </td>
                                     </tr>

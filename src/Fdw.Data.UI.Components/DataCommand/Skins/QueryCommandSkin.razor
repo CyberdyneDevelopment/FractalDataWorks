@@ -24,10 +24,10 @@ else
 {
     <div style="display:flex;flex-direction:column;gap:12px;">
         @* FROM clause *@
-        <div class="frow" style="margin-bottom:0;">
+        <div class="frow u-mb-0">
             <label class="flbl">FROM Container</label>
             <div style="display:flex;gap:8px;align-items:center;">
-                <div style="flex:1;">
+                <div class="u-flex-1">
                     <DataContainerPicker Containers="@Context.AvailableContainers"
                                          SelectedContainerId="@_fromContainerId"
                                          SelectedContainerIdChanged="@OnFromContainerChanged"
@@ -41,9 +41,9 @@ else
         </div>
 
         @* JOIN clauses *@
-        <div class="frow" style="margin-bottom:0;">
-            <div class="card-h" style="padding:0;">
-                <label class="flbl" style="margin-bottom:0;">JOIN Clauses</label>
+        <div class="frow u-mb-0">
+            <div class="card-h u-p-0">
+                <label class="flbl u-mb-0">JOIN Clauses</label>
                 <button class="btn btn-secondary btn-sm" @onclick="AddJoin">+ Join</button>
             </div>
             @for (var i = 0; i < _joins.Count; i++)
@@ -62,7 +62,7 @@ else
         </div>
 
         @* Field selection *@
-        <div class="frow" style="margin-bottom:0;">
+        <div class="frow u-mb-0">
             <label class="flbl">Select Fields</label>
             <DataFieldsMultiSelect Sources="@BuildFieldSources()"
                                    SelectedFields="@_selectedFields"
@@ -76,7 +76,7 @@ else
 
         @* Paging *@
         <div class="fgrid">
-            <div class="frow" style="margin-bottom:0;">
+            <div class="frow u-mb-0">
                 <label class="flbl">Skip (OFFSET)</label>
                 <input class="fin"
                        type="number"
@@ -84,7 +84,7 @@ else
                        value="@(Context.CurrentSpec.Paging?.Skip ?? 0)"
                        @oninput="@(e => OnPagingChanged(e, isPagingSkip: true))" />
             </div>
-            <div class="frow" style="margin-bottom:0;">
+            <div class="frow u-mb-0">
                 <label class="flbl">Take (0 = all)</label>
                 <input class="fin"
                        type="number"
@@ -95,9 +95,9 @@ else
         </div>
 
         @* Sort *@
-        <div class="frow" style="margin-bottom:0;">
-            <div class="card-h" style="padding:0;">
-                <label class="flbl" style="margin-bottom:0;">Sort</label>
+        <div class="frow u-mb-0">
+            <div class="card-h u-p-0">
+                <label class="flbl u-mb-0">Sort</label>
                 <button class="btn btn-secondary btn-sm" @onclick="AddSort">+ Sort</button>
             </div>
             @for (var i = 0; i < _sort.Count; i++)
@@ -129,7 +129,7 @@ else
                         <option value="Asc">Asc</option>
                         <option value="Desc">Desc</option>
                     </select>
-                    <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => RemoveSort(idx)">✕</button>
+                    <button class="btn btn-ghost btn-sm u-fg-signal" @onclick="() => RemoveSort(idx)">✕</button>
                 </div>
             }
         </div>

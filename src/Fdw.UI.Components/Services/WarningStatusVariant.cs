@@ -9,5 +9,5 @@ namespace Fdw.UI.Components.Services;
 public sealed class WarningStatusVariant : StatusVariantBase
 {
     /// <summary>Initializes a new instance of <see cref="WarningStatusVariant"/>.</summary>
-    public WarningStatusVariant() : base(3, "Warning") { }
+    public WarningStatusVariant() : base(3, "Warning", "b-warn") { }
 }

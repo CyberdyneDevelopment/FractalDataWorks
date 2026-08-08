@@ -37,8 +37,7 @@
            call RebuildFilter() immediately on each keystroke without waiting for the
            next render cycle. @bind:event="oninput" would also work but the handler
            pattern makes the rebuild trigger explicit. *@
-        <input class="finput"
-               style="margin-bottom:4px;"
+        <input class="finput u-mb-4"
                placeholder="@(SearchPlaceholder ?? "Search...")"
                value="@_searchText"
                @oninput="HandleSearchInput"
@@ -139,6 +138,6 @@
 
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
-        <div class="hint" style="color:var(--signal);">@_errorMessage</div>
+        <div class="hint u-fg-signal">@_errorMessage</div>
     }
 </div>

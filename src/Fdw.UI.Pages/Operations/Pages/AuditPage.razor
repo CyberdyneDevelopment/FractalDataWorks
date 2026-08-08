@@ -4,23 +4,16 @@
 <PageTitle>Execution History - Cyberdyne</PageTitle>
 
 <AuditProvider Context="ctx">
-    <div class="pagehead">
-        <div>
-            <div class="ey">Operations</div>
-            <h1>Execution History</h1>
-            <div class="sub">Workflow, job, stage, step and task executions.</div>
-        </div>
-        <div class="actions">
+    <PageHeader Eyebrow="Operations" Title="Execution History" Subtitle="Workflow, job, stage, step and task executions.">
+        <Actions>
             <button class="btn btn-secondary" @onclick="async () => await ctx.OnRefresh()" disabled="@ctx.IsLoading">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M20 8a8 8 0 00-14-3M4 16a8 8 0 0014 3" />
-                </svg>
+                <Icon Name="RefreshAlt" />
                 Refresh
             </button>
-        </div>
-    </div>
+        </Actions>
+    </PageHeader>
 
-    <div class="card" style="margin-bottom:14px;">
+    <div class="card u-mb-14">
         <div class="card-h"><h3>Filters</h3></div>
         <div class="card-b">
             <div class="fgrid" style="grid-template-columns:repeat(3,1fr);align-items:end;">
@@ -57,22 +50,22 @@
 
     @if (ctx.IsLoading)
     {
-        <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="mut" style="color:var(--n-500);">Loading execution history&hellip;</p></div></div>
+        <EmptyState><p class="mut u-fg-n500">Loading execution history&hellip;</p></EmptyState>
     }
     else if (ctx.Entries.Count == 0)
     {
         <div class="card">
-            <div class="card-b" style="padding:48px 20px;text-align:center;">
-                <p style="color:var(--n-300);">No execution history found</p>
-                <p class="sub" style="margin-top:6px;">Executions will appear here once pipelines run</p>
-            </div>
+            <EmptyState InCard="false">
+                <p class="u-fg-n300">No execution history found</p>
+                <p class="sub u-mt-6">Executions will appear here once pipelines run</p>
+            </EmptyState>
         </div>
     }
     else
     {
         <div class="card">
             <div class="card-h"><h3>Executions</h3><span class="meta">@ctx.Entries.Count / @ctx.TotalCount</span></div>
-            <div class="card-b" style="padding:0 10px 12px;">
+            <div class="card-b fdw-table-body">
                 <table class="tbl">
                     <thead>
                         <tr>
@@ -91,7 +84,7 @@
                                 <td class="nm">@entry.Name</td>
                                 <td class="mut"><span class="tpill">@entry.ItemType</span></td>
                                 <td class="mut">
-                                    <span class="@GetStateBadge(entry.State)"><span class="bd"></span>@entry.State</span>
+                                    <Badge Variant="GetStateVariant(entry.State)">@entry.State</Badge>
                                 </td>
                                 <td class="num">
                                     @(entry.CompletedAt.HasValue
@@ -108,13 +101,12 @@
 </AuditProvider>
 
 @code {
-    private static string GetStateBadge(string state) => state switch
+    private static StatusVariantBase GetStateVariant(string state) => state switch
     {
-        "Succeeded" => "badge b-ok",
-        "Completed" => "badge b-ok",
-        "Failed" => "badge b-fail",
-        "Running" => "badge b-run",
-        "Cancelled" => "badge b-warn",
-        _ => "badge b-idle"
+        "Succeeded" or "Completed" => StatusVariants.Success,
+        "Failed" => StatusVariants.Error,
+        "Running" => StatusVariants.Info,
+        "Cancelled" => StatusVariants.Warning,
+        _ => StatusVariants.Neutral
     };
 }

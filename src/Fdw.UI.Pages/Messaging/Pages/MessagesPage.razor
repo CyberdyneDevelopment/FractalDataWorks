@@ -6,21 +6,14 @@
 
 <MessageProvider AutoLoad="true">
     <MessageListContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">System</div>
-                <h1>Messages</h1>
-                <div class="sub">View and manage system notifications.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="System" Title="Messages" Subtitle="View and manage system notifications.">
+            <Actions>
                 <button class="btn btn-secondary" @onclick="@(() => ctx.OnMarkAllRead())">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                    <Icon Name="CheckCircle" />
                     Mark All Read
                 </button>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @* Filters *@
         <div class="filters">
@@ -32,7 +25,7 @@
                     @status
                 </span>
             }
-            <div class="seg" style="margin-left:auto;">
+            <div class="seg u-ml-auto">
                 <select class="finput mono" style="background:transparent;padding:5px 8px;" @bind="_typeFilter">
                     <option value="">All Types</option>
                     <option value="SystemNotification">System</option>
@@ -61,7 +54,7 @@
                 }
                 else if (!string.IsNullOrEmpty(ctx.ErrorMessage))
                 {
-                    <div class="act"><div class="a"><p class="t mono" style="color:var(--signal);">@ctx.ErrorMessage</p></div></div>
+                    <div class="act"><div class="a"><p class="t mono u-fg-signal">@ctx.ErrorMessage</p></div></div>
                 }
                 else if (FilteredMessages(ctx.Messages).Count == 0)
                 {
@@ -72,7 +65,7 @@
                     <div class="act">
                         @foreach (var message in FilteredMessages(ctx.Messages))
                         {
-                            <div class="a" style="cursor:pointer;" @onclick="@(() => OpenMessage(message))">
+                            <div class="a u-pointer" @onclick="@(() => OpenMessage(message))">
                                 <span class="d @GetSeverityDotClass(message.Severity)"></span>
                                 <div style="flex:1;min-width:0;">
                                     <p class="t @(message.IsUnread ? "" : "mut")">@message.Subject</p>
@@ -83,18 +76,14 @@
                                     {
                                         <button class="btn btn-ghost btn-sm" title="Dismiss"
                                                 @onclick="@(async () => await ctx.OnDismiss(message.Id))" @onclick:stopPropagation="true">
-                                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
+                                            <Icon Name="Close" />
                                         </button>
                                     }
                                     @if (message.ArchivedAt is null)
                                     {
                                         <button class="btn btn-ghost btn-sm" title="Archive"
                                                 @onclick="@(async () => await ctx.OnArchive(message.Id))" @onclick:stopPropagation="true">
-                                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                            </svg>
+                                            <Icon Name="Archive" />
                                         </button>
                                     }
                                 </div>

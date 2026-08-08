@@ -25,9 +25,9 @@
                 @if (ctx.IsLoading && !ctx.ConnectionTypes.Any())
                 {
                     <div class="card">
-                        <div class="card-b" style="padding:48px;text-align:center;">
+                        <EmptyState InCard="false" SquarePadding="true">
                             <span class="badge b-run"><span class="bd"></span>Loading</span>
-                        </div>
+                        </EmptyState>
                     </div>
                 }
                 else
@@ -40,8 +40,8 @@
 
                             @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
                             {
-                                <div class="danger" style="margin-bottom:16px;">
-                                    <div class="t"><p style="color:var(--signal);">@ctx.ErrorMessage</p></div>
+                                <div class="danger u-mb-16">
+                                    <div class="t"><p class="u-fg-signal">@ctx.ErrorMessage</p></div>
                                 </div>
                             }
 
@@ -116,21 +116,21 @@
                                         <p style="font-size:13px;color:var(--n-200);margin:0;">Encrypt</p>
                                         <p style="font-size:11px;color:var(--n-500);margin:2px 0 0;">Encrypt the connection with TLS/SSL</p>
                                     </div>
-                                    <span class="sw @(ctx.Model.Encrypt ? "on" : "")" @onclick="() => ctx.Model.Encrypt = !ctx.Model.Encrypt" style="cursor:pointer;"></span>
+                                    <span class="sw @(ctx.Model.Encrypt ? "on" : "") u-pointer" @onclick="() => ctx.Model.Encrypt = !ctx.Model.Encrypt"></span>
                                 </div>
                                 <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--hair);">
                                     <div>
                                         <p style="font-size:13px;color:var(--n-200);margin:0;">Trust Server Certificate</p>
                                         <p style="font-size:11px;color:var(--n-500);margin:2px 0 0;">Skip certificate validation (not recommended in production)</p>
                                     </div>
-                                    <span class="sw @(ctx.Model.TrustServerCertificate ? "on" : "")" @onclick="() => ctx.Model.TrustServerCertificate = !ctx.Model.TrustServerCertificate" style="cursor:pointer;"></span>
+                                    <span class="sw @(ctx.Model.TrustServerCertificate ? "on" : "") u-pointer" @onclick="() => ctx.Model.TrustServerCertificate = !ctx.Model.TrustServerCertificate"></span>
                                 </div>
                                 <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;">
                                     <div>
                                         <p style="font-size:13px;color:var(--n-200);margin:0;">Active</p>
                                         <p style="font-size:11px;color:var(--n-500);margin:2px 0 0;">Connection is available for use</p>
                                     </div>
-                                    <span class="sw @(ctx.IsActive ? "on" : "")" @onclick="() => ctx.OnActiveChanged(!ctx.IsActive)" style="cursor:pointer;"></span>
+                                    <span class="sw @(ctx.IsActive ? "on" : "") u-pointer" @onclick="() => ctx.OnActiveChanged(!ctx.IsActive)"></span>
                                 </div>
                             </div>
 
@@ -158,16 +158,11 @@ else
 
             <div style="max-width:768px;margin:0 auto;">
                 @* Header *@
-                <div class="pagehead">
-                    <div>
-                        <div class="ey">Data Sources · Connections</div>
-                        <h1>New Connection</h1>
-                        <div class="sub">Connection-agnostic access — MsSql, Http, FileSystem, RoslynWorkspace.</div>
-                    </div>
-                    <div class="actions">
+                <PageHeader Eyebrow="Data Sources · Connections" Title="New Connection" Subtitle="Connection-agnostic access — MsSql, Http, FileSystem, RoslynWorkspace.">
+                    <Actions>
                         <a class="btn btn-ghost" href="/connections">Cancel</a>
-                    </div>
-                </div>
+                    </Actions>
+                </PageHeader>
 
                 @* Step Indicator *@
                 <div class="stepper">
@@ -178,7 +173,7 @@ else
                             <span class="num">
                                 @if (stepIndex < ctx.Step)
                                 {
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:13px;height:13px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                                    <Icon Name="Check" Style="width:13px;height:13px;" />
                                 }
                                 else
                                 {
@@ -197,11 +192,11 @@ else
                 @if (ctx.IsComplete)
                 {
                     <div class="card">
-                        <div class="card-b" style="padding:48px;text-align:center;">
+                        <EmptyState InCard="false" SquarePadding="true">
                             <div style="font-size:32px;color:var(--success);margin-bottom:14px;">✓</div>
                             <p style="color:var(--n-200);margin:0 0 16px;">Connection created successfully.</p>
                             <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/connections")'>Back to Connections</button>
-                        </div>
+                        </EmptyState>
                     </div>
                 }
                 else
@@ -216,8 +211,8 @@ else
 
                             @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
                             {
-                                <div class="danger" style="margin-bottom:16px;">
-                                    <div class="t"><p class="mono" style="color:var(--signal);">@ctx.ErrorMessage</p></div>
+                                <div class="danger u-mb-16">
+                                    <div class="t"><p class="mono u-fg-signal">@ctx.ErrorMessage</p></div>
                                 </div>
                             }
 
@@ -246,7 +241,7 @@ else
                                 }
                                 else
                                 {
-                                    <p class="hint" style="font-style:italic;">Loading connection types...</p>
+                                    <p class="hint u-italic">Loading connection types...</p>
                                 }
 
                                 @if (IsHttpType(ctx.ConnectionConfig.ServiceType))
@@ -350,7 +345,7 @@ else
                                                                     <input class="finput mono" style="flex:1;opacity:0.6;" value="@ctx.StoredSecretKeyName" disabled />
                                                                     <span class="mono" style="font-size:11px;color:var(--success);white-space:nowrap;">✓ stored</span>
                                                                 </div>
-                                                                <p class="hint">Stored in <span style="color:var(--n-300);">@ctx.SelectedSecretManagerName</span> as <span style="color:var(--n-300);">@ctx.StoredSecretKeyName</span></p>
+                                                                <p class="hint">Stored in <span class="u-fg-n300">@ctx.SelectedSecretManagerName</span> as <span class="u-fg-n300">@ctx.StoredSecretKeyName</span></p>
                                                             </div>
                                                         }
                                                         else
@@ -361,7 +356,7 @@ else
                                                                        value="@ctx.PlainPassword"
                                                                        @oninput="e => ctx.OnPasswordChanged(e.Value?.ToString() ?? string.Empty)"
                                                                        placeholder="Password — stored in secret manager on Next" />
-                                                                <p class="hint">Stored in <span style="color:var(--n-300);">@ctx.SelectedSecretManagerName</span> when you click Next.</p>
+                                                                <p class="hint">Stored in <span class="u-fg-n300">@ctx.SelectedSecretManagerName</span> when you click Next.</p>
                                                             </div>
                                                         }
                                                     }
@@ -371,7 +366,7 @@ else
                                                             <label>Secret Key Name</label>
                                                             <input class="finput mono" @bind="ctx.ConnectionConfig.Authentication.SecretKeyName"
                                                                    placeholder="e.g. connection-prod-sql-password" />
-                                                            <p class="hint">Key name in <span style="color:var(--n-300);">@ctx.SelectedSecretManagerName</span> — resolved at runtime.</p>
+                                                            <p class="hint">Key name in <span class="u-fg-n300">@ctx.SelectedSecretManagerName</span> — resolved at runtime.</p>
                                                         </div>
                                                     }
                                                 }
@@ -395,14 +390,14 @@ else
                                             <p style="font-size:13px;color:var(--n-200);margin:0;">Encrypt</p>
                                             <p style="font-size:11px;color:var(--n-500);margin:2px 0 0;">Encrypt the connection with TLS/SSL</p>
                                         </div>
-                                        <span class="sw @(ctx.ConnectionConfig.Encrypt ? "on" : "")" @onclick="() => ctx.ConnectionConfig.Encrypt = !ctx.ConnectionConfig.Encrypt" style="cursor:pointer;"></span>
+                                        <span class="sw @(ctx.ConnectionConfig.Encrypt ? "on" : "") u-pointer" @onclick="() => ctx.ConnectionConfig.Encrypt = !ctx.ConnectionConfig.Encrypt"></span>
                                     </div>
                                     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;">
                                         <div>
                                             <p style="font-size:13px;color:var(--n-200);margin:0;">Trust Server Certificate</p>
                                             <p style="font-size:11px;color:var(--n-500);margin:2px 0 0;">Skip certificate validation (not recommended in production)</p>
                                         </div>
-                                        <span class="sw @(ctx.ConnectionConfig.TrustServerCertificate ? "on" : "")" @onclick="() => ctx.ConnectionConfig.TrustServerCertificate = !ctx.ConnectionConfig.TrustServerCertificate" style="cursor:pointer;"></span>
+                                        <span class="sw @(ctx.ConnectionConfig.TrustServerCertificate ? "on" : "") u-pointer" @onclick="() => ctx.ConnectionConfig.TrustServerCertificate = !ctx.ConnectionConfig.TrustServerCertificate"></span>
                                     </div>
                                 </div>
                             }

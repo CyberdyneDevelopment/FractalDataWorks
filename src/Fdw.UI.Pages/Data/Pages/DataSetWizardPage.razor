@@ -31,7 +31,7 @@
                             <span class="num">
                                 @if (stepIndex < _activeStep)
                                 {
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:13px;height:13px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                                    <Icon Name="Check" Style="width:13px;height:13px;" />
                                 }
                                 else
                                 {
@@ -52,7 +52,7 @@
                     @* Why: journey context banner — shown on all steps when arriving from a
                        "Derive new DataSet" action so the user knows which DataSet they are
                        basing this on without having to navigate back. *@
-                    <div class="alert alert-ok" style="margin-bottom:14px;">
+                    <div class="alert alert-ok u-mb-14">
                         Deriving new DataSet from: <strong>@BaseDataSet</strong>
                     </div>
                 }
@@ -121,7 +121,7 @@
 
                     @if (!string.IsNullOrEmpty(_importedFromTable))
                     {
-                        <div class="alert alert-ok" style="margin-bottom:14px;">@_importedFromTable</div>
+                        <div class="alert alert-ok u-mb-14">@_importedFromTable</div>
                     }
 
                     @if (_showImportPanel)
@@ -130,7 +130,7 @@
                             <div class="card-h">
                                 <h3>Container Import</h3>
                                 <button class="btn btn-ghost btn-sm" @onclick="() => _showImportPanel = false">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    <Icon Name="Close" />
                                 </button>
                             </div>
                             <div class="card-b">
@@ -177,7 +177,7 @@
                         </div>
                     }
                     <div class="card">
-                        <div class="card-b" style="padding:0 10px 12px;">
+                        <div class="card-b fdw-table-body">
                             <table class="tbl">
                                 <thead>
                                     <tr>
@@ -225,9 +225,7 @@
                                             <td>
                                                 <div class="actions">
                                                     <button class="btn btn-ghost btn-sm @(field.IsKey ? null : "mut")" @onclick="() => field.IsKey = !field.IsKey" title="Primary Key">
-                                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                                                        </svg>
+                                                        <Icon Name="Key" />
                                                     </button>
                                                     <button class="btn btn-ghost btn-sm" @onclick="() => field.IsRequired = !field.IsRequired" title="Required">
                                                         <span class="mono" style="font-size:10px;font-weight:600;color:@(field.IsRequired ? "var(--amber)" : "var(--n-600)");">REQ</span>
@@ -239,7 +237,7 @@
                                             </td>
                                             <td>
                                                 <button class="btn btn-ghost btn-sm danger" @onclick="() => _model.Fields.Remove(field)">
-                                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                                    <Icon Name="Close" />
                                                 </button>
                                             </td>
                                         </tr>
@@ -262,7 +260,7 @@
                             <div class="card-h">
                                 <h3>@source.SourceName</h3>
                                 <button class="btn btn-ghost btn-sm danger" @onclick="() => _model.Sources.Remove(source)">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    <Icon Name="Close" />
                                 </button>
                             </div>
                             <div class="card-b">
@@ -320,9 +318,9 @@
                     @* Step 4: Mappings *@
                     @foreach (var source in _model.Sources)
                     {
-                        <div class="card" style="margin-bottom:14px;">
+                        <div class="card u-mb-14">
                             <div class="card-h"><h3>@source.SourceName</h3></div>
-                            <div class="card-b" style="padding:0 10px 12px;">
+                            <div class="card-b fdw-table-body">
                                 <table class="tbl">
                                     <thead><tr><th>Logical Target</th><th>Physical Source</th><th>Transforms</th></tr></thead>
                                     <tbody>

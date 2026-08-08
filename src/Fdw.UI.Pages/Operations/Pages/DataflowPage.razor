@@ -5,30 +5,23 @@
 
 <DataflowProvider>
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Operations</div>
-                <h1>Dataflow Overview</h1>
-                <div class="sub">DataSets, DataStores, sources and connections in the active graph.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="Operations" Title="Dataflow Overview" Subtitle="DataSets, DataStores, sources and connections in the active graph.">
+            <Actions>
                 <button class="btn btn-secondary" @onclick="async () => await ctx.OnLoadGraph()" disabled="@ctx.IsLoading">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M20 8a8 8 0 00-14-3M4 16a8 8 0 0014 3" />
-                    </svg>
+                    <Icon Name="RefreshAlt" />
                     Refresh
                 </button>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
         {
-            <div class="danger" style="margin-bottom:14px;"><div class="t"><p>@ctx.ErrorMessage</p></div></div>
+            <div class="danger u-mb-14"><div class="t"><p>@ctx.ErrorMessage</p></div></div>
         }
 
         @if (ctx.IsLoading)
         {
-            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="mut" style="color:var(--n-500);">Loading dataflow graph&hellip;</p></div></div>
+            <EmptyState><p class="mut u-fg-n500">Loading dataflow graph&hellip;</p></EmptyState>
         }
         else
         {
@@ -54,19 +47,19 @@
             @if ((ctx.Graph?.Nodes.Count ?? 0) == 0)
             {
                 <div class="card">
-                    <div class="card-b" style="padding:48px 20px;text-align:center;">
-                        <p style="color:var(--n-300);">No dataflow nodes found</p>
-                        <p class="sub" style="margin-top:6px;">Configure DataSets and DataStores to see the dataflow graph</p>
-                    </div>
+                    <EmptyState InCard="false">
+                        <p class="u-fg-n300">No dataflow nodes found</p>
+                        <p class="sub u-mt-6">Configure DataSets and DataStores to see the dataflow graph</p>
+                    </EmptyState>
                 </div>
             }
             else
             {
                 @foreach (var group in ctx.Graph!.Nodes.GroupBy(n => n.NodeType).OrderBy(g => g.Key))
                 {
-                    <div class="card" style="margin-bottom:14px;">
+                    <div class="card u-mb-14">
                         <div class="card-h"><h3>@group.Key</h3><span class="meta">@group.Count()</span></div>
-                        <div class="card-b" style="padding:0 10px 12px;">
+                        <div class="card-b fdw-table-body">
                             <table class="tbl">
                                 <tbody>
                                     @foreach (var node in group.OrderBy(n => n.Label))
@@ -79,7 +72,7 @@
                                                     <div class="mut" style="font-size:11px;">@node.Category</div>
                                                 }
                                             </td>
-                                            <td style="text-align:right;"><span class="@GetNodeTypeBadge(node.NodeType)"><span class="bd"></span>@node.NodeType</span></td>
+                                            <td class="u-ta-right"><Badge Variant="DataflowNodeBadge.Variant(node.NodeType)">@node.NodeType</Badge></td>
                                         </tr>
                                     }
                                 </tbody>
@@ -92,13 +85,3 @@
     </ChildContent>
 </DataflowProvider>
 
-@code {
-    private static string GetNodeTypeBadge(string nodeType) => nodeType switch
-    {
-        "Pipeline" => "badge b-run",
-        "DataSet" => "badge b-run",
-        "DataStore" => "badge b-ok",
-        "Connection" => "badge b-warn",
-        _ => "badge b-idle"
-    };
-}

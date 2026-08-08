@@ -8,21 +8,16 @@
 <ProjectProvider>
     <ChildContent Context="ctx">
         <div>
-            <div class="pagehead">
-                <div>
-                    <div class="ey">Pipelines &amp; Scheduling</div>
-                    <h1>Project Tree</h1>
-                    <div class="sub">Projects → stages → steps → pipelines.</div>
-                </div>
-                <div class="actions">
+            <PageHeader Eyebrow="Pipelines & Scheduling" Title="Project Tree" Subtitle="Projects → stages → steps → pipelines.">
+                <Actions>
                     <button class="btn btn-secondary btn-sm" @onclick='() => Nav.NavigateTo("/projects/list")'>
                         List View
                     </button>
                     <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/projects/edit")'>
                         New Project
                     </button>
-                </div>
-            </div>
+                </Actions>
+            </PageHeader>
 
             @if (ctx.ErrorMessage is not null)
             {
@@ -33,15 +28,15 @@
 
             @if (ctx.IsLoading)
             {
-                <div class="card" style="padding:48px;text-align:center;">
-                    <span class="mono" style="color:var(--n-500);">Loading projects…</span>
+                <div class="card fdw-empty-square">
+                    <span class="mono u-fg-n500">Loading projects…</span>
                 </div>
             }
             else if (!ctx.Projects.Any())
             {
-                <div class="card" style="padding:48px;text-align:center;">
-                    <p style="color:var(--n-500);">No projects defined yet.</p>
-                    <button class="btn btn-primary" style="margin-top:14px;" @onclick='() => Nav.NavigateTo("/projects/edit")'>
+                <div class="card fdw-empty-square">
+                    <p class="u-fg-n500">No projects defined yet.</p>
+                    <button class="btn btn-primary u-mt-14" @onclick='() => Nav.NavigateTo("/projects/edit")'>
                         Create Your First Project
                     </button>
                 </div>
@@ -60,18 +55,14 @@
                                         aria-label="@(projectExpanded ? "Collapse" : "Expand") @project.Name">
                                     @if (projectExpanded)
                                     {
-                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                        </svg>
+                                        <Icon Name="ChevronDown" />
                                     }
                                     else
                                     {
-                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                        </svg>
+                                        <Icon Name="ChevronRight" />
                                     }
                                 </button>
-                                <span class="mono nm" style="flex:1;">@project.Name</span>
+                                <span class="mono nm u-flex-1">@project.Name</span>
                                 @if (!project.IsEnabled)
                                 {
                                     <span class="badge b-idle"><span class="bd"></span>disabled</span>
@@ -97,15 +88,11 @@
                                                         @onclick="() => ToggleStage(project.Id, stage.Id)">
                                                     @if (stageExpanded)
                                                     {
-                                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                                        </svg>
+                                                        <Icon Name="ChevronDown" />
                                                     }
                                                     else
                                                     {
-                                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                                        </svg>
+                                                        <Icon Name="ChevronRight" />
                                                     }
                                                 </button>
                                                 <span class="mono num" style="width:20px;text-align:right;">@stage.Ordinal</span>
