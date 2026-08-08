@@ -135,6 +135,16 @@ public class RawSvgMarkupAnalyzerTests : RazorMarkupAnalyzerTestBase<RawSvgMarku
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Analyzer")]
+    public async Task ComponentWhoseNameStartsWithSvg_ReportsNothing()
+    {
+        // Why: a chart component named SvgGauge is markup already doing what this rule asks for; matching
+        // the needle inside a longer tag name would flag the fix as the defect.
+        await VerifyRazor("<SvgGauge Value=\"1\" /><SvgSparkline Width=\"80\" />");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Analyzer")]
     public async Task ComponentsAssembly_ReportsDiagnostic()
     {
         await VerifyRazorIn(

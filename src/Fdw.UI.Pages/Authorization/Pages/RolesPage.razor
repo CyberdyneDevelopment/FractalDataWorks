@@ -14,7 +14,7 @@
                 </div>
                 <div class="actions">
                     <button class="btn btn-primary" @onclick="ShowCreateDialog">
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" /></svg>
+                        <Icon Name="Add" />
                         New Role
                     </button>
                 </div>
@@ -54,7 +54,7 @@
                             <div class="card-b" style="padding:18px 20px;">
                                 <div class="dhead" style="margin-bottom:14px;">
                                     <div class="ic ic-glacier" style="width:36px;height:36px;border-radius:9px;">
-                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M12 3l8 4v5c0 5-4 8-8 9-4-1-8-4-8-9V7z" /></svg>
+                                        <Icon Name="Shield" />
                                     </div>
                                     <h3 style="font-size:16px;">@role.Name</h3>
                                 </div>
@@ -66,7 +66,7 @@
                                 <div class="actions" style="justify-content:space-between;margin-top:16px;border-top:1px solid var(--hair);padding-top:14px;">
                                     <a href="/roles/@role.Name" class="btn btn-ghost btn-sm">Edit Permissions</a>
                                     <button class="btn btn-ghost btn-sm" @onclick="() => ctx.OnDeleteRole(role.Name)">
-                                        <svg fill="none" viewBox="0 0 24 24" stroke="#e05c4a"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 7h14M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m1 0v12a2 2 0 01-2 2H8a2 2 0 01-2-2V7" /></svg>
+                                        <Icon Name="DeleteAlt" />
                                     </button>
                                 </div>
                             </div>

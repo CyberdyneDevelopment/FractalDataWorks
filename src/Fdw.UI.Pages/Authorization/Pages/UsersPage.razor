@@ -16,7 +16,7 @@
                         </div>
                         <div class="actions">
                             <button @onclick="ShowCreateForm" class="btn btn-primary">
-                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" /></svg>
+                                <Icon Name="Add" />
                                 New User
                             </button>
                         </div>
@@ -26,7 +26,7 @@
                         <div class="card-h">
                             <h3>Members</h3>
                             <div class="search" style="width:280px;margin-left:0;">
-                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.3-4.3M11 18a7 7 0 100-14 7 7 0 000 14z" /></svg>
+                                <Icon Name="Search" />
                                 <input type="text"
                                        value="@ctx.SearchString"
                                        @oninput="e => ctx.OnSearchChanged(e.Value?.ToString() ?? string.Empty)"
@@ -91,13 +91,13 @@
                                                 <td class="mut">
                                                     <div class="actions" style="justify-content:flex-end;">
                                                         <button @onclick="() => EditUser(user)" class="btn btn-ghost btn-sm">
-                                                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.4-9.4a2 2 0 113 3L12 16l-4 1 1-4 9.6-9.4z" /></svg>
+                                                            <Icon Name="EditAlt" />
                                                         </button>
                                                         <button @onclick="() => ShowResetForm(user)" class="btn btn-ghost btn-sm" title="Reset password">
-                                                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                                            <Icon Name="Password" />
                                                         </button>
                                                         <button @onclick="() => ctx.OnDeleteUser(user.Id)" class="btn btn-ghost btn-sm">
-                                                            <svg fill="none" viewBox="0 0 24 24" stroke="#e05c4a"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 7h14M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m1 0v12a2 2 0 01-2 2H8a2 2 0 01-2-2V7" /></svg>
+                                                            <Icon Name="DeleteAlt" />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -114,7 +114,7 @@
                             <div class="card-h">
                                 <h3>Reset password &mdash; @_resetUser.Username</h3>
                                 <button class="btn btn-ghost btn-sm" @onclick="CancelReset">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    <Icon Name="Close" />
                                 </button>
                             </div>
                             <div class="card-b">
@@ -141,7 +141,7 @@
                             <div class="card-h">
                                 <h3>@(_editingUser != null ? "Edit User" : "Create User")</h3>
                                 <button class="btn btn-ghost btn-sm" @onclick="CancelForm">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    <Icon Name="Close" />
                                 </button>
                             </div>
                             <div class="card-b">

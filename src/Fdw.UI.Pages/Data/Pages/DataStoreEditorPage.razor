@@ -38,7 +38,7 @@
                                 <span class="num">
                                     @if (stepIndex < ctx.Step)
                                     {
-                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:13px;height:13px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                                        <Icon Name="Check" Style="width:13px;height:13px;" />
                                     }
                                     else
                                     {
@@ -181,9 +181,7 @@
                                                 }
                                             </div>
                                             <button class="btn btn-ghost btn-sm danger" @onclick="() => ctx.OnRemovePath(idx)">
-                                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
+                                                <Icon Name="Close" />
                                             </button>
                                         </div>
                                     }
@@ -272,9 +270,7 @@
                     <div class="card-h">
                         <h3>New Connection</h3>
                         <button class="btn btn-ghost btn-sm" @onclick="() => _showConnectionDialog = false" type="button">
-                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            <Icon Name="Close" />
                         </button>
                     </div>
                     <div class="card-b">
@@ -289,7 +285,7 @@
                                             <span class="num">
                                                 @if (stepIndex < connCtx.Step)
                                                 {
-                                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:13px;height:13px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                                                    <Icon Name="Check" Style="width:13px;height:13px;" />
                                                 }
                                                 else
                                                 {

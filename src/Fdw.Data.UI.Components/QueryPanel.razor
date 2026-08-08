@@ -64,9 +64,7 @@
             <div class="card-h" style="padding:0 0 4px;">
                 <label class="flbl" style="margin-bottom:0;">Filters</label>
                 <button class="btn btn-secondary btn-sm" @onclick="AddFilter">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
+                    <Icon Name="AddAlt" />
                     Add Filter
                 </button>
             </div>
@@ -103,9 +101,7 @@
                         <input class="fin" placeholder="Value" @bind="filter.Value"
                                disabled="@(filter.Operator is "IsNull" or "IsNotNull")" />
                         <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => Filters.Remove(filter)">
-                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            <Icon Name="Close" />
                         </button>
                     </div>
                 }
@@ -126,9 +122,7 @@
                 }
             </div>
             <button class="btn btn-primary" @onclick="OnExecute" disabled="@IsLoading">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                </svg>
+                <Icon Name="Play" />
                 @(IsLoading ? "Executing..." : "Execute")
             </button>
         </div>

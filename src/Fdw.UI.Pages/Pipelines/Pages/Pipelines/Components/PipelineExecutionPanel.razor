@@ -17,9 +17,7 @@
         @if (OnClose.HasDelegate)
         {
             <button class="btn btn-ghost btn-sm" @onclick="OnClose" title="Close execution panel">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <Icon Name="Close" />
             </button>
         }
     </div>
@@ -31,9 +29,7 @@
             <button class="btn btn-secondary btn-sm" style="color:var(--success);"
                     @onclick="OnResume"
                     title="Resume execution">
-                <svg fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                </svg>
+                <Icon Name="Resume" />
                 Resume
             </button>
         }
@@ -43,9 +39,7 @@
                     @onclick="OnPause"
                     disabled="@(!IsRunning)"
                     title="Pause execution">
-                <svg fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                </svg>
+                <Icon Name="Pause" />
                 Pause
             </button>
         }
@@ -53,18 +47,14 @@
                 @onclick="OnStep"
                 disabled="@(!IsPaused)"
                 title="Step one batch">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <Icon Name="Skip" />
             Step
         </button>
         <button class="btn btn-secondary btn-sm" style="color:var(--signal);margin-left:auto;"
                 @onclick="OnStop"
                 disabled="@(!IsRunning && !IsPaused)"
                 title="Stop execution">
-            <svg fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6 6h12v12H6z" />
-            </svg>
+            <Icon Name="Stop" />
             Stop
         </button>
     </div>

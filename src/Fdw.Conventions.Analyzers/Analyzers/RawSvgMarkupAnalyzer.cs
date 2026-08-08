@@ -30,7 +30,9 @@ public sealed class RawSvgMarkupAnalyzer : DiagnosticAnalyzer
 
     /// <summary>
     /// The element opening text searched for in markup. This matches the opening tag only, so a closing
-    /// <c>&lt;/svg&gt;</c> does not produce a second diagnostic for the same element.
+    /// <c>&lt;/svg&gt;</c> does not produce a second diagnostic for the same element. It is matched as a
+    /// whole element name, so a component named <c>SvgGauge</c> or <c>SvgSparkline</c> — which is markup
+    /// doing exactly what this rule asks for — is not mistaken for a raw svg element.
     /// </summary>
     private const string Needle = "<svg";
 
@@ -65,5 +67,5 @@ public sealed class RawSvgMarkupAnalyzer : DiagnosticAnalyzer
     }
 
     private static void Analyze(AdditionalFileAnalysisContext context) =>
-        RazorMarkupAnalysis.ReportMarkupOccurrences(context, Needle, Rule);
+        RazorMarkupAnalysis.ReportMarkupOccurrences(context, Needle, Rule, wholeElementName: true);
 }

@@ -13,9 +13,7 @@ else
         <div class="card-h">
             <h3>Filters</h3>
             <button class="btn btn-secondary btn-sm" @onclick="AddRow">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
+                <Icon Name="AddAlt" />
                 Add Filter
             </button>
         </div>
@@ -59,9 +57,7 @@ else
                         <input class="fin" placeholder="Value" @bind="row.Value"
                                disabled="@IsNullOperator(row.Operator)" />
                         <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => RemoveRow(idx)">
-                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            <Icon Name="Close" />
                         </button>
                     </div>
                 }

@@ -14,9 +14,7 @@
             </div>
             <div class="actions">
                 <button class="btn btn-secondary" @onclick="@(() => ctx.OnMarkAllRead())">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                    <Icon Name="CheckCircle" />
                     Mark All Read
                 </button>
             </div>
@@ -83,18 +81,14 @@
                                     {
                                         <button class="btn btn-ghost btn-sm" title="Dismiss"
                                                 @onclick="@(async () => await ctx.OnDismiss(message.Id))" @onclick:stopPropagation="true">
-                                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
+                                            <Icon Name="Close" />
                                         </button>
                                     }
                                     @if (message.ArchivedAt is null)
                                     {
                                         <button class="btn btn-ghost btn-sm" title="Archive"
                                                 @onclick="@(async () => await ctx.OnArchive(message.Id))" @onclick:stopPropagation="true">
-                                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                            </svg>
+                                            <Icon Name="Archive" />
                                         </button>
                                     }
                                 </div>

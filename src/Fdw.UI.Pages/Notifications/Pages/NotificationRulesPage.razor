@@ -14,15 +14,11 @@
             </div>
             <div class="actions">
                 <a href="/admin/notifications" class="btn btn-ghost">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
+                    <Icon Name="Back" />
                     Back to Notifications
                 </a>
                 <button class="btn btn-ghost" @onclick="() => ctx.OnLoadRules()">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
+                    <Icon Name="Refresh" />
                     Refresh
                 </button>
             </div>
@@ -76,9 +72,7 @@
                                         <button class="btn btn-ghost btn-sm"
                                                 title="@(_expandedRuleId == rule.Id ? "Collapse" : "Expand details")"
                                                 @onclick="() => ToggleExpand(rule.Id)">
-                                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;transition:transform .15s;transform:rotate(@(_expandedRuleId == rule.Id ? "90deg" : "0deg"));">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                            </svg>
+                                            <Icon Name="ChevronRight" Style="@($"width:14px;height:14px;transition:transform .15s;transform:rotate({(_expandedRuleId == rule.Id ? "90deg" : "0deg")});")" />
                                         </button>
                                     </td>
                                     <td><div class="cellpad nm">@rule.Name</div></td>

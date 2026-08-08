@@ -23,7 +23,7 @@
     <div class="bhead" style="margin-bottom:12px;">
         <div class="l">
             <a class="back" href="/pipelines">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 18l-6-6 6-6"/></svg>
+                <Icon Name="ChevronLeftAlt" />
                 Pipelines
             </a>
             <h1>Pipeline Builder</h1>
@@ -47,27 +47,19 @@
         </div>
         <div class="actions">
             <button class="btn btn-ghost btn-sm" @onclick="Undo" disabled="@(_undoStack.Count == 0)">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                </svg>
+                <Icon Name="Undo" />
                 Undo
             </button>
             <button class="btn btn-ghost btn-sm" @onclick="Redo" disabled="@(_redoStack.Count == 0)">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" />
-                </svg>
+                <Icon Name="Redo" />
                 Redo
             </button>
             <button class="btn btn-ghost btn-sm" @onclick="ZoomOut">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
-                </svg>
+                <Icon Name="ZoomOut" />
             </button>
             <span class="mono" style="font-size:11px;width:48px;text-align:center;color:var(--n-400);">@(Math.Round(_zoom * 100))%</span>
             <button class="btn btn-ghost btn-sm" @onclick="ZoomIn">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
-                </svg>
+                <Icon Name="ZoomIn" />
             </button>
             @if (!string.IsNullOrEmpty(_validationError))
             {
@@ -82,14 +74,12 @@
                     {
                         <button class="btn btn-secondary btn-sm" style="color:var(--success);"
                                 @onclick="TestResume" title="Resume execution">
-                            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            <Icon Name="Resume" />
                             Resume
                         </button>
                         <button class="btn btn-secondary btn-sm" style="color:var(--glacier);"
                                 @onclick="TestStep" title="Step one batch">
-                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
+                            <Icon Name="Skip" />
                             Step
                         </button>
                     }
@@ -97,13 +87,13 @@
                     {
                         <button class="btn btn-secondary btn-sm" style="color:var(--warn);"
                                 @onclick="TestPause" title="Pause execution">
-                            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                            <Icon Name="Pause" />
                             Pause
                         </button>
                     }
                     <button class="btn btn-secondary btn-sm" style="color:var(--signal);"
                             @onclick="TestStop" title="Stop execution">
-                        <svg fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+                        <Icon Name="Stop" />
                         Stop
                     </button>
                     <span class="badge @GetStatusBadgeClass(_testExecutionStatus)"><span class="bd"></span>@_testExecutionStatus</span>
@@ -114,27 +104,20 @@
                 <button class="btn btn-secondary btn-sm" style="color:var(--glacier);"
                         @onclick="StartTestRun"
                         title="Run pipeline in test mode (bounded, no destination writes)">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
+                    <Icon Name="Run" />
                     Test
                 </button>
             }
 
             <button class="btn btn-primary btn-sm" @onclick="SavePipeline" disabled="@_isSaving">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                </svg>
+                <Icon Name="Save" />
                 @(_isSaving ? "Saving..." : "Save")
             </button>
             <button class="btn btn-secondary btn-sm" style="color:var(--success);"
                     @onclick="PublishPipeline"
                     disabled="@(_isPublishing || _pipelineId == null)"
                     title="Publish pipeline to make it active">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <Icon Name="CheckCircle" />
                 @(_isPublishing ? "Publishing..." : "Publish")
             </button>
         </div>

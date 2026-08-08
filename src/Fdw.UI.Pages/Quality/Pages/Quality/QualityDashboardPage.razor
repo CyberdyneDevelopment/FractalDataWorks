@@ -14,9 +14,7 @@
             </div>
             <div class="actions">
                 <button class="btn btn-secondary" @onclick="async () => await ctx.OnRefresh()" disabled="@ctx.IsLoading">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
+                    <Icon Name="Refresh" />
                     Refresh
                 </button>
             </div>
@@ -35,15 +33,15 @@
         {
             <div class="metrics" style="grid-template-columns:repeat(3,1fr);">
                 <div class="metric">
-                    <div class="mt"><span class="lbl">Total Rules</span><span class="ic ic-glacier"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 4v5c0 5-4 8-8 9-4-1-8-4-8-9V7z" /></svg></span></div>
+                    <div class="mt"><span class="lbl">Total Rules</span><span class="ic ic-glacier"><Icon Name="Shield" StrokeWidth="" /></span></div>
                     <div class="row"><span class="val">@ctx.Dashboard.TotalRules</span></div>
                 </div>
                 <div class="metric">
-                    <div class="mt"><span class="lbl">Passing</span><span class="ic ic-green"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></span></div>
+                    <div class="mt"><span class="lbl">Passing</span><span class="ic ic-green"><Icon Name="Check" StrokeWidth="" /></span></div>
                     <div class="row"><span class="val">@ctx.Dashboard.PassingRules</span></div>
                 </div>
                 <div class="metric">
-                    <div class="mt"><span class="lbl">Failing</span><span class="ic ic-red"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9L2.4 18a1.5 1.5 0 001.3 2.2h16.6a1.5 1.5 0 001.3-2.2L13.7 3.9a1.5 1.5 0 00-2.6 0z" /></svg></span></div>
+                    <div class="mt"><span class="lbl">Failing</span><span class="ic ic-red"><Icon Name="Warning" /></span></div>
                     <div class="row"><span class="val">@ctx.Dashboard.FailingRules</span></div>
                 </div>
             </div>

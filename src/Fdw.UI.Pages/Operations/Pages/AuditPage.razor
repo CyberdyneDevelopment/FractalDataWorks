@@ -12,9 +12,7 @@
         </div>
         <div class="actions">
             <button class="btn btn-secondary" @onclick="async () => await ctx.OnRefresh()" disabled="@ctx.IsLoading">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M20 8a8 8 0 00-14-3M4 16a8 8 0 0014 3" />
-                </svg>
+                <Icon Name="RefreshAlt" />
                 Refresh
             </button>
         </div>

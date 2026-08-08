@@ -93,15 +93,11 @@
                                     </span>
                                     @if (!isMapped)
                                     {
-                                        <svg style="width:15px;height:15px;color:var(--n-500);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                        </svg>
+                                        <Icon Name="ChevronRight" Style="width:15px;height:15px;color:var(--n-500);" />
                                     }
                                     else
                                     {
-                                        <svg style="width:15px;height:15px;color:var(--success);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                        </svg>
+                                        <Icon Name="Check" Style="width:15px;height:15px;color:var(--success);" StrokeWidth="2" />
                                     }
                                 </button>
                             }
@@ -127,9 +123,7 @@
                                 {
                                     <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s2);border-radius:8px;">
                                         <span class="mono" style="flex:1;color:var(--glacier-soft);font-size:12px;overflow:hidden;text-overflow:ellipsis;">@mapping.SourceField</span>
-                                        <svg style="width:15px;height:15px;color:var(--n-500);flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                        </svg>
+                                        <Icon Name="ArrowRightAlt" Style="width:15px;height:15px;color:var(--n-500);flex-shrink:0;" />
                                         <span class="mono" style="flex:1;color:var(--success);font-size:12px;text-align:right;overflow:hidden;text-overflow:ellipsis;">@mapping.TargetField</span>
                                     </div>
                                 }
@@ -147,9 +141,7 @@
                                 var isMapped = ctx.Mappings.Any(m => string.Equals(m.TargetField, field.Name, StringComparison.Ordinal));
                                 <button type="button" style="@($"display:flex;align-items:center;justify-content:space-between;width:100%;{(isMapped ? "opacity:.5;" : "")}")"
                                         @onclick="() => { _pendingTarget = field.Name; TryAddMapping(ctx); }">
-                                    <svg style="width:15px;height:15px;color:var(--n-500);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                                    </svg>
+                                    <Icon Name="ChevronLeft" Style="width:15px;height:15px;color:var(--n-500);" />
                                     <span style="text-align:right;">
                                         <span class="pn mono">@field.Name</span>
                                         <span class="pk" style="margin-left:8px;">@field.NativeDataType</span>

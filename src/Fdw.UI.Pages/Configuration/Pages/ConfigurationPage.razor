@@ -75,9 +75,7 @@
                                             <span class="meta">@ctx.Instances.Count INSTANCES</span>
                                         </div>
                                         <button class="btn btn-primary btn-sm" @onclick="ShowCreateForm">
-                                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                                            </svg>
+                                            <Icon Name="AddAlt" />
                                             New Instance
                                         </button>
                                     </div>
@@ -104,13 +102,9 @@
                                                         <div style="display:flex;align-items:center;gap:8px;">
                                                             <button class="btn btn-ghost btn-sm danger"
                                                                     @onclick="() => DeleteInstance(inst.Name, ctx)" @onclick:stopPropagation="true">
-                                                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                </svg>
+                                                                <Icon Name="Delete" />
                                                             </button>
-                                                            <svg style="width:15px;height:15px;color:var(--n-600);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                                            </svg>
+                                                            <Icon Name="ChevronRight" Style="width:15px;height:15px;color:var(--n-600);" />
                                                         </div>
                                                     </div>
                                                 }

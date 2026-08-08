@@ -8,9 +8,7 @@
     </div>
     <div class="actions">
         <button class="btn btn-primary" @onclick="OnNewConnection">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
-            </svg>
+            <Icon Name="Add" />
             New Connection
         </button>
     </div>
@@ -63,9 +61,7 @@ else if (!GetDisplayedConnections().Any())
        rather than a blank grid with no feedback. *@
     <div class="card">
         <div class="card-b" style="padding:48px;text-align:center;">
-            <svg style="width:48px;height:48px;margin:0 auto 14px;color:var(--n-600);display:block;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-            </svg>
+            <Icon Name="Database" Style="width:48px;height:48px;margin:0 auto 14px;color:var(--n-600);display:block;" StrokeWidth="1.5" />
             <p style="color:var(--n-500);">No connections configured</p>
         </div>
     </div>
@@ -105,9 +101,7 @@ else
                                             @onclick="() => ConfirmDelete(conn.Name)"
                                             @onclick:stopPropagation="true"
                                             title="Delete connection">
-                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
+                                        <Icon Name="Delete" />
                                     </button>
                                 </div>
                             </td>

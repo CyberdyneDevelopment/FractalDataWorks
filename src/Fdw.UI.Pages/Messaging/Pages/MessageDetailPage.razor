@@ -15,9 +15,7 @@
             </div>
             <div class="actions">
                 <button class="btn btn-ghost" @onclick="@(() => Navigation.NavigateTo("/messages"))">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
+                    <Icon Name="Back" />
                     Back to Messages
                 </button>
             </div>
@@ -47,9 +45,7 @@
                             <span class="mono mut" style="font-size:12px;">
                                 Ref: @ctx.Message.ReferenceId
                                 <button class="btn btn-ghost btn-sm" @onclick="@(() => CopyToClipboard(ctx.Message.ReferenceId))">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                    </svg>
+                                    <Icon Name="Copy" />
                                 </button>
                             </span>
                         }
@@ -78,9 +74,7 @@
                     {
                         <div style="margin-bottom:16px;">
                             <a href="@ctx.Message.ActionUrl" class="btn btn-primary">
-                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                </svg>
+                                <Icon Name="ExternalLink" />
                                 @(ctx.Message.ActionType ?? "Take Action")
                             </a>
                         </div>
@@ -90,18 +84,14 @@
                         @if (ctx.Message.DismissedAt is null && ctx.Message.ArchivedAt is null)
                         {
                             <button class="btn btn-secondary btn-sm" @onclick="@(async () => { await ctx.OnDismiss(); Navigation.NavigateTo("/messages"); })">
-                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                                <Icon Name="Close" />
                                 Dismiss
                             </button>
                         }
                         @if (ctx.Message.ArchivedAt is null)
                         {
                             <button class="btn btn-secondary btn-sm" @onclick="@(async () => { await ctx.OnArchive(); Navigation.NavigateTo("/messages"); })">
-                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                </svg>
+                                <Icon Name="Archive" />
                                 Archive
                             </button>
                         }
