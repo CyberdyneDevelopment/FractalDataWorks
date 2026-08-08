@@ -5,19 +5,14 @@
 
 <PromotionReviewProvider PromotionId="@Id" OnActionCompleted="HandleActionCompleted">
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">System</div>
-                <h1>Review Promotion</h1>
-                <div class="sub">Move configuration between environments with review.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="System" Title="Review Promotion" Subtitle="Move configuration between environments with review.">
+            <Actions>
                 <a href="/promotions" class="btn btn-ghost">
                     <Icon Name="ChevronLeft" />
                     Back
                 </a>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
         {
@@ -28,16 +23,16 @@
 
         @if (ctx.IsLoading && ctx.Request is null)
         {
-            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="mut u-fg-n500">Loading&hellip;</p></div></div>
+            <EmptyState><p class="mut u-fg-n500">Loading&hellip;</p></EmptyState>
         }
         else if (ctx.Request is null)
         {
-            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="u-fg-n300">Promotion request not found</p></div></div>
+            <EmptyState><p class="u-fg-n300">Promotion request not found</p></EmptyState>
         }
         else
         {
             <div class="card">
-                <div class="card-h"><h3>@ctx.Request.Name</h3><span class="@GetStatusBadge(ctx.Request.Status)"><span class="bd"></span>@ctx.Request.Status</span></div>
+                <div class="card-h"><h3>@ctx.Request.Name</h3><Badge Variant="GetStatusVariant(ctx.Request.Status)">@ctx.Request.Status</Badge></div>
                 <div class="card-b">
                     <dl class="kv">
                         <dt>Name</dt><dd>@ctx.Request.Name</dd>
@@ -89,11 +84,11 @@
         Nav.NavigateTo("/promotions");
     }
 
-    private static string GetStatusBadge(string status) => status switch
+    private static StatusVariantBase GetStatusVariant(string status) => status switch
     {
-        "Approved" => "badge b-ok",
-        "Rejected" => "badge b-fail",
-        "Pending" => "badge b-warn",
-        _ => "badge b-idle"
+        "Approved" => StatusVariants.Success,
+        "Rejected" => StatusVariants.Error,
+        "Pending" => StatusVariants.Warning,
+        _ => StatusVariants.Neutral
     };
 }

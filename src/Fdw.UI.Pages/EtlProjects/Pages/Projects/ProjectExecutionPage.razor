@@ -17,7 +17,7 @@
         <h1>Execution Monitor</h1>
         <span class="mono" style="font-size:11px;color:var(--n-500);">@ExecutionId</span>
         <div class="actions u-ml-auto">
-            <span class="badge @GetStatusBadge(_overallStatus)"><span class="bd"></span>@(_overallStatus ?? "Loading...")</span>
+            <Badge Variant="GetStatusVariant(_overallStatus)">@(_overallStatus ?? "Loading...")</Badge>
             <button class="btn btn-ghost btn-sm u-fg-signal"
                     @onclick="CancelExecution"
                     disabled="@_isCompleted">
@@ -162,15 +162,14 @@
         }
     };
 
-    // Why: Status strings map to console.css badge classes for the header chip.
-    private static string GetStatusBadge(string? status) => status switch
+    private static StatusVariantBase GetStatusVariant(string? status) => status switch
     {
-        "Completed" => "b-ok",
-        "Failed" => "b-fail",
-        "Running" => "b-run",
-        "Cancelled" => "b-idle",
-        "AwaitingApproval" => "b-warn",
-        _ => "b-idle"
+        "Completed" => StatusVariants.Success,
+        "Failed" => StatusVariants.Error,
+        "Running" => StatusVariants.Info,
+        "Cancelled" => StatusVariants.Neutral,
+        "AwaitingApproval" => StatusVariants.Warning,
+        _ => StatusVariants.Neutral
     };
 
     // Why: Inline color style for the tree-node status label (RenderTreeBuilder can't use badge spans cleanly here).

@@ -9,5 +9,5 @@ namespace Fdw.UI.Components.Services;
 public sealed class SuccessStatusVariant : StatusVariantBase
 {
     /// <summary>Initializes a new instance of <see cref="SuccessStatusVariant"/>.</summary>
-    public SuccessStatusVariant() : base(1, "Success") { }
+    public SuccessStatusVariant() : base(1, "Success", "b-ok") { }
 }

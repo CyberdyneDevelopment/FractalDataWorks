@@ -11,7 +11,7 @@
             <span class="mono" style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--glacier);">Test Run</span>
             @if (!string.IsNullOrEmpty(ExecutionStatus))
             {
-                <span class="badge @GetStatusBadgeClass(ExecutionStatus)"><span class="bd"></span>@ExecutionStatus.ToUpperInvariant()</span>
+                <Badge Variant="GetStatusVariant(ExecutionStatus)">@ExecutionStatus.ToUpperInvariant()</Badge>
             }
         </div>
         @if (OnClose.HasDelegate)
@@ -124,17 +124,20 @@
     /// <summary>Fired when the user closes the inspector sub-panel.</summary>
     [Parameter] public EventCallback OnInspectorClose { get; set; }
 
-    private static string GetStatusBadgeClass(string status)
+    // Why Running takes the success tone and Complete the running one: that is what this panel has
+    // always drawn, and the pass that introduced Badge changed no colour anywhere. It disagrees with
+    // every other execution view in the console and is the next thing to settle.
+    private static StatusVariantBase GetStatusVariant(string status)
     {
         if (string.Equals(status, "Running", StringComparison.OrdinalIgnoreCase))
-            return "b-ok";
+            return StatusVariants.Success;
         if (string.Equals(status, "Paused", StringComparison.OrdinalIgnoreCase))
-            return "b-warn";
+            return StatusVariants.Warning;
         if (string.Equals(status, "Complete", StringComparison.OrdinalIgnoreCase))
-            return "b-run";
+            return StatusVariants.Info;
         if (string.Equals(status, "Failed", StringComparison.OrdinalIgnoreCase)
             || string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase))
-            return "b-fail";
-        return "b-idle";
+            return StatusVariants.Error;
+        return StatusVariants.Neutral;
     }
 }

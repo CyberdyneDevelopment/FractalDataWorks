@@ -34,13 +34,13 @@
 
             @if (provider.IsLoading && !provider.Pipelines.Any())
             {
-                <div class="card" style="padding:48px;text-align:center;">
+                <div class="card fdw-empty-square">
                     <span class="mono u-fg-n500">Loading pipelines…</span>
                 </div>
             }
             else if (!provider.Pipelines.Any())
             {
-                <div class="card" style="padding:48px;text-align:center;">
+                <div class="card fdw-empty-square">
                     <p class="u-fg-n500">No pipelines configured</p>
                 </div>
             }
@@ -48,7 +48,7 @@
             {
                 <div class="card">
                     <div class="card-h"><h3>All Pipelines</h3></div>
-                    <div class="card-b" style="padding:0 10px 12px;">
+                    <div class="card-b fdw-table-body">
                         <table class="tbl">
                             <thead>
                                 <tr>

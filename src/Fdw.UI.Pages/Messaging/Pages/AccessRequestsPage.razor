@@ -5,14 +5,10 @@
 
 <MessageProvider AutoLoadAccessRequests="true">
     <AccessRequestContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Admin</div>
-                <h1>Access Requests</h1>
-                <div class="sub">Review and manage resource access requests.</div>
-            </div>
-            <div class="actions"></div>
-        </div>
+        <PageHeader Eyebrow="Admin" Title="Access Requests" Subtitle="Review and manage resource access requests.">
+            <Actions>
+            </Actions>
+        </PageHeader>
 
         @* Filter chips *@
         <div class="filters">
@@ -28,7 +24,7 @@
 
         <div class="card">
             <div class="card-h"><h3>Requests</h3></div>
-            <div class="card-b" style="padding:0 10px 12px;">
+            <div class="card-b fdw-table-body">
                 @if (ctx.IsLoading)
                 {
                     <div class="mono mut" style="padding:20px;">Loading…</div>
@@ -58,7 +54,7 @@
                             @foreach (var request in ApplyFilter(ctx.AccessRequests))
                             {
                                 <tr>
-                                    <td><div class="cellpad"><span class="badge @GetStatusBadgeClass(request.Status)"><span class="bd"></span>@request.Status</span></div></td>
+                                    <td><div class="cellpad"><Badge Variant="GetStatusVariant(request.Status)">@request.Status</Badge></div></td>
                                     <td class="mut">@request.RequestedResource</td>
                                     <td class="mut">@request.RequestedPermission</td>
                                     <td class="mut" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@(request.Justification ?? "-")</td>
@@ -158,11 +154,13 @@
         }
     }
 
-    private static string GetStatusBadgeClass(string status) => status switch
+    // Why Approved is the running tone and not the success one: this page shows a request that has
+    // been granted but not yet acted on, which the console draws the same as work in flight.
+    private static StatusVariantBase GetStatusVariant(string status) => status switch
     {
-        "Pending" => "b-warn",
-        "Approved" => "b-run",
-        "Denied" => "b-fail",
-        _ => "b-idle"
+        "Pending" => StatusVariants.Warning,
+        "Approved" => StatusVariants.Info,
+        "Denied" => StatusVariants.Error,
+        _ => StatusVariants.Neutral
     };
 }

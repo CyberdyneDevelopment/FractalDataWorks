@@ -5,41 +5,36 @@
 
 <ScheduleProvider>
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Pipelines &amp; Scheduling</div>
-                <h1>Schedules</h1>
-                <div class="sub">Cron / Interval / Once / Manual. A background service dispatches due jobs through resiliency pipelines.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="Pipelines & Scheduling" Title="Schedules" Subtitle="Cron / Interval / Once / Manual. A background service dispatches due jobs through resiliency pipelines.">
+            <Actions>
                 <a href="/schedules/new" class="btn btn-primary">
                     <Icon Name="Add" />
                     New Schedule
                 </a>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @if (ctx.IsLoading && ctx.Schedules.Count == 0)
         {
             <div class="card">
-                <div class="card-b" style="padding:48px 20px;text-align:center;">
+                <EmptyState InCard="false">
                     <p class="mut u-fg-n500">Loading schedules&hellip;</p>
-                </div>
+                </EmptyState>
             </div>
         }
         else if (ctx.Schedules.Count == 0)
         {
             <div class="card">
-                <div class="card-b" style="padding:48px 20px;text-align:center;">
+                <EmptyState InCard="false">
                     <p class="u-fg-n500">No schedules configured</p>
-                </div>
+                </EmptyState>
             </div>
         }
         else
         {
             <div class="card">
                 <div class="card-h"><h3>Active Schedules</h3></div>
-                <div class="card-b" style="padding:0 10px 12px;">
+                <div class="card-b fdw-table-body">
                     <table class="tbl">
                         <thead>
                             <tr>

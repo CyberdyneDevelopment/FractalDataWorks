@@ -9,18 +9,13 @@
 <ProjectProvider>
     <ChildContent Context="ctx">
         <div>
-            <div class="pagehead">
-                <div>
-                    <div class="ey">Pipelines &amp; Scheduling</div>
-                    <h1>Projects</h1>
-                    <div class="sub">ETL projects — stage and step orchestration.</div>
-                </div>
-                <div class="actions">
+            <PageHeader Eyebrow="Pipelines & Scheduling" Title="Projects" Subtitle="ETL projects — stage and step orchestration.">
+                <Actions>
                     <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/projects/edit")'>
                         New Project
                     </button>
-                </div>
-            </div>
+                </Actions>
+            </PageHeader>
 
             <div class="filters">
                 <input type="text"
@@ -39,7 +34,7 @@
 
             @if (ctx.IsLoading)
             {
-                <div class="card" style="padding:48px;text-align:center;">
+                <div class="card fdw-empty-square">
                     <span class="mono u-fg-n500">Loading projects…</span>
                 </div>
             }
@@ -47,7 +42,7 @@
             {
                 <div class="card">
                     <div class="card-h"><h3>All Projects</h3></div>
-                    <div class="card-b" style="padding:0 10px 12px;">
+                    <div class="card-b fdw-table-body">
                         <table class="tbl">
                             <thead>
                                 <tr>

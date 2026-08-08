@@ -6,18 +6,13 @@
 <ApiKeyProvider>
     <ChildContent Context="ctx">
         <div style="display:flex;flex-direction:column;gap:14px;">
-            <div class="pagehead">
-                <div>
-                    <div class="ey">Admin</div>
-                    <h1>API Keys</h1>
-                    <div class="sub">Programmatic access · scoped · audited.</div>
-                </div>
-                <div class="actions">
+            <PageHeader Eyebrow="Admin" Title="API Keys" Subtitle="Programmatic access · scoped · audited.">
+                <Actions>
                     <button class="btn btn-ghost btn-sm" @onclick="() => ctx.OnRefresh.Invoke()" disabled="@ctx.IsLoading">
                         Refresh
                     </button>
-                </div>
-            </div>
+                </Actions>
+            </PageHeader>
 
             @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
             {
@@ -45,7 +40,7 @@
 
             @if (ctx.IsLoading && !ctx.PersonalTokens.Any() && !ctx.AgentKeys.Any())
             {
-                <div class="card"><div class="card-b" style="display:flex;justify-content:center;padding:48px;"><span class="badge b-run"><span class="bd"></span>Loading</span></div></div>
+                <LoadingCard />
             }
             else
             {

@@ -5,13 +5,8 @@
 
 <GlossaryProvider>
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Governance</div>
-                <h1>Glossary</h1>
-                <div class="sub">Shared vocabulary of business terms and their definitions.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="Governance" Title="Glossary" Subtitle="Shared vocabulary of business terms and their definitions.">
+            <Actions>
                 <button class="btn btn-secondary" @onclick="async () => await ctx.OnRefresh()" disabled="@ctx.IsLoading">
                     <Icon Name="Refresh" />
                     Refresh
@@ -20,8 +15,8 @@
                     <Icon Name="AddAlt" />
                     New Term
                 </button>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
         {

@@ -9,16 +9,11 @@
 
 <CatalogProvider>
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Governance</div>
-                <h1>Catalog</h1>
-                <div class="sub">Searchable inventory of DataSets and containers — start here to build a dataset.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="Governance" Title="Catalog" Subtitle="Searchable inventory of DataSets and containers — start here to build a dataset.">
+            <Actions>
                 <button class="btn btn-secondary btn-sm" @onclick="async () => await ctx.OnRefresh()" disabled="@ctx.IsLoading">Refresh</button>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         <div class="card">
             <div class="card-b">

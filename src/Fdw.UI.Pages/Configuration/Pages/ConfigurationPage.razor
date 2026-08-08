@@ -7,14 +7,10 @@
     <ChildContent Context="page">
         @{ var ctx = page.Inner; }
         <div>
-            <div class="pagehead">
-                <div>
-                    <div class="ey">System</div>
-                    <h1>Configuration</h1>
-                    <div class="sub">Database-backed configuration POCOs — DDL, validators and UI are generated per domain.</div>
-                </div>
-                <div class="actions"></div>
-            </div>
+            <PageHeader Eyebrow="System" Title="Configuration" Subtitle="Database-backed configuration POCOs — DDL, validators and UI are generated per domain.">
+                <Actions>
+                </Actions>
+            </PageHeader>
 
             @if (!string.IsNullOrEmpty(_errorMessage))
             {
@@ -60,9 +56,9 @@
                     <div>
                         @if (string.IsNullOrEmpty(_selectedCategory))
                         {
-                            <div class="card"><div class="card-b" style="padding:48px;text-align:center;color:var(--n-500);">
+                            <EmptyState SquarePadding="true" Class="u-fg-n500">
                                 <p style="font-size:13px;">Select a category to view and manage configuration instances.</p>
-                            </div></div>
+                            </EmptyState>
                         }
                         else
                         {

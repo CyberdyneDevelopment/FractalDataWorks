@@ -21,10 +21,10 @@
         }
         else if (ctx.CurrentAction is null)
         {
-            <div class="card"><div class="card-b" style="padding:48px;text-align:center;">
+            <EmptyState SquarePadding="true">
                 <p class="mono u-fg-signal">ACTION_NOT_FOUND</p>
                 <button class="btn btn-secondary" style="margin-top:16px;" @onclick='() => Nav.NavigateTo("/agent-actions")'>Back</button>
-            </div></div>
+            </EmptyState>
         }
         else if (!string.Equals(ctx.CurrentAction.Status, "Pending", StringComparison.Ordinal))
         {

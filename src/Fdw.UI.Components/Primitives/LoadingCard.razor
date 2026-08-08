@@ -1,0 +1,11 @@
+@namespace Fdw.UI.Components.Primitives
+@using Fdw.UI.Components.Services
+
+@if (InCard)
+{
+    <div class="card"><div class="card-b fdw-loading"><Badge Variant="StatusVariants.Info">@Text</Badge></div></div>
+}
+else
+{
+    <div class="card-b fdw-loading"><Badge Variant="StatusVariants.Info">@Text</Badge></div>
+}

@@ -6,19 +6,14 @@
 
 <PageTitle>Notification Preferences - Cyberdyne</PageTitle>
 
-<div class="pagehead">
-    <div>
-        <div class="ey">Settings</div>
-        <h1>Notification Preferences</h1>
-        <div class="sub">Configure how you receive notifications for each message type.</div>
-    </div>
-    <div class="actions">
+<PageHeader Eyebrow="Settings" Title="Notification Preferences" Subtitle="Configure how you receive notifications for each message type.">
+    <Actions>
         <button class="btn btn-ghost" onclick="history.back()">
             <Icon Name="Back" />
             Back to Settings
         </button>
-    </div>
-</div>
+    </Actions>
+</PageHeader>
 
 @if (!string.IsNullOrEmpty(_errorMessage))
 {

@@ -48,9 +48,9 @@
 @if (Context.IsLoading && !Context.FilteredConnections.Any())
 {
     <div class="card">
-        <div class="card-b" style="padding:48px;text-align:center;">
+        <EmptyState InCard="false" SquarePadding="true">
             <span class="badge b-run"><span class="bd"></span>Loading</span>
-        </div>
+        </EmptyState>
     </div>
 }
 else if (!GetDisplayedConnections().Any())
@@ -60,17 +60,17 @@ else if (!GetDisplayedConnections().Any())
        the displayed set shows the empty-state message when a search/filter yields no matches,
        rather than a blank grid with no feedback. *@
     <div class="card">
-        <div class="card-b" style="padding:48px;text-align:center;">
+        <EmptyState InCard="false" SquarePadding="true">
             <Icon Name="Database" Style="width:48px;height:48px;margin:0 auto 14px;color:var(--n-600);display:block;" StrokeWidth="1.5" />
             <p class="u-fg-n500">No connections configured</p>
-        </div>
+        </EmptyState>
     </div>
 }
 else
 {
     <div class="card">
         <div class="card-h"><h3>All Connections</h3></div>
-        <div class="card-b" style="padding:0 10px 12px;">
+        <div class="card-b fdw-table-body">
             <table class="tbl">
                 <thead>
                     <tr><th>Name</th><th>Type</th><th>Last Tested</th><th>Status</th><th></th></tr>
@@ -88,7 +88,7 @@ else
                             <td class="mut"><span class="tpill">@conn.ConnectionType</span></td>
                             <td class="mut">@(conn.LastTestedAt.HasValue ? conn.LastTestedAt.Value.ToString("t") : "Never")</td>
                             <td class="mut">
-                                <span class="badge @GetHealthBadgeClass(conn)"><span class="bd"></span>@GetHealthBadgeText(conn)</span>
+                                <Badge Variant="GetHealthVariant(conn)">@GetHealthBadgeText(conn)</Badge>
                             </td>
                             <td>
                                 <div class="actions u-jc-end">
@@ -166,11 +166,11 @@ else
     // Why: tri-state badge — Unknown (never tested) must render distinctly from a known failure,
     // rather than collapsing null into "Unhealthy" (see FDW-559 investigation). "b-idle" is the
     // established muted badge class elsewhere in the UI for "no status yet" (e.g. disabled rows).
-    private static string GetHealthBadgeClass(ConnectionPayload conn) => conn.LastTestSuccess switch
+    private static StatusVariantBase GetHealthVariant(ConnectionPayload conn) => conn.LastTestSuccess switch
     {
-        true => "b-ok",
-        false => "b-fail",
-        null => "b-idle",
+        true => StatusVariants.Success,
+        false => StatusVariants.Error,
+        null => StatusVariants.Neutral,
     };
 
     private static string GetHealthBadgeText(ConnectionPayload conn) => conn.LastTestSuccess switch

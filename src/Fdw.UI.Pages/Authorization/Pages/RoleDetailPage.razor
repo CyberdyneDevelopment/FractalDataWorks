@@ -22,7 +22,7 @@
 
                     @if (ctx.IsLoading)
                     {
-                        <div class="card"><div class="card-b" style="display:flex;justify-content:center;padding:48px;"><span class="badge b-run"><span class="bd"></span>Loading</span></div></div>
+                        <LoadingCard />
                     }
                     else if (ctx.ErrorMessage != null)
                     {

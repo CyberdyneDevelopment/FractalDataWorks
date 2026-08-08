@@ -6,13 +6,8 @@
 
 <NotificationsProvider UserId="_currentUserId">
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Administration &rsaquo; Notifications</div>
-                <h1>Notification Rules</h1>
-                <div class="sub">Rules determine which notification service fires for a given event and severity.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="Administration › Notifications" Title="Notification Rules" Subtitle="Rules determine which notification service fires for a given event and severity.">
+            <Actions>
                 <a href="/admin/notifications" class="btn btn-ghost">
                     <Icon Name="Back" />
                     Back to Notifications
@@ -21,8 +16,8 @@
                     <Icon Name="Refresh" />
                     Refresh
                 </button>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
         {
@@ -34,24 +29,24 @@
         @if (ctx.IsLoading && ctx.Rules.Count == 0)
         {
             <div class="card">
-                <div class="card-b" style="padding:48px 20px;text-align:center;">
+                <EmptyState InCard="false">
                     <p class="mut u-fg-n500">Loading rules&hellip;</p>
-                </div>
+                </EmptyState>
             </div>
         }
         else if (ctx.Rules.Count == 0)
         {
             <div class="card">
-                <div class="card-b" style="padding:48px 20px;text-align:center;">
+                <EmptyState InCard="false">
                     <p class="u-fg-n500">No notification rules configured.</p>
-                </div>
+                </EmptyState>
             </div>
         }
         else
         {
             <div class="card">
                 <div class="card-h"><h3>Rules</h3></div>
-                <div class="card-b" style="padding:0 10px 12px;">
+                <div class="card-b fdw-table-body">
                     <table class="tbl">
                         <thead>
                             <tr>
@@ -79,7 +74,7 @@
                                     <td class="mut">@rule.NotificationServiceType</td>
                                     <td class="mut">@rule.NotificationServiceName</td>
                                     <td>
-                                        <span class="badge @GetSeverityClass(rule.Severity)">@rule.Severity</span>
+                                        <span class="badge @NotificationSeverityBadge.CssClass(rule.Severity)">@rule.Severity</span>
                                     </td>
                                     <td class="mut">@(rule.Description ?? "—")</td>
                                     <td class="mut">
@@ -150,13 +145,4 @@
     {
         _expandedRuleId = _expandedRuleId == ruleId ? Guid.Empty : ruleId;
     }
-
-    private static string GetSeverityClass(string severity) =>
-        severity.ToUpperInvariant() switch
-        {
-            "CRITICAL" => "badge-danger",
-            "HIGH" or "ERROR" => "badge-warning",
-            "MEDIUM" or "WARNING" => "badge-caution",
-            _ => "badge-idle"
-        };
 }

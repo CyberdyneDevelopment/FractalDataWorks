@@ -7,17 +7,13 @@
     <ChildContent Context="ctx">
         @{ CaptureContext(ctx); }
         <div style="max-width:920px;">
-            <div class="pagehead">
-                <div>
-                    <div class="ey">Transformations / Calculations / Edit</div>
-                    <h1>Edit Calculation</h1>
-                </div>
-                <div class="actions">
+            <PageHeader Eyebrow="Transformations / Calculations / Edit" Title="Edit Calculation">
+                <Actions>
                     <button class="btn btn-secondary btn-sm" @onclick='() => Nav.NavigateTo("/calculations")'>
                         Cancel
                     </button>
-                </div>
-            </div>
+                </Actions>
+            </PageHeader>
 
             @if (ctx.ErrorMessage is not null)
             {
@@ -28,7 +24,7 @@
 
             @if (_isPageLoading)
             {
-                <div class="card" style="padding:48px;text-align:center;">
+                <div class="card fdw-empty-square">
                     <span class="mono u-fg-n500">Loading calculation…</span>
                 </div>
             }

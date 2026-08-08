@@ -6,19 +6,14 @@
 
 <MessageProvider AutoLoad="true">
     <MessageListContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">System</div>
-                <h1>Messages</h1>
-                <div class="sub">View and manage system notifications.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="System" Title="Messages" Subtitle="View and manage system notifications.">
+            <Actions>
                 <button class="btn btn-secondary" @onclick="@(() => ctx.OnMarkAllRead())">
                     <Icon Name="CheckCircle" />
                     Mark All Read
                 </button>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @* Filters *@
         <div class="filters">

@@ -28,18 +28,13 @@
 
 <DataMapperProvider>
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Data Sources</div>
-                <h1>Field Mapper</h1>
-                <div class="sub">Map source fields onto target fields, then persist the mapping.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="Data Sources" Title="Field Mapper" Subtitle="Map source fields onto target fields, then persist the mapping.">
+            <Actions>
                 <button class="btn btn-secondary btn-sm" @onclick="() => ctx.OnAutoMap()">Auto-Map</button>
                 <button class="btn btn-secondary btn-sm" @onclick="async () => await ctx.OnValidate()">Validate</button>
                 <button class="btn btn-primary btn-sm" @onclick="async () => await ctx.OnSave()" disabled="@(ctx.Mappings.Count == 0)">Save Mappings</button>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
         {

@@ -60,7 +60,7 @@
             {
                 <div class="card">
                     <div class="card-h"><h3>Fields</h3><span class="meta">@ctx.CurrentDataSet.Fields.Count defined</span></div>
-                    <div class="card-b" style="padding:0 10px 12px;">
+                    <div class="card-b fdw-table-body">
                         <table class="tbl">
                             <thead>
                                 <tr>
@@ -102,7 +102,7 @@
                             Map Fields
                         </button>
                     </div>
-                    <div class="card-b" style="padding:0 10px 12px;">
+                    <div class="card-b fdw-table-body">
                         @if (ctx.CurrentDataSet.Sources.Count == 0)
                         {
                             <div class="empty">No sources configured.</div>
@@ -144,7 +144,7 @@
                     <div class="u-h-14"></div>
                     <div class="card">
                         <div class="card-h"><h3>Field Mappings</h3></div>
-                        <div class="card-b" style="padding:0 10px 12px;">
+                        <div class="card-b fdw-table-body">
                             <table class="tbl">
                                 <thead>
                                     <tr>
@@ -251,7 +251,7 @@
                                 }
                                 @if (compCtx.WorkingSources.Count > 0)
                                 {
-                                    <div class="card-b" style="padding:0 10px 12px;">
+                                    <div class="card-b fdw-table-body">
                                         <table class="tbl">
                                             <thead>
                                                 <tr>
@@ -362,7 +362,7 @@
                                     }
                                     @if (compCtx.WorkingJoins.Count > 0)
                                     {
-                                        <div class="card-b" style="padding:0 10px 12px;">
+                                        <div class="card-b fdw-table-body">
                                             <table class="tbl">
                                                 <thead>
                                                     <tr>
@@ -441,7 +441,7 @@
                                 }
                                 @if (compCtx.WorkingCalculations.Count > 0)
                                 {
-                                    <div class="card-b" style="padding:0 10px 12px;">
+                                    <div class="card-b fdw-table-body">
                                         <table class="tbl">
                                             <thead>
                                                 <tr>
@@ -528,7 +528,7 @@
                                 }
                                 @if (compCtx.WorkingAggregations.Count > 0)
                                 {
-                                    <div class="card-b" style="padding:0 10px 12px;">
+                                    <div class="card-b fdw-table-body">
                                         <table class="tbl">
                                             <thead>
                                                 <tr>
@@ -593,7 +593,7 @@
                                 }
                                 else
                                 {
-                                    <div class="card-b" style="padding:0 10px 12px;overflow-x:auto;">
+                                    <div class="card-b fdw-table-body-scroll">
                                         <table class="tbl">
                                             <thead>
                                                 <tr>
@@ -692,7 +692,7 @@
                             {
                                 <div class="card">
                                     <div class="card-h"><h3>Catalog Metadata</h3><span class="meta">@annCtx.Annotations.Count annotation(s)</span></div>
-                                    <div class="card-b" style="padding:0 10px 12px;">
+                                    <div class="card-b fdw-table-body">
                                         <table class="tbl">
                                             <thead>
                                                 <tr>

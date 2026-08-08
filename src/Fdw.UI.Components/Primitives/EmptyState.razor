@@ -1,0 +1,12 @@
+@namespace Fdw.UI.Components.Primitives
+
+@if (InCard)
+{
+    <div class="card">
+        <div class="@BodyClass">@ChildContent</div>
+    </div>
+}
+else
+{
+    <div class="@BodyClass">@ChildContent</div>
+}

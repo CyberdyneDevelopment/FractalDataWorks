@@ -5,19 +5,14 @@
 
 <DataStoreProvider>
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Data Sources</div>
-                <h1>DataStores</h1>
-                <div class="sub">Logical DataSet &rarr; physical DataStore &rarr; DataPath &rarr; DataContainer.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="Data Sources" Title="DataStores" Subtitle="Logical DataSet → physical DataStore → DataPath → DataContainer.">
+            <Actions>
                 <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/datastores/new")'>
                     <Icon Name="Add" />
                     New DataStore
                 </button>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @if (ctx.IsLoading && !ctx.DataStores.Any())
         {
@@ -31,7 +26,7 @@
         {
             <div class="card">
                 <div class="card-h"><h3>All DataStores</h3></div>
-                <div class="card-b" style="padding:0 10px 12px;">
+                <div class="card-b fdw-table-body">
                     <table class="tbl">
                         <thead>
                             <tr>

@@ -6,19 +6,14 @@
 <RoleProvider>
     <ChildContent Context="ctx">
         <div style="display:flex;flex-direction:column;gap:14px;">
-            <div class="pagehead">
-                <div>
-                    <div class="ey">Admin</div>
-                    <h1>Roles &amp; Permissions</h1>
-                    <div class="sub">Define access roles and manage their security matrix.</div>
-                </div>
-                <div class="actions">
+            <PageHeader Eyebrow="Admin" Title="Roles & Permissions" Subtitle="Define access roles and manage their security matrix.">
+                <Actions>
                     <button class="btn btn-primary" @onclick="ShowCreateDialog">
                         <Icon Name="Add" />
                         New Role
                     </button>
-                </div>
-            </div>
+                </Actions>
+            </PageHeader>
 
             @if (_showCreateDialog)
             {
@@ -43,7 +38,7 @@
 
             @if (ctx.IsLoading && !ctx.Roles.Any())
             {
-                <div class="card"><div class="card-b" style="display:flex;justify-content:center;padding:48px;"><span class="badge b-run"><span class="bd"></span>Loading</span></div></div>
+                <LoadingCard />
             }
             else
             {

@@ -9,5 +9,5 @@ namespace Fdw.UI.Components.Services;
 public sealed class ErrorStatusVariant : StatusVariantBase
 {
     /// <summary>Initializes a new instance of <see cref="ErrorStatusVariant"/>.</summary>
-    public ErrorStatusVariant() : base(2, "Error") { }
+    public ErrorStatusVariant() : base(2, "Error", "b-fail") { }
 }

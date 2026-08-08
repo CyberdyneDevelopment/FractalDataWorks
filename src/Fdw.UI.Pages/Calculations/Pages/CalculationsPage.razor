@@ -5,35 +5,30 @@
 
 <CalculationProvider>
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Pipelines &amp; Scheduling</div>
-                <h1>Calculations</h1>
-                <div class="sub">Derived fields via the formula engine — Calculation, Aggregation, Pivot, Lookup.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="Pipelines & Scheduling" Title="Calculations" Subtitle="Derived fields via the formula engine — Calculation, Aggregation, Pivot, Lookup.">
+            <Actions>
                 <a class="btn btn-primary btn-sm" href="/calculations/create">Create Calculation</a>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @if (ctx.IsLoading && !ctx.FilteredCalculations.Any())
         {
-            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="mut u-fg-n500">Loading calculations&hellip;</p></div></div>
+            <EmptyState><p class="mut u-fg-n500">Loading calculations&hellip;</p></EmptyState>
         }
         else if (!ctx.FilteredCalculations.Any())
         {
             <div class="card">
-                <div class="card-b" style="padding:48px 20px;text-align:center;">
+                <EmptyState InCard="false">
                     <p class="u-fg-n300">No calculations defined</p>
                     <p class="sub u-mt-6">Create a calculation to add derived fields to DataSets.</p>
-                </div>
+                </EmptyState>
             </div>
         }
         else
         {
             <div class="card">
                 <div class="card-h"><h3>Calculations</h3></div>
-                <div class="card-b" style="padding:0 10px 12px;">
+                <div class="card-b fdw-table-body">
                     <table class="tbl">
                         <thead>
                             <tr>

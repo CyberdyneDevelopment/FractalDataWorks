@@ -5,13 +5,8 @@
 
 <DataSetProvider>
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Data Sources</div>
-                <h1>DataSets</h1>
-                <div class="sub">Logical views over one or more sources. Calculated sets derive fields with the formula engine.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="Data Sources" Title="DataSets" Subtitle="Logical views over one or more sources. Calculated sets derive fields with the formula engine.">
+            <Actions>
                 <input class="fin" style="width:240px;" placeholder="Search name, abbrev, category..."
                        value="@_search" @oninput="@(e => { _search = e.Value?.ToString() ?? string.Empty; ctx.OnSearchStringChanged(_search); })" />
                 <select class="fin" style="width:170px;" @bind="_categoryFilter" @bind:after="() => ctx.OnCategoryFilterChanged(_categoryFilter)">
@@ -25,8 +20,8 @@
                     <Icon Name="Add" />
                     New DataSet
                 </button>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @if (ctx.IsLoading && !ctx.DataSets.Any())
         {
@@ -40,7 +35,7 @@
         {
             <div class="card">
                 <div class="card-h"><h3>All DataSets</h3></div>
-                <div class="card-b" style="padding:0 10px 12px;">
+                <div class="card-b fdw-table-body">
                     <table class="tbl">
                         <thead>
                             <tr>

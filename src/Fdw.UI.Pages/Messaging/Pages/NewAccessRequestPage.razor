@@ -6,19 +6,14 @@
 
 <MessageProvider>
     <AccessRequestContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Admin · Access Requests</div>
-                <h1>Request Access</h1>
-                <div class="sub">Request access to a resource for approval.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="Admin · Access Requests" Title="Request Access" Subtitle="Request access to a resource for approval.">
+            <Actions>
                 <button class="btn btn-ghost" @onclick="@(() => Navigation.NavigateTo("/messages"))">
                     <Icon Name="Back" />
                     Back to Messages
                 </button>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         <div class="card" style="max-width:560px;">
             <div class="card-h"><h3>New Access Request</h3></div>

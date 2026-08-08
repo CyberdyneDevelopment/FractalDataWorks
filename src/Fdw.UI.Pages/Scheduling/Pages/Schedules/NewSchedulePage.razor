@@ -6,19 +6,14 @@
 <ScheduleProvider>
     <ChildContent Context="ctx">
         <div style="max-width:760px;margin:0 auto;">
-            <div class="pagehead">
-                <div>
-                    <div class="ey">Pipelines &amp; Scheduling</div>
-                    <h1>New Schedule</h1>
-                    <div class="sub">Cron / Interval / One Time / Event.</div>
-                </div>
-                <div class="actions">
+            <PageHeader Eyebrow="Pipelines & Scheduling" Title="New Schedule" Subtitle="Cron / Interval / One Time / Event.">
+                <Actions>
                     <button class="btn btn-ghost" @onclick="GoBack">
                         <Icon Name="Back" />
                         Back
                     </button>
-                </div>
-            </div>
+                </Actions>
+            </PageHeader>
 
             @if (!string.IsNullOrEmpty(_errorMessage))
             {

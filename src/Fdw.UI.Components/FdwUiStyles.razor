@@ -11,7 +11,8 @@
    <link rel="stylesheet"> element in the body applies to the document under every render mode, and
    carries display:none from the UA stylesheet so it never participates in layout.
 
-   Order does not matter: every rule in the asset is !important and no host rule in this cascade
-   layer is, so the utilities keep the precedence the inline style attributes they replaced had. *@
+   Order does not matter: every rule in both assets is !important and no host rule in this cascade
+   layer is, so they keep the precedence the inline style attributes they replaced had. *@
 
 <link rel="stylesheet" href="_content/Fdw.UI.Components/css/fdw-utilities.css" />
+<link rel="stylesheet" href="_content/Fdw.UI.Components/css/fdw-shapes.css" />

@@ -96,7 +96,7 @@
                         <Icon Name="Stop" />
                         Stop
                     </button>
-                    <span class="badge @GetStatusBadgeClass(_testExecutionStatus)"><span class="bd"></span>@_testExecutionStatus</span>
+                    <Badge Variant="GetStatusVariant(_testExecutionStatus)">@_testExecutionStatus</Badge>
                 </div>
             }
             else
@@ -1366,18 +1366,21 @@
         _ => "#475569"
     };
 
-    private static string GetStatusBadgeClass(string status)
+    // Why Running takes the success tone and Complete the running one: that is what this panel has
+    // always drawn, and the pass that introduced Badge changed no colour anywhere. It disagrees with
+    // every other execution view in the console and is the next thing to settle.
+    private static StatusVariantBase GetStatusVariant(string status)
     {
         if (string.Equals(status, "Running", StringComparison.OrdinalIgnoreCase))
-            return "b-ok";
+            return StatusVariants.Success;
         if (string.Equals(status, "Paused", StringComparison.OrdinalIgnoreCase))
-            return "b-warn";
+            return StatusVariants.Warning;
         if (string.Equals(status, "Complete", StringComparison.OrdinalIgnoreCase))
-            return "b-run";
+            return StatusVariants.Info;
         if (string.Equals(status, "Failed", StringComparison.OrdinalIgnoreCase)
             || string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase))
-            return "b-fail";
-        return "b-idle";
+            return StatusVariants.Error;
+        return StatusVariants.Neutral;
     }
 
     // Why: IAsyncDisposable implementation ensures the SignalR connection is cleanly

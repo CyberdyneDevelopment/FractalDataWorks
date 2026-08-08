@@ -8,19 +8,14 @@
         <UserProvider>
             <ChildContent Context="ctx">
                 <div style="display:flex;flex-direction:column;gap:14px;">
-                    <div class="pagehead">
-                        <div>
-                            <div class="ey">Admin</div>
-                            <h1>Users</h1>
-                            <div class="sub">Manage system users and their access levels.</div>
-                        </div>
-                        <div class="actions">
+                    <PageHeader Eyebrow="Admin" Title="Users" Subtitle="Manage system users and their access levels.">
+                        <Actions>
                             <button @onclick="ShowCreateForm" class="btn btn-primary">
                                 <Icon Name="Add" />
                                 New User
                             </button>
-                        </div>
-                    </div>
+                        </Actions>
+                    </PageHeader>
 
                     <div class="card">
                         <div class="card-h">
@@ -38,13 +33,11 @@
 
                         @if (ctx.IsLoading && !ctx.FilteredUsers.Any())
                         {
-                            <div class="card-b" style="display:flex;justify-content:center;padding:48px;">
-                                <span class="badge b-run"><span class="bd"></span>Loading</span>
-                            </div>
+                            <LoadingCard InCard="false" />
                         }
                         else
                         {
-                            <div class="card-b" style="padding:0 10px 12px;overflow-x:auto;">
+                            <div class="card-b fdw-table-body-scroll">
                                 <table class="tbl">
                                     <thead>
                                         <tr>

@@ -7,18 +7,13 @@
 <OrchestrationNodeProvider>
     <ChildContent Context="ctx">
         <div>
-            <div class="pagehead">
-                <div>
-                    <div class="ey">Pipelines &amp; Scheduling</div>
-                    <h1>Orchestration</h1>
-                    <div class="sub">Orchestration nodes — hierarchical execution policy.</div>
-                </div>
-                <div class="actions">
+            <PageHeader Eyebrow="Pipelines & Scheduling" Title="Orchestration" Subtitle="Orchestration nodes — hierarchical execution policy.">
+                <Actions>
                     <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/orchestration/edit")'>
                         New Node
                     </button>
-                </div>
-            </div>
+                </Actions>
+            </PageHeader>
 
             <div class="filters">
                 <input type="text"
@@ -37,7 +32,7 @@
 
             @if (ctx.IsLoading)
             {
-                <div class="card" style="padding:48px;text-align:center;">
+                <div class="card fdw-empty-square">
                     <span class="mono u-fg-n500">Loading nodes…</span>
                 </div>
             }
@@ -45,7 +40,7 @@
             {
                 <div class="card">
                     <div class="card-h"><h3>Root Nodes</h3></div>
-                    <div class="card-b" style="padding:0 10px 12px;">
+                    <div class="card-b fdw-table-body">
                         <table class="tbl">
                             <thead>
                                 <tr>

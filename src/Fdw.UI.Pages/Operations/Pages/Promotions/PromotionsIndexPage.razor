@@ -5,13 +5,8 @@
 
 <PromotionProvider>
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">System</div>
-                <h1>Promotions</h1>
-                <div class="sub">Move configuration between environments with review.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="System" Title="Promotions" Subtitle="Move configuration between environments with review.">
+            <Actions>
                 <button class="btn btn-secondary" @onclick="async () => await ctx.OnRefresh()" disabled="@ctx.IsLoading">
                     <Icon Name="Refresh" />
                     Refresh
@@ -20,8 +15,8 @@
                     <Icon Name="Add" />
                     New promotion
                 </button>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
         {
@@ -59,22 +54,22 @@
 
         @if (ctx.IsLoading && !ctx.Requests.Any())
         {
-            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="mut u-fg-n500">Loading promotions&hellip;</p></div></div>
+            <EmptyState><p class="mut u-fg-n500">Loading promotions&hellip;</p></EmptyState>
         }
         else if (!ctx.Requests.Any())
         {
             <div class="card">
-                <div class="card-b" style="padding:48px 20px;text-align:center;">
+                <EmptyState InCard="false">
                     <p class="u-fg-n300">No promotion requests</p>
                     <p class="sub u-mt-6">Create a promotion request to move configurations between environments</p>
-                </div>
+                </EmptyState>
             </div>
         }
         else
         {
             <div class="card">
                 <div class="card-h"><h3>Promotions</h3></div>
-                <div class="card-b" style="padding:0 10px 12px;">
+                <div class="card-b fdw-table-body">
                     <table class="tbl">
                         <thead>
                             <tr>
@@ -93,7 +88,7 @@
                                     <td class="mut">@req.SourceEnvironment</td>
                                     <td class="mut">@req.TargetEnvironment</td>
                                     <td class="mut">
-                                        <span class="@GetStatusBadge(req.Status)"><span class="bd"></span>@req.Status</span>
+                                        <Badge Variant="GetStatusVariant(req.Status)">@req.Status</Badge>
                                     </td>
                                     <td>
                                         <div class="actions">
@@ -139,11 +134,11 @@
         _showCreate = false;
     }
 
-    private static string GetStatusBadge(string status) => status switch
+    private static StatusVariantBase GetStatusVariant(string status) => status switch
     {
-        "Approved" => "badge b-ok",
-        "Rejected" => "badge b-fail",
-        "Pending" => "badge b-warn",
-        _ => "badge b-idle"
+        "Approved" => StatusVariants.Success,
+        "Rejected" => StatusVariants.Error,
+        "Pending" => StatusVariants.Warning,
+        _ => StatusVariants.Neutral
     };
 }

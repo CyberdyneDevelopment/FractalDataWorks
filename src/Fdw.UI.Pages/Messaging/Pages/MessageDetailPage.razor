@@ -34,7 +34,7 @@
             <div class="card">
                 <div class="card-h">
                     <h3>@ctx.Message.Subject</h3>
-                    <span class="badge @GetSeverityBadge(ctx.Message.Severity)"><span class="bd"></span>@ctx.Message.Severity</span>
+                    <Badge Variant="GetSeverityVariant(ctx.Message.Severity)">@ctx.Message.Severity</Badge>
                 </div>
                 <div class="card-b">
                     <div class="filters u-mb-16">
@@ -114,12 +114,12 @@
         }
     }
 
-    private static string GetSeverityBadge(string severity) => severity switch
+    private static StatusVariantBase GetSeverityVariant(string severity) => severity switch
     {
-        "Critical" => "b-fail",
-        "High" => "b-warn",
-        "Normal" => "b-idle",
-        "Low" => "b-run",
-        _ => "b-idle"
+        "Critical" => StatusVariants.Error,
+        "High" => StatusVariants.Warning,
+        "Normal" => StatusVariants.Neutral,
+        "Low" => StatusVariants.Info,
+        _ => StatusVariants.Neutral
     };
 }
