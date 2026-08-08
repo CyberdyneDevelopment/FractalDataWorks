@@ -89,7 +89,7 @@
                                                     @(user.LastLoginAt?.ToString("MMM dd, yyyy HH:mm") ?? "Never")
                                                 </td>
                                                 <td class="mut">
-                                                    <div class="actions" style="justify-content:flex-end;">
+                                                    <div class="actions u-jc-end">
                                                         <button @onclick="() => EditUser(user)" class="btn btn-ghost btn-sm">
                                                             <Icon Name="EditAlt" />
                                                         </button>
@@ -120,13 +120,13 @@
                             <div class="card-b">
                                 @if (!string.IsNullOrEmpty(_resetError))
                                 {
-                                    <div class="danger" style="margin-bottom:16px;"><div class="t"><p>@_resetError</p></div></div>
+                                    <div class="danger u-mb-16"><div class="t"><p>@_resetError</p></div></div>
                                 }
                                 <div class="frow">
                                     <label>New password</label>
                                     <input type="password" class="finput" @bind="_resetPassword" placeholder="Min 8 characters" />
                                 </div>
-                                <div class="actions" style="justify-content:flex-end;">
+                                <div class="actions u-jc-end">
                                     <button class="btn btn-secondary" @onclick="CancelReset">Cancel</button>
                                     <button class="btn btn-primary" @onclick="() => SubmitReset(ctx)" disabled="@_resetting">
                                         @(_resetting ? "Resetting..." : "Reset password")
@@ -147,7 +147,7 @@
                             <div class="card-b">
                                 @if (!string.IsNullOrEmpty(_formError))
                                 {
-                                    <div class="danger" style="margin-bottom:16px;"><div class="t"><p>@_formError</p></div></div>
+                                    <div class="danger u-mb-16"><div class="t"><p>@_formError</p></div></div>
                                 }
 
                                 <div class="fgrid">
@@ -181,7 +181,7 @@
                                     </div>
                                 </div>
 
-                                <div class="frow" style="margin-bottom:16px;">
+                                <div class="frow u-mb-16">
                                     <label>Status</label>
                                     <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
                                         <input type="checkbox" @bind="_formIsActive" style="position:absolute;opacity:0;" />
@@ -190,7 +190,7 @@
                                     </label>
                                 </div>
 
-                                <div class="actions" style="justify-content:flex-end;">
+                                <div class="actions u-jc-end">
                                     <button class="btn btn-secondary" @onclick="CancelForm">Cancel</button>
                                     <button class="btn btn-primary" @onclick="() => SubmitForm(ctx)" disabled="@_submitting">
                                         @(_submitting ? "Saving..." : (_editingUser != null ? "Update" : "Create"))

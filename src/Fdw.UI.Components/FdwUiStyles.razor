@@ -1,0 +1,17 @@
+@namespace Fdw.UI.Components
+
+@* Why: the utility classes the Fdw UI packages emit are defined in a static web asset that ships
+   with Fdw.UI.Components, and a NuGet package cannot add a <link> to the host's App.razor. Rendering
+   the link from a component the host already renders is what lets the class definitions arrive with
+   the package instead of having to be re-declared in every skin.
+
+   Why the link sits in the body rather than in <HeadContent>: HeadOutlet lives in App.razor at the
+   host's chosen render mode, which need not be the render mode of the tree that declares the head
+   content, and a stylesheet that silently fails to load is a whole-console visual regression. A
+   <link rel="stylesheet"> element in the body applies to the document under every render mode, and
+   carries display:none from the UA stylesheet so it never participates in layout.
+
+   Order does not matter: every rule in the asset is !important and no host rule in this cascade
+   layer is, so the utilities keep the precedence the inline style attributes they replaced had. *@
+
+<link rel="stylesheet" href="_content/Fdw.UI.Components/css/fdw-utilities.css" />

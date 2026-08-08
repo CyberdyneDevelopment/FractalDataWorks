@@ -25,7 +25,7 @@
 
         @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
         {
-            <div class="danger" style="margin-bottom:14px;">
+            <div class="danger u-mb-14">
                 <div class="t">
                     <h4>Error</h4>
                     <p>@ctx.ErrorMessage</p>
@@ -45,7 +45,7 @@
 
         @if (_showCreate)
         {
-            <div class="card" style="margin-bottom:14px;">
+            <div class="card u-mb-14">
                 <div class="card-h"><h3>Add Glossary Term</h3></div>
                 <div class="card-b">
                     <div class="fgrid">
@@ -58,7 +58,7 @@
                             <input class="finput" @bind="_createDefinition" placeholder="Term definition" />
                         </div>
                     </div>
-                    <div class="actions" style="justify-content:flex-end;">
+                    <div class="actions u-jc-end">
                         <button class="btn btn-ghost btn-sm" @onclick="() => _showCreate = false">Cancel</button>
                         <button class="btn btn-primary btn-sm" @onclick="async () => await SubmitCreate(ctx)" disabled="@ctx.IsLoading">Create</button>
                     </div>
@@ -70,7 +70,7 @@
         {
             <div class="card">
                 <div class="card-b" style="padding:40px 20px;text-align:center;color:var(--n-500);">
-                    <p style="margin:0;">Loading terms...</p>
+                    <p class="u-m-0">Loading terms...</p>
                 </div>
             </div>
         }

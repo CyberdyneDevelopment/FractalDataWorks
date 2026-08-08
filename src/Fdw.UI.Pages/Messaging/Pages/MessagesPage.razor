@@ -30,7 +30,7 @@
                     @status
                 </span>
             }
-            <div class="seg" style="margin-left:auto;">
+            <div class="seg u-ml-auto">
                 <select class="finput mono" style="background:transparent;padding:5px 8px;" @bind="_typeFilter">
                     <option value="">All Types</option>
                     <option value="SystemNotification">System</option>
@@ -59,7 +59,7 @@
                 }
                 else if (!string.IsNullOrEmpty(ctx.ErrorMessage))
                 {
-                    <div class="act"><div class="a"><p class="t mono" style="color:var(--signal);">@ctx.ErrorMessage</p></div></div>
+                    <div class="act"><div class="a"><p class="t mono u-fg-signal">@ctx.ErrorMessage</p></div></div>
                 }
                 else if (FilteredMessages(ctx.Messages).Count == 0)
                 {
@@ -70,7 +70,7 @@
                     <div class="act">
                         @foreach (var message in FilteredMessages(ctx.Messages))
                         {
-                            <div class="a" style="cursor:pointer;" @onclick="@(() => OpenMessage(message))">
+                            <div class="a u-pointer" @onclick="@(() => OpenMessage(message))">
                                 <span class="d @GetSeverityDotClass(message.Severity)"></span>
                                 <div style="flex:1;min-width:0;">
                                     <p class="t @(message.IsUnread ? "" : "mut")">@message.Subject</p>

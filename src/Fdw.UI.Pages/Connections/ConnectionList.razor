@@ -62,7 +62,7 @@ else if (!GetDisplayedConnections().Any())
     <div class="card">
         <div class="card-b" style="padding:48px;text-align:center;">
             <Icon Name="Database" Style="width:48px;height:48px;margin:0 auto 14px;color:var(--n-600);display:block;" StrokeWidth="1.5" />
-            <p style="color:var(--n-500);">No connections configured</p>
+            <p class="u-fg-n500">No connections configured</p>
         </div>
     </div>
 }
@@ -83,7 +83,7 @@ else
                            narrowing to 1) makes Blazor reuse the position-0 DOM node and its per-row click
                            handlers (TEST/trash) bind to stale/disposed handler ids — the circuit then silently
                            drops the click, so the delete confirm modal never opens after a search. *@
-                        <tr @key="conn.Name" style="cursor:pointer;" @onclick="() => OnCardClick.InvokeAsync(conn.Name)">
+                        <tr @key="conn.Name" class="u-pointer" @onclick="() => OnCardClick.InvokeAsync(conn.Name)">
                             <td><div class="cellpad nm">@conn.Name</div></td>
                             <td class="mut"><span class="tpill">@conn.ConnectionType</span></td>
                             <td class="mut">@(conn.LastTestedAt.HasValue ? conn.LastTestedAt.Value.ToString("t") : "Never")</td>
@@ -91,7 +91,7 @@ else
                                 <span class="badge @GetHealthBadgeClass(conn)"><span class="bd"></span>@GetHealthBadgeText(conn)</span>
                             </td>
                             <td>
-                                <div class="actions" style="justify-content:flex-end;">
+                                <div class="actions u-jc-end">
                                     <button class="btn btn-secondary btn-sm" @onclick="() => StartTest(conn.Name)"
                                             @onclick:stopPropagation="true"
                                             disabled="@(_testingConnection == conn.Name)">
@@ -119,8 +119,8 @@ else
         <div class="card" style="width:384px;">
             <div class="card-h"><h3>Confirm Delete</h3></div>
             <div class="card-b">
-                <p style="color:var(--n-400);font-size:13px;margin:0 0 20px;">Are you sure you want to delete connection <span class="mono" style="color:var(--signal);">@_deleteTarget</span>? This action cannot be undone.</p>
-                <div class="actions" style="justify-content:flex-end;">
+                <p style="color:var(--n-400);font-size:13px;margin:0 0 20px;">Are you sure you want to delete connection <span class="mono u-fg-signal">@_deleteTarget</span>? This action cannot be undone.</p>
+                <div class="actions u-jc-end">
                     <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancel</button>
                     <button class="btn btn-danger btn-sm" @onclick="ExecuteDelete">Delete</button>
                 </div>

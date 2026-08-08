@@ -32,7 +32,7 @@
         else
         {
             @* ── Journey actions ─────────────────────────────────────────────────────── *@
-            <div class="actions" style="margin-bottom:12px;">
+            <div class="actions u-mb-12">
                 <button class="btn btn-primary btn-sm"
                         @onclick='async () => await ctx.OnStartPipeline(ctx.CurrentDataSet!.Name)'
                         title="Open Pipeline Builder with this DataSet as the source">
@@ -141,7 +141,7 @@
 
                 @if (ctx.CurrentDataSet.Sources.Any(s => s.FieldMappings.Count > 0))
                 {
-                    <div style="height:14px;"></div>
+                    <div class="u-h-14"></div>
                     <div class="card">
                         <div class="card-h"><h3>Field Mappings</h3></div>
                         <div class="card-b" style="padding:0 10px 12px;">
@@ -207,14 +207,14 @@
                                 </div>
                             </div>
 
-                            <div style="height:14px;"></div>
+                            <div class="u-h-14"></div>
 
                             @* ── Sources ─────────────────────────────────────────────────────────── *@
                             <div class="card">
                                 <div class="card-h">
                                     <h3>Sources</h3>
                                     <span class="meta">@compCtx.WorkingSources.Count</span>
-                                    <button class="btn btn-secondary btn-sm" style="margin-left:auto;"
+                                    <button class="btn btn-secondary btn-sm u-ml-auto"
                                             @onclick="() => _showAddSource = !_showAddSource">
                                         + Add Source
                                     </button>
@@ -240,7 +240,7 @@
                                                 <input class="fin" @bind="_addSourceContainer" placeholder="e.g. Orders" />
                                             </div>
                                         </div>
-                                        <div class="actions" style="justify-content:flex-end;">
+                                        <div class="actions u-jc-end">
                                             <button class="btn btn-secondary btn-sm" @onclick="() => _showAddSource = false">Cancel</button>
                                             <button class="btn btn-primary btn-sm"
                                                     @onclick='() => SubmitAddSource(compCtx)'>
@@ -294,7 +294,7 @@
                                 }
                             </div>
 
-                            <div style="height:14px;"></div>
+                            <div class="u-h-14"></div>
 
                             @* ── Joins ──────────────────────────────────────────────────────────── *@
                             @if (compCtx.WorkingSources.Count > 1)
@@ -303,7 +303,7 @@
                                     <div class="card-h">
                                         <h3>Joins</h3>
                                         <span class="meta">@compCtx.WorkingJoins.Count</span>
-                                        <button class="btn btn-secondary btn-sm" style="margin-left:auto;"
+                                        <button class="btn btn-secondary btn-sm u-ml-auto"
                                                 @onclick="() => _showAddJoin = !_showAddJoin">
                                             + Add Join
                                         </button>
@@ -351,7 +351,7 @@
                                                     <input class="fin" @bind="_addJoinRightField" placeholder="e.g. Id" />
                                                 </div>
                                             </div>
-                                            <div class="actions" style="justify-content:flex-end;">
+                                            <div class="actions u-jc-end">
                                                 <button class="btn btn-secondary btn-sm" @onclick="() => _showAddJoin = false">Cancel</button>
                                                 <button class="btn btn-primary btn-sm"
                                                         @onclick='() => SubmitAddJoin(compCtx)'>
@@ -400,7 +400,7 @@
                                     }
                                 </div>
 
-                                <div style="height:14px;"></div>
+                                <div class="u-h-14"></div>
                             }
 
                             @* ── Calculations ────────────────────────────────────────────────────── *@
@@ -408,7 +408,7 @@
                                 <div class="card-h">
                                     <h3>Calculations</h3>
                                     <span class="meta">@compCtx.WorkingCalculations.Count</span>
-                                    <button class="btn btn-secondary btn-sm" style="margin-left:auto;"
+                                    <button class="btn btn-secondary btn-sm u-ml-auto"
                                             @onclick="() => _showAddCalc = !_showAddCalc">
                                         + Add Calculation
                                     </button>
@@ -430,7 +430,7 @@
                                                 <input class="fin" @bind="_addCalcDataType" placeholder="e.g. decimal" />
                                             </div>
                                         </div>
-                                        <div class="actions" style="justify-content:flex-end;">
+                                        <div class="actions u-jc-end">
                                             <button class="btn btn-secondary btn-sm" @onclick="() => _showAddCalc = false">Cancel</button>
                                             <button class="btn btn-primary btn-sm"
                                                     @onclick='() => SubmitAddCalculation(compCtx)'>
@@ -475,14 +475,14 @@
                                 }
                             </div>
 
-                            <div style="height:14px;"></div>
+                            <div class="u-h-14"></div>
 
                             @* ── Aggregations ────────────────────────────────────────────────────── *@
                             <div class="card">
                                 <div class="card-h">
                                     <h3>Aggregations</h3>
                                     <span class="meta">@compCtx.WorkingAggregations.Count</span>
-                                    <button class="btn btn-secondary btn-sm" style="margin-left:auto;"
+                                    <button class="btn btn-secondary btn-sm u-ml-auto"
                                             @onclick="() => _showAddAgg = !_showAddAgg">
                                         + Add Aggregation
                                     </button>
@@ -517,7 +517,7 @@
                                                 <input class="fin" @bind="_addAggGroupBy" placeholder="e.g. CustomerId, Region" />
                                             </div>
                                         </div>
-                                        <div class="actions" style="justify-content:flex-end;">
+                                        <div class="actions u-jc-end">
                                             <button class="btn btn-secondary btn-sm" @onclick="() => _showAddAgg = false">Cancel</button>
                                             <button class="btn btn-primary btn-sm"
                                                     @onclick='() => SubmitAddAggregation(compCtx)'>
@@ -564,7 +564,7 @@
                                 }
                             </div>
 
-                            <div style="height:14px;"></div>
+                            <div class="u-h-14"></div>
 
                             @* ── Live Preview ─────────────────────────────────────────────────────── *@
                             <div class="card">
@@ -732,7 +732,7 @@
                                         </table>
                                     </div>
                                 </div>
-                                <div style="height:14px;"></div>
+                                <div class="u-h-14"></div>
                             }
 
                             <div class="card">
@@ -762,7 +762,7 @@
                                             <input class="fin" @bind="_tagInput" placeholder="finance, compliance" />
                                         </div>
                                     </div>
-                                    <div class="actions" style="justify-content:flex-end;">
+                                    <div class="actions u-jc-end">
                                         <button class="btn btn-primary btn-sm" @onclick="() => SubmitAnnotation(annCtx)">Save Annotation</button>
                                     </div>
                                 </div>

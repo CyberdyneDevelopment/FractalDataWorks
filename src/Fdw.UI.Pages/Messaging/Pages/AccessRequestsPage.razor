@@ -67,11 +67,11 @@
                                         @if (string.Equals(request.Status, "Pending", StringComparison.OrdinalIgnoreCase))
                                         {
                                             <div class="actions">
-                                                <button class="btn btn-ghost btn-sm" title="Approve" style="color:var(--success);"
+                                                <button class="btn btn-ghost btn-sm u-fg-success" title="Approve"
                                                         @onclick="@(async () => await ctx.OnApprove(request.Id, null))">
                                                     <Icon Name="Check" StrokeWidth="2" />
                                                 </button>
-                                                <button class="btn btn-ghost btn-sm" title="Deny" style="color:var(--signal);"
+                                                <button class="btn btn-ghost btn-sm u-fg-signal" title="Deny"
                                                         @onclick="@(() => OpenDenyDialog(request))">
                                                     <Icon Name="Close" />
                                                 </button>
@@ -104,7 +104,7 @@
                         </button>
                     </div>
                     <div class="card-b">
-                        <p class="sub" style="margin-bottom:16px;">
+                        <p class="sub u-mb-16">
                             Denying access to: <span class="mono" style="color:var(--n-100);">@_denyTarget.RequestedResource</span>
                             (<span class="mono">@_denyTarget.RequestedPermission</span>)
                         </p>
@@ -112,7 +112,7 @@
                             <label>Notes (optional)</label>
                             <textarea class="finput" rows="3" @bind="_denyNotes" placeholder="Reason for denial..."></textarea>
                         </div>
-                        <div class="actions" style="justify-content:flex-end;">
+                        <div class="actions u-jc-end">
                             <button class="btn btn-secondary btn-sm" @onclick="@(() => _showDenyDialog = false)">Cancel</button>
                             <button class="btn btn-danger btn-sm" @onclick="@(async () => await ConfirmDeny(ctx))">Deny</button>
                         </div>

@@ -58,7 +58,7 @@
                         <button class="@(_altActive ? "on" : "")" @onclick='() => _altActive = !_altActive'>ALT</button>
                         <button @onclick='() => terminal.SendCommand("\t")'>TAB</button>
 
-                        <div style="flex:1;"></div>
+                        <div class="u-flex-1"></div>
 
                         <button @onclick='() => terminal.SendCommand("\x1b[A")'><Icon Name="ChevronUp" Style="width:14px;height:14px;" /></button>
                         <button @onclick='() => terminal.SendCommand("\x1b[D")'><Icon Name="ChevronLeft" Style="width:14px;height:14px;" Rounded="false" /></button>

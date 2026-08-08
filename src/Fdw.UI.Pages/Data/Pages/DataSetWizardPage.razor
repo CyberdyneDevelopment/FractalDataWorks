@@ -52,7 +52,7 @@
                     @* Why: journey context banner — shown on all steps when arriving from a
                        "Derive new DataSet" action so the user knows which DataSet they are
                        basing this on without having to navigate back. *@
-                    <div class="alert alert-ok" style="margin-bottom:14px;">
+                    <div class="alert alert-ok u-mb-14">
                         Deriving new DataSet from: <strong>@BaseDataSet</strong>
                     </div>
                 }
@@ -121,7 +121,7 @@
 
                     @if (!string.IsNullOrEmpty(_importedFromTable))
                     {
-                        <div class="alert alert-ok" style="margin-bottom:14px;">@_importedFromTable</div>
+                        <div class="alert alert-ok u-mb-14">@_importedFromTable</div>
                     }
 
                     @if (_showImportPanel)
@@ -318,7 +318,7 @@
                     @* Step 4: Mappings *@
                     @foreach (var source in _model.Sources)
                     {
-                        <div class="card" style="margin-bottom:14px;">
+                        <div class="card u-mb-14">
                             <div class="card-h"><h3>@source.SourceName</h3></div>
                             <div class="card-b" style="padding:0 10px 12px;">
                                 <table class="tbl">

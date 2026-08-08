@@ -17,7 +17,7 @@
 
     @* Name *@
     <div class="frow">
-        <label class="flbl">Name <span style="color:var(--signal);">*</span></label>
+        <label class="flbl">Name <span class="u-fg-signal">*</span></label>
         <input class="@InputClass(_nameTouched && string.IsNullOrWhiteSpace(_name))"
                @bind="_name"
                @bind:event="oninput"
@@ -25,13 +25,13 @@
                placeholder="DATASET_NAME" />
         @if (_nameTouched && string.IsNullOrWhiteSpace(_name))
         {
-            <p class="fhint mono" style="color:var(--signal);">Name is required</p>
+            <p class="fhint mono u-fg-signal">Name is required</p>
         }
     </div>
 
     @* DataStore / Connection *@
     <div class="frow">
-        <label class="flbl">DataStore <span style="color:var(--signal);">*</span></label>
+        <label class="flbl">DataStore <span class="u-fg-signal">*</span></label>
         <select class="@InputClass(_datastoreTouched && string.IsNullOrWhiteSpace(_dataStoreName))"
                 @bind="_dataStoreName"
                 @onblur="() => _datastoreTouched = true">
@@ -43,7 +43,7 @@
         </select>
         @if (_datastoreTouched && string.IsNullOrWhiteSpace(_dataStoreName))
         {
-            <p class="fhint mono" style="color:var(--signal);">DataStore is required</p>
+            <p class="fhint mono u-fg-signal">DataStore is required</p>
         }
     </div>
 
@@ -58,7 +58,7 @@
     @* Fields (repeating rows) *@
     <div class="frow">
         <div class="card-h" style="padding:0 0 4px;">
-            <label class="flbl" style="margin-bottom:0;">Fields</label>
+            <label class="flbl u-mb-0">Fields</label>
             <button type="button"
                     class="btn btn-secondary btn-sm"
                     @onclick="AddField">
@@ -117,7 +117,7 @@
     @* Error display *@
     @if (!string.IsNullOrEmpty(_validationError))
     {
-        <div class="alert alert-err mono" style="margin-bottom:16px;">
+        <div class="alert alert-err mono u-mb-16">
             @_validationError
         </div>
     }

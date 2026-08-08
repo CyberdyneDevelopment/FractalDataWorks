@@ -37,12 +37,12 @@
                     <span class="badge @GetSeverityBadge(ctx.Message.Severity)"><span class="bd"></span>@ctx.Message.Severity</span>
                 </div>
                 <div class="card-b">
-                    <div class="filters" style="margin-bottom:16px;">
+                    <div class="filters u-mb-16">
                         <span class="tpill">@ctx.Message.MessageType</span>
-                        <span class="mono mut" style="font-size:12px;">@ctx.Message.CreatedAt.ToString("g")</span>
+                        <span class="mono mut u-fs-12">@ctx.Message.CreatedAt.ToString("g")</span>
                         @if (!string.IsNullOrEmpty(ctx.Message.ReferenceId))
                         {
-                            <span class="mono mut" style="font-size:12px;">
+                            <span class="mono mut u-fs-12">
                                 Ref: @ctx.Message.ReferenceId
                                 <button class="btn btn-ghost btn-sm" @onclick="@(() => CopyToClipboard(ctx.Message.ReferenceId))">
                                     <Icon Name="Copy" />
@@ -58,7 +58,7 @@
 
                     @if (!string.IsNullOrEmpty(ctx.Message.ResourceType))
                     {
-                        <dl class="kv" style="margin-bottom:16px;">
+                        <dl class="kv u-mb-16">
                             <dt>Resource</dt>
                             <dd>
                                 @ctx.Message.ResourceType
@@ -72,7 +72,7 @@
 
                     @if (!string.IsNullOrEmpty(ctx.Message.ActionUrl))
                     {
-                        <div style="margin-bottom:16px;">
+                        <div class="u-mb-16">
                             <a href="@ctx.Message.ActionUrl" class="btn btn-primary">
                                 <Icon Name="ExternalLink" />
                                 @(ctx.Message.ActionType ?? "Take Action")

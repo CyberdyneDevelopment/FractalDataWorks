@@ -22,8 +22,7 @@
 
             <div class="filters">
                 <input type="text"
-                       class="finput"
-                       style="flex:1;"
+                       class="finput u-flex-1"
                        placeholder="Search nodes..."
                        value="@ctx.SearchString"
                        @oninput="e => ctx.OnSearchStringChanged(e.Value?.ToString() ?? string.Empty)" />
@@ -39,7 +38,7 @@
             @if (ctx.IsLoading)
             {
                 <div class="card" style="padding:48px;text-align:center;">
-                    <span class="mono" style="color:var(--n-500);">Loading nodes…</span>
+                    <span class="mono u-fg-n500">Loading nodes…</span>
                 </div>
             }
             else
@@ -89,7 +88,7 @@
                                                         @onclick='() => Nav.NavigateTo($"/orchestration/edit/{node.Id}")'>
                                                     Edit
                                                 </button>
-                                                <button class="btn btn-ghost btn-sm" style="color:var(--signal);"
+                                                <button class="btn btn-ghost btn-sm u-fg-signal"
                                                         @onclick="() => DeleteNode(ctx, node.Id)">
                                                     Delete
                                                 </button>

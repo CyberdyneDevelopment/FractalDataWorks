@@ -58,7 +58,7 @@
                                page where the cascade is loaded anyway. *@
                             @foreach (var ds in ctx.FilteredDataSets)
                             {
-                                <tr style="cursor:pointer;" @onclick='() => Nav.NavigateTo($"/datasets/{ds.Name}")'>
+                                <tr class="u-pointer" @onclick='() => Nav.NavigateTo($"/datasets/{ds.Name}")'>
                                     <td>
                                         <div class="cellpad">
                                             @if (!string.IsNullOrWhiteSpace(ds.Abbreviation))

@@ -56,7 +56,7 @@ else
                         </select>
                         <input class="fin" placeholder="Value" @bind="row.Value"
                                disabled="@IsNullOperator(row.Operator)" />
-                        <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => RemoveRow(idx)">
+                        <button class="btn btn-ghost btn-sm u-fg-signal" @onclick="() => RemoveRow(idx)">
                             <Icon Name="Close" />
                         </button>
                     </div>

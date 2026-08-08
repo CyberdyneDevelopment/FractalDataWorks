@@ -22,7 +22,7 @@
 
             @if (!string.IsNullOrEmpty(_errorMessage))
             {
-                <div class="danger" style="margin-bottom:14px;">
+                <div class="danger u-mb-14">
                     <div class="t"><p>@_errorMessage</p></div>
                 </div>
             }
@@ -119,7 +119,7 @@
                     </div>
                     <div class="frow" style="flex-direction:row;align-items:center;gap:11px;">
                         <span class="sw @(_isEnabled ? "on" : "")" role="button" @onclick="() => _isEnabled = !_isEnabled"></span>
-                        <label style="margin:0;">Enabled</label>
+                        <label class="u-m-0">Enabled</label>
                     </div>
                     <div class="actions" style="margin-top:8px;">
                         <button class="btn btn-primary" @onclick="() => CreateSchedule(ctx)" disabled="@_isSaving">

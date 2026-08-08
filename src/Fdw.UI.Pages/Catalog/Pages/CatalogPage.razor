@@ -23,14 +23,14 @@
         <div class="card">
             <div class="card-b">
                 <div class="fgrid" style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
-                    <input class="fin" style="flex:1;" placeholder="Search the catalog…" @bind="_query" @bind:event="oninput"
+                    <input class="fin u-flex-1" placeholder="Search the catalog…" @bind="_query" @bind:event="oninput"
                            @onkeyup="async e => await OnSearchKey(e, ctx)" />
                     <button class="btn btn-primary btn-sm" @onclick="async () => await ctx.OnSearch(_query)" disabled="@ctx.IsLoading">Search</button>
                 </div>
 
                 @if (ctx.ErrorMessage is not null)
                 {
-                    <div class="alert" style="margin-bottom:12px;">@ctx.ErrorMessage</div>
+                    <div class="alert u-mb-12">@ctx.ErrorMessage</div>
                 }
 
                 @if (ctx.IsLoading)
@@ -50,7 +50,7 @@
                             <tr>
                                 <th>Name</th>
                                 <th>Type</th>
-                                <th style="text-align:right;">Actions</th>
+                                <th class="u-ta-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -59,7 +59,7 @@
                                 <tr>
                                     <td>@entity.Name</td>
                                     <td><span class="badge">@entity.EntityType</span></td>
-                                    <td style="text-align:right;">
+                                    <td class="u-ta-right">
                                         @if (IsDataSet(entity))
                                         {
                                             <a class="btn btn-secondary btn-sm" href="@($"/datasets/{entity.Name}")">Open</a>

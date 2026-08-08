@@ -18,7 +18,7 @@
 
             @if (!string.IsNullOrEmpty(_errorMessage))
             {
-                <div class="danger" style="margin-bottom:14px;"><div class="t"><p>@_errorMessage</p></div></div>
+                <div class="danger u-mb-14"><div class="t"><p>@_errorMessage</p></div></div>
             }
 
             @if (ctx.IsLoading && ctx.Types.Count == 0)
@@ -126,7 +126,7 @@
                                                     @if (IsSecretField(prop.Key))
                                                     {
                                                         <div style="display:flex;gap:8px;">
-                                                            <input class="finput mono" style="flex:1;" type="@(_revealedFields.Contains(prop.Key) ? "text" : "password")"
+                                                            <input class="finput mono u-flex-1" type="@(_revealedFields.Contains(prop.Key) ? "text" : "password")"
                                                                    value="@prop.Value"
                                                                    @onchange="e => UpdateProperty(prop.Key, e.Value?.ToString() ?? string.Empty)" />
                                                             <button class="btn btn-secondary btn-sm" @onclick="() => ToggleReveal(prop.Key)">

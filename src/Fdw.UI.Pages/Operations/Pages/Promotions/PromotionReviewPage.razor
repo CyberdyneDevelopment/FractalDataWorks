@@ -21,18 +21,18 @@
 
         @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
         {
-            <div class="danger" style="margin-bottom:14px;">
+            <div class="danger u-mb-14">
                 <div class="t"><p>@ctx.ErrorMessage</p></div>
             </div>
         }
 
         @if (ctx.IsLoading && ctx.Request is null)
         {
-            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="mut" style="color:var(--n-500);">Loading&hellip;</p></div></div>
+            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="mut u-fg-n500">Loading&hellip;</p></div></div>
         }
         else if (ctx.Request is null)
         {
-            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p style="color:var(--n-300);">Promotion request not found</p></div></div>
+            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="u-fg-n300">Promotion request not found</p></div></div>
         }
         else
         {

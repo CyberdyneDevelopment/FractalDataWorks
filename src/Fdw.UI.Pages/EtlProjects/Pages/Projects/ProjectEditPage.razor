@@ -31,13 +31,13 @@
             @if (ctx.IsLoading)
             {
                 <div class="card" style="padding:48px;text-align:center;">
-                    <span class="mono" style="color:var(--n-500);">Loading…</span>
+                    <span class="mono u-fg-n500">Loading…</span>
                 </div>
             }
             else
             {
                 <!-- Basic Fields -->
-                <section class="card" style="margin-bottom:14px;">
+                <section class="card u-mb-14">
                     <div class="card-h"><h3>Basic Information</h3></div>
                     <div class="card-b">
                         <div class="frow">
@@ -58,13 +58,13 @@
                 </section>
 
                 <!-- Policy Panel -->
-                <section class="card" style="margin-bottom:14px;">
+                <section class="card u-mb-14">
                     <div class="card-h"><h3>Execution Policy</h3></div>
                     <div class="card-b">
                         <p class="hint" style="margin-top:0;margin-bottom:16px;">NULL inherits from server defaults. Child levels may override to be stricter only.</p>
 
-                        <div class="fgrid" style="margin-bottom:16px;">
-                            <div class="frow" style="margin-bottom:0;">
+                        <div class="fgrid u-mb-16">
+                            <div class="frow u-mb-0">
                                 <label>Stage Failure Policy</label>
                                 <select class="finput" @bind="_stageFailurePolicy">
                                     <option value="">inherit</option>
@@ -73,7 +73,7 @@
                                 </select>
                             </div>
 
-                            <div class="frow" style="margin-bottom:0;">
+                            <div class="frow u-mb-0">
                                 <label>Step Failure Policy</label>
                                 <select class="finput" @bind="_stepFailurePolicy">
                                     <option value="">inherit</option>
@@ -82,14 +82,14 @@
                                 </select>
                             </div>
 
-                            <div class="frow" style="margin-bottom:0;">
+                            <div class="frow u-mb-0">
                                 <label>Max Parallel Pipelines</label>
                                 <input type="number" class="finput" placeholder="inherit" min="1"
                                        value="@_maxParallelPipelines?.ToString()"
                                        @oninput="e => _maxParallelPipelines = int.TryParse(e.Value?.ToString(), out var v) ? v : null" />
                             </div>
 
-                            <div class="frow" style="margin-bottom:0;">
+                            <div class="frow u-mb-0">
                                 <label>Resiliency Policy Name</label>
                                 <input type="text" class="finput" placeholder="inherit" @bind="_resiliencePolicyName" />
                             </div>
@@ -117,7 +117,7 @@
                 {
                     <StageProvider>
                         <ChildContent Context="stageCtx">
-                            <section class="card" style="margin-bottom:14px;">
+                            <section class="card u-mb-14">
                                 <div class="card-h">
                                     <h3>Stages</h3>
                                     <button class="btn btn-secondary btn-sm" @onclick="() => AddStage(stageCtx)">
@@ -133,7 +133,7 @@
                                                 <li style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--s2);border-radius:8px;">
                                                     <span class="mono num" style="width:24px;text-align:center;">@stage.Ordinal</span>
                                                     <span class="mono" style="flex:1;color:var(--glacier-soft);">@stage.Name</span>
-                                                    <button class="btn btn-ghost btn-sm" style="color:var(--signal);"
+                                                    <button class="btn btn-ghost btn-sm u-fg-signal"
                                                             @onclick="() => stageCtx.OnDeleteStage(stage.Id)">
                                                         Remove
                                                     </button>
@@ -152,7 +152,7 @@
                 }
 
                 <!-- Save Button -->
-                <div class="actions" style="justify-content:flex-end;">
+                <div class="actions u-jc-end">
                     <button class="btn btn-secondary btn-sm" @onclick='() => Nav.NavigateTo("/projects")'>Cancel</button>
                     <button class="btn btn-primary" @onclick="() => Save(ctx)" disabled="@ctx.IsLoading">
                         @(_id.HasValue ? "Save Changes" : "Create Project")

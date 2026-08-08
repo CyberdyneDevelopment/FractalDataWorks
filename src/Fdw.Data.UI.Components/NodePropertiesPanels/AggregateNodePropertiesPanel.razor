@@ -16,7 +16,7 @@
    designer's task DTO round-trips cleanly via JSON without custom converters. *@
 
 @* ── Group-By Fields ─────────────────────────────────────────────────────────────── *@
-<div class="frow" style="margin-bottom:8px;">
+<div class="frow u-mb-8">
     <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Group-By Fields</label>
     @if (AvailableFields.Count == 0)
     {
@@ -42,7 +42,7 @@
 </div>
 
 @* ── Measures ─────────────────────────────────────────────────────────────────────── *@
-<div class="frow" style="margin-bottom:8px;">
+<div class="frow u-mb-8">
     <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Measures</label>
     @if (_measures.Count == 0 && _validationTriggered)
     {
@@ -58,11 +58,11 @@
                 <button class="btn btn-danger btn-sm" style="font-size:9px;padding:1px 6px;"
                         @onclick="() => RemoveMeasure(idx)">×</button>
             </div>
-            <div class="frow" style="margin-bottom:4px;">
+            <div class="frow u-mb-4">
                 <label style="font-size:9px;color:var(--n-500);">Source Field</label>
                 @if (AvailableFields.Count > 0)
                 {
-                    <select class="finput mono" style="font-size:9px;"
+                    <select class="finput mono u-fs-9"
                             value="@measure.SourceField"
                             @onchange="e => OnMeasureSourceFieldChanged(idx, e)">
                         <option value="">— select field —</option>
@@ -74,18 +74,18 @@
                 }
                 else
                 {
-                    <input class="finput mono" style="font-size:9px;"
+                    <input class="finput mono u-fs-9"
                            value="@measure.SourceField"
                            @onchange="e => OnMeasureSourceFieldChanged(idx, e)"
                            placeholder="field name" />
                 }
             </div>
-            <div class="frow" style="margin-bottom:4px;">
+            <div class="frow u-mb-4">
                 <label style="font-size:9px;color:var(--n-500);">Function</label>
                 @* Why: options come from AvailableAggregationFunctions parameter, populated by the host
                    from the canonical AggregationFunctions TypeCollection via the API, so this panel
                    stays in sync with what the server can execute without any hardcoded list here. *@
-                <select class="finput mono" style="font-size:9px;"
+                <select class="finput mono u-fs-9"
                         value="@measure.AggregateFunction"
                         @onchange="e => OnMeasureFunctionChanged(idx, e)">
                     <option value="">— select —</option>
@@ -97,7 +97,7 @@
             </div>
             <div class="frow">
                 <label style="font-size:9px;color:var(--n-500);">Output Name</label>
-                <input class="finput mono" style="font-size:9px;"
+                <input class="finput mono u-fs-9"
                        value="@measure.OutputName"
                        @onchange="e => OnMeasureOutputNameChanged(idx, e)"
                        placeholder="e.g. TotalSales" />

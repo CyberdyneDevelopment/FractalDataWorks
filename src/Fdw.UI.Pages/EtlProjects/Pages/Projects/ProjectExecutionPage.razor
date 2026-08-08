@@ -8,17 +8,17 @@
 
 <div style="display:flex;flex-direction:column;height:calc(100vh - 90px);">
     <!-- Header -->
-    <div class="dhead" style="margin-bottom:14px;">
+    <div class="dhead u-mb-14">
         <div class="ic">
-            <button class="btn btn-ghost btn-sm" style="padding:0;" @onclick='() => Nav.NavigateTo("/projects")'>
+            <button class="btn btn-ghost btn-sm u-p-0" @onclick='() => Nav.NavigateTo("/projects")'>
                 <Icon Name="ChevronLeft" />
             </button>
         </div>
         <h1>Execution Monitor</h1>
         <span class="mono" style="font-size:11px;color:var(--n-500);">@ExecutionId</span>
-        <div class="actions" style="margin-left:auto;">
+        <div class="actions u-ml-auto">
             <span class="badge @GetStatusBadge(_overallStatus)"><span class="bd"></span>@(_overallStatus ?? "Loading...")</span>
-            <button class="btn btn-ghost btn-sm" style="color:var(--signal);"
+            <button class="btn btn-ghost btn-sm u-fg-signal"
                     @onclick="CancelExecution"
                     disabled="@_isCompleted">
                 Cancel
@@ -35,7 +35,7 @@
                 @if (_statusRoot is null)
                 {
                     <div style="padding:24px;text-align:center;">
-                        <span class="mono" style="color:var(--n-500);">Loading…</span>
+                        <span class="mono u-fg-n500">Loading…</span>
                     </div>
                 }
                 else

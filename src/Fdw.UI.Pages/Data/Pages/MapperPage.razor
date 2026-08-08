@@ -47,7 +47,7 @@
         }
 
         <div class="grid2e">
-            <div class="frow" style="margin-bottom:0;">
+            <div class="frow u-mb-0">
                 <NestedObjectPicker TNode="DataStoreNode"
                                     Items="ctx.DataStorePickerItems"
                                     GetChildren="ctx.GetSourcePickerChildren"
@@ -58,7 +58,7 @@
                                     Placeholder="Select..."
                                     SelectionChanged="ctx.OnSourcePickerSelectionChanged" />
             </div>
-            <div class="frow" style="margin-bottom:0;">
+            <div class="frow u-mb-0">
                 <NestedObjectPicker TNode="DataStoreNode"
                                     Items="ctx.DataStorePickerItems"
                                     GetChildren="ctx.GetTargetPickerChildren"
@@ -142,7 +142,7 @@
                                 <button type="button" style="@($"display:flex;align-items:center;justify-content:space-between;width:100%;{(isMapped ? "opacity:.5;" : "")}")"
                                         @onclick="() => { _pendingTarget = field.Name; TryAddMapping(ctx); }">
                                     <Icon Name="ChevronLeft" Style="width:15px;height:15px;color:var(--n-500);" />
-                                    <span style="text-align:right;">
+                                    <span class="u-ta-right">
                                         <span class="pn mono">@field.Name</span>
                                         <span class="pk" style="margin-left:8px;">@field.NativeDataType</span>
                                     </span>

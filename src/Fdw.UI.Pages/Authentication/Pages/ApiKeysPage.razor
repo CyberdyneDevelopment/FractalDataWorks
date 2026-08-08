@@ -96,8 +96,8 @@
                                             <td class="mut">@token.CreatedAt.ToString("MMM dd, yyyy", System.Globalization.CultureInfo.InvariantCulture)</td>
                                             <td class="mut">@(token.ExpiresAt.HasValue ? token.ExpiresAt.Value.ToString("MMM dd, yyyy", System.Globalization.CultureInfo.InvariantCulture) : "—")</td>
                                             <td class="mut">@(token.LastUsedAt.HasValue ? token.LastUsedAt.Value.ToString("MMM dd, yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture) : "—")</td>
-                                            <td class="mut" style="text-align:right;">
-                                                <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => ctx.OnRevokeToken(token.TokenId)" disabled="@ctx.IsLoading">Revoke</button>
+                                            <td class="mut u-ta-right">
+                                                <button class="btn btn-ghost btn-sm u-fg-signal" @onclick="() => ctx.OnRevokeToken(token.TokenId)" disabled="@ctx.IsLoading">Revoke</button>
                                             </td>
                                         </tr>
                                     }
@@ -158,8 +158,8 @@
                                             <td class="mut">@key.CreatedAt.ToString("MMM dd, yyyy", System.Globalization.CultureInfo.InvariantCulture)</td>
                                             <td class="mut">@(key.ExpiresAt.HasValue ? key.ExpiresAt.Value.ToString("MMM dd, yyyy", System.Globalization.CultureInfo.InvariantCulture) : "—")</td>
                                             <td class="mut">@(key.LastUsedAt.HasValue ? key.LastUsedAt.Value.ToString("MMM dd, yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture) : "—")</td>
-                                            <td class="mut" style="text-align:right;">
-                                                <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => ctx.OnDeleteAgentKey(key.KeyId)" disabled="@ctx.IsLoading">Delete</button>
+                                            <td class="mut u-ta-right">
+                                                <button class="btn btn-ghost btn-sm u-fg-signal" @onclick="() => ctx.OnDeleteAgentKey(key.KeyId)" disabled="@ctx.IsLoading">Delete</button>
                                             </td>
                                         </tr>
                                     }

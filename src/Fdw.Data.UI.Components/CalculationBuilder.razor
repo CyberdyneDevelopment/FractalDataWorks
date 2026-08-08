@@ -16,7 +16,7 @@ else
         <div class="card-b">
 
             @* ── Operation picker ─────────────────────────────────────────────── *@
-            <div class="frow" style="margin-bottom:16px;">
+            <div class="frow u-mb-16">
                 @* Why: OptionPicker over CalculationOperationTypes.All() replaces the old
                    CalculationTypes picker and drives parameter rendering below (FDW convention
                    — no free-text, no switch on type strings). *@
@@ -31,17 +31,17 @@ else
             @* ── Operation description ────────────────────────────────────────── *@
             @if (_selectedOperation is not null && !string.IsNullOrEmpty(_selectedOperation.Description))
             {
-                <p class="fhint" style="margin-bottom:12px;">@_selectedOperation.Description</p>
+                <p class="fhint u-mb-12">@_selectedOperation.Description</p>
             }
 
             @* ── Per-parameter inputs (driven by ICalculationOperation.Parameters) ─ *@
             @if (_selectedOperation is not null && _selectedOperation.Parameters.Count > 0)
             {
-                <div class="fgrid" style="margin-bottom:8px;">
+                <div class="fgrid u-mb-8">
                     @foreach (var param in _selectedOperation.Parameters)
                     {
                         var paramName = param.Name;
-                        <div class="frow" style="margin-bottom:8px;">
+                        <div class="frow u-mb-8">
 
                             @if (string.Equals(param.Kind, "Scalar", StringComparison.Ordinal))
                             {
@@ -84,7 +84,7 @@ else
                                 </label>
                                 @if (param.HelpText is not null)
                                 {
-                                    <p class="fhint" style="margin-bottom:4px;">@param.HelpText</p>
+                                    <p class="fhint u-mb-4">@param.HelpText</p>
                                 }
                                 <div class="finput" style="max-height:8rem;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
                                     @if (Context.Data?.Columns is null || Context.Data.Columns.Count == 0)
@@ -147,7 +147,7 @@ else
             }
 
             @* ── Output column name ───────────────────────────────────────────── *@
-            <div class="frow" style="margin-bottom:8px;">
+            <div class="frow u-mb-8">
                 <label class="flbl">Output Column Name <span style="color:var(--signal);margin-left:2px;">*</span></label>
                 <input class="fin" placeholder="e.g. total_amount" @bind="_outputColumn" />
                 @if (_paramErrors.TryGetValue("__output", out var outErr) && !string.IsNullOrEmpty(outErr))
@@ -159,7 +159,7 @@ else
             @* ── Summary validation error ─────────────────────────────────────── *@
             @if (!string.IsNullOrEmpty(_validationError))
             {
-                <div class="alert alert-err" style="margin-bottom:16px;">@_validationError</div>
+                <div class="alert alert-err u-mb-16">@_validationError</div>
             }
 
             <div class="card-h" style="padding:14px 0 0;border-top:1px solid var(--hair);justify-content:flex-end;">

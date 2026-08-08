@@ -26,8 +26,8 @@
 
         @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
         {
-            <div class="card" style="margin-bottom:14px;">
-                <div class="card-b mono" style="color:var(--signal);">@ctx.ErrorMessage</div>
+            <div class="card u-mb-14">
+                <div class="card-b mono u-fg-signal">@ctx.ErrorMessage</div>
             </div>
         }
 
@@ -35,7 +35,7 @@
         {
             <div class="card">
                 <div class="card-b" style="padding:48px 20px;text-align:center;">
-                    <p class="mut" style="color:var(--n-500);">Loading rules&hellip;</p>
+                    <p class="mut u-fg-n500">Loading rules&hellip;</p>
                 </div>
             </div>
         }
@@ -43,7 +43,7 @@
         {
             <div class="card">
                 <div class="card-b" style="padding:48px 20px;text-align:center;">
-                    <p style="color:var(--n-500);">No notification rules configured.</p>
+                    <p class="u-fg-n500">No notification rules configured.</p>
                 </div>
             </div>
         }
@@ -95,7 +95,7 @@
                                                     <p class="mut" style="font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Lists used as recipients</p>
                                                     @if (ctx.Lists.Count == 0)
                                                     {
-                                                        <p class="mut" style="font-size:12px;">No lists loaded — <button class="btn btn-ghost btn-sm" @onclick="() => ctx.OnLoadLists()">load lists</button></p>
+                                                        <p class="mut u-fs-12">No lists loaded — <button class="btn btn-ghost btn-sm" @onclick="() => ctx.OnLoadLists()">load lists</button></p>
                                                     }
                                                     else
                                                     {
@@ -109,7 +109,7 @@
                                                 </div>
                                                 <div style="flex:1;min-width:200px;">
                                                     <p class="mut" style="font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Rule details</p>
-                                                    <div style="font-size:12px;" class="mono">
+                                                    <div class="mono u-fs-12">
                                                         <div>ID: @rule.Id.ToString("D")</div>
                                                         <div>Service: @rule.NotificationServiceType / @rule.NotificationServiceName</div>
                                                         <div>Severity: @rule.Severity</div>

@@ -22,7 +22,7 @@
 
 @if (!string.IsNullOrEmpty(_errorMessage))
 {
-    <div class="card" style="margin-bottom:14px;"><div class="card-b mono" style="color:var(--signal);">@_errorMessage</div></div>
+    <div class="card u-mb-14"><div class="card-b mono u-fg-signal">@_errorMessage</div></div>
 }
 
 @if (_isLoading)
@@ -41,7 +41,7 @@ else if (_preferences is not null)
                         <span style="color:var(--n-100);">@pref.NotificationType</span>
                         <span class="mono mut" style="margin-left:8px;font-size:11px;">(@pref.Channel)</span>
                     </div>
-                    <span class="@(pref.IsEnabled ? "sw on" : "sw")" style="cursor:pointer;" @onclick="() => pref.IsEnabled = !pref.IsEnabled"></span>
+                    <span class="@(pref.IsEnabled ? "sw on" : "sw") u-pointer" @onclick="() => pref.IsEnabled = !pref.IsEnabled"></span>
                 </div>
             }
             <div class="actions" style="justify-content:flex-end;margin-top:16px;">

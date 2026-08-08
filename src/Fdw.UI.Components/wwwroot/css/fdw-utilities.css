@@ -1,0 +1,82 @@
+/* ════════════════════════════════════════════════════════════════════════
+   Fdw UI — utility primitives
+   Static web asset: _content/Fdw.UI.Components/css/fdw-utilities.css
+   ════════════════════════════════════════════════════════════════════════
+
+   Why this file exists, and why HERE:
+   the Fdw UI packages emit class names (btn, card, tbl, finput, badge) whose
+   definitions live only in the consuming host's stylesheet, so a second host
+   renders them unstyled. Every class this file declares is emitted by
+   Fdw.UI.Pages, Fdw.Data.UI.Components, Fdw.Web.Analytics.Components,
+   Fdw.Dashboard.UI.Components and Fdw.Services.Multitenancy.Components — all
+   of which reference Fdw.UI.Components — so shipping the definitions from
+   Fdw.UI.Components is what makes the emitting package also the defining one.
+
+   Why every declaration carries !important:
+   each rule below replaces an inline style="..." attribute of exactly the same
+   property and value. An inline declaration outranks every normal author rule
+   regardless of selector; a plain class does not. Measured against the reference
+   console's stylesheet, the sites being converted sit under rules that would
+   otherwise win outright — .frow{margin-bottom} over 69 of them, .danger p{color}
+   at (0,1,1) over 33, .field .inp input{flex} at (0,2,1). !important is the only
+   host-independent way to keep the cascade position the inline attribute had, so
+   the replacement renders identically rather than "identically on this skin".
+
+   Why the scale is these values and no others:
+   it is the measured tail of the inline styles in the .razor corpus, not a
+   general-purpose scale. A utility exists only where one declaration, with a
+   single-token value, was the entire style attribute at four or more sites.
+     spacing   0 · 4 · 6 · 8 · 12 · 14 · 16 px
+     font-size 9 · 10 · 12 px
+     colour    the six theme tokens actually used
+   Multi-value shorthands (padding:0 10px 12px, padding:48px 20px) are recurring
+   component shapes, not primitives, and are deliberately absent.
+
+   Colour utilities forward the same var(--token) the inline style named. The
+   token contract is the host theme's, exactly as before — no fallback value is
+   supplied, so a host that does not define a token inherits, as it did when the
+   declaration was inline. */
+
+/* ── margin-bottom ── */
+.u-mb-0  { margin-bottom: 0     !important; }
+.u-mb-4  { margin-bottom: 4px   !important; }
+.u-mb-8  { margin-bottom: 8px   !important; }
+.u-mb-12 { margin-bottom: 12px  !important; }
+.u-mb-14 { margin-bottom: 14px  !important; }
+.u-mb-16 { margin-bottom: 16px  !important; }
+
+/* ── margin-top ── */
+.u-mt-6  { margin-top: 6px      !important; }
+.u-mt-14 { margin-top: 14px     !important; }
+
+/* ── margin ── */
+.u-m-0     { margin: 0          !important; }
+.u-ml-auto { margin-left: auto  !important; }
+
+/* ── padding ── */
+.u-p-0 { padding: 0             !important; }
+
+/* ── size ── */
+.u-h-14 { height: 14px          !important; }
+
+/* ── font-size ── */
+.u-fs-9  { font-size: 9px       !important; }
+.u-fs-10 { font-size: 10px      !important; }
+.u-fs-12 { font-size: 12px      !important; }
+
+/* ── colour ── */
+.u-fg-signal  { color: var(--signal)  !important; }
+.u-fg-success { color: var(--success) !important; }
+.u-fg-glacier { color: var(--glacier) !important; }
+.u-fg-n300    { color: var(--n-300)   !important; }
+.u-fg-n400    { color: var(--n-400)   !important; }
+.u-fg-n500    { color: var(--n-500)   !important; }
+
+/* ── text ── */
+.u-ta-right { text-align: right !important; }
+.u-italic   { font-style: italic !important; }
+
+/* ── box ── */
+.u-pointer { cursor: pointer            !important; }
+.u-flex-1  { flex: 1                    !important; }
+.u-jc-end  { justify-content: flex-end  !important; }

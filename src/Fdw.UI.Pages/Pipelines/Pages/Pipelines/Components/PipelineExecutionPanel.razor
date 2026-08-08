@@ -26,7 +26,7 @@
     <div style="display:flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid var(--hair);">
         @if (IsPaused)
         {
-            <button class="btn btn-secondary btn-sm" style="color:var(--success);"
+            <button class="btn btn-secondary btn-sm u-fg-success"
                     @onclick="OnResume"
                     title="Resume execution">
                 <Icon Name="Resume" />
@@ -43,7 +43,7 @@
                 Pause
             </button>
         }
-        <button class="btn btn-secondary btn-sm" style="color:var(--glacier);"
+        <button class="btn btn-secondary btn-sm u-fg-glacier"
                 @onclick="OnStep"
                 disabled="@(!IsPaused)"
                 title="Step one batch">

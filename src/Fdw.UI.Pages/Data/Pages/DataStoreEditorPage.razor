@@ -56,7 +56,7 @@
 
                     @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
                     {
-                        <div class="alert alert-err" style="margin-bottom:16px;">@ctx.ErrorMessage</div>
+                        <div class="alert alert-err u-mb-16">@ctx.ErrorMessage</div>
                     }
 
                     @* ── Step 0: Basic Info ── *@
@@ -314,7 +314,7 @@
                                 {
                                     @if (!string.IsNullOrEmpty(connCtx.ErrorMessage))
                                     {
-                                        <div class="alert alert-err" style="margin-bottom:16px;">@connCtx.ErrorMessage</div>
+                                        <div class="alert alert-err u-mb-16">@connCtx.ErrorMessage</div>
                                     }
 
                                     @* -- Step 0: Configure -- *@
@@ -418,7 +418,7 @@
 
                                                         @if (connCtx.SelectedSecretManagerName is not null)
                                                         {
-                                                            <div class="seg" style="margin-bottom:8px;">
+                                                            <div class="seg u-mb-8">
                                                                 <button class="@(connCtx.SecretStorageMode == "new" ? "on" : null)"
                                                                         @onclick='() => connCtx.OnSecretStorageModeChanged("new")' type="button">Store New Password</button>
                                                                 <button class="@(connCtx.SecretStorageMode == "existing" ? "on" : null)"
@@ -518,12 +518,12 @@
                                         }
                                         else if (connCtx.TestResult is not null)
                                         {
-                                            <div class="alert @(connCtx.TestResult.Success ? "alert-ok" : "alert-err")" style="margin-top:14px;">
+                                            <div class="alert @(connCtx.TestResult.Success ? "alert-ok" : "alert-err") u-mt-14">
                                                 @(connCtx.TestResult.Success ? "✓ " : "✗ ")@connCtx.TestResult.Message
                                             </div>
                                         }
 
-                                        <button class="btn btn-secondary btn-sm" style="margin-top:14px;" @onclick="async () => await connCtx.OnTestConnection()" disabled="@connCtx.IsLoading" type="button">Run Test</button>
+                                        <button class="btn btn-secondary btn-sm u-mt-14" @onclick="async () => await connCtx.OnTestConnection()" disabled="@connCtx.IsLoading" type="button">Run Test</button>
                                     }
 
                                     @* -- Step 2: Save -- *@
@@ -531,7 +531,7 @@
                                     {
                                         @if (connCtx.TestResult is not null)
                                         {
-                                            <div class="alert @(connCtx.TestResult.Success ? "alert-ok" : "alert-err")" style="margin-bottom:14px;">
+                                            <div class="alert @(connCtx.TestResult.Success ? "alert-ok" : "alert-err") u-mb-14">
                                                 Test: @(connCtx.TestResult.Success ? "✓ Passed" : "⚠ Failed — saving anyway")
                                             </div>
                                         }

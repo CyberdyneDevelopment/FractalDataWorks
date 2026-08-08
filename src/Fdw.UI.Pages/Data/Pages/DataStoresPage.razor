@@ -44,7 +44,7 @@
                         <tbody>
                             @foreach (var store in ctx.FilteredDataStores)
                             {
-                                <tr style="cursor:pointer;" @onclick='() => Nav.NavigateTo($"/datastores/{store.Name}")'>
+                                <tr class="u-pointer" @onclick='() => Nav.NavigateTo($"/datastores/{store.Name}")'>
                                     <td><div class="cellpad nm">@store.Name</div></td>
                                     <td class="mut">@store.ConnectionName</td>
                                     <td class="num">@store.PathCount</td>
@@ -73,7 +73,7 @@
                     <div class="card-h"><h3>Confirm Delete</h3></div>
                     <div class="card-b">
                         <p style="font-size:13px;color:var(--n-400);margin:0 0 18px;">Are you sure you want to delete data store <span class="mono danger">@_deleteTarget</span>? This action cannot be undone.</p>
-                        <div class="actions" style="justify-content:flex-end;">
+                        <div class="actions u-jc-end">
                             <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancel</button>
                             <button class="btn btn-danger btn-sm" @onclick="() => ExecuteDelete(ctx)">Delete</button>
                         </div>

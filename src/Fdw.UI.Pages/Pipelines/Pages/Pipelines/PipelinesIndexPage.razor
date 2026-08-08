@@ -13,7 +13,7 @@
             {
                 <div class="card @(_runBannerIsError ? "b-fail" : "b-ok")" style="margin-bottom:14px;padding:11px 16px;display:flex;justify-content:space-between;align-items:center;"
                      role="alert">
-                    <span class="mono" style="font-size:12px;">@_runBanner</span>
+                    <span class="mono u-fs-12">@_runBanner</span>
                     <button class="btn btn-ghost btn-sm" @onclick="() => _runBanner = null" title="Dismiss">✕</button>
                 </div>
             }
@@ -35,13 +35,13 @@
             @if (provider.IsLoading && !provider.Pipelines.Any())
             {
                 <div class="card" style="padding:48px;text-align:center;">
-                    <span class="mono" style="color:var(--n-500);">Loading pipelines…</span>
+                    <span class="mono u-fg-n500">Loading pipelines…</span>
                 </div>
             }
             else if (!provider.Pipelines.Any())
             {
                 <div class="card" style="padding:48px;text-align:center;">
-                    <p style="color:var(--n-500);">No pipelines configured</p>
+                    <p class="u-fg-n500">No pipelines configured</p>
                 </div>
             }
             else

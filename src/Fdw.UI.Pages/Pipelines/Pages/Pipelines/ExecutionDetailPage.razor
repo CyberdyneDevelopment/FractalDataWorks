@@ -31,13 +31,13 @@
             @if (ctx.IsLoading && ctx.Execution is null)
             {
                 <div class="card" style="padding:48px;text-align:center;">
-                    <span class="mono" style="color:var(--n-500);">Loading execution…</span>
+                    <span class="mono u-fg-n500">Loading execution…</span>
                 </div>
             }
             else if (ctx.Execution is not null)
             {
                 var exec = ctx.Execution;
-                <div class="card" style="margin-bottom:14px;">
+                <div class="card u-mb-14">
                     <div class="card-b" style="padding:20px;">
                         <dl class="kv">
                             <dt>Name</dt>
@@ -109,7 +109,7 @@
             else
             {
                 <div class="card" style="padding:48px;text-align:center;">
-                    <p style="color:var(--n-500);">Execution not found</p>
+                    <p class="u-fg-n500">Execution not found</p>
                 </div>
             }
         </div>

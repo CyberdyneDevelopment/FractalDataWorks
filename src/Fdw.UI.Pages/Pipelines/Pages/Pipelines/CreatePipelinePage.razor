@@ -66,8 +66,8 @@
 
                         @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
                         {
-                            <div class="danger" style="margin-bottom:16px;">
-                                <div class="t"><p class="mono" style="color:var(--signal);">@ctx.ErrorMessage</p></div>
+                            <div class="danger u-mb-16">
+                                <div class="t"><p class="mono u-fg-signal">@ctx.ErrorMessage</p></div>
                             </div>
                         }
 
@@ -91,11 +91,11 @@
                             }
                             else if (ctx.IsLoading)
                             {
-                                <p class="hint" style="font-style:italic;">Loading engine types...</p>
+                                <p class="hint u-italic">Loading engine types...</p>
                             }
                             else
                             {
-                                <p class="hint" style="font-style:italic;">No pipeline engine types are registered.</p>
+                                <p class="hint u-italic">No pipeline engine types are registered.</p>
                             }
                         }
 

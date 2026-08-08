@@ -20,7 +20,7 @@
 
 <div class="content builder" style="display:flex;flex-direction:column;height:calc(100vh - 90px);padding:0;">
     <!-- Toolbar -->
-    <div class="bhead" style="margin-bottom:12px;">
+    <div class="bhead u-mb-12">
         <div class="l">
             <a class="back" href="/pipelines">
                 <Icon Name="ChevronLeftAlt" />
@@ -72,12 +72,12 @@
                 <div class="actions" style="padding-left:8px;border-left:1px solid var(--hair);">
                     @if (_testIsPaused)
                     {
-                        <button class="btn btn-secondary btn-sm" style="color:var(--success);"
+                        <button class="btn btn-secondary btn-sm u-fg-success"
                                 @onclick="TestResume" title="Resume execution">
                             <Icon Name="Resume" />
                             Resume
                         </button>
-                        <button class="btn btn-secondary btn-sm" style="color:var(--glacier);"
+                        <button class="btn btn-secondary btn-sm u-fg-glacier"
                                 @onclick="TestStep" title="Step one batch">
                             <Icon Name="Skip" />
                             Step
@@ -91,7 +91,7 @@
                             Pause
                         </button>
                     }
-                    <button class="btn btn-secondary btn-sm" style="color:var(--signal);"
+                    <button class="btn btn-secondary btn-sm u-fg-signal"
                             @onclick="TestStop" title="Stop execution">
                         <Icon Name="Stop" />
                         Stop
@@ -101,7 +101,7 @@
             }
             else
             {
-                <button class="btn btn-secondary btn-sm" style="color:var(--glacier);"
+                <button class="btn btn-secondary btn-sm u-fg-glacier"
                         @onclick="StartTestRun"
                         title="Run pipeline in test mode (bounded, no destination writes)">
                     <Icon Name="Run" />
@@ -113,7 +113,7 @@
                 <Icon Name="Save" />
                 @(_isSaving ? "Saving..." : "Save")
             </button>
-            <button class="btn btn-secondary btn-sm" style="color:var(--success);"
+            <button class="btn btn-secondary btn-sm u-fg-success"
                     @onclick="PublishPipeline"
                     disabled="@(_isPublishing || _pipelineId == null)"
                     title="Publish pipeline to make it active">
@@ -196,15 +196,15 @@
             @if (_selectedTask != null)
             {
                 <div style="display:flex;flex-direction:column;gap:16px;">
-                    <div class="frow" style="margin-bottom:0;">
+                    <div class="frow u-mb-0">
                         <label>Name</label>
                         <input class="finput" @bind="_selectedTask.Name" />
                     </div>
-                    <div class="frow" style="margin-bottom:0;">
+                    <div class="frow u-mb-0">
                         <label>Type</label>
                         <input class="finput mono" value="@_selectedTask.TaskType" disabled />
                     </div>
-                    <div class="frow" style="margin-bottom:0;">
+                    <div class="frow u-mb-0">
                         <label>Step Type</label>
                         @if (pipelineBuilder.PipelineStepTypes.Count > 0)
                         {
@@ -279,7 +279,7 @@
                     @if (_selectedTask.Category == "Source" || _selectedTask.Category == "Destination")
                     {
                         @* Connection picker — drives which capability picker appears below *@
-                        <div class="frow" style="margin-bottom:0;">
+                        <div class="frow u-mb-0">
                             <label>Connection</label>
                             @* Why: value+@onchange instead of @bind so we can also trigger
                                canvas metadata write-back when the user changes the connection. *@
@@ -297,7 +297,7 @@
                         @* Capability picker — shown only when the connection has supported commands *@
                         @if (supportedCaps.Count > 0)
                         {
-                            <div class="frow" style="margin-bottom:0;">
+                            <div class="frow u-mb-0">
                                 <label>Command</label>
                                 <select class="finput"
                                         value="@capabilityName"
@@ -325,7 +325,7 @@
                              && connDto is not null
                              && supportedCaps.Count > 0)
                         {
-                            <div class="frow" style="margin-bottom:0;">
+                            <div class="frow u-mb-0">
                                 <label>Write Capability</label>
                                 @if (string.Equals(destWriteMode, "None", StringComparison.Ordinal))
                                 {
@@ -359,7 +359,7 @@
                             {
                                 @foreach (var field in capFields)
                                 {
-                                    <div class="frow" style="margin-bottom:0;">
+                                    <div class="frow u-mb-0">
                                         <label>@field.Label</label>
                                         @if (string.Equals(field.InputKind, ConfigurationFieldKinds.Textarea, StringComparison.Ordinal))
                                         {
@@ -416,7 +416,7 @@
                     {
                         @foreach (var field in taskType.ConfigurationFields)
                         {
-                            <div class="frow" style="margin-bottom:0;">
+                            <div class="frow u-mb-0">
                                 <label>@field.Label</label>
                                 @if (string.Equals(field.InputKind, TransformFieldKinds.Textarea, StringComparison.Ordinal))
                                 {

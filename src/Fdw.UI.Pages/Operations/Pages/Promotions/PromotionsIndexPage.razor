@@ -25,14 +25,14 @@
 
         @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
         {
-            <div class="danger" style="margin-bottom:14px;">
+            <div class="danger u-mb-14">
                 <div class="t"><p>@ctx.ErrorMessage</p></div>
             </div>
         }
 
         @if (_showCreate)
         {
-            <div class="card" style="margin-bottom:14px;">
+            <div class="card u-mb-14">
                 <div class="card-h"><h3>Create Promotion Request</h3></div>
                 <div class="card-b">
                     <div class="fgrid" style="grid-template-columns:repeat(3,1fr);">
@@ -49,7 +49,7 @@
                             <input class="finput" @bind="_createTarget" placeholder="e.g. Production" />
                         </div>
                     </div>
-                    <div class="actions" style="justify-content:flex-end;">
+                    <div class="actions u-jc-end">
                         <button class="btn btn-ghost btn-sm" @onclick="() => _showCreate = false">Cancel</button>
                         <button class="btn btn-primary btn-sm" @onclick="async () => await SubmitCreate(ctx)" disabled="@ctx.IsLoading">Create</button>
                     </div>
@@ -59,14 +59,14 @@
 
         @if (ctx.IsLoading && !ctx.Requests.Any())
         {
-            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="mut" style="color:var(--n-500);">Loading promotions&hellip;</p></div></div>
+            <div class="card"><div class="card-b" style="padding:48px 20px;text-align:center;"><p class="mut u-fg-n500">Loading promotions&hellip;</p></div></div>
         }
         else if (!ctx.Requests.Any())
         {
             <div class="card">
                 <div class="card-b" style="padding:48px 20px;text-align:center;">
-                    <p style="color:var(--n-300);">No promotion requests</p>
-                    <p class="sub" style="margin-top:6px;">Create a promotion request to move configurations between environments</p>
+                    <p class="u-fg-n300">No promotion requests</p>
+                    <p class="sub u-mt-6">Create a promotion request to move configurations between environments</p>
                 </div>
             </div>
         }

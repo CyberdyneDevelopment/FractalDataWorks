@@ -8,8 +8,8 @@
 <CalculatedDataSetProvider DataSetName="@Name" Context="ctx">
 @{ SyncFromContext(ctx); }
 <div style="height:100%;display:flex;flex-direction:column;gap:14px;padding:14px 32px 32px;">
-    <div class="pagehead" style="margin-bottom:0;">
-        <div class="dhead" style="margin-bottom:0;">
+    <div class="pagehead u-mb-0">
+        <div class="dhead u-mb-0">
             <button class="btn btn-ghost btn-sm" @onclick='() => Nav.NavigateTo("/datasets")'>
                 <Icon Name="ChevronLeft" StrokeWidth="" Rounded="false" />
             </button>
@@ -92,14 +92,14 @@
              <div class="card-b">
              @if (_selected != null)
              {
-                 <div class="frow" style="margin-bottom:8px;">
+                 <div class="frow u-mb-8">
                      <label>Instance Name</label>
                      <input @bind="_selected.Name" class="finput mono" />
                  </div>
                  @switch (_selected.Type)
                  {
                      case "Source":
-                         <div class="frow" style="margin-bottom:8px;">
+                         <div class="frow u-mb-8">
                              <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Source Container</label>
                              @if (_loadingSourceRoots)
                              {
@@ -142,7 +142,7 @@
                              OnConfigurationChanged="cfg => UpdateNodeConfig(_selected, cfg)" />
                          break;
                      case "Output":
-                         <div class="frow" style="margin-bottom:8px;">
+                         <div class="frow u-mb-8">
                              <label>Result Field Name</label>
                              <input value="@GetConfigString(_selected, "ResultFieldName", "Result")"
                                     @onchange="OnResultFieldNameChanged"
@@ -150,7 +150,7 @@
                          </div>
                          break;
                      default:
-                         <div class="frow" style="margin-bottom:8px;">
+                         <div class="frow u-mb-8">
                              <label>Formula Body</label>
                              <textarea value="@GetConfigString(_selected, "FormulaBody", string.Empty)"
                                        @onchange="OnFormulaBodyChanged"

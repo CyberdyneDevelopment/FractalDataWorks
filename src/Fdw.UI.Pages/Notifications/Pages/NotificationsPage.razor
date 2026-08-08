@@ -22,8 +22,8 @@
 
         @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
         {
-            <div class="card" style="margin-bottom:14px;">
-                <div class="card-b mono" style="color:var(--signal);">@ctx.ErrorMessage</div>
+            <div class="card u-mb-14">
+                <div class="card-b mono u-fg-signal">@ctx.ErrorMessage</div>
             </div>
         }
 
@@ -31,13 +31,13 @@
         {
             <div class="card">
                 <div class="card-b" style="padding:48px 20px;text-align:center;">
-                    <p class="mut" style="color:var(--n-500);">Loading notifications&hellip;</p>
+                    <p class="mut u-fg-n500">Loading notifications&hellip;</p>
                 </div>
             </div>
         }
         else
         {
-            <div class="tabs" style="margin-bottom:16px;">
+            <div class="tabs u-mb-16">
                 <button class="tab-btn @(_activeTab == 0 ? "active" : "")" @onclick="() => _activeTab = 0">
                     Notifications (@ctx.Notifications.Count)
                 </button>
@@ -55,7 +55,7 @@
                 {
                     <div class="card">
                         <div class="card-b" style="padding:48px 20px;text-align:center;">
-                            <p style="color:var(--n-500);">No notification configurations found.</p>
+                            <p class="u-fg-n500">No notification configurations found.</p>
                         </div>
                     </div>
                 }
@@ -97,7 +97,7 @@
                 {
                     <div class="card">
                         <div class="card-b" style="padding:48px 20px;text-align:center;">
-                            <p style="color:var(--n-500);">No notification rules found.</p>
+                            <p class="u-fg-n500">No notification rules found.</p>
                         </div>
                     </div>
                 }
@@ -141,7 +141,7 @@
                 {
                     <div class="card">
                         <div class="card-b" style="padding:48px 20px;text-align:center;">
-                            <p style="color:var(--n-500);">No notification lists found.</p>
+                            <p class="u-fg-n500">No notification lists found.</p>
                         </div>
                     </div>
                 }

@@ -58,7 +58,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="actions" style="justify-content:flex-end;">
+                    <div class="actions u-jc-end">
                         <button class="btn btn-ghost btn-sm" @onclick="() => _showCreate = false">Cancel</button>
                         <button class="btn btn-primary btn-sm" @onclick="async () => await SubmitCreate(ctx)" disabled="@ctx.IsLoading">Create</button>
                     </div>
@@ -88,7 +88,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="actions" style="justify-content:flex-end;">
+                    <div class="actions u-jc-end">
                         <button class="btn btn-ghost btn-sm" @onclick="() => { _showEdit = false; _editingId = null; }">Cancel</button>
                         <button class="btn btn-primary btn-sm" @onclick="async () => await SubmitEdit(ctx)" disabled="@ctx.IsLoading">Save</button>
                     </div>
@@ -105,7 +105,7 @@
             <div class="card">
                 <div class="card-b" style="text-align:center;padding:40px 20px;">
                     <p style="color:var(--n-300);margin:0 0 6px;">No quality rules defined</p>
-                    <p class="hint" style="margin:0;">Create rules to validate data quality across your pipelines</p>
+                    <p class="hint u-m-0">Create rules to validate data quality across your pipelines</p>
                 </div>
             </div>
         }
