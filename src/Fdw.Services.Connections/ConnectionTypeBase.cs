@@ -186,5 +186,15 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
             .Single(sessionContext => sessionContext.Governs(authenticationContext))
             .CachePartition(authenticationContext);
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// Selects the same way <see cref="CachePartition"/> does, and for the same reason: the governing
+    /// option owns both answers, so both describe the one session the kind would actually apply.
+    /// </remarks>
+    public virtual TimeSpan MaxCacheDuration(IAuthenticationContext? authenticationContext)
+        => SessionContextTypes
+            .Single(sessionContext => sessionContext.Governs(authenticationContext))
+            .MaxCacheDuration(authenticationContext);
+
     // which registers configuration loader using IOptions<List<TConfiguration>> lookup by Name
 }

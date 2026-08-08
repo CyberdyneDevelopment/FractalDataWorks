@@ -92,4 +92,25 @@ public interface IConnectionType : IServiceType
     /// none has been established.
     /// </param>
     string CachePartition(IAuthenticationContext? authenticationContext);
+
+    /// <summary>
+    /// Gets the longest a result read through this connection kind may be replayed from cache for a
+    /// caller with <paramref name="authenticationContext"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The companion to <see cref="CachePartition"/> on the time axis. The partition separates callers
+    /// whose visibility differs now; this bounds how long a result stays valid when visibility can
+    /// change without the caller changing — a revoked grant the partition cannot see.
+    /// </para>
+    /// <para>
+    /// A ceiling, never an extension: a consumer caps whatever duration it would otherwise use and
+    /// keeps a shorter one. <see cref="TimeSpan.MaxValue"/> means the kind imposes no bound.
+    /// </para>
+    /// </remarks>
+    /// <param name="authenticationContext">
+    /// The authentication context of the current logical call flow, or <see langword="null"/> when
+    /// none has been established.
+    /// </param>
+    TimeSpan MaxCacheDuration(IAuthenticationContext? authenticationContext);
 }

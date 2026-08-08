@@ -45,4 +45,28 @@ public static class CachePolicy
 
         return defaultDuration ?? DefaultDuration;
     }
+
+    /// <summary>
+    /// Gets the cache duration from command Metadata bounded by a ceiling the storage layer imposes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A command states how long it would like its result kept; the connection kind states how long a
+    /// result read under the caller's session may safely be replayed. This composes the two, and the
+    /// composition is a minimum — a ceiling caps a request and never extends it, so a command asking
+    /// for less than the ceiling keeps its shorter duration.
+    /// </para>
+    /// <para>
+    /// <see cref="TimeSpan.MaxValue"/> is the identity for that minimum, which is what a kind imposing
+    /// no bound returns. It needs no special case here: it simply never wins the comparison.
+    /// </para>
+    /// </remarks>
+    /// <param name="command">The command whose Metadata may request a duration.</param>
+    /// <param name="defaultDuration">Duration to use when the command requests none.</param>
+    /// <param name="ceiling">The longest the storage layer permits this result to be replayed.</param>
+    public static TimeSpan GetDuration(IDataCommand command, TimeSpan defaultDuration, TimeSpan ceiling)
+    {
+        var requested = GetDuration(command, defaultDuration);
+        return requested < ceiling ? requested : ceiling;
+    }
 }

@@ -131,6 +131,35 @@ public sealed class MsSqlSessionContextCachePartitionTests
         PartitionFor(different).ShouldNotBe(PartitionFor(left));
     }
 
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public void BoundsReplayForContextsWhosePredicateBranchJoinsLiveGrantTables()
+    {
+        // Modes 2, 3 and 4 all join tenant.TenantOrgAccess or security.VisibilityGroup at query time,
+        // so revoking a grant changes the next query's answer while this caller's identity — and so
+        // its partition — is unchanged. Without a ceiling the revoked user keeps being served the rows
+        // they just lost for as long as the entry lives.
+        var principal = Principal(UserA, TenantA);
+
+        MsSqlSessionContextTypes.For(principal).MaxCacheDuration(principal)
+            .ShouldBeLessThan(TimeSpan.FromMinutes(5));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public void DoesNotBoundContextsWhoseBranchJoinsNothing()
+    {
+        // Mode 1 grants full visibility on a null UserId alone, and the deny principal reaches only
+        // the shared-row branch. Neither consults a grant, so neither can be invalidated by an edit to
+        // one — bounding them would cost hit rate to protect against a change that cannot happen.
+        MsSqlSessionContextTypes.For(new SystemAuthenticationContext())
+            .MaxCacheDuration(new SystemAuthenticationContext()).ShouldBe(TimeSpan.MaxValue);
+
+        MsSqlSessionContextTypes.For(null).MaxCacheDuration(null).ShouldBe(TimeSpan.MaxValue);
+    }
+
     private static IAuthenticationContext Principal(
         Guid userId,
         Guid? tenantId = null,

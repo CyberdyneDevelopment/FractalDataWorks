@@ -203,6 +203,11 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         bool enable = _cache is not null && _options is not null && _options.Value.EnableCache;
 
         string? cacheKey = null;
+        // Why the ceiling is captured here rather than the kind: these are the only two things the
+        // write below needs, and taking them together binds both to the one resolution that produced
+        // the key. TimeSpan.MaxValue is the identity for the minimum CachePolicy applies, so it is the
+        // correct starting value for the paths that never consult a kind at all.
+        var cacheCeiling = TimeSpan.MaxValue;
         if (enable)
         {
             // Why the read fails instead of proceeding uncached: without a partition the gateway
@@ -214,7 +219,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
             if (!connectionTypeResult.IsSuccess || connectionTypeResult.Value is null)
                 return connectionTypeResult.ToNewResult<T>();
 
-            var connectionType = connectionTypeResult.Value;
+            cacheCeiling = connectionTypeResult.Value.MaxCacheDuration(_authenticationContextAccessor?.Current);
 
             try
             {
@@ -227,7 +232,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
                 // typeof(T).FullName prevents type mismatches across generic invocations with the same
                 // query shape.
                 cacheKey = string.Concat(
-                    connectionType.CachePartition(_authenticationContextAccessor?.Current),
+                    connectionTypeResult.Value.CachePartition(_authenticationContextAccessor?.Current),
                     "|_cfg|", CacheKeyBuilder.ComputeCacheKey(command, target), ":", typeof(T).FullName);
             }
             catch (Exception ex)
@@ -254,7 +259,10 @@ public sealed class ConfigurationGateway : IConfigurationGateway
                 cacheKey,
                 result,
                 CacheKeyBuilder.GetInvalidationTags(command, target),
-                CachePolicy.GetDuration(command, DefaultCacheDuration));
+                CachePolicy.GetDuration(
+                    command,
+                    DefaultCacheDuration,
+                    cacheCeiling));
         }
 
         return result;

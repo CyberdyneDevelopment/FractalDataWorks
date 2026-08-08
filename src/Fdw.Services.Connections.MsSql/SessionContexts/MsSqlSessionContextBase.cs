@@ -73,6 +73,18 @@ public abstract class MsSqlSessionContextBase : TypeOptionBase<int, ISessionCont
     /// <inheritdoc />
     /// <remarks>
     /// <para>
+    /// Abstract because the three options differ, and the difference is exactly whether their branch
+    /// of <c>security.fn_TenantFilter</c> joins a live table. Modes 2, 3 and 4 read
+    /// <c>tenant.TenantOrgAccess</c> or <c>security.VisibilityGroup</c> at query time, so an edit
+    /// there changes what a caller sees without changing anything the partition can observe. Mode 1
+    /// and the shared-row branch join nothing and cannot drift.
+    /// </para>
+    /// </remarks>
+    public abstract TimeSpan MaxCacheDuration(IAuthenticationContext? authenticationContext);
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
     /// <b>Derived from <see cref="Plan"/>, and deliberately not overridable.</b> The plan already is
     /// the complete description of what this scheme tells the store about the caller — every
     /// <c>SESSION_CONTEXT</c> key <see cref="Apply"/> sets comes from it, and

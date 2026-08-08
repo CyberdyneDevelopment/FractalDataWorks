@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Data;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
@@ -58,6 +59,18 @@ public sealed class DenySessionContext() : MsSqlSessionContextBase(3, "Deny")
     /// <inheritdoc />
     public override SessionContextPlan Plan(IAuthenticationContext? authenticationContext)
         => SessionContextPlan.Deny;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Unbounded. The deny principal reaches only the shared-row branch
+    /// (<c>fn_TenantFilter.sql:48-51</c>), which tests <c>TenantId IS NULL AND VisibilityGroupId IS
+    /// NULL</c> on the row itself and joins nothing. Its emptiness in
+    /// <c>tenant.TenantOrgAccess</c> is what denies it every tenant-scoped branch, and adding grants
+    /// for a principal that exists in no table is not an operation — so what it sees cannot change
+    /// out from under a cached result.
+    /// </remarks>
+    public override TimeSpan MaxCacheDuration(IAuthenticationContext? authenticationContext)
+        => TimeSpan.MaxValue;
 
     /// <inheritdoc />
     public override async Task Apply(

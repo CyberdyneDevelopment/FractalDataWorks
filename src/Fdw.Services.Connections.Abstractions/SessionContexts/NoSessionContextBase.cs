@@ -1,3 +1,4 @@
+using System;
 using Fdw.Collections;
 using Fdw.Services.Authentication.Abstractions.Security;
 
@@ -52,4 +53,14 @@ public abstract class NoSessionContextBase : TypeOptionBase<int, ISessionContext
     /// </remarks>
     public string CachePartition(IAuthenticationContext? authenticationContext)
         => NoSessionContextPartition;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Unbounded, for the same reason the partition is constant: the kind never describes the calling
+    /// principal to its store, so no per-principal rule exists to read live state and nothing about
+    /// who is asking can change what comes back. Results here age like any other data — the command's
+    /// own duration governs, and this imposes no security ceiling on top of it.
+    /// </remarks>
+    public TimeSpan MaxCacheDuration(IAuthenticationContext? authenticationContext)
+        => TimeSpan.MaxValue;
 }

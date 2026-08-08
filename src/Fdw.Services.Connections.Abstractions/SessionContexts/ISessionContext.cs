@@ -1,3 +1,4 @@
+using System;
 using Fdw.Collections;
 using Fdw.Services.Authentication.Abstractions.Security;
 
@@ -86,4 +87,32 @@ public interface ISessionContext : ITypeOption<int, ISessionContext>
     /// none has been established. This is the same input <see cref="Governs"/> selected on.
     /// </param>
     string CachePartition(IAuthenticationContext? authenticationContext);
+
+    /// <summary>
+    /// Gets the longest a result read under this session context may be replayed from cache.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Why a scheme states this and a caller cannot.</b> A cache partition separates callers whose
+    /// visibility differs <i>now</i>. It cannot express visibility that changes <i>underneath</i> a
+    /// caller whose own identity never changed — a revoked grant, a regrouped visibility group. Where
+    /// a scheme's rule reads live state at query time, the store answers the next query differently
+    /// while the partition stays identical, so only a time bound closes the gap.
+    /// </para>
+    /// <para>
+    /// <b>This is a ceiling, not a duration.</b> It caps whatever a command requests; it never
+    /// extends it. A caller asking for a shorter lifetime keeps the shorter one.
+    /// </para>
+    /// <para>
+    /// <see cref="TimeSpan.MaxValue"/> means the scheme imposes no bound — the honest answer whenever
+    /// visibility under this context cannot change without the caller's own identity changing. It is a
+    /// declared position rather than an absent one, and a context that reads live state must not
+    /// return it.
+    /// </para>
+    /// </remarks>
+    /// <param name="authenticationContext">
+    /// The authentication context of the current logical call flow, or <see langword="null"/> when
+    /// none has been established. This is the same input <see cref="Governs"/> selected on.
+    /// </param>
+    TimeSpan MaxCacheDuration(IAuthenticationContext? authenticationContext);
 }
