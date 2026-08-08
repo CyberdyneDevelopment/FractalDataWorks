@@ -53,6 +53,12 @@ public sealed class ServiceTypeCollectionPhaseMethodsAnalyzer : DiagnosticAnalyz
     private const string LoggerFactory = "Microsoft.Extensions.Logging.ILoggerFactory";
     private const string Host = "Microsoft.Extensions.Hosting.IHost";
 
+    // Why the return types are spelled separately from the parameter types: a phase takes a builder or
+    // host and hands back a RESULT carrying it, so the two are no longer the same symbol and checking
+    // "returns what it took" would now reject every correct phase.
+    private const string BuilderResult = "Fdw.Results.IGenericResult<Microsoft.Extensions.Hosting.IHostApplicationBuilder>";
+    private const string HostResult = "Fdw.Results.IGenericResult<Microsoft.Extensions.Hosting.IHost>";
+
     /// <inheritdoc />
     public override void Initialize(AnalysisContext context)
     {
@@ -72,9 +78,9 @@ public sealed class ServiceTypeCollectionPhaseMethodsAnalyzer : DiagnosticAnalyz
 
         // Why: partial classes and the generated half both contribute members, and the generator emits the
         // phase methods for the common case. Only report what is genuinely absent from the merged symbol.
-        RequirePhase(context, type, "Configure", HostApplicationBuilder, HostApplicationBuilder);
-        RequirePhase(context, type, "Register", HostApplicationBuilder, HostApplicationBuilder);
-        RequirePhase(context, type, "Initialize", Host, Host);
+        RequirePhase(context, type, "Configure", HostApplicationBuilder, BuilderResult);
+        RequirePhase(context, type, "Register", HostApplicationBuilder, BuilderResult);
+        RequirePhase(context, type, "Initialize", Host, HostResult);
     }
 
     private static bool IsRegisteredIntoPlatformServices(INamedTypeSymbol type)
@@ -148,9 +154,25 @@ public sealed class ServiceTypeCollectionPhaseMethodsAnalyzer : DiagnosticAnalyz
             fullyQualifiedName,
             System.StringComparison.Ordinal);
 
+    // Why this shortens each part rather than taking the tail after the last dot: the return types are
+    // now generic, so "…IGenericResult<…IHostApplicationBuilder>" has its last dot INSIDE the type
+    // argument. Taking the tail produced "IHostApplicationBuilder>" — a diagnostic telling the author
+    // to declare a method whose return type does not parse.
     private static string Short(string fullyQualifiedName)
     {
-        var lastDot = fullyQualifiedName.LastIndexOf('.');
-        return lastDot >= 0 ? fullyQualifiedName.Substring(lastDot + 1) : fullyQualifiedName;
+        var open = fullyQualifiedName.IndexOf('<');
+        if (open < 0)
+            return Tail(fullyQualifiedName);
+
+        var close = fullyQualifiedName.LastIndexOf('>');
+        return close > open
+            ? $"{Tail(fullyQualifiedName.Substring(0, open))}<{Tail(fullyQualifiedName.Substring(open + 1, close - open - 1))}>"
+            : Tail(fullyQualifiedName);
+    }
+
+    private static string Tail(string name)
+    {
+        var lastDot = name.LastIndexOf('.');
+        return lastDot >= 0 ? name.Substring(lastDot + 1) : name;
     }
 }

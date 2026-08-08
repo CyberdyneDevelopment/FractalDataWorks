@@ -1,4 +1,5 @@
 using System;
+using Fdw.Results;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -111,7 +112,11 @@ public static class PlatformServices
     /// Calls every registered domain's Configure in dependency-safe order. Replaces the manual,
     /// per-domain <c>XxxServiceTypes.Configure(builder, loggerFactory)</c> calls.
     /// </summary>
-    public static IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    // Why the sweep stops at the first failing domain: the domains after it are ordered AFTER it
+    // because they may depend on it. Continuing would register them against a dependency that is not
+    // there, turning one legible failure into a cascade of unrelated-looking ones. The caller gets the
+    // first failure, which is the one that explains the rest.
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
     {
         EnsureFrozen();
         foreach (var entry in _frozenOrder)
@@ -121,9 +126,14 @@ public static class PlatformServices
             // and records that the phase ran. Reaching past it to the descriptor made a Configure
             // replacement silently not run under the sweep, and left _configured unset so the
             // lock-at-sweep guard never fired either — the exact silent no-op that guard exists for.
-            builder = entry.Configure(builder, loggerFactory);
+            var result = entry.Configure(builder, loggerFactory);
+            if (result.IsFailure)
+                return result;
+
+            builder = result.Value ?? builder;
         }
-        return builder;
+
+        return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
     /// <summary>
@@ -132,14 +142,19 @@ public static class PlatformServices
     /// <c>PlatformServices.Connection?.Register(...)</c>), since <see cref="PlatformServiceEntry.Register"/>
     /// is idempotent. Replaces the manual, per-domain <c>XxxServiceTypes.Register(services, loggerFactory)</c> calls.
     /// </summary>
-    public static void Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
     {
         EnsureFrozen();
         foreach (var entry in _frozenOrder)
         {
             if (entry.Manual) continue;
-            entry.Register(builder, loggerFactory);
+
+            var result = entry.Register(builder, loggerFactory);
+            if (result.IsFailure)
+                return result;
         }
+
+        return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
     /// <summary>
@@ -148,14 +163,19 @@ public static class PlatformServices
     /// <c>PlatformServices.Connection?.Initialize(...)</c>), since <see cref="PlatformServiceEntry.Initialize"/>
     /// is idempotent. Replaces the manual, per-domain <c>XxxServiceTypes.Initialize(host, loggerFactory)</c> calls.
     /// </summary>
-    public static void Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
         EnsureFrozen();
         foreach (var entry in _frozenOrder)
         {
             if (entry.Manual) continue;
-            entry.Initialize(host, loggerFactory);
+
+            var result = entry.Initialize(host, loggerFactory);
+            if (result.IsFailure)
+                return result;
         }
+
+        return GenericResult<IHost>.Success(host);
     }
 
     /// <summary>

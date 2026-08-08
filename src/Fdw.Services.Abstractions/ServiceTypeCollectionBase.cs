@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using Fdw.Results;
 using Fdw.ServiceTypes.Logging;
+using Fdw.ServiceTypes.Results;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -121,41 +123,81 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
         }
     }
 
-    // ── The three phases ────────────────────────────────────────────────────────────────────────
-    // Each phase is a func holding the body, a gerund that replaces it, and a verb that invokes it.
+    // ── Configure, Register, Initialize ─────────────────────────────────────────────────────────
+    // Each is a func holding the body, a gerund that replaces it, and a verb that invokes it.
     //
     // The defaults are set HERE, in the declaration, so a func is never null and the verb never has to
     // guard. They are static lambdas over static members, which a static field initializer may do —
     // an instance initializer could not, because a lambda touching Options would capture `this`.
     //
-    // Each default sweeps this collection's options and runs that option's own phase.
+    // Each default calls the same method on every option in this collection.
 
-    private static Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> _configurationFunc
-        = static (builder, loggerFactory) =>
-        {
-            foreach (var option in Options)
-                option.Configure(builder, loggerFactory);
-            return builder;
-        };
+    // Why a default stops at the first failing option instead of running the rest: the options after it
+    // register against a domain that is already incomplete, and whatever they build on top of the
+    // missing piece fails later, somewhere else, with nothing pointing back here. Stopping means the
+    // failure the caller receives is the FIRST one, which is the one that explains the others.
+    // NO FALLBACKS — it does not carry on and hope.
 
-    private static Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> _registerFunc
+    private static Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> _configurationFunc
         = static (builder, loggerFactory) =>
         {
             foreach (var option in Options)
             {
-                option.Register(builder, loggerFactory,
-                    option.DefaultDataStoreName, option.DefaultPathName, option.DefaultContainerName);
+                var result = option.Configure(builder, loggerFactory);
+                if (result.IsFailure)
+                    return Stop<IHostApplicationBuilder>(loggerFactory, "Configure", option, result);
             }
-            return builder;
+
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         };
 
-    private static Func<IHost, ILoggerFactory?, IHost> _initializationFunc
+    private static Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> _registerFunc
+        = static (builder, loggerFactory) =>
+        {
+            foreach (var option in Options)
+            {
+                var result = option.Register(builder, loggerFactory,
+                    option.DefaultDataStoreName, option.DefaultPathName, option.DefaultContainerName);
+                if (result.IsFailure)
+                    return Stop<IHostApplicationBuilder>(loggerFactory, "Register", option, result);
+            }
+
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        };
+
+    private static Func<IHost, ILoggerFactory?, IGenericResult<IHost>> _initializationFunc
         = static (host, loggerFactory) =>
         {
             foreach (var option in Options)
-                option.Initialize(host, loggerFactory);
-            return host;
+            {
+                var result = option.Initialize(host, loggerFactory);
+                if (result.IsFailure)
+                    return Stop<IHost>(loggerFactory, "Initialize", option, result);
+            }
+
+            return GenericResult<IHost>.Success(host);
         };
+
+    // Why the option's own failure is carried forward rather than a fresh one: it already names what
+    // went wrong in that option's own vocabulary. Re-wrapping would bury the specific code under a
+    // generic one. The log line is what adds the context — which collection, which method, which option.
+    //
+    // Why ToNewResult and not Failure(failure.Messages): copying the messages out and building a new
+    // result drops the error CHAIN, so the caller sees the leaf complaint with nothing linking it to
+    // what it came from (FDW015 reports exactly this). ToNewResult re-types the same result, keeping
+    // the chain intact across the generic boundary.
+    private static IGenericResult<T> Stop<T>(
+        ILoggerFactory? loggerFactory,
+        string phase,
+        IServiceTypeRegistration option,
+        IGenericResult failure)
+    {
+        ServiceTypeLog.CollectionPhaseStopped(
+            loggerFactory?.CreateLogger(typeof(TInterface).FullName ?? CollectionName) ?? (ILogger)NullLogger.Instance,
+            CollectionName, phase, option.Name, failure.CurrentMessage ?? string.Empty);
+
+        return failure.ToNewResult<T>();
+    }
 
     // ── Which body is installed ─────────────────────────────────────────────────────────────────
     // Set by the gerund setters, read by the invokers, so each phase can say at Info whether the
@@ -179,39 +221,39 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     protected static bool InitializationIsCustom { get; private set; }
 
     /// <summary>Gets this collection's Configure body.</summary>
-    protected static Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> ConfigurationFunc => _configurationFunc;
+    protected static Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> ConfigurationFunc => _configurationFunc;
 
     /// <summary>Gets this collection's Register body.</summary>
-    protected static Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> RegisterFunc => _registerFunc;
+    protected static Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> RegisterFunc => _registerFunc;
 
     /// <summary>Gets this collection's Initialize body.</summary>
-    protected static Func<IHost, ILoggerFactory?, IHost> InitializationFunc => _initializationFunc;
+    protected static Func<IHost, ILoggerFactory?, IGenericResult<IHost>> InitializationFunc => _initializationFunc;
 
-    /// <summary>Replaces this collection's Configure body. Call before phase 1.</summary>
+    /// <summary>Replaces this collection's Configure body. Call before Configure runs.</summary>
     /// <param name="method">The replacement delegate.</param>
-    public static void Configuration(Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> method)
+    public static void Configuration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
     {
         _configurationFunc = method ?? throw new ArgumentNullException(nameof(method));
         ConfigurationIsCustom = true;
     }
 
-    /// <summary>Replaces this collection's Register body. Call before phase 2.</summary>
+    /// <summary>Replaces this collection's Register body. Call before Register runs.</summary>
     /// <param name="method">The replacement delegate.</param>
-    public static void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> method)
+    public static void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
     {
         _registerFunc = method ?? throw new ArgumentNullException(nameof(method));
         RegistrationIsCustom = true;
     }
 
-    /// <summary>Replaces this collection's Initialize body. Call before phase 3.</summary>
+    /// <summary>Replaces this collection's Initialize body. Call before Initialize runs.</summary>
     /// <param name="method">The replacement delegate.</param>
-    public static void Initialization(Func<IHost, ILoggerFactory?, IHost> method)
+    public static void Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
     {
         _initializationFunc = method ?? throw new ArgumentNullException(nameof(method));
         InitializationIsCustom = true;
     }
 
-    /// <summary>Phase 1 — binds each option's configuration.</summary>
+    /// <summary>Binds each option's configuration.</summary>
     /// <param name="builder">The host application builder.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <returns>The builder, for chaining.</returns>
@@ -222,11 +264,11 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// binds to this inherited static; the generated part supplies the registry contents and the typed
     /// lookups.
     /// </remarks>
-    public static IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
         => RunPhase(builder, loggerFactory, "Configure", ConfigurationIsCustom,
             ServiceTypePhaseSequence.Configure, _configurationFunc);
 
-    /// <summary>Phase 2 — each option registers its factory and configuration provider.</summary>
+    /// <summary>Each option registers its factory and configuration provider.</summary>
     /// <param name="builder">The host application builder.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <returns>The builder, for chaining.</returns>
@@ -236,11 +278,11 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// <c>ProviderType</c>, the generated part registers the provider into DI around this call, so the
     /// provider is wired whether or not an application replaced the option sweep.
     /// </remarks>
-    public static IHostApplicationBuilder Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
         => RunPhase(builder, loggerFactory, "Register", RegistrationIsCustom,
             ServiceTypePhaseSequence.Register, _registerFunc);
 
-    /// <summary>Phase 3 — post-Build initialization.</summary>
+    /// <summary>Post-Build initialization.</summary>
     /// <param name="host">The built host. Its <c>Services</c> is the provider this phase used to take.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <returns>The host, for chaining.</returns>
@@ -248,28 +290,34 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// The <c>xxxTypes</c> class this is called on is written by <c>ServiceTypeCollectionGenerator</c>
     /// from the <c>[ServiceTypeCollection]</c> attribute, not by hand.
     /// </remarks>
-    public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
         => RunPhase(host, loggerFactory, "Initialize", InitializationIsCustom,
             ServiceTypePhaseSequence.Initialize, _initializationFunc);
 
     // Why one runner rather than three copies of the same ceremony: the phases differ only in what
     // flows through them, and a logging contract that drifts between phases is worse than none.
     //
-    // Why log-and-rethrow rather than the usual catch-log-return: these return the builder or the
-    // provider, so there is no failure value to hand back. Swallowing would let a half-registered
-    // domain reach a running application, which is the outcome NO FALLBACKS exists to prevent. The log
-    // names the phase and which body was running; the throw stops the host.
-    private static T RunPhase<T>(
+    // Why catch-log-return rather than log-and-rethrow: a throw ends the process, which is a decision
+    // about THIS application that this framework type is in no position to make. Returning the failure
+    // hands that decision to whoever composed the host — abort, or run without this domain — while
+    // still guaranteeing they cannot proceed unaware, because they must read the result to get the
+    // builder back out of it. NO FALLBACKS is satisfied by refusing to return a success, not by
+    // choosing the caller's error handling for them.
+    //
+    // The catch stays because a phase body is arbitrary code that may still throw; this is the seam
+    // that turns that into the value the rest of the pipeline is written against.
+    private static IGenericResult<T> RunPhase<T>(
         T subject,
         ILoggerFactory? loggerFactory,
         string phase,
         bool isCustom,
         ServiceTypePhaseSequence sequence,
-        Func<T, ILoggerFactory?, T> body)
+        Func<T, ILoggerFactory?, IGenericResult<T>> body)
     {
         var logger = loggerFactory?.CreateLogger(typeof(TInterface).FullName ?? CollectionName)
             ?? (ILogger)NullLogger.Instance;
         var position = sequence.BeginCollection(CollectionName);
+        var implementation = isCustom ? "custom" : "default";
 
         if (isCustom)
             ServiceTypeLog.CollectionPhaseCustom(logger, CollectionName, phase, position, ServiceTypeLog.PhaseDocumentation);
@@ -279,13 +327,25 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
         try
         {
             var result = body(subject, loggerFactory);
-            ServiceTypeLog.CollectionPhaseSucceeded(logger, CollectionName, phase, position, Options.Length);
+
+            // Why only the success line is conditional: a failure has already been logged with the
+            // option that caused it by the sweep, or by the option's own runner. Logging it again here
+            // would report one failure twice, at two altitudes, as if they were two events.
+            if (result.IsSuccess)
+                ServiceTypeLog.CollectionPhaseSucceeded(logger, CollectionName, phase, position, Options.Length);
+
             return result;
         }
         catch (Exception ex)
         {
-            ServiceTypeLog.CollectionPhaseFailed(logger, ex, CollectionName, phase, position, isCustom ? "custom" : "default");
-            throw;
+            ServiceTypeLog.CollectionPhaseFailed(logger, ex, CollectionName, phase, position, implementation);
+            return GenericResult<T>.Failure(
+                ServiceTypeResultCodes.ByName("CollectionPhaseFailed"),
+                ResultDetails.Create("CollectionName", CollectionName)
+                    .With("Phase", phase)
+                    .With("Sequence", position)
+                    .With("Implementation", implementation)
+                    .With("ErrorMessage", ex.Message));
         }
     }
 }

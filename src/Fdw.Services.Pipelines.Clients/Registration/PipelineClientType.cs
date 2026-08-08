@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Services.Pipelines.Clients;
 
@@ -30,7 +31,7 @@ public sealed class PipelineClientType : ApiClientTypeBase<IPipelineClient>
         Configuration(builder =>
         {
             builder.Services.AddApiHttpClient(builder.Configuration, Name);
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -41,7 +42,7 @@ public sealed class PipelineClientType : ApiClientTypeBase<IPipelineClient>
                 var logger = sp.GetService<ILogger<PipelineHttpClient>>() ?? NullLogger<PipelineHttpClient>.Instance;
                 return new PipelineHttpClient(factory.CreateClient(Name), logger);
             });
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
  }
 

@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Operations.Clients;
 
@@ -25,7 +26,7 @@ public sealed class DataflowClientType : ApiClientTypeBase<DataflowApiClient>
         Configuration(builder =>
         {
             builder.Services.AddApiHttpClient(builder.Configuration, Name);
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -36,7 +37,7 @@ public sealed class DataflowClientType : ApiClientTypeBase<DataflowApiClient>
                 var logger = sp.GetService<ILogger<DataflowApiClient>>() ?? NullLogger<DataflowApiClient>.Instance;
                 return new DataflowApiClient(factory.CreateClient(Name), logger);
             });
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
  }
 

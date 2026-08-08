@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Services.Multitenancy;
 
@@ -49,7 +50,7 @@ public sealed class SingleTenantMultitenancyType : MultitenancyTypeBase<ISingleT
             builder.Services.AddScoped<ITenantProvider, NullTenantProvider>();
             builder.Services.TryAddSingleton<IOrganizationProvider>(_ => NullOrganizationProvider.Instance);
 
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

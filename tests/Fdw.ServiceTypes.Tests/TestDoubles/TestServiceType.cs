@@ -5,6 +5,7 @@ using Fdw.Configuration;
 using Fdw.ServiceTypes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Fdw.Results;
 
 namespace Fdw.ServiceTypes.Tests.TestDoubles;
 
@@ -19,7 +20,7 @@ public sealed class TestServiceType : ServiceTypeBase<ITestService, TestServiceF
     {
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
         {
-        return builder;
+        return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

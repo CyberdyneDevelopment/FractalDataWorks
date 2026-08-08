@@ -2,6 +2,7 @@ using System;
 using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Configuration;
+using Fdw.Results;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -92,13 +93,13 @@ public interface IServiceType : IServiceType<Guid>, IServiceTypeRegistration
 
     /// <summary>Sets this option's Configure body.</summary>
     /// <param name="method">The replacement delegate.</param>
-    void Configuration(Func<IHostApplicationBuilder, IHostApplicationBuilder> method);
+    void Configuration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method);
 
     /// <summary>Sets this option's Register body.</summary>
     /// <param name="method">The replacement delegate.</param>
-    void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, string, string, string, IHostApplicationBuilder> method);
+    void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, string, string, string, IGenericResult<IHostApplicationBuilder>> method);
 
     /// <summary>Sets this option's Initialize body.</summary>
     /// <param name="method">The replacement delegate.</param>
-    void Initialization(Func<IHost, ILoggerFactory?, IHost> method);
+    void Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method);
 }

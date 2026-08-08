@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Web.Calculations.Clients;
 
@@ -26,7 +27,7 @@ public sealed class CalculationClientType : ApiClientTypeBase<CalculationApiClie
         Configuration(builder =>
         {
             builder.Services.AddApiHttpClient(builder.Configuration, Name);
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -41,7 +42,7 @@ public sealed class CalculationClientType : ApiClientTypeBase<CalculationApiClie
                 return new CalculationApiClient(factory.CreateClient(Name), logger);
             });
             builder.Services.AddScoped<ICalculationApiClient>(sp => sp.GetRequiredService<CalculationApiClient>());
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
  }
 

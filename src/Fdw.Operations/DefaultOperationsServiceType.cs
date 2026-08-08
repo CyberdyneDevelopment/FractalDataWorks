@@ -20,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Operations;
 
@@ -79,7 +80,7 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
                 var provider = sp.GetRequiredService<EscalationConfigurationProvider>();
                 return new EscalationService(provider, lf);
             });
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

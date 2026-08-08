@@ -1,4 +1,5 @@
 using System;
+using Fdw.Results;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -59,9 +60,9 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     // it swaps a delegate. The same word is already spoken for one level down, where ServiceTypeBase
     // documents overriding the INVOKER as the way to add wiring a replacement cannot clobber. Naming both
     // "override" would put one word on the two operations that must not be confused.
-    private Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder>? _configurationMethod;
-    private Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder>? _registrationMethod;
-    private Func<IHost, ILoggerFactory?, IHost>? _initializationMethod;
+    private Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>>? _configurationMethod;
+    private Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>>? _registrationMethod;
+    private Func<IHost, ILoggerFactory?, IGenericResult<IHost>>? _initializationMethod;
     private bool _configured;
 
     /// <summary>
@@ -71,7 +72,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// BEFORE the Configure sweep runs for this entry. Returns <c>this</c> for fluent chaining.
     /// </summary>
     /// <exception cref="InvalidOperationException">The Configure phase has already run for this entry.</exception>
-    public PlatformServiceEntry Configuration(Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> replacement)
+    public PlatformServiceEntry Configuration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> replacement)
     {
         if (replacement is null) throw new ArgumentNullException(nameof(replacement));
         if (_configured)
@@ -88,7 +89,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// called BEFORE the Register sweep runs for this entry. Returns <c>this</c> for fluent chaining.
     /// </summary>
     /// <exception cref="InvalidOperationException">The Register phase has already run for this entry.</exception>
-    public PlatformServiceEntry Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IHostApplicationBuilder> replacement)
+    public PlatformServiceEntry Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> replacement)
     {
         if (replacement is null) throw new ArgumentNullException(nameof(replacement));
         if (Registered)
@@ -105,7 +106,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// called BEFORE the Initialize sweep runs for this entry. Returns <c>this</c> for fluent chaining.
     /// </summary>
     /// <exception cref="InvalidOperationException">The Initialize phase has already run for this entry.</exception>
-    public PlatformServiceEntry Initialization(Func<IHost, ILoggerFactory?, IHost> replacement)
+    public PlatformServiceEntry Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> replacement)
     {
         if (replacement is null) throw new ArgumentNullException(nameof(replacement));
         if (Initialized)
@@ -122,12 +123,20 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// initialize it manually, in whatever order matters, before a later
     /// <see cref="PlatformServices.Initialize"/> sweep skips anything already done.
     /// </summary>
-    public void Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    // Why the flag is set even when the phase failed: it records that this domain's Initialize HAS
+    // RUN, not that it succeeded. Leaving it unset would let a later sweep run it a second time on top
+    // of whatever the first attempt already did — double-initializing the part that worked in order to
+    // retry the part that did not. The failure goes to the caller; the re-run does not happen.
+    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
-        if (Initialized) return;
-        if (_initializationMethod is not null) _initializationMethod(host, loggerFactory);
-        else Descriptor.Initialize(host, loggerFactory);
+        if (Initialized) return GenericResult<IHost>.Success(host);
+
+        var result = _initializationMethod is not null
+            ? _initializationMethod(host, loggerFactory)
+            : Descriptor.Initialize(host, loggerFactory);
+
         Initialized = true;
+        return result;
     }
 
     /// <summary>
@@ -136,7 +145,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// without reaching through <see cref="Descriptor"/> explicitly. Unlike <see cref="Initialize"/>, this
     /// is not idempotent-tracked — Configure has no "already done" concept in this design.
     /// </summary>
-    public IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
     {
         _configured = true;
         return _configurationMethod is not null
@@ -152,11 +161,16 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// registers a <c>Manual</c> domain explicitly and is then swept by <see cref="PlatformServices.Register"/>
     /// (or vice versa) does not double-register the domain's services.
     /// </summary>
-    public void Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    // Why the flag is set even when the phase failed: see Initialize — it records that the phase ran.
+    public IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
     {
-        if (Registered) return;
-        if (_registrationMethod is not null) _registrationMethod(builder, loggerFactory);
-        else Descriptor.Register(builder, loggerFactory);
+        if (Registered) return GenericResult<IHostApplicationBuilder>.Success(builder);
+
+        var result = _registrationMethod is not null
+            ? _registrationMethod(builder, loggerFactory)
+            : Descriptor.Register(builder, loggerFactory);
+
         Registered = true;
+        return result;
     }
 }

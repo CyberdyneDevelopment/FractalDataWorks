@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Services.Data;
 
@@ -107,7 +108,7 @@ public sealed class DefaultDataGatewayServiceType : DataGatewayTypeBase<IGeneric
                     sp.GetRequiredService<ConnectionLimitCounterStore>(),
                     sp.GetService<ILoggerFactory>()));
 
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
     
         });
 
@@ -119,7 +120,7 @@ public sealed class DefaultDataGatewayServiceType : DataGatewayTypeBase<IGeneric
             // eliminating cross-process staleness without any per-call opt-out.
             builder.Services.Configure<DataGatewayOptions>(builder.Configuration.GetSection("DataGateway"));
     
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
     }

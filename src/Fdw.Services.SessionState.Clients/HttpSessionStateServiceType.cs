@@ -8,6 +8,7 @@ using Fdw.Web.Http.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Fdw.Results;
 
 namespace Fdw.Services.SessionState.Clients;
 
@@ -41,13 +42,13 @@ public sealed class HttpSessionStateServiceType : SessionStateServiceTypeBase<IG
             // UI ended up pointing session state at a dev URL while its other clients were correct.
             builder.Services.AddApiHttpClient(builder.Configuration, HttpClientName);
     
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
         {
             builder.Services.AddScoped<ISessionStateService, HttpSessionStateService>();
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

@@ -11,6 +11,7 @@ using Fdw.Services.Quality.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Fdw.Results;
 
 namespace Fdw.Services.Quality;
 
@@ -39,7 +40,7 @@ public sealed class DefaultQualityServiceType : QualityServiceTypeBase
             builder.Services.Configure<List<DataSetAnnotationConfiguration>>(builder.Configuration.GetSection("Catalog:DataSetAnnotation"));
             builder.Services.Configure<List<GlossaryTermConfiguration>>(builder.Configuration.GetSection("Catalog:GlossaryTerm"));
     
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -58,7 +59,7 @@ public sealed class DefaultQualityServiceType : QualityServiceTypeBase
             // → Get always 404'd. Singleton keeps the list alive across requests until a
             // real DataGateway-backed implementation replaces it.
             builder.Services.TryAddSingleton<IPromotionService, PromotionService>();
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

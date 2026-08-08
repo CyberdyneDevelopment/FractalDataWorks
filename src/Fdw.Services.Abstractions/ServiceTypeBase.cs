@@ -3,8 +3,10 @@ using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Collections.Attributes;
 using Fdw.Configuration;
+using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes.Logging;
+using Fdw.ServiceTypes.Results;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -103,12 +105,12 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     // checked the field before falling through to virtual dispatch — four moving parts for one body.
 
     /// <summary>Gets this option's Configure body.</summary>
-    protected Func<IHostApplicationBuilder, IHostApplicationBuilder> ConfigurationMethod { get; private set; }
-        = static builder => builder;
+    protected Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> ConfigurationMethod { get; private set; }
+        = static builder => GenericResult<IHostApplicationBuilder>.Success(builder);
 
     /// <summary>Gets this option's Register body.</summary>
-    protected Func<IHostApplicationBuilder, ILoggerFactory?, string, string, string, IHostApplicationBuilder> RegistrationMethod { get; private set; }
-        = static (builder, loggerFactory, dataStoreName, pathName, containerName) => builder;
+    protected Func<IHostApplicationBuilder, ILoggerFactory?, string, string, string, IGenericResult<IHostApplicationBuilder>> RegistrationMethod { get; private set; }
+        = static (builder, loggerFactory, dataStoreName, pathName, containerName) => GenericResult<IHostApplicationBuilder>.Success(builder);
 
     /// <summary>Gets this option's Initialize body.</summary>
     /// <remarks>
@@ -119,8 +121,8 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// nothing connects the two. Taking the host means the requirement is stated by the option that
     /// has it. <c>host.Services</c> is the same provider this used to receive.
     /// </remarks>
-    protected Func<IHost, ILoggerFactory?, IHost> InitializationMethod { get; private set; }
-        = static (host, loggerFactory) => host;
+    protected Func<IHost, ILoggerFactory?, IGenericResult<IHost>> InitializationMethod { get; private set; }
+        = static (host, loggerFactory) => GenericResult<IHost>.Success(host);
 
     // ── Which body is installed ─────────────────────────────────────────────────────────────────
     // Set by the gerund setters, read by the invokers, so each phase can say at Info whether the
@@ -141,7 +143,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
 
     /// <summary>Sets this option's Configure body.</summary>
     /// <param name="method">The replacement delegate.</param>
-    public void Configuration(Func<IHostApplicationBuilder, IHostApplicationBuilder> method)
+    public void Configuration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
     {
         ConfigurationMethod = method ?? throw new ArgumentNullException(nameof(method));
         ConfigurationIsCustom = true;
@@ -149,7 +151,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
 
     /// <summary>Sets this option's Register body.</summary>
     /// <param name="method">The replacement delegate.</param>
-    public void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, string, string, string, IHostApplicationBuilder> method)
+    public void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, string, string, string, IGenericResult<IHostApplicationBuilder>> method)
     {
         RegistrationMethod = method ?? throw new ArgumentNullException(nameof(method));
         RegistrationIsCustom = true;
@@ -157,7 +159,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
 
     /// <summary>Sets this option's Initialize body.</summary>
     /// <param name="method">The replacement delegate.</param>
-    public void Initialization(Func<IHost, ILoggerFactory?, IHost> method)
+    public void Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
     {
         InitializationMethod = method ?? throw new ArgumentNullException(nameof(method));
         InitializationIsCustom = true;
@@ -177,7 +179,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// <c>ServiceTypeCollectionGenerator</c> from the <c>[ServiceTypeCollection]</c> attribute, not by
     /// hand. It is that generated sweep which calls this, in the order the log line reports.
     /// </remarks>
-    public virtual IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    public virtual IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
         => RunPhase(loggerFactory, "Configure", ConfigurationIsCustom, ServiceTypePhaseSequence.Configure,
             () => ConfigurationMethod(builder));
 
@@ -186,7 +188,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// Called by the generated collection's phase-2 sweep. Where the collection declares a
     /// <c>ProviderType</c>, the generated part registers that provider independently of this call.
     /// </remarks>
-    public virtual IHostApplicationBuilder Register(
+    public virtual IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory,
         string dataStoreName,
@@ -199,25 +201,31 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// <remarks>
     /// Called by the generated collection's phase-3 sweep, after the host has been built.
     /// </remarks>
-    public virtual IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    public virtual IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
         => RunPhase(loggerFactory, "Initialize", InitializationIsCustom, ServiceTypePhaseSequence.Initialize,
             () => InitializationMethod(host, loggerFactory));
 
     // Why the body arrives as a thunk rather than the func itself: the three phases take different
     // arguments, and closing over them here keeps one logging contract instead of three that drift.
     //
-    // Why log-and-rethrow rather than catch-log-return: these return the builder or the provider, so
-    // there is no failure value to hand back. Swallowing would let a half-registered option reach a
-    // running application. The log names the option, its position, and which body was running.
-    private T RunPhase<T>(
+    // Why catch-log-return rather than log-and-rethrow: an exception decides for the application that
+    // the process ends. A framework does not get to make that call — the host may want to abort on a
+    // failed domain or run without it, and it can only choose if the failure arrives as a value. The
+    // catch is the boundary where an option that still throws is converted into the result everything
+    // above this expects, so one badly-behaved option cannot unwind a sweep that was handling failures.
+    //
+    // A body that returns a failure is passed through untouched: it already carries its own domain's
+    // code, which is more specific than anything this could substitute. Only the throw needs a code.
+    private IGenericResult<T> RunPhase<T>(
         ILoggerFactory? loggerFactory,
         string phase,
         bool isCustom,
         ServiceTypePhaseSequence sequence,
-        Func<T> body)
+        Func<IGenericResult<T>> body)
     {
         var logger = loggerFactory?.CreateLogger(GetType().FullName ?? Name) ?? (ILogger)NullLogger.Instance;
         var ordinal = sequence.NextOption();
+        var implementation = isCustom ? "custom" : "default";
 
         if (isCustom)
             ServiceTypeLog.OptionPhaseCustom(logger, Name, phase, ordinal, sequence.CurrentCollectionName, ServiceTypeLog.PhaseDocumentation);
@@ -227,13 +235,26 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
         try
         {
             var result = body();
-            ServiceTypeLog.OptionPhaseSucceeded(logger, Name, phase, ordinal, sequence.CurrentCollectionName);
+
+            if (result.IsSuccess)
+                ServiceTypeLog.OptionPhaseSucceeded(logger, Name, phase, ordinal, sequence.CurrentCollectionName);
+            else
+                ServiceTypeLog.OptionPhaseReportedFailure(
+                    logger, Name, phase, ordinal, sequence.CurrentCollectionName, result.CurrentMessage ?? string.Empty);
+
             return result;
         }
         catch (Exception ex)
         {
-            ServiceTypeLog.OptionPhaseFailed(logger, ex, Name, phase, ordinal, sequence.CurrentCollectionName, isCustom ? "custom" : "default");
-            throw;
+            ServiceTypeLog.OptionPhaseFailed(logger, ex, Name, phase, ordinal, sequence.CurrentCollectionName, implementation);
+            return GenericResult<T>.Failure(
+                ServiceTypeResultCodes.ByName("OptionPhaseFailed"),
+                ResultDetails.Create("OptionName", Name)
+                    .With("Phase", phase)
+                    .With("Ordinal", ordinal)
+                    .With("CollectionName", sequence.CurrentCollectionName)
+                    .With("Implementation", implementation)
+                    .With("ErrorMessage", ex.Message));
         }
     }
 

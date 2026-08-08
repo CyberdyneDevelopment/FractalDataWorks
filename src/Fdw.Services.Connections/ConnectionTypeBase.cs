@@ -47,7 +47,7 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
     //
     // The func is deferred — it runs in the provider's constructor, once the container exists — so it
     // does not matter that the option's own Register (which puts TFactory into DI) runs after this.
-    public override IHostApplicationBuilder Register(
+    public override IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory,
         string dataStoreName,

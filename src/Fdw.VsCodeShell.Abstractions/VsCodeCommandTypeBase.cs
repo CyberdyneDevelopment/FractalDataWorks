@@ -6,6 +6,8 @@ using Fdw.ServiceTypes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Fdw.VsCodeShell.Abstractions;
+using Fdw.Results;
+using Microsoft.Extensions.Hosting;
 
 namespace Fdw.VsCodeShell;
 
@@ -63,7 +65,7 @@ public abstract class VsCodeCommandTypeBase<THandler>
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
         {
             builder.Services.AddKeyedSingleton<IVsCodeCommandHandler, THandler>(CommandId);
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
     }
 

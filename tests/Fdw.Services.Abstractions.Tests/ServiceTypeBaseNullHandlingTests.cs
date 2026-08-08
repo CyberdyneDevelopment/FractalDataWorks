@@ -90,7 +90,7 @@ public class ServiceTypeBaseNullHandlingTests
         {
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
         {
-                return builder;
+                return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
         }

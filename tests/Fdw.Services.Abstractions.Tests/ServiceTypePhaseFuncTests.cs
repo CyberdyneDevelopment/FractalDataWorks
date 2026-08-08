@@ -71,8 +71,13 @@ public class ServiceTypePhaseFuncTests
         var builder = NewBuilder();
         var before = builder.Services.Count;
 
-        serviceType.Configure(builder).ShouldBeSameAs(builder);
-        serviceType.Register(builder, null, "Store", "path", "container").ShouldBeSameAs(builder);
+        var configured = serviceType.Configure(builder);
+        configured.IsSuccess.ShouldBeTrue();
+        configured.Value.ShouldBeSameAs(builder);
+
+        var registered = serviceType.Register(builder, null, "Store", "path", "container");
+        registered.IsSuccess.ShouldBeTrue();
+        registered.Value.ShouldBeSameAs(builder);
 
         builder.Services.Count.ShouldBe(before);
     }
@@ -84,7 +89,7 @@ public class ServiceTypePhaseFuncTests
     {
         var serviceType = new TestServiceType();
         var ran = 0;
-        serviceType.Configuration(b => { ran++; return b; });
+        serviceType.Configuration(b => { ran++; return GenericResult<IHostApplicationBuilder>.Success(b); });
 
         serviceType.Configure(NewBuilder());
 
@@ -98,10 +103,10 @@ public class ServiceTypePhaseFuncTests
     {
         var serviceType = new TestServiceType();
         var replacement = NewBuilder();
-        serviceType.Registration((_, _, _, _, _) => replacement);
+        serviceType.Registration((_, _, _, _, _) => GenericResult<IHostApplicationBuilder>.Success(replacement));
 
         serviceType.Register(NewBuilder(), null, "Store", "path", "container")
-            .ShouldBeSameAs(replacement);
+            .Value.ShouldBeSameAs(replacement);
     }
 
     [Fact]
@@ -111,10 +116,10 @@ public class ServiceTypePhaseFuncTests
     {
         var serviceType = new TestServiceType();
         var replacement = Host.CreateApplicationBuilder().Build();
-        serviceType.Initialization((_, _) => replacement);
+        serviceType.Initialization((_, _) => GenericResult<IHost>.Success(replacement));
 
         serviceType.Initialize(Host.CreateApplicationBuilder().Build(), null)
-            .ShouldBeSameAs(replacement);
+            .Value.ShouldBeSameAs(replacement);
     }
 
     [Fact]
@@ -125,7 +130,7 @@ public class ServiceTypePhaseFuncTests
         var replaced = new TestServiceType();
         var untouched = new TestServiceType();
         var ran = 0;
-        replaced.Configuration(b => { ran++; return b; });
+        replaced.Configuration(b => { ran++; return GenericResult<IHostApplicationBuilder>.Success(b); });
 
         untouched.Configure(NewBuilder());
 
@@ -164,7 +169,7 @@ public class ServiceTypePhaseFuncTests
     {
         IServiceType serviceType = new TestServiceType();
         var ran = 0;
-        serviceType.Configuration(b => { ran++; return b; });
+        serviceType.Configuration(b => { ran++; return GenericResult<IHostApplicationBuilder>.Success(b); });
 
         serviceType.Configure(NewBuilder());
 
@@ -183,7 +188,7 @@ public class ServiceTypePhaseFuncTests
 
         public int BaseRegisterCount { get; private set; }
 
-        public override IHostApplicationBuilder Register(
+        public override IGenericResult<IHostApplicationBuilder> Register(
             IHostApplicationBuilder builder,
             ILoggerFactory? loggerFactory,
             string dataStoreName,
@@ -203,7 +208,7 @@ public class ServiceTypePhaseFuncTests
             => Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
             {
                 OwnRegisterCount++;
-                return builder;
+                return GenericResult<IHostApplicationBuilder>.Success(builder);
             });
     }
 

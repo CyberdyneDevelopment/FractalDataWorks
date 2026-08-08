@@ -19,6 +19,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Fdw.Results;
 
 namespace Fdw.Services.Calculations;
 
@@ -57,7 +58,7 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
                 "Windowed",
                 services.GetRequiredService<DefaultConfigurationProvider<WindowedCalculationConfiguration, WindowedCalculationConfigurationCommand>>());
     
-            return host;
+            return GenericResult<IHost>.Success(host);
         });
 
         Configuration(builder =>
@@ -65,7 +66,7 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
 
             builder.Services.Configure<CalculationCacheOptions>(builder.Configuration.GetSection("CalculationCache"));
     
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -93,7 +94,7 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
             // to the header provider via RegisterTypedProvider (read dispatch on ServiceOptionType).
             RegisterTypedBodyProvider<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>(builder.Services);
             RegisterTypedBodyProvider<WindowedCalculationConfiguration, WindowedCalculationConfigurationCommand>(builder.Services);
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

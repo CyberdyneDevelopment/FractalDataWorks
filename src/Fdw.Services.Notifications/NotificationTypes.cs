@@ -10,6 +10,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
+using Fdw.Results;
+using Microsoft.Extensions.Hosting;
 
 namespace Fdw.Services.Notifications;
 
@@ -53,7 +55,13 @@ public partial class NotificationTypes
         var sweepOptions = RegisterFunc;
         Registration((builder, loggerFactory) =>
         {
-            sweepOptions(builder, loggerFactory);
+            // Why the result is read: this replacement calls the func it captured, and discarding
+            // what that returned meant an option that failed to register was followed by this body
+            // registering the provider anyway and reporting success.
+            var registered = sweepOptions(builder, loggerFactory);
+            if (registered.IsFailure)
+                return registered;
+
             builder.Services.AddScoped<IFdwServiceProvider<IGenericNotification, NotificationConfiguration>>(sp =>
             {
                 var provider = new DefaultServiceProvider<IGenericNotification, NotificationConfiguration, INotificationFactory<IGenericNotification, NotificationConfiguration>, IServiceConfigurationProvider<NotificationConfiguration>>(
@@ -81,7 +89,7 @@ public partial class NotificationTypes
                 }
                 return provider;
             });
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
     }
 }

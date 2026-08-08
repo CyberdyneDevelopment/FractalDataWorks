@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Schema.Clients;
 
@@ -26,7 +27,7 @@ public sealed class SchemaClientType : ApiClientTypeBase<SchemaApiClient>
         Configuration(builder =>
         {
             builder.Services.AddApiHttpClient(builder.Configuration, Name);
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -39,7 +40,7 @@ public sealed class SchemaClientType : ApiClientTypeBase<SchemaApiClient>
                 var logger = sp.GetService<ILogger<SchemaApiClient>>() ?? NullLogger<SchemaApiClient>.Instance;
                 return new SchemaApiClient(factory.CreateClient(Name), logger);
             });
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
  }
 

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Fdw.Collections;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.ServiceTypes.Tests;
 
@@ -47,14 +48,16 @@ public class ServiceTypeCollectionRegistrationTests
         public string DefaultPathName => "cfg";
         public string DefaultContainerName => Name;
 
-        public IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null) => builder;
+        public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+            => GenericResult<IHostApplicationBuilder>.Success(builder);
 
-        public IHostApplicationBuilder Register(
+        public IGenericResult<IHostApplicationBuilder> Register(
             IHostApplicationBuilder builder, ILoggerFactory? loggerFactory,
-            string dataStoreName, string pathName, string containerName) => builder;
+            string dataStoreName, string pathName, string containerName)
+            => GenericResult<IHostApplicationBuilder>.Success(builder);
 
-        public IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null)
-            => host;
+        public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+            => GenericResult<IHost>.Success(host);
     }
 
     [Fact]

@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Services.Data;
 
@@ -44,7 +45,7 @@ public sealed class ConfigurationGatewayServiceType : DataGatewayTypeBase<IGener
             // AddConfigurationGateway<TFactory>(builder.Services, filePath) registers the singleton.
             // Nothing to bind from IConfiguration here.
     
-                    return builder;
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
@@ -76,7 +77,7 @@ public sealed class ConfigurationGatewayServiceType : DataGatewayTypeBase<IGener
                     dataStoresLazy,
                     sp.GetService<ILogger<ConfigurationContainerLookup>>());
             });
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
     }

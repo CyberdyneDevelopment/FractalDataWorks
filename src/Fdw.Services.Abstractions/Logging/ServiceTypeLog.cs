@@ -870,8 +870,8 @@ public static partial class ServiceTypeLog
         string collectionName);
 
     /// <summary>
-    /// Logs that a collection phase threw. The exception is rethrown after this is logged —
-    /// a half-registered domain must not be allowed to reach a running application.
+    /// Logs that a collection phase threw. The exception is converted to a failure result after this
+    /// is logged — the caller decides whether a half-registered domain may reach a running application.
     /// </summary>
     [MessageLogging(
         EventId = 61011,
@@ -886,7 +886,8 @@ public static partial class ServiceTypeLog
         string implementation);
 
     /// <summary>
-    /// Logs that an option phase threw. The exception is rethrown after this is logged.
+    /// Logs that an option phase threw. The exception is converted to a failure result after this is
+    /// logged, so one throwing option cannot unwind a sweep that is handling failures as values.
     /// </summary>
     [MessageLogging(
         EventId = 61012,
@@ -900,4 +901,39 @@ public static partial class ServiceTypeLog
         int ordinal,
         string collectionName,
         string implementation);
+
+    // Why these two are separate from the *Failed pair above: a phase that RETURNS a failure did so
+    // deliberately and carries its own domain's code and message, whereas a phase that THREW did not
+    // choose to fail and has only an exception. Logging both as "FAILED ... while running" would make
+    // a deliberate, well-described refusal indistinguishable from a crash in the one place someone
+    // reads to tell them apart. No exception parameter here, because there is no exception.
+
+    /// <summary>
+    /// Logs that an option's phase body returned a failure result rather than throwing.
+    /// </summary>
+    [MessageLogging(
+        EventId = 61013,
+        Level = LogLevel.Error,
+        Message = "[{optionName}] {phase} (option #{ordinal} in {collectionName}) returned a failure: {reason}")]
+    public static partial IGenericMessage OptionPhaseReportedFailure(
+        ILogger logger,
+        string optionName,
+        string phase,
+        int ordinal,
+        string collectionName,
+        string reason);
+
+    /// <summary>
+    /// Logs that a collection's sweep stopped because one of its options returned a failure.
+    /// </summary>
+    [MessageLogging(
+        EventId = 61014,
+        Level = LogLevel.Error,
+        Message = "[{collectionName}] {phase} stopped at option '{optionName}', which returned a failure: {reason}")]
+    public static partial IGenericMessage CollectionPhaseStopped(
+        ILogger logger,
+        string collectionName,
+        string phase,
+        string optionName,
+        string reason);
 }

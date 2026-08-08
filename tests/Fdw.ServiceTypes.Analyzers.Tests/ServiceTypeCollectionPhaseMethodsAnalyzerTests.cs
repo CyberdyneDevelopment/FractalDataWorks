@@ -20,6 +20,7 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
 
         namespace Microsoft.Extensions.Hosting { public interface IHostApplicationBuilder { } public interface IHost { } }
         namespace Microsoft.Extensions.Logging { public interface ILoggerFactory { } }
+        namespace Fdw.Results { public interface IGenericResult<out T> { } }
 
         namespace Fdw.Collections.Attributes
         {
@@ -32,9 +33,9 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
         """;
 
     private const string AllThreePhases = """
-                public static IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory) => builder;
-                public static IHostApplicationBuilder Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory) => builder;
-                public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory) => host;
+                public static Fdw.Results.IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory) => null!;
+                public static Fdw.Results.IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory) => null!;
+                public static Fdw.Results.IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory) => null!;
         """;
 
     [Fact]
@@ -81,8 +82,8 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
                 [ServiceTypeCollection]
                 public partial class {|#0:MissingInitializeTypes|}
                 {
-                    public static IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory) => builder;
-                    public static IHostApplicationBuilder Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory) => builder;
+                    public static Fdw.Results.IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory) => null!;
+                    public static Fdw.Results.IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory) => null!;
                 }
             }
             """;
@@ -91,7 +92,7 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
             test,
             new DiagnosticResult(ServiceTypeCollectionPhaseMethodsAnalyzer.DiagnosticId, Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
                 .WithLocation(0)
-                .WithArguments("MissingInitializeTypes", "IHost Initialize(IHost, ILoggerFactory?)"));
+                .WithArguments("MissingInitializeTypes", "IGenericResult<IHost> Initialize(IHost, ILoggerFactory?)"));
     }
 
     [Fact]
@@ -120,13 +121,13 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
             test,
             new DiagnosticResult(ServiceTypeCollectionPhaseMethodsAnalyzer.DiagnosticId, Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
                 .WithLocation(0)
-                .WithArguments("BareProvider", "IHostApplicationBuilder Configure(IHostApplicationBuilder, ILoggerFactory?)"),
+                .WithArguments("BareProvider", "IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder, ILoggerFactory?)"),
             new DiagnosticResult(ServiceTypeCollectionPhaseMethodsAnalyzer.DiagnosticId, Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
                 .WithLocation(0)
-                .WithArguments("BareProvider", "IHostApplicationBuilder Register(IHostApplicationBuilder, ILoggerFactory?)"),
+                .WithArguments("BareProvider", "IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder, ILoggerFactory?)"),
             new DiagnosticResult(ServiceTypeCollectionPhaseMethodsAnalyzer.DiagnosticId, Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
                 .WithLocation(0)
-                .WithArguments("BareProvider", "IHost Initialize(IHost, ILoggerFactory?)"));
+                .WithArguments("BareProvider", "IGenericResult<IHost> Initialize(IHost, ILoggerFactory?)"));
     }
 
     [Fact]
@@ -149,9 +150,9 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
                 [ServiceTypeCollection]
                 public partial class {|#0:WrongShapeTypes|}
                 {
-                    public static IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory) => builder;
+                    public static Fdw.Results.IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory) => null!;
                     public static void Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory) { }
-                    public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory) => host;
+                    public static Fdw.Results.IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory) => null!;
                 }
             }
             """;
@@ -160,7 +161,7 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
             test,
             new DiagnosticResult(ServiceTypeCollectionPhaseMethodsAnalyzer.DiagnosticId, Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
                 .WithLocation(0)
-                .WithArguments("WrongShapeTypes", "IHostApplicationBuilder Register(IHostApplicationBuilder, ILoggerFactory?)"));
+                .WithArguments("WrongShapeTypes", "IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder, ILoggerFactory?)"));
     }
 
     [Fact]
@@ -183,9 +184,9 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
 
                 public abstract class CollectionBase
                 {
-                    public static IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null) => builder;
-                    public static IHostApplicationBuilder Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null) => builder;
-                    public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null) => host;
+                    public static Fdw.Results.IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null) => null!;
+                    public static Fdw.Results.IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null) => null!;
+                    public static Fdw.Results.IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null) => null!;
                 }
 
                 [ServiceTypeCollection]

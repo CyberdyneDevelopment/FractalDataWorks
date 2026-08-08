@@ -15,6 +15,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Fdw.ServiceTypes.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
+using Microsoft.Extensions.Hosting;
 
 namespace Fdw.Services.Etl;
 
@@ -114,7 +116,13 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
         var sweepOptions = RegisterFunc;
         Registration((builder, loggerFactory) =>
         {
-            sweepOptions(builder, loggerFactory);
+            // Why the result is read: this replacement calls the func it captured, and discarding
+            // what that returned meant an option that failed to register was followed by this body
+            // registering the provider anyway and reporting success.
+            var registered = sweepOptions(builder, loggerFactory);
+            if (registered.IsFailure)
+                return registered;
+
             builder.Services.AddScoped<IFdwServiceProvider<IEtlPipeline, PipelineConfiguration>>(sp =>
             {
                 var provider = new DefaultServiceProvider<IEtlPipeline, PipelineConfiguration, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, IServiceConfigurationProvider<PipelineConfiguration>>(
@@ -142,7 +150,7 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
                 }
                 return provider;
             });
-            return builder;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
     }
 }

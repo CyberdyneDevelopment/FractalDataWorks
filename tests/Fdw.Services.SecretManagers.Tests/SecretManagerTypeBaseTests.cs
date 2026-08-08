@@ -6,6 +6,7 @@ using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.ServiceTypes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Fdw.Results;
 
 namespace Fdw.Services.SecretManagers.Tests;
 
@@ -52,7 +53,7 @@ public sealed class SecretManagerTypeBaseTests
         {
         Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
         {
-                return builder;
+                return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
         }

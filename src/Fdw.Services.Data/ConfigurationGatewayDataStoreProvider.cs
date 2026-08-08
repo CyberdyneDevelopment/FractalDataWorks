@@ -46,7 +46,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     /// Phase 1a: Configures IOptions bindings for DataStore configurations.
     /// Call before Build(). Configuration source must be added BEFORE calling this method.
     /// </summary>
-    public static IHostApplicationBuilder Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
     {
 
         // Why: ctrl-tier IDataStore tree (built by DataStoreLoader.BuildTreeFromFlatLists, used by
@@ -71,14 +71,14 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         var logger = loggerFactory?.CreateLogger(typeof(ConfigurationGatewayDataStoreProvider)) ?? NullLogger.Instance;
         DataStoreTypesLog.ConfiguredOptionsBindings(logger);
 
-        return builder;
+        return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
     /// <summary>
     /// Phase 1b: Registers required services (factories) for all data store types.
     /// Call before Build().
     /// </summary>
-    public static IHostApplicationBuilder Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
     {
         var services = builder.Services;
         // Why: the DataStore domain registers the gateway-backed DataStoreConfigurationProvider it
@@ -145,7 +145,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         var logger = loggerFactory?.CreateLogger(typeof(ConfigurationGatewayDataStoreProvider)) ?? NullLogger.Instance;
         DataStoreTypesLog.RegisteredInfrastructureServices(logger);
 
-        return builder;
+        return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
     /// <summary>
@@ -157,7 +157,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     /// same three-phase shape every swept domain declares — the actual work (async config load) is in
     /// <see cref="LoadStores"/>, blocked-on here exactly once at startup.
     /// </remarks>
-    public static IHost Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
         // Why the scope: this provider is Scoped, so resolving it from the root provider throws under
         // Development ValidateScopes.
@@ -172,7 +172,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         LoadStores(scope.ServiceProvider, provider, logger).GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
     
-        return host;
+        return GenericResult<IHost>.Success(host);
     }
 
     // Why: Initialize is a one-time startup method with sequential logging over all loaded entities;
