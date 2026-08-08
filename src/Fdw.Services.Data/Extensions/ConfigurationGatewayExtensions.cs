@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Configuration;
@@ -82,7 +83,8 @@ public static partial class ConfigurationGatewayExtensions
                 sp.GetRequiredService<ConfigurationSchema>(),
                 sp.GetService<ILogger<ConfigurationGateway>>(),
                 sp.GetService<DataGatewayResultCache>(),
-                sp.GetService<IOptions<DataGatewayOptions>>()));
+                sp.GetService<IOptions<DataGatewayOptions>>(),
+                sp.GetService<IAuthenticationContextAccessor>()));
         return services;
     }
 
@@ -177,7 +179,8 @@ public static partial class ConfigurationGatewayExtensions
                 sp.GetRequiredService<ConfigurationSchema>(),
                 sp.GetService<ILogger<ConfigurationGateway>>(),
                 sp.GetService<DataGatewayResultCache>(),
-                sp.GetService<IOptions<DataGatewayOptions>>()));
+                sp.GetService<IOptions<DataGatewayOptions>>(),
+                sp.GetService<IAuthenticationContextAccessor>()));
         return services;
     }
 

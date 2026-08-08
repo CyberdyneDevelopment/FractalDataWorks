@@ -13,6 +13,7 @@ using Fdw.Data.Abstractions;
 using Fdw.Data.Abstractions.Mappers.PocoMappers;
 using Fdw.Data.RowSources.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
@@ -72,6 +73,20 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     private readonly DataGatewayResultCache? _cache;
     private readonly IOptions<DataGatewayOptions>? _options;
 
+    // Why optional, and why this exact expression: the connection layer selects its session context
+    // from _authenticationContextAccessor?.Current (MsSqlConnection.SetUserSessionContext). Reading
+    // the SAME expression here is what makes the cache partition name the same principal the session
+    // is actually opened under. A null accessor yields a null context, which every scheme must govern
+    // — the reference scheme sends it to Deny — so this is not a fallback for a missing value, it is
+    // the identical input producing the identical decision.
+    private readonly IAuthenticationContextAccessor? _authenticationContextAccessor;
+
+    // Why lazy and never resolved in the constructor: ConnectionTypes.ByName freezes the collection,
+    // and connection kinds register into it from their own assemblies' module initializers. Freezing
+    // it at gateway construction would lock out any kind whose assembly had not loaded yet — the same
+    // load-order hazard the _dataStores Lazy exists to avoid.
+    private readonly Lazy<IGenericResult<IConnectionType>> _connectionTypeLazy;
+
     private static readonly TimeSpan DefaultCacheDuration = TimeSpan.FromMinutes(5);
 
     /// <summary>
@@ -87,13 +102,18 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     /// <param name="logger">Logger (optional — falls back to NullLogger).</param>
     /// <param name="cache">Optional process-wide result cache. When null caching is disabled.</param>
     /// <param name="options">Optional gateway options (EnableCache knob). When null caching is disabled.</param>
+    /// <param name="authenticationContextAccessor">
+    /// Optional accessor for the calling principal, used to partition cached results by the
+    /// visibility scope their session reads under.
+    /// </param>
     public ConfigurationGateway(
         IConnectionFactory connectionFactory,
         ConfigurationSchema schema,
         ILogger<ConfigurationGateway>? logger = null,
         DataGatewayResultCache? cache = null,
-        IOptions<DataGatewayOptions>? options = null)
-        : this(connectionFactory, secretManager: null, schema, logger, cache, options)
+        IOptions<DataGatewayOptions>? options = null,
+        IAuthenticationContextAccessor? authenticationContextAccessor = null)
+        : this(connectionFactory, secretManager: null, schema, logger, cache, options, authenticationContextAccessor)
     {
     }
 
@@ -112,13 +132,20 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     /// <param name="logger">Logger (optional — falls back to NullLogger).</param>
     /// <param name="cache">Optional process-wide result cache. When null caching is disabled.</param>
     /// <param name="options">Optional gateway options (EnableCache knob). When null caching is disabled.</param>
+    /// <param name="authenticationContextAccessor">
+    /// Optional accessor for the calling principal, used to partition cached results by the
+    /// visibility scope their session reads under. Optional for the same reason the connection
+    /// layer's own accessor is: a null accessor yields a null context, which every session-context
+    /// scheme must govern, so the partition still names exactly what the session will apply.
+    /// </param>
     public ConfigurationGateway(
         IConnectionFactory connectionFactory,
         ISecretManager? secretManager,
         ConfigurationSchema schema,
         ILogger<ConfigurationGateway>? logger = null,
         DataGatewayResultCache? cache = null,
-        IOptions<DataGatewayOptions>? options = null)
+        IOptions<DataGatewayOptions>? options = null,
+        IAuthenticationContextAccessor? authenticationContextAccessor = null)
     {
         _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
         _secretManager = secretManager;
@@ -126,6 +153,11 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         _logger = logger ?? NullLogger<ConfigurationGateway>.Instance;
         _cache = cache;
         _options = options;
+        _authenticationContextAccessor = authenticationContextAccessor;
+
+        _connectionTypeLazy = new Lazy<IGenericResult<IConnectionType>>(
+            ResolveConnectionType,
+            LazyThreadSafetyMode.ExecutionAndPublication);
 
         // Why: ConfigurationDb configuration is resolved once at construction time (not per-Execute)
         // so the schema object is read exactly once. Wrapping in Lazy<> ensures the factory call
@@ -173,13 +205,30 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         string? cacheKey = null;
         if (enable)
         {
+            // Why the read fails instead of proceeding uncached: without a partition the gateway
+            // cannot tell which callers may share a result. Continuing would either poison the cache
+            // for other principals or serve this caller a result from a different visibility scope,
+            // so there is no safe degraded mode — and silently skipping the cache would hide a
+            // misconfiguration that has to be fixed.
+            var connectionTypeResult = _connectionTypeLazy.Value;
+            if (!connectionTypeResult.IsSuccess || connectionTypeResult.Value is null)
+                return connectionTypeResult.ToNewResult<T>();
+
+            var connectionType = connectionTypeResult.Value;
+
             try
             {
+                // Why the partition leads the key: results are visible only to callers whose session
+                // reads under the same scope, so the scope is part of the identity of a cached entry,
+                // not a qualifier on it. The connection kind computes it; this gateway never parses
+                // it or learns anything about the kind from it.
                 // Why: key prefix "_cfg|" distinguishes configuration-gateway cached results from
                 // data-gateway cached results in the shared DataGatewayResultCache store.
                 // typeof(T).FullName prevents type mismatches across generic invocations with the same
                 // query shape.
-                cacheKey = string.Concat("_cfg|", CacheKeyBuilder.ComputeCacheKey(command, target), ":", typeof(T).FullName);
+                cacheKey = string.Concat(
+                    connectionType.CachePartition(_authenticationContextAccessor?.Current),
+                    "|_cfg|", CacheKeyBuilder.ComputeCacheKey(command, target), ":", typeof(T).FullName);
             }
             catch (Exception ex)
             {
@@ -479,6 +528,45 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     // Connections list and calls the injected IConnectionFactory to create a connection.
     // If the schema has no such connection, or the factory returns failure, the result is
     // non-success — callers get a failure result from Execute, not a null-reference crash.
+    // Why a second schema scan rather than reusing BuildConnection's: BuildConnection is async (it
+    // awaits secret resolution) and returns an open connection, while this must run on the
+    // synchronous cache-key path and needs only the declared kind. Both read the same one entry, so
+    // they cannot disagree about which connection ConfigurationDb is.
+    private IGenericResult<IConnectionType> ResolveConnectionType()
+    {
+        for (var i = 0; i < _schema.Connections.Count; i++)
+        {
+            if (!string.Equals(_schema.Connections[i].Name, ConfigurationDbConnectionName, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (string.IsNullOrWhiteSpace(_schema.Connections[i].ServiceOptionType))
+            {
+                return GenericResult<IConnectionType>.Failure(
+                    DataGatewayCacheLog.CachePartitionUnavailable(
+                        _logger, ConfigurationDbConnectionName, "the connection declares no ServiceOptionType"));
+            }
+
+            // Why fail loud on NotFound rather than partitioning under some placeholder: an
+            // unregistered kind means we cannot know what its sessions would show, and a guessed
+            // partition would let callers with different visibility share cached rows.
+            if (ReferenceEquals(ConnectionTypes.ByName(_schema.Connections[i].ServiceOptionType), ConnectionTypes.NotFound))
+            {
+                return GenericResult<IConnectionType>.Failure(
+                    DataGatewayCacheLog.CachePartitionUnavailable(
+                        _logger,
+                        ConfigurationDbConnectionName,
+                        $"connection type '{_schema.Connections[i].ServiceOptionType}' is not registered"));
+            }
+
+            return GenericResult<IConnectionType>.Success(
+                ConnectionTypes.ByName(_schema.Connections[i].ServiceOptionType));
+        }
+
+        return GenericResult<IConnectionType>.Failure(
+            DataGatewayCacheLog.CachePartitionUnavailable(
+                _logger, ConfigurationDbConnectionName, "the connection is not declared in configurationSchema.json"));
+    }
+
     private async Task<IGenericResult<IDataConnection>> BuildConnection(CancellationToken cancellationToken)
     {
         ConfigurationGatewayLog.BuildConnectionEntry(_logger, ConfigurationDbConnectionName);
