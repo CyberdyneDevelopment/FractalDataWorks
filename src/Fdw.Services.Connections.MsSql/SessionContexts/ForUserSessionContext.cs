@@ -41,6 +41,10 @@ public sealed class ForUserSessionContext() : MsSqlSessionContextBase(2, "ForUse
     // sync with the fn_TenantFilter predicate in the databases repo.
     private const string ReadSecretsPermission = "connections:read-secrets";
 
+    // Why: the longest a result read under a live-grant-joining branch may outlive the grant that
+    // permitted it. Keep this in sync with the security posture, not with the gateway's own default.
+    private static readonly TimeSpan RevocationCeiling = TimeSpan.FromSeconds(30);
+
     /// <inheritdoc />
     public override bool Governs(IAuthenticationContext? authenticationContext)
         => IsResolvedUser(authenticationContext);
@@ -63,6 +67,31 @@ public sealed class ForUserSessionContext() : MsSqlSessionContextBase(2, "ForUse
             authenticationContext.IsCrossTenant,
             authenticationContext.Permissions.Contains(ReadSecretsPermission, StringComparer.OrdinalIgnoreCase));
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    /// Bounded, because every branch this context can reach joins a live table. Modes 2 and 3 test
+    /// <c>tenant.TenantOrgAccess</c> for the calling user, and Modes 2 and 4 test
+    /// <c>security.VisibilityGroup</c> (<c>fn_TenantFilter.sql:61-123</c>). Revoking a grant changes
+    /// the next query's answer immediately while the caller's own identity — and therefore the cache
+    /// partition — is unchanged, so without a ceiling a revoked user keeps being served the rows they
+    /// just lost for as long as the entry lives.
+    /// </para>
+    /// <para>
+    /// Why a ceiling rather than invalidation: nothing in the framework writes these tables, so there
+    /// is no <c>Save</c> to hang an <c>ICacheInvalidator</c> call on. Grants change out of band, which
+    /// no in-process event can observe. A bound is the only mechanism that does not depend on being
+    /// told.
+    /// </para>
+    /// <para>
+    /// The value is a security posture, not a derived fact: how long a revocation may take to bite.
+    /// Thirty seconds keeps a revocation effectively prompt while still absorbing the repeated reads
+    /// a single request makes. It caps the command's request and never extends it.
+    /// </para>
+    /// </remarks>
+    public override TimeSpan MaxCacheDuration(IAuthenticationContext? authenticationContext)
+        => RevocationCeiling;
 
     /// <inheritdoc />
     public override async Task Apply(

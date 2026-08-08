@@ -189,16 +189,22 @@ public sealed class DataGatewayService : IDataGateway
         bool cacheEnabled = enable && CachePolicy.IsEnabled(command);
 
         string? cacheKey = null;
+        // Why the ceiling is captured here rather than the kind: these are the only two things the
+        // write below needs, and taking them together binds both to the one resolution that produced
+        // the key. TimeSpan.MaxValue is the identity for the minimum CachePolicy applies, so it is the
+        // correct starting value for the paths that never consult a kind at all.
+        var cacheCeiling = TimeSpan.MaxValue;
         if (cacheEnabled)
         {
             // Why the read fails instead of proceeding uncached: without a partition the gateway cannot
             // tell which callers may share a result, so continuing would either poison the cache for
             // other principals or serve this caller a result from a different visibility scope.
-            var partitionResult = await ResolveCachePartition(target, cancellationToken).ConfigureAwait(false);
-            if (!partitionResult.IsSuccess || partitionResult.Value is null)
-                return partitionResult.ToNewResult<T>();
+            var connectionTypeResult = await ResolveConnectionType(target, cancellationToken).ConfigureAwait(false);
+            if (!connectionTypeResult.IsSuccess || connectionTypeResult.Value is null)
+                return connectionTypeResult.ToNewResult<T>();
 
-            var partition = partitionResult.Value;
+            var partition = connectionTypeResult.Value.CachePartition(_authenticationContextAccessor?.Current);
+            cacheCeiling = connectionTypeResult.Value.MaxCacheDuration(_authenticationContextAccessor?.Current);
 
             try
             {
@@ -232,7 +238,10 @@ public sealed class DataGatewayService : IDataGateway
                 cacheKey,
                 result,
                 CacheKeyBuilder.GetInvalidationTags(command, target),
-                CachePolicy.GetDuration(command, DefaultCacheDuration));
+                CachePolicy.GetDuration(
+                    command,
+                    DefaultCacheDuration,
+                    cacheCeiling));
         }
 
         return result;
@@ -309,13 +318,13 @@ public sealed class DataGatewayService : IDataGateway
     // connection, by the session context its scheme applies. The gateway holds the token and compares it;
     // it never parses it and learns nothing about the kind from it. A kind that declares no session-context
     // concept returns a constant, so its results keep caching globally.
-    private async Task<IGenericResult<string>> ResolveCachePartition(
+    private async Task<IGenericResult<IConnectionType>> ResolveConnectionType(
         DataStoreTarget target,
         CancellationToken cancellationToken)
     {
         if (_connectionConfigProvider is null)
         {
-            return GenericResult<string>.Failure(
+            return GenericResult<IConnectionType>.Failure(
                 DataGatewayCacheLog.CachePartitionUnavailable(
                     _logger, target.DataStore, "no connection configuration provider is registered"));
         }
@@ -323,7 +332,7 @@ public sealed class DataGatewayService : IDataGateway
         var storeResult = await _dataStoreConfigProvider.Get(target.DataStore, cancellationToken).ConfigureAwait(false);
         if (!storeResult.IsSuccess || storeResult.Value is null)
         {
-            return GenericResult<string>.Failure(
+            return GenericResult<IConnectionType>.Failure(
                 DataGatewayCacheLog.CachePartitionUnavailable(
                     _logger, target.DataStore, "the DataStore could not be resolved"));
         }
@@ -332,14 +341,14 @@ public sealed class DataGatewayService : IDataGateway
             .Get(storeResult.Value.ConnectionId, cancellationToken).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value is null)
         {
-            return GenericResult<string>.Failure(
+            return GenericResult<IConnectionType>.Failure(
                 DataGatewayCacheLog.CachePartitionUnavailable(
                     _logger, target.DataStore, "the DataStore's connection configuration could not be resolved"));
         }
 
         if (string.IsNullOrWhiteSpace(connectionResult.Value.ServiceOptionType))
         {
-            return GenericResult<string>.Failure(
+            return GenericResult<IConnectionType>.Failure(
                 DataGatewayCacheLog.CachePartitionUnavailable(
                     _logger, target.DataStore, "the connection declares no ServiceOptionType"));
         }
@@ -348,16 +357,15 @@ public sealed class DataGatewayService : IDataGateway
         // show, and a guessed partition would let callers with different visibility share cached rows.
         if (ReferenceEquals(ConnectionTypes.ByName(connectionResult.Value.ServiceOptionType), ConnectionTypes.NotFound))
         {
-            return GenericResult<string>.Failure(
+            return GenericResult<IConnectionType>.Failure(
                 DataGatewayCacheLog.CachePartitionUnavailable(
                     _logger,
                     target.DataStore,
                     $"connection type '{connectionResult.Value.ServiceOptionType}' is not registered"));
         }
 
-        return GenericResult<string>.Success(
-            ConnectionTypes.ByName(connectionResult.Value.ServiceOptionType)
-                .CachePartition(_authenticationContextAccessor?.Current));
+        return GenericResult<IConnectionType>.Success(
+            ConnectionTypes.ByName(connectionResult.Value.ServiceOptionType));
     }
 
     /// <inheritdoc/>

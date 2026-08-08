@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,6 +43,15 @@ public sealed class SystemSessionContext() : MsSqlSessionContextBase(1, "SystemC
     /// <inheritdoc />
     public override SessionContextPlan Plan(IAuthenticationContext? authenticationContext)
         => SessionContextPlan.System;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Unbounded. Mode 1 grants full visibility on <c>SESSION_CONTEXT('UserId') IS NULL</c> alone
+    /// (<c>fn_TenantFilter.sql:44</c>) — it joins no table and consults no grant, so no edit to
+    /// authorization data can narrow or widen what this context sees. There is nothing to go stale.
+    /// </remarks>
+    public override TimeSpan MaxCacheDuration(IAuthenticationContext? authenticationContext)
+        => TimeSpan.MaxValue;
 
     /// <inheritdoc />
     public override Task Apply(
