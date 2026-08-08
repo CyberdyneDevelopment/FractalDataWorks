@@ -122,6 +122,34 @@ public sealed class PlatformServicesTests : IDisposable
     }
 
     [Fact]
+    public void EntryConfigureIsIdempotent()
+    {
+        var counter = new CallCounter();
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+
+        entry.Configure(EmptyHostApplicationBuilder());
+        entry.Configure(EmptyHostApplicationBuilder());
+
+        counter.ConfigureCalls.ShouldBe(1);
+        entry.Configured.ShouldBeTrue();
+    }
+
+    // Why this test exists: running a domain early to put it ahead of the others is the documented
+    // reason the run-tracking exists at all. Configure previously had no skip, so the early call was
+    // paid for twice — once manually and once by the aggregate pass.
+    [Fact]
+    public void ConfigureSweepSkipsAlreadyManuallyConfiguredEntry()
+    {
+        var counter = new CallCounter();
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+
+        entry.Configure(EmptyHostApplicationBuilder());
+        PlatformServices.Configure(EmptyHostApplicationBuilder());
+
+        counter.ConfigureCalls.ShouldBe(1);
+    }
+
+    [Fact]
     public void EntryInitializeIsIdempotent()
     {
         var counter = new CallCounter();

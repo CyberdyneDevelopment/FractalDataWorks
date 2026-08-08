@@ -20,13 +20,16 @@ namespace Fdw.ServiceTypes;
 /// <remarks>
 /// <see cref="Group"/> is immutable-by-replace: "changing" it is always <c>entry with { Group = newValue }</c>,
 /// never in-place mutation — this keeps the frozen snapshot's sort order genuinely immutable with no back
-/// door. <see cref="Initialized"/> and <see cref="Registered"/> are deliberately the exceptions: they are
-/// pure bookkeeping that never affects sort/graph correctness, so they are mutated in place — the entry is
-/// a reference type, so flipping either flag on one shared instance is visible everywhere that instance is
-/// held, with no array rebuild.
+/// door. <see cref="Configured"/>, <see cref="Initialized"/> and <see cref="Registered"/> are deliberately
+/// the exceptions: they are pure bookkeeping that never affects sort/graph correctness, so they are mutated
+/// in place — the entry is a reference type, so flipping any of them on one shared instance is visible
+/// everywhere that instance is held, with no array rebuild.
 /// </remarks>
 public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeCollection Descriptor, int Group)
 {
+    /// <summary>Whether <see cref="Configure"/> has already run for this entry.</summary>
+    public bool Configured { get; private set; }
+
     /// <summary>Whether <see cref="Initialize"/> has already run for this entry.</summary>
     public bool Initialized { get; private set; }
 
@@ -63,7 +66,6 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     private Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>>? _configurationMethod;
     private Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>>? _registrationMethod;
     private Func<IHost, ILoggerFactory?, IGenericResult<IHost>>? _initializationMethod;
-    private bool _configured;
 
     /// <summary>
     /// Selects an alternative Configure phase delegate for this entry, replacing the descriptor default.
@@ -75,7 +77,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     public PlatformServiceEntry Configuration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> replacement)
     {
         if (replacement is null) throw new ArgumentNullException(nameof(replacement));
-        if (_configured)
+        if (Configured)
             throw new InvalidOperationException(
                 $"Cannot replace Configure for '{CategoryName}': the Configure phase has already run. " +
                 "Phase replacements must be selected before the sweep (lock-at-sweep).");
@@ -140,17 +142,24 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     }
 
     /// <summary>
-    /// Runs this domain's Configure phase. Forwards to <see cref="Descriptor"/> so a specific domain can
-    /// be dot-walked directly (e.g. <c>PlatformServices.Connection?.Configure(builder, loggerFactory)</c>)
-    /// without reaching through <see cref="Descriptor"/> explicitly. Unlike <see cref="Initialize"/>, this
-    /// is not idempotent-tracked — Configure has no "already done" concept in this design.
+    /// Runs this domain's Configure phase, unless it has already run. Forwards to <see cref="Descriptor"/>
+    /// so a specific domain can be dot-walked directly (e.g.
+    /// <c>PlatformServices.Connection?.Configure(builder, loggerFactory)</c>) without reaching through
+    /// <see cref="Descriptor"/> explicitly. Idempotent like <see cref="Register"/> and
+    /// <see cref="Initialize"/> — a host that configures a domain early, to put it ahead of the others,
+    /// is not configured a second time by the later <see cref="PlatformServices.Configure"/> pass.
     /// </summary>
+    // Why the flag is set even when the phase failed: see Initialize — it records that the phase ran.
     public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
     {
-        _configured = true;
-        return _configurationMethod is not null
+        if (Configured) return GenericResult<IHostApplicationBuilder>.Success(builder);
+
+        var result = _configurationMethod is not null
             ? _configurationMethod(builder, loggerFactory)
             : Descriptor.Configure(builder, loggerFactory);
+
+        Configured = true;
+        return result;
     }
 
     /// <summary>

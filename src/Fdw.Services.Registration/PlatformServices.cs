@@ -109,8 +109,10 @@ public static class PlatformServices
     }
 
     /// <summary>
-    /// Calls every registered domain's Configure in dependency-safe order. Replaces the manual,
-    /// per-domain <c>XxxServiceTypes.Configure(builder, loggerFactory)</c> calls.
+    /// Calls every registered domain's Configure in dependency-safe order — skipping any domain already
+    /// configured manually via its own dot-walked entry (e.g.
+    /// <c>PlatformServices.Connection?.Configure(...)</c>), since <see cref="PlatformServiceEntry.Configure"/>
+    /// is idempotent. Replaces the manual, per-domain <c>XxxServiceTypes.Configure(builder, loggerFactory)</c> calls.
     /// </summary>
     // Why the sweep stops at the first failing domain: the domains after it are ordered AFTER it
     // because they may depend on it. Continuing would register them against a dependency that is not
@@ -124,8 +126,8 @@ public static class PlatformServices
             if (entry.Manual) continue;
             // Why the entry and not its Descriptor: the entry is what consults a phase replacement
             // and records that the phase ran. Reaching past it to the descriptor made a Configure
-            // replacement silently not run under the sweep, and left _configured unset so the
-            // lock-at-sweep guard never fired either — the exact silent no-op that guard exists for.
+            // replacement silently not run under the sweep, and left Configured unset so neither the
+            // lock-at-sweep guard nor the already-run skip fired — the exact silent no-op they exist for.
             var result = entry.Configure(builder, loggerFactory);
             if (result.IsFailure)
                 return result;
