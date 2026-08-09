@@ -71,11 +71,16 @@ internal static class RazorMarkupAnalysis
     /// When <see langword="true"/> the needle opens an element and only matches where the tag name ends
     /// there, so <c>&lt;svg</c> does not also match the component <c>&lt;SvgGauge&gt;</c>.
     /// </param>
+    /// <param name="skipDataDrivenValues">
+    /// When set, an occurrence whose attribute value is computed from data is not reported. Only the
+    /// attribute rules pass this: an element name has no value to judge.
+    /// </param>
     internal static void ReportMarkupOccurrences(
         AdditionalFileAnalysisContext context,
         string needle,
         DiagnosticDescriptor rule,
-        bool wholeElementName = false)
+        bool wholeElementName = false,
+        bool skipDataDrivenValues = false)
     {
         // Why: additional files carry every non-compiled item the project feeds the compiler, not just
         // .razor — filter on the extension rather than assuming the item order or count.
@@ -86,7 +91,8 @@ internal static class RazorMarkupAnalysis
         if (text is null)
             return;
 
-        var scanner = new RazorMarkupScanner(text.ToString());
+        var document = text.ToString();
+        var scanner = new RazorMarkupScanner(document);
 
         foreach (var line in text.Lines)
         {
@@ -102,6 +108,12 @@ internal static class RazorMarkupAnalysis
                     continue;
 
                 if (wholeElementName && ContinuesTagName(lineText, column + needle.Length))
+                    continue;
+
+                // Why the whole document and not lineText: an expression value may run past the end of
+                // the line, and the reader has to balance delimiters across it to find where it ends.
+                if (skipDataDrivenValues
+                    && RazorAttributeValue.IsDataDriven(document, line.Start + column + needle.Length))
                     continue;
 
                 context.ReportDiagnostic(Diagnostic.Create(
