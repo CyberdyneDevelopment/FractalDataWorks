@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using NotificationSettingsPage = Fdw.Services.Messaging.UI.Pages.Pages.NotificationSettings;
+using NotificationSettingsPage = Fdw.UI.Pages.Messaging.Pages.NotificationSettingsPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Messaging;
 

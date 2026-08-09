@@ -5,19 +5,14 @@
 
 <DataPreviewPageProvider>
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Data Sources</div>
-                <h1>Data Preview</h1>
-                <div class="sub">Run a query against a DataStore or DataSet and inspect the rows.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="Data Sources" Title="Data Preview" Subtitle="Run a query against a DataStore or DataSet and inspect the rows.">
+            <Actions>
                 <div class="seg">
                     <button class="@(ctx.IsTableMode ? "on" : null)" @onclick="ctx.OnSetTableMode">DataStore</button>
                     <button class="@(!ctx.IsTableMode ? "on" : null)" @onclick="ctx.OnSetDataSetMode">DataSet</button>
                 </div>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         <QueryPanel PreviewProvider="ctx.PreviewProvider"
                     SchemaContext="ctx.SchemaContext"

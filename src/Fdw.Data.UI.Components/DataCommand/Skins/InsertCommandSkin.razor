@@ -14,7 +14,7 @@
 else
 {
     <div style="display:flex;flex-direction:column;gap:12px;">
-        <div class="frow" style="margin-bottom:0;">
+        <div class="frow u-mb-0">
             <label class="flbl">Target Container</label>
             <DataContainerPicker Containers="@Context.AvailableContainers"
                                  SelectedContainerId="@_targetId"
@@ -23,8 +23,8 @@ else
         </div>
 
         @* Per-field values *@
-        <div class="frow" style="margin-bottom:0;">
-            <div class="card-h" style="padding:0;">
+        <div class="frow u-mb-0">
+            <div class="card-h u-p-0">
                 <label class="flbl">Field Values</label>
                 <button class="btn btn-secondary btn-sm" @onclick="AddRow">+ Field</button>
             </div>
@@ -61,7 +61,7 @@ else
                         <input class="fin mono" placeholder="value"
                                value="@v.Value"
                                @oninput="@(e => SetValue(idx, e.Value?.ToString() ?? string.Empty))" />
-                        <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => RemoveRow(idx)">✕</button>
+                        <button class="btn btn-ghost btn-sm u-fg-signal" @onclick="() => RemoveRow(idx)">✕</button>
                     </div>
                 }
             }

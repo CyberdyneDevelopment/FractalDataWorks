@@ -6,25 +6,18 @@
 
 <PageTitle>Notification Preferences - Cyberdyne</PageTitle>
 
-<div class="pagehead">
-    <div>
-        <div class="ey">Settings</div>
-        <h1>Notification Preferences</h1>
-        <div class="sub">Configure how you receive notifications for each message type.</div>
-    </div>
-    <div class="actions">
+<PageHeader Eyebrow="Settings" Title="Notification Preferences" Subtitle="Configure how you receive notifications for each message type.">
+    <Actions>
         <button class="btn btn-ghost" onclick="history.back()">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
+            <Icon Name="Back" />
             Back to Settings
         </button>
-    </div>
-</div>
+    </Actions>
+</PageHeader>
 
 @if (!string.IsNullOrEmpty(_errorMessage))
 {
-    <div class="card" style="margin-bottom:14px;"><div class="card-b mono" style="color:var(--signal);">@_errorMessage</div></div>
+    <div class="card u-mb-14"><div class="card-b mono u-fg-signal">@_errorMessage</div></div>
 }
 
 @if (_isLoading)
@@ -43,7 +36,7 @@ else if (_preferences is not null)
                         <span style="color:var(--n-100);">@pref.NotificationType</span>
                         <span class="mono mut" style="margin-left:8px;font-size:11px;">(@pref.Channel)</span>
                     </div>
-                    <span class="@(pref.IsEnabled ? "sw on" : "sw")" style="cursor:pointer;" @onclick="() => pref.IsEnabled = !pref.IsEnabled"></span>
+                    <span class="@(pref.IsEnabled ? "sw on" : "sw") u-pointer" @onclick="() => pref.IsEnabled = !pref.IsEnabled"></span>
                 </div>
             }
             <div class="actions" style="justify-content:flex-end;margin-top:16px;">

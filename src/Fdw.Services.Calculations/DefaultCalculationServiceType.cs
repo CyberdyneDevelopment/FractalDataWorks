@@ -91,7 +91,7 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
 
             // Why: the polymorphic typed body (Formula/Windowed) is composed by the keystone base dictionary —
             // register one plain DefaultConfigurationProvider per typed body so RegisterFactory can attach it
-            // to the header provider via RegisterTypedProvider (read dispatch on ServiceOptionType).
+            // to the header provider via Register (read dispatch on ServiceOptionType).
             RegisterTypedBodyProvider<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>(builder.Services);
             RegisterTypedBodyProvider<WindowedCalculationConfiguration, WindowedCalculationConfigurationCommand>(builder.Services);
             return GenericResult<IHostApplicationBuilder>.Success(builder);

@@ -2,7 +2,7 @@ using Bunit;
 using Fdw.Operations.Clients.Models;
 using Fdw.Services.Connections.Clients.Models;
 using Fdw.Services.Connections.Components.Connections;
-using Fdw.Services.Connections.UI.Pages.Pages;
+using Fdw.UI.Pages.Connections.Pages;
 using Fdw.UI.Components.Blazor.Tests.ConnInfra;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Connections;
@@ -28,7 +28,7 @@ public sealed class ConnectionEditorPageTests : IDisposable
     public void NewRendersNewConnectionHeaderAndEnabledNameInput()
     {
         Swap(new ConnectionContext { ConnectionTypes = [Type("MsSql")] });
-        var cut = _ctx.Render<ConnectionEditor>();
+        var cut = _ctx.Render<ConnectionEditorPage>();
         cut.Markup.ShouldContain("New Connection");
         cut.Find("input[placeholder='Connection name']").HasAttribute("disabled").ShouldBeFalse();
     }
@@ -37,7 +37,7 @@ public sealed class ConnectionEditorPageTests : IDisposable
     public void EditRendersEditHeaderAndDisabledNameInput()
     {
         Swap(new ConnectionContext { ConnectionTypes = [Type("MsSql")] });
-        var cut = _ctx.Render<ConnectionEditor>(p => p.Add(x => x.Name, "PROD"));
+        var cut = _ctx.Render<ConnectionEditorPage>(p => p.Add(x => x.Name, "PROD"));
         cut.Markup.ShouldContain("Edit Connection");
         cut.Find("input[placeholder='Connection name']").HasAttribute("disabled").ShouldBeTrue();
     }
@@ -46,7 +46,7 @@ public sealed class ConnectionEditorPageTests : IDisposable
     public void TypeSelectRendersWhenTypesPresent()
     {
         Swap(new ConnectionContext { ConnectionTypes = [Type("MsSql"), Type("Http")] });
-        var cut = _ctx.Render<ConnectionEditor>();
+        var cut = _ctx.Render<ConnectionEditorPage>();
         cut.Markup.ShouldContain("Connection Type");
         cut.Markup.ShouldContain("MsSql");
         cut.Markup.ShouldContain("Http");
@@ -56,7 +56,7 @@ public sealed class ConnectionEditorPageTests : IDisposable
     public void TypeSelectHiddenWhenNoTypes()
     {
         Swap(new ConnectionContext { ConnectionTypes = [] });
-        var cut = _ctx.Render<ConnectionEditor>();
+        var cut = _ctx.Render<ConnectionEditorPage>();
         cut.Markup.ShouldNotContain("Connection Type");
     }
 
@@ -69,7 +69,7 @@ public sealed class ConnectionEditorPageTests : IDisposable
             ConnectionTypes = [Type("MsSql")],
             OnCreateConnection = _ => { created = true; return Task.FromResult<ConnectionDetailResponse?>(null); }
         });
-        var cut = _ctx.Render<ConnectionEditor>();
+        var cut = _ctx.Render<ConnectionEditorPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("Save", StringComparison.Ordinal)).Click();
         await Task.Yield();
         created.ShouldBeFalse(); // name empty => early return
@@ -84,7 +84,7 @@ public sealed class ConnectionEditorPageTests : IDisposable
             ConnectionTypes = [Type("MsSql")],
             OnCreateConnection = req => { captured = req; return Task.FromResult<ConnectionDetailResponse?>(new ConnectionDetailResponse { Name = req.Name }); }
         });
-        var cut = _ctx.Render<ConnectionEditor>();
+        var cut = _ctx.Render<ConnectionEditorPage>();
         cut.Find("input[placeholder='Connection name']").Change("NEWCONN");
         cut.FindAll("button").First(b => b.TextContent.Contains("Save", StringComparison.Ordinal)).Click();
         await Task.Yield();
@@ -100,7 +100,7 @@ public sealed class ConnectionEditorPageTests : IDisposable
             ConnectionTypes = [Type("MsSql")],
             OnCreateConnection = _ => Task.FromResult<ConnectionDetailResponse?>(null)
         });
-        var cut = _ctx.Render<ConnectionEditor>();
+        var cut = _ctx.Render<ConnectionEditorPage>();
         cut.Find("input[placeholder='Connection name']").Change("X");
         cut.FindAll("button").First(b => b.TextContent.Contains("Save", StringComparison.Ordinal)).Click();
         cut.WaitForAssertion(() => cut.Markup.ShouldContain("Failed to create connection"));
@@ -115,7 +115,7 @@ public sealed class ConnectionEditorPageTests : IDisposable
             ConnectionTypes = [Type("MsSql")],
             OnUpdateConnection = (name, _) => { updatedName = name; return Task.FromResult<ConnectionDetailResponse?>(new ConnectionDetailResponse { Name = name }); }
         });
-        var cut = _ctx.Render<ConnectionEditor>(p => p.Add(x => x.Name, "PROD"));
+        var cut = _ctx.Render<ConnectionEditorPage>(p => p.Add(x => x.Name, "PROD"));
         cut.Find("input[placeholder='Connection name']").Change("PROD");
         cut.FindAll("button").First(b => b.TextContent.Contains("Save", StringComparison.Ordinal)).Click();
         await Task.Yield();

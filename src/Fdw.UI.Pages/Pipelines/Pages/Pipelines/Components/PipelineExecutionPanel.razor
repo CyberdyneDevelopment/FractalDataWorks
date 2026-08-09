@@ -11,15 +11,13 @@
             <span class="mono" style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--glacier);">Test Run</span>
             @if (!string.IsNullOrEmpty(ExecutionStatus))
             {
-                <span class="badge @GetStatusBadgeClass(ExecutionStatus)"><span class="bd"></span>@ExecutionStatus.ToUpperInvariant()</span>
+                <Badge Variant="GetStatusVariant(ExecutionStatus)">@ExecutionStatus.ToUpperInvariant()</Badge>
             }
         </div>
         @if (OnClose.HasDelegate)
         {
             <button class="btn btn-ghost btn-sm" @onclick="OnClose" title="Close execution panel">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <Icon Name="Close" />
             </button>
         }
     </div>
@@ -28,12 +26,10 @@
     <div style="display:flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid var(--hair);">
         @if (IsPaused)
         {
-            <button class="btn btn-secondary btn-sm" style="color:var(--success);"
+            <button class="btn btn-secondary btn-sm u-fg-success"
                     @onclick="OnResume"
                     title="Resume execution">
-                <svg fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                </svg>
+                <Icon Name="Resume" />
                 Resume
             </button>
         }
@@ -43,28 +39,22 @@
                     @onclick="OnPause"
                     disabled="@(!IsRunning)"
                     title="Pause execution">
-                <svg fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                </svg>
+                <Icon Name="Pause" />
                 Pause
             </button>
         }
-        <button class="btn btn-secondary btn-sm" style="color:var(--glacier);"
+        <button class="btn btn-secondary btn-sm u-fg-glacier"
                 @onclick="OnStep"
                 disabled="@(!IsPaused)"
                 title="Step one batch">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <Icon Name="Skip" />
             Step
         </button>
         <button class="btn btn-secondary btn-sm" style="color:var(--signal);margin-left:auto;"
                 @onclick="OnStop"
                 disabled="@(!IsRunning && !IsPaused)"
                 title="Stop execution">
-            <svg fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6 6h12v12H6z" />
-            </svg>
+            <Icon Name="Stop" />
             Stop
         </button>
     </div>
@@ -134,17 +124,20 @@
     /// <summary>Fired when the user closes the inspector sub-panel.</summary>
     [Parameter] public EventCallback OnInspectorClose { get; set; }
 
-    private static string GetStatusBadgeClass(string status)
+    // Why Running takes the success tone and Complete the running one: that is what this panel has
+    // always drawn, and the pass that introduced Badge changed no colour anywhere. It disagrees with
+    // every other execution view in the console and is the next thing to settle.
+    private static StatusVariantBase GetStatusVariant(string status)
     {
         if (string.Equals(status, "Running", StringComparison.OrdinalIgnoreCase))
-            return "b-ok";
+            return StatusVariants.Success;
         if (string.Equals(status, "Paused", StringComparison.OrdinalIgnoreCase))
-            return "b-warn";
+            return StatusVariants.Warning;
         if (string.Equals(status, "Complete", StringComparison.OrdinalIgnoreCase))
-            return "b-run";
+            return StatusVariants.Info;
         if (string.Equals(status, "Failed", StringComparison.OrdinalIgnoreCase)
             || string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase))
-            return "b-fail";
-        return "b-idle";
+            return StatusVariants.Error;
+        return StatusVariants.Neutral;
     }
 }

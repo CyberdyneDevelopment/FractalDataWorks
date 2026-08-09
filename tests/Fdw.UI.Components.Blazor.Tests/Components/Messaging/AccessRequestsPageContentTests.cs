@@ -1,9 +1,11 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Bunit.ComponentFactories;
 using Fdw.Services.Messaging.Clients.Models;
 using Fdw.Services.Messaging.Components.Messaging;
 using Fdw.UI.Components.Blazor.Tests.Helpers;
-using AccessRequestsPage = Fdw.Services.Messaging.UI.Pages.Pages.AccessRequests;
+using AccessRequestsPage = Fdw.UI.Pages.Messaging.Pages.AccessRequestsPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Messaging;
 
@@ -35,7 +37,7 @@ public sealed class AccessRequestsPageContentTests : IDisposable
         {
             AccessRequests = requests ?? [],
             IsLoading = isLoading,
-            ErrorMessage = error,
+            LastResult = error is null ? null : GenericResult.Failure(new GenericMessage(error)),
             OnApprove = onApprove ?? ((_, _) => Task.CompletedTask),
             OnDeny = onDeny ?? ((_, _) => Task.CompletedTask),
         };

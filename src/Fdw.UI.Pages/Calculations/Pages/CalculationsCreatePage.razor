@@ -7,18 +7,13 @@
     <ChildContent Context="ctx">
         @{ CaptureContext(ctx); }
         <div style="max-width:920px;">
-            <div class="pagehead">
-                <div>
-                    <div class="ey">Transformations / Calculations / Create</div>
-                    <h1>Create Calculation</h1>
-                    <div class="sub">Define a new derived field via the formula engine.</div>
-                </div>
-                <div class="actions">
+            <PageHeader Eyebrow="Transformations / Calculations / Create" Title="Create Calculation" Subtitle="Define a new derived field via the formula engine.">
+                <Actions>
                     <button class="btn btn-secondary btn-sm" @onclick='() => Nav.NavigateTo("/calculations")'>
                         Cancel
                     </button>
-                </div>
-            </div>
+                </Actions>
+            </PageHeader>
 
             @if (ctx.ErrorMessage is not null)
             {
@@ -28,7 +23,7 @@
             }
 
             <!-- Basic Fields -->
-            <section class="card" style="margin-bottom:14px;">
+            <section class="card u-mb-14">
                 <div class="card-h"><h3>Basic Information</h3></div>
                 <div class="card-b">
                     <div class="frow">

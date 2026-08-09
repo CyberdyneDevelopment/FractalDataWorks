@@ -6,56 +6,47 @@
 
 <NotificationsProvider UserId="_currentUserId">
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Administration &rsaquo; Notifications</div>
-                <h1>Notification Rules</h1>
-                <div class="sub">Rules determine which notification service fires for a given event and severity.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="Administration › Notifications" Title="Notification Rules" Subtitle="Rules determine which notification service fires for a given event and severity.">
+            <Actions>
                 <a href="/admin/notifications" class="btn btn-ghost">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
+                    <Icon Name="Back" />
                     Back to Notifications
                 </a>
                 <button class="btn btn-ghost" @onclick="() => ctx.OnLoadRules()">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
+                    <Icon Name="Refresh" />
                     Refresh
                 </button>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
         {
-            <div class="card" style="margin-bottom:14px;">
-                <div class="card-b mono" style="color:var(--signal);">@ctx.ErrorMessage</div>
+            <div class="card u-mb-14">
+                <div class="card-b mono u-fg-signal">@ctx.ErrorMessage</div>
             </div>
         }
 
         @if (ctx.IsLoading && ctx.Rules.Count == 0)
         {
             <div class="card">
-                <div class="card-b" style="padding:48px 20px;text-align:center;">
-                    <p class="mut" style="color:var(--n-500);">Loading rules&hellip;</p>
-                </div>
+                <EmptyState InCard="false">
+                    <p class="mut u-fg-n500">Loading rules&hellip;</p>
+                </EmptyState>
             </div>
         }
         else if (ctx.Rules.Count == 0)
         {
             <div class="card">
-                <div class="card-b" style="padding:48px 20px;text-align:center;">
-                    <p style="color:var(--n-500);">No notification rules configured.</p>
-                </div>
+                <EmptyState InCard="false">
+                    <p class="u-fg-n500">No notification rules configured.</p>
+                </EmptyState>
             </div>
         }
         else
         {
             <div class="card">
                 <div class="card-h"><h3>Rules</h3></div>
-                <div class="card-b" style="padding:0 10px 12px;">
+                <div class="card-b fdw-table-body">
                     <table class="tbl">
                         <thead>
                             <tr>
@@ -76,16 +67,14 @@
                                         <button class="btn btn-ghost btn-sm"
                                                 title="@(_expandedRuleId == rule.Id ? "Collapse" : "Expand details")"
                                                 @onclick="() => ToggleExpand(rule.Id)">
-                                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;transition:transform .15s;transform:rotate(@(_expandedRuleId == rule.Id ? "90deg" : "0deg"));">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                            </svg>
+                                            <Icon Name="ChevronRight" Style="@($"width:14px;height:14px;transition:transform .15s;transform:rotate({(_expandedRuleId == rule.Id ? "90deg" : "0deg")});")" />
                                         </button>
                                     </td>
                                     <td><div class="cellpad nm">@rule.Name</div></td>
                                     <td class="mut">@rule.NotificationServiceType</td>
                                     <td class="mut">@rule.NotificationServiceName</td>
                                     <td>
-                                        <span class="badge @GetSeverityClass(rule.Severity)">@rule.Severity</span>
+                                        <span class="badge @NotificationSeverityBadge.CssClass(rule.Severity)">@rule.Severity</span>
                                     </td>
                                     <td class="mut">@(rule.Description ?? "—")</td>
                                     <td class="mut">
@@ -101,7 +90,7 @@
                                                     <p class="mut" style="font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Lists used as recipients</p>
                                                     @if (ctx.Lists.Count == 0)
                                                     {
-                                                        <p class="mut" style="font-size:12px;">No lists loaded — <button class="btn btn-ghost btn-sm" @onclick="() => ctx.OnLoadLists()">load lists</button></p>
+                                                        <p class="mut u-fs-12">No lists loaded — <button class="btn btn-ghost btn-sm" @onclick="() => ctx.OnLoadLists()">load lists</button></p>
                                                     }
                                                     else
                                                     {
@@ -115,7 +104,7 @@
                                                 </div>
                                                 <div style="flex:1;min-width:200px;">
                                                     <p class="mut" style="font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Rule details</p>
-                                                    <div style="font-size:12px;" class="mono">
+                                                    <div class="mono u-fs-12">
                                                         <div>ID: @rule.Id.ToString("D")</div>
                                                         <div>Service: @rule.NotificationServiceType / @rule.NotificationServiceName</div>
                                                         <div>Severity: @rule.Severity</div>
@@ -156,13 +145,4 @@
     {
         _expandedRuleId = _expandedRuleId == ruleId ? Guid.Empty : ruleId;
     }
-
-    private static string GetSeverityClass(string severity) =>
-        severity.ToUpperInvariant() switch
-        {
-            "CRITICAL" => "badge-danger",
-            "HIGH" or "ERROR" => "badge-warning",
-            "MEDIUM" or "WARNING" => "badge-caution",
-            _ => "badge-idle"
-        };
 }

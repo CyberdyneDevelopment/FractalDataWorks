@@ -30,14 +30,14 @@
 @if (IsExpanded && Mapping.Id != Guid.Empty)
 {
     <tr>
-        <td colspan="3" style="padding:0;">
+        <td colspan="3" class="u-p-0">
             <div class="card" style="margin:8px 0;background:var(--s2);border-radius:6px;">
                 <div class="card-b" style="padding:12px;">
                     <FieldMappingTransformProvider FieldMappingId="@Mapping.Id" FieldMappingName="@Mapping.DataSetFieldName">
                         <ChildContent Context="ctx">
                             @if (ctx.ErrorMessage is not null)
                             {
-                                <div class="alert" style="margin-bottom:8px;">@ctx.ErrorMessage</div>
+                                <div class="alert u-mb-8">@ctx.ErrorMessage</div>
                             }
 
                             @if (ctx.IsLoading)

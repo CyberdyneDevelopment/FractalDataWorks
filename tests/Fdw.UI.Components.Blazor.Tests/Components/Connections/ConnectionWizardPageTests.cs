@@ -1,9 +1,11 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Operations.Clients.Models;
 using Fdw.Services.Connections.Clients.Models;
 using Fdw.Services.Connections.Components.ConnectionEditor;
 using Fdw.Services.Connections.Components.ConnectionWizard;
-using Fdw.Services.Connections.UI.Pages.Pages;
+using Fdw.UI.Pages.Connections.Pages;
 using Fdw.UI.Components.Blazor.Tests.ConnInfra;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Connections;
@@ -33,8 +35,8 @@ public sealed class ConnectionWizardPageTests : IDisposable
     private static TypeCollectionValueSummary Auth(string name, params string[] required) =>
         new() { Name = name, RequiredProperties = required, ExpectedProperties = [] };
 
-    private IRenderedComponent<ConnectionWizard> RenderWizard(string? name = null) =>
-        _ctx.Render<ConnectionWizard>(p => { if (name is not null) { p.Add(x => x.Name, name); } });
+    private IRenderedComponent<ConnectionWizardPage> RenderWizard(string? name = null) =>
+        _ctx.Render<ConnectionWizardPage>(p => { if (name is not null) { p.Add(x => x.Name, name); } });
 
     // CREATE WIZARD (no Name) ────────────────────────────────────────────────
 
@@ -248,7 +250,7 @@ public sealed class ConnectionWizardPageTests : IDisposable
     [Fact]
     public void WizardErrorMessageRendersBanner()
     {
-        SwapWizard(new ConnectionWizardContext { Step = 0, ErrorMessage = "boom error" });
+        SwapWizard(new ConnectionWizardContext { Step = 0, LastResult = GenericResult.Failure(new GenericMessage("boom error")) });
         var cut = RenderWizard();
         cut.Markup.ShouldContain("boom error");
     }
@@ -540,7 +542,7 @@ public sealed class ConnectionWizardPageTests : IDisposable
         SwapEditor(new ConnectionEditorContext
         {
             ConnectionTypes = [Type("MsSql")],
-            ErrorMessage = "edit failed",
+            LastResult = GenericResult.Failure(new GenericMessage("edit failed")),
             Model = new CreateConnectionClientRequest { Name = "P" }
         });
         var cut = RenderWizard("PROD");

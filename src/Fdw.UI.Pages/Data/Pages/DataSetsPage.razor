@@ -5,13 +5,8 @@
 
 <DataSetProvider>
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Data Sources</div>
-                <h1>DataSets</h1>
-                <div class="sub">Logical views over one or more sources. Calculated sets derive fields with the formula engine.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="Data Sources" Title="DataSets" Subtitle="Logical views over one or more sources. Calculated sets derive fields with the formula engine.">
+            <Actions>
                 <input class="fin" style="width:240px;" placeholder="Search name, abbrev, category..."
                        value="@_search" @oninput="@(e => { _search = e.Value?.ToString() ?? string.Empty; ctx.OnSearchStringChanged(_search); })" />
                 <select class="fin" style="width:170px;" @bind="_categoryFilter" @bind:after="() => ctx.OnCategoryFilterChanged(_categoryFilter)">
@@ -22,13 +17,11 @@
                     }
                 </select>
                 <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/datasets/new")'>
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
-                    </svg>
+                    <Icon Name="Add" />
                     New DataSet
                 </button>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @if (ctx.IsLoading && !ctx.DataSets.Any())
         {
@@ -42,7 +35,7 @@
         {
             <div class="card">
                 <div class="card-h"><h3>All DataSets</h3></div>
-                <div class="card-b" style="padding:0 10px 12px;">
+                <div class="card-b fdw-table-body">
                     <table class="tbl">
                         <thead>
                             <tr>
@@ -60,7 +53,7 @@
                                page where the cascade is loaded anyway. *@
                             @foreach (var ds in ctx.FilteredDataSets)
                             {
-                                <tr style="cursor:pointer;" @onclick='() => Nav.NavigateTo($"/datasets/{ds.Name}")'>
+                                <tr class="u-pointer" @onclick='() => Nav.NavigateTo($"/datasets/{ds.Name}")'>
                                     <td>
                                         <div class="cellpad">
                                             @if (!string.IsNullOrWhiteSpace(ds.Abbreviation))

@@ -1,9 +1,11 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Services.Abstractions.Health;
 using Fdw.Services.Abstractions.Health.Monitoring;
 using Fdw.UI.Components.Blazor.Tests.ObsInfra;
 using Fdw.Web.Analytics.Components.Health.Dashboard;
-using HealthPage = Fdw.Operations.UI.Pages.Pages.HealthDashboard;
+using HealthPage = Fdw.UI.Pages.Operations.Pages.HealthDashboardPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Dashboard;
 
@@ -60,7 +62,7 @@ public sealed class HealthDashboardPageTests : IDisposable
     [Fact]
     public void RendersErrorWhenNoSnapshotAndNotLoading()
     {
-        SwapProvider(new HealthDashboardContext { ErrorMessage = "health probe failed" });
+        SwapProvider(new HealthDashboardContext { LastResult = GenericResult.Failure(new GenericMessage("health probe failed")) });
         var cut = _ctx.Render<HealthPage>();
         cut.Markup.ShouldContain("health probe failed");
     }
@@ -180,7 +182,7 @@ public sealed class HealthDashboardPageTests : IDisposable
     public async Task RefreshInvokesOnRefresh()
     {
         var calls = 0;
-        SwapProvider(new HealthDashboardContext { OnRefresh = () => { calls++; return Task.CompletedTask; } });
+        SwapProvider(new HealthDashboardContext { OnRefresh = () => { calls++; return Task.FromResult<IGenericResult>(GenericResult.Success()); } });
         var cut = _ctx.Render<HealthPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("Refresh", StringComparison.Ordinal)).Click();
         await Task.Yield();

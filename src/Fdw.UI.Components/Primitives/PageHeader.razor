@@ -1,0 +1,17 @@
+@namespace Fdw.UI.Components.Primitives
+
+<div class="@HeaderClass">
+    <div>
+        <div class="ey">@Eyebrow</div>
+        <h1>@Title</h1>
+        @if (!string.IsNullOrEmpty(Subtitle))
+        {
+            <div class="@SubtitleClassName">@Subtitle</div>
+        }
+        @SubtitleContent
+    </div>
+    @if (Actions is not null)
+    {
+        <div class="@ActionsClassName">@Actions</div>
+    }
+</div>

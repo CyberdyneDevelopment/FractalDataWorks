@@ -18,12 +18,12 @@
 }
 else
 {
-    <section class="card" style="margin-bottom:14px;">
+    <section class="card u-mb-14">
         <div class="card-h"><h3>Formula</h3></div>
         <div class="card-b">
 
             @* Language selector — populated from supported languages (no switch/if-else on type name) *@
-            <div class="frow" style="margin-bottom:12px;">
+            <div class="frow u-mb-12">
                 <label>Language</label>
                 <select class="finput" value="@Context.SelectedLanguage" @onchange="LanguageSelectionChanged">
                     @foreach (var lang in _supportedLanguages)
@@ -36,10 +36,10 @@ else
             @* Field picker — loads from OnGetDataSetFields when TargetDataSet is provided *@
             @if (!string.IsNullOrWhiteSpace(_targetDataSet))
             {
-                <div class="frow" style="margin-bottom:12px;">
+                <div class="frow u-mb-12">
                     <label>Insert Field Reference</label>
                     <div style="display:flex;gap:8px;align-items:center;">
-                        <select class="finput" style="flex:1;" @bind="_selectedField">
+                        <select class="finput u-flex-1" @bind="_selectedField">
                             <option value="">— select a field —</option>
                             @if (Context.DataSetFields is not null)
                             {
@@ -110,8 +110,8 @@ else
                         </div>
                         @if (preview.ReferencedFields.Any())
                         {
-                            <div style="margin-top:6px;">
-                                <span class="mut" style="font-size:12px;">Referenced fields: </span>
+                            <div class="u-mt-6">
+                                <span class="mut u-fs-12">Referenced fields: </span>
                                 @foreach (var field in preview.ReferencedFields)
                                 {
                                     <span class="mono badge b-idle" style="margin-left:4px;font-size:11px;">@field</span>

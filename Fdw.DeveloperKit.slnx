@@ -827,6 +827,14 @@
       <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
+    <Project Path="tests/Fdw.UI.Components.Blazor.Tests/Fdw.UI.Components.Blazor.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
     <Project Path="tests/Fdw.UI.Components.TUI.Tests/Fdw.UI.Components.TUI.Tests.csproj" />
     <Project Path="tests/Fdw.UI.Rendering.Conformance.Tests/Fdw.UI.Rendering.Conformance.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />

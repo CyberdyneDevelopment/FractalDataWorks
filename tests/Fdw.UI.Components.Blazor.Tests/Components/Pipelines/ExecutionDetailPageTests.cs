@@ -1,8 +1,10 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Operations.Clients.Models;
 using Fdw.Operations.Components.Execution;
 using Fdw.UI.Components.Blazor.Tests.PipeInfra;
-using ExecutionDetailPage = Fdw.Services.Pipelines.UI.Pages.Pages.Pipelines.ExecutionDetail;
+using ExecutionDetailPage = Fdw.UI.Pages.Pipelines.Pages.Pipelines.ExecutionDetailPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Pipelines;
 
@@ -42,7 +44,7 @@ public sealed class ExecutionDetailPageTests : IDisposable
     [Fact]
     public void RendersErrorBannerAndNotFoundWhenExecutionNull()
     {
-        var cut = RenderWith(new ExecutionDetailContext { ErrorMessage = "boom", Execution = null });
+        var cut = RenderWith(new ExecutionDetailContext { LastResult = GenericResult.Failure(new GenericMessage("boom")), Execution = null });
         cut.Markup.ShouldContain("boom");
         cut.Markup.ShouldContain("Execution not found");
     }
@@ -106,7 +108,7 @@ public sealed class ExecutionDetailPageTests : IDisposable
         var cut = RenderWith(new ExecutionDetailContext
         {
             Execution = Exec("p", "Running"),
-            OnRefresh = () => { refreshed = true; return Task.CompletedTask; },
+            OnRefresh = () => { refreshed = true; return Task.FromResult<IGenericResult>(GenericResult.Success()); },
         });
         cut.FindAll("button").First(b => b.TextContent.Contains("Refresh", StringComparison.Ordinal)).Click();
         refreshed.ShouldBeTrue();

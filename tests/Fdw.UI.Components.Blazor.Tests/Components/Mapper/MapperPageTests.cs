@@ -1,10 +1,12 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Data.Components;
 using Fdw.Data.Components.DataMapper;
 using Fdw.Data.Components.Models;
 using Fdw.Services.Data.Clients.Models;
 using Fdw.UI.Components.Blazor.Tests.PipeInfra;
-using MapperPage = Fdw.Data.UI.Pages.Pages.Mapper;
+using MapperPage = Fdw.UI.Pages.Data.Pages.MapperPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Mapper;
 
@@ -36,7 +38,7 @@ public sealed class MapperPageTests : IDisposable
     [Fact]
     public void RendersErrorBannerWhenErrorMessagePresent()
     {
-        var cut = RenderWith(new DataMapperContext { ErrorMessage = "mapper boom" });
+        var cut = RenderWith(new DataMapperContext { LastResult = GenericResult.Failure(new GenericMessage("mapper boom")) });
         cut.Markup.ShouldContain("mapper boom", Case.Sensitive);
         cut.Markup.ShouldContain("alert-err", Case.Sensitive);
     }

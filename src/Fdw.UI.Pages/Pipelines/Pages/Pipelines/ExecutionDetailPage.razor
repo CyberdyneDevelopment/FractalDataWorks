@@ -14,9 +14,7 @@
                 </div>
                 <div class="actions">
                     <button class="btn btn-secondary btn-sm" @onclick="ctx.OnRefresh" disabled="@ctx.IsLoading">
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
+                        <Icon Name="Refresh" />
                         Refresh
                     </button>
                     <a href="/audit" class="btn btn-ghost btn-sm">Back to Audit</a>
@@ -32,14 +30,14 @@
 
             @if (ctx.IsLoading && ctx.Execution is null)
             {
-                <div class="card" style="padding:48px;text-align:center;">
-                    <span class="mono" style="color:var(--n-500);">Loading execution…</span>
+                <div class="card fdw-empty-square">
+                    <span class="mono u-fg-n500">Loading execution…</span>
                 </div>
             }
             else if (ctx.Execution is not null)
             {
                 var exec = ctx.Execution;
-                <div class="card" style="margin-bottom:14px;">
+                <div class="card u-mb-14">
                     <div class="card-b" style="padding:20px;">
                         <dl class="kv">
                             <dt>Name</dt>
@@ -47,7 +45,7 @@
                             <dt>Type</dt>
                             <dd>@exec.ItemType</dd>
                             <dt>State</dt>
-                            <dd><span class="badge @GetStateClasses(exec.State)"><span class="bd"></span>@exec.State</span></dd>
+                            <dd><Badge Variant="GetStateVariant(exec.State)">@exec.State</Badge></dd>
                             <dt>Started</dt>
                             <dd>@(exec.CreatedAt.ToString("g"))</dd>
                             @if (exec.CorrelationId is not null)
@@ -68,7 +66,7 @@
                 {
                     <div class="card">
                         <div class="card-h"><h3>Steps (@ctx.Children.Count)</h3></div>
-                        <div class="card-b" style="padding:0 10px 12px;">
+                        <div class="card-b fdw-table-body">
                             <table class="tbl">
                                 <thead>
                                     <tr>
@@ -90,7 +88,7 @@
                                             </td>
                                             <td class="mut">@child.ItemType</td>
                                             <td>
-                                                <span class="badge @GetStateClasses(child.State)"><span class="bd"></span>@child.State</span>
+                                                <Badge Variant="GetStateVariant(child.State)">@child.State</Badge>
                                             </td>
                                             <td class="mut">@child.CreatedAt.ToString("g")</td>
                                             <td class="mut">@(child.CompletedAt?.ToString("g") ?? "-")</td>
@@ -110,8 +108,8 @@
             }
             else
             {
-                <div class="card" style="padding:48px;text-align:center;">
-                    <p style="color:var(--n-500);">Execution not found</p>
+                <div class="card fdw-empty-square">
+                    <p class="u-fg-n500">Execution not found</p>
                 </div>
             }
         </div>
@@ -121,13 +119,12 @@
 @code {
     [Parameter] public Guid ExecutionId { get; set; }
 
-    private static string GetStateClasses(string state) => state switch
+    private static StatusVariantBase GetStateVariant(string state) => state switch
     {
-        "Completed" or "Succeeded" => "b-ok",
-        "Failed" or "Faulted" => "b-fail",
-        "Running" or "InProgress" => "b-run",
-        "Pending" or "Queued" => "b-warn",
-        "Cancelled" or "Paused" => "b-idle",
-        _ => "b-idle"
+        "Completed" or "Succeeded" => StatusVariants.Success,
+        "Failed" or "Faulted" => StatusVariants.Error,
+        "Running" or "InProgress" => StatusVariants.Info,
+        "Pending" or "Queued" => StatusVariants.Warning,
+        _ => StatusVariants.Neutral
     };
 }

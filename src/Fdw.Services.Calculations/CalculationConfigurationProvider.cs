@@ -22,7 +22,7 @@ namespace Fdw.Services.Calculations;
 /// Operands}, and the polymorphic Formula/Windowed typed body — is composed on read and cascade-saved on
 /// write entirely by the keystone <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>; there is no
 /// per-domain hand-assembly. Typed providers are registered with this header via the inherited
-/// <c>RegisterTypedProvider</c> in <see cref="DefaultCalculationServiceType"/> (dispatch on ServiceOptionType).
+/// <c>Register</c> in <see cref="DefaultCalculationServiceType"/> (dispatch on ServiceOptionType).
 /// </summary>
 public class CalculationConfigurationProvider : DefaultConfigurationProvider<CalculationEntityConfiguration, CalculationEntityConfigurationCommand>
 {

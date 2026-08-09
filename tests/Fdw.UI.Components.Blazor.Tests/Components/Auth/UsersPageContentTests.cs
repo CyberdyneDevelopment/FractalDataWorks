@@ -1,10 +1,12 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Bunit.ComponentFactories;
 using Fdw.Services.Authorization.Components.Roles;
 using Fdw.Services.Authorization.Components.Users;
 using Fdw.Services.Users.Clients.Models;
 using Fdw.UI.Components.Blazor.Tests.Helpers;
-using UsersPage = Fdw.Services.Authorization.UI.Pages.Pages.Users;
+using UsersPage = Fdw.UI.Pages.Authorization.Pages.UsersPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Auth;
 
@@ -175,7 +177,7 @@ public sealed class UsersPageContentTests : IDisposable
     {
         var cut = Render(new UserContext
         {
-            ErrorMessage = "duplicate username",
+            LastResult = GenericResult.Failure(new GenericMessage("duplicate username")),
             OnCreateUser = _ => Task.FromResult<UserDetailPayload?>(null),
         });
         cut.FindAll("button").First(b => b.TextContent.Contains("New User", StringComparison.Ordinal)).Click();

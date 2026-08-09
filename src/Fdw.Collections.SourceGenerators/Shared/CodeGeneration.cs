@@ -46,6 +46,21 @@ internal static class CodeGeneration
     }
 
     /// <summary>
+    /// Converts a name to PascalCase.
+    /// </summary>
+    /// <remarks>
+    /// Used to build compound identifiers whose first segment is a fixed generator-owned prefix,
+    /// e.g. the <c>_option</c> singleton fields. Upper-casing the user-supplied segment is what
+    /// keeps such an identifier out of the namespace a bare <c>_{camelCase(name)}</c> occupies —
+    /// see <see cref="ReservedMemberNames"/> for why that separation matters.
+    /// </remarks>
+    public static string ToPascalCase(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return name;
+        return char.ToUpperInvariant(name[0]) + name.Substring(1);
+    }
+
+    /// <summary>
     /// Generates static property accessors for TypeOptions.
     /// </summary>
     public static void GenerateStaticAccessors(

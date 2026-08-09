@@ -8,9 +8,9 @@
         @{ _ctx = ctx; }
                 <div style="display:flex;flex-direction:column;gap:14px;">
                     <div class="pagehead">
-                        <div class="dhead" style="margin-bottom:0;">
+                        <div class="dhead u-mb-0">
                             <a href="/roles" class="ic" style="text-decoration:none;">
-                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 19l-7-7 7-7" /></svg>
+                                <Icon Name="ChevronLeft" StrokeWidth="1.8" />
                             </a>
                             <div>
                                 <div class="ey">Admin / Roles</div>
@@ -22,7 +22,7 @@
 
                     @if (ctx.IsLoading)
                     {
-                        <div class="card"><div class="card-b" style="display:flex;justify-content:center;padding:48px;"><span class="badge b-run"><span class="bd"></span>Loading</span></div></div>
+                        <LoadingCard />
                     }
                     else if (ctx.ErrorMessage != null)
                     {

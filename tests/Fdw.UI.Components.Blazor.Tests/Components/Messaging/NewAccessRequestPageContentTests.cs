@@ -5,7 +5,7 @@ using Fdw.Services.Messaging.Components.Messaging;
 using Fdw.UI.Components.Blazor.Tests.Helpers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using NewAccessRequestPage = Fdw.Services.Messaging.UI.Pages.Pages.NewAccessRequest;
+using NewAccessRequestPage = Fdw.UI.Pages.Messaging.Pages.NewAccessRequestPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Messaging;
 

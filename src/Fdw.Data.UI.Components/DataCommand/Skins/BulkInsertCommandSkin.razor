@@ -14,7 +14,7 @@
 else
 {
     <div style="display:flex;flex-direction:column;gap:12px;">
-        <div class="frow" style="margin-bottom:0;">
+        <div class="frow u-mb-0">
             <label class="flbl">Target Container</label>
             <DataContainerPicker Containers="@Context.AvailableContainers"
                                  SelectedContainerId="@_targetId"
@@ -23,8 +23,8 @@ else
         </div>
 
         @* Field mapping: source field → target field *@
-        <div class="frow" style="margin-bottom:0;">
-            <div class="card-h" style="padding:0;">
+        <div class="frow u-mb-0">
+            <div class="card-h u-p-0">
                 <label class="flbl">Field Mapping (source → target)</label>
                 <button class="btn btn-secondary btn-sm" @onclick="AddRow">+ Field</button>
             </div>
@@ -61,13 +61,13 @@ else
                                    value="@v.Field"
                                    @oninput="@(e => SetTargetField(idx, e.Value?.ToString() ?? string.Empty))" />
                         }
-                        <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => RemoveRow(idx)">✕</button>
+                        <button class="btn btn-ghost btn-sm u-fg-signal" @onclick="() => RemoveRow(idx)">✕</button>
                     </div>
                 }
             }
         </div>
 
-        <div class="frow" style="margin-bottom:0;">
+        <div class="frow u-mb-0">
             <label class="flbl">Batch Size (0 = connection default)</label>
             <input class="fin" type="number" min="0"
                    value="@Context.CurrentSpec.BatchSize"

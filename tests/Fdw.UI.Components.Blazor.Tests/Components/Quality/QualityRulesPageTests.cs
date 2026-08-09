@@ -1,7 +1,9 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Services.Quality.Clients.Models;
 using Fdw.Services.Quality.Components.QualityRules;
-using Fdw.Services.Quality.UI.Pages.Pages.Quality;
+using Fdw.UI.Pages.Quality.Pages.Quality;
 using Fdw.UI.Components.Blazor.Tests.ObsInfra;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Quality;
@@ -29,22 +31,22 @@ public sealed class QualityRulesPageTests : IDisposable
         Func<CreateQualityRulePayload, Task>? onCreate = null,
         Func<Guid, Task>? onDelete = null,
         Func<Guid, Task>? onExecute = null,
-        Func<Task>? onRefresh = null) => new()
+        Func<Task<IGenericResult>>? onRefresh = null) => new()
         {
             Rules = rules ?? [],
             IsLoading = isLoading,
-            ErrorMessage = error,
+            LastResult = error is null ? null : GenericResult.Failure(new GenericMessage(error)),
             OnCreate = onCreate ?? (_ => Task.CompletedTask),
             OnDelete = onDelete ?? (_ => Task.CompletedTask),
             OnExecute = onExecute ?? (_ => Task.CompletedTask),
-            OnRefresh = onRefresh ?? (() => Task.CompletedTask),
+            OnRefresh = onRefresh ?? (() => Task.FromResult<IGenericResult>(GenericResult.Success())),
         };
 
     [Fact]
     public void RendersLoadingSpinnerWhenLoadingAndNoRules()
     {
         SwapProvider(Ctx(isLoading: true));
-        var cut = _ctx.Render<Rules>();
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.Find(".loadwrap .spin").ShouldNotBeNull();
     }
 
@@ -52,7 +54,7 @@ public sealed class QualityRulesPageTests : IDisposable
     public void RendersEmptyCardWhenNoRules()
     {
         SwapProvider(Ctx());
-        var cut = _ctx.Render<Rules>();
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.Markup.ShouldContain("No quality rules defined");
     }
 
@@ -60,7 +62,7 @@ public sealed class QualityRulesPageTests : IDisposable
     public void RendersErrorBannerWhenErrorPresent()
     {
         SwapProvider(Ctx(error: "rule load failed"));
-        var cut = _ctx.Render<Rules>();
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.Markup.ShouldContain("rule load failed");
     }
 
@@ -72,7 +74,7 @@ public sealed class QualityRulesPageTests : IDisposable
             new() { Id = Guid.NewGuid(), Name = "NotNull", Description = "no nulls", IsEnabled = true },
             new() { Id = Guid.NewGuid(), Name = "Range",   Description = "0..100",   IsEnabled = false },
         ]));
-        var cut = _ctx.Render<Rules>();
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.Markup.ShouldContain("NotNull");
         cut.Markup.ShouldContain("Range");
         cut.FindAll("tbody tr").Count.ShouldBe(2);
@@ -82,7 +84,7 @@ public sealed class QualityRulesPageTests : IDisposable
     public void RendersEnabledBadgeForEnabledRule()
     {
         SwapProvider(Ctx(rules: [new() { Id = Guid.NewGuid(), Name = "A", IsEnabled = true }]));
-        var cut = _ctx.Render<Rules>();
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.Markup.ShouldContain("Enabled");
         cut.Find(".badge.b-ok").ShouldNotBeNull();
     }
@@ -91,7 +93,7 @@ public sealed class QualityRulesPageTests : IDisposable
     public void RendersDisabledBadgeForDisabledRule()
     {
         SwapProvider(Ctx(rules: [new() { Id = Guid.NewGuid(), Name = "A", IsEnabled = false }]));
-        var cut = _ctx.Render<Rules>();
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.Markup.ShouldContain("Disabled");
         cut.Find(".badge.b-idle").ShouldNotBeNull();
     }
@@ -100,7 +102,7 @@ public sealed class QualityRulesPageTests : IDisposable
     public void RefreshAndNewButtonsDisabledWhenLoading()
     {
         SwapProvider(Ctx(rules: [new() { Id = Guid.NewGuid(), Name = "A" }], isLoading: true));
-        var cut = _ctx.Render<Rules>();
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("Refresh", StringComparison.Ordinal)).HasAttribute("disabled").ShouldBeTrue();
         cut.FindAll("button").First(b => b.TextContent.Contains("New Rule", StringComparison.Ordinal)).HasAttribute("disabled").ShouldBeTrue();
     }
@@ -109,7 +111,7 @@ public sealed class QualityRulesPageTests : IDisposable
     public void NewRuleButtonShowsCreatePanel()
     {
         SwapProvider(Ctx());
-        var cut = _ctx.Render<Rules>();
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.Markup.ShouldNotContain("Create Quality Rule");
         cut.FindAll("button").First(b => b.TextContent.Contains("New Rule", StringComparison.Ordinal)).Click();
         cut.Markup.ShouldContain("Create Quality Rule");
@@ -119,7 +121,7 @@ public sealed class QualityRulesPageTests : IDisposable
     public void CancelHidesCreatePanel()
     {
         SwapProvider(Ctx());
-        var cut = _ctx.Render<Rules>();
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("New Rule", StringComparison.Ordinal)).Click();
         cut.FindAll("button").First(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).Click();
         cut.Markup.ShouldNotContain("Create Quality Rule");
@@ -129,8 +131,8 @@ public sealed class QualityRulesPageTests : IDisposable
     public async Task RefreshInvokesOnRefresh()
     {
         var calls = 0;
-        SwapProvider(Ctx(onRefresh: () => { calls++; return Task.CompletedTask; }));
-        var cut = _ctx.Render<Rules>();
+        SwapProvider(Ctx(onRefresh: () => { calls++; return Task.FromResult<IGenericResult>(GenericResult.Success()); }));
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("Refresh", StringComparison.Ordinal)).Click();
         await Task.Yield();
         calls.ShouldBe(1);
@@ -141,7 +143,7 @@ public sealed class QualityRulesPageTests : IDisposable
     {
         CreateQualityRulePayload? sent = null;
         SwapProvider(Ctx(onCreate: r => { sent = r; return Task.CompletedTask; }));
-        var cut = _ctx.Render<Rules>();
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("New Rule", StringComparison.Ordinal)).Click();
 
         cut.FindAll("input")[0].Change("Completeness");
@@ -162,7 +164,7 @@ public sealed class QualityRulesPageTests : IDisposable
     {
         var called = false;
         SwapProvider(Ctx(onCreate: _ => { called = true; return Task.CompletedTask; }));
-        var cut = _ctx.Render<Rules>();
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("New Rule", StringComparison.Ordinal)).Click();
         cut.FindAll("input")[0].Change("   ");
         cut.FindAll("button").First(b => string.Equals(b.TextContent.Trim(), "Create", StringComparison.Ordinal)).Click();
@@ -175,7 +177,7 @@ public sealed class QualityRulesPageTests : IDisposable
     {
         CreateQualityRulePayload? sent = null;
         SwapProvider(Ctx(onCreate: r => { sent = r; return Task.CompletedTask; }));
-        var cut = _ctx.Render<Rules>();
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("New Rule", StringComparison.Ordinal)).Click();
         cut.FindAll("input")[0].Change("Completeness");
         cut.Find("select").Change("NotNull");
@@ -194,7 +196,7 @@ public sealed class QualityRulesPageTests : IDisposable
         SwapProvider(Ctx(
             rules: [new() { Id = id, Name = "A" }],
             onExecute: g => { executed = g; return Task.CompletedTask; }));
-        var cut = _ctx.Render<Rules>();
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.FindAll("button").First(b => string.Equals(b.TextContent.Trim(), "Execute", StringComparison.Ordinal)).Click();
         await Task.Yield();
         executed.ShouldBe(id);
@@ -208,7 +210,7 @@ public sealed class QualityRulesPageTests : IDisposable
         SwapProvider(Ctx(
             rules: [new() { Id = id, Name = "A" }],
             onDelete: g => { deleted = g; return Task.CompletedTask; }));
-        var cut = _ctx.Render<Rules>();
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.FindAll("button").First(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).Click();
         await Task.Yield();
         deleted.ShouldBe(id);
@@ -218,7 +220,7 @@ public sealed class QualityRulesPageTests : IDisposable
     public void EditButtonOpensEditPanel()
     {
         SwapProvider(Ctx(rules: [new() { Id = Guid.NewGuid(), Name = "A", Description = "desc", IsEnabled = true }]));
-        var cut = _ctx.Render<Rules>();
+        var cut = _ctx.Render<QualityRulesPage>();
         cut.FindAll("button").Any(b => string.Equals(b.TextContent.Trim(), "Edit", StringComparison.Ordinal)).ShouldBeTrue();
         cut.FindAll("button").First(b => string.Equals(b.TextContent.Trim(), "Edit", StringComparison.Ordinal)).Click();
         cut.Markup.ShouldContain("Edit Quality Rule");

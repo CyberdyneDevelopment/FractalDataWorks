@@ -290,7 +290,7 @@ Follow the same pattern as `DefaultDataVaultType`:
 1. Create `MyDataVaultConfiguration : IDataVaultConfiguration` with `ConnectionId` and any additional properties.
 2. Create `MyDataVaultType : DataVaultTypeBase<IDataVault, IDataVaultFactory<IDataVault, DataVaultConfiguration>, DataVaultConfiguration>` decorated with `[ServiceTypeOption(typeof(DataVaultServiceTypes), "MyType")]`.
 3. Override `Configure`, `RegisterRequiredServices`, and `RegisterFactory` following `DefaultDataVaultType` as the exemplar.
-4. Call `DataVaultConfigurationProvider.RegisterTypedProvider<MyDataVaultConfiguration>(Name, typedProvider)` in `RegisterFactory`.
+4. Call `DataVaultConfigurationProvider.Register(Name, typedProvider)` in `RegisterFactory`.
 5. If your vault base takes an `IDataConnection` by constructor (resolved by the provider in system context and handed to the immutable vault), mark that parameter `[ServiceOptionDependency]` so it opts out of FDW044 — see [above](#serviceoptiondependency-on-the-vaults-connection).
 
 ## Security Rules

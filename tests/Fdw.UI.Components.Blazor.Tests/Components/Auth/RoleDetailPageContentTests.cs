@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using RoleDetailPage = Fdw.Services.Authorization.UI.Pages.Pages.RoleDetail;
+using RoleDetailPage = Fdw.UI.Pages.Authorization.Pages.RoleDetailPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Auth;
 

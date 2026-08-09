@@ -1,8 +1,10 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Services.Quality.Clients.Models;
 using Fdw.Services.Quality.Components.QualityDashboard;
 using Fdw.UI.Components.Blazor.Tests.ObsInfra;
-using QualityDashboardPage = Fdw.Services.Quality.UI.Pages.Pages.Quality.Dashboard;
+using QualityDashboardPage = Fdw.UI.Pages.Quality.Pages.Quality.QualityDashboardPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Quality;
 
@@ -41,7 +43,7 @@ public sealed class QualityDashboardPageTests : IDisposable
     [Fact]
     public void RendersErrorBannerWhenErrorPresent()
     {
-        SwapProvider(new QualityDashboardContext { ErrorMessage = "dashboard down" });
+        SwapProvider(new QualityDashboardContext { LastResult = GenericResult.Failure(new GenericMessage("dashboard down")) });
         var cut = _ctx.Render<QualityDashboardPage>();
         cut.Markup.ShouldContain("dashboard down");
     }
@@ -114,7 +116,7 @@ public sealed class QualityDashboardPageTests : IDisposable
     public async Task RefreshInvokesOnRefresh()
     {
         var calls = 0;
-        SwapProvider(new QualityDashboardContext { OnRefresh = () => { calls++; return Task.CompletedTask; } });
+        SwapProvider(new QualityDashboardContext { OnRefresh = () => { calls++; return Task.FromResult<IGenericResult>(GenericResult.Success()); } });
         var cut = _ctx.Render<QualityDashboardPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("Refresh", StringComparison.Ordinal)).Click();
         await Task.Yield();

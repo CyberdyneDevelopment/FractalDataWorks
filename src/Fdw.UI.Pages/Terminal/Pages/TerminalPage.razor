@@ -27,23 +27,19 @@
                 </select>
 
                 <button @onclick="CreateNewSession" class="btn btn-primary">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
+                    <Icon Name="AddAlt" />
                     New Session
                 </button>
 
                 <button @onclick="ToggleFullscreen" class="btn btn-ghost">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        @if (_isFullscreen)
-                        {
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9L4 4m0 0l5 0m-5 0l0 5m11 1l5 5m0 0l-5 0m5 0l0-5" />
-                        }
-                        else
-                        {
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                        }
-                    </svg>
+                    @if (_isFullscreen)
+                    {
+                        <Icon Name="FullscreenExit" />
+                    }
+                    else
+                    {
+                        <Icon Name="Fullscreen" />
+                    }
                 </button>
             </div>
         </div>
@@ -62,12 +58,12 @@
                         <button class="@(_altActive ? "on" : "")" @onclick='() => _altActive = !_altActive'>ALT</button>
                         <button @onclick='() => terminal.SendCommand("\t")'>TAB</button>
 
-                        <div style="flex:1;"></div>
+                        <div class="u-flex-1"></div>
 
-                        <button @onclick='() => terminal.SendCommand("\x1b[A")'><svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M5 15l7-7 7 7" stroke-width="2"/></svg></button>
-                        <button @onclick='() => terminal.SendCommand("\x1b[D")'><svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M15 19l-7-7 7-7" stroke-width="2"/></svg></button>
-                        <button @onclick='() => terminal.SendCommand("\x1b[B")'><svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 9l-7 7-7-7" stroke-width="2"/></svg></button>
-                        <button @onclick='() => terminal.SendCommand("\x1b[C")'><svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 5l7 7-7 7" stroke-width="2"/></svg></button>
+                        <button @onclick='() => terminal.SendCommand("\x1b[A")'><Icon Name="ChevronUp" Style="width:14px;height:14px;" /></button>
+                        <button @onclick='() => terminal.SendCommand("\x1b[D")'><Icon Name="ChevronLeft" Style="width:14px;height:14px;" Rounded="false" /></button>
+                        <button @onclick='() => terminal.SendCommand("\x1b[B")'><Icon Name="ChevronDown" Style="width:14px;height:14px;" Rounded="false" /></button>
+                        <button @onclick='() => terminal.SendCommand("\x1b[C")'><Icon Name="ChevronRight" Style="width:14px;height:14px;" Rounded="false" /></button>
                     </div>
                 </ChildContent>
             </HeadlessTerminal>

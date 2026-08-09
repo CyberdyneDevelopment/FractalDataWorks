@@ -17,7 +17,7 @@ namespace Fdw.Services.DataVault;
 /// The polymorphic typed-body read (dispatch on <c>ServiceOptionType</c> to load the typed body row and
 /// attach it to <see cref="DataVaultConfiguration.Configuration"/>) is composed uniformly by
 /// <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>; typed providers are registered via the
-/// inherited <c>RegisterTypedProvider</c>.
+/// inherited <c>Register</c>.
 /// </summary>
 public class DataVaultConfigurationProvider : DefaultConfigurationProvider<DataVaultConfiguration, DataVaultConfigurationCommand>
 {

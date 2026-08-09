@@ -32,14 +32,14 @@
                @oninput="@(e => SetAlias(e.Value?.ToString() ?? string.Empty))" />
 
         @* Remove join *@
-        <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="RemoveJoin">✕</button>
+        <button class="btn btn-ghost btn-sm u-fg-signal" @onclick="RemoveJoin">✕</button>
     </div>
 
     @* ON conditions *@
     <div style="display:flex;flex-direction:column;gap:4px;padding-left:8px;">
         <div style="display:flex;align-items:center;gap:4px;">
-            <span class="flbl" style="margin-bottom:0;">ON</span>
-            <button class="btn btn-ghost btn-sm" style="color:var(--success);" @onclick="AddOnCondition">+ condition</button>
+            <span class="flbl u-mb-0">ON</span>
+            <button class="btn btn-ghost btn-sm u-fg-success" @onclick="AddOnCondition">+ condition</button>
         </div>
         @for (var i = 0; i < Join.On.Count; i++)
         {
@@ -57,7 +57,7 @@
                                  SelectedField="@cond.RightField"
                                  SelectedFieldChanged="@(v => SetOnRight(idx, v))"
                                  Placeholder="right.field" />
-                <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => RemoveOnCondition(idx)">✕</button>
+                <button class="btn btn-ghost btn-sm u-fg-signal" @onclick="() => RemoveOnCondition(idx)">✕</button>
             </div>
         }
     </div>

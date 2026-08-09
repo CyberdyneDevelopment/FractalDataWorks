@@ -1,0 +1,6 @@
+@namespace Fdw.UI.Components.Primitives
+@using Fdw.UI.Components.Services
+@*  Why no whitespace between the elements: .badge is display:inline-flex with its own gap, and the
+    markup this replaces was written closed-up. Keeping it closed-up leaves the rendered box identical
+    rather than identical-once-white-space-collapses. *@
+<span class="@PillClass">@if (ShowDot){<span class="bd"></span>}@ChildContent</span>

@@ -13,7 +13,7 @@
 
 <div style="display:flex;flex-direction:column;gap:12px;">
     @* Container picker *@
-    <div class="frow" style="margin-bottom:0;">
+    <div class="frow u-mb-0">
         <label>Container</label>
         @if (AvailableContainers.Count > 0)
         {
@@ -39,7 +39,7 @@
     @* Field selector — shown once a container is picked *@
     @if (!string.IsNullOrEmpty(_container))
     {
-        <div class="frow" style="margin-bottom:0;">
+        <div class="frow u-mb-0">
             <label>Fields</label>
             @if (AvailableFields.Count > 0)
             {
@@ -72,14 +72,14 @@
         </div>
 
         @* Filter clauses *@
-        <div class="frow" style="margin-bottom:0;">
+        <div class="frow u-mb-0">
             <div style="display:flex;align-items:center;justify-content:space-between;">
                 <label>Filters</label>
                 <button class="btn btn-ghost btn-sm" @onclick="AddFilterClause">+ Add</button>
             </div>
             @if (_filterClauses.Count == 0)
             {
-                <div class="hint" style="font-style:italic;">No filters — returns all rows.</div>
+                <div class="hint u-italic">No filters — returns all rows.</div>
             }
             @for (var i = 0; i < _filterClauses.Count; i++)
             {
@@ -95,7 +95,7 @@
                     {
                         <span style="width:28px;"></span>
                     }
-                    <select class="finput mono" style="flex:1;"
+                    <select class="finput mono u-flex-1"
                             value="@clause.Field"
                             @onchange="@(e => UpdateClauseField(idx, e.Value?.ToString() ?? string.Empty))">
                         <option value="">Column...</option>
@@ -115,7 +115,7 @@
                     @if (!string.Equals(clause.Operator, "IsNull", StringComparison.Ordinal)
                          && !string.Equals(clause.Operator, "IsNotNull", StringComparison.Ordinal))
                     {
-                        <input class="finput mono" style="flex:1;"
+                        <input class="finput mono u-flex-1"
                                placeholder="Value"
                                value="@clause.Value"
                                @oninput="@(e => UpdateClauseValue(idx, e.Value?.ToString() ?? string.Empty))" />
@@ -123,22 +123,20 @@
                     <button class="btn btn-danger btn-sm"
                             @onclick="() => RemoveFilterClause(idx)"
                             title="Remove filter">
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <Icon Name="Close" />
                     </button>
                 </div>
             }
         </div>
 
         @* Sort *@
-        <div class="frow" style="margin-bottom:0;">
+        <div class="frow u-mb-0">
             <label>Sort</label>
             <div style="display:flex;gap:6px;">
                 @{
                     var sortFieldOptions = AvailableFields.Count > 0 ? AvailableFields : _derivedFields;
                 }
-                <select class="finput mono" style="flex:1;"
+                <select class="finput mono u-flex-1"
                         value="@_sortField"
                         @onchange="OnSortFieldChanged">
                     <option value="">No sort</option>
@@ -157,7 +155,7 @@
         </div>
 
         @* Paging *@
-        <div class="frow" style="margin-bottom:0;">
+        <div class="frow u-mb-0">
             <label>Paging</label>
             <div style="display:flex;gap:6px;">
                 <div style="flex:1;display:flex;flex-direction:column;gap:4px;">

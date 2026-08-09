@@ -9,5 +9,5 @@ namespace Fdw.UI.Components.Services;
 public sealed class NeutralStatusVariant : StatusVariantBase
 {
     /// <summary>Initializes a new instance of <see cref="NeutralStatusVariant"/>.</summary>
-    public NeutralStatusVariant() : base(5, "Neutral") { }
+    public NeutralStatusVariant() : base(5, "Neutral", "b-idle") { }
 }

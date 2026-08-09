@@ -13,15 +13,11 @@
             </div>
             <div class="actions">
                 <button class="btn btn-secondary" @onclick="async () => await ctx.OnRefresh()" disabled="@ctx.IsLoading">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
+                    <Icon Name="Refresh" />
                     Refresh
                 </button>
                 <button class="btn btn-primary" @onclick="() => { _showCreate = true; _showEdit = false; }" disabled="@ctx.IsLoading">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
-                    </svg>
+                    <Icon Name="Add" />
                     New Rule
                 </button>
             </div>
@@ -62,7 +58,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="actions" style="justify-content:flex-end;">
+                    <div class="actions u-jc-end">
                         <button class="btn btn-ghost btn-sm" @onclick="() => _showCreate = false">Cancel</button>
                         <button class="btn btn-primary btn-sm" @onclick="async () => await SubmitCreate(ctx)" disabled="@ctx.IsLoading">Create</button>
                     </div>
@@ -92,7 +88,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="actions" style="justify-content:flex-end;">
+                    <div class="actions u-jc-end">
                         <button class="btn btn-ghost btn-sm" @onclick="() => { _showEdit = false; _editingId = null; }">Cancel</button>
                         <button class="btn btn-primary btn-sm" @onclick="async () => await SubmitEdit(ctx)" disabled="@ctx.IsLoading">Save</button>
                     </div>
@@ -109,7 +105,7 @@
             <div class="card">
                 <div class="card-b" style="text-align:center;padding:40px 20px;">
                     <p style="color:var(--n-300);margin:0 0 6px;">No quality rules defined</p>
-                    <p class="hint" style="margin:0;">Create rules to validate data quality across your pipelines</p>
+                    <p class="hint u-m-0">Create rules to validate data quality across your pipelines</p>
                 </div>
             </div>
         }
@@ -117,7 +113,7 @@
         {
             <div class="card">
                 <div class="card-h"><h3>Quality Rules</h3></div>
-                <div class="card-b" style="padding:0 10px 12px;">
+                <div class="card-b fdw-table-body">
                     <table class="tbl">
                         <thead>
                             <tr>

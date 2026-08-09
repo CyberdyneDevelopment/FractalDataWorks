@@ -1,10 +1,12 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Configuration.Components.Configuration;
 using Fdw.Configuration.UI.Components;
 using Fdw.Operations.Clients.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
-using ConfigurationPage = Fdw.Configuration.UI.Pages.Pages.Configuration;
+using ConfigurationPage = Fdw.UI.Pages.Configuration.Pages.ConfigurationPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Settings;
 
@@ -64,7 +66,7 @@ public sealed class ConfigurationPageTests : IDisposable
     {
         // The page's error banner binds to its own private _errorMessage (set during create/delete
         // actions), NOT the provider context's ErrorMessage — so a context error renders no banner.
-        Swap(new ConfigurationContext { ErrorMessage = "config blew up" });
+        Swap(new ConfigurationContext { LastResult = GenericResult.Failure(new GenericMessage("config blew up")) });
         var cut = _ctx.Render<ConfigurationPage>();
         cut.Markup.ShouldNotContain("config blew up");
     }

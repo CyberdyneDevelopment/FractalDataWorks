@@ -1,8 +1,10 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Services.SecretManagers.Clients.Models;
 using Fdw.Services.SecretManagers.Components.SecretManagers;
 using Fdw.UI.Components.Blazor.Tests.ConnInfra;
-using SecretManagersPage = Fdw.Services.SecretManagers.UI.Pages.Pages.SecretManagers;
+using SecretManagersPage = Fdw.UI.Pages.SecretManagers.Pages.SecretManagersPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.SecretManagers;
 
@@ -47,7 +49,7 @@ public sealed class SecretManagersPageTests : IDisposable
     [Fact]
     public void RendersErrorBannerWhenError()
     {
-        Swap(new SecretManagerContext { ErrorMessage = "vault down" });
+        Swap(new SecretManagerContext { LastResult = GenericResult.Failure(new GenericMessage("vault down")) });
         var cut = _ctx.Render<SecretManagersPage>();
         cut.Markup.ShouldContain("vault down");
     }
@@ -104,7 +106,7 @@ public sealed class SecretManagersPageTests : IDisposable
     public async Task CreateFormMissingFieldsDoesNotInvokeCreate()
     {
         var created = false;
-        Swap(new SecretManagerContext { OnCreate = _ => { created = true; return Task.CompletedTask; } });
+        Swap(new SecretManagerContext { OnCreate = _ => { created = true; return Task.FromResult<IGenericResult>(GenericResult.Success()); } });
         var cut = _ctx.Render<SecretManagersPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("Add manager", StringComparison.Ordinal)).Click();
         cut.FindAll("button").First(b => string.Equals(b.TextContent.Trim(), "Create", StringComparison.Ordinal)).Click();
@@ -119,7 +121,7 @@ public sealed class SecretManagersPageTests : IDisposable
         Swap(new SecretManagerContext
         {
             AvailableTypes = [Type("MsSql")],
-            OnCreate = r => { captured = r; return Task.CompletedTask; }
+            OnCreate = r => { captured = r; return Task.FromResult<IGenericResult>(GenericResult.Success()); }
         });
         var cut = _ctx.Render<SecretManagersPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("Add manager", StringComparison.Ordinal)).Click();
@@ -139,7 +141,7 @@ public sealed class SecretManagersPageTests : IDisposable
         Swap(new SecretManagerContext
         {
             SecretManagers = [Sm("Vault1")],
-            OnDelete = n => { deleted = n; return Task.CompletedTask; }
+            OnDelete = n => { deleted = n; return Task.FromResult<IGenericResult>(GenericResult.Success()); }
         });
         var cut = _ctx.Render<SecretManagersPage>();
         cut.FindAll("button").First(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).Click();
@@ -164,7 +166,7 @@ public sealed class SecretManagersPageTests : IDisposable
         Swap(new SecretManagerContext
         {
             SecretManagers = [Sm("Vault1", "MsSql", "old")],
-            OnUpdate = (n, r) => { updatedName = n; updReq = r; return Task.CompletedTask; }
+            OnUpdate = (n, r) => { updatedName = n; updReq = r; return Task.FromResult<IGenericResult>(GenericResult.Success()); }
         });
         var cut = _ctx.Render<SecretManagersPage>();
         cut.FindAll("button").First(b => string.Equals(b.TextContent.Trim(), "Edit", StringComparison.Ordinal)).Click();
@@ -192,7 +194,7 @@ public sealed class SecretManagersPageTests : IDisposable
         Swap(new SecretManagerContext
         {
             SecretManagers = [Sm("Vault1")],
-            OnSelect = n => { selected = n; return Task.CompletedTask; }
+            OnSelect = n => { selected = n; return Task.FromResult<IGenericResult>(GenericResult.Success()); }
         });
         var cut = _ctx.Render<SecretManagersPage>();
         cut.FindAll("tbody tr")[0].Click();

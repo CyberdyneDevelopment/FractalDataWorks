@@ -1,6 +1,8 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Data.Components.DataStores;
-using Fdw.Data.UI.Pages.Pages;
+using Fdw.UI.Pages.Data.Pages;
 using Fdw.Operations.Clients.Models;
 using Fdw.Services.Connections.Clients.Models;
 using Fdw.Services.Connections.Components.ConnectionWizard;
@@ -34,8 +36,8 @@ public sealed class DataStoreEditorPageTests : IDisposable
     private static ConfigurationTypeSummary StoreType(string typeName, string display) =>
         new() { TypeName = typeName, DisplayName = display };
 
-    private IRenderedComponent<DataStoreEditor> RenderEditor(string? name = null) =>
-        _ctx.Render<DataStoreEditor>(p => { if (name is not null) { p.Add(x => x.Name, name); } });
+    private IRenderedComponent<DataStoreEditorPage> RenderEditor(string? name = null) =>
+        _ctx.Render<DataStoreEditorPage>(p => { if (name is not null) { p.Add(x => x.Name, name); } });
 
     // Header / step indicator ───────────────────────────────────────────────────
 
@@ -60,7 +62,7 @@ public sealed class DataStoreEditorPageTests : IDisposable
     [Fact]
     public void ErrorMessageRendersBanner()
     {
-        Swap(new DataStoreEditorContext { Step = 0, Connections = [Conn("A")], ErrorMessage = "save failed" });
+        Swap(new DataStoreEditorContext { Step = 0, Connections = [Conn("A")], LastResult = GenericResult.Failure(new GenericMessage("save failed")) });
         var cut = RenderEditor();
         cut.Markup.ShouldContain("save failed");
     }

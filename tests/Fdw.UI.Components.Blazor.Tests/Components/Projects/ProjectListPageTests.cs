@@ -1,9 +1,11 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Services.Etl.Projects.Abstractions.Configuration;
 using Fdw.Services.Etl.Projects.Clients;
 using Fdw.Services.Etl.Projects.UI.Components.Providers;
 using Fdw.UI.Components.Blazor.Tests.PipeInfra;
-using ProjectListPage = Fdw.Services.Etl.Projects.UI.Pages.Pages.Projects.ProjectList;
+using ProjectListPage = Fdw.UI.Pages.EtlProjects.Pages.Projects.ProjectListPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Projects;
 
@@ -42,7 +44,7 @@ public sealed class ProjectListPageTests : IDisposable
     {
         // Why: current markup emits the error banner as class "card b-fail" (the old reference-ui
         // test asserted a stale "border-red-700" class the page no longer emits).
-        var cut = RenderWith(new ProjectContext { ErrorMessage = "list failed" });
+        var cut = RenderWith(new ProjectContext { LastResult = GenericResult.Failure(new GenericMessage("list failed")) });
         cut.Markup.ShouldContain("list failed");
         cut.FindAll("div").ShouldContain(d => d.ClassList.Contains("b-fail"));
     }

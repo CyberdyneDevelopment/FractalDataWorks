@@ -20,8 +20,7 @@
 <div class="frow">
     <label>@Label</label>
     <div style="display:flex;align-items:center;gap:9px;">
-        <select class="finput sel"
-                style="flex:1;"
+        <select class="finput sel u-flex-1"
                 value="@(Value?.ToString() ?? string.Empty)"
                 @onchange="OnChangeHandler"
                 disabled="@_isLoading">
@@ -48,7 +47,7 @@
     </div>
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
-        <div class="hint" style="color:var(--signal);">@_errorMessage</div>
+        <div class="hint u-fg-signal">@_errorMessage</div>
     }
 </div>
 

@@ -9,7 +9,7 @@
     <div class="card-b">
         @if (string.Equals(PreviewMode, "Table", StringComparison.Ordinal))
         {
-            <div style="margin-bottom:16px;">
+            <div class="u-mb-16">
                 <NestedObjectPicker TNode="DataStoreNode"
                                     Items="DataStorePickerItems"
                                     GetChildren="GetPickerChildren"
@@ -24,7 +24,7 @@
         else
         {
             <div class="fgrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
-                <div class="frow" style="margin-bottom:0;">
+                <div class="frow u-mb-0">
                     <label class="flbl">DataSet</label>
                     <select class="fin" value="@PreviewProvider.SelectedDataSetName"
                             @onchange="@(async e => await PreviewProvider.OnDataSetChanged(e.Value?.ToString() ?? string.Empty))"
@@ -36,7 +36,7 @@
                         }
                     </select>
                 </div>
-                <div class="frow" style="margin-bottom:0;">
+                <div class="frow u-mb-0">
                     <label class="flbl">Row limit</label>
                     <select class="fin" @bind="RowLimit">
                         <option value="10">10</option>
@@ -49,7 +49,7 @@
         }
         @if (string.Equals(PreviewMode, "DataSet", StringComparison.Ordinal) && PreviewProvider.SelectedDataSetDetail is not null)
         {
-            <div class="filters" style="margin-bottom:16px;">
+            <div class="filters u-mb-16">
                 @foreach (var field in PreviewProvider.SelectedDataSetDetail.Fields.OrderBy(f => f.Ordinal))
                 {
                     <span class="@(field.IsKey ? "chip on" : "chip")">
@@ -60,13 +60,11 @@
         }
 
         <!-- Filters -->
-        <div class="frow" style="margin-bottom:16px;">
+        <div class="frow u-mb-16">
             <div class="card-h" style="padding:0 0 4px;">
-                <label class="flbl" style="margin-bottom:0;">Filters</label>
+                <label class="flbl u-mb-0">Filters</label>
                 <button class="btn btn-secondary btn-sm" @onclick="AddFilter">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
+                    <Icon Name="AddAlt" />
                     Add Filter
                 </button>
             </div>
@@ -102,21 +100,19 @@
                         </select>
                         <input class="fin" placeholder="Value" @bind="filter.Value"
                                disabled="@(filter.Operator is "IsNull" or "IsNotNull")" />
-                        <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => Filters.Remove(filter)">
-                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                        <button class="btn btn-ghost btn-sm u-fg-signal" @onclick="() => Filters.Remove(filter)">
+                            <Icon Name="Close" />
                         </button>
                     </div>
                 }
             </div>
         </div>
 
-        <div class="card-h" style="padding:0;">
+        <div class="card-h u-p-0">
             <div class="actions">
                 @if (string.Equals(PreviewMode, "Table", StringComparison.Ordinal))
                 {
-                    <label class="flbl" style="margin-bottom:0;">Row limit</label>
+                    <label class="flbl u-mb-0">Row limit</label>
                     <select class="fin" style="width:auto;" @bind="RowLimit">
                         <option value="10">10</option>
                         <option value="25">25</option>
@@ -126,9 +122,7 @@
                 }
             </div>
             <button class="btn btn-primary" @onclick="OnExecute" disabled="@IsLoading">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                </svg>
+                <Icon Name="Play" />
                 @(IsLoading ? "Executing..." : "Execute")
             </button>
         </div>

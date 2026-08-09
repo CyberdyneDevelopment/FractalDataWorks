@@ -1,8 +1,10 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Operations.Clients.Models;
 using Fdw.Operations.Components.Audit;
 using Fdw.UI.Components.Blazor.Tests.ObsInfra;
-using AuditPage = Fdw.Operations.UI.Pages.Pages.Audit;
+using AuditPage = Fdw.UI.Pages.Operations.Pages.AuditPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Audit;
 
@@ -92,7 +94,7 @@ public sealed class AuditPageTests : IDisposable
     public async Task RefreshInvokesOnRefresh()
     {
         var calls = 0;
-        SwapProvider(new AuditContext { OnRefresh = () => { calls++; return Task.CompletedTask; } });
+        SwapProvider(new AuditContext { OnRefresh = () => { calls++; return Task.FromResult<IGenericResult>(GenericResult.Success()); } });
         var cut = _ctx.Render<AuditPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("Refresh", StringComparison.Ordinal)).Click();
         await Task.Yield();

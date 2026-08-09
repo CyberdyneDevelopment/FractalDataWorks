@@ -28,7 +28,7 @@ namespace Fdw.Services.SecretManagers;
 /// <see cref="SecretManagerConfiguration.Configuration"/>) is composed uniformly by
 /// <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>. This subclass additionally captures the
 /// concrete typed CLR type (for endpoint deserialization) and a reflection-free factory (for default-body
-/// creation on Save), and registers typed providers via the inherited <c>RegisterTypedProvider</c>.
+/// creation on Save), and registers typed providers via the inherited <c>Register</c>.
 /// </summary>
 public class SecretManagerConfigurationProvider : DefaultConfigurationProvider<SecretManagerConfiguration, SecretManagerConfigurationCommand>
 {
@@ -101,11 +101,11 @@ public class SecretManagerConfigurationProvider : DefaultConfigurationProvider<S
     /// <typeparam name="TDerived">A configuration type that implements <see cref="ISecretManagerConfiguration"/>.</typeparam>
     /// <param name="serviceOptionType">The service option type key (e.g., "AzureKeyVault").</param>
     /// <param name="provider">The typed configuration provider for that service option.</param>
-    // Why: a generic sibling of the base's non-generic RegisterTypedProvider, so this domain can ALSO capture the
-    // typed CLR type (GetTypedConfigType, used by endpoints) and a reflection-free ctor (Save's default
-    // body). The actual typed-provider registration + read composition lives in the base; this only adds
-    // the two domain-specific captures and then delegates. Constraint adds new() for the factory capture.
-    public void RegisterTypedProvider<TDerived>(string serviceOptionType, IServiceConfigurationProvider<TDerived> provider)
+    // Why: a generic overload of the base's Register, so this domain can ALSO capture the typed CLR type
+    // (GetTypedConfigType, used by endpoints) and a reflection-free ctor (Save's default body). The actual
+    // typed-provider registration + read composition lives in the base; this only adds the two
+    // domain-specific captures and then delegates. Constraint adds new() for the factory capture.
+    public void Register<TDerived>(string serviceOptionType, IServiceConfigurationProvider<TDerived> provider)
         where TDerived : class, ISecretManagerConfiguration, new()
     {
         base.Register(serviceOptionType, provider);

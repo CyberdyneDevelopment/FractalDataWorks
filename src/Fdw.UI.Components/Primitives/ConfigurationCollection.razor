@@ -14,7 +14,7 @@
                     var item = Items[i];
 
                     <div class="card" @key="item">
-                        <div class="card-h" style="cursor:pointer;" @onclick="() => ToggleItem(index)">
+                        <div class="card-h u-pointer" @onclick="() => ToggleItem(index)">
                             <h3>Item @(index + 1)</h3>
                             @if (AllowRemove)
                             {

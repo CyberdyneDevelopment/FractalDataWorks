@@ -7,17 +7,13 @@
 <AgentActionProvider AutoLoadList="true">
     <ChildContent Context="ctx">
         <div>
-            <div class="pagehead">
-                <div>
-                    <div class="ey">AI Agent Queue</div>
-                    <h1>Pending Actions</h1>
-                </div>
-                <div class="actions">
+            <PageHeader Eyebrow="AI Agent Queue" Title="Pending Actions">
+                <Actions>
                     <button class="btn btn-secondary btn-sm" @onclick="async () => await ctx.OnLoadActions()" disabled="@ctx.IsLoading">
                         @(ctx.IsLoading ? "Loading..." : "Refresh")
                     </button>
-                </div>
-            </div>
+                </Actions>
+            </PageHeader>
 
             @if (ctx.IsLoading && ctx.Actions.Count == 0)
             {
@@ -25,7 +21,7 @@
             }
             else if (ctx.Actions.Count == 0)
             {
-                <div class="card"><div class="card-b mono" style="padding:48px;text-align:center;color:var(--n-500);">NO_PENDING_ACTIONS</div></div>
+                <EmptyState SquarePadding="true" Class="mono u-fg-n500">NO_PENDING_ACTIONS</EmptyState>
             }
             else
             {
@@ -53,11 +49,11 @@
                                             <div class="mut">@action.UserId</div>
                                         </td>
                                         <td class="cellpad">
-                                            <span class="@MethodBadgeClass(action.Method)"><span class="bd"></span>@action.Method</span>
+                                            <Badge Variant="HttpMethodBadge.Variant(action.Method)">@action.Method</Badge>
                                         </td>
                                         <td class="cellpad mut">@action.Route</td>
                                         <td class="cellpad">
-                                            <span class="@StatusBadgeClass(action.Status)"><span class="bd"></span>@action.Status</span>
+                                            <Badge Variant="StatusVariantFor(action.Status)">@action.Status</Badge>
                                         </td>
                                         <td class="cellpad mut">@action.RequestedAt.ToString("yyyy-MM-dd HH:mm")</td>
                                         <td class="cellpad">
@@ -83,20 +79,11 @@
 @code {
     [Inject] private NavigationManager Nav { get; set; } = default!;
 
-    private static string MethodBadgeClass(string method) => method.ToUpperInvariant() switch
+    private static StatusVariantBase StatusVariantFor(string status) => status switch
     {
-        "POST"   => "badge b-ok",
-        "PUT"    => "badge b-run",
-        "PATCH"  => "badge b-warn",
-        "DELETE" => "badge b-fail",
-        _        => "badge b-idle"
-    };
-
-    private static string StatusBadgeClass(string status) => status switch
-    {
-        "Pending"  => "badge b-warn",
-        "Approved" => "badge b-ok",
-        "Denied"   => "badge b-fail",
-        _          => "badge b-idle"
+        "Pending"  => StatusVariants.Warning,
+        "Approved" => StatusVariants.Success,
+        "Denied"   => StatusVariants.Error,
+        _          => StatusVariants.Neutral
     };
 }

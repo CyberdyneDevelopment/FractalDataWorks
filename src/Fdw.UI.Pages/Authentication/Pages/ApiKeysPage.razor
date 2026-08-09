@@ -6,18 +6,13 @@
 <ApiKeyProvider>
     <ChildContent Context="ctx">
         <div style="display:flex;flex-direction:column;gap:14px;">
-            <div class="pagehead">
-                <div>
-                    <div class="ey">Admin</div>
-                    <h1>API Keys</h1>
-                    <div class="sub">Programmatic access · scoped · audited.</div>
-                </div>
-                <div class="actions">
+            <PageHeader Eyebrow="Admin" Title="API Keys" Subtitle="Programmatic access · scoped · audited.">
+                <Actions>
                     <button class="btn btn-ghost btn-sm" @onclick="() => ctx.OnRefresh.Invoke()" disabled="@ctx.IsLoading">
                         Refresh
                     </button>
-                </div>
-            </div>
+                </Actions>
+            </PageHeader>
 
             @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
             {
@@ -36,7 +31,7 @@
                         <div style="display:flex;align-items:center;gap:9px;">
                             <code class="finput mono" style="flex:1;word-break:break-all;user-select:all;">@ctx.NewTokenValue</code>
                             <button class="btn btn-secondary btn-sm" @onclick="() => CopyToClipboard(ctx.NewTokenValue)" title="Copy to clipboard">
-                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                <Icon Name="Copy" StrokeWidth="1.8" />
                             </button>
                         </div>
                     </div>
@@ -45,7 +40,7 @@
 
             @if (ctx.IsLoading && !ctx.PersonalTokens.Any() && !ctx.AgentKeys.Any())
             {
-                <div class="card"><div class="card-b" style="display:flex;justify-content:center;padding:48px;"><span class="badge b-run"><span class="bd"></span>Loading</span></div></div>
+                <LoadingCard />
             }
             else
             {
@@ -54,7 +49,7 @@
                     <div class="card-h">
                         <h3>Personal Access Tokens</h3>
                         <button class="btn btn-primary btn-sm" @onclick="() => _showCreateToken = true">
-                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" /></svg>
+                            <Icon Name="Add" />
                             New Token
                         </button>
                     </div>
@@ -96,8 +91,8 @@
                                             <td class="mut">@token.CreatedAt.ToString("MMM dd, yyyy", System.Globalization.CultureInfo.InvariantCulture)</td>
                                             <td class="mut">@(token.ExpiresAt.HasValue ? token.ExpiresAt.Value.ToString("MMM dd, yyyy", System.Globalization.CultureInfo.InvariantCulture) : "—")</td>
                                             <td class="mut">@(token.LastUsedAt.HasValue ? token.LastUsedAt.Value.ToString("MMM dd, yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture) : "—")</td>
-                                            <td class="mut" style="text-align:right;">
-                                                <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => ctx.OnRevokeToken(token.TokenId)" disabled="@ctx.IsLoading">Revoke</button>
+                                            <td class="mut u-ta-right">
+                                                <button class="btn btn-ghost btn-sm u-fg-signal" @onclick="() => ctx.OnRevokeToken(token.TokenId)" disabled="@ctx.IsLoading">Revoke</button>
                                             </td>
                                         </tr>
                                     }
@@ -116,7 +111,7 @@
                     <div class="card-h">
                         <h3>Agent Keys</h3>
                         <button class="btn btn-primary btn-sm" @onclick="() => _showCreateAgentKey = true">
-                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" /></svg>
+                            <Icon Name="Add" />
                             New Agent Key
                         </button>
                     </div>
@@ -158,8 +153,8 @@
                                             <td class="mut">@key.CreatedAt.ToString("MMM dd, yyyy", System.Globalization.CultureInfo.InvariantCulture)</td>
                                             <td class="mut">@(key.ExpiresAt.HasValue ? key.ExpiresAt.Value.ToString("MMM dd, yyyy", System.Globalization.CultureInfo.InvariantCulture) : "—")</td>
                                             <td class="mut">@(key.LastUsedAt.HasValue ? key.LastUsedAt.Value.ToString("MMM dd, yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture) : "—")</td>
-                                            <td class="mut" style="text-align:right;">
-                                                <button class="btn btn-ghost btn-sm" style="color:var(--signal);" @onclick="() => ctx.OnDeleteAgentKey(key.KeyId)" disabled="@ctx.IsLoading">Delete</button>
+                                            <td class="mut u-ta-right">
+                                                <button class="btn btn-ghost btn-sm u-fg-signal" @onclick="() => ctx.OnDeleteAgentKey(key.KeyId)" disabled="@ctx.IsLoading">Delete</button>
                                             </td>
                                         </tr>
                                     }

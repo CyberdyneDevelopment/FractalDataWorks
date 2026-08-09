@@ -1,8 +1,10 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Web.Analytics.Clients.Models;
 using Fdw.Web.Analytics.Components.PromotionReview;
 using Fdw.UI.Components.Blazor.Tests.ObsInfra;
-using ReviewPage = Fdw.Operations.UI.Pages.Pages.Promotions.Review;
+using ReviewPage = Fdw.UI.Pages.Operations.Pages.Promotions.PromotionReviewPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Promotion;
 
@@ -53,7 +55,7 @@ public sealed class PromotionReviewPageTests : IDisposable
     [Fact]
     public void RendersErrorBanner()
     {
-        SwapProvider(new PromotionReviewContext { ErrorMessage = "review failed" });
+        SwapProvider(new PromotionReviewContext { LastResult = GenericResult.Failure(new GenericMessage("review failed")) });
         var cut = RenderReview();
         cut.Markup.ShouldContain("review failed");
     }

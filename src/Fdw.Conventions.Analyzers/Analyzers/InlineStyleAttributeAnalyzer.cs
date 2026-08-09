@@ -11,9 +11,18 @@ namespace Fdw.Conventions.Analyzers;
 /// <c>*.Components</c> packages; Fdw.UI.Rendering.Blazor is exempt.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The .razor document is analyzed as an additional file — raw text — so the diagnostic carries an
 /// external file location. <c>#pragma warning disable</c> inside the .razor therefore cannot suppress it;
 /// only NoWarn, .editorconfig, or the descriptor severity apply.
+/// </para>
+/// <para>
+/// A style whose value the markup computes is not reported, because a CSS class cannot carry it. A class
+/// names a fixed set of declarations; a grid coordinate, a percentage width or a depth in pixels has no
+/// fixed set to name, so the advice this rule gives would have no way to be followed. Selecting between
+/// written-out literals stays reported — the alternatives are already fixed, which makes them two classes
+/// and a conditional on the class attribute. <see cref="RazorAttributeValue"/> draws the line.
+/// </para>
 /// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class InlineStyleAttributeAnalyzer : DiagnosticAnalyzer
@@ -65,5 +74,5 @@ public sealed class InlineStyleAttributeAnalyzer : DiagnosticAnalyzer
     }
 
     private static void Analyze(AdditionalFileAnalysisContext context) =>
-        RazorMarkupAnalysis.ReportMarkupOccurrences(context, Needle, Rule);
+        RazorMarkupAnalysis.ReportMarkupOccurrences(context, Needle, Rule, skipDataDrivenValues: true);
 }

@@ -7,18 +7,14 @@
     <ChildContent Context="page">
         @{ var ctx = page.Inner; }
         <div>
-            <div class="pagehead">
-                <div>
-                    <div class="ey">System</div>
-                    <h1>Configuration</h1>
-                    <div class="sub">Database-backed configuration POCOs — DDL, validators and UI are generated per domain.</div>
-                </div>
-                <div class="actions"></div>
-            </div>
+            <PageHeader Eyebrow="System" Title="Configuration" Subtitle="Database-backed configuration POCOs — DDL, validators and UI are generated per domain.">
+                <Actions>
+                </Actions>
+            </PageHeader>
 
             @if (!string.IsNullOrEmpty(_errorMessage))
             {
-                <div class="danger" style="margin-bottom:14px;"><div class="t"><p>@_errorMessage</p></div></div>
+                <div class="danger u-mb-14"><div class="t"><p>@_errorMessage</p></div></div>
             }
 
             @if (ctx.IsLoading && ctx.Types.Count == 0)
@@ -60,9 +56,9 @@
                     <div>
                         @if (string.IsNullOrEmpty(_selectedCategory))
                         {
-                            <div class="card"><div class="card-b" style="padding:48px;text-align:center;color:var(--n-500);">
+                            <EmptyState SquarePadding="true" Class="u-fg-n500">
                                 <p style="font-size:13px;">Select a category to view and manage configuration instances.</p>
-                            </div></div>
+                            </EmptyState>
                         }
                         else
                         {
@@ -75,9 +71,7 @@
                                             <span class="meta">@ctx.Instances.Count INSTANCES</span>
                                         </div>
                                         <button class="btn btn-primary btn-sm" @onclick="ShowCreateForm">
-                                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                                            </svg>
+                                            <Icon Name="AddAlt" />
                                             New Instance
                                         </button>
                                     </div>
@@ -104,13 +98,9 @@
                                                         <div style="display:flex;align-items:center;gap:8px;">
                                                             <button class="btn btn-ghost btn-sm danger"
                                                                     @onclick="() => DeleteInstance(inst.Name, ctx)" @onclick:stopPropagation="true">
-                                                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                </svg>
+                                                                <Icon Name="Delete" />
                                                             </button>
-                                                            <svg style="width:15px;height:15px;color:var(--n-600);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                                            </svg>
+                                                            <Icon Name="ChevronRight" Style="width:15px;height:15px;color:var(--n-600);" />
                                                         </div>
                                                     </div>
                                                 }
@@ -132,7 +122,7 @@
                                                     @if (IsSecretField(prop.Key))
                                                     {
                                                         <div style="display:flex;gap:8px;">
-                                                            <input class="finput mono" style="flex:1;" type="@(_revealedFields.Contains(prop.Key) ? "text" : "password")"
+                                                            <input class="finput mono u-flex-1" type="@(_revealedFields.Contains(prop.Key) ? "text" : "password")"
                                                                    value="@prop.Value"
                                                                    @onchange="e => UpdateProperty(prop.Key, e.Value?.ToString() ?? string.Empty)" />
                                                             <button class="btn btn-secondary btn-sm" @onclick="() => ToggleReveal(prop.Key)">

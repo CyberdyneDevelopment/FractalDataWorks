@@ -14,7 +14,7 @@
 else
 {
     <div style="display:flex;flex-direction:column;gap:12px;">
-        <div class="frow" style="margin-bottom:0;">
+        <div class="frow u-mb-0">
             <label class="flbl">Target Container</label>
             <DataContainerPicker Containers="@Context.AvailableContainers"
                                  SelectedContainerId="@_targetId"
@@ -23,7 +23,7 @@ else
         </div>
 
         @* Key fields (match criteria) *@
-        <div class="frow" style="margin-bottom:0;">
+        <div class="frow u-mb-0">
             <label class="flbl">Key Fields (match on)</label>
             <div class="finput" style="max-height:7rem;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
                 @foreach (var f in _targetFields)

@@ -8,9 +8,7 @@
     </div>
     <div class="actions">
         <button class="btn btn-primary" @onclick="OnNewConnection">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
-            </svg>
+            <Icon Name="Add" />
             New Connection
         </button>
     </div>
@@ -50,9 +48,9 @@
 @if (Context.IsLoading && !Context.FilteredConnections.Any())
 {
     <div class="card">
-        <div class="card-b" style="padding:48px;text-align:center;">
+        <EmptyState InCard="false" SquarePadding="true">
             <span class="badge b-run"><span class="bd"></span>Loading</span>
-        </div>
+        </EmptyState>
     </div>
 }
 else if (!GetDisplayedConnections().Any())
@@ -62,19 +60,17 @@ else if (!GetDisplayedConnections().Any())
        the displayed set shows the empty-state message when a search/filter yields no matches,
        rather than a blank grid with no feedback. *@
     <div class="card">
-        <div class="card-b" style="padding:48px;text-align:center;">
-            <svg style="width:48px;height:48px;margin:0 auto 14px;color:var(--n-600);display:block;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-            </svg>
-            <p style="color:var(--n-500);">No connections configured</p>
-        </div>
+        <EmptyState InCard="false" SquarePadding="true">
+            <Icon Name="Database" Style="width:48px;height:48px;margin:0 auto 14px;color:var(--n-600);display:block;" StrokeWidth="1.5" />
+            <p class="u-fg-n500">No connections configured</p>
+        </EmptyState>
     </div>
 }
 else
 {
     <div class="card">
         <div class="card-h"><h3>All Connections</h3></div>
-        <div class="card-b" style="padding:0 10px 12px;">
+        <div class="card-b fdw-table-body">
             <table class="tbl">
                 <thead>
                     <tr><th>Name</th><th>Type</th><th>Last Tested</th><th>Status</th><th></th></tr>
@@ -87,15 +83,15 @@ else
                            narrowing to 1) makes Blazor reuse the position-0 DOM node and its per-row click
                            handlers (TEST/trash) bind to stale/disposed handler ids — the circuit then silently
                            drops the click, so the delete confirm modal never opens after a search. *@
-                        <tr @key="conn.Name" style="cursor:pointer;" @onclick="() => OnCardClick.InvokeAsync(conn.Name)">
+                        <tr @key="conn.Name" class="u-pointer" @onclick="() => OnCardClick.InvokeAsync(conn.Name)">
                             <td><div class="cellpad nm">@conn.Name</div></td>
                             <td class="mut"><span class="tpill">@conn.ConnectionType</span></td>
                             <td class="mut">@(conn.LastTestedAt.HasValue ? conn.LastTestedAt.Value.ToString("t") : "Never")</td>
                             <td class="mut">
-                                <span class="badge @GetHealthBadgeClass(conn)"><span class="bd"></span>@GetHealthBadgeText(conn)</span>
+                                <Badge Variant="GetHealthVariant(conn)">@GetHealthBadgeText(conn)</Badge>
                             </td>
                             <td>
-                                <div class="actions" style="justify-content:flex-end;">
+                                <div class="actions u-jc-end">
                                     <button class="btn btn-secondary btn-sm" @onclick="() => StartTest(conn.Name)"
                                             @onclick:stopPropagation="true"
                                             disabled="@(_testingConnection == conn.Name)">
@@ -105,9 +101,7 @@ else
                                             @onclick="() => ConfirmDelete(conn.Name)"
                                             @onclick:stopPropagation="true"
                                             title="Delete connection">
-                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
+                                        <Icon Name="Delete" />
                                     </button>
                                 </div>
                             </td>
@@ -125,8 +119,8 @@ else
         <div class="card" style="width:384px;">
             <div class="card-h"><h3>Confirm Delete</h3></div>
             <div class="card-b">
-                <p style="color:var(--n-400);font-size:13px;margin:0 0 20px;">Are you sure you want to delete connection <span class="mono" style="color:var(--signal);">@_deleteTarget</span>? This action cannot be undone.</p>
-                <div class="actions" style="justify-content:flex-end;">
+                <p style="color:var(--n-400);font-size:13px;margin:0 0 20px;">Are you sure you want to delete connection <span class="mono u-fg-signal">@_deleteTarget</span>? This action cannot be undone.</p>
+                <div class="actions u-jc-end">
                     <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancel</button>
                     <button class="btn btn-danger btn-sm" @onclick="ExecuteDelete">Delete</button>
                 </div>
@@ -172,11 +166,11 @@ else
     // Why: tri-state badge — Unknown (never tested) must render distinctly from a known failure,
     // rather than collapsing null into "Unhealthy" (see FDW-559 investigation). "b-idle" is the
     // established muted badge class elsewhere in the UI for "no status yet" (e.g. disabled rows).
-    private static string GetHealthBadgeClass(ConnectionPayload conn) => conn.LastTestSuccess switch
+    private static StatusVariantBase GetHealthVariant(ConnectionPayload conn) => conn.LastTestSuccess switch
     {
-        true => "b-ok",
-        false => "b-fail",
-        null => "b-idle",
+        true => StatusVariants.Success,
+        false => StatusVariants.Error,
+        null => StatusVariants.Neutral,
     };
 
     private static string GetHealthBadgeText(ConnectionPayload conn) => conn.LastTestSuccess switch

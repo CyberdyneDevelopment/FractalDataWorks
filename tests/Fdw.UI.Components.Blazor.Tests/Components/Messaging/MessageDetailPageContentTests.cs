@@ -5,7 +5,7 @@ using Fdw.Services.Messaging.Components.Messaging;
 using Fdw.UI.Components.Blazor.Tests.Helpers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using DetailPage = Fdw.Services.Messaging.UI.Pages.Pages.MessageDetail;
+using DetailPage = Fdw.UI.Pages.Messaging.Pages.MessageDetailPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Messaging;
 

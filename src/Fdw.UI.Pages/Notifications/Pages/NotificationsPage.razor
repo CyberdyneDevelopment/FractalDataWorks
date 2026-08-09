@@ -6,40 +6,33 @@
 
 <NotificationsProvider UserId="_currentUserId">
     <ChildContent Context="ctx">
-        <div class="pagehead">
-            <div>
-                <div class="ey">Administration</div>
-                <h1>Notifications</h1>
-                <div class="sub">Manage notification configurations, rules, and recipient lists.</div>
-            </div>
-            <div class="actions">
+        <PageHeader Eyebrow="Administration" Title="Notifications" Subtitle="Manage notification configurations, rules, and recipient lists.">
+            <Actions>
                 <button class="btn btn-ghost" @onclick="() => ctx.OnLoadNotifications()">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
+                    <Icon Name="Refresh" />
                     Refresh
                 </button>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         @if (!string.IsNullOrEmpty(ctx.ErrorMessage))
         {
-            <div class="card" style="margin-bottom:14px;">
-                <div class="card-b mono" style="color:var(--signal);">@ctx.ErrorMessage</div>
+            <div class="card u-mb-14">
+                <div class="card-b mono u-fg-signal">@ctx.ErrorMessage</div>
             </div>
         }
 
         @if (ctx.IsLoading && ctx.Notifications.Count == 0 && ctx.Rules.Count == 0 && ctx.Lists.Count == 0)
         {
             <div class="card">
-                <div class="card-b" style="padding:48px 20px;text-align:center;">
-                    <p class="mut" style="color:var(--n-500);">Loading notifications&hellip;</p>
-                </div>
+                <EmptyState InCard="false">
+                    <p class="mut u-fg-n500">Loading notifications&hellip;</p>
+                </EmptyState>
             </div>
         }
         else
         {
-            <div class="tabs" style="margin-bottom:16px;">
+            <div class="tabs u-mb-16">
                 <button class="tab-btn @(_activeTab == 0 ? "active" : "")" @onclick="() => _activeTab = 0">
                     Notifications (@ctx.Notifications.Count)
                 </button>
@@ -56,16 +49,16 @@
                 @if (ctx.Notifications.Count == 0)
                 {
                     <div class="card">
-                        <div class="card-b" style="padding:48px 20px;text-align:center;">
-                            <p style="color:var(--n-500);">No notification configurations found.</p>
-                        </div>
+                        <EmptyState InCard="false">
+                            <p class="u-fg-n500">No notification configurations found.</p>
+                        </EmptyState>
                     </div>
                 }
                 else
                 {
                     <div class="card">
                         <div class="card-h"><h3>Notification Configurations</h3></div>
-                        <div class="card-b" style="padding:0 10px 12px;">
+                        <div class="card-b fdw-table-body">
                             <table class="tbl">
                                 <thead>
                                     <tr>
@@ -98,16 +91,16 @@
                 @if (ctx.Rules.Count == 0)
                 {
                     <div class="card">
-                        <div class="card-b" style="padding:48px 20px;text-align:center;">
-                            <p style="color:var(--n-500);">No notification rules found.</p>
-                        </div>
+                        <EmptyState InCard="false">
+                            <p class="u-fg-n500">No notification rules found.</p>
+                        </EmptyState>
                     </div>
                 }
                 else
                 {
                     <div class="card">
                         <div class="card-h"><h3>Notification Rules</h3></div>
-                        <div class="card-b" style="padding:0 10px 12px;">
+                        <div class="card-b fdw-table-body">
                             <table class="tbl">
                                 <thead>
                                     <tr>
@@ -124,7 +117,7 @@
                                             <td><div class="cellpad nm">@rule.Name</div></td>
                                             <td class="mut">@rule.NotificationServiceType (@rule.NotificationServiceName)</td>
                                             <td>
-                                                <span class="badge @GetSeverityClass(rule.Severity)">@rule.Severity</span>
+                                                <span class="badge @NotificationSeverityBadge.CssClass(rule.Severity)">@rule.Severity</span>
                                             </td>
                                             <td class="mut">
                                                 <span class="sw @(rule.IsEnabled ? "on" : "")" title="@(rule.IsEnabled ? "Enabled" : "Disabled")"></span>
@@ -142,16 +135,16 @@
                 @if (ctx.Lists.Count == 0)
                 {
                     <div class="card">
-                        <div class="card-b" style="padding:48px 20px;text-align:center;">
-                            <p style="color:var(--n-500);">No notification lists found.</p>
-                        </div>
+                        <EmptyState InCard="false">
+                            <p class="u-fg-n500">No notification lists found.</p>
+                        </EmptyState>
                     </div>
                 }
                 else
                 {
                     <div class="card">
                         <div class="card-h"><h3>Notification Lists</h3></div>
-                        <div class="card-b" style="padding:0 10px 12px;">
+                        <div class="card-b fdw-table-body">
                             <table class="tbl">
                                 <thead>
                                     <tr>
@@ -203,13 +196,4 @@
         if (Guid.TryParse(userIdValue, out var id) && id != Guid.Empty)
             _currentUserId = id;
     }
-
-    private static string GetSeverityClass(string severity) =>
-        severity.ToUpperInvariant() switch
-        {
-            "CRITICAL" => "badge-danger",
-            "HIGH" or "ERROR" => "badge-warning",
-            "MEDIUM" or "WARNING" => "badge-caution",
-            _ => "badge-idle"
-        };
 }

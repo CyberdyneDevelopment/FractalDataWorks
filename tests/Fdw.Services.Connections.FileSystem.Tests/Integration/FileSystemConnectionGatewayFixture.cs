@@ -92,7 +92,7 @@ public sealed class FileSystemConnectionGatewayFixture : IDisposable
 
         // Why: SecretManagerTypes' generated provider is registered AddScoped, so
         // RegisterFactory (which calls EnvironmentVariableSecretManagerType.RegisterFactory ->
-        // SecretManagerConfigurationProvider.RegisterTypedProvider) only runs the FIRST TIME
+        // SecretManagerConfigurationProvider.Register) only runs the FIRST TIME
         // IFdwServiceProvider<ISecretManager, SecretManagerConfiguration> is actually resolved — it is
         // NOT run by Initialize() for the scoped path. A real host resolves this provider per-request
         // via an ISecretManager consumer; this test forces that same resolution once so the typed-body

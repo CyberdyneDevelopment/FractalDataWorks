@@ -1,8 +1,10 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Operations.Clients.Models;
 using Fdw.Operations.Components.Dataflow;
 using Fdw.UI.Components.Blazor.Tests.PipeInfra;
-using DataflowPage = Fdw.Operations.UI.Pages.Pages.Dataflow;
+using DataflowPage = Fdw.UI.Pages.Operations.Pages.DataflowPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Dataflow;
 
@@ -150,7 +152,7 @@ public sealed class DataflowPageTests : IDisposable
     {
         // Why: the CURRENT page DOES render ctx.ErrorMessage (Dataflow.razor lines 24-26) — the old
         // reference-ui "documented bug" where the error was swallowed no longer applies here.
-        var cut = RenderWith(new DataflowContext { ErrorMessage = "graph load failed" });
+        var cut = RenderWith(new DataflowContext { LastResult = GenericResult.Failure(new GenericMessage("graph load failed")) });
         cut.Markup.ShouldContain("graph load failed", Case.Sensitive);
     }
 

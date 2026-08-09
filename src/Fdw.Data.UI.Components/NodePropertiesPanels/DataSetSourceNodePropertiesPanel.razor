@@ -16,16 +16,16 @@
    Incomplete state is highlighted red; incomplete graphs are rejected at compile time,
    not at save time. *@
 
-<div class="frow" style="margin-bottom:8px;">
+<div class="frow u-mb-8">
     <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Source Name</label>
-    <input class="finput mono @(string.IsNullOrWhiteSpace(_sourceName) && _validationTriggered ? "input-error" : string.Empty)"
+    <input class="finput mono @(string.IsNullOrWhiteSpace(_sourceName) && _validationTriggered ? "input-error" : string.Empty) u-fs-10"
            value="@_sourceName"
            @onchange="OnSourceNameChanged"
            placeholder="e.g. Primary"
-           style="font-size:10px;" />
+           />
 </div>
 
-<div class="frow" style="margin-bottom:8px;">
+<div class="frow u-mb-8">
     <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Source Container</label>
     @if (IsLoadingDataStores)
     {
@@ -49,13 +49,13 @@
     }
 </div>
 
-<div class="frow" style="margin-bottom:8px;">
+<div class="frow u-mb-8">
     <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Connection Name</label>
-    <input class="finput mono @(string.IsNullOrWhiteSpace(_connectionName) && _validationTriggered ? "input-error" : string.Empty)"
+    <input class="finput mono @(string.IsNullOrWhiteSpace(_connectionName) && _validationTriggered ? "input-error" : string.Empty) u-fs-10"
            value="@_connectionName"
            @onchange="OnConnectionNameChanged"
            placeholder="connection name"
-           style="font-size:10px;" />
+           />
 </div>
 
 @if (!string.IsNullOrEmpty(_errorMessage))

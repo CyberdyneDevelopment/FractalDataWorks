@@ -11,7 +11,7 @@
    (populated from the graph's Source nodes) so the left/right source dropdowns remain
    context-aware without coupling to the designer's private Node class. *@
 
-<div class="frow" style="margin-bottom:8px;">
+<div class="frow u-mb-8">
     <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Left Source</label>
     @if (AvailableSourceNames.Count == 0)
     {
@@ -19,7 +19,7 @@
     }
     else
     {
-        <select class="finput mono" value="@_leftSource" @onchange="OnLeftSourceChanged" style="font-size:10px;">
+        <select class="finput mono u-fs-10" value="@_leftSource" @onchange="OnLeftSourceChanged">
             <option value="">— select source —</option>
             @foreach (var src in AvailableSourceNames)
             {
@@ -29,16 +29,16 @@
     }
 </div>
 
-<div class="frow" style="margin-bottom:8px;">
+<div class="frow u-mb-8">
     <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Left Field</label>
-    <input class="finput mono @(string.IsNullOrWhiteSpace(_leftField) && _validationTriggered ? "input-error" : string.Empty)"
+    <input class="finput mono @(string.IsNullOrWhiteSpace(_leftField) && _validationTriggered ? "input-error" : string.Empty) u-fs-10"
            value="@_leftField"
            @onchange="OnLeftFieldChanged"
            placeholder="field name"
-           style="font-size:10px;" />
+           />
 </div>
 
-<div class="frow" style="margin-bottom:8px;">
+<div class="frow u-mb-8">
     <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Right Source</label>
     @if (AvailableSourceNames.Count == 0)
     {
@@ -46,7 +46,7 @@
     }
     else
     {
-        <select class="finput mono" value="@_rightSource" @onchange="OnRightSourceChanged" style="font-size:10px;">
+        <select class="finput mono u-fs-10" value="@_rightSource" @onchange="OnRightSourceChanged">
             <option value="">— select source —</option>
             @foreach (var src in AvailableSourceNames)
             {
@@ -56,18 +56,18 @@
     }
 </div>
 
-<div class="frow" style="margin-bottom:8px;">
+<div class="frow u-mb-8">
     <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Right Field</label>
-    <input class="finput mono @(string.IsNullOrWhiteSpace(_rightField) && _validationTriggered ? "input-error" : string.Empty)"
+    <input class="finput mono @(string.IsNullOrWhiteSpace(_rightField) && _validationTriggered ? "input-error" : string.Empty) u-fs-10"
            value="@_rightField"
            @onchange="OnRightFieldChanged"
            placeholder="field name"
-           style="font-size:10px;" />
+           />
 </div>
 
-<div class="frow" style="margin-bottom:8px;">
+<div class="frow u-mb-8">
     <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Join Type</label>
-    <select class="finput mono" value="@_joinType" @onchange="OnJoinTypeChanged" style="font-size:10px;">
+    <select class="finput mono u-fs-10" value="@_joinType" @onchange="OnJoinTypeChanged">
         <option value="Inner">Inner</option>
         <option value="Left">Left</option>
         <option value="Right">Right</option>
@@ -76,7 +76,7 @@
     </select>
 </div>
 
-<div class="frow" style="margin-bottom:8px;">
+<div class="frow u-mb-8">
     <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Description</label>
     <textarea class="finput mono"
               value="@_description"

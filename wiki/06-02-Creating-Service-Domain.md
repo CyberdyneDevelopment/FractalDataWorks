@@ -293,7 +293,7 @@ public sealed class {Implementation}Type
 
         // Register in domain provider's typed lookup dictionary
         var domainProvider = services.GetService<{Domain}ConfigurationProvider>();
-        domainProvider?.RegisterTypedProvider(Name, configProvider);
+        domainProvider?.Register(Name, configProvider);
     }
 
     public override void Configure(
