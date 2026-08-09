@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Collections;
 using Fdw.Collections.Attributes;
 using Fdw.Results;
 
@@ -10,17 +11,15 @@ namespace Fdw.Services.SecretManagers.Abstractions.Handlers;
 /// Non-generic base interface for secret manager command handlers.
 /// Used by the TypeCollection for handler discovery and lookup.
 /// </summary>
-public interface ISecretManagerCommandHandler
+/// <remarks>
+/// Deriving from <see cref="ITypeOption{TKey,TValue}"/> is what makes this a usable collection base.
+/// The generator reads Id, Name and Category from that contract and, given it, can build the
+/// collection's NotFound sentinel itself; without it the collection has no sentinel and each backend
+/// has to register a hand-written option to stand in for one — which puts a non-handler into the
+/// handler set that every enumeration of All() then has to know to skip.
+/// </remarks>
+public interface ISecretManagerCommandHandler : ITypeOption
 {
-    /// <summary>
-    /// Gets the unique identifier for this handler.
-    /// </summary>
-    int Id { get; }
-
-    /// <summary>
-    /// Gets the command type name this handler processes (e.g., "GetSecret", "SetSecret").
-    /// </summary>
-    string Name { get; }
 
     /// <summary>
     /// Gets the Type of command this handler processes.

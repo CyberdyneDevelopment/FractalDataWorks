@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Collections;
 using Fdw.Results;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Abstractions.Handlers;
@@ -10,16 +11,16 @@ using Fdw.Services.SecretManagers.Results;
 namespace Fdw.Services.SecretManagers.Handlers;
 
 /// <summary>
-/// Base class for strongly-typed secret manager command handlers.
-/// Provides common functionality and enforces the handler pattern.
+/// The type a handler collection is built on: one concrete base every handler shares, carrying the
+/// Id, Name and Category the collection indexes by.
 /// </summary>
-/// <typeparam name="TCommand">The specific command type this handler processes.</typeparam>
-/// <typeparam name="TResult">The result type returned by this handler.</typeparam>
 /// <remarks>
 /// <para>
-/// Inherit from this class to create new command handlers. Each handler should be
-/// decorated with <c>[TypeOption(typeof(YourImplCommandHandlers), "CommandTypeName")]</c>
-/// to register with the per-implementation TypeCollection.
+/// A TypeCollection needs a single non-generic base to key on. Handlers are generic over their
+/// command and result, so that generic form cannot be the collection's base — this is what stands in
+/// its place, and what lets the generator build the collection's NotFound sentinel by deriving from
+/// it. A collection keyed directly on the interface gets no sentinel, and each backend ends up
+/// registering a hand-written stand-in as a member of its own handler set.
 /// </para>
 /// <para>
 /// Each secret manager implementation defines its own TypeCollection (e.g.,
@@ -28,8 +29,51 @@ namespace Fdw.Services.SecretManagers.Handlers;
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage(Justification = "Abstract base class")]
+public abstract class SecretManagerCommandHandlerBase
+    : TypeOptionBase<int, SecretManagerCommandHandlerBase>, ISecretManagerCommandHandler
+{
+    /// <summary>
+    /// Initializes the handler with the identity the collection indexes it by.
+    /// </summary>
+    /// <param name="id">The unique identifier for this handler.</param>
+    /// <param name="name">The command type name (e.g., "GetSecret").</param>
+    protected SecretManagerCommandHandlerBase(int id, string name) : base(id, name)
+    {
+    }
+
+    /// <inheritdoc />
+    public abstract Type CommandTypeClass { get; }
+
+    /// <inheritdoc />
+    public abstract Type ResultType { get; }
+
+    /// <inheritdoc />
+    public abstract Delegate ExecuteFunc { get; }
+
+    /// <inheritdoc />
+    public abstract Task<IGenericResult<object?>> InvokeBoxed(
+        ISecretManagerCommand command,
+        ISecretManagerExecutionContext context,
+        CancellationToken cancellationToken);
+
+    /// <inheritdoc />
+    public abstract IGenericResult Validate(ISecretManagerCommand command);
+}
+
+/// <summary>
+/// Strongly-typed handler base: knows its command and result types, so the manager never has to
+/// DynamicInvoke the delegate or reflect over the returned task.
+/// </summary>
+/// <typeparam name="TCommand">The specific command type this handler processes.</typeparam>
+/// <typeparam name="TResult">The result type returned by this handler.</typeparam>
+/// <remarks>
+/// Inherit from this class to create new command handlers. Each handler should be decorated with
+/// <c>[TypeOption(typeof(YourImplCommandHandlers), "CommandTypeName")]</c> to register with the
+/// per-implementation TypeCollection.
+/// </remarks>
+[ExcludeFromCodeCoverage(Justification = "Abstract base class")]
 public abstract class SecretManagerCommandHandlerBase<TCommand, TResult>
-    : ISecretManagerCommandHandler
+    : SecretManagerCommandHandlerBase
     where TCommand : ISecretManagerCommand<TResult>
 {
     /// <summary>
@@ -37,24 +81,16 @@ public abstract class SecretManagerCommandHandlerBase<TCommand, TResult>
     /// </summary>
     /// <param name="id">The unique identifier for this handler.</param>
     /// <param name="name">The command type name (e.g., "GetSecret").</param>
-    protected SecretManagerCommandHandlerBase(int id, string name)
+    protected SecretManagerCommandHandlerBase(int id, string name) : base(id, name)
     {
-        Id = id;
-        Name = name;
         ExecuteFunc = new Func<TCommand, ISecretManagerExecutionContext, CancellationToken, Task<IGenericResult<TResult>>>(Execute);
     }
 
     /// <inheritdoc />
-    public int Id { get; }
+    public override Type CommandTypeClass => typeof(TCommand);
 
     /// <inheritdoc />
-    public string Name { get; }
-
-    /// <inheritdoc />
-    public Type CommandTypeClass => typeof(TCommand);
-
-    /// <inheritdoc />
-    public Type ResultType => typeof(TResult);
+    public override Type ResultType => typeof(TResult);
 
     /// <summary>
     /// Gets the command type name (alias for Name).
@@ -62,12 +98,12 @@ public abstract class SecretManagerCommandHandlerBase<TCommand, TResult>
     public string CommandType => Name;
 
     /// <inheritdoc />
-    public Delegate ExecuteFunc { get; }
+    public override Delegate ExecuteFunc { get; }
 
     /// <inheritdoc />
     // Why: TResult is statically known here, so the typed Execute is called directly and its value
     // boxed — replacing the manager's DynamicInvoke(ExecuteFunc) + reflection-await on Result/Value.
-    public async Task<IGenericResult<object?>> InvokeBoxed(
+    public override async Task<IGenericResult<object?>> InvokeBoxed(
         ISecretManagerCommand command,
         ISecretManagerExecutionContext context,
         CancellationToken cancellationToken)
@@ -91,7 +127,7 @@ public abstract class SecretManagerCommandHandlerBase<TCommand, TResult>
         CancellationToken cancellationToken);
 
     /// <inheritdoc />
-    public virtual IGenericResult Validate(ISecretManagerCommand command)
+    public override IGenericResult Validate(ISecretManagerCommand command)
     {
         if (command is null)
         {

@@ -46,7 +46,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `CreateSecretManagerPayload` | class | Request payload for creating a new secret manager configuration. |
 | `CredentialStorageResult` | class | Result of a credential storage operation. |
 | `CredentialVerificationResult` | class | Result of a credential verification operation. |
-| `EmptySecretManagerCommandHandler` | class | Empty/NotFound handler implementation. Each per-implementation TypeCollection creates its own NotFound… |
 | `InvalidCommandTypeCode` | class | Command must be of the correct type for the handler. |
 | `InvalidExecutionContextCode` | class | Execution context must be of the correct type. |
 | `ListSecretManagersResponse` | class | Response DTO containing the names of all configured secret managers. |
