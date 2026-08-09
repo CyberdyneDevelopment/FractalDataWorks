@@ -92,7 +92,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand> : IServiceConfigura
     /// Per-discriminator registry of typed-body providers, keyed by the framework-level
     /// <see cref="IGenericConfiguration.ServiceOptionType"/> (e.g. "MsSql", "Http"). A polymorphic HEADER
     /// provider (Connection, SecretManager, ...) registers one entry per typed body via
-    /// <c>RegisterTypedProvider</c>; a leaf/child provider (e.g. the MsSqlConnectionConfiguration body
+    /// <c>Register</c>; a leaf/child provider (e.g. the MsSqlConnectionConfiguration body
     /// provider) never registers any, so its registry stays empty — that emptiness is how
     /// <c>ComposeTypedBody</c> distinguishes a header provider from a leaf.
     /// </summary>

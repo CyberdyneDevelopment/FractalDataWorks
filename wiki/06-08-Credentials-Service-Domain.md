@@ -116,7 +116,7 @@ public sealed class SqlCredentialServiceType
     //                           IPersonalAccessTokenGenerator / Hasher / IPasswordHasher / IAgentKeyVaultCommands (Singleton),
     //                           IPersonalAccessTokenService / IAgentKeyService (Scoped — never Singleton)
     // RegisterFactory:          provider.Register(Name, factory) +
-    //                           CredentialServiceConfigurationProvider.RegisterTypedProvider("Sql", typedProvider)
+    //                           CredentialServiceConfigurationProvider.Register("Sql", typedProvider)
 }
 ```
 

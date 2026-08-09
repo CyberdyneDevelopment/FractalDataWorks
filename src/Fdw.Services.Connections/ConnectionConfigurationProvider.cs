@@ -22,7 +22,7 @@ namespace Fdw.Services.Connections;
 /// The polymorphic typed-body read (dispatch on <c>ServiceOptionType</c> to load the typed body row,
 /// e.g. <c>conn.MsSqlConnection</c>, and attach it to <see cref="ConnectionConfiguration.Configuration"/>)
 /// is composed uniformly by <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>; typed providers
-/// are registered via the inherited <c>RegisterTypedProvider</c>.
+/// are registered via the inherited <c>Register</c>.
 /// </summary>
 public class ConnectionConfigurationProvider : DefaultConfigurationProvider<ConnectionConfiguration, ConnectionConfigurationCommand>
 {

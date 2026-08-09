@@ -27,7 +27,7 @@ namespace Fdw.Services.Data;
 /// load the typed body row, e.g. <c>data.MsSqlDataStore</c>, and attach it to
 /// <see cref="DataStoreConfiguration.Configuration"/>) is composed uniformly by
 /// <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>; typed providers are registered via the
-/// inherited <c>RegisterTypedProvider</c>. Unlike most domains, a missing typed provider is not a defect
+/// inherited <c>Register</c>. Unlike most domains, a missing typed provider is not a defect
 /// here — see <see cref="OnNoTypedProvider"/> for the body-less-store rule.
 /// </summary>
 /// <remarks>

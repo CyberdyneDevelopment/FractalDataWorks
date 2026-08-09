@@ -162,7 +162,7 @@ public sealed class AggregateWriteCascadeTests
     public async Task SaveSucceedsWhenNoTypedProviderIsRegisteredForTheDiscriminator()
     {
         var gateway = new RecordingGateway();
-        var provider = MakeProvider(gateway); // No RegisterTypedProvider call — registry stays empty.
+        var provider = MakeProvider(gateway); // No Register call — registry stays empty.
 
         var header = new TestRootConfiguration { Id = Guid.NewGuid(), Name = "Root" };
 
