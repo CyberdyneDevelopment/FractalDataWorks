@@ -22,7 +22,7 @@ namespace Fdw.Services.SecretManagers.Abstractions.Handlers;
 /// has to register a hand-written option to stand in for one — which puts a non-handler into the
 /// handler set that every enumeration of All() then has to know to skip.
 /// </remarks>
-public interface ISecretManagerCommandHandler : ITypeOption<int>
+public interface ISecretManagerCommandHandler : ITypeOption<int, SecretManagerCommandHandlerBase>
 {
 
     /// <summary>
