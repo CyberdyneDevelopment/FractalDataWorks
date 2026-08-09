@@ -1,9 +1,11 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Bunit.ComponentFactories;
 using Fdw.Services.Authentication.Clients.Models;
 using Fdw.Services.Authentication.Components.ApiKeys;
 using Fdw.UI.Components.Blazor.Tests.Helpers;
-using ApiKeysPage = Fdw.Services.Authentication.UI.Pages.Pages.ApiKeys;
+using ApiKeysPage = Fdw.UI.Pages.Authentication.Pages.ApiKeysPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Auth;
 
@@ -42,7 +44,7 @@ public sealed class ApiKeysPageContentTests : IDisposable
     public async Task RefreshButtonInvokesOnRefresh()
     {
         var called = false;
-        var cut = Render(new ApiKeyContext { OnRefresh = () => { called = true; return Task.CompletedTask; } });
+        var cut = Render(new ApiKeyContext { OnRefresh = () => { called = true; return Task.FromResult<IGenericResult>(GenericResult.Success()); } });
         cut.FindAll("button").First(b => b.TextContent.Contains("Refresh", StringComparison.Ordinal)).Click();
         await Task.Yield();
         called.ShouldBeTrue();
@@ -51,7 +53,7 @@ public sealed class ApiKeysPageContentTests : IDisposable
     [Fact]
     public void ErrorBranchRendersErrorMessage()
     {
-        var cut = Render(new ApiKeyContext { ErrorMessage = "boom" });
+        var cut = Render(new ApiKeyContext { LastResult = GenericResult.Failure(new GenericMessage("boom")) });
         cut.Markup.ShouldContain("boom");
     }
 

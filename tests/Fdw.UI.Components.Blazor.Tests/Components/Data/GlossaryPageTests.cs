@@ -1,4 +1,6 @@
 using System;
+using Fdw.Messages;
+using Fdw.Results;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -6,7 +8,7 @@ using Bunit;
 using Fdw.Services.Catalog.Clients.Models;
 using Fdw.Services.Catalog.Components.Glossary;
 using Fdw.UI.Components.Blazor.Tests.DataInfra;
-using GlossaryPage = Fdw.Services.Catalog.UI.Pages.Pages.Glossary.Index;
+using GlossaryPage = Fdw.UI.Pages.Catalog.Pages.Glossary.GlossaryIndexPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Data;
 
@@ -37,7 +39,7 @@ public sealed class GlossaryPageTests : IDisposable
     [Fact]
     public void RendersErrorBannerWhenErrorMessagePresent()
     {
-        Swap(new GlossaryContext { ErrorMessage = "glossary-boom" });
+        Swap(new GlossaryContext { LastResult = GenericResult.Failure(new GenericMessage("glossary-boom")) });
         var cut = _ctx.Render<GlossaryPage>();
         cut.Markup.ShouldContain("glossary-boom");
     }
@@ -73,7 +75,7 @@ public sealed class GlossaryPageTests : IDisposable
     public async Task RefreshButtonInvokesOnRefresh()
     {
         var refreshed = 0;
-        Swap(new GlossaryContext { Terms = [Term("X", "y")], OnRefresh = () => { refreshed++; return Task.CompletedTask; } });
+        Swap(new GlossaryContext { Terms = [Term("X", "y")], OnRefresh = () => { refreshed++; return Task.FromResult<IGenericResult>(GenericResult.Success()); } });
         var cut = _ctx.Render<GlossaryPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("Refresh", StringComparison.Ordinal)).Click();
         await Task.Yield();

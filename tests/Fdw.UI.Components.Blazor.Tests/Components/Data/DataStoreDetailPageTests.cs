@@ -1,6 +1,8 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Data.Components.DataStores;
-using Fdw.Data.UI.Pages.Pages;
+using Fdw.UI.Pages.Data.Pages;
 using Fdw.Services.Data.Clients.Models;
 using Fdw.UI.Components.Blazor.Tests.ConnInfra;
 using Fdw.UI.DrillDown;
@@ -32,8 +34,8 @@ public sealed class DataStoreDetailPageTests : IDisposable
         Paths = paths
     };
 
-    private IRenderedComponent<DataStoreDetail> RenderDetail() =>
-        _ctx.Render<DataStoreDetail>(p => p.Add(x => x.Name, "Sales"));
+    private IRenderedComponent<DataStoreDetailPage> RenderDetail() =>
+        _ctx.Render<DataStoreDetailPage>(p => p.Add(x => x.Name, "Sales"));
 
     [Fact]
     public void RendersLoadingSpinnerWhenDrillLoading()
@@ -46,7 +48,7 @@ public sealed class DataStoreDetailPageTests : IDisposable
     [Fact]
     public void RendersErrorMessageWhenDrillError()
     {
-        Swap(new DataStoreDetailContext { ConfigurationContext = new ConfigurationDrillDownContext { ErrorMessage = "load fail" } });
+        Swap(new DataStoreDetailContext { ConfigurationContext = new ConfigurationDrillDownContext { LastResult = GenericResult.Failure(new GenericMessage("load fail")) } });
         var cut = RenderDetail();
         cut.Markup.ShouldContain("load fail");
     }
@@ -241,7 +243,7 @@ public sealed class DataStoreDetailPageTests : IDisposable
         Swap(new DataStoreDetailContext
         {
             DataStore = StoreWith(),
-            ConfigurationContext = new ConfigurationDrillDownContext { OnRefresh = () => { refreshed = true; return Task.CompletedTask; } }
+            ConfigurationContext = new ConfigurationDrillDownContext { OnRefresh = () => { refreshed = true; return Task.FromResult<IGenericResult>(GenericResult.Success()); } }
         });
         var cut = RenderDetail();
         cut.FindAll("button").First(b => string.Equals(b.TextContent.Trim(), "Refresh", StringComparison.Ordinal)).Click();

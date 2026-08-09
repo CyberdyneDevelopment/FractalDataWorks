@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 using Xunit;
-using DataSetsPage = Fdw.Data.UI.Pages.Pages.DataSets;
+using DataSetsPage = Fdw.UI.Pages.Data.Pages.DataSetsPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Data;
 

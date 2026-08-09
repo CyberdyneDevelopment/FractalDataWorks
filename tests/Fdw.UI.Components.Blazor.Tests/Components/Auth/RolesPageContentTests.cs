@@ -3,7 +3,7 @@ using Bunit.ComponentFactories;
 using Fdw.Services.Authorization.Clients.Models;
 using Fdw.Services.Authorization.Components.Roles;
 using Fdw.UI.Components.Blazor.Tests.Helpers;
-using RolesPage = Fdw.Services.Authorization.UI.Pages.Pages.Roles;
+using RolesPage = Fdw.UI.Pages.Authorization.Pages.RolesPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Auth;
 

@@ -1,4 +1,6 @@
 using System;
+using Fdw.Messages;
+using Fdw.Results;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,7 +19,7 @@ namespace Fdw.UI.Components.Blazor.Tests.Components.Data;
 
 /// <summary>
 /// Branch-complete bUnit tests for the FDW <c>DataSetDetail</c> page
-/// (<c>Fdw.Data.UI.Pages.Pages.DataSetDetail</c>). Relocated from reference-ui's
+/// (<c>Fdw.UI.Pages.Data.Pages.DataSetDetailPage</c>). Relocated from reference-ui's
 /// DataSetDetailPageTests.
 ///
 /// Covers the top-level render branches (loading / not-found / loaded), each of the five tabs
@@ -59,8 +61,8 @@ public sealed class DataSetDetailPageTests : IDisposable
         Sources = sources ?? []
     };
 
-    private IRenderedComponent<Fdw.Data.UI.Pages.Pages.DataSetDetail> RenderDetail() =>
-        _ctx.Render<Fdw.Data.UI.Pages.Pages.DataSetDetail>(p => p
+    private IRenderedComponent<Fdw.UI.Pages.Data.Pages.DataSetDetailPage> RenderDetail() =>
+        _ctx.Render<Fdw.UI.Pages.Data.Pages.DataSetDetailPage>(p => p
             .AddCascadingValue(new DataSetContextSeed { Value = _dsSeed })
             .Add(x => x.Name, "Customers"));
 
@@ -172,16 +174,52 @@ public sealed class DataSetDetailPageTests : IDisposable
 
     // ── Preview tab ─────────────────────────────────────────────────────────
 
+    // Why these replaced PreviewTabRendersOpenDataPreviewButtonAndNavigates: the Preview tab no
+    // longer navigates to a separate /data-preview page. It renders DataSetDetailPreviewPane inline,
+    // whose Run Query button calls OnLoadPreview on the pane's own context. The old "Open Data
+    // Preview" button was already absent at 978b09003 — before the UI remediation — so the old test
+    // had been asserting removed markup since well before that work.
+
     [Fact]
-    public void PreviewTabRendersOpenDataPreviewButtonAndNavigates()
+    public void PreviewTabRendersInlinePreviewPaneControls()
     {
         Swap(new DataSetContext { CurrentDataSet = Detail() });
-        var nav = _ctx.Services.GetRequiredService<NavigationManager>();
         var cut = RenderDetail();
         cut.FindAll(".tabs a").First(a => string.Equals(a.TextContent.Trim(), "Preview", StringComparison.Ordinal)).Click();
-        cut.Markup.ShouldContain("Open Data Preview");
-        cut.FindAll("button").First(b => b.TextContent.Contains("Open Data Preview", StringComparison.Ordinal)).Click();
-        nav.Uri.ShouldEndWith("/data-preview");
+
+        cut.Markup.ShouldContain("Run Query");
+        cut.FindAll("option").Select(o => o.TextContent.Trim())
+            .ShouldBe(["10 rows", "25 rows", "50 rows", "100 rows"], ignoreOrder: false);
+    }
+
+    [Fact]
+    public void PreviewTabRunQueryIsDisabledUntilTheDataSetHasASource()
+    {
+        // The page gates Run Query on ctx.CurrentDataSet.Sources.Count — a dataset with no source
+        // has nothing to query, so the button must not be clickable.
+        Swap(new DataSetContext { CurrentDataSet = Detail() });
+        var cut = RenderDetail();
+        cut.FindAll(".tabs a").First(a => string.Equals(a.TextContent.Trim(), "Preview", StringComparison.Ordinal)).Click();
+
+        cut.FindAll("button").First(b => b.TextContent.Contains("Run Query", StringComparison.Ordinal))
+            .HasAttribute("disabled").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void PreviewTabRunQueryIsEnabledOnceASourceExists()
+    {
+        Swap(new DataSetContext
+        {
+            CurrentDataSet = Detail(sources:
+            [
+                new DataSetSourcePayload { SourceName = "Primary", DataStoreName = "Sql1", FieldMappings = [] }
+            ])
+        });
+        var cut = RenderDetail();
+        cut.FindAll(".tabs a").First(a => string.Equals(a.TextContent.Trim(), "Preview", StringComparison.Ordinal)).Click();
+
+        cut.FindAll("button").First(b => b.TextContent.Contains("Run Query", StringComparison.Ordinal))
+            .HasAttribute("disabled").ShouldBeFalse();
     }
 
     // ── Annotations tab — nested AnnotationProvider branches ────────────────
@@ -199,7 +237,7 @@ public sealed class DataSetDetailPageTests : IDisposable
     [Fact]
     public void AnnotationsTabShowsErrorWhenAnnotationContextHasError()
     {
-        Swap(new DataSetContext { CurrentDataSet = Detail() }, new AnnotationContext { ErrorMessage = "ann-boom" });
+        Swap(new DataSetContext { CurrentDataSet = Detail() }, new AnnotationContext { LastResult = GenericResult.Failure(new GenericMessage("ann-boom")) });
         var cut = RenderDetail();
         cut.FindAll(".tabs a").First(a => string.Equals(a.TextContent.Trim(), "Annotations", StringComparison.Ordinal)).Click();
         cut.Markup.ShouldContain("ann-boom");

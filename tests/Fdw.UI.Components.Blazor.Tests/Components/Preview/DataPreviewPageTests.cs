@@ -1,8 +1,10 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Data.UI.Components;
 using Fdw.Services.Data.Abstractions.Visualization;
 using Fdw.UI.Components.Blazor.Tests.DataInfra;
-using DataPreviewPage = Fdw.Data.UI.Pages.Pages.DataPreview;
+using DataPreviewPage = Fdw.UI.Pages.Data.Pages.DataPreviewPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Preview;
 
@@ -54,7 +56,7 @@ public sealed class DataPreviewPageTests : IDisposable
     [Fact]
     public void RendersErrorCardWhenErrorMessagePresent()
     {
-        SwapProvider(new DataPreviewPageContext { ErrorMessage = "query exploded" });
+        SwapProvider(new DataPreviewPageContext { LastResult = GenericResult.Failure(new GenericMessage("query exploded")) });
         var cut = _ctx.Render<DataPreviewPage>();
         cut.Markup.ShouldContain("query exploded");
     }

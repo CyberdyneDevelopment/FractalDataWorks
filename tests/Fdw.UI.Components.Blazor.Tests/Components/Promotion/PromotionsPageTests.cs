@@ -1,8 +1,10 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Web.Analytics.Clients.Models;
 using Fdw.Web.Analytics.Components.Promotions;
 using Fdw.UI.Components.Blazor.Tests.ObsInfra;
-using Index = Fdw.Operations.UI.Pages.Pages.Promotions.Index;
+using Index = Fdw.UI.Pages.Operations.Pages.Promotions.PromotionsIndexPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Promotion;
 
@@ -30,15 +32,15 @@ public sealed class PromotionsPageTests : IDisposable
         Func<CreatePromotionPayload, Task>? onCreate = null,
         Func<Guid, Task>? onApprove = null,
         Func<Guid, Task>? onReject = null,
-        Func<Task>? onRefresh = null) => new()
+        Func<Task<IGenericResult>>? onRefresh = null) => new()
         {
             Requests = requests ?? [],
             IsLoading = isLoading,
-            ErrorMessage = error,
+            LastResult = error is null ? null : GenericResult.Failure(new GenericMessage(error)),
             OnCreate = onCreate ?? (_ => Task.CompletedTask),
             OnApprove = onApprove ?? (_ => Task.CompletedTask),
             OnReject = onReject ?? (_ => Task.CompletedTask),
-            OnRefresh = onRefresh ?? (() => Task.CompletedTask),
+            OnRefresh = onRefresh ?? (() => Task.FromResult<IGenericResult>(GenericResult.Success())),
         };
 
     private static PromotionPayload Req(string name = "P1", string status = "Pending") => new()
@@ -130,7 +132,7 @@ public sealed class PromotionsPageTests : IDisposable
     public async Task RefreshInvokesOnRefresh()
     {
         var calls = 0;
-        SwapProvider(Ctx(onRefresh: () => { calls++; return Task.CompletedTask; }));
+        SwapProvider(Ctx(onRefresh: () => { calls++; return Task.FromResult<IGenericResult>(GenericResult.Success()); }));
         var cut = _ctx.Render<Index>();
         cut.FindAll("button").First(b => b.TextContent.Contains("Refresh", StringComparison.Ordinal)).Click();
         await Task.Yield();

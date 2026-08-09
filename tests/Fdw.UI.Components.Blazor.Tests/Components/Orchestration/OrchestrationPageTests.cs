@@ -1,9 +1,11 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Services.Etl.Projects.Abstractions.Configuration;
 using Fdw.Services.Etl.Projects.UI.Components.Providers;
 using Fdw.UI.Components.Blazor.Tests.PipeInfra;
-using NodeListPage = Fdw.Services.Etl.Projects.UI.Pages.Pages.Orchestration.NodeList;
-using NodeTreeEditorPage = Fdw.Services.Etl.Projects.UI.Pages.Pages.Orchestration.NodeTreeEditor;
+using NodeListPage = Fdw.UI.Pages.EtlProjects.Pages.Orchestration.NodeListPage;
+using NodeTreeEditorPage = Fdw.UI.Pages.EtlProjects.Pages.Orchestration.NodeTreeEditorPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Orchestration;
 
@@ -54,7 +56,7 @@ public sealed class OrchestrationPageTests : IDisposable
     {
         // Why: current markup emits the error banner as class "card b-fail" (the old reference-ui
         // test asserted a stale "border-red-700" class the page no longer emits).
-        var cut = RenderList(new OrchestrationNodeContext { ErrorMessage = "node load failed" });
+        var cut = RenderList(new OrchestrationNodeContext { LastResult = GenericResult.Failure(new GenericMessage("node load failed")) });
         cut.Markup.ShouldContain("node load failed");
         cut.FindAll("div").ShouldContain(d => d.ClassList.Contains("b-fail"));
     }

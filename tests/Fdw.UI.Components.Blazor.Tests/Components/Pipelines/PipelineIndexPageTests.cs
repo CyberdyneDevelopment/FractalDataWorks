@@ -4,7 +4,7 @@ using Fdw.Results;
 using Fdw.Services.Pipelines.Clients.Abstractions;
 using Fdw.UI.Components.Blazor.Tests.PipeInfra;
 using Microsoft.Extensions.DependencyInjection;
-using IndexPage = Fdw.Services.Pipelines.UI.Pages.Pages.Pipelines.Index;
+using IndexPage = Fdw.UI.Pages.Pipelines.Pages.Pipelines.PipelinesIndexPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Pipelines;
 
@@ -122,7 +122,7 @@ public sealed class PipelineIndexPageTests : IDisposable
         cut.WaitForAssertion(() =>
         {
             captured.ShouldNotBeNull();
-            captured!.PipelineName.ShouldBe("nightly-load");
+            captured!.Name.ShouldBe("nightly-load");
             captured.TriggerSource.ShouldBe("UI");
         });
     }

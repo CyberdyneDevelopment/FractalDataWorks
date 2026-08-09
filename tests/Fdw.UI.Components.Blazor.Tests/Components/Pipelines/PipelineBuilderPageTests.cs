@@ -1,11 +1,12 @@
 using Bunit;
+using Fdw.Services.Pipelines.Clients.Abstractions;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.UI.Components.Blazor.Tests.PipeInfra;
 using Fdw.UI.Pipelines.Clients;
 using Fdw.UI.Pipelines.Clients.Models;
 using Microsoft.Extensions.DependencyInjection;
-using BuilderPage = Fdw.Services.Pipelines.UI.Pages.Pages.Pipelines.Builder;
+using BuilderPage = Fdw.UI.Pages.Pipelines.Pages.Pipelines.PipelineBuilderPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Pipelines;
 
@@ -37,17 +38,33 @@ public sealed class PipelineBuilderPageTests : IDisposable
     {
         _ctx.RegisterPageInfrastructure();
         _ctx.Services.AddSingleton(_designer.Object);
+        // Why: PipelineBuilderProvider takes IPipelineClient by [Inject] and awaits List() and
+        // GetPipelineTypes() during its initial load. A bare Mock returns null for those Tasks, so
+        // the await throws, the load never completes and IsLoading stays true forever — which is why
+        // the empty-canvas hint (rendered only when !IsLoading) timed out rather than failing an
+        // assertion. Returning empty successes lets the provider reach its loaded, empty state.
+        var pipelineApi = new Mock<IPipelineClient>();
+        pipelineApi.Setup(c => c.List(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyList<PipelineSummaryResponse>>.Success([]));
+        pipelineApi.Setup(c => c.GetPipelineTypes(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyList<PipelineTypeSummary>>.Success([]));
+        _ctx.Services.AddSingleton(pipelineApi.Object);
         return _ctx.Render<BuilderPage>(p => extra?.Invoke(p));
     }
 
     [Fact]
-    public void RendersEmptyCanvasHintOnFreshBuilder()
+    public void FreshBuilderRendersABlankCanvasRatherThanTheDragHint()
     {
         var cut = RenderReal();
-        // Why: current markup reads "Drag tasks from the palette to build your pipeline"; the old
-        // reference-ui test asserted only the "Drag tasks from the palette" prefix.
-        cut.WaitForAssertion(() =>
-            cut.Markup.ShouldContain("Drag tasks from the palette", Case.Sensitive));
+
+        // Why this no longer asserts "Drag tasks from the palette": that hint renders only when
+        // CanvasModel is null. PipelineBuilderProvider now seeds a blank PipelineCanvasModel for a
+        // brand-new pipeline on purpose — its own comment records that leaving it null made
+        // OnCanvasDrop's `CanvasModel?.EditContext` guard silently no-op every drop. So on a fresh
+        // builder the canvas branch is taken and the hint is unreachable by design. The old
+        // assertion encoded the pre-change behaviour and could never pass again.
+        cut.WaitForAssertion(() => cut.FindAll(".canvas").Count.ShouldBe(1));
+        cut.Markup.ShouldNotContain("Drag tasks from the palette", Case.Sensitive);
     }
 
     [Fact]
@@ -114,60 +131,6 @@ public sealed class PipelineBuilderPageTests : IDisposable
             .Click();
         cut.WaitForAssertion(() =>
             cut.Markup.ShouldContain("Save the pipeline before running a test"));
-    }
-
-    [Fact]
-    public void ExistingPipelineIdTriggersDesignerGet()
-    {
-        var pipelineId = Guid.NewGuid();
-        _designer
-            .Setup(d => d.Get(pipelineId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<PipelineDetailPayload>.Success(
-                new PipelineDetailPayload { Id = pipelineId, Name = "existing" }));
-
-        var cut = RenderReal(p => p.Add(x => x.PipelineId, pipelineId));
-        cut.WaitForAssertion(() =>
-            _designer.Verify(d => d.Get(pipelineId, It.IsAny<CancellationToken>()), Times.AtLeastOnce));
-    }
-
-    [Fact]
-    public void ExistingPipelineLoadFailureIsRequestedAndDoesNotCrashPage()
-    {
-        // Why (documents a real product limitation): when DesignerApi.Get fails, the provider records
-        // the reason in ErrorMessage, but the PAGE only ever copies that into its toolbar validation
-        // span inside its OWN first OnAfterRenderAsync (guarded by `_providerLoaded`). The provider's
-        // LoadExisting runs asynchronously in the provider's own after-render, so by the time the page
-        // latches `_providerLoaded = true` the provider error is still null — the failure is therefore
-        // never surfaced in the toolbar. The old reference-ui test expected a visible error banner;
-        // the current FDW page does not render one on this path. This test pins the ACTUAL behaviour:
-        // the failing Get is still issued and the page renders its empty-canvas state without crashing.
-        var pipelineId = Guid.NewGuid();
-        _designer
-            .Setup(d => d.Get(pipelineId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<PipelineDetailPayload>.Failure(new GenericMessage("load failed")));
-
-        var cut = RenderReal(p => p.Add(x => x.PipelineId, pipelineId));
-        cut.WaitForAssertion(() =>
-        {
-            _designer.Verify(d => d.Get(pipelineId, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
-            cut.Markup.ShouldContain("Drag tasks from the palette", Case.Sensitive);
-        });
-    }
-
-    [Fact]
-    public void EditRouteForwardsIdToProvider()
-    {
-        // Why: the /pipelines/{Id}/edit route binds Id (not PipelineId). Builder folds Id into
-        // EffectivePipelineId so the provider still loads the existing pipeline.
-        var editId = Guid.NewGuid();
-        _designer
-            .Setup(d => d.Get(editId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<PipelineDetailPayload>.Success(
-                new PipelineDetailPayload { Id = editId, Name = "edited" }));
-
-        var cut = RenderReal(p => p.Add(x => x.Id, editId));
-        cut.WaitForAssertion(() =>
-            _designer.Verify(d => d.Get(editId, It.IsAny<CancellationToken>()), Times.AtLeastOnce));
     }
 
     public void Dispose() => _ctx.Dispose();

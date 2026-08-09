@@ -6,13 +6,13 @@ using Fdw.Services.Data.Clients.Models;
 using Fdw.UI.Components.Blazor.Tests.DataInfra;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using DataSetWizardPage = Fdw.Data.UI.Pages.Pages.DataSetWizard;
+using DataSetWizardPage = Fdw.UI.Pages.Data.Pages.DataSetWizardPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Data;
 
 /// <summary>
 /// Branch-complete bUnit tests for the FDW <c>DataSetWizard</c> page
-/// (<c>Fdw.Data.UI.Pages.Pages.DataSetWizard</c>). Relocated from
+/// (<c>Fdw.UI.Pages.Data.Pages.DataSetWizard</c>). Relocated from
 /// reference-ui's <c>DataSetWizardPageTests</c>.
 ///
 /// The wizard nests two providers (<see cref="DataSetWizardProvider"/> +

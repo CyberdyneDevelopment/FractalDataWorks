@@ -1,11 +1,13 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Bunit.ComponentFactories;
 using Fdw.Services.Messaging.Clients.Models;
 using Fdw.Services.Messaging.Components.Messaging;
 using Fdw.UI.Components.Blazor.Tests.Helpers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using MessagesPage = Fdw.Services.Messaging.UI.Pages.Pages.Messages;
+using MessagesPage = Fdw.UI.Pages.Messaging.Pages.MessagesPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Messaging;
 
@@ -38,7 +40,7 @@ public sealed class MessagesPageContentTests : IDisposable
         {
             Messages = messages ?? [],
             IsLoading = isLoading,
-            ErrorMessage = error,
+            LastResult = error is null ? null : GenericResult.Failure(new GenericMessage(error)),
             OnMarkAllRead = onMarkAllRead ?? (() => Task.CompletedTask),
             OnArchive = onArchive ?? (_ => Task.CompletedTask),
             OnDismiss = onDismiss ?? (_ => Task.CompletedTask),
@@ -212,7 +214,7 @@ public sealed class MessagesPageContentTests : IDisposable
         var msg = Msg("Open");
         var cut = Render(Ctx(messages: [msg]));
         var nav = _ctx.Services.GetRequiredService<NavigationManager>();
-        cut.FindAll(".a").First(a => a.GetAttribute("style")?.Contains("cursor:pointer", StringComparison.Ordinal) == true).Click();
+        cut.FindAll(".a.u-pointer").First().Click();
         nav.Uri.ShouldEndWith($"/messages/{msg.Id}");
     }
 

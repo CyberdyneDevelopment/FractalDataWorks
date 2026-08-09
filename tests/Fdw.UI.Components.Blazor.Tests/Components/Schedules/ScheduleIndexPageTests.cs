@@ -5,7 +5,7 @@ using Fdw.Services.Scheduling.Clients.Abstractions;
 using Fdw.Services.Scheduling.Components.Schedules;
 using Fdw.UI.Components.Blazor.Tests.PipeInfra;
 using Microsoft.Extensions.DependencyInjection;
-using IndexPage = Fdw.Services.Scheduling.UI.Pages.Pages.Schedules.Index;
+using IndexPage = Fdw.UI.Pages.Scheduling.Pages.Schedules.SchedulesIndexPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Schedules;
 

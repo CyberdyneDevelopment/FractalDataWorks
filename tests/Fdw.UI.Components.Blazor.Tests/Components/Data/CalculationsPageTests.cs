@@ -6,7 +6,7 @@ using Bunit;
 using Fdw.Calculations.Components.Calculations;
 using Fdw.UI.Components.Blazor.Tests.DataInfra;
 using Fdw.Web.Calculations.Clients.Models;
-using CalculationsPage = Fdw.Calculations.UI.Pages.Pages.Calculations;
+using CalculationsPage = Fdw.UI.Pages.Calculations.Pages.CalculationsPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Data;
 

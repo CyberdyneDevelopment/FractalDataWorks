@@ -5,7 +5,7 @@ using Fdw.Agents.Components.AgentActions;
 using Fdw.UI.Components.Blazor.Tests.Helpers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using ReviewAgentActionPage = Fdw.Agents.UI.Pages.Pages.ReviewAgentAction;
+using ReviewAgentActionPage = Fdw.Agents.UI.Pages.Pages.ReviewAgentActionPage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Agents;
 

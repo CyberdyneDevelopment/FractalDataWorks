@@ -1,9 +1,11 @@
 using Bunit;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Operations.Clients.Models;
 using Fdw.Operations.Components.Dataflow;
 using Fdw.Operations.Components.Lineage;
 using Fdw.UI.Components.Blazor.Tests.PipeInfra;
-using LineagePage = Fdw.Operations.UI.Pages.Pages.Lineage;
+using LineagePage = Fdw.UI.Pages.Operations.Pages.LineagePage;
 
 namespace Fdw.UI.Components.Blazor.Tests.Components.Lineage;
 
@@ -251,7 +253,7 @@ public sealed class LineagePageTests : IDisposable
     [Fact]
     public void RendersErrorMessageFromEitherProvider()
     {
-        var cut = RenderWith(new LineageContext { ErrorMessage = "lineage boom" }, new DataflowContext());
+        var cut = RenderWith(new LineageContext { LastResult = GenericResult.Failure(new GenericMessage("lineage boom")) }, new DataflowContext());
         cut.Markup.ShouldContain("lineage boom", Case.Sensitive);
     }
 

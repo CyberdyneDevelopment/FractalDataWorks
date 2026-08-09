@@ -1,6 +1,8 @@
 using System.Net.Http;
+using Fdw.Messages;
+using Fdw.Results;
 using Bunit;
-using Fdw.Calculations.UI.Pages.Pages;
+using Fdw.UI.Pages.Calculations.Pages;
 using Fdw.Data.Components.DataSets;
 using Fdw.Services.Data.Clients;
 using Fdw.UI.Components.Blazor.Tests.DataInfra;
@@ -13,7 +15,7 @@ namespace Fdw.UI.Components.Blazor.Tests.Components.Data;
 
 /// <summary>
 /// Page-level component tests for the FDW <c>CalculatedDesigner</c> page
-/// (<c>Fdw.Calculations.UI.Pages.Pages.CalculatedDesigner</c>).
+/// (<c>Fdw.UI.Pages.Calculations.Pages.CalculatedDesigner</c>).
 /// Relocated from reference-ui's CalculatedDesignerPageTests. The outer
 /// <see cref="CalculatedDataSetProvider"/> is stubbed; markup strings/selectors are
 /// verified against the current razor. Render branches: loading (SyncFromContext
@@ -31,6 +33,7 @@ public sealed class CalculatedDesignerPageTests : IDisposable
         // Why: the current FDW CalculatedDesigner injects DataStoreApiClient (used only on
         // Source-node selection). Register a no-op handler-backed client so DI can satisfy the
         // page; none of these tests select a Source node, so no HTTP call is made.
+        PipeInfra.PageHost.RegisterPageInfrastructure(_ctx);
         _ctx.Services.AddSingleton(new DataStoreApiClient(
             new HttpClient(new MockHttpHandler()) { BaseAddress = new Uri("http://localhost/") },
             NullLogger<DataStoreApiClient>.Instance));
@@ -54,7 +57,7 @@ public sealed class CalculatedDesignerPageTests : IDisposable
     {
         // Why: when IsLoading, SyncFromContext returns early — no nodes projected.
         SwapProvider(new CalculatedDataSetContext { IsLoading = true });
-        var cut = _ctx.Render<CalculatedDesigner>();
+        var cut = _ctx.Render<CalculatedDesignerPage>();
         cut.Markup.ShouldContain("OPERATIONS PALETTE", Case.Sensitive);
         cut.Markup.ShouldContain("NO_SELECTION_ACTIVE", Case.Sensitive);
     }
@@ -69,7 +72,7 @@ public sealed class CalculatedDesignerPageTests : IDisposable
             IsLoading = false,
             InitialTasks = [NodeTask("SourceA", "Source"), NodeTask("OutB", "Output")],
         });
-        var cut = _ctx.Render<CalculatedDesigner>();
+        var cut = _ctx.Render<CalculatedDesignerPage>();
         cut.Markup.ShouldContain("SourceA", Case.Sensitive);
         cut.Markup.ShouldContain("OutB", Case.Sensitive);
     }
@@ -85,7 +88,7 @@ public sealed class CalculatedDesignerPageTests : IDisposable
             InitialTasks = [t1, t2],
             InitialConnections = [new TaskConnectionPayload { Id = Guid.NewGuid(), SourceTaskId = t1.Id, TargetTaskId = t2.Id }],
         });
-        var cut = _ctx.Render<CalculatedDesigner>();
+        var cut = _ctx.Render<CalculatedDesignerPage>();
         // a connection renders an SVG <path>
         cut.FindAll("path").Any().ShouldBeTrue();
     }
@@ -96,7 +99,7 @@ public sealed class CalculatedDesignerPageTests : IDisposable
     public void PaletteAddNodeAddsNodeToCanvas()
     {
         SwapProvider(new CalculatedDataSetContext { IsLoading = false });
-        var cut = _ctx.Render<CalculatedDesigner>();
+        var cut = _ctx.Render<CalculatedDesignerPage>();
         // palette buttons render "> @op.ToUpper()" so the Filter chip reads "FILTER"
         cut.FindAll("button").First(b => b.TextContent.Contains("FILTER", StringComparison.Ordinal)).Click();
         cut.Markup.ShouldContain("Filter_0", Case.Sensitive);
@@ -108,7 +111,7 @@ public sealed class CalculatedDesignerPageTests : IDisposable
     public void SelectNodeShowsPropertiesPanel()
     {
         SwapProvider(new CalculatedDataSetContext { IsLoading = false, InitialTasks = [NodeTask("NodeX", "Map")] });
-        var cut = _ctx.Render<CalculatedDesigner>();
+        var cut = _ctx.Render<CalculatedDesignerPage>();
         // mousedown on a node group selects it (node rendered at translate(100, 100))
         cut.Find("svg g[transform^='translate(100']").MouseDown();
         cut.Markup.ShouldContain("Instance Name", Case.Sensitive);
@@ -119,7 +122,7 @@ public sealed class CalculatedDesignerPageTests : IDisposable
     public void DeleteSelectedRemovesNode()
     {
         SwapProvider(new CalculatedDataSetContext { IsLoading = false, InitialTasks = [NodeTask("NodeX", "Map")] });
-        var cut = _ctx.Render<CalculatedDesigner>();
+        var cut = _ctx.Render<CalculatedDesignerPage>();
         cut.Find("svg g[transform^='translate(100']").MouseDown();
         cut.FindAll("button").First(b => b.TextContent.Contains("Delete Node", StringComparison.Ordinal)).Click();
         cut.Markup.ShouldContain("NO_SELECTION_ACTIVE", Case.Sensitive);
@@ -136,7 +139,7 @@ public sealed class CalculatedDesignerPageTests : IDisposable
             IsLoading = false,
             OnSave = (_, _) => Task.FromResult<Guid?>(Guid.NewGuid()),
         });
-        var cut = _ctx.Render<CalculatedDesigner>();
+        var cut = _ctx.Render<CalculatedDesignerPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("Save Layout", StringComparison.Ordinal)).Click();
         await Task.Yield();
         cut.Markup.ShouldContain("Saved", Case.Sensitive);
@@ -148,10 +151,10 @@ public sealed class CalculatedDesignerPageTests : IDisposable
         SwapProvider(new CalculatedDataSetContext
         {
             IsLoading = false,
-            ErrorMessage = "save-failed",
+            LastResult = GenericResult.Failure(new GenericMessage("save-failed")),
             OnSave = (_, _) => Task.FromResult<Guid?>(null),
         });
-        var cut = _ctx.Render<CalculatedDesigner>();
+        var cut = _ctx.Render<CalculatedDesignerPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("Save Layout", StringComparison.Ordinal)).Click();
         await Task.Yield();
         cut.Markup.ShouldContain("save-failed", Case.Sensitive);
@@ -165,7 +168,7 @@ public sealed class CalculatedDesignerPageTests : IDisposable
             IsLoading = false,
             OnSave = (_, _) => throw new InvalidOperationException("x"),
         });
-        var cut = _ctx.Render<CalculatedDesigner>();
+        var cut = _ctx.Render<CalculatedDesignerPage>();
         cut.FindAll("button").First(b => b.TextContent.Contains("Save Layout", StringComparison.Ordinal)).Click();
         await Task.Yield();
         cut.Markup.ShouldContain("Failed to save", Case.Sensitive);
@@ -176,7 +179,7 @@ public sealed class CalculatedDesignerPageTests : IDisposable
     {
         SwapProvider(new CalculatedDataSetContext { IsLoading = false });
         var nav = _ctx.Services.GetRequiredService<NavigationManager>();
-        var cut = _ctx.Render<CalculatedDesigner>();
+        var cut = _ctx.Render<CalculatedDesignerPage>();
         // the first ghost button is the back arrow → navigates to /datasets
         cut.Find("button.btn-ghost").Click();
         nav.Uri.ShouldEndWith("/datasets", Case.Sensitive);

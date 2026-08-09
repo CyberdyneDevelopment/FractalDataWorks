@@ -1,6 +1,6 @@
 using Bunit;
 using Fdw.Data.Components.DataStores;
-using Fdw.Data.UI.Pages.Pages;
+using Fdw.UI.Pages.Data.Pages;
 using Fdw.Services.Data.Clients.Models;
 using Fdw.UI.Components.Blazor.Tests.ConnInfra;
 
@@ -27,7 +27,7 @@ public sealed class DataStoresPageTests : IDisposable
     public void RendersLoadingSpinnerWhenLoadingAndEmpty()
     {
         Swap(new DataStoreContext { IsLoading = true });
-        var cut = _ctx.Render<DataStores>();
+        var cut = _ctx.Render<DataStoresPage>();
         cut.FindAll(".spin").Count.ShouldBeGreaterThan(0);
     }
 
@@ -35,7 +35,7 @@ public sealed class DataStoresPageTests : IDisposable
     public void RendersEmptyStateWhenNoStores()
     {
         Swap(new DataStoreContext());
-        var cut = _ctx.Render<DataStores>();
+        var cut = _ctx.Render<DataStoresPage>();
         cut.Markup.ShouldContain("No DataStores configured");
     }
 
@@ -44,7 +44,7 @@ public sealed class DataStoresPageTests : IDisposable
     {
         var list = new List<DataStoreSummaryPayload> { Store("Sales", "SQL_A", 3), Store("HR", "SQL_B", 1) };
         Swap(new DataStoreContext { DataStores = list, FilteredDataStores = list });
-        var cut = _ctx.Render<DataStores>();
+        var cut = _ctx.Render<DataStoresPage>();
         cut.Markup.ShouldContain("Sales");
         cut.Markup.ShouldContain("HR");
         cut.Markup.ShouldContain("SQL_A");
@@ -56,7 +56,7 @@ public sealed class DataStoresPageTests : IDisposable
     public void RendersNewDataStoreButton()
     {
         Swap(new DataStoreContext());
-        var cut = _ctx.Render<DataStores>();
+        var cut = _ctx.Render<DataStoresPage>();
         cut.FindAll("button").Any(b => b.TextContent.Contains("New DataStore", StringComparison.Ordinal)).ShouldBeTrue();
     }
 
@@ -65,7 +65,7 @@ public sealed class DataStoresPageTests : IDisposable
     {
         var list = new List<DataStoreSummaryPayload> { Store("Sales") };
         Swap(new DataStoreContext { DataStores = list, FilteredDataStores = list });
-        var cut = _ctx.Render<DataStores>();
+        var cut = _ctx.Render<DataStoresPage>();
         cut.FindAll("button.danger").First(b => b.InnerHtml.Contains("M19 7l", StringComparison.Ordinal)).Click();
         cut.Markup.ShouldContain("Confirm Delete");
         cut.Markup.ShouldContain("Sales");
@@ -76,7 +76,7 @@ public sealed class DataStoresPageTests : IDisposable
     {
         var list = new List<DataStoreSummaryPayload> { Store("Sales") };
         Swap(new DataStoreContext { DataStores = list, FilteredDataStores = list });
-        var cut = _ctx.Render<DataStores>();
+        var cut = _ctx.Render<DataStoresPage>();
         cut.FindAll("button.danger").First(b => b.InnerHtml.Contains("M19 7l", StringComparison.Ordinal)).Click();
         cut.FindAll("button").First(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).Click();
         cut.Markup.ShouldNotContain("Confirm Delete");
@@ -93,7 +93,7 @@ public sealed class DataStoresPageTests : IDisposable
             FilteredDataStores = list,
             OnDeleteDataStore = n => { deleted = n; return Task.FromResult(true); }
         });
-        var cut = _ctx.Render<DataStores>();
+        var cut = _ctx.Render<DataStoresPage>();
         cut.FindAll("button.danger").First(b => b.InnerHtml.Contains("M19 7l", StringComparison.Ordinal)).Click();
         cut.FindAll("button").First(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).Click();
         await Task.Yield();
