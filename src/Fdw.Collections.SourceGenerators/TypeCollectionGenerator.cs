@@ -236,6 +236,16 @@ public class TypeCollectionGenerator : IIncrementalGenerator
                 types));
         }
 
+        // Check for names the generated collection already uses for its own members
+        foreach (var reserved in options.Where(o => ReservedMemberNames.IsReserved(o.OptionName)))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                TypeCollectionGeneratorDiagnostics.ReservedOptionName,
+                Location.None,
+                reserved.FullTypeName,
+                reserved.OptionName));
+        }
+
         // Check for duplicate lookup property values
         ValidateLookupPropertyValues(context, collection.ClassName, options);
 
@@ -422,7 +432,7 @@ public class TypeCollectionGenerator : IIncrementalGenerator
         // (Id is determined by the TypeOption constructor, not by the generator)
         foreach (var option in options)
         {
-            var fieldName = $"_{CodeGeneration.ToCamelCase(option.OptionName)}";
+            var fieldName = $"_option{CodeGeneration.ToPascalCase(option.OptionName)}";
             bodySb.AppendLine($"        private static {option.FullTypeName}? {fieldName};");
             bodySb.AppendLine($"        /// <summary>Gets the {option.OptionName} singleton instance.</summary>");
             bodySb.AppendLine($"        public static {option.FullTypeName} {option.OptionName}");

@@ -190,6 +190,16 @@ public class MutableTypeCollectionGenerator : IIncrementalGenerator
         // No options is OK for mutable collections (they can be added at runtime)
 
         // Check for Id collisions
+        // Check for names the generated collection already uses for its own members
+        foreach (var reserved in options.Where(o => ReservedMemberNames.IsReserved(o.OptionName)))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                TypeCollectionGeneratorDiagnostics.ReservedOptionName,
+                Location.None,
+                reserved.FullTypeName,
+                reserved.OptionName));
+        }
+
         var idGroups = options.GroupBy(o => o.GeneratedId)
             .Where(g => g.Count() > 1)
             .ToList();
@@ -367,7 +377,7 @@ public class MutableTypeCollectionGenerator : IIncrementalGenerator
         // Note: We use linear search by Name since we don't know the actual Id value at compile time
         foreach (var option in options)
         {
-            var fieldName = $"_{CodeGeneration.ToCamelCase(option.OptionName)}";
+            var fieldName = $"_option{CodeGeneration.ToPascalCase(option.OptionName)}";
             sb.AppendLine($"        private static {option.FullTypeName}? {fieldName};");
             sb.AppendLine($"        /// <summary>Gets the {option.OptionName} singleton instance.</summary>");
             sb.AppendLine($"        public static {option.FullTypeName} {option.OptionName} =>");

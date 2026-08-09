@@ -192,6 +192,16 @@ public class ServiceTypeInstanceCollectionGenerator : IIncrementalGenerator
         ServiceTypeCollectionModel collection,
         ImmutableArray<ServiceTypeOptionModel> options)
     {
+        // Check for names the generated collection already uses for its own members
+        foreach (var reserved in options.Where(o => ReservedMemberNames.IsReserved(o.OptionName)))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                TypeCollectionGeneratorDiagnostics.ReservedServiceTypeOptionName,
+                Location.None,
+                reserved.FullTypeName,
+                reserved.OptionName));
+        }
+
         var idGroups = options.GroupBy(o => o.GeneratedId)
             .Where(g => g.Count() > 1)
             .ToList();

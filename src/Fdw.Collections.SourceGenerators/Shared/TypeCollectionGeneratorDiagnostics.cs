@@ -137,6 +137,24 @@ internal static class TypeCollectionGeneratorDiagnostics
         isEnabledByDefault: true,
         description: "The type targeted by [Replaces] was not found. The replacement type will still be registered.");
 
+    public static readonly DiagnosticDescriptor ReservedServiceTypeOptionName = new(
+        id: "ST006",
+        title: "ServiceTypeOption Name Is Reserved",
+        messageFormat: "ServiceTypeOption '{0}' cannot be named '{1}': the generated collection already defines a member with that name. Rename the option.",
+        category: "ServiceType",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Each ServiceTypeOption gets a static accessor named after it, which would collide with a member the collection generates for itself (All, ByName, ById, ByCategory, Categories, GetMetadata, NotFound, RegisterMember). Reported here rather than left to the C# compiler, which would report a duplicate member inside generated code the author cannot open.");
+
+    public static readonly DiagnosticDescriptor ReservedOptionName = new(
+        id: "TC012",
+        title: "TypeOption Name Is Reserved",
+        messageFormat: "TypeOption '{0}' cannot be named '{1}': the generated collection already defines a member with that name. Rename the option.",
+        category: "TypeCollection",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Each TypeOption gets a static accessor named after it, which would collide with a member the collection generates for itself (All, ByName, ById, ByCategory, Categories, GetMetadata, NotFound, RegisterMember). Reported here rather than left to the C# compiler, which would report a duplicate member inside generated code the author cannot open.");
+
     // Empty sentinel diagnostics
     public static readonly DiagnosticDescriptor UnknownConstructorParameterType = new(
         id: "TC009",

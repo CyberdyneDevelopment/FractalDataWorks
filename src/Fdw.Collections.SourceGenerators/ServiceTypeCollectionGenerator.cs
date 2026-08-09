@@ -247,6 +247,16 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         }
 
         // Check for Id collisions (extremely rare with Guids)
+        // Check for names the generated collection already uses for its own members
+        foreach (var reserved in options.Where(o => ReservedMemberNames.IsReserved(o.OptionName)))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                TypeCollectionGeneratorDiagnostics.ReservedServiceTypeOptionName,
+                Location.None,
+                reserved.FullTypeName,
+                reserved.OptionName));
+        }
+
         var idGroups = options.GroupBy(o => o.GeneratedId)
             .Where(g => g.Count() > 1)
             .ToList();
@@ -488,7 +498,7 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         // Static property accessors (singleton) - only for compile-time discovered options
         foreach (var option in options)
         {
-            var fieldName = $"_{CodeGeneration.ToCamelCase(option.OptionName)}";
+            var fieldName = $"_option{CodeGeneration.ToPascalCase(option.OptionName)}";
             bodySb.AppendLine($"        private static {option.FullTypeName}? {fieldName};");
             bodySb.AppendLine($"        /// <summary>Gets the {option.OptionName} singleton instance.</summary>");
             bodySb.AppendLine($"        public static {option.FullTypeName} {option.OptionName}");
