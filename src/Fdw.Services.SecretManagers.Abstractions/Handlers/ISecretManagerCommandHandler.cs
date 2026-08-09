@@ -12,17 +12,15 @@ namespace Fdw.Services.SecretManagers.Abstractions.Handlers;
 /// Used by the TypeCollection for handler discovery and lookup.
 /// </summary>
 /// <remarks>
-/// Deriving from <see cref="ITypeOption{TKey}"/> is what makes this a usable collection base, and the
-/// key type has to be on the interface as well as the base: the collection exposes this type, so its
-/// lookup dictionaries are keyed by the Id declared here. Non-generic ITypeOption declares Id as
-/// object, which keys them by object and will not assign to the int-keyed fields the collection
-/// generates from the base.
+/// The interface names itself as the option type: it is what the collection exposes and what lookups
+/// return, so it carries the key the generator builds those lookups from. Naming the base here
+/// instead would work, but it would make the abstraction depend on the class implementing it.
 /// The generator reads Id, Name and Category from that contract and, given it, can build the
 /// collection's NotFound sentinel itself; without it the collection has no sentinel and each backend
 /// has to register a hand-written option to stand in for one — which puts a non-handler into the
 /// handler set that every enumeration of All() then has to know to skip.
 /// </remarks>
-public interface ISecretManagerCommandHandler : ITypeOption<int, SecretManagerCommandHandlerBase>
+public interface ISecretManagerCommandHandler : ITypeOption<int, ISecretManagerCommandHandler>
 {
 
     /// <summary>
