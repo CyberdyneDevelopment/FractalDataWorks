@@ -936,4 +936,22 @@ public static partial class ServiceTypeLog
         string phase,
         string optionName,
         string reason);
+
+    /// <summary>
+    /// Logged when a command reaches a service type that declares no service to run it.
+    /// </summary>
+    /// <remarks>
+    /// Warning rather than Error: nothing is broken at this point, and the caller still gets a
+    /// failure result to act on. What it records is that something resolved a service type whose
+    /// whole job is to register during the three phases, expecting a service that was never meant
+    /// to exist — a wiring mistake, and one that would otherwise surface far from its cause.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 61015,
+        Level = LogLevel.Warning,
+        Message = "A {commandType} command was dispatched to {serviceTypeName}, which declares no service to run it")]
+    public static partial IGenericMessage NoServiceToExecute(
+        ILogger logger,
+        string commandType,
+        string serviceTypeName);
 }
