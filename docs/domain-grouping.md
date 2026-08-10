@@ -170,7 +170,7 @@ This document maps every project in `src/` to a logical domain and describes the
 | `Fdw.Services.Data` | DataStoreServiceTypes, DataSetServiceTypes |
 | `Fdw.Services.Data.Abstractions` | IDataStore, IDataSet interfaces |
 | `Fdw.Services.Data.Clients` | DataStore/DataSet HTTP clients |
-| `Fdw.Services.Data.Clients.Abstractions` | Client interfaces |
+| `Fdw.Services.Data.Clients.Models` | Client DTO models |
 | `Fdw.Services.Data.Endpoints` | Data service API endpoints |
 | `Fdw.Services.Data.SignalR` | Real-time data notifications |
 
@@ -302,7 +302,7 @@ This document maps every project in `src/` to a logical domain and describes the
 | Project | Purpose |
 |---------|---------|
 | `Fdw.Services.Catalog.Clients` | Catalog HTTP client |
-| `Fdw.Services.Catalog.Clients.Abstractions` | Catalog client interfaces |
+| `Fdw.Services.Catalog.Clients.Models` | Catalog client DTO models |
 | `Fdw.Services.Catalog.Endpoints` | Catalog API endpoints |
 
 ### 21. Services.Workflows
@@ -395,7 +395,7 @@ This document maps every project in `src/` to a logical domain and describes the
 | `Fdw.Web.Analytics.Clients` | Analytics HTTP client |
 | `Fdw.Web.Analytics.Clients.Abstractions` | Analytics interfaces |
 | `Fdw.Web.Search.Clients` | Search HTTP client |
-| `Fdw.Web.Search.Clients.Abstractions` | Search interfaces |
+| `Fdw.Web.Search.Clients.Models` | Search client DTO models |
 | `Fdw.Web.Search.Endpoints` | Search API endpoints |
 | `Fdw.Web.Calculations.Clients` | Calculation HTTP client |
 | `Fdw.Web.Calculations.Clients.Abstractions` | Calculation client interfaces |
@@ -439,7 +439,7 @@ This document maps every project in `src/` to a logical domain and describes the
 | `Fdw.UI.Themes.Clients.Abstractions` | Theme client interfaces |
 | `Fdw.UI.Themes.Endpoints` | Theme API endpoints |
 | `Fdw.UI.Pipelines.Clients` | Pipeline UI client |
-| `Fdw.UI.Pipelines.Clients.Abstractions` | Pipeline UI interfaces |
+| `Fdw.UI.Pipelines.Clients.Models` | Pipeline UI DTO models |
 | `Fdw.UI.Pipelines.Endpoints` | Pipeline UI endpoints |
 | `Fdw.UI.Schema.Clients.Abstractions` | Schema UI interfaces |
 | `Fdw.UI.Lineage.Clients.Abstractions` | Lineage UI interfaces |

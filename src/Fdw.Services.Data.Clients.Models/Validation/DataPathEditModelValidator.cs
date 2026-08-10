@@ -1,7 +1,7 @@
 using FluentValidation;
 using Fdw.Services.Data.Clients.Models;
 
-namespace Fdw.Services.Data.Clients.Validation;
+namespace Fdw.Services.Data.Clients.Models.Validation;
 
 /// <summary>
 /// Validator for <see cref="DataPathEditModel"/>.

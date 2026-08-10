@@ -21,7 +21,7 @@ dotnet add package Fdw.UI.Pipelines.Endpoints --prerelease
 
 ## Dependencies
 
-`Fdw.MessageLogging.Abstractions` · `Fdw.UI.Pipelines.Clients.Abstractions` · `Fdw.Web.Endpoints`
+`Fdw.MessageLogging.Abstractions` · `Fdw.UI.Pipelines.Clients.Models` · `Fdw.Web.Endpoints`
 
 Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators` · `Fdw.MessageLogging.SourceGenerators`
 

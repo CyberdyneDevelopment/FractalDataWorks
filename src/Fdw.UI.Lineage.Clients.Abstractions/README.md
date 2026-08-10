@@ -14,7 +14,7 @@ dotnet add package Fdw.UI.Lineage.Clients.Abstractions --prerelease
 
 ## Dependencies
 
-`Fdw.Collections` · `Fdw.UI.Pipelines.Clients.Abstractions`
+`Fdw.Collections` · `Fdw.UI.Pipelines.Clients.Models`
 
 Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators`
 

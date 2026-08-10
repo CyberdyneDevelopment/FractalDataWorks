@@ -1,6 +1,6 @@
-# Fdw.Web.Search.Clients.Abstractions
+# Fdw.Services.Catalog.Clients.Models
 
-The payload models for the search client.
+The payload models for the catalog API client.
 
 The typed client for this domain's API, plus the payload models it sends and receives.
 
@@ -10,14 +10,16 @@ Client models carry the `Payload` suffix: the body shape, minus transport concer
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `FindResultPayload` | class | A single matched record from a find operation. |
-| `SearchResultPayload` | class | Represents a single search result entry. |
-| `SearchSuggestionPayload` | class | Represents a search suggestion for autocomplete functionality. |
+| `CatalogEntityPayload` | class | Catalog entity summary. |
+| `CatalogSearchPayload` | class | Catalog search request. |
+| `DataSetAnnotationPayload` | class | Data transfer object representing a DataSet annotation. |
+| `DataSetCatalogPayload` | class | DataSet catalog entry. |
+| `GlossaryTermPayload` | class | Glossary term definition. |
 
 ## Installation
 
 ```bash
-dotnet add package Fdw.Web.Search.Clients.Abstractions --prerelease
+dotnet add package Fdw.Services.Catalog.Clients.Models --prerelease
 ```
 
 ---

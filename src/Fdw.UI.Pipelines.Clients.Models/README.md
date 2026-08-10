@@ -1,16 +1,10 @@
-# Fdw.UI.Pipelines.Clients.Abstractions
+# Fdw.UI.Pipelines.Clients.Models
 
 The payload models for the pipeline designer UI.
 
 The typed client for this domain's API, plus the payload models it sends and receives.
 
 Client models carry the `Payload` suffix: the body shape, minus transport concerns. The server's endpoint layer names its own models `Request` / `Response`, and the domain type carries no suffix at all. The duplication is deliberate — it keeps the wire contract free to change without dragging the domain with it.
-
-## Clients
-
-| Type | Kind | Purpose |
-|---|---|---|
-| `IPipelineDesignerClient` | interface | Defines the contract for the pipeline designer API — task type discovery and step type discovery. |
 
 ## Payloads
 
@@ -24,7 +18,7 @@ Client models carry the `Payload` suffix: the body shape, minus transport concer
 ## Installation
 
 ```bash
-dotnet add package Fdw.UI.Pipelines.Clients.Abstractions --prerelease
+dotnet add package Fdw.UI.Pipelines.Clients.Models --prerelease
 ```
 
 ## Dependencies

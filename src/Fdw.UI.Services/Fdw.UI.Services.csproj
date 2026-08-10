@@ -12,9 +12,9 @@
 
   <ItemGroup>
     <!-- Fdw Framework -->
-    <ProjectReference Include="..\Fdw.UI.Pipelines.Clients.Abstractions\Fdw.UI.Pipelines.Clients.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
     <ProjectReference Include="..\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Pipelines.Clients.Models\Fdw.UI.Pipelines.Clients.Models.csproj" />
   </ItemGroup>
 
   <ItemGroup>

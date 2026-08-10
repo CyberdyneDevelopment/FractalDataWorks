@@ -5,8 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <RootNamespace>Fdw.Web.Search.Clients</RootNamespace>
-    <PackageId>Fdw.Web.Search.Clients.Abstractions</PackageId>
-    <Title>Fdw Search Client Abstractions</Title>
+    <PackageId>Fdw.Web.Search.Clients.Models</PackageId>
+    <Title>Fdw Search Client Models</Title>
     <Description>DTO models for search API client operations.</Description>
   </PropertyGroup>
 </Project>

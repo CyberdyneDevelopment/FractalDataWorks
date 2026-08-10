@@ -30,7 +30,7 @@ dotnet add package Fdw.Schema.Clients.Abstractions --prerelease
 
 ## Dependencies
 
-`Fdw.Services.Data.Clients.Abstractions` · `Fdw.Web.Clients.Abstractions`
+`Fdw.Services.Data.Clients.Models` · `Fdw.Web.Clients.Abstractions`
 
 ---
 

@@ -10,6 +10,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Fdw.Web.Clients.Abstractions\Fdw.Web.Clients.Abstractions.csproj" />
-    <ProjectReference Include="..\Fdw.Services.Data.Clients.Abstractions\Fdw.Services.Data.Clients.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Clients.Models\Fdw.Services.Data.Clients.Models.csproj" />
   </ItemGroup>
 </Project>

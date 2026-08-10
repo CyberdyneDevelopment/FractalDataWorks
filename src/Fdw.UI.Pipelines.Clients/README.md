@@ -20,7 +20,7 @@ dotnet add package Fdw.UI.Pipelines.Clients --prerelease
 
 ## Dependencies
 
-`Fdw.UI.Pipelines.Clients.Abstractions` · `Fdw.Web.Clients` · `Fdw.Web.Http.Authentication`
+`Fdw.UI.Pipelines.Clients.Models` · `Fdw.Web.Clients` · `Fdw.Web.Http.Authentication`
 
 Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators`
 

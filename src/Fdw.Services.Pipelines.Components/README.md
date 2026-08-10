@@ -28,7 +28,7 @@ dotnet add package Fdw.Services.Pipelines.Components --prerelease
 
 ## Dependencies
 
-`Fdw.MessageLogging.Abstractions` · `Fdw.Operations.Clients` · `Fdw.Results` · `Fdw.Services.Connections.Clients` · `Fdw.Services.Data.Clients` · `Fdw.Services.Pipelines.Abstractions` · `Fdw.UI.Abstractions` · `Fdw.UI.Components` · `Fdw.UI.Pipelines.Clients.Abstractions` · `Fdw.UI.Wizard`
+`Fdw.MessageLogging.Abstractions` · `Fdw.Operations.Clients` · `Fdw.Results` · `Fdw.Services.Connections.Clients` · `Fdw.Services.Data.Clients` · `Fdw.Services.Pipelines.Abstractions` · `Fdw.UI.Abstractions` · `Fdw.UI.Components` · `Fdw.UI.Pipelines.Clients.Models` · `Fdw.UI.Wizard`
 
 Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators` · `Fdw.MessageLogging.SourceGenerators`
 

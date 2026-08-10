@@ -25,12 +25,12 @@
     <ProjectReference Include="..\..\src\Fdw.Data.Configuration\Fdw.Data.Configuration.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Data.Clients\Fdw.Services.Data.Clients.csproj" />
-    <ProjectReference Include="..\..\src\Fdw.Services.Data.Clients.Abstractions\Fdw.Services.Data.Clients.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Results\Fdw.Results.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Results.Abstractions\Fdw.Results.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Data.Clients.Models\Fdw.Services.Data.Clients.Models.csproj" />
   </ItemGroup>
 
 </Project>

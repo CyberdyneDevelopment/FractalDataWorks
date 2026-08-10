@@ -32,7 +32,6 @@
     <ProjectReference Include="..\Fdw.Services.Data.Clients\Fdw.Services.Data.Clients.csproj" />
     <ProjectReference Include="..\Fdw.Schema.Clients\Fdw.Schema.Clients.csproj" />
     <ProjectReference Include="..\Fdw.Services.Connections.Clients\Fdw.Services.Connections.Clients.csproj" />
-    <ProjectReference Include="..\Fdw.UI.Pipelines.Clients.Abstractions\Fdw.UI.Pipelines.Clients.Abstractions.csproj" />
 <ProjectReference Include="..\Fdw.Services.Catalog.Clients\Fdw.Services.Catalog.Clients.csproj" />
     <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Operations.Clients\Fdw.Operations.Clients.csproj" />
@@ -49,6 +48,8 @@
     <ProjectReference Include="..\Fdw.Data.Configuration\Fdw.Data.Configuration.csproj" />
     <ProjectReference Include="..\Fdw.UI\Fdw.UI.csproj" />
     <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Pipelines.Clients.Models\Fdw.UI.Pipelines.Clients.Models.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Pipelines.Clients\Fdw.UI.Pipelines.Clients.csproj" />
   </ItemGroup>
 
   <ItemGroup>

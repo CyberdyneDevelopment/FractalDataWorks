@@ -1,4 +1,4 @@
-# Fdw.Services.Data.Clients.Abstractions
+# Fdw.Services.Data.Clients.Models
 
 The payload models, edit models and validators for the data API client.
 
@@ -30,7 +30,7 @@ Client models carry the `Payload` suffix: the body shape, minus transport concer
 ## Installation
 
 ```bash
-dotnet add package Fdw.Services.Data.Clients.Abstractions --prerelease
+dotnet add package Fdw.Services.Data.Clients.Models --prerelease
 ```
 
 ## Dependencies

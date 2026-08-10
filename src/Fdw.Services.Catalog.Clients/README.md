@@ -20,7 +20,7 @@ dotnet add package Fdw.Services.Catalog.Clients --prerelease
 
 ## Dependencies
 
-`Fdw.Services.Catalog.Clients.Abstractions` · `Fdw.Web.Clients` · `Fdw.Web.Endpoints` · `Fdw.Web.Http.Authentication`
+`Fdw.Services.Catalog.Clients.Models` · `Fdw.Web.Clients` · `Fdw.Web.Endpoints` · `Fdw.Web.Http.Authentication`
 
 Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators`
 

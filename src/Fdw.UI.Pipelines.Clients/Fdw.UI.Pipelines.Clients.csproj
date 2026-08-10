@@ -7,7 +7,7 @@
     <RootNamespace>Fdw.UI.Pipelines.Clients</RootNamespace>
     <PackageId>Fdw.UI.Pipelines.Clients</PackageId>
     <Title>Fdw UI Pipelines API Clients</Title>
-    <Description>API client implementation and registration for the pipeline designer, over Fdw.UI.Pipelines.Clients.Abstractions.</Description>
+    <Description>API client contract, implementation and registration for the pipeline designer, over Fdw.UI.Pipelines.Clients.Models.</Description>
     <PackageTags>api;clients;pipelines</PackageTags>
   </PropertyGroup>
 
@@ -20,7 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\Fdw.Web.Http.Authentication\Fdw.Web.Http.Authentication.csproj" />
-    <ProjectReference Include="..\Fdw.UI.Pipelines.Clients.Abstractions\Fdw.UI.Pipelines.Clients.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Pipelines.Clients.Models\Fdw.UI.Pipelines.Clients.Models.csproj" />
   </ItemGroup>
 
 </Project>

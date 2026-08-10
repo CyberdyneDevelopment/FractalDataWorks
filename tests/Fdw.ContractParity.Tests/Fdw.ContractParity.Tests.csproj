@@ -14,11 +14,11 @@
     <!-- Client request DTOs (…Clients.Abstractions) paired with their server (…Endpoints) counterparts. -->
     <!-- Endpoint packages folded into Fdw.Web.Api -->
     <ProjectReference Include="..\..\src\Fdw.Web.Api\Fdw.Web.Api.csproj" />
-    <ProjectReference Include="..\..\src\Fdw.Services.Data.Clients.Abstractions\Fdw.Services.Data.Clients.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Scheduling.Abstractions\Fdw.Services.Scheduling.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Quality.Abstractions\Fdw.Services.Quality.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Connections.Abstractions\Fdw.Services.Connections.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Users.Abstractions\Fdw.Services.Users.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Data.Clients.Models\Fdw.Services.Data.Clients.Models.csproj" />
   </ItemGroup>
 
 </Project>

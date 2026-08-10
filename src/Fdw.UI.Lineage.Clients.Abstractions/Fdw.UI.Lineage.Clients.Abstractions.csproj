@@ -12,10 +12,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Fdw.UI.Pipelines.Clients.Abstractions\Fdw.UI.Pipelines.Clients.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
-    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj"
-                      OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Fdw.UI.Pipelines.Clients.Models\Fdw.UI.Pipelines.Clients.Models.csproj" />
   </ItemGroup>
 </Project>

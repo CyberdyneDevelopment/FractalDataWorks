@@ -5,8 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <RootNamespace>Fdw.UI.Pipelines.Clients</RootNamespace>
-    <PackageId>Fdw.UI.Pipelines.Clients.Abstractions</PackageId>
-    <Title>Fdw Pipeline UI Client Abstractions</Title>
+    <PackageId>Fdw.UI.Pipelines.Clients.Models</PackageId>
+    <Title>Fdw Pipeline UI Client Models</Title>
     <Description>Pipeline editor UI DTOs for Fdw Management UIs.</Description>
     <PackageTags>pipelines;ui;clients</PackageTags>
   </PropertyGroup>

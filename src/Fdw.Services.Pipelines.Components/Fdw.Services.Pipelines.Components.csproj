@@ -30,7 +30,6 @@
     <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
     <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
-    <ProjectReference Include="..\Fdw.UI.Pipelines.Clients.Abstractions\Fdw.UI.Pipelines.Clients.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.UI.Components\Fdw.UI.Components.csproj" />
     <ProjectReference Include="..\Fdw.Services.Connections.Clients\Fdw.Services.Connections.Clients.csproj" />
     <ProjectReference Include="..\Fdw.Operations.Clients\Fdw.Operations.Clients.csproj" />
@@ -39,6 +38,8 @@
     <ProjectReference Include="..\Fdw.UI.Abstractions\Fdw.UI.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.UI.Wizard\Fdw.UI.Wizard.csproj" />
     <ProjectReference Include="..\Fdw.UI\Fdw.UI.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Pipelines.Clients.Models\Fdw.UI.Pipelines.Clients.Models.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Pipelines.Clients\Fdw.UI.Pipelines.Clients.csproj" />
   </ItemGroup>
 
   <ItemGroup>

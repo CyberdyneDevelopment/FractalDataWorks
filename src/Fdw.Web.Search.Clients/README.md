@@ -20,7 +20,7 @@ dotnet add package Fdw.Web.Search.Clients --prerelease
 
 ## Dependencies
 
-`Fdw.Web.Clients` · `Fdw.Web.Endpoints` · `Fdw.Web.Http.Authentication` · `Fdw.Web.Search.Clients.Abstractions`
+`Fdw.Web.Clients` · `Fdw.Web.Endpoints` · `Fdw.Web.Http.Authentication` · `Fdw.Web.Search.Clients.Models`
 
 Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators`
 

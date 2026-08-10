@@ -44,12 +44,12 @@
     <ProjectReference Include="..\Fdw.UI.Themes\Fdw.UI.Themes.csproj" />
     <ProjectReference Include="..\Fdw.Data.DataSets\Fdw.Data.DataSets.csproj" />
     <ProjectReference Include="..\Fdw.Data.DataSets.Abstractions\Fdw.Data.DataSets.Abstractions.csproj" />
-    <ProjectReference Include="..\Fdw.Services.Data.Clients.Abstractions\Fdw.Services.Data.Clients.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Calculations.Aggregations\Fdw.Calculations.Aggregations.csproj" />
     <ProjectReference Include="..\Fdw.Services.ExternalIdentityProviders\Fdw.Services.ExternalIdentityProviders.csproj" />
     <ProjectReference Include="..\Fdw.Schema.Clients.Abstractions\Fdw.Schema.Clients.Abstractions.csproj" />
-    <ProjectReference Include="..\Fdw.Web.Search.Clients.Abstractions\Fdw.Web.Search.Clients.Abstractions.csproj" />
-    <ProjectReference Include="..\Fdw.Services.Catalog.Clients.Abstractions\Fdw.Services.Catalog.Clients.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Clients.Models\Fdw.Services.Data.Clients.Models.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Catalog.Clients.Models\Fdw.Services.Catalog.Clients.Models.csproj" />
+    <ProjectReference Include="..\Fdw.Web.Search.Clients.Models\Fdw.Web.Search.Clients.Models.csproj" />
   </ItemGroup>
 
   <ItemGroup>

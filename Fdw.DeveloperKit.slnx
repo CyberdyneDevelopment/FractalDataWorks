@@ -251,7 +251,7 @@
     <Project Path="src/Fdw.Services.Authorization/Fdw.Services.Authorization.csproj" />
     <Project Path="src/Fdw.Services.Calculations.Abstractions/Fdw.Services.Calculations.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Calculations/Fdw.Services.Calculations.csproj" />
-    <Project Path="src/Fdw.Services.Catalog.Clients.Abstractions/Fdw.Services.Catalog.Clients.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Catalog.Clients.Models/Fdw.Services.Catalog.Clients.Models.csproj" />
     <Project Path="src/Fdw.Services.Configuration.Abstractions/Fdw.Services.Configuration.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Connections.FileSystem.Abstractions/Fdw.Services.Connections.FileSystem.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Connections.FileSystem/Fdw.Services.Connections.FileSystem.csproj" />
@@ -261,7 +261,7 @@
     <Project Path="src/Fdw.Services.Connections.Sqlite/Fdw.Services.Connections.Sqlite.csproj" />
     <Project Path="src/Fdw.Services.Credentials.Abstractions/Fdw.Services.Credentials.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Credentials.Sql/Fdw.Services.Credentials.Sql.csproj" />
-    <Project Path="src/Fdw.Services.Data.Clients.Abstractions/Fdw.Services.Data.Clients.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Data.Clients.Models/Fdw.Services.Data.Clients.Models.csproj" />
     <Project Path="src/Fdw.Services.Data.SignalR/Fdw.Services.Data.SignalR.csproj" />
     <Project Path="src/Fdw.Services.DataVault.Abstractions/Fdw.Services.DataVault.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Etl.Abstractions/Fdw.Services.Etl.Abstractions.csproj" />
@@ -320,7 +320,7 @@
     <Project Path="src/Fdw.UI.Components.Blazor.MsSql/Fdw.UI.Components.Blazor.MsSql.csproj" />
     <Project Path="src/Fdw.UI.Lineage.Clients.Abstractions/Fdw.UI.Lineage.Clients.Abstractions.csproj" />
     <Project Path="src/Fdw.UI.Pages/Fdw.UI.Pages.csproj" />
-    <Project Path="src/Fdw.UI.Pipelines.Clients.Abstractions/Fdw.UI.Pipelines.Clients.Abstractions.csproj" />
+    <Project Path="src/Fdw.UI.Pipelines.Clients.Models/Fdw.UI.Pipelines.Clients.Models.csproj" />
     <Project Path="src/Fdw.UI.Pipelines.Endpoints/Fdw.UI.Pipelines.Endpoints.csproj" />
     <Project Path="src/Fdw.UI.Rendering.Blazor/Fdw.UI.Rendering.Blazor.csproj" />
     <Project Path="src/Fdw.UI.Schema.Clients.Abstractions/Fdw.UI.Schema.Clients.Abstractions.csproj" />
@@ -344,7 +344,7 @@
     <Project Path="src/Fdw.Web.Endpoints/Fdw.Web.Endpoints.csproj" />
     <Project Path="src/Fdw.Web.Http.Authentication.Blazor/Fdw.Web.Http.Authentication.Blazor.csproj" />
     <Project Path="src/Fdw.Web.Http.Authentication/Fdw.Web.Http.Authentication.csproj" />
-    <Project Path="src/Fdw.Web.Search.Clients.Abstractions/Fdw.Web.Search.Clients.Abstractions.csproj" />
+    <Project Path="src/Fdw.Web.Search.Clients.Models/Fdw.Web.Search.Clients.Models.csproj" />
   </Folder>
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
   <!-- src/Analyzers - Framework-wide code style analyzers and code fixes               -->

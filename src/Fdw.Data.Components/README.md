@@ -35,7 +35,7 @@ dotnet add package Fdw.Data.Components --prerelease
 
 ## Dependencies
 
-`Fdw.Data.Configuration` · `Fdw.Data.DataNodes` · `Fdw.MessageLogging.Abstractions` · `Fdw.Operations.Abstractions` · `Fdw.Operations.Clients` · `Fdw.Schema.Clients` · `Fdw.Services.Catalog.Clients` · `Fdw.Services.Connections.Clients` · `Fdw.Services.Data.Abstractions` · `Fdw.Services.Data.Clients` · `Fdw.UI.Abstractions` · `Fdw.UI.Components` · `Fdw.UI.Pipelines.Clients.Abstractions` · `Fdw.UI.Wizard` · `Fdw.Web.Calculations.Clients`
+`Fdw.Data.Configuration` · `Fdw.Data.DataNodes` · `Fdw.MessageLogging.Abstractions` · `Fdw.Operations.Abstractions` · `Fdw.Operations.Clients` · `Fdw.Schema.Clients` · `Fdw.Services.Catalog.Clients` · `Fdw.Services.Connections.Clients` · `Fdw.Services.Data.Abstractions` · `Fdw.Services.Data.Clients` · `Fdw.UI.Abstractions` · `Fdw.UI.Components` · `Fdw.UI.Pipelines.Clients.Models` · `Fdw.UI.Wizard` · `Fdw.Web.Calculations.Clients`
 
 Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators` · `Fdw.MessageLogging.SourceGenerators`
 

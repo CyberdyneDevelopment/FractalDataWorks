@@ -38,7 +38,7 @@ dotnet add package Fdw.UI.Services --prerelease
 
 ## Dependencies
 
-`Fdw.Messages` · `Fdw.Results` · `Fdw.UI.Pipelines.Clients.Abstractions`
+`Fdw.Messages` · `Fdw.Results` · `Fdw.UI.Pipelines.Clients.Models`
 
 ---
 

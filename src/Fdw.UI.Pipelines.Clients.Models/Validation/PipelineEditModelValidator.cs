@@ -1,7 +1,7 @@
 using FluentValidation;
 using Fdw.UI.Pipelines.Clients.Models;
 
-namespace Fdw.UI.Pipelines.Clients.Validation;
+namespace Fdw.UI.Pipelines.Clients.Models.Validation;
 
 /// <summary>
 /// Validator for PipelineEditModel.
