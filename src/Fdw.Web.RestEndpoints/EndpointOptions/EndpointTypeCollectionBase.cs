@@ -29,9 +29,20 @@ namespace Fdw.Web.RestEndpoints.EndpointOptions;
 /// to a collection it does not own: replacing a packaged endpoint is a <c>SkipRegistration</c> on
 /// the original plus a member declared in the host's own assembly.
 /// </remarks>
-public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBase, IEndpointTypeOption>
+public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBase, IEndpointTypeOption>, IEndpointTypeCollection
     where TBase : EndpointTypeOptionBase, IEndpointTypeOption
 {
+    /// <summary>
+    /// Gets the endpoints declared against this collection.
+    /// </summary>
+    /// <remarks>
+    /// Abstract because <c>All()</c> is a generated static on the derived collection and this base
+    /// cannot name it. Each concrete collection satisfies this with one line returning its own
+    /// <c>All()</c> - the bridge between the generated static surface and the polymorphism a
+    /// service type needs to cycle collections it does not name.
+    /// </remarks>
+    public abstract IEnumerable<IEndpointTypeOption> Members { get; }
+
     // ── The three registration methods, at collection level ─────────────────────────────────────
     // The same shape as the option's, for the same reason one level up: something a whole resource
     // needs — a shared validator, a typed client every one of its endpoints resolves — belongs
@@ -79,11 +90,8 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// Runs Configure for this resource: its own body if one was set, then every member not skipped.
     /// </summary>
     /// <param name="builder">The host builder.</param>
-    /// <param name="members">The members to cycle.</param>
-    /// <returns>The builder, or the first failure encountered.</returns>
-    public IGenericResult<IHostApplicationBuilder> ConfigureAll(
-        IHostApplicationBuilder builder,
-        IEnumerable<TBase>? members)
+        /// <returns>The builder, or the first failure encountered.</returns>
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder)
     {
         if (SkipRegistration)
         {
@@ -99,7 +107,7 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
             }
         }
 
-        foreach (var member in Selected(members))
+        foreach (var member in Selected(Members))
         {
             var result = member.Configure(builder);
             if (result.IsFailure)
@@ -115,12 +123,10 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// Runs Register for this resource: its own body if one was set, then every member not skipped.
     /// </summary>
     /// <param name="builder">The host builder.</param>
-    /// <param name="members">The members to cycle.</param>
-    /// <param name="loggerFactory">The logger factory, if the host has one yet.</param>
+        /// <param name="loggerFactory">The logger factory, if the host has one yet.</param>
     /// <returns>The builder, or the first failure encountered.</returns>
-    public IGenericResult<IHostApplicationBuilder> RegisterAll(
+    public IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
-        IEnumerable<TBase>? members,
         ILoggerFactory? loggerFactory = null)
     {
         if (SkipRegistration)
@@ -137,7 +143,7 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
             }
         }
 
-        foreach (var member in Selected(members))
+        foreach (var member in Selected(Members))
         {
             var result = member.Register(builder, loggerFactory);
             if (result.IsFailure)
@@ -153,12 +159,10 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// Runs Initialize for this resource: its own body if one was set, then every member not skipped.
     /// </summary>
     /// <param name="host">The built host.</param>
-    /// <param name="members">The members to cycle.</param>
-    /// <param name="loggerFactory">The logger factory.</param>
+        /// <param name="loggerFactory">The logger factory.</param>
     /// <returns>The host, or the first failure encountered.</returns>
-    public IGenericResult<IHost> InitializeAll(
+    public IGenericResult<IHost> Initialize(
         IHost host,
-        IEnumerable<TBase>? members,
         ILoggerFactory? loggerFactory = null)
     {
         if (SkipRegistration)
@@ -175,7 +179,7 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
             }
         }
 
-        foreach (var member in Selected(members))
+        foreach (var member in Selected(Members))
         {
             var result = member.Initialize(host, loggerFactory);
             if (result.IsFailure)
@@ -194,6 +198,6 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     // Why no argument check: nothing to register is a real state, not a mistake. A resource whose
     // members are all skipped, or which has none yet, should register nothing and say so by doing
     // nothing — throwing would turn an ordinary composition choice into a startup failure.
-    private static IEnumerable<TBase> Selected(IEnumerable<TBase>? members)
-        => (members ?? Enumerable.Empty<TBase>()).Where(m => !m.SkipRegistration);
+    private static IEnumerable<IEndpointTypeOption> Selected(IEnumerable<IEndpointTypeOption>? members)
+        => (members ?? Enumerable.Empty<IEndpointTypeOption>()).Where(m => !m.SkipRegistration);
 }

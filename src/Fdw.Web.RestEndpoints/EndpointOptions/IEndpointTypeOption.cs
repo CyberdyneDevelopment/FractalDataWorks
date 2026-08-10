@@ -1,5 +1,8 @@
 using System;
 using Fdw.Collections;
+using Fdw.Results;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Web.RestEndpoints.EndpointOptions;
 
@@ -42,4 +45,25 @@ public interface IEndpointTypeOption : ITypeOption<int, EndpointTypeOptionBase>
     /// themselves — set this during Configure, which runs before Register reads it.
     /// </remarks>
     bool SkipRegistration { get; set; }
+
+    // The three phases belong on the interface, not just the base, because a collection cycles its
+    // members as IEndpointTypeOption — it is the declared contract that has to carry them, or the
+    // sweep can see an endpoint and not be able to run it.
+
+    /// <summary>Runs this endpoint's Configure body.</summary>
+    /// <param name="builder">The host builder.</param>
+    /// <returns>The builder, or a failure the caller decides what to do with.</returns>
+    IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder);
+
+    /// <summary>Runs this endpoint's Register body.</summary>
+    /// <param name="builder">The host builder.</param>
+    /// <param name="loggerFactory">The logger factory, if the host has one yet.</param>
+    /// <returns>The builder, or a failure the caller decides what to do with.</returns>
+    IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null);
+
+    /// <summary>Runs this endpoint's Initialize body.</summary>
+    /// <param name="host">The built host.</param>
+    /// <param name="loggerFactory">The logger factory.</param>
+    /// <returns>The host, or a failure the caller decides what to do with.</returns>
+    IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null);
 }
