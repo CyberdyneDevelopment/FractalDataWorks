@@ -20,6 +20,7 @@
     <ProjectReference Include="..\Fdw.Web.Endpoints\Fdw.Web.Endpoints.csproj" />
     <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
     <ProjectReference Include="..\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
 
   </ItemGroup>
 
