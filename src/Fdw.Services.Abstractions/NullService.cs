@@ -51,10 +51,21 @@ public sealed class NullService : IGenericService
     public static NullService Instance { get; } = new();
 
     /// <inheritdoc />
-    public string Id => nameof(NullService);
+    /// <remarks>
+    /// <c>_Empty</c>, the same identity a TypeCollection's generated <c>NotFound</c> sentinel
+    /// carries. Both answer the same question — "there is nothing here" — and reading the same way
+    /// is the point: an <c>_Empty</c> in a log or a diagnostic means a sentinel was reached, not
+    /// that a real thing was misnamed.
+    /// </remarks>
+    public string Id => SentinelName;
 
     /// <inheritdoc />
-    public string ServiceType => nameof(NullService);
+    public string ServiceType => SentinelName;
+
+    /// <summary>
+    /// The identity every sentinel in the framework carries.
+    /// </summary>
+    private const string SentinelName = "_Empty";
 
     /// <summary>
     /// Gets a value indicating whether this service is available. Always false.
