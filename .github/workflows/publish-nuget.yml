@@ -28,6 +28,10 @@ on:
         description: 'Pack and validate without pushing to nuget.org'
         type: boolean
         default: false
+      force:
+        description: 'Publish even if this version already exists on nuget.org'
+        type: boolean
+        default: false
 
 concurrency:
   # One publish at a time. nuget.org rejects a re-push of an existing version, so overlapping
@@ -40,8 +44,97 @@ permissions:
   id-token: write # required: lets the job mint the OIDC token nuget.org exchanges for a key
 
 jobs:
+  # Decides whether there is anything to publish, WITHOUT building. The mirror is force-pushed as
+  # a whole subtree, so this workflow fires on every sync — a README edit, a pipeline tweak, a
+  # comment change. What makes a run meaningful is not which files moved but whether the version
+  # number is one nuget.org has never seen, since that is the only thing that can actually be
+  # published: nuget.org rejects a re-push and versions are immutable once live. Gating on the
+  # version rather than on paths means no list of "safe" file globs has to be kept correct, and a
+  # source change that forgets to bump the version is skipped for the same reason a docs change
+  # is — there is no new version to publish.
+  check:
+    name: Check version is publishable
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      should-publish: ${{ steps.exists.outputs.should-publish }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Why the version is read rather than computed: the package number is hand-set in
+      # Directory.Build.props (VersionPrefix + VersionSuffix) and deliberately not derived from
+      # git tags, so it is identical wherever it is built.
+      - name: Resolve version
+        id: version
+        run: |
+          set -euo pipefail
+          PREFIX=$(grep -oPm1 '(?<=<VersionPrefix>)[^<]+' Directory.Build.props)
+          SUFFIX=$(grep -oPm1 '(?<=<VersionSuffix>)[^<]+' Directory.Build.props || true)
+          if [ -n "$SUFFIX" ]; then VERSION="${PREFIX}-${SUFFIX}"; else VERSION="${PREFIX}"; fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version in this tree: $VERSION"
+
+      # Why a stable branch must not carry a prerelease suffix, and vice versa: `main` is the
+      # stable channel. Publishing 1.0.0-rc.1 from it would put a prerelease on the stable line,
+      # and nuget.org can never take it back — versions are immutable and only unlistable.
+      - name: Check version matches the branch channel
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ "${{ github.ref_name }}" = "main" ] && [[ "$VERSION" == *-* ]]; then
+            echo "FAIL: branch 'main' is the stable channel but the version is '$VERSION'."
+            echo "Clear <VersionSuffix> in Directory.Build.props before publishing from main."
+            exit 1
+          fi
+          if [ "${{ github.ref_name }}" = "prerelease" ] && [[ "$VERSION" != *-* ]]; then
+            echo "FAIL: branch 'prerelease' expects a prerelease version but got '$VERSION'."
+            echo "Set <VersionSuffix> in Directory.Build.props before publishing from prerelease."
+            exit 1
+          fi
+          echo "Version '$VERSION' matches branch '${{ github.ref_name }}'."
+
+      # Fdw.Abstractions is the probe: it is packable, its id is not overridden, and every release
+      # contains it, so its presence at a given version stands for the whole set. A 404 from the
+      # flat container means the id has never been published at all, which is the first-release
+      # case and must proceed.
+      - name: Is this version already on nuget.org?
+        id: exists
+        env:
+          PROBE_PACKAGE: fdw.abstractions
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ "${{ inputs.force }}" = "true" ]; then
+            echo "should-publish=true" >> "$GITHUB_OUTPUT"
+            echo "force requested - publishing $VERSION regardless of what is already live."
+            exit 0
+          fi
+          CODE=$(curl -sS -o /tmp/versions.json -w '%{http_code}' \
+            "https://api.nuget.org/v3-flatcontainer/${PROBE_PACKAGE}/index.json" || echo 000)
+          if [ "$CODE" = "404" ]; then
+            echo "should-publish=true" >> "$GITHUB_OUTPUT"
+            echo "${PROBE_PACKAGE} is not on nuget.org yet - this is the first publish."
+            exit 0
+          fi
+          if [ "$CODE" != "200" ]; then
+            echo "FAIL: nuget.org returned HTTP $CODE querying ${PROBE_PACKAGE}."
+            echo "Refusing to guess whether $VERSION is already live."
+            exit 1
+          fi
+          if python3 -c "import json,sys; sys.exit(0 if '$VERSION'.lower() in [v.lower() for v in json.load(open('/tmp/versions.json'))['versions']] else 1)"; then
+            echo "should-publish=false" >> "$GITHUB_OUTPUT"
+            echo "$VERSION is already on nuget.org - nothing to publish."
+            echo "Bump VersionPrefix/VersionSuffix in Directory.Build.props to cut a new release."
+          else
+            echo "should-publish=true" >> "$GITHUB_OUTPUT"
+            echo "$VERSION is new - publishing."
+          fi
+
   publish:
     name: Pack and publish
+    needs: check
+    if: needs.check.outputs.should-publish == 'true'
     runs-on: ubuntu-latest
     env:
       DOTNET_NOLOGO: 'true'
@@ -66,39 +159,6 @@ jobs:
 
       - name: Restore
         run: dotnet restore Fdw.DeveloperKit.slnx
-
-      # Why the version is read rather than computed: the package number is hand-set in
-      # Directory.Build.props (VersionPrefix + VersionSuffix) and deliberately not derived from
-      # git tags, so it is identical wherever it is built. Surfacing it makes the run log say
-      # which version is about to become permanent on nuget.org.
-      - name: Resolve version
-        id: version
-        run: |
-          set -euo pipefail
-          PREFIX=$(grep -oPm1 '(?<=<VersionPrefix>)[^<]+' Directory.Build.props)
-          SUFFIX=$(grep -oPm1 '(?<=<VersionSuffix>)[^<]+' Directory.Build.props || true)
-          if [ -n "$SUFFIX" ]; then VERSION="${PREFIX}-${SUFFIX}"; else VERSION="${PREFIX}"; fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Publishing version $VERSION"
-
-      # Why a stable branch must not carry a prerelease suffix, and vice versa: `main` is the
-      # stable channel. Publishing 1.0.0-rc.1 from it would put a prerelease on the stable line,
-      # and nuget.org can never take it back — versions are immutable and only unlistable.
-      - name: Check version matches the branch channel
-        run: |
-          set -euo pipefail
-          VERSION="${{ steps.version.outputs.version }}"
-          if [ "${{ github.ref_name }}" = "main" ] && [[ "$VERSION" == *-* ]]; then
-            echo "FAIL: branch 'main' is the stable channel but the version is '$VERSION'."
-            echo "Clear <VersionSuffix> in Directory.Build.props before publishing from main."
-            exit 1
-          fi
-          if [ "${{ github.ref_name }}" = "prerelease" ] && [[ "$VERSION" != *-* ]]; then
-            echo "FAIL: branch 'prerelease' expects a prerelease version but got '$VERSION'."
-            echo "Set <VersionSuffix> in Directory.Build.props before publishing from prerelease."
-            exit 1
-          fi
-          echo "Version '$VERSION' matches branch '${{ github.ref_name }}'."
 
       - name: Build
         run: dotnet build Fdw.DeveloperKit.slnx -c Release --no-restore
@@ -135,4 +195,4 @@ jobs:
 
       - name: Dry run summary
         if: ${{ inputs.dry_run }}
-        run: echo "Dry run - packed ${{ steps.version.outputs.version }} but did not push."
+        run: echo "Dry run - packed ${{ needs.check.outputs.version }} but did not push."
