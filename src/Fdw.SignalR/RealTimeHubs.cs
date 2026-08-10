@@ -23,7 +23,7 @@ namespace Fdw.SignalR;
 /// </para>
 /// <para>
 /// Hosts wire the hubs through <see cref="Register"/> (before <c>Build()</c>) and
-/// <see cref="RealTimeHubEndpointExtensions.MapRealTimeHubs"/> (after <c>Build()</c>) — SignalR
+/// the host's Initialize phase (after <c>Build()</c>) — SignalR
 /// registration and hub mapping are driven entirely by the collection, with no per-application
 /// wiring.
 /// </para>
@@ -32,7 +32,7 @@ namespace Fdw.SignalR;
 /// <c>PlatformServicesRegistrationGenerator</c> sweep, alongside every <c>[ServiceTypeCollection]</c>
 /// domain — <see cref="Configure"/> and <see cref="Initialize"/> are no-ops declared only to
 /// satisfy the required shape; <see cref="Register"/> does the only real pre-Build work this domain
-/// needs. Endpoint mapping (<see cref="RealTimeHubEndpointExtensions.MapRealTimeHubs"/>) is a post-Build
+/// needs. Endpoint mapping is a post-Build
 /// call each host still makes manually — it is not part of this three-phase shape and is not swept.
 /// </para>
 /// </remarks>

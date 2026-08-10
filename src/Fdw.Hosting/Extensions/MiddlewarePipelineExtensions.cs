@@ -17,59 +17,7 @@ namespace Fdw.Hosting.Extensions;
 [ExcludeFromCodeCoverage]
 public static class MiddlewarePipelineExtensions
 {
-    /// <summary>
-    /// Configures the framework middleware pipeline in the correct order:
-    /// HSTS (production), framework middleware (exception handler, HTTPS, security headers, Serilog),
-    /// CORS, authentication, authorization, multi-tenancy, and rate limiting.
-    /// <para>
-    /// FastEndpoints, Swagger, and app-specific middleware should be added after this call.
-    /// </para>
-    /// </summary>
-    /// <param name="app">The web application.</param>
-    /// <param name="multitenancyEnabled">Whether multi-tenancy middleware should be added (after authentication).</param>
-    public static WebApplication UseFrameworkApplicationPipeline(
-        this WebApplication app,
-        bool multitenancyEnabled)
-    {
-        // HSTS — production only
-        if (!app.Environment.IsDevelopment())
-        {
-            app.UseHsts();
-        }
-
-        // Framework middleware: global exception handler (first), HTTPS, security headers, Serilog
-        var securityHeadersOptions = app.Configuration
-            .GetSection("SecurityHeaders")
-            .Get<SecurityHeadersOptions>()
-            ?? new SecurityHeadersOptions();
-        app.UseFrameworkMiddleware(securityHeadersOptions);
-
-        // CORS — must be before authentication for preflight (OPTIONS) to work
-        var corsOptions = app.Services.GetService<CorsOptions>();
-        if (corsOptions?.Enabled == true)
-        {
-            app.UseCors();
-        }
-
-        // Authentication and Authorization
-        app.UseAuthentication();
-        app.UseAuthorization();
-
-        // Request context — must be after authentication so HttpContext.User is populated
-        app.UseRequestContext();
-
-        // Multi-tenancy middleware (must be after authentication)
-        if (multitenancyEnabled)
-        {
-            app.UseMultitenancy();
-        }
-
-        // Rate limiting
-        app.UseRateLimiter();
-
-        return app;
-    }
-
+    
     /// <summary>
     /// Calls <c>UseFastEndpoints</c> with <see cref="PermissionClaimsPreProcessor"/> registered
     /// as a global pre-processor on every endpoint, then invokes the caller-supplied configuration

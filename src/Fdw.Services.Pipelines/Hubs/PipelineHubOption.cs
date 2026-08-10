@@ -13,7 +13,7 @@ namespace Fdw.Services.Pipelines.Hubs;
 /// <remarks>
 /// Declares the route and broadcaster wiring for <see cref="PipelineStatusHub"/>. Discovered and
 /// registered by the host through <see cref="RealTimeHubs.Register"/> /
-/// <see cref="RealTimeHubEndpointExtensions.MapRealTimeHubs"/> — there is no per-application
+/// the host's Initialize phase — there is no per-application
 /// registration code.
 /// </remarks>
 [TypeOption(typeof(RealTimeHubs), "Pipeline")]
