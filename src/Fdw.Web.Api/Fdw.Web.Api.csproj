@@ -50,6 +50,20 @@
     <ProjectReference Include="..\Fdw.Services.Data.Clients.Models\Fdw.Services.Data.Clients.Models.csproj" />
     <ProjectReference Include="..\Fdw.Services.Catalog.Clients.Models\Fdw.Services.Catalog.Clients.Models.csproj" />
     <ProjectReference Include="..\Fdw.Web.Search.Clients.Models\Fdw.Web.Search.Clients.Models.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Endpoints\Fdw.Services.Data.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Schema.Endpoints\Fdw.Schema.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Web.Search.Endpoints\Fdw.Web.Search.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Pipelines.Endpoints\Fdw.Services.Pipelines.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Quality.Endpoints\Fdw.Services.Quality.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Connections.Endpoints\Fdw.Services.Connections.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authorization.Endpoints\Fdw.Services.Authorization.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Scheduling.Endpoints\Fdw.Services.Scheduling.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Catalog.Endpoints\Fdw.Services.Catalog.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Users.Endpoints\Fdw.Services.Users.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authentication.Endpoints\Fdw.Services.Authentication.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Themes.Endpoints\Fdw.UI.Themes.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Multitenancy.Endpoints\Fdw.Services.Multitenancy.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Services.ExternalIdentityProviders.Endpoints\Fdw.Services.ExternalIdentityProviders.Endpoints.csproj" />
   </ItemGroup>
 
   <ItemGroup>
