@@ -170,7 +170,8 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
                     // cannot catch what follows; buffering must sit after it so the handler's own
                     // body gets a Content-Length, and before the security headers so every
                     // downstream response passes through it.
-                    web.UseGlobalExceptionHandler();
+                    // What UseGlobalExceptionHandler used to hide.
+                    web.UseMiddleware<GlobalExceptionHandlerMiddleware>();
                     web.UseHttpsRedirection();
 
                     web.UseFrameworkResponseBuffering(
@@ -193,7 +194,8 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
                     web.UseAuthorization();
 
                     // After authentication: it reads HttpContext.User, which is empty before it.
-                    web.UseRequestContext();
+                    // What UseRequestContext used to hide.
+                    web.UseMiddleware<RequestContextMiddleware>();
 
                     web.UseRateLimiter();
                 }
@@ -204,6 +206,8 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
                 {
                     config.Endpoints.RoutePrefix = RoutePrefix;
                     config.Security.RoleClaimType = RoleClaimType;
+
+                    ConfigureEndpoints(config);
 
                     // One error shape for the whole API. FastEndpoints' default validation body is
                     // {statusCode, message, errors:{field:[...]}}, which differs from the envelope
@@ -246,6 +250,27 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
             }
 
         return GenericResult<IHost>.Success(host);
+    }
+
+
+    /// <summary>
+    /// Adjusts the FastEndpoints configuration for this host.
+    /// </summary>
+    /// <param name="config">The configuration being built.</param>
+    /// <remarks>
+    /// A host whose endpoints do not all derive from an FDW base class registers the permission
+    /// pre-processor here:
+    /// <code>
+    /// config.Endpoints.Configurator = ep =>
+    ///     ep.PreProcessors(Order.Before, new PermissionClaimsPreProcessor());
+    /// </code>
+    /// Deliberately not done for every host. The FDW endpoint bases add that pre-processor
+    /// themselves in their own Configure, so a host built entirely from them would register it
+    /// twice. Which of the two a host needs depends on what its endpoints derive from, which only
+    /// the host knows.
+    /// </remarks>
+    protected virtual void ConfigureEndpoints(Config config)
+    {
     }
 
     /// <summary>Gets the route prefix every endpoint sits under.</summary>
