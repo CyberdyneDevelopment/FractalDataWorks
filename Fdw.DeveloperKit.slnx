@@ -281,9 +281,11 @@
     <Project Path="src/Fdw.Services.Multitenancy.Components/Fdw.Services.Multitenancy.Components.csproj" />
     <Project Path="src/Fdw.Services.Multitenancy.Sql/Fdw.Services.Multitenancy.Sql.csproj" />
     <Project Path="src/Fdw.Services.Multitenancy/Fdw.Services.Multitenancy.csproj" />
+    <Project Path="src/Fdw.Services.Notifications.Components/Fdw.Services.Notifications.Components.csproj" />
     <Project Path="src/Fdw.Services.Notifications.Endpoints/Fdw.Services.Notifications.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Notifications.System/Fdw.Services.Notifications.System.csproj" />
     <Project Path="src/Fdw.Services.Pipelines.Clients/Fdw.Services.Pipelines.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Quality.Components/Fdw.Services.Quality.Components.csproj" />
     <Project Path="src/Fdw.Services.RateLimiting.Abstractions/Fdw.Services.RateLimiting.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.RateLimiting/Fdw.Services.RateLimiting.csproj" />
     <Project Path="src/Fdw.Services.Registration.SourceGenerators/Fdw.Services.Registration.SourceGenerators.csproj" />
@@ -294,12 +296,14 @@
     <Project Path="src/Fdw.Services.Resiliency.RetryNotify/Fdw.Services.Resiliency.RetryNotify.csproj" />
     <Project Path="src/Fdw.Services.Resiliency/Fdw.Services.Resiliency.csproj" />
     <Project Path="src/Fdw.Services.Scheduling.Components/Fdw.Services.Scheduling.Components.csproj" />
+    <Project Path="src/Fdw.Services.SecretManagers.Components/Fdw.Services.SecretManagers.Components.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.Endpoints/Fdw.Services.SecretManagers.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.EnvironmentVariable/Fdw.Services.SecretManagers.EnvironmentVariable.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.MsSql/Fdw.Services.SecretManagers.MsSql.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.Sqlite/Fdw.Services.SecretManagers.Sqlite.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.UserSecrets/Fdw.Services.SecretManagers.UserSecrets.csproj" />
     <Project Path="src/Fdw.Services.SessionState.Clients/Fdw.Services.SessionState.Clients.csproj" />
+    <Project Path="src/Fdw.Services.Settings.Components/Fdw.Services.Settings.Components.csproj" />
     <Project Path="src/Fdw.Services.Settings.Endpoints/Fdw.Services.Settings.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Settings/Fdw.Services.Settings.csproj" />
     <Project Path="src/Fdw.Services.Terminal.Abstractions/Fdw.Services.Terminal.Abstractions.csproj" />

@@ -81,6 +81,10 @@
     <ProjectReference Include="..\Fdw.UI.Pipelines.Clients\Fdw.UI.Pipelines.Clients.csproj" />
     <ProjectReference Include="..\Fdw.Services.Quality.Clients\Fdw.Services.Quality.Clients.csproj" />
     <ProjectReference Include="..\Fdw.UI.Pipelines.Clients.Models\Fdw.UI.Pipelines.Clients.Models.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Settings.Components\Fdw.Services.Settings.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Notifications.Components\Fdw.Services.Notifications.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Quality.Components\Fdw.Services.Quality.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Services.SecretManagers.Components\Fdw.Services.SecretManagers.Components.csproj" />
   </ItemGroup>
 
   <!-- Package references — union of all 19 UI.Pages packages + 4 cascaded packages -->

@@ -1,0 +1,17 @@
+@* Why this file exists separately: the razor files here previously relied on Fdw.UI.Pages'
+   _Imports.razor, which imports ~25 domains into one scope. Extracting the components means
+   declaring only what they actually use, so a missing reference fails here rather than being
+   satisfied by an unrelated domain's import. *@
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Fdw.Results
+@using Fdw.Services.Notifications.Clients
+@using Fdw.Services.Notifications.Clients.Models
+@using Fdw.Services.Notifications.Components.Logging
+@using Fdw.UI.Themes.Clients.Models
+@using Fdw.UI.Providers
