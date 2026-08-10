@@ -173,80 +173,13 @@ public static class RateLimitingServiceExtensions
     /// </remarks>
     private static void RegisterPolicy(RateLimiterOptions options, IRateLimitPolicy policy)
     {
-        switch (policy.Algorithm.Name)
-        {
-            case "SlidingWindow":
-                RegisterSlidingWindowPolicy(options, policy);
-                break;
-
-            case "TokenBucket":
-                RegisterTokenBucketPolicy(options, policy);
-                break;
-
-            case "FixedWindow":
-                RegisterFixedWindowPolicy(options, policy);
-                break;
-
-            case "Concurrency":
-                RegisterConcurrencyPolicy(options, policy);
-                break;
-        }
+        // Why the algorithm builds its own limiter: policy.Algorithm is a resolved TypeOption, so it
+        // can be asked what it is rather than interrogated for its Name. This replaced a four-case
+        // switch on that string which had no default — an algorithm it did not recognise registered
+        // nothing, and the named policy every endpoint asks for by RateLimitPolicyName simply did not
+        // exist. Adding a fifth algorithm is now a new TypeOption and no edit here.
+        options.AddPolicy(policy.Name, _ =>
+            RateLimitPartition.Get(policy.Name, _ => policy.Algorithm.CreateLimiter(policy)));
     }
 
-    /// <summary>
-    /// Registers a sliding window rate limiter for the given policy.
-    /// </summary>
-    private static void RegisterSlidingWindowPolicy(RateLimiterOptions options, IRateLimitPolicy policy)
-    {
-        options.AddSlidingWindowLimiter(policy.Name, opt =>
-        {
-            opt.PermitLimit = policy.RequestsPerWindow;
-            opt.Window = policy.Window;
-            opt.SegmentsPerWindow = policy.SegmentsPerWindow;
-            opt.QueueLimit = policy.QueueExceededRequests ? policy.QueueLimit : 0;
-            opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        });
-    }
-
-    /// <summary>
-    /// Registers a token bucket rate limiter for the given policy.
-    /// </summary>
-    private static void RegisterTokenBucketPolicy(RateLimiterOptions options, IRateLimitPolicy policy)
-    {
-        options.AddTokenBucketLimiter(policy.Name, opt =>
-        {
-            opt.TokenLimit = policy.AllowBurst ? policy.BurstLimit : policy.RequestsPerWindow;
-            opt.ReplenishmentPeriod = policy.Window;
-            opt.TokensPerPeriod = policy.RequestsPerWindow;
-            opt.QueueLimit = policy.QueueExceededRequests ? policy.QueueLimit : 0;
-            opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        });
-    }
-
-    /// <summary>
-    /// Registers a fixed window rate limiter for the given policy.
-    /// </summary>
-    private static void RegisterFixedWindowPolicy(RateLimiterOptions options, IRateLimitPolicy policy)
-    {
-        options.AddFixedWindowLimiter(policy.Name, opt =>
-        {
-            opt.PermitLimit = policy.RequestsPerWindow;
-            opt.Window = policy.Window;
-            opt.QueueLimit = policy.QueueExceededRequests ? policy.QueueLimit : 0;
-            opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        });
-    }
-
-    /// <summary>
-    /// Registers a concurrency limiter for the given policy.
-    /// </summary>
-    private static void RegisterConcurrencyPolicy(RateLimiterOptions options, IRateLimitPolicy policy)
-    {
-        options.AddConcurrencyLimiter(policy.Name, opt =>
-        {
-            opt.PermitLimit = policy.RequestsPerWindow;
-            opt.QueueLimit = policy.QueueExceededRequests ? policy.QueueLimit : 0;
-            opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        });
-    }
 }
