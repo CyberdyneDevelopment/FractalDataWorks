@@ -113,10 +113,15 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory = null)
     {
-        // The endpoint type itself goes in first, then whatever else this endpoint needs. Both
-        // happen here rather than the type being collected and registered somewhere central,
-        // because the option already knows its type and a second pass could only disagree with it.
+        // The endpoint registers ITSELF, in two places, then runs whatever else it needs.
+        //
+        // DI, so the container can construct it. And DeclaredEndpoints, because FastEndpoints has no
+        // per-endpoint registration call: with auto-discovery off, the only way in is the
+        // SourceGeneratorDiscoveredTypes list read when AddFastEndpoints runs. Doing both here is
+        // what makes SkipRegistration mean something — an endpoint that is skipped is never routed,
+        // where a scanner would have found and routed it regardless.
         builder.Services.AddTransient(EndpointType);
+        DeclaredEndpoints.Declare(EndpointType);
 
         return RegistrationMethod(builder, loggerFactory);
     }
