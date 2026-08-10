@@ -97,6 +97,11 @@ public abstract class ApiServiceTypeBase
     /// <param name="builder">The host builder.</param>
     /// <param name="loggerFactory">The logger factory, if the host has one yet.</param>
     /// <returns>The builder, or the first failure encountered.</returns>
+    /// <remarks>
+    /// Nothing is logged here. Register is the phase that reports what reached the container, and the
+    /// collection is the level that can measure it — this cycle would only be able to repeat what its
+    /// collections already said.
+    /// </remarks>
     protected IGenericResult<IHostApplicationBuilder> RegisterEndpoints(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory = null)
@@ -106,6 +111,9 @@ public abstract class ApiServiceTypeBase
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
+        // Why: a skipped collection is still driven rather than filtered out here. Register is where
+        // a collection announces that it was skipped, and a filter at this level would take that
+        // announcement with it — leaving a switched-off resource looking like one that never existed.
         foreach (var collection in EndpointCollections ?? Array.Empty<IEndpointTypeCollection>())
         {
             var result = collection.Register(builder, loggerFactory);

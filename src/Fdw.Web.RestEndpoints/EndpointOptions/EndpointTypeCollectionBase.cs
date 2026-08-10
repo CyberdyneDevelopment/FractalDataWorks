@@ -5,6 +5,7 @@ using Fdw.Collections;
 using Fdw.Results;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Web.RestEndpoints.EndpointOptions;
 
@@ -32,6 +33,11 @@ namespace Fdw.Web.RestEndpoints.EndpointOptions;
 public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBase, IEndpointTypeOption>, IEndpointTypeCollection
     where TBase : EndpointTypeOptionBase, IEndpointTypeOption
 {
+    // Why: one fixed category for the whole sweep, not the concrete collection's type name. A host
+    // filtering its startup log wants "show me what registration did" as a single switch; a
+    // per-collection category would make that a wildcard the collections have to keep agreeing on.
+    private const string LogCategory = "Fdw.Web.RestEndpoints.EndpointRegistration";
+
     /// <summary>
     /// Gets the endpoints declared against this collection.
     /// </summary>
@@ -125,33 +131,71 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// <param name="builder">The host builder.</param>
         /// <param name="loggerFactory">The logger factory, if the host has one yet.</param>
     /// <returns>The builder, or the first failure encountered.</returns>
+    /// <remarks>
+    /// This is the phase that reports itself. Register is the only one of the three that changes the
+    /// container, so it is the only one where "what did this put in" is a question with an answer —
+    /// and the answer is measured, as the service-descriptor delta across each call, rather than
+    /// taken from what a body says it registers.
+    /// </remarks>
     public IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory = null)
     {
+        // Why: the factory is null until the host has one, and reporting is not optional work that
+        // gets dropped when it is — NullLogger keeps every call below unconditional and silent.
+        var logger = loggerFactory?.CreateLogger(LogCategory) ?? NullLogger.Instance;
+
         if (SkipRegistration)
         {
+            EndpointRegistrationLog.GroupSkipped(logger, Name);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
+        // Why: zero when no body was set is the measurement, not a stand-in for one — a group that
+        // declared no registration body of its own contributed nothing to the container.
+        var groupServiceCount = 0;
         if (RegistrationMethod is not null)
         {
+            var beforeGroup = builder.Services.Count;
             var own = RegistrationMethod(builder, loggerFactory);
             if (own.IsFailure)
             {
                 return own;
             }
+
+            groupServiceCount = builder.Services.Count - beforeGroup;
         }
 
-        foreach (var member in Selected(Members))
+        var endpointCount = 0;
+
+        // Why: every declared member, not Selected(Members) — an endpoint switched off has to be
+        // named as switched off. Filtering first is what makes a skipped endpoint indistinguishable
+        // from one that was never declared, which is the state this sweep exists to make visible.
+        foreach (var member in Members)
         {
+            if (member.SkipRegistration)
+            {
+                EndpointRegistrationLog.EndpointSkipped(logger, Name, member.Name);
+                continue;
+            }
+
+            var beforeMember = builder.Services.Count;
             var result = member.Register(builder, loggerFactory);
             if (result.IsFailure)
             {
                 return result;
             }
+
+            EndpointRegistrationLog.EndpointRegistered(
+                logger,
+                Name,
+                member.Name,
+                builder.Services.Count - beforeMember,
+                member.EndpointType.Name);
+            endpointCount++;
         }
 
+        EndpointRegistrationLog.GroupRegistered(logger, Name, groupServiceCount, endpointCount);
         return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
