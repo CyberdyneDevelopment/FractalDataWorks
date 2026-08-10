@@ -15,7 +15,6 @@
     <ProjectReference Include="..\Fdw.Services.Connections\Fdw.Services.Connections.csproj" />
     <ProjectReference Include="..\Fdw.Services.Data\Fdw.Services.Data.csproj" />
     <ProjectReference Include="..\Fdw.Services.Etl\Fdw.Services.Etl.csproj" />
-    <ProjectReference Include="..\Fdw.Services.Etl.Projects\Fdw.Services.Etl.Projects.csproj" />
     <ProjectReference Include="..\Fdw.Services.Pipelines\Fdw.Services.Pipelines.csproj" />
     <ProjectReference Include="..\Fdw.Services.RateLimiting\Fdw.Services.RateLimiting.csproj" />
     <ProjectReference Include="..\Fdw.Services.Resiliency\Fdw.Services.Resiliency.csproj" />
