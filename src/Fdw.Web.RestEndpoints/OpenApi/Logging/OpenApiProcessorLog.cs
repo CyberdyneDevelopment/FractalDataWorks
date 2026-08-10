@@ -2,7 +2,7 @@ using Fdw.MessageLogging;
 using Fdw.Messages;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.Web.Api.OpenApi.Logging;
+namespace Fdw.Web.RestEndpoints.OpenApi.Logging;
 
 /// <summary>
 /// MessageLogging for OpenAPI document processors.

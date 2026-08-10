@@ -7,7 +7,7 @@ using NJsonSchema;
 using NSwag.Generation.Processors;
 using NSwag.Generation.Processors.Contexts;
 
-namespace Fdw.Web.Api.OpenApi;
+namespace Fdw.Web.RestEndpoints.OpenApi;
 
 /// <summary>
 /// NSwag document processor that resolves [ValuesFrom] attributes on schema properties

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Fdw.Services.Authentication.Abstractions.Security;
-using Fdw.Web.Api.OpenApi.Logging;
+using Fdw.Web.RestEndpoints.OpenApi.Logging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -11,7 +11,7 @@ using NSwag;
 using NSwag.Generation.Processors;
 using NSwag.Generation.Processors.Contexts;
 
-namespace Fdw.Web.Api.OpenApi;
+namespace Fdw.Web.RestEndpoints.OpenApi;
 
 /// <summary>
 /// Filters OpenAPI operations based on the current user's permissions.

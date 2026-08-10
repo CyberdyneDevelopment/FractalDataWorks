@@ -1,6 +1,7 @@
 using System;
 using Fdw.Collections;
 using Fdw.Results;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -111,7 +112,14 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
     public virtual IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory = null)
-        => RegistrationMethod(builder, loggerFactory);
+    {
+        // The endpoint type itself goes in first, then whatever else this endpoint needs. Both
+        // happen here rather than the type being collected and registered somewhere central,
+        // because the option already knows its type and a second pass could only disagree with it.
+        builder.Services.AddTransient(EndpointType);
+
+        return RegistrationMethod(builder, loggerFactory);
+    }
 
     /// <summary>Runs this endpoint's Initialize body.</summary>
     /// <param name="host">The built host.</param>

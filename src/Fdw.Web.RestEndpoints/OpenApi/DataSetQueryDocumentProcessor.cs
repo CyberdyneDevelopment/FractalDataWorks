@@ -8,7 +8,7 @@ using NSwag;
 using NSwag.Generation.Processors;
 using NSwag.Generation.Processors.Contexts;
 
-namespace Fdw.Web.Api.OpenApi;
+namespace Fdw.Web.RestEndpoints.OpenApi;
 
 /// <summary>
 /// NSwag document processor that enriches the OpenAPI spec with per-dataset query documentation.
