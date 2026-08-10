@@ -1,0 +1,138 @@
+# Publishes the Fdw.* packages to nuget.org using Trusted Publishing (OIDC), so no long-lived
+# API key is stored anywhere.
+#
+# Why the push happens here rather than alongside the rest of the build: nuget.org's Trusted
+# Publishing accepts tokens from a fixed set of hosted issuers, matching each token's `iss` claim
+# against a compiled-in constant and fetching signing keys from that issuer's discovery document.
+# A self-managed CI host presents its own issuer, so its tokens are rejected during signature
+# validation — before any policy lookup — and no policy field or pipeline setting changes that.
+# GitHub Actions is a supported issuer and this repository already mirrors the source, so the
+# release push runs from here.
+#
+# A long-lived API key is not the alternative: nuget.org caps new keys at 30 days from
+# 2026-08-17 and expires all existing keys on 2026-11-01.
+#
+# Requires a Trusted Publishing policy on nuget.org (Account -> Trusted Publishing) owned by the
+# `aicolab` account, naming this repository owner, this repository, and this workflow's FILE NAME
+# (`publish-nuget.yml`, no path). Renaming this file invalidates the policy.
+name: Publish to NuGet.org
+
+on:
+  push:
+    branches:
+      - main
+      - prerelease
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Pack and validate without pushing to nuget.org'
+        type: boolean
+        default: false
+
+concurrency:
+  # One publish at a time. nuget.org rejects a re-push of an existing version, so overlapping
+  # runs on the same version would race and one would fail on packages the other already pushed.
+  group: publish-nuget-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # required: lets the job mint the OIDC token nuget.org exchanges for a key
+
+jobs:
+  publish:
+    name: Pack and publish
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: 'true'
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+      DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore Fdw.DeveloperKit.slnx
+
+      # Why the version is read rather than computed: the package number is hand-set in
+      # Directory.Build.props (VersionPrefix + VersionSuffix) and deliberately not derived from
+      # git tags, so it is identical wherever it is built. Surfacing it makes the run log say
+      # which version is about to become permanent on nuget.org.
+      - name: Resolve version
+        id: version
+        run: |
+          set -euo pipefail
+          PREFIX=$(grep -oPm1 '(?<=<VersionPrefix>)[^<]+' Directory.Build.props)
+          SUFFIX=$(grep -oPm1 '(?<=<VersionSuffix>)[^<]+' Directory.Build.props || true)
+          if [ -n "$SUFFIX" ]; then VERSION="${PREFIX}-${SUFFIX}"; else VERSION="${PREFIX}"; fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publishing version $VERSION"
+
+      # Why a stable branch must not carry a prerelease suffix, and vice versa: `main` is the
+      # stable channel. Publishing 1.0.0-rc.1 from it would put a prerelease on the stable line,
+      # and nuget.org can never take it back — versions are immutable and only unlistable.
+      - name: Check version matches the branch channel
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ "${{ github.ref_name }}" = "main" ] && [[ "$VERSION" == *-* ]]; then
+            echo "FAIL: branch 'main' is the stable channel but the version is '$VERSION'."
+            echo "Clear <VersionSuffix> in Directory.Build.props before publishing from main."
+            exit 1
+          fi
+          if [ "${{ github.ref_name }}" = "prerelease" ] && [[ "$VERSION" != *-* ]]; then
+            echo "FAIL: branch 'prerelease' expects a prerelease version but got '$VERSION'."
+            echo "Set <VersionSuffix> in Directory.Build.props before publishing from prerelease."
+            exit 1
+          fi
+          echo "Version '$VERSION' matches branch '${{ github.ref_name }}'."
+
+      - name: Build
+        run: dotnet build Fdw.DeveloperKit.slnx -c Release --no-restore
+
+      - name: Pack
+        run: dotnet pack Fdw.DeveloperKit.slnx -c Release --no-build -o artifacts
+
+      - name: List packages
+        run: |
+          set -euo pipefail
+          ls -1 artifacts/*.nupkg | sed 's/^/  /'
+          echo "total: $(ls -1 artifacts/*.nupkg | wc -l) packages"
+
+      # Exchanges the OIDC token for a nuget.org API key valid for 1 hour. The key is masked in
+      # logs by the action and never leaves the runner.
+      - name: NuGet login (OIDC to short-lived key)
+        id: login
+        if: ${{ !inputs.dry_run }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      # --skip-duplicate: a version already on nuget.org is a no-op rather than a hard failure, so
+      # a re-run after a partial push finishes the remaining packages instead of dying on the
+      # first one that already landed. The .snupkg symbol packages are pushed automatically
+      # alongside their .nupkg.
+      - name: Push to nuget.org
+        if: ${{ !inputs.dry_run }}
+        run: |
+          dotnet nuget push "artifacts/*.nupkg" \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+            --skip-duplicate
+
+      - name: Dry run summary
+        if: ${{ inputs.dry_run }}
+        run: echo "Dry run - packed ${{ steps.version.outputs.version }} but did not push."
