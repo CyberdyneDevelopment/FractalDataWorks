@@ -1,5 +1,8 @@
 using System;
 using Fdw.Collections;
+using Fdw.Results;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Web.RestEndpoints.EndpointOptions;
 
@@ -36,6 +39,86 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
 
     /// <inheritdoc />
     public bool SkipRegistration { get; set; }
+
+    // ── The three registration methods ──────────────────────────────────────────────────────────
+    // Same shape as ServiceTypeBase: a func holding the body, a gerund that sets it, and a method
+    // that invokes it. It is here at the ENDPOINT level so an endpoint that needs something of its
+    // own - a validator, a typed client, an accessor - registers it beside itself instead of in a
+    // host's Program.cs, where the dependency is invisible to anyone reading the endpoint.
+    //
+    // Defaults are set in the declaration so a func is never null and the invokers never guard.
+
+    /// <summary>Gets the body run during Configure.</summary>
+    protected Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> ConfigurationMethod { get; private set; }
+        = static builder => GenericResult<IHostApplicationBuilder>.Success(builder);
+
+    /// <summary>Gets the body run during Register.</summary>
+    protected Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> RegistrationMethod { get; private set; }
+        = static (builder, loggerFactory) => GenericResult<IHostApplicationBuilder>.Success(builder);
+
+    /// <summary>Gets the body run during Initialize.</summary>
+    protected Func<IHost, ILoggerFactory?, IGenericResult<IHost>> InitializationMethod { get; private set; }
+        = static (host, loggerFactory) => GenericResult<IHost>.Success(host);
+
+    /// <summary>Gets a value indicating whether this option supplied its own Configure body.</summary>
+    protected bool ConfigurationIsCustom { get; private set; }
+
+    /// <summary>Gets a value indicating whether this option supplied its own Register body.</summary>
+    protected bool RegistrationIsCustom { get; private set; }
+
+    /// <summary>Gets a value indicating whether this option supplied its own Initialize body.</summary>
+    protected bool InitializationIsCustom { get; private set; }
+
+    /// <summary>Sets the body run during Configure.</summary>
+    /// <param name="method">The body.</param>
+    public void Configuration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        ConfigurationMethod = method ?? throw new ArgumentNullException(nameof(method));
+        ConfigurationIsCustom = true;
+    }
+
+    /// <summary>Sets the body run during Register.</summary>
+    /// <param name="method">The body.</param>
+    public void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        RegistrationMethod = method ?? throw new ArgumentNullException(nameof(method));
+        RegistrationIsCustom = true;
+    }
+
+    /// <summary>Sets the body run during Initialize.</summary>
+    /// <param name="method">The body.</param>
+    public void Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
+    {
+        InitializationMethod = method ?? throw new ArgumentNullException(nameof(method));
+        InitializationIsCustom = true;
+    }
+
+    /// <summary>Runs this endpoint's Configure body.</summary>
+    /// <param name="builder">The host builder.</param>
+    /// <returns>The builder, or a failure the caller decides what to do with.</returns>
+    public virtual IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder)
+        => ConfigurationMethod(builder);
+
+    /// <summary>Runs this endpoint's Register body, and registers the endpoint type itself.</summary>
+    /// <param name="builder">The host builder.</param>
+    /// <param name="loggerFactory">The logger factory, if the host has one yet.</param>
+    /// <returns>The builder, or a failure the caller decides what to do with.</returns>
+    /// <remarks>
+    /// <see cref="SkipRegistration"/> is honoured by the COLLECTION, not here. An option asked
+    /// directly to register does so: skipping is a composition decision the collection makes while
+    /// cycling, and burying it here would make a direct call silently do nothing.
+    /// </remarks>
+    public virtual IGenericResult<IHostApplicationBuilder> Register(
+        IHostApplicationBuilder builder,
+        ILoggerFactory? loggerFactory = null)
+        => RegistrationMethod(builder, loggerFactory);
+
+    /// <summary>Runs this endpoint's Initialize body.</summary>
+    /// <param name="host">The built host.</param>
+    /// <param name="loggerFactory">The logger factory.</param>
+    /// <returns>The host, or a failure the caller decides what to do with.</returns>
+    public virtual IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+        => InitializationMethod(host, loggerFactory);
 
     /// <summary>
     /// Derives an option's name from the endpoint class it declares.
