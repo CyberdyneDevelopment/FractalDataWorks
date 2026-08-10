@@ -1,5 +1,25 @@
 <Project>
   <!--
+    A package that ships no build output has no .pdb to put in a symbol package, so the
+    IncludeSymbols=true set in Directory.Build.props produces an EMPTY .snupkg. nuget.org rejects
+    those with 400 "The package does not contain any symbol (.pdb) files.", and because
+    `dotnet nuget push` stops at the first error, one such package aborts the whole release
+    part-way through — leaving some ids published at a version that can then never be re-pushed.
+
+    The condition is written against IncludeBuildOutput rather than a list of project names so
+    that any project which hand-packs its own output is covered without editing this file. Today
+    that is the five source generators, which pack their dll into analyzers/dotnet/cs and set
+    IncludeBuildOutput=false.
+
+    This lives in .targets rather than .props because a project sets IncludeBuildOutput in its own
+    body, which is evaluated after Directory.Build.props is imported — the condition would always
+    read empty there.
+  -->
+  <PropertyGroup Condition="'$(IncludeBuildOutput)' == 'false'">
+    <IncludeSymbols>false</IncludeSymbols>
+  </PropertyGroup>
+
+  <!--
     Fix pack when projects explicitly set TargetFramework (singular) but Directory.Build.props
     sets a default TargetFrameworks (plural). Clear TargetFrameworks to prevent pack from
     looking for target frameworks that weren't built.
