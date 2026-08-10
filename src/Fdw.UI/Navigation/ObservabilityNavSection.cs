@@ -1,7 +1,7 @@
 using Fdw.Collections;
 using Fdw.Collections.Attributes;
 
-namespace Fdw.UI.Registration;
+namespace Fdw.UI.Navigation;
 
 /// <summary>
 /// The "Observability" sidebar section.

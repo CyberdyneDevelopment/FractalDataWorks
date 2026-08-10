@@ -1,6 +1,6 @@
 using System;
 
-namespace Fdw.UI.Registration;
+namespace Fdw.UI.Navigation;
 
 /// <summary>
 /// The rule deciding whether a caller may reach a page.

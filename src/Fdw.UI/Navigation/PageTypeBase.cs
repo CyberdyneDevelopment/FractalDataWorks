@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Fdw.Collections;
 
-namespace Fdw.UI.Registration;
+namespace Fdw.UI.Navigation;
 
 /// <summary>
 /// Base class for a group of pages contributed to <see cref="PageTypes"/> by one package.

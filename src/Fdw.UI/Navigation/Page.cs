@@ -1,6 +1,6 @@
 using System;
 
-namespace Fdw.UI.Registration;
+namespace Fdw.UI.Navigation;
 
 /// <summary>
 /// A page declaration with no behaviour of its own — the shape almost every page uses.

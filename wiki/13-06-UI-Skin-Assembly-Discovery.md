@@ -53,7 +53,7 @@ public abstract class PageTypeBase : TypeOptionBase<int, PageTypeBase>, IPageTyp
 
 ```razor
 @using System.Reflection
-@using Fdw.UI.Registration
+@using Fdw.UI.Navigation
 
 @code {
     private static readonly Assembly[] _fdwPageAssemblies =

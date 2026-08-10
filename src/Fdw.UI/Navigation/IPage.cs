@@ -1,6 +1,6 @@
 using System;
 
-namespace Fdw.UI.Registration;
+namespace Fdw.UI.Navigation;
 
 /// <summary>
 /// One routable page declared by a <see cref="PageTypes"/> option, together with the sidebar entry

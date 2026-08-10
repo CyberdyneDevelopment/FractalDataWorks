@@ -1,6 +1,6 @@
 using Fdw.Collections;
 
-namespace Fdw.UI.Registration;
+namespace Fdw.UI.Navigation;
 
 /// <summary>
 /// Base class for sidebar sections.

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fdw.UI.Registration;
+namespace Fdw.UI.Navigation;
 
 /// <summary>
 /// The rule for a page any authenticated caller may reach. Declared as

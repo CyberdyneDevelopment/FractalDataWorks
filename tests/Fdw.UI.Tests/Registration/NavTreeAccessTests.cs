@@ -1,6 +1,6 @@
 using System;
 using System.Linq;
-using Fdw.UI.Registration;
+using Fdw.UI.Navigation;
 
 namespace Fdw.UI.Tests.Registration;
 

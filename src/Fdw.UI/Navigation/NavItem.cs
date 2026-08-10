@@ -1,6 +1,6 @@
 using System;
 
-namespace Fdw.UI.Registration;
+namespace Fdw.UI.Navigation;
 
 /// <summary>
 /// A sidebar entry declared by the page it opens.

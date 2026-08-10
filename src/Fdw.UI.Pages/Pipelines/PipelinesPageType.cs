@@ -1,5 +1,5 @@
 using Fdw.Collections.Attributes;
-using Fdw.UI.Registration;
+using Fdw.UI.Navigation;
 
 namespace Fdw.Services.Pipelines.UI.Pages;
 

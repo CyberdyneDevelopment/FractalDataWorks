@@ -1,6 +1,6 @@
 using Fdw.Collections;
 
-namespace Fdw.UI.Registration;
+namespace Fdw.UI.Navigation;
 
 /// <summary>
 /// A titled group of sidebar entries.

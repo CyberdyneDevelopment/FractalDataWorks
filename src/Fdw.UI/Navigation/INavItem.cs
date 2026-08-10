@@ -1,4 +1,4 @@
-namespace Fdw.UI.Registration;
+namespace Fdw.UI.Navigation;
 
 /// <summary>
 /// The sidebar entry for a single <see cref="IPage"/>.

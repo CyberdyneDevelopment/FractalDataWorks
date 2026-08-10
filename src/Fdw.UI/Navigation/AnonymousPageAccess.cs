@@ -1,6 +1,6 @@
 using System;
 
-namespace Fdw.UI.Registration;
+namespace Fdw.UI.Navigation;
 
 /// <summary>
 /// The rule for a page anyone may reach. Declared as <see cref="PageAccess.Anonymous"/>.

@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Collections.Attributes;
 
-namespace Fdw.UI.Registration;
+namespace Fdw.UI.Navigation;
 
 /// <summary>
 /// TypeCollection for sidebar sections. The source generator creates a static property per section

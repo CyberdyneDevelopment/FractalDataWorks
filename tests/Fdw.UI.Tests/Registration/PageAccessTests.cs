@@ -1,5 +1,5 @@
 using System;
-using Fdw.UI.Registration;
+using Fdw.UI.Navigation;
 
 namespace Fdw.UI.Tests.Registration;
 

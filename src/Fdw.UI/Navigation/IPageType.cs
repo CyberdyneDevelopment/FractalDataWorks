@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using Fdw.Collections;
 
-namespace Fdw.UI.Registration;
+namespace Fdw.UI.Navigation;
 
 /// <summary>
 /// A group of related pages contributed to <see cref="PageTypes"/> by one package.

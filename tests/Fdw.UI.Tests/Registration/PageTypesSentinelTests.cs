@@ -1,4 +1,4 @@
-using Fdw.UI.Registration;
+using Fdw.UI.Navigation;
 using Shouldly;
 using Xunit;
 

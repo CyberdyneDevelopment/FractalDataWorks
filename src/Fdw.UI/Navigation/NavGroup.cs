@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Fdw.UI.Registration;
+namespace Fdw.UI.Navigation;
 
 /// <summary>
 /// One rendered sidebar section: its label and the pages in it, already ordered.

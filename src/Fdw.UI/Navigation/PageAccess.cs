@@ -1,6 +1,6 @@
 using System;
 
-namespace Fdw.UI.Registration;
+namespace Fdw.UI.Navigation;
 
 /// <summary>
 /// The access rules a page can declare: <see cref="Anonymous"/>, <see cref="Authenticated"/>, or
