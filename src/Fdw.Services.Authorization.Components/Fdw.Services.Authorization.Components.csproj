@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <Description>Headless Authorization components: the contexts and providers a skin renders against, with no rendering of its own.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.UI\Fdw.UI.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Settings.Clients\Fdw.Services.Settings.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Themes.Abstractions\Fdw.UI.Themes.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Themes.Clients\Fdw.UI.Themes.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authorization.Clients\Fdw.Services.Authorization.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Users.Clients\Fdw.Services.Users.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Components\Fdw.UI.Components.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="**/*.razor" Pack="true" PackagePath="razor-sources/%(RecursiveDir)" />
+  </ItemGroup>
+
+</Project>

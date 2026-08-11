@@ -1,0 +1,15 @@
+@* Why this file exists per package: these razor files used to rely on Fdw.UI.Pages' _Imports,
+   which pulled ~25 domains into one scope. Declaring only what this package uses means a missing
+   reference fails here rather than being satisfied by an unrelated domain's import. *@
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using Fdw.Results
+@using Fdw.Agents.Components.AgentActions
+@using Fdw.Agents.Components.Logging
+@using Fdw.Agents.Clients
+@using Fdw.Agents.Clients.Models

@@ -85,6 +85,15 @@
     <ProjectReference Include="..\Fdw.Services.Notifications.Components\Fdw.Services.Notifications.Components.csproj" />
     <ProjectReference Include="..\Fdw.Services.Quality.Components\Fdw.Services.Quality.Components.csproj" />
     <ProjectReference Include="..\Fdw.Services.SecretManagers.Components\Fdw.Services.SecretManagers.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Agents.Components\Fdw.Agents.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authentication.Components\Fdw.Services.Authentication.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authorization.Components\Fdw.Services.Authorization.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Calculations.Components\Fdw.Calculations.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Catalog.Components\Fdw.Services.Catalog.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Configuration.Components\Fdw.Configuration.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Etl.Projects.UI.Components\Fdw.Services.Etl.Projects.UI.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Messaging.Components\Fdw.Services.Messaging.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Terminal.Components\Fdw.Services.Terminal.Components.csproj" />
   </ItemGroup>
 
   <!-- Package references — union of all 19 UI.Pages packages + 4 cascaded packages -->

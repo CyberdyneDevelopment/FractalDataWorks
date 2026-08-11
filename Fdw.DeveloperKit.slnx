@@ -211,11 +211,14 @@
     <Project Path="src/Fdw.Aegis.Configuration/Fdw.Aegis.Configuration.csproj" />
     <Project Path="src/Fdw.Aegis.McpServer/Fdw.Aegis.McpServer.csproj" />
     <Project Path="src/Fdw.Aegis/Fdw.Aegis.csproj" />
+    <Project Path="src/Fdw.Agents.Components/Fdw.Agents.Components.csproj" />
     <Project Path="src/Fdw.Aui.Abstractions/Fdw.Aui.Abstractions.csproj" />
     <Project Path="src/Fdw.Aui/Fdw.Aui.csproj" />
+    <Project Path="src/Fdw.Calculations.Components/Fdw.Calculations.Components.csproj" />
     <Project Path="src/Fdw.Calculations.Endpoints/Fdw.Calculations.Endpoints.csproj" />
     <Project Path="src/Fdw.Collections/Fdw.Collections.csproj" />
     <Project Path="src/Fdw.Commands.Data/Fdw.Commands.Data.csproj" />
+    <Project Path="src/Fdw.Configuration.Components/Fdw.Configuration.Components.csproj" />
     <Project Path="src/Fdw.Configuration.Endpoints/Fdw.Configuration.Endpoints.csproj" />
     <Project Path="src/Fdw.Connections.MsSql/Fdw.Connections.MsSql.csproj" />
     <Project Path="src/Fdw.Connections.PostgreSql/Fdw.Connections.PostgreSql.csproj" />
@@ -248,13 +251,16 @@
     <Project Path="src/Fdw.Security.Hashing/Fdw.Security.Hashing.csproj" />
     <Project Path="src/Fdw.Services.Agents.Abstractions/Fdw.Services.Agents.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Agents/Fdw.Services.Agents.csproj" />
+    <Project Path="src/Fdw.Services.Authentication.Components/Fdw.Services.Authentication.Components.csproj" />
     <Project Path="src/Fdw.Services.Authentication.Endpoints/Fdw.Services.Authentication.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Authentication.OpenIddict/Fdw.Services.Authentication.OpenIddict.csproj" />
+    <Project Path="src/Fdw.Services.Authorization.Components/Fdw.Services.Authorization.Components.csproj" />
     <Project Path="src/Fdw.Services.Authorization.Endpoints/Fdw.Services.Authorization.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Authorization/Fdw.Services.Authorization.csproj" />
     <Project Path="src/Fdw.Services.Calculations.Abstractions/Fdw.Services.Calculations.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Calculations/Fdw.Services.Calculations.csproj" />
     <Project Path="src/Fdw.Services.Catalog.Clients.Models/Fdw.Services.Catalog.Clients.Models.csproj" />
+    <Project Path="src/Fdw.Services.Catalog.Components/Fdw.Services.Catalog.Components.csproj" />
     <Project Path="src/Fdw.Services.Catalog.Endpoints/Fdw.Services.Catalog.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Configuration.Abstractions/Fdw.Services.Configuration.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Connections.Endpoints/Fdw.Services.Connections.Endpoints.csproj" />
@@ -272,6 +278,7 @@
     <Project Path="src/Fdw.Services.DataVault.Abstractions/Fdw.Services.DataVault.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Etl.Abstractions/Fdw.Services.Etl.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Etl.JobTriggerSources/Fdw.Services.Etl.JobTriggerSources.csproj" />
+    <Project Path="src/Fdw.Services.Etl.Projects.UI.Components/Fdw.Services.Etl.Projects.UI.Components.csproj" />
     <Project Path="src/Fdw.Services.Etl.Projects/Fdw.Services.Etl.Projects.csproj" />
     <Project Path="src/Fdw.Services.Etl/Fdw.Services.Etl.csproj" />
     <Project Path="src/Fdw.Services.EtlMappers.Abstractions/Fdw.Services.EtlMappers.Abstractions.csproj" />
@@ -283,6 +290,7 @@
     <Project Path="src/Fdw.Services.ExternalIdentityProviders.Oidc/Fdw.Services.ExternalIdentityProviders.Oidc.csproj" />
     <Project Path="src/Fdw.Services.ExternalIdentityProviders/Fdw.Services.ExternalIdentityProviders.csproj" />
     <Project Path="src/Fdw.Services.Messaging.Abstractions/Fdw.Services.Messaging.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Messaging.Components/Fdw.Services.Messaging.Components.csproj" />
     <Project Path="src/Fdw.Services.Messaging.Endpoints/Fdw.Services.Messaging.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Messaging/Fdw.Services.Messaging.csproj" />
     <Project Path="src/Fdw.Services.Multitenancy.Components/Fdw.Services.Multitenancy.Components.csproj" />
@@ -318,6 +326,7 @@
     <Project Path="src/Fdw.Services.Settings.Endpoints/Fdw.Services.Settings.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Settings/Fdw.Services.Settings.csproj" />
     <Project Path="src/Fdw.Services.Terminal.Abstractions/Fdw.Services.Terminal.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Terminal.Components/Fdw.Services.Terminal.Components.csproj" />
     <Project Path="src/Fdw.Services.TokenManagers.Abstractions/Fdw.Services.TokenManagers.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.TokenManagers/Fdw.Services.TokenManagers.csproj" />
     <Project Path="src/Fdw.Services.Users.Abstractions/Fdw.Services.Users.Abstractions.csproj" />
