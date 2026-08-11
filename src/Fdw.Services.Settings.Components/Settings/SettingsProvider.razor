@@ -26,7 +26,11 @@
 
     // -- Injected Services --
 
-    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+    // Why injected rather than built here: SettingsClientType already registers SettingsApiClient
+    // in DI, wired to the named HttpClient it also registers. Constructing one by hand repeats the
+    // client name as a magic string and bypasses a registration that exists.
+    [Inject] private SettingsApiClient SettingsApi { get; set; } = default!;
+    [Inject] private ThemeApiClient ThemeApi { get; set; } = default!;
     [Inject] private ILoggerFactory? LoggerFactory { get; set; }
 
     private SettingsApiClient? _settingsApi;
@@ -50,8 +54,8 @@
 
     protected override void OnInitialized()
     {
-        _settingsApi = new SettingsApiClient(HttpClientFactory.CreateClient("SettingsClient"), LoggerFactory?.CreateLogger<SettingsApiClient>()!);
-        _themeApi = new ThemeApiClient(HttpClientFactory.CreateClient("ThemeClient"), LoggerFactory?.CreateLogger<ThemeApiClient>()!);
+        _settingsApi = SettingsApi;
+        _themeApi = ThemeApi;
         _logger = LoggerParam ?? NullLogger<SettingsProvider>.Instance;
         RebuildContext();
     }
