@@ -47,7 +47,7 @@ public class DataSetDetailResponse : ResourceDetail
     public string? RecordTypeName { get; set; }
 
     /// <summary>Gets or sets the collection of field definitions.</summary>
-    public IList<DataSetFieldResponse> Fields { get; set; } = [];
+    public IList<DataSetFieldPayload> Fields { get; set; } = [];
 
     /// <summary>Gets or sets the surrogate key field names.</summary>
     public IList<string> SurrogateKeyFields { get; set; } = [];
@@ -56,7 +56,7 @@ public class DataSetDetailResponse : ResourceDetail
     public IList<string> NaturalKeyFields { get; set; } = [];
 
     /// <summary>Gets or sets the collection of data sources.</summary>
-    public IList<DataSetSourceResponse> Sources { get; set; } = [];
+    public IList<DataSetSourcePayload> Sources { get; set; } = [];
 
     /// <summary>Gets or sets the stored filter conditions applied when querying this DataSet.</summary>
     public IList<DataSetFilterConditionPayload> Filters { get; set; } = [];

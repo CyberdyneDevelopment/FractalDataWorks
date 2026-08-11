@@ -36,4 +36,22 @@ public sealed class DataSetFieldPayload : IDataSetField
     public string? Role { get; set; }
     /// <summary>Gets or sets the ordinal position.</summary>
     public int Ordinal { get; set; }
+
+    /// <summary>Gets or sets the dataset this field belongs to.</summary>
+    /// <remarks>
+    /// Redundant when the field arrives nested under its dataset, and carried anyway: identity is
+    /// always knowable, and the type that carried it separately was one of three copies of this
+    /// shape that drifted apart.
+    /// </remarks>
+    public Guid DataSetId { get; set; }
+
+    /// <summary>Gets or sets the field's declared type name.</summary>
+    /// <remarks>
+    /// Distinct from <see cref="DataType"/>: the declared name as the source states it, where
+    /// DataType is the storage type it maps onto.
+    /// </remarks>
+    public string TypeName { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets a value indicating whether the field accepts null.</summary>
+    public bool IsNullable { get; set; }
 }

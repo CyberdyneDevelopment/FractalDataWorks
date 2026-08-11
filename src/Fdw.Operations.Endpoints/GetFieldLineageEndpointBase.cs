@@ -1,3 +1,4 @@
+using Fdw.Services.Data.Clients.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -117,7 +118,7 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
     private static int AddConnectionNodes(
         LineageGraph fieldGraph,
         LineageGraph fullGraph,
-        IReadOnlyList<DataSetSourceRecord> sources,
+        IReadOnlyList<DataSetSourcePayload> sources,
         string entryNodeId,
         HashSet<string> addedNodeIds,
         int edgeId)
@@ -225,7 +226,7 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
     {
         var dataSets = await QueryAll<DataSetRecord>("DataSet", ct).ConfigureAwait(false);
         var pipelines = await PipelineLineageLoader.Load(_pipelineProvider, _logger, ct).ConfigureAwait(false);
-        var sources = await QueryAll<DataSetSourceRecord>("DataSetSource", ct).ConfigureAwait(false);
+        var sources = await QueryAll<DataSetSourcePayload>("DataSetSource", ct).ConfigureAwait(false);
         var chains = await QueryAll<ChainDefinitionLineageRecord>("ChainDefinition", ct).ConfigureAwait(false);
 
         var graph = new LineageGraph();
@@ -308,7 +309,7 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
         if (dataSet == null) return [];
 
         // Why: Addressing moved off IDataCommand onto DataStoreTarget.
-        var srcCommand = new QueryCommand<DataSetSourceRecord>
+        var srcCommand = new QueryCommand<DataSetSourcePayload>
         {
             Filter = new FilterExpression
             {
@@ -320,7 +321,7 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
                 }
             }
         };
-        var srcResult = await _configurationGateway.Execute<IEnumerable<DataSetSourceRecord>>(
+        var srcResult = await _configurationGateway.Execute<IEnumerable<DataSetSourcePayload>>(
             srcCommand, new DataStoreTarget("ConfigurationDb", "data", "DataSetSource"), ct).ConfigureAwait(false);
         var dsSources = srcResult.IsSuccess ? srcResult.Value?.ToList() ?? [] : [];
 
@@ -350,13 +351,13 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
     }
 
     /// <summary>Queries DataSetSource records by their identifiers.</summary>
-    private async Task<IReadOnlyList<DataSetSourceRecord>> QuerySourcesByIds(IReadOnlyList<Guid> sourceIds, CancellationToken ct)
+    private async Task<IReadOnlyList<DataSetSourcePayload>> QuerySourcesByIds(IReadOnlyList<Guid> sourceIds, CancellationToken ct)
     {
-        var results = new List<DataSetSourceRecord>();
+        var results = new List<DataSetSourcePayload>();
         foreach (var id in sourceIds)
         {
             // Why: Addressing moved off IDataCommand onto DataStoreTarget.
-            var command = new QueryCommand<DataSetSourceRecord>
+            var command = new QueryCommand<DataSetSourcePayload>
             {
                 Filter = new FilterExpression
                 {
@@ -368,7 +369,7 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
                     }
                 }
             };
-            var result = await _configurationGateway.Execute<IEnumerable<DataSetSourceRecord>>(
+            var result = await _configurationGateway.Execute<IEnumerable<DataSetSourcePayload>>(
                 command, new DataStoreTarget("ConfigurationDb", "data", "DataSetSource"), ct).ConfigureAwait(false);
             if (result.IsSuccess && result.Value != null)
                 results.AddRange(result.Value);

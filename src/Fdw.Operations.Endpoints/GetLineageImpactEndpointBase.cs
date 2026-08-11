@@ -1,3 +1,4 @@
+using Fdw.Services.Data.Clients.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -128,7 +129,7 @@ public abstract class GetLineageImpactEndpointBase : Endpoint<LineageImpactReque
     {
         var dataSetsTask = QueryAll<DataSetRecord>("DataSet", ct);
         var pipelinesTask = PipelineLineageLoader.Load(_pipelineProvider, _logger, ct);
-        var sourcesTask = QueryAll<DataSetSourceRecord>("DataSetSource", ct);
+        var sourcesTask = QueryAll<DataSetSourcePayload>("DataSetSource", ct);
 
         await Task.WhenAll(dataSetsTask, pipelinesTask, sourcesTask).ConfigureAwait(false);
 
@@ -147,7 +148,7 @@ public abstract class GetLineageImpactEndpointBase : Endpoint<LineageImpactReque
         LineageGraph graph,
         IReadOnlyList<DataSetRecord> dataSets,
         IReadOnlyList<PipelineLineageRecord> pipelines,
-        IReadOnlyList<DataSetSourceRecord> sources)
+        IReadOnlyList<DataSetSourcePayload> sources)
     {
         foreach (var ds in dataSets)
         {
@@ -186,7 +187,7 @@ public abstract class GetLineageImpactEndpointBase : Endpoint<LineageImpactReque
     /// <summary>Collects unique connection names from pipelines and sources.</summary>
     private static HashSet<string> CollectConnectionNames(
         IReadOnlyList<PipelineLineageRecord> pipelines,
-        IReadOnlyList<DataSetSourceRecord> sources)
+        IReadOnlyList<DataSetSourcePayload> sources)
     {
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var src in sources)
@@ -209,7 +210,7 @@ public abstract class GetLineageImpactEndpointBase : Endpoint<LineageImpactReque
         LineageGraph graph,
         IReadOnlyList<DataSetRecord> dataSets,
         IReadOnlyList<PipelineLineageRecord> pipelines,
-        IReadOnlyList<DataSetSourceRecord> sources)
+        IReadOnlyList<DataSetSourcePayload> sources)
     {
         var dataSetNameById = dataSets.ToDictionary(ds => ds.Id, ds => ds.Name);
         var edgeId = 0;

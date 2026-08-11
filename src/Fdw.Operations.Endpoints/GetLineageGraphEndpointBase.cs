@@ -1,3 +1,4 @@
+using Fdw.Services.Data.Clients.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -93,7 +94,7 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
     {
         var dataSetsTask = QueryAll<DataSetRecord>("DataSet", "data", DataSetTags, ct);
         var pipelinesTask = PipelineLineageLoader.Load(_pipelineProvider, _logger, ct);
-        var sourcesTask = QueryAll<DataSetSourceRecord>("DataSetSource", "data", DataSetSourceTags, ct);
+        var sourcesTask = QueryAll<DataSetSourcePayload>("DataSetSource", "data", DataSetSourceTags, ct);
         var chainsTask = QueryAll<ChainDefinitionLineageRecord>("ChainDefinition", "transform", ChainDefinitionTags, ct);
         var stepsTask = QueryAll<ChainStepLineageRecord>("ChainStep", "transform", ChainStepTags, ct);
         var stepFieldsTask = QueryAll<ChainStepSourceFieldRecord>("ChainStepSourceField", "transform", ChainStepSourceFieldTags, ct);
@@ -120,7 +121,7 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
     internal static LineageGraph BuildGraphFromRecords(
         IReadOnlyList<DataSetRecord> dataSets,
         IReadOnlyList<PipelineLineageRecord> pipelines,
-        IReadOnlyList<DataSetSourceRecord> sources,
+        IReadOnlyList<DataSetSourcePayload> sources,
         IReadOnlyList<ChainDefinitionLineageRecord> chains,
         IReadOnlyList<ChainStepLineageRecord> steps,
         IReadOnlyList<ChainStepSourceFieldRecord> stepFields,
@@ -146,7 +147,7 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
         LineageGraph graph,
         IReadOnlyList<DataSetRecord> dataSets,
         IReadOnlyList<PipelineLineageRecord> pipelines,
-        IReadOnlyList<DataSetSourceRecord> sources,
+        IReadOnlyList<DataSetSourcePayload> sources,
         IReadOnlyList<ChainDefinitionLineageRecord> chains)
     {
         foreach (var ds in dataSets)
@@ -211,7 +212,7 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
         LineageGraph graph,
         IReadOnlyList<DataSetRecord> dataSets,
         IReadOnlyList<PipelineLineageRecord> pipelines,
-        IReadOnlyList<DataSetSourceRecord> sources,
+        IReadOnlyList<DataSetSourcePayload> sources,
         IReadOnlyList<ChainDefinitionLineageRecord> chains,
         IReadOnlyList<ChainStepLineageRecord> steps,
         IReadOnlyList<ChainStepSourceFieldRecord> stepFields,
@@ -233,7 +234,7 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
     private static void AddSourceAndPipelineEdges(
         LineageGraph graph,
         IReadOnlyList<PipelineLineageRecord> pipelines,
-        IReadOnlyList<DataSetSourceRecord> sources,
+        IReadOnlyList<DataSetSourcePayload> sources,
         Dictionary<Guid, string> dataSetNameById,
         ILogger logger,
         ref int edgeId)
@@ -337,7 +338,7 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
     /// <summary>Creates edges linking Calculations to DataSets via ChainStep field cross-references.</summary>
     private static void AddCalculationEdges(
         LineageGraph graph,
-        IReadOnlyList<DataSetSourceRecord> sources,
+        IReadOnlyList<DataSetSourcePayload> sources,
         IReadOnlyList<ChainDefinitionLineageRecord> chains,
         IReadOnlyList<ChainStepLineageRecord> steps,
         IReadOnlyList<ChainStepSourceFieldRecord> stepFields,
@@ -403,7 +404,7 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
 
     /// <summary>Builds a reverse lookup from logical field names to the DataSet names that contain them.</summary>
     private static Dictionary<string, HashSet<string>> BuildFieldToDataSetLookup(
-        IReadOnlyList<DataSetSourceRecord> sources,
+        IReadOnlyList<DataSetSourcePayload> sources,
         Dictionary<Guid, List<DataSetFieldMappingRecord>> fieldMappingsBySourceId,
         Dictionary<Guid, string> dataSetNameById)
     {

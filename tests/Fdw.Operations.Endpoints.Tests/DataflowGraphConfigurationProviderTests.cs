@@ -1,3 +1,4 @@
+using Fdw.Services.Data.Clients.Models;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -114,10 +115,10 @@ public class DataflowGraphConfigurationProviderTests
         // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
-        gateway.Setup(g => g.Execute<IEnumerable<DataSetSourceRecord>>(
+        gateway.Setup(g => g.Execute<IEnumerable<DataSetSourcePayload>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<DataSetSourceRecord>>.Success([
-                new DataSetSourceRecord { Id = Guid.NewGuid(), DataSetId = Guid.NewGuid(), SourceName = "Src1", Priority = 1 }
+            .ReturnsAsync(GenericResult<IEnumerable<DataSetSourcePayload>>.Success([
+                new DataSetSourcePayload { Id = Guid.NewGuid(), DataSetId = Guid.NewGuid(), SourceName = "Src1", Priority = 1 }
             ]));
 
         var result = await MakeProvider(gateway).LoadSources(TestContext.Current.CancellationToken);
@@ -135,9 +136,9 @@ public class DataflowGraphConfigurationProviderTests
         // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
-        gateway.Setup(g => g.Execute<IEnumerable<DataSetSourceRecord>>(
+        gateway.Setup(g => g.Execute<IEnumerable<DataSetSourcePayload>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<DataSetSourceRecord>>.Failure(new GenericMessage("DB error")));
+            .ReturnsAsync(GenericResult<IEnumerable<DataSetSourcePayload>>.Failure(new GenericMessage("DB error")));
 
         var result = await MakeProvider(gateway).LoadSources(TestContext.Current.CancellationToken);
 

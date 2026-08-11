@@ -1,3 +1,4 @@
+using Fdw.Services.Data.Clients.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +13,7 @@ namespace Fdw.Operations.Endpoints.Tests.Lineage;
 /// <summary>
 /// Unit tests for <see cref="GetLineageGraphEndpointBase.BuildGraphFromRecords"/> — the edge kinds
 /// produced from a pipeline's linkage-bearing <see cref="PipelineLineageRecord"/> projection and from
-/// <see cref="DataSetSourceRecord.SourceDataSetName"/> (DerivesFrom).
+/// <see cref="DataSetSourcePayload.SourceDataSetName"/> (DerivesFrom).
 /// </summary>
 [Trait("Priority", "P1")]
 [Trait("Category", "Etl")]
@@ -32,7 +33,7 @@ public class PipelineLineageEdgeTests
         var dataSets = new List<DataSetRecord> { new() { Id = Guid.NewGuid(), Name = "DS1" } };
 
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
-            dataSets, pipelines, Empty<DataSetSourceRecord>(), Empty<ChainDefinitionLineageRecord>(),
+            dataSets, pipelines, Empty<DataSetSourcePayload>(), Empty<ChainDefinitionLineageRecord>(),
             Empty<ChainStepLineageRecord>(), Empty<ChainStepSourceFieldRecord>(),
             Empty<DataSetFieldMappingRecord>(), _logger.Object);
 
@@ -50,7 +51,7 @@ public class PipelineLineageEdgeTests
         var dataSets = new List<DataSetRecord> { new() { Id = Guid.NewGuid(), Name = "DS2" } };
 
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
-            dataSets, pipelines, Empty<DataSetSourceRecord>(), Empty<ChainDefinitionLineageRecord>(),
+            dataSets, pipelines, Empty<DataSetSourcePayload>(), Empty<ChainDefinitionLineageRecord>(),
             Empty<ChainStepLineageRecord>(), Empty<ChainStepSourceFieldRecord>(),
             Empty<DataSetFieldMappingRecord>(), _logger.Object);
 
@@ -67,7 +68,7 @@ public class PipelineLineageEdgeTests
         };
 
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
-            Empty<DataSetRecord>(), pipelines, Empty<DataSetSourceRecord>(), Empty<ChainDefinitionLineageRecord>(),
+            Empty<DataSetRecord>(), pipelines, Empty<DataSetSourcePayload>(), Empty<ChainDefinitionLineageRecord>(),
             Empty<ChainStepLineageRecord>(), Empty<ChainStepSourceFieldRecord>(),
             Empty<DataSetFieldMappingRecord>(), _logger.Object);
 
@@ -86,7 +87,7 @@ public class PipelineLineageEdgeTests
         };
 
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
-            Empty<DataSetRecord>(), pipelines, Empty<DataSetSourceRecord>(), Empty<ChainDefinitionLineageRecord>(),
+            Empty<DataSetRecord>(), pipelines, Empty<DataSetSourcePayload>(), Empty<ChainDefinitionLineageRecord>(),
             Empty<ChainStepLineageRecord>(), Empty<ChainStepSourceFieldRecord>(),
             Empty<DataSetFieldMappingRecord>(), _logger.Object);
 
@@ -101,7 +102,7 @@ public class PipelineLineageEdgeTests
         // never read by any graph before this fix.
         var ownerId = Guid.NewGuid();
         var dataSets = new List<DataSetRecord> { new() { Id = ownerId, Name = "DS_Owner" } };
-        var sources = new List<DataSetSourceRecord>
+        var sources = new List<DataSetSourcePayload>
         {
             new() { Id = Guid.NewGuid(), DataSetId = ownerId, SourceDataSetName = "DS_Upstream" }
         };
@@ -126,7 +127,7 @@ public class PipelineLineageEdgeTests
         };
 
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
-            Empty<DataSetRecord>(), pipelines, Empty<DataSetSourceRecord>(), Empty<ChainDefinitionLineageRecord>(),
+            Empty<DataSetRecord>(), pipelines, Empty<DataSetSourcePayload>(), Empty<ChainDefinitionLineageRecord>(),
             Empty<ChainStepLineageRecord>(), Empty<ChainStepSourceFieldRecord>(),
             Empty<DataSetFieldMappingRecord>(), _logger.Object);
 
@@ -140,7 +141,7 @@ public class PipelineLineageEdgeTests
         var ds1 = Guid.NewGuid();
         var ds2 = Guid.NewGuid();
         var dataSets = new List<DataSetRecord> { new() { Id = ds1, Name = "DS1" }, new() { Id = ds2, Name = "DS2" } };
-        var sources = new List<DataSetSourceRecord>
+        var sources = new List<DataSetSourcePayload>
         {
             new() { Id = Guid.NewGuid(), DataSetId = ds1, ConnectionName = "SharedConn" },
             new() { Id = Guid.NewGuid(), DataSetId = ds2, ConnectionName = "SharedConn" }
@@ -161,7 +162,7 @@ public class PipelineLineageEdgeTests
         // (e.g. re-mapped per field-group); dedup so DerivesFrom is emitted once per distinct pair.
         var ownerId = Guid.NewGuid();
         var dataSets = new List<DataSetRecord> { new() { Id = ownerId, Name = "Owner" } };
-        var sources = new List<DataSetSourceRecord>
+        var sources = new List<DataSetSourcePayload>
         {
             new() { Id = Guid.NewGuid(), DataSetId = ownerId, SourceDataSetName = "Upstream" },
             new() { Id = Guid.NewGuid(), DataSetId = ownerId, SourceDataSetName = "Upstream" }

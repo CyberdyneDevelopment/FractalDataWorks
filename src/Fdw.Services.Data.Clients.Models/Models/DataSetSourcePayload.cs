@@ -40,4 +40,27 @@ public sealed class DataSetSourcePayload
     public string? FileFormat { get; set; }
     /// <summary>Gets or sets the field mappings.</summary>
     public IReadOnlyList<DataSetFieldMappingPayload> FieldMappings { get; set; } = Array.Empty<DataSetFieldMappingPayload>();
+
+    /// <summary>Gets or sets the dataset this source feeds.</summary>
+    /// <remarks>
+    /// Present even when the source arrives nested under its dataset, where it is redundant.
+    /// Identity is always knowable and a consumer that ignores it is unharmed; the alternative was
+    /// a second type that carried it, which is how three copies of this shape came about.
+    /// </remarks>
+    public Guid DataSetId { get; set; }
+
+    /// <summary>Gets or sets the container's identity, when one is resolved.</summary>
+    public Guid? ContainerId { get; set; }
+
+    /// <summary>Gets or sets the kind of source this is.</summary>
+    public string SourceKind { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the dataset this source draws from, when it is another dataset.</summary>
+    public Guid? SourceDataSetId { get; set; }
+
+    /// <summary>Gets or sets that dataset's name.</summary>
+    public string? SourceDataSetName { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether this source is active.</summary>
+    public bool IsActive { get; set; }
 }

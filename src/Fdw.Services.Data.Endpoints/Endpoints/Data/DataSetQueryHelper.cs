@@ -159,7 +159,7 @@ internal static class DataSetQueryHelper
         ModifiedOnBehalfOf = config.ModifyOnBehalfOf
     };
 
-    internal static DataSetFieldResponse MapToFieldDto(DataFieldConfiguration field) => new()
+    internal static DataSetFieldPayload MapToFieldDto(DataFieldConfiguration field) => new()
     {
         Name = field.Name,
         DataType = field.TypeName,
@@ -173,14 +173,14 @@ internal static class DataSetQueryHelper
         IsCalculated = field.IsCalculated
     };
 
-    internal static DataSetSourceResponse MapToSourceDto(DataSetSourceConfiguration source) => new()
+    internal static DataSetSourcePayload MapToSourceDto(DataSetSourceConfiguration source) => new()
     {
         Id = source.Id,
         SourceName = source.SourceName,
         DataStoreName = source.DataStoreName,
         ConnectionName = source.ConnectionName,
         ConnectionType = source.ConnectionType,
-        PathName = source.Path,
+        Path = source.Path,
         ContainerName = source.ContainerName,
         ContainerId = source.ContainerId,
         Priority = source.Priority,

@@ -1,3 +1,4 @@
+using Fdw.Services.Data.Clients.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,7 @@ using Fdw.Commands.Data;
 using Fdw.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Data.Abstractions;
-// DataSetRecord and DataSetSourceRecord now in this namespace
+// DataSetRecord and DataSetSourcePayload now in this namespace
 // ApiEndpointLog now in this namespace
 using Microsoft.Extensions.Logging;
 using Fdw.Operations.Endpoints;
@@ -108,9 +109,9 @@ public abstract class GetSourceMappingsEndpoint : Endpoint<GetSourceMappingsRequ
     }
 
     /// <summary>Finds a source record by data set identifier and source name.</summary>
-    protected virtual async Task<DataSetSourceRecord?> FindSource(Guid dataSetId, string sourceName, CancellationToken ct)
+    protected virtual async Task<DataSetSourcePayload?> FindSource(Guid dataSetId, string sourceName, CancellationToken ct)
     {
-        var command = new QueryCommand<DataSetSourceRecord>
+        var command = new QueryCommand<DataSetSourcePayload>
         {
             Filter = new FilterExpression
             {
@@ -136,7 +137,7 @@ public abstract class GetSourceMappingsEndpoint : Endpoint<GetSourceMappingsRequ
             }
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<DataSetSourceRecord>>(
+        var result = await _dataGateway.Execute<IEnumerable<DataSetSourcePayload>>(
             command, new DataStoreTarget("ConfigurationDb", "data", "DataSetSource"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {

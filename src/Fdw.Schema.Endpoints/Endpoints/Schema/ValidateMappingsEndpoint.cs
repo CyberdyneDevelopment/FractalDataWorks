@@ -1,3 +1,4 @@
+using Fdw.Services.Data.Clients.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,7 @@ using Fdw.Commands.Data;
 using Fdw.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Data.Abstractions;
-// DataSetRecord and DataSetSourceRecord now in this namespace
+// DataSetRecord and DataSetSourcePayload now in this namespace
 // ApiEndpointLog now in this namespace
 using Microsoft.Extensions.Logging;
 using Fdw.Operations.Endpoints;
@@ -118,9 +119,9 @@ public abstract class ValidateMappingsEndpoint : Endpoint<ValidateMappingsReques
     }
 
     /// <summary>Gets all field records for the specified data set.</summary>
-    protected virtual async Task<IList<DataSetFieldRecord>> GetDataSetFields(Guid dataSetId, CancellationToken ct)
+    protected virtual async Task<IList<DataSetFieldPayload>> GetDataSetFields(Guid dataSetId, CancellationToken ct)
     {
-        var command = new QueryCommand<DataSetFieldRecord>
+        var command = new QueryCommand<DataSetFieldPayload>
         {
             Filter = new FilterExpression
             {
@@ -133,7 +134,7 @@ public abstract class ValidateMappingsEndpoint : Endpoint<ValidateMappingsReques
             }
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<DataSetFieldRecord>>(
+        var result = await _dataGateway.Execute<IEnumerable<DataSetFieldPayload>>(
             command, new DataStoreTarget("ConfigurationDb", "data", "DataSetField"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
@@ -148,7 +149,7 @@ public abstract class ValidateMappingsEndpoint : Endpoint<ValidateMappingsReques
     /// </summary>
     protected virtual void ValidateMappingEntries(
         IList<FieldMappingInputPayload> mappings,
-        IList<DataSetFieldRecord> fields,
+        IList<DataSetFieldPayload> fields,
         IList<MappingValidationError> errors,
         IList<MappingValidationWarning> warnings)
     {

@@ -1,3 +1,4 @@
+using Fdw.Services.Data.Clients.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -13,7 +14,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// Generic base endpoint for retrieving sources for a specific data set.
 /// Uses DataSetConfigurationProvider for the dataset lookup; sources are part of the composed aggregate.
 /// </summary>
-public abstract class GetDataSetSourcesEndpointBase : CrudGetEndpoint<DataSetNameRequest, List<DataSetSourceResponse>>
+public abstract class GetDataSetSourcesEndpointBase : CrudGetEndpoint<DataSetNameRequest, List<DataSetSourcePayload>>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
@@ -30,7 +31,7 @@ public abstract class GetDataSetSourcesEndpointBase : CrudGetEndpoint<DataSetNam
     protected override string GetResourceIdentifier(DataSetNameRequest request) => request.Name;
 
     /// <summary>Finds a data set by name and returns its sources.</summary>
-    protected override Task<IGenericResult<List<DataSetSourceResponse>?>> FindByIdentifier(DataSetNameRequest request, CancellationToken ct)
+    protected override Task<IGenericResult<List<DataSetSourcePayload>?>> FindByIdentifier(DataSetNameRequest request, CancellationToken ct)
     {
         return LoadDataSetSources(request.Name, ct);
     }
@@ -39,21 +40,21 @@ public abstract class GetDataSetSourcesEndpointBase : CrudGetEndpoint<DataSetNam
     /// Loads data set sources from the composed aggregate returned by the provider.
     /// Override for custom behavior.
     /// </summary>
-    protected virtual async Task<IGenericResult<List<DataSetSourceResponse>?>> LoadDataSetSources(string dataSetName, CancellationToken ct)
+    protected virtual async Task<IGenericResult<List<DataSetSourcePayload>?>> LoadDataSetSources(string dataSetName, CancellationToken ct)
     {
         DataSetEndpointLog.LoadingSources(Logger, dataSetName);
 
         var dsResult = await _dataSetProvider.Get(dataSetName, ct).ConfigureAwait(false);
-        if (dsResult.IsFailure) return dsResult.ToNewResult<List<DataSetSourceResponse>?>();
+        if (dsResult.IsFailure) return dsResult.ToNewResult<List<DataSetSourcePayload>?>();
 
         if (dsResult.Value is null)
         {
             DataSetEndpointLog.DataSetNotFound(Logger, dataSetName);
-            return GenericResult<List<DataSetSourceResponse>?>.Success((List<DataSetSourceResponse>?)null);
+            return GenericResult<List<DataSetSourcePayload>?>.Success((List<DataSetSourcePayload>?)null);
         }
 
         // Why: Sources are part of the composed aggregate returned by DataSetConfigurationProvider.Get.
         var sources = dsResult.Value.Sources?.Select(DataSetQueryHelper.MapToSourceDto).ToList() ?? [];
-        return GenericResult<List<DataSetSourceResponse>?>.Success((List<DataSetSourceResponse>?)sources);
+        return GenericResult<List<DataSetSourcePayload>?>.Success((List<DataSetSourcePayload>?)sources);
     }
 }

@@ -1,3 +1,4 @@
+using Fdw.Services.Data.Clients.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -98,20 +99,20 @@ public class DataflowGraphConfigurationProvider
     /// Returns all current DataSetSource summary rows for graph edge construction.
     /// </summary>
     // Why: virtual — Moq can override in unit tests without a real IConfigurationGateway.
-    public virtual async Task<IGenericResult<IReadOnlyList<DataSetSourceRecord>>> LoadSources(
+    public virtual async Task<IGenericResult<IReadOnlyList<DataSetSourcePayload>>> LoadSources(
         CancellationToken cancellationToken = default)
     {
         // Why: Addressing moved off IDataCommand onto DataStoreTarget.
-        var command = new QueryCommand<DataSetSourceRecord>();
+        var command = new QueryCommand<DataSetSourcePayload>();
 
-        var result = await _gateway.Execute<IEnumerable<DataSetSourceRecord>>(
+        var result = await _gateway.Execute<IEnumerable<DataSetSourcePayload>>(
                 command, new DataStoreTarget(DataStoreName, DataPath, "DataSetSource"), cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)
-            return result.ToNewResult<IReadOnlyList<DataSetSourceRecord>>();
+            return result.ToNewResult<IReadOnlyList<DataSetSourcePayload>>();
 
-        return GenericResult<IReadOnlyList<DataSetSourceRecord>>.Success(result.Value?.ToList() ?? []);
+        return GenericResult<IReadOnlyList<DataSetSourcePayload>>.Success(result.Value?.ToList() ?? []);
     }
 
     /// <summary>

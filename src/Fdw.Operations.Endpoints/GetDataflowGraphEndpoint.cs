@@ -1,3 +1,4 @@
+using Fdw.Services.Data.Clients.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -81,7 +82,7 @@ public abstract class GetDataflowGraphEndpoint : EndpointWithoutRequest<Dataflow
         AddDataStoreNodes(dataStores, nodes);
 
         var sourcesResult = await _provider.LoadSources(ct).ConfigureAwait(false);
-        IReadOnlyList<DataSetSourceRecord> sources = sourcesResult.IsSuccess ? sourcesResult.Value ?? [] : [];
+        IReadOnlyList<DataSetSourcePayload> sources = sourcesResult.IsSuccess ? sourcesResult.Value ?? [] : [];
         stats.SourceCount = sources.Count;
 
         var connectionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -147,7 +148,7 @@ public abstract class GetDataflowGraphEndpoint : EndpointWithoutRequest<Dataflow
 
     /// <summary>Adds source nodes and edges linking sources to DataSets, DataStores, and connections.</summary>
     protected virtual void AddSourceNodesAndEdges(
-        IReadOnlyList<DataSetSourceRecord> sources,
+        IReadOnlyList<DataSetSourcePayload> sources,
         IReadOnlyList<DataSetRecord> dataSets,
         IReadOnlyList<DataStoreRecord> dataStores,
         IList<DataflowNodeDto> nodes,
@@ -230,7 +231,7 @@ public abstract class GetDataflowGraphEndpoint : EndpointWithoutRequest<Dataflow
     }
 
     /// <summary>Adds edges linking sources to their connection nodes.</summary>
-    protected virtual void AddSourceToConnectionEdges(IReadOnlyList<DataSetSourceRecord> sources, IList<DataflowEdgeDto> edges)
+    protected virtual void AddSourceToConnectionEdges(IReadOnlyList<DataSetSourcePayload> sources, IList<DataflowEdgeDto> edges)
     {
         foreach (var source in sources.Where(s => !string.IsNullOrEmpty(s.ConnectionName)))
         {

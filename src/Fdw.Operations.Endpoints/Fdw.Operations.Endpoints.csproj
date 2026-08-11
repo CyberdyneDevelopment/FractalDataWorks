@@ -38,6 +38,7 @@
     <ProjectReference Include="..\Fdw.Services.Etl.Abstractions\Fdw.Services.Etl.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Services.Pipelines\Fdw.Services.Pipelines.csproj" />
     <ProjectReference Include="..\Fdw.Services.Etl\Fdw.Services.Etl.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Clients.Models\Fdw.Services.Data.Clients.Models.csproj" />
     <!-- Why: Services.Etl.Projects.Abstractions is referenced to access pipe.* configuration
          records (ProjectLineageRecord, StageLineageRecord, etc.) for the lineage graph extension. -->
   </ItemGroup>

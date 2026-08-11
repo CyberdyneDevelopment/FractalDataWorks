@@ -1,3 +1,4 @@
+using Fdw.Services.Data.Clients.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -103,7 +104,7 @@ public abstract class ExpandLineageNodeEndpointBase : Endpoint<ExpandLineageNode
     {
         var dataSetsTask = QueryAll<DataSetRecord>("DataSet", "data", DataSetTags, ct);
         var pipelinesTask = PipelineLineageLoader.Load(_pipelineProvider, _logger, ct);
-        var sourcesTask = QueryAll<DataSetSourceRecord>("DataSetSource", "data", DataSetSourceTags, ct);
+        var sourcesTask = QueryAll<DataSetSourcePayload>("DataSetSource", "data", DataSetSourceTags, ct);
         var chainsTask = QueryAll<ChainDefinitionLineageRecord>("ChainDefinition", "transform", ChainDefinitionTags, ct);
         var stepsTask = QueryAll<ChainStepLineageRecord>("ChainStep", "transform", ChainStepTags, ct);
         var stepFieldsTask = QueryAll<ChainStepSourceFieldRecord>("ChainStepSourceField", "transform", ChainStepSourceFieldTags, ct);
