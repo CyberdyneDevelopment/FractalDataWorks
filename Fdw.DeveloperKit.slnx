@@ -327,6 +327,7 @@
     <Project Path="src/Fdw.Services.Settings/Fdw.Services.Settings.csproj" />
     <Project Path="src/Fdw.Services.Terminal.Abstractions/Fdw.Services.Terminal.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Terminal.Components/Fdw.Services.Terminal.Components.csproj" />
+    <Project Path="src/Fdw.Services.Terminal/Fdw.Services.Terminal.csproj" />
     <Project Path="src/Fdw.Services.TokenManagers.Abstractions/Fdw.Services.TokenManagers.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.TokenManagers/Fdw.Services.TokenManagers.csproj" />
     <Project Path="src/Fdw.Services.Users.Abstractions/Fdw.Services.Users.Abstractions.csproj" />
