@@ -4,7 +4,7 @@ using Fdw.Results;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.UI.ComponentOptions;
+namespace Fdw.UI.ComponentTypeOptions;
 
 /// <summary>
 /// A declared headless component: its provider type, and whether a host wants it registered.
@@ -17,12 +17,15 @@ namespace Fdw.UI.ComponentOptions;
 /// compile and address nothing, which is the worst outcome for a switch whose only job is to be
 /// obeyed.
 ///
-/// What "registering" means for a component is worth stating, because it differs from an endpoint.
-/// An endpoint goes into DI and gets routed. A headless component is a Blazor provider a skin
-/// renders: what it needs registered is whatever its context resolves — a typed client, a cache, an
-/// accessor — plus its own assembly, so Blazor's component discovery can find it. Declaring the
-/// component is what lets those two happen together instead of in a host's Program.cs, where
-/// nothing connects the registration to the component that needs it.
+/// What "registering" means for a component differs from an endpoint, and the difference is the
+/// whole point. FastEndpoints resolves an endpoint from the container, so an endpoint option puts
+/// its type there. Blazor instantiates a component from markup and fills its [Inject] properties
+/// afterwards, so a component in DI is a registration nothing resolves.
+///
+/// A component option therefore registers what the component REQUIRES — a validator, an accessor,
+/// a cache, a state container — beside the component that needs it, instead of in a host's
+/// Program.cs where nothing connects the two. Its assembly reaching Blazor's discovery is what
+/// makes the component itself available, and the collection handles that.
 /// </remarks>
 public interface IComponentTypeOption : ITypeOption<int, ComponentTypeOptionBase>
 {

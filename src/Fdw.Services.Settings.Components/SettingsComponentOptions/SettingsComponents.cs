@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
-using Fdw.UI.ComponentOptions;
+using Fdw.UI.ComponentTypeOptions;
 
 namespace Fdw.Services.Settings.Components.SettingsComponentOptions;
 

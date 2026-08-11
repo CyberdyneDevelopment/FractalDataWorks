@@ -1,11 +1,10 @@
 using System;
 using Fdw.Collections;
 using Fdw.Results;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.UI.ComponentOptions;
+namespace Fdw.UI.ComponentTypeOptions;
 
 /// <summary>
 /// Base for a declared headless component. Carries the provider type and its registration switch.
@@ -72,23 +71,24 @@ public abstract class ComponentTypeOptionBase : TypeOptionBase<int, ComponentTyp
 
     /// <inheritdoc />
     /// <remarks>
-    /// The component registers ITSELF in DI before running whatever else it needs, so a skipped
-    /// component is never resolvable — where a scan would have found and registered it regardless.
+    /// Registers what the component REQUIRES — not the component. That asymmetry with the endpoint
+    /// option is deliberate and follows from how Blazor works: FastEndpoints resolves an endpoint
+    /// from the container, so an endpoint option must put its type there, but Blazor instantiates a
+    /// component from markup and fills its <c>[Inject]</c> properties afterwards. A component in DI
+    /// is a registration nothing ever resolves.
+    ///
+    /// So this body is the seam, and the only thing in it: a validator, an accessor, a cache, a
+    /// state container — whatever this component needs and nothing else registers. What makes a
+    /// skipped component actually disappear is its assembly never reaching Blazor's discovery,
+    /// which the collection handles through <c>ComponentAssemblies</c>.
+    ///
     /// <see cref="SkipRegistration"/> is honoured by the COLLECTION while cycling, not here: an
     /// option asked directly to register does so, because skipping is a composition decision.
     /// </remarks>
     public virtual IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory = null)
-    {
-        if (builder is null)
-        {
-            throw new ArgumentNullException(nameof(builder));
-        }
-
-        builder.Services.AddTransient(ComponentType);
-        return RegistrationMethod(builder, loggerFactory);
-    }
+        => RegistrationMethod(builder, loggerFactory);
 
     /// <inheritdoc />
     public virtual IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)

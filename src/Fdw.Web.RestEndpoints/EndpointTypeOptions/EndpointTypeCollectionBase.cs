@@ -7,7 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Fdw.Web.RestEndpoints.EndpointOptions;
+namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
 
 /// <summary>
 /// Base for a collection of declared endpoints, one collection per resource.

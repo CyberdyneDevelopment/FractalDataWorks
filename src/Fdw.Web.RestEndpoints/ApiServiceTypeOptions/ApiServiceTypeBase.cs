@@ -4,7 +4,7 @@ using Fdw.Abstractions;
 using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.Abstractions;
-using Fdw.Web.RestEndpoints.EndpointOptions;
+using Fdw.Web.RestEndpoints.EndpointTypeOptions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

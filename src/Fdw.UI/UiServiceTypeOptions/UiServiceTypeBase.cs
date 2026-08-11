@@ -6,7 +6,7 @@ using Fdw.Abstractions;
 using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.Abstractions;
-using Fdw.UI.ComponentOptions;
+using Fdw.UI.ComponentTypeOptions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

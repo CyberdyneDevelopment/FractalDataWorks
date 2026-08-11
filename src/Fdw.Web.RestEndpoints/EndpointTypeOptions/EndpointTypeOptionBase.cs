@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.Web.RestEndpoints.EndpointOptions;
+namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
 
 /// <summary>
 /// Base for a declared endpoint. Carries the endpoint's type and its registration switch.

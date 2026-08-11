@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Fdw.Abstractions;
 using Fdw.ServiceTypes;
-using Fdw.Web.RestEndpoints.EndpointOptions;
+using Fdw.Web.RestEndpoints.EndpointTypeOptions;
 
 namespace Fdw.Web.RestEndpoints.ApiServiceTypeOptions;
 

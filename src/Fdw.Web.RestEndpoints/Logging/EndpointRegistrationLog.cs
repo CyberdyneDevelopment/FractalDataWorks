@@ -2,7 +2,7 @@ using Fdw.MessageLogging;
 using Fdw.Messages;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.Web.RestEndpoints.EndpointOptions;
+namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
 
 /// <summary>
 /// What each endpoint and group put into the container, as the sweep runs.

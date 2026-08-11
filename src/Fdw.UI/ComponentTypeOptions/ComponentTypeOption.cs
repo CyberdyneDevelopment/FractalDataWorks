@@ -1,6 +1,6 @@
 using System;
 
-namespace Fdw.UI.ComponentOptions;
+namespace Fdw.UI.ComponentTypeOptions;
 
 /// <summary>
 /// A declared component that takes its identity from the component class itself.

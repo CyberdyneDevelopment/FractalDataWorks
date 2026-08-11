@@ -4,7 +4,7 @@ using Fdw.Results;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.UI.ComponentOptions;
+namespace Fdw.UI.ComponentTypeOptions;
 
 /// <summary>
 /// A component collection a UI service type can drive through the three phases without naming it.

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fdw.Web.RestEndpoints.EndpointOptions;
+namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
 
 /// <summary>
 /// The endpoint types that registered themselves, for FastEndpoints to route.

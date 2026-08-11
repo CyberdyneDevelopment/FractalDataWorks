@@ -40,6 +40,7 @@
     <ProjectReference Include="..\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
     <ProjectReference Include="..\Fdw.Web.RestEndpoints\Fdw.Web.RestEndpoints.csproj" />
     <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.UI\Fdw.UI.csproj" />
   </ItemGroup>
 
   <ItemGroup>

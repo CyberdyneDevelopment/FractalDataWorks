@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using Fdw.ServiceTypes;
-using Fdw.UI.ComponentOptions;
+using Fdw.UI.ComponentTypeOptions;
 
 namespace Fdw.UI.UiServiceTypeOptions;
 

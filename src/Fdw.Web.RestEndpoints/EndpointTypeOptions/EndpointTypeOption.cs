@@ -1,6 +1,6 @@
 using System;
 
-namespace Fdw.Web.RestEndpoints.EndpointOptions;
+namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
 
 /// <summary>
 /// Base for a declared endpoint that takes its identity from the endpoint class itself.

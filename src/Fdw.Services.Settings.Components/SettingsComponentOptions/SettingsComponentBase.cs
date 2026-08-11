@@ -1,5 +1,5 @@
 using System;
-using Fdw.UI.ComponentOptions;
+using Fdw.UI.ComponentTypeOptions;
 
 namespace Fdw.Services.Settings.Components.SettingsComponentOptions;
 

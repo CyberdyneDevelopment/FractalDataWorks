@@ -7,7 +7,7 @@ using Fdw.Results;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.UI.ComponentOptions;
+namespace Fdw.UI.ComponentTypeOptions;
 
 /// <summary>
 /// Base for a collection of declared components, one collection per domain.

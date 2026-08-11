@@ -18,7 +18,7 @@ using Fdw.Web.RestEndpoints.ApiServiceTypeOptions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Fdw.Web.RestEndpoints.EndpointOptions;
+using Fdw.Web.RestEndpoints.EndpointTypeOptions;
 using Fdw.Web.RestEndpoints.OpenApi;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
