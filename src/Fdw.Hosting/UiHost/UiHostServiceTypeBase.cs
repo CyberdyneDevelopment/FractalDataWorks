@@ -6,7 +6,12 @@ using Fdw.Results;
 using Fdw.UI.ComponentTypeOptions;
 using Fdw.UI.Navigation;
 using Fdw.UI.UiServiceTypeOptions;
+using Fdw.Web.Http.Authentication;
+using Fdw.Web.Http.Authentication.Blazor;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Components.Server.Circuits;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -91,6 +96,18 @@ public abstract class UiHostServiceTypeBase : UiServiceTypeBase
     private static IGenericResult<IHostApplicationBuilder> RegisterUiSurface(IHostApplicationBuilder builder)
     {
         builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+
+        // Why the host registers this and not a client type: BearerTokenHandler sits on every named
+        // API client and needs an IAccessTokenProvider to put a bearer on each request. The client
+        // types declare that requirement; only the host knows how to satisfy it, because where the
+        // token lives is a property of the hosting model. An API host reads it from HttpContext. A
+        // Blazor circuit has no HttpContext after the SignalR handshake, so the token is captured
+        // during the initial request and held against the circuit instead.
+        builder.Services.TryAddSingleton<CircuitTokenAccessor>();
+        builder.Services.AddScoped<CircuitHandler, TokenCapturingCircuitHandler>();
+        builder.Services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        builder.Services.TryAddScoped<IAccessTokenProvider, BlazorServerAccessTokenProvider>();
+
         return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 

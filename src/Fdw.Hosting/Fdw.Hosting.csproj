@@ -41,6 +41,7 @@
     <ProjectReference Include="..\Fdw.Web.RestEndpoints\Fdw.Web.RestEndpoints.csproj" />
     <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.UI\Fdw.UI.csproj" />
+    <ProjectReference Include="..\Fdw.Web.Http.Authentication.Blazor\Fdw.Web.Http.Authentication.Blazor.csproj" />
   </ItemGroup>
 
   <ItemGroup>
