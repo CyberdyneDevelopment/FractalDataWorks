@@ -40,6 +40,30 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
 
     /// <inheritdoc />
     public bool SkipRegistration { get; set; }
+    /// <summary>Gets or sets a value indicating whether Configure is switched off.</summary>
+    /// <remarks>
+    /// One flag per phase, because they are switched off for different reasons: a domain may
+    /// need its services registered while its post-Build wiring is suppressed, and a single flag
+    /// named for one phase silently governing the other two says something false about what it does.
+    /// </remarks>
+    public bool SkipConfiguration { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether Initialize is switched off.</summary>
+    public bool SkipInitialization { get; set; }
+
+    /// <summary>Gets a value indicating whether Configure has run.</summary>
+    /// <remarks>
+    /// A phase runs once. An endpoint option is reachable from its collection and directly, and
+    /// AddTransient plus DeclaredEndpoints.Declare are not free to repeat - declaring the same
+    /// endpoint twice is how a route ends up registered twice.
+    /// </remarks>
+    public bool Configured { get; private set; }
+
+    /// <summary>Gets a value indicating whether Register has run.</summary>
+    public bool Registered { get; private set; }
+
+    /// <summary>Gets a value indicating whether Initialize has run.</summary>
+    public bool Initialized { get; private set; }
 
     // ── The three registration methods ──────────────────────────────────────────────────────────
     // Same shape as ServiceTypeBase: a func holding the body, a gerund that sets it, and a method
@@ -97,8 +121,17 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
     /// <summary>Runs this endpoint's Configure body.</summary>
     /// <param name="builder">The host builder.</param>
     /// <returns>The builder, or a failure the caller decides what to do with.</returns>
-    public virtual IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder)
-        => ConfigurationMethod(builder);
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder)
+    {
+        if (Configured || SkipConfiguration)
+        {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        var result = ConfigurationMethod(builder);
+        Configured = true;
+        return result;
+    }
 
     /// <summary>Runs this endpoint's Register body, and registers the endpoint type itself.</summary>
     /// <param name="builder">The host builder.</param>
@@ -109,7 +142,7 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
     /// directly to register does so: skipping is a composition decision the collection makes while
     /// cycling, and burying it here would make a direct call silently do nothing.
     /// </remarks>
-    public virtual IGenericResult<IHostApplicationBuilder> Register(
+    public IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory = null)
     {
@@ -130,8 +163,17 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">The logger factory.</param>
     /// <returns>The host, or a failure the caller decides what to do with.</returns>
-    public virtual IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
-        => InitializationMethod(host, loggerFactory);
+    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    {
+        if (Initialized || SkipInitialization)
+        {
+            return GenericResult<IHost>.Success(host);
+        }
+
+        var result = InitializationMethod(host, loggerFactory);
+        Initialized = true;
+        return result;
+    }
 
     /// <summary>
     /// Derives an option's name from the endpoint class it declares.

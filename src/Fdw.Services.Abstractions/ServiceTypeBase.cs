@@ -128,6 +128,16 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// must honour the switch too, or the switch means nothing to half its callers.
     /// </remarks>
     public bool SkipRegistration { get; set; }
+    /// <summary>Gets or sets a value indicating whether Configure is switched off.</summary>
+    /// <remarks>
+    /// One flag per phase, because they are switched off for different reasons: a domain may
+    /// need its services registered while its post-Build wiring is suppressed, and a single flag
+    /// named for one phase silently governing the other two says something false about what it does.
+    /// </remarks>
+    public bool SkipConfiguration { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether Initialize is switched off.</summary>
+    public bool SkipInitialization { get; set; }
 
     /// <summary>Gets this option's Configure body.</summary>
     protected Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> ConfigurationMethod { get; private set; }
@@ -336,7 +346,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// </remarks>
     public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
     {
-        if (Configured || SkipRegistration)
+        if (Configured || SkipConfiguration)
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
@@ -373,7 +383,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// </remarks>
     public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
-        if (Initialized || SkipRegistration)
+        if (Initialized || SkipInitialization)
         {
             return GenericResult<IHost>.Success(host);
         }
