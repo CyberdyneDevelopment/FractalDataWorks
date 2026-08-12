@@ -233,5 +233,25 @@ public interface ISessionManager : IDisposable
     /// </summary>
     /// <param name="conversationId">The conversation ID to find.</param>
     /// <returns>Session info, or null if not found.</returns>
+    /// <remarks>
+    /// Searches only sessions live in THIS process. To find a session created by an earlier process —
+    /// which is the case reattach-after-reconnect actually needs — use the overload taking a
+    /// <see cref="CancellationToken"/>, which also consults the persisted store.
+    /// </remarks>
     SessionInfo? FindSessionByConversationId(string conversationId);
+
+    /// <summary>
+    /// Finds a session by conversation ID, including sessions persisted by earlier processes.
+    /// </summary>
+    /// <param name="conversationId">The conversation ID to find.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Session info, or null if not found.</returns>
+    /// <remarks>
+    /// Checks live sessions first, then the persisted store. This is the overload a host should use
+    /// to decide between resuming an agent's existing session and creating a new one, because the
+    /// in-memory-only overload cannot see across a process restart.
+    /// </remarks>
+    Task<SessionInfo?> FindSessionByConversationId(
+        string conversationId,
+        CancellationToken cancellationToken);
 }

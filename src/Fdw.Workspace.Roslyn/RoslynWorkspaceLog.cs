@@ -372,6 +372,17 @@ public static partial class RoslynWorkspaceLog
     public static partial IGenericMessage SessionSavedToPath(ILogger logger, Guid sessionId, string path);
 
     /// <summary>
+    /// Logs that persisting a session record failed.
+    /// </summary>
+    /// <remarks>
+    /// Warning rather than Error: the in-memory session is still usable, so the caller's operation
+    /// succeeded — what is lost is only the ability to reattach to it from a future process.
+    /// </remarks>
+    [MessageLogging(EventId = 91005, Level = LogLevel.Warning,
+        Message = "Session {sessionId} could not be persisted and will not survive this process: {errorMessage}")]
+    public static partial IGenericMessage SessionSaveFailed(ILogger logger, Guid sessionId, string errorMessage);
+
+    /// <summary>
     /// Logs that a project session index was loaded.
     /// </summary>
     [MessageLogging(EventId = 11057, Level = LogLevel.Information,
