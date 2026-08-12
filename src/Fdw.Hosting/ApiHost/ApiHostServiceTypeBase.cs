@@ -63,11 +63,13 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
     protected ApiHostServiceTypeBase(string name, string sectionName, string displayName, string description)
         : base(name, sectionName, displayName, description)
     {
+        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+            RegisterApiSurface(builder));
+
+        Initialization(InitializeApiSurface);
     }
 
-    protected override IGenericResult<IHostApplicationBuilder> Register(
-        IHostApplicationBuilder builder,
-        ILoggerFactory? loggerFactory = null)
+    private IGenericResult<IHostApplicationBuilder> RegisterApiSurface(IHostApplicationBuilder builder)
     {
             builder.Services.AddFastEndpoints(o =>
             {
@@ -123,7 +125,7 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
         return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
-    protected override IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    private IGenericResult<IHost> InitializeApiSurface(IHost host, ILoggerFactory? loggerFactory)
     {
             _dataSetQueryProcessor.Initialize(host.Services);
             _permissionFilterProcessor.Initialize(host.Services);
@@ -198,14 +200,14 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
                     web.UseRateLimiter();
                 }
 
-                ConfigurePipeline(app);
+                PipelineMethod(app);
 
                 app.UseFastEndpoints(config =>
                 {
                     config.Endpoints.RoutePrefix = RoutePrefix;
                     config.Security.RoleClaimType = RoleClaimType;
 
-                    ConfigureEndpoints(config);
+                    EndpointsMethod(config);
 
                     // One error shape for the whole API. FastEndpoints' default validation body is
                     // {statusCode, message, errors:{field:[...]}}, which differs from the envelope
@@ -244,7 +246,7 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
                     timestamp = DateTime.UtcNow,
                 })).ExcludeFromDescription();
 
-                MapEndpoints(routes);
+                MapMethod(routes);
             }
 
         return GenericResult<IHost>.Success(host);
@@ -252,9 +254,8 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
 
 
     /// <summary>
-    /// Adjusts the FastEndpoints configuration for this host.
+    /// Gets the body that adjusts the FastEndpoints configuration for this host.
     /// </summary>
-    /// <param name="config">The configuration being built.</param>
     /// <remarks>
     /// A host whose endpoints do not all derive from an FDW base class registers the permission
     /// pre-processor here:
@@ -267,9 +268,12 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
     /// twice. Which of the two a host needs depends on what its endpoints derive from, which only
     /// the host knows.
     /// </remarks>
-    protected virtual void ConfigureEndpoints(Config config)
-    {
-    }
+    protected Action<Config> EndpointsMethod { get; private set; } = static _ => { };
+
+    /// <summary>Sets the body that configures FastEndpoints for this host.</summary>
+    /// <param name="method">The body.</param>
+    public void Endpoints(Action<Config> method)
+        => EndpointsMethod = method ?? throw new ArgumentNullException(nameof(method));
 
     /// <summary>Gets the route prefix every endpoint sits under.</summary>
     protected virtual string RoutePrefix => "api/v1";
@@ -281,25 +285,35 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
     protected virtual bool HasMultitenancy => false;
 
     /// <summary>
-    /// Adds middleware between the framework pipeline and FastEndpoints.
+    /// Gets the body that adds middleware between the framework pipeline and FastEndpoints.
     /// </summary>
-    /// <param name="app">The application builder.</param>
     /// <remarks>
     /// This is the seam for middleware that has to run before routing but after the framework's own
     /// — a host's body-shape rules, for instance, whose exempt routes are a property of that host's
     /// surface and cannot be known here.
     /// </remarks>
-    protected virtual void ConfigurePipeline(IApplicationBuilder app)
-    {
-    }
+    /// <remarks>
+    /// A func with a gerund setter rather than a virtual method, matching Configuration, Registration
+    /// and Initialization. Not for symmetry: the sweep invokes the funcs this option holds, so
+    /// anything reachable only by an override never runs. One shape everywhere means a host cannot
+    /// pick the extension point that silently does nothing.
+    /// </remarks>
+    protected Action<IApplicationBuilder> PipelineMethod { get; private set; } = static _ => { };
+
+    /// <summary>Sets the body that adds middleware between the framework pipeline and FastEndpoints.</summary>
+    /// <param name="method">The body.</param>
+    public void Pipeline(Action<IApplicationBuilder> method)
+        => PipelineMethod = method ?? throw new ArgumentNullException(nameof(method));
 
     /// <summary>
-    /// Maps routes this host serves beyond the endpoints and the framework's own.
+    /// Gets the body that maps routes beyond the endpoints and the framework's own.
     /// </summary>
-    /// <param name="routes">The route builder.</param>
-    protected virtual void MapEndpoints(IEndpointRouteBuilder routes)
-    {
-    }
+    protected Action<IEndpointRouteBuilder> MapMethod { get; private set; } = static _ => { };
+
+    /// <summary>Sets the body that maps routes beyond the endpoints and the framework's own.</summary>
+    /// <param name="method">The body.</param>
+    public void Mapping(Action<IEndpointRouteBuilder> method)
+        => MapMethod = method ?? throw new ArgumentNullException(nameof(method));
 
     /// <summary>
     /// Writes the framework's error envelope for bodyless 401 and 403 responses.

@@ -49,6 +49,10 @@ public abstract class UiHostServiceTypeBase : UiServiceTypeBase
     protected UiHostServiceTypeBase(string name, string sectionName, string displayName, string description)
         : base(name, sectionName, displayName, description)
     {
+        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+            RegisterUiSurface(builder));
+
+        Initialization(InitializeUiSurface);
     }
 
     /// <summary>
@@ -73,25 +77,29 @@ public abstract class UiHostServiceTypeBase : UiServiceTypeBase
     public override IReadOnlyList<IComponentTypeCollection> ComponentCollections { get; } =
         Array.Empty<IComponentTypeCollection>();
 
-    /// <summary>
-    /// Adds middleware between the framework pipeline and the component router.
-    /// </summary>
-    /// <param name="app">The application builder.</param>
-    protected virtual void ConfigurePipeline(IApplicationBuilder app)
-    {
-    }
+    /// <summary>Gets the body that adds middleware between the framework pipeline and the router.</summary>
+    /// <remarks>
+    /// A func with a gerund setter rather than a virtual method, matching Configuration, Registration
+    /// and Initialization. The reason is not symmetry: the sweep invokes the funcs this option holds,
+    /// so anything reachable only by an override never runs at all. Keeping every extension point in
+    /// the same shape means a skin cannot pick the one that silently does nothing.
+    /// </remarks>
+    protected Action<IApplicationBuilder> PipelineMethod { get; private set; } = static _ => { };
 
-    /// <summary>
-    /// Maps routes this skin serves beyond its components — a cookie login endpoint, for instance.
-    /// </summary>
-    /// <param name="routes">The route builder.</param>
-    protected virtual void MapEndpoints(IEndpointRouteBuilder routes)
-    {
-    }
+    /// <summary>Gets the body that maps routes this skin serves beyond its components.</summary>
+    protected Action<IEndpointRouteBuilder> MapMethod { get; private set; } = static _ => { };
 
-    protected override IGenericResult<IHostApplicationBuilder> Register(
-        IHostApplicationBuilder builder,
-        ILoggerFactory? loggerFactory = null)
+    /// <summary>Sets the body that adds middleware between the framework pipeline and the router.</summary>
+    /// <param name="method">The body.</param>
+    public void Pipeline(Action<IApplicationBuilder> method)
+        => PipelineMethod = method ?? throw new ArgumentNullException(nameof(method));
+
+    /// <summary>Sets the body that maps routes this skin serves beyond its components.</summary>
+    /// <param name="method">The body.</param>
+    public void Mapping(Action<IEndpointRouteBuilder> method)
+        => MapMethod = method ?? throw new ArgumentNullException(nameof(method));
+
+    private static IGenericResult<IHostApplicationBuilder> RegisterUiSurface(IHostApplicationBuilder builder)
     {
         builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
@@ -109,7 +117,7 @@ public abstract class UiHostServiceTypeBase : UiServiceTypeBase
         return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
-    protected override IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    private IGenericResult<IHost> InitializeUiSurface(IHost host, ILoggerFactory? loggerFactory)
     {
         if (host is not WebApplication app)
         {
@@ -145,10 +153,10 @@ public abstract class UiHostServiceTypeBase : UiServiceTypeBase
         // After both: antiforgery validates against the authenticated user.
         app.UseAntiforgery();
 
-        ConfigurePipeline(app);
+        PipelineMethod(app);
 
         MapRootComponent(app);
-        MapEndpoints(app);
+        MapMethod(app);
 
         return GenericResult<IHost>.Success(host);
     }

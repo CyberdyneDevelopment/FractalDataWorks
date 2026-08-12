@@ -77,14 +77,14 @@ public abstract class UiServiceTypeBase
     /// <summary>Runs Configure for every component collection this domain owns.</summary>
     /// <param name="builder">The host builder.</param>
     /// <returns>The builder, or the first failure encountered.</returns>
-    protected virtual IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder)
+    protected IGenericResult<IHostApplicationBuilder> ConfigureComponents(IHostApplicationBuilder builder)
         => Cycle(builder, (c, b) => c.Configure(b));
 
     /// <summary>Runs Register for every component collection this domain owns.</summary>
     /// <param name="builder">The host builder.</param>
     /// <param name="loggerFactory">The logger factory, if the host has one yet.</param>
     /// <returns>The builder, or the first failure encountered.</returns>
-    protected virtual IGenericResult<IHostApplicationBuilder> Register(
+    protected IGenericResult<IHostApplicationBuilder> RegisterComponents(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory = null)
         => Cycle(builder, (c, b) => c.Register(b, loggerFactory));
@@ -93,7 +93,7 @@ public abstract class UiServiceTypeBase
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">The logger factory.</param>
     /// <returns>The host, or the first failure encountered.</returns>
-    protected virtual IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    protected IGenericResult<IHost> InitializeComponents(IHost host, ILoggerFactory? loggerFactory = null)
     {
         if (SkipRegistration)
         {
