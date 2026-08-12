@@ -56,7 +56,7 @@
                             <select class="finput" @bind="_schedulerType">
                                 <option value="Cron">Cron</option>
                                 <option value="Interval">Interval</option>
-                                <option value="OneTime">One Time</option>
+                                <option value="Once">One Time</option>
                                 <option value="Event">Event</option>
                             </select>
                         }
@@ -83,7 +83,7 @@
                             </div>
                         </div>
                     }
-                    else if (string.Equals(_schedulerType, "OneTime", StringComparison.OrdinalIgnoreCase))
+                    else if (string.Equals(_schedulerType, "Once", StringComparison.OrdinalIgnoreCase))
                     {
                         <div class="frow">
                             <label>Execution Date</label>
@@ -176,7 +176,7 @@
         try
         {
             DateTimeOffset? oneTimeDateTime = null;
-            if (string.Equals(_schedulerType, "OneTime", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(_schedulerType, "Once", StringComparison.OrdinalIgnoreCase))
             {
                 var localDt = _oneTimeDate.ToDateTime(_oneTimeTime);
                 oneTimeDateTime = new DateTimeOffset(localDt, TimeSpan.Zero);

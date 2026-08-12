@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Scheduling.Clients.Abstractions;
-using Fdw.Services.Scheduling.Abstractions.TypeCollections.ScheduleTypeOptions;
+using Fdw.Services.Scheduling.Abstractions.OptionTypes;
 using Fdw.Services.Scheduling.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
 
@@ -18,7 +18,7 @@ namespace Fdw.Services.Scheduling.Endpoints;
 /// Why: the generic GET /configuration/types?category=Schedule walks the IDataPath schema-container
 /// tree, which matches physical schema names (conn/data/pipe/sched) — not the domain's
 /// ServiceCategory string. That means every category except Transform returns zero results.
-/// This endpoint reads directly from <see cref="ScheduleTypes.All()"/> which is source-generated,
+/// This endpoint reads directly from <see cref="TriggerTypes.All()"/> which is source-generated,
 /// reflection-free, and always correct regardless of physical schema topology.
 /// </remarks>
 public abstract class ListScheduleTypesEndpointBase : EndpointWithoutRequest<List<ScheduleTypeSummary>>
@@ -35,7 +35,7 @@ public abstract class ListScheduleTypesEndpointBase : EndpointWithoutRequest<Lis
         Summary(s =>
         {
             s.Summary = "List available schedule types";
-            s.Description = "Returns all schedule types registered via the source-generated ScheduleTypes TypeCollection.";
+            s.Description = "Returns all trigger types registered via the source-generated TriggerTypes TypeCollection.";
         });
     }
 
@@ -46,7 +46,7 @@ public abstract class ListScheduleTypesEndpointBase : EndpointWithoutRequest<Lis
 
         ScheduleEndpointLog.ListingScheduleTypes(endpointLogger);
 
-        var all = ScheduleTypes.All();
+        var all = TriggerTypes.All();
         var dtos = new List<ScheduleTypeSummary>(all.Count);
 
         foreach (var t in all)
@@ -68,12 +68,12 @@ public abstract class ListScheduleTypesEndpointBase : EndpointWithoutRequest<Lis
     /// <summary>
     /// Builds a human-readable description for a schedule type. Override to provide custom descriptions.
     /// </summary>
-    protected virtual string BuildDescription(IScheduleType scheduleType) => scheduleType.Name switch
+    protected virtual string BuildDescription(ITriggerType triggerType) => triggerType.Name switch
     {
         "Cron" => "Time-based scheduling using a cron expression",
         "Interval" => "Recurring execution at a fixed interval (seconds, minutes, hours, or days)",
-        "OneTime" => "Single execution at a specific date and time",
+        "Once" => "Single execution at a specific date and time",
         "Event" => "Execution triggered by a named application event",
-        _ => scheduleType.Name
+        _ => triggerType.Name
     };
 }

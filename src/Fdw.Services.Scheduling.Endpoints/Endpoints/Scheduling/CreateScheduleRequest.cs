@@ -23,7 +23,7 @@ public class CreateScheduleRequest : ResourceCreateRequest
     /// <summary>Gets or sets the interval in seconds for interval-based schedules.</summary>
     public int? IntervalSeconds { get; set; }
 
-    /// <summary>Gets or sets the one-time execution date and time for OneTime-type schedules.</summary>
+    /// <summary>Gets or sets the one-time execution date and time for Once-type schedules.</summary>
     public DateTimeOffset? OneTimeDateTime { get; set; }
 
     /// <summary>Gets or sets the triggering event name for Event-type schedules.</summary>

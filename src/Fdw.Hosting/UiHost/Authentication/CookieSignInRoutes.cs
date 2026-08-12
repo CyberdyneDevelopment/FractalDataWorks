@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -59,6 +60,7 @@ public static class CookieSignInRoutes
         var logger = loggerFactory?.CreateLogger("Fdw.Hosting.CookieSignIn") ?? NullLogger.Instance;
         var form = await context.Request.ReadFormAsync().ConfigureAwait(false);
         var username = form["username"].ToString();
+        CookieSignInLog.SignInAttempted(logger, username);
         var returnUrl = Declared(form["returnUrl"].ToString(), options);
 
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(form["password"].ToString()))
@@ -82,8 +84,13 @@ public static class CookieSignInRoutes
             request["tenant"] = form["tenant"].ToString();
         }
 
+        var started = Stopwatch.GetTimestamp();
         var response = await clients.CreateClient(options.ClientName)
             .PostAsync("connect/token", new FormUrlEncodedContent(request)).ConfigureAwait(false);
+
+        CookieSignInLog.TokenEndpointAnswered(
+            logger, username, (int)response.StatusCode,
+            (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -149,6 +156,7 @@ public static class CookieSignInRoutes
         ILoggerFactory? loggerFactory)
     {
         var logger = loggerFactory?.CreateLogger("Fdw.Hosting.CookieSignIn") ?? NullLogger.Instance;
+        CookieSignInLog.SignOutAttempted(logger);
 
         // Best-effort: the server revokes the refresh token so it cannot be replayed, but a failure
         // here must not leave the caller signed in locally, which is why the cookie is cleared

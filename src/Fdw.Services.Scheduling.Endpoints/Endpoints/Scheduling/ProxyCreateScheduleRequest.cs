@@ -22,7 +22,7 @@ public sealed class ProxyCreateScheduleRequest
     /// <summary>Gets or sets the interval in seconds.</summary>
     public int? IntervalSeconds { get; set; }
 
-    /// <summary>Gets or sets the one-time execution date and time for OneTime-type schedules.</summary>
+    /// <summary>Gets or sets the one-time execution date and time for Once-type schedules.</summary>
     public DateTimeOffset? OneTimeDateTime { get; set; }
 
     /// <summary>Gets or sets the triggering event name for Event-type schedules.</summary>

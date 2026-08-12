@@ -4,10 +4,11 @@ namespace Fdw.Services.Scheduling.Clients.Abstractions;
 /// Summary information about a schedule type for UI pickers.
 /// </summary>
 /// <remarks>
-/// Returned by GET /schedules/types. Maps directly from
-/// <see cref="Fdw.Services.Scheduling.Abstractions.TypeCollections.ScheduleTypeOptions.ScheduleTypeBase"/>
-/// so the UI picker is driven by the source-generated TypeCollection rather than the
-/// broken generic category endpoint.
+/// Returned by GET /schedules/types, mapped from <c>TriggerTypeBase</c> so the UI picker is
+/// driven by the source-generated TypeCollection that also evaluates due-ness. There was a second
+/// collection naming the same concepts without any behaviour behind them, and a schedule had to be
+/// translated from one to the other before it could be evaluated; the translation handled one of
+/// the six names and silently skipped a schedule whenever it did not match.
 /// </remarks>
 public sealed class ScheduleTypeSummary
 {

@@ -120,8 +120,8 @@ public partial class ScheduleConfiguration : IScheduleDefinition
     public int? IntervalSeconds { get; set; }
 
     /// <summary>
-    /// Gets or sets the one-time execution date and time for OneTime-type schedules.
-    /// Null for non-OneTime schedules.
+    /// Gets or sets the one-time execution date and time for Once-type schedules.
+    /// Null for non-Once schedules.
     /// </summary>
     public DateTimeOffset? OneTimeDateTime { get; set; }
 

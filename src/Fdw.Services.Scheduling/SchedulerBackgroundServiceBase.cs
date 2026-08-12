@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
@@ -71,13 +72,28 @@ public abstract class SchedulerBackgroundServiceBase : BackgroundService
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        OnStarted(EvaluationInterval);
+        var interval = EvaluationInterval;
+        SchedulerLoopLog.LoopStarted(_logger, interval.TotalSeconds);
+        OnStarted(interval);
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            SchedulerLoopLog.Tick(_logger);
+            var started = Stopwatch.GetTimestamp();
+
             try
             {
                 await Evaluate(stoppingToken).ConfigureAwait(false);
+
+                var elapsed = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+                SchedulerLoopLog.EvaluationCompleted(_logger, LastEvaluatedCount, elapsed);
+
+                // Why worth its own message: nothing has failed, but passes are now back-to-back and
+                // a due schedule fires late. It is the signal that precedes a real problem.
+                if (elapsed > (long)EvaluationInterval.TotalMilliseconds)
+                {
+                    SchedulerLoopLog.EvaluationOverran(_logger, elapsed, (long)EvaluationInterval.TotalMilliseconds);
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -90,7 +106,7 @@ public abstract class SchedulerBackgroundServiceBase : BackgroundService
 #pragma warning restore CA1031
             {
                 OnEvaluationFailed(ex);
-                _logger.LogError(ex, "Scheduler evaluation failed; the loop continues.");
+                SchedulerLoopLog.EvaluationFailed(_logger, ex);
             }
 
             try
@@ -103,6 +119,21 @@ public abstract class SchedulerBackgroundServiceBase : BackgroundService
             }
         }
 
+        if (!stoppingToken.IsCancellationRequested)
+        {
+            SchedulerLoopLog.LoopEndedUnexpectedly(_logger);
+        }
+
+        SchedulerLoopLog.LoopStopped(_logger);
         OnStopped();
     }
+
+    /// <summary>
+    /// Gets how many schedules the last pass looked at, for the completion message.
+    /// </summary>
+    /// <remarks>
+    /// Zero when an implementation does not track it — a count of nothing is honest, and the message
+    /// is still worth emitting because it says the pass ran.
+    /// </remarks>
+    protected virtual int LastEvaluatedCount => 0;
 }
