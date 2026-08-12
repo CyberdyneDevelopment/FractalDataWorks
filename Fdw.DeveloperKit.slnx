@@ -201,6 +201,7 @@
     <Project Path="src/Fdw.Intelligence/Fdw.Intelligence.csproj" />
     <Project Path="src/Fdw.Mcp.Bus.Abstractions/Fdw.Mcp.Bus.Abstractions.csproj" />
     <Project Path="src/Fdw.Mcp.Bus/Fdw.Mcp.Bus.csproj" />
+    <Project Path="src/Fdw.Mcp.Hosting/Fdw.Mcp.Hosting.csproj" />
     <Project Path="src/Fdw.Messages/Fdw.Messages.csproj" />
     <Project Path="src/Fdw.Operations.Abstractions/Fdw.Operations.Abstractions.csproj" />
     <Project Path="src/Fdw.Operations.Endpoints/Fdw.Operations.Endpoints.csproj" />
@@ -578,6 +579,22 @@
     <Project Path="tests/Fdw.Hosting.MsSql.Tests/Fdw.Hosting.MsSql.Tests.csproj" />
     <Project Path="tests/Fdw.Hosting.Tests/Fdw.Hosting.Tests.csproj" />
     <Project Path="tests/Fdw.Mcp.Bus.Tests/Fdw.Mcp.Bus.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Mcp.Hosting.SampleTools/Fdw.Mcp.Hosting.SampleTools.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Mcp.Hosting.Tests/Fdw.Mcp.Hosting.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />
       <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />

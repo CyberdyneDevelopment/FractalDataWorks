@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- Why: this project stands in for a real tool package. It deliberately does NOT reference
+       Fdw.Registration.SourceGenerators — a tool package is a library, and the module initializer
+       that registers its options is emitted only in the consuming entry-point executable. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Mcp.Hosting\Fdw.Mcp.Hosting.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" />
+  </ItemGroup>
+
+</Project>
