@@ -77,15 +77,123 @@ public abstract class ComponentTypeOptionBase : TypeOptionBase<int, ComponentTyp
     public void Configuration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
         => ConfigurationMethod = method ?? throw new ArgumentNullException(nameof(method));
 
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>Prefer this to <see cref="Configuration"/>, which assigns and so discards anything
+    /// another contributor already chained.</remarks>
+    /// <param name="method">The body to run after.</param>
+    public void AppendConfiguration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = ConfigurationMethod;
+        ConfigurationMethod = (builder) =>
+        {
+            var result = existing(builder);
+            return result.IsFailure ? result : method(builder);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public void PrependConfiguration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = ConfigurationMethod;
+        ConfigurationMethod = (builder) =>
+        {
+            var result = method(builder);
+            return result.IsFailure ? result : existing(builder);
+        };
+    }
+
     /// <summary>Sets the body run during Register.</summary>
     /// <param name="method">The body.</param>
     public void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
         => RegistrationMethod = method ?? throw new ArgumentNullException(nameof(method));
 
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>Prefer this to <see cref="Registration"/>, which assigns and so discards anything
+    /// another contributor already chained.</remarks>
+    /// <param name="method">The body to run after.</param>
+    public void AppendRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = RegistrationMethod;
+        RegistrationMethod = (builder, loggerFactory) =>
+        {
+            var result = existing(builder, loggerFactory);
+            return result.IsFailure ? result : method(builder, loggerFactory);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public void PrependRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = RegistrationMethod;
+        RegistrationMethod = (builder, loggerFactory) =>
+        {
+            var result = method(builder, loggerFactory);
+            return result.IsFailure ? result : existing(builder, loggerFactory);
+        };
+    }
+
     /// <summary>Sets the body run during Initialize.</summary>
     /// <param name="method">The body.</param>
     public void Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
         => InitializationMethod = method ?? throw new ArgumentNullException(nameof(method));
+
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>Prefer this to <see cref="Initialization"/>, which assigns and so discards anything
+    /// another contributor already chained.</remarks>
+    /// <param name="method">The body to run after.</param>
+    public void AppendInitialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = InitializationMethod;
+        InitializationMethod = (host, loggerFactory) =>
+        {
+            var result = existing(host, loggerFactory);
+            return result.IsFailure ? result : method(host, loggerFactory);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public void PrependInitialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = InitializationMethod;
+        InitializationMethod = (host, loggerFactory) =>
+        {
+            var result = method(host, loggerFactory);
+            return result.IsFailure ? result : existing(host, loggerFactory);
+        };
+    }
 
     /// <inheritdoc />
     public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder)
