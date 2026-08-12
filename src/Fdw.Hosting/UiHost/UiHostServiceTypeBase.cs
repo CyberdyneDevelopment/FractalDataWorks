@@ -49,10 +49,6 @@ public abstract class UiHostServiceTypeBase : UiServiceTypeBase
     protected UiHostServiceTypeBase(string name, string sectionName, string displayName, string description)
         : base(name, sectionName, displayName, description)
     {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
-            RegisterUiSurface(builder));
-
-        Initialization(InitializeUiSurface);
     }
 
     /// <summary>
@@ -93,7 +89,9 @@ public abstract class UiHostServiceTypeBase : UiServiceTypeBase
     {
     }
 
-    private static IGenericResult<IHostApplicationBuilder> RegisterUiSurface(IHostApplicationBuilder builder)
+    protected override IGenericResult<IHostApplicationBuilder> Register(
+        IHostApplicationBuilder builder,
+        ILoggerFactory? loggerFactory = null)
     {
         builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
@@ -111,7 +109,7 @@ public abstract class UiHostServiceTypeBase : UiServiceTypeBase
         return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
-    private IGenericResult<IHost> InitializeUiSurface(IHost host, ILoggerFactory? loggerFactory)
+    protected override IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
         if (host is not WebApplication app)
         {

@@ -70,7 +70,7 @@ public abstract class ApiServiceTypeBase
     /// It is not the phase body: a domain that wants nothing extra still gets the cycle, and one
     /// that does can put its own work either side of it.
     /// </remarks>
-    protected IGenericResult<IHostApplicationBuilder> ConfigureEndpoints(
+    protected virtual IGenericResult<IHostApplicationBuilder> Configure(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory = null)
     {
@@ -102,7 +102,7 @@ public abstract class ApiServiceTypeBase
     /// collection is the level that can measure it — this cycle would only be able to repeat what its
     /// collections already said.
     /// </remarks>
-    protected IGenericResult<IHostApplicationBuilder> RegisterEndpoints(
+    protected virtual IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory = null)
     {
@@ -132,7 +132,7 @@ public abstract class ApiServiceTypeBase
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">The logger factory.</param>
     /// <returns>The host, or the first failure encountered.</returns>
-    protected IGenericResult<IHost> InitializeEndpoints(IHost host, ILoggerFactory? loggerFactory = null)
+    protected virtual IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
         if (SkipRegistration)
         {

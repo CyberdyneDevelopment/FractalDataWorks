@@ -63,13 +63,11 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
     protected ApiHostServiceTypeBase(string name, string sectionName, string displayName, string description)
         : base(name, sectionName, displayName, description)
     {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
-            RegisterApiSurface(builder));
-
-        Initialization(InitializeApiSurface);
     }
 
-    private IGenericResult<IHostApplicationBuilder> RegisterApiSurface(IHostApplicationBuilder builder)
+    protected override IGenericResult<IHostApplicationBuilder> Register(
+        IHostApplicationBuilder builder,
+        ILoggerFactory? loggerFactory = null)
     {
             builder.Services.AddFastEndpoints(o =>
             {
@@ -125,7 +123,7 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
         return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
-    private IGenericResult<IHost> InitializeApiSurface(IHost host, ILoggerFactory? loggerFactory)
+    protected override IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
             _dataSetQueryProcessor.Initialize(host.Services);
             _permissionFilterProcessor.Initialize(host.Services);
