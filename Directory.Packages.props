@@ -231,7 +231,7 @@
     <PackageVersion Include="Microsoft.TeamFoundationServer.Client" Version="19.225.1" />
     <PackageVersion Include="Microsoft.VisualStudio.Services.Client" Version="19.225.1" />
     <!-- MCP (Model Context Protocol) -->
-    <PackageVersion Include="ModelContextProtocol" Version="2.0.0" />
+    <PackageVersion Include="ModelContextProtocol" Version="2.1.0" />
     <!-- ConversationVault Dependencies -->
     <PackageVersion Include="Build5Nines.SharpVector" Version="2.1.1" />
     <PackageVersion Include="Qdrant.Client" Version="1.15.1" />
