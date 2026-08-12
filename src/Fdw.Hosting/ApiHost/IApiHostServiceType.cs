@@ -36,46 +36,9 @@ public interface IApiHostServiceType
     /// <returns>This, for chaining.</returns>
     IApiHostServiceType Version(string value);
 
-    /// <summary>Sets the document's description.</summary>
-    /// <remarks>Named Summary, not Description: every TypeOption already carries a Description of
-    /// its own, and a setter by that name would shadow the option's identity with the document's.</remarks>
-    /// <param name="value">The description.</param>
-    /// <returns>This, for chaining.</returns>
-    IApiHostServiceType Summary(string value);
 
-    /// <summary>Sets the origins the document advertises.</summary>
-    /// <remarks>
-    /// Stated rather than derived: behind a reverse proxy Request.Scheme reports http even with
-    /// forwarded-headers middleware, and a document advertising http origins gets its "try it" calls
-    /// blocked as mixed content.
-    /// </remarks>
-    /// <param name="urls">The origins this deployment is reachable on.</param>
-    /// <returns>This, for chaining.</returns>
-    IApiHostServiceType Origins(params string[] urls);
 
-    /// <summary>Adds to the generated document, after the framework's own processors have run.</summary>
-    /// <remarks>
-    /// Additive rather than replacing: the framework's permission processor hides operations the
-    /// caller cannot invoke, and a host that replaced the document body would drop it silently.
-    /// </remarks>
-    /// <param name="method">The body.</param>
-    /// <returns>This, for chaining.</returns>
-    IApiHostServiceType Documentation(Action<AspNetCoreOpenApiDocumentGeneratorSettings> method);
 
-    /// <summary>Sets the body that adds middleware between the framework pipeline and FastEndpoints.</summary>
-    /// <param name="method">The body.</param>
-    /// <returns>This, for chaining.</returns>
-    IApiHostServiceType Pipeline(Action<IApplicationBuilder> method);
-
-    /// <summary>Sets the body that maps routes beyond the endpoints and the framework's own.</summary>
-    /// <param name="method">The body.</param>
-    /// <returns>This, for chaining.</returns>
-    IApiHostServiceType Mapping(Action<IEndpointRouteBuilder> method);
-
-    /// <summary>Sets the body that adjusts the FastEndpoints configuration.</summary>
-    /// <param name="method">The body.</param>
-    /// <returns>This, for chaining.</returns>
-    IApiHostServiceType Endpoints(Action<Config> method);
 
     /// <summary>Sets the prefix every endpoint sits under.</summary>
     /// <param name="prefix">The route prefix.</param>

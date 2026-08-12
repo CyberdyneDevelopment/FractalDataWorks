@@ -30,13 +30,5 @@ public interface IUiHostServiceType
     /// <returns>This, for chaining.</returns>
     IUiHostServiceType Error(string path);
 
-    /// <summary>Sets the body that adds middleware between the framework pipeline and the router.</summary>
-    /// <param name="method">The body.</param>
-    /// <returns>This, for chaining.</returns>
-    IUiHostServiceType Pipeline(Action<IApplicationBuilder> method);
 
-    /// <summary>Sets the body that maps routes this skin serves beyond its components.</summary>
-    /// <param name="method">The body.</param>
-    /// <returns>This, for chaining.</returns>
-    IUiHostServiceType Mapping(Action<IEndpointRouteBuilder> method);
 }

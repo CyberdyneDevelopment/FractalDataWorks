@@ -100,11 +100,6 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase, IApiHostServi
                     // Hides operations the caller cannot invoke. Runs before any host processor so
                     // a host's own pass only ever sees operations that survived the filter.
                     s.DocumentProcessors.Add(_permissionFilterProcessor);
-
-                    // Last, so a host's own pass only ever sees a document the framework has
-                    // already filtered — the permission processor above cannot be bypassed.
-                    DocumentationMethod(s);
-
                     if (ServerUrls.Count > 0)
                     {
                         // Why stated rather than derived: behind a reverse proxy Request.Scheme
@@ -200,14 +195,10 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase, IApiHostServi
                     web.UseRateLimiter();
                 }
 
-                PipelineMethod(app);
-
                 app.UseFastEndpoints(config =>
                 {
                     config.Endpoints.RoutePrefix = RoutePrefix;
                     config.Security.RoleClaimType = RoleClaimType;
-
-                    EndpointsMethod(config);
 
                     // One error shape for the whole API. FastEndpoints' default validation body is
                     // {statusCode, message, errors:{field:[...]}}, which differs from the envelope
@@ -246,12 +237,10 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase, IApiHostServi
                     timestamp = DateTime.UtcNow,
                 })).ExcludeFromDescription();
 
-                MapMethod(routes);
             }
 
         return GenericResult<IHost>.Success(host);
     }
-
 
     /// <summary>
     /// Gets the body that adjusts the FastEndpoints configuration for this host.
@@ -268,17 +257,6 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase, IApiHostServi
     /// twice. Which of the two a host needs depends on what its endpoints derive from, which only
     /// the host knows.
     /// </remarks>
-    protected Action<Config> EndpointsMethod { get; private set; } = static _ => { };
-
-    /// <summary>Sets the body that configures FastEndpoints for this host.</summary>
-    /// <param name="method">The body.</param>
-    /// <inheritdoc />
-    public IApiHostServiceType Endpoints(Action<Config> method)
-    {
-        EndpointsMethod = method ?? throw new ArgumentNullException(nameof(method));
-        return this;
-    }
-
     /// <summary>Gets the route prefix every endpoint sits under.</summary>
     protected string RoutePrefix { get; private set; } = "api/v1";
 
@@ -309,45 +287,12 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase, IApiHostServi
         return this;
     }
 
-    /// <summary>
-    /// Gets the body that adds middleware between the framework pipeline and FastEndpoints.
-    /// </summary>
-    /// <remarks>
-    /// This is the seam for middleware that has to run before routing but after the framework's own
-    /// — a host's body-shape rules, for instance, whose exempt routes are a property of that host's
-    /// surface and cannot be known here.
-    /// </remarks>
     /// <remarks>
     /// A func with a gerund setter rather than a virtual method, matching Configuration, Registration
     /// and Initialization. Not for symmetry: the sweep invokes the funcs this option holds, so
     /// anything reachable only by an override never runs. One shape everywhere means a host cannot
     /// pick the extension point that silently does nothing.
     /// </remarks>
-    protected Action<IApplicationBuilder> PipelineMethod { get; private set; } = static _ => { };
-
-    /// <summary>Sets the body that adds middleware between the framework pipeline and FastEndpoints.</summary>
-    /// <param name="method">The body.</param>
-    /// <inheritdoc />
-    public IApiHostServiceType Pipeline(Action<IApplicationBuilder> method)
-    {
-        PipelineMethod = method ?? throw new ArgumentNullException(nameof(method));
-        return this;
-    }
-
-    /// <summary>
-    /// Gets the body that maps routes beyond the endpoints and the framework's own.
-    /// </summary>
-    protected Action<IEndpointRouteBuilder> MapMethod { get; private set; } = static _ => { };
-
-    /// <summary>Sets the body that maps routes beyond the endpoints and the framework's own.</summary>
-    /// <param name="method">The body.</param>
-    /// <inheritdoc />
-    public IApiHostServiceType Mapping(Action<IEndpointRouteBuilder> method)
-    {
-        MapMethod = method ?? throw new ArgumentNullException(nameof(method));
-        return this;
-    }
-
     /// <summary>
     /// Writes the framework's error envelope for bodyless 401 and 403 responses.
     /// </summary>
@@ -397,16 +342,6 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase, IApiHostServi
     /// </summary>
     protected IReadOnlyList<string> ServerUrls { get; private set; } = Array.Empty<string>();
 
-    /// <summary>
-    /// Gets the body run against the document after the framework's own processors.
-    /// </summary>
-    /// <remarks>
-    /// Additive rather than replacing: the permission processor hides operations the caller cannot
-    /// invoke, and a host that replaced the document body would drop it silently.
-    /// </remarks>
-    protected Action<AspNetCoreOpenApiDocumentGeneratorSettings> DocumentationMethod { get; private set; }
-        = static _ => { };
-
     /// <inheritdoc />
     public IApiHostServiceType Title(string value)
     {
@@ -432,13 +367,6 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase, IApiHostServi
     public IApiHostServiceType Origins(params string[] urls)
     {
         ServerUrls = urls ?? throw new ArgumentNullException(nameof(urls));
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IApiHostServiceType Documentation(Action<AspNetCoreOpenApiDocumentGeneratorSettings> method)
-    {
-        DocumentationMethod = method ?? throw new ArgumentNullException(nameof(method));
         return this;
     }
 

@@ -99,36 +99,6 @@ public abstract class UiHostServiceTypeBase : UiServiceTypeBase, IUiHostServiceT
     public override IReadOnlyList<IComponentTypeCollection> ComponentCollections { get; } =
         Array.Empty<IComponentTypeCollection>();
 
-    /// <summary>Gets the body that adds middleware between the framework pipeline and the router.</summary>
-    /// <remarks>
-    /// A func with a gerund setter rather than a virtual method, matching Configuration, Registration
-    /// and Initialization. The reason is not symmetry: the sweep invokes the funcs this option holds,
-    /// so anything reachable only by an override never runs at all. Keeping every extension point in
-    /// the same shape means a skin cannot pick the one that silently does nothing.
-    /// </remarks>
-    protected Action<IApplicationBuilder> PipelineMethod { get; private set; } = static _ => { };
-
-    /// <summary>Gets the body that maps routes this skin serves beyond its components.</summary>
-    protected Action<IEndpointRouteBuilder> MapMethod { get; private set; } = static _ => { };
-
-    /// <summary>Sets the body that adds middleware between the framework pipeline and the router.</summary>
-    /// <param name="method">The body.</param>
-    /// <inheritdoc />
-    public IUiHostServiceType Pipeline(Action<IApplicationBuilder> method)
-    {
-        PipelineMethod = method ?? throw new ArgumentNullException(nameof(method));
-        return this;
-    }
-
-    /// <summary>Sets the body that maps routes this skin serves beyond its components.</summary>
-    /// <param name="method">The body.</param>
-    /// <inheritdoc />
-    public IUiHostServiceType Mapping(Action<IEndpointRouteBuilder> method)
-    {
-        MapMethod = method ?? throw new ArgumentNullException(nameof(method));
-        return this;
-    }
-
     private static IGenericResult<IHostApplicationBuilder> RegisterUiSurface(IHostApplicationBuilder builder)
     {
         builder.Services.AddRazorComponents().AddInteractiveServerComponents();
@@ -183,10 +153,7 @@ public abstract class UiHostServiceTypeBase : UiServiceTypeBase, IUiHostServiceT
         // After both: antiforgery validates against the authenticated user.
         app.UseAntiforgery();
 
-        PipelineMethod(app);
-
         MapRootComponent(app);
-        MapMethod(app);
 
         return GenericResult<IHost>.Success(host);
     }
