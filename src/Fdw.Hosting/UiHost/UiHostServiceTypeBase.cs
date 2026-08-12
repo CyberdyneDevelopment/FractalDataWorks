@@ -89,15 +89,6 @@ public abstract class UiHostServiceTypeBase : UiServiceTypeBase, IUiHostServiceT
         return this;
     }
 
-    /// <summary>
-    /// Gets the collections whose components this host serves — none by default.
-    /// </summary>
-    /// <remarks>
-    /// A host owns the surface, not the domains. Each UI domain's own service type names its
-    /// collections; this one exists so the pipeline has an owner.
-    /// </remarks>
-    public override IReadOnlyList<IComponentTypeCollection> ComponentCollections { get; } =
-        Array.Empty<IComponentTypeCollection>();
 
     private static IGenericResult<IHostApplicationBuilder> RegisterUiSurface(IHostApplicationBuilder builder)
     {

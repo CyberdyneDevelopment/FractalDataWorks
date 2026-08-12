@@ -46,7 +46,30 @@ public abstract class ApiServiceTypeBase
     }
 
     /// <inheritdoc />
-    public abstract IReadOnlyList<IEndpointTypeCollection> EndpointCollections { get; }
+    private readonly List<IEndpointTypeCollection> _endpointCollections = new();
+
+    /// <summary>Gets the endpoint collections this service type owns.</summary>
+    /// <remarks>
+    /// Added through <see cref="Endpoints"/> in the constructor rather than declared by overriding an
+    /// abstract property, for the same reason every other body is set rather than overridden: a
+    /// value only reachable through an override is a second mechanism beside the one the chain
+    /// actually reads, and an abstract member cannot be added to - a base contributing a endpoint
+    /// collection of its own would be replaced by the derived type rather than joined by it.
+    /// </remarks>
+    public IReadOnlyList<IEndpointTypeCollection> EndpointCollections => _endpointCollections;
+
+    /// <summary>Adds a endpoint collection this service type owns.</summary>
+    /// <param name="collection">The collection to add.</param>
+    /// <returns>This, for chaining.</returns>
+    public ApiServiceTypeBase Endpoints(IEndpointTypeCollection collection)
+    {
+        if (collection is not null)
+        {
+            _endpointCollections.Add(collection);
+        }
+
+        return this;
+    }
 
 
     /// <summary>

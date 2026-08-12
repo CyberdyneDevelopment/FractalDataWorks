@@ -48,7 +48,30 @@ public abstract class UiServiceTypeBase
     }
 
     /// <inheritdoc />
-    public abstract IReadOnlyList<IComponentTypeCollection> ComponentCollections { get; }
+    private readonly List<IComponentTypeCollection> _componentCollections = new();
+
+    /// <summary>Gets the component collections this service type owns.</summary>
+    /// <remarks>
+    /// Added through <see cref="Components"/> in the constructor rather than declared by overriding an
+    /// abstract property, for the same reason every other body is set rather than overridden: a
+    /// value only reachable through an override is a second mechanism beside the one the chain
+    /// actually reads, and an abstract member cannot be added to - a base contributing a component
+    /// collection of its own would be replaced by the derived type rather than joined by it.
+    /// </remarks>
+    public IReadOnlyList<IComponentTypeCollection> ComponentCollections => _componentCollections;
+
+    /// <summary>Adds a component collection this service type owns.</summary>
+    /// <param name="collection">The collection to add.</param>
+    /// <returns>This, for chaining.</returns>
+    public UiServiceTypeBase Components(IComponentTypeCollection collection)
+    {
+        if (collection is not null)
+        {
+            _componentCollections.Add(collection);
+        }
+
+        return this;
+    }
 
 
     /// <summary>

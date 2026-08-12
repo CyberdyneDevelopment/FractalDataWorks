@@ -370,10 +370,4 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase, IApiHostServi
         return this;
     }
 
-    /// <summary>
-    /// Gets the endpoint collections this host owns — none.
-    /// </summary>
-    /// <remarks>The host registers the API surface; each domain owns its own endpoints.</remarks>
-    public override IReadOnlyList<IEndpointTypeCollection> EndpointCollections { get; } =
-        Array.Empty<IEndpointTypeCollection>();
 }
