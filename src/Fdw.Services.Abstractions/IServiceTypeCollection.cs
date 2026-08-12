@@ -24,11 +24,11 @@ public interface IServiceTypeCollection
     /// The collection's phase-1 Configure entry point (e.g. <c>ConnectionTypes.Configure</c>), bound as
     /// a bare method-group delegate by the generator — never populated via reflection.
     /// </summary>
-    Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> Configure { get; }
+    Func<IHostApplicationBuilder, ILoggerFactory?, bool, IGenericResult<IHostApplicationBuilder>> Configure { get; }
 
     /// <summary>The collection's phase-2 Register entry point (e.g. <c>ConnectionTypes.Register</c>).</summary>
-    Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> Register { get; }
+    Func<IHostApplicationBuilder, ILoggerFactory?, bool, IGenericResult<IHostApplicationBuilder>> Register { get; }
 
     /// <summary>The collection's phase-3 Initialize entry point (e.g. <c>ConnectionTypes.Initialize</c>).</summary>
-    Func<IHost, ILoggerFactory?, IGenericResult<IHost>> Initialize { get; }
+    Func<IHost, ILoggerFactory?, bool, IGenericResult<IHost>> Initialize { get; }
 }

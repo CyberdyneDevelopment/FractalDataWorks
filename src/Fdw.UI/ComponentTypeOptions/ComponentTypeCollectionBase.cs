@@ -45,6 +45,32 @@ public abstract class ComponentTypeCollectionBase<TBase> : TypeCollectionBase<TB
     /// <summary>Gets or sets a value indicating whether this whole domain should be passed over.</summary>
     public bool SkipRegistration { get; set; }
 
+    /// <summary>Gets the data store this collection's configuration rows live in.</summary>
+    /// <remarks>Virtual so a resource that lives elsewhere says so, rather than the framework
+    /// guessing from a name.</remarks>
+    /// <summary>Gets this collection's identity as a parent collection sees it.</summary>
+    /// <remarks>
+    /// A TypeCollection is keyed by an int derived from its type name; a ServiceTypeCollection keys
+    /// its members by Guid. This collection is both - a collection of options, and a member of one -
+    /// so it carries the Guid the parent needs alongside the int its own members are found by.
+    ///
+    /// Derived from the name rather than generated: the same collection must be the same
+    /// identity in every process that loads it, and Guid.NewGuid() would give a different answer on
+    /// each start - so a configuration row written against one run would not be found by the next.
+    /// </remarks>
+    public new Guid Id => OptionId.Derive(Name);
+
+    /// <summary>Gets the data store this collection's configuration rows live in.</summary>
+    /// <remarks>Virtual so a resource that lives elsewhere says so, rather than the framework
+    /// guessing from a name.</remarks>
+    public virtual string DataStore => "ConfigurationDb";
+
+    /// <summary>Gets the schema within that store.</summary>
+    public virtual string PathName => "ui";
+
+    /// <summary>Gets the table within that schema.</summary>
+    public virtual string Container => Name;
+
     /// <summary>Gets or sets a value indicating whether Configure is switched off.</summary>
     /// <remarks>One flag per phase: they are switched off for different reasons, and a single
     /// flag named for one phase silently governing the other two says something false.</remarks>
@@ -236,12 +262,12 @@ public abstract class ComponentTypeCollectionBase<TBase> : TypeCollectionBase<TB
     }
 
     /// <inheritdoc />
-    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder)
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         // Why the flag is set here rather than after the work: a phase that failed halfway
         // has already registered whatever came before the failure, and re-entering would do
         // that part twice.
-        if (Configured || SkipConfiguration)
+        if (!force && (Configured || SkipConfiguration))
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
@@ -272,12 +298,13 @@ public abstract class ComponentTypeCollectionBase<TBase> : TypeCollectionBase<TB
     /// <inheritdoc />
     public IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        bool force = false)
     {
         // Why the flag is set here rather than after the work: a phase that failed halfway
         // has already registered whatever came before the failure, and re-entering would do
         // that part twice.
-        if (Registered || SkipRegistration)
+        if (!force && (Registered || SkipRegistration))
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
@@ -306,12 +333,12 @@ public abstract class ComponentTypeCollectionBase<TBase> : TypeCollectionBase<TB
     }
 
     /// <inheritdoc />
-    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         // Why the flag is set here rather than after the work: a phase that failed halfway
         // has already registered whatever came before the failure, and re-entering would do
         // that part twice.
-        if (Initialized || SkipInitialization)
+        if (!force && (Initialized || SkipInitialization))
         {
             return GenericResult<IHost>.Success(host);
         }

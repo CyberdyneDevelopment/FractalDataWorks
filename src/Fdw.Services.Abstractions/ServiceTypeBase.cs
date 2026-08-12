@@ -57,14 +57,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// </remarks>
     // Why MD5: deterministic hashing for a stable id, not security.
 #pragma warning disable CA5351, SCS0006, CA1850
-    protected static Guid DeriveId(string name)
-    {
-        if (name is null)
-            throw new ArgumentNullException(nameof(name));
-
-        using var md5 = System.Security.Cryptography.MD5.Create();
-        return new Guid(md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(name)));
-    }
+    protected static Guid DeriveId(string name) => OptionId.Derive(name);
 #pragma warning restore CA5351, SCS0006, CA1850
 
     /// <summary>Gets the name of this service type — its discriminator within the collection.</summary>
@@ -344,9 +337,9 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// <c>ServiceTypeCollectionGenerator</c> from the <c>[ServiceTypeCollection]</c> attribute, not by
     /// hand. It is that generated sweep which calls this, in the order the log line reports.
     /// </remarks>
-    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
-        if (Configured || SkipConfiguration)
+        if (!force && (Configured || SkipConfiguration))
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
@@ -364,9 +357,10 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// </remarks>
     public IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        bool force = false)
     {
-        if (Registered || SkipRegistration)
+        if (!force && (Registered || SkipRegistration))
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
@@ -381,9 +375,9 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// <remarks>
     /// Called by the generated collection's phase-3 sweep, after the host has been built.
     /// </remarks>
-    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
     {
-        if (Initialized || SkipInitialization)
+        if (!force && (Initialized || SkipInitialization))
         {
             return GenericResult<IHost>.Success(host);
         }

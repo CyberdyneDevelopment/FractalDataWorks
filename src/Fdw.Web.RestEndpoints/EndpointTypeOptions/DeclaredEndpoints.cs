@@ -22,6 +22,12 @@ public static class DeclaredEndpoints
     private static readonly List<Type> Declared = new();
     private static readonly System.Threading.Lock Gate = new();
 
+    // Why a map rather than a property on the endpoint: FastEndpoints builds an endpoint's definition
+    // itself, and Tags() is only callable from inside that endpoint's Configure. The collection knows
+    // the tag but cannot reach the definition, so it records the answer here and the configurator in
+    // Program.cs applies it when the definition exists.
+    private static readonly Dictionary<Type, string> TagsByType = new();
+
     /// <summary>
     /// Gets the endpoint types declared so far.
     /// </summary>
@@ -96,6 +102,38 @@ public static class DeclaredEndpoints
             {
                 Declared.Add(endpointType);
             }
+        }
+    }
+
+    /// <summary>Records the tag every endpoint of this type appears under.</summary>
+    /// <param name="endpointType">The endpoint's type.</param>
+    /// <param name="tag">The documentation tag its collection declares.</param>
+    public static void Tag(Type endpointType, string tag)
+    {
+        if (endpointType is null || string.IsNullOrWhiteSpace(tag))
+        {
+            return;
+        }
+
+        lock (Gate)
+        {
+            TagsByType[endpointType] = tag;
+        }
+    }
+
+    /// <summary>Gets the tag recorded for an endpoint type, or null when none was.</summary>
+    /// <param name="endpointType">The endpoint's type.</param>
+    /// <returns>The tag its collection declared, or null.</returns>
+    public static string? TagFor(Type endpointType)
+    {
+        if (endpointType is null)
+        {
+            return null;
+        }
+
+        lock (Gate)
+        {
+            return TagsByType.TryGetValue(endpointType, out var tag) ? tag : null;
         }
     }
 }

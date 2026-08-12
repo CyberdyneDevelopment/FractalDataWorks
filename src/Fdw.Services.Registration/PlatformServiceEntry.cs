@@ -135,7 +135,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
 
         var result = _initializationMethod is not null
             ? _initializationMethod(host, loggerFactory)
-            : Descriptor.Initialize(host, loggerFactory);
+            : Descriptor.Initialize(host, loggerFactory, false);
 
         Initialized = true;
         return result;
@@ -156,7 +156,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
 
         var result = _configurationMethod is not null
             ? _configurationMethod(builder, loggerFactory)
-            : Descriptor.Configure(builder, loggerFactory);
+            : Descriptor.Configure(builder, loggerFactory, false);
 
         Configured = true;
         return result;
@@ -177,7 +177,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
 
         var result = _registrationMethod is not null
             ? _registrationMethod(builder, loggerFactory)
-            : Descriptor.Register(builder, loggerFactory);
+            : Descriptor.Register(builder, loggerFactory, false);
 
         Registered = true;
         return result;

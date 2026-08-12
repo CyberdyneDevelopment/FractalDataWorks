@@ -75,7 +75,47 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// members themselves — which is what makes "this resource is broken, turn it off, turn it back
     /// on when it is fixed" a single decision rather than one per endpoint.
     /// </remarks>
+    /// <summary>Gets the documentation tag every endpoint in this collection appears under.</summary>
+    /// <remarks>
+    /// Declared by the collection because it is a property of the resource, not of any one endpoint.
+    /// Stated per endpoint it was the same string repeated nineteen times for connections and twelve
+    /// for datasets, where one omission drops that endpoint out of its group in the documentation and
+    /// nothing says so.
+    ///
+    /// Virtual with the collection's own name as the answer: a collection whose tag differs from its
+    /// name says so, and one whose does not says nothing.
+    /// </remarks>
+    public virtual string Tag => Name;
+
+    /// <summary>Gets or sets a value indicating whether this whole resource is passed over.</summary>
+    /// <remarks>Set this and every member goes with it, without touching the members themselves.</remarks>
     public bool SkipRegistration { get; set; }
+
+    /// <summary>Gets the data store this collection's configuration rows live in.</summary>
+    /// <remarks>Virtual so a resource that lives elsewhere says so, rather than the framework
+    /// guessing from a name.</remarks>
+    /// <summary>Gets this collection's identity as a parent collection sees it.</summary>
+    /// <remarks>
+    /// A TypeCollection is keyed by an int derived from its type name; a ServiceTypeCollection keys
+    /// its members by Guid. This collection is both - a collection of options, and a member of one -
+    /// so it carries the Guid the parent needs alongside the int its own members are found by.
+    ///
+    /// Derived from the name rather than generated: the same collection must be the same
+    /// identity in every process that loads it, and Guid.NewGuid() would give a different answer on
+    /// each start - so a configuration row written against one run would not be found by the next.
+    /// </remarks>
+    public new Guid Id => OptionId.Derive(Name);
+
+    /// <summary>Gets the data store this collection's configuration rows live in.</summary>
+    /// <remarks>Virtual so a resource that lives elsewhere says so, rather than the framework
+    /// guessing from a name.</remarks>
+    public virtual string DataStore => "ConfigurationDb";
+
+    /// <summary>Gets the schema within that store.</summary>
+    public virtual string PathName => "web";
+
+    /// <summary>Gets the table within that schema.</summary>
+    public virtual string Container => Name;
 
     /// <summary>Gets or sets a value indicating whether Configure is switched off.</summary>
     /// <remarks>One flag per phase: they are switched off for different reasons, and a single
@@ -262,13 +302,15 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// Runs Configure for this resource: its own body if one was set, then every member not skipped.
     /// </summary>
     /// <param name="builder">The host builder.</param>
-        /// <returns>The builder, or the first failure encountered.</returns>
-    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder)
+    /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <returns>The builder, or the first failure encountered.</returns>
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         // Why the flag is set here rather than after the work: a phase that failed halfway
         // has already registered whatever came before the failure, and re-entering would do
         // that part twice.
-        if (Configured || SkipConfiguration)
+        if (!force && (Configured || SkipConfiguration))
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
@@ -308,15 +350,17 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// and the answer is measured, as the service-descriptor delta across each call, rather than
     /// taken from what a body says it registers.
     /// </remarks>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
     public IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        bool force = false)
     {
         // Why: the factory is null until the host has one, and reporting is not optional work that
         // gets dropped when it is — NullLogger keeps every call below unconditional and silent.
         var logger = loggerFactory?.CreateLogger(LogCategory) ?? NullLogger.Instance;
 
-        if (Registered || SkipRegistration)
+        if (!force && (Registered || SkipRegistration))
         {
             EndpointRegistrationLog.GroupSkipped(logger, Name);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
@@ -355,6 +399,10 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
             }
 
             var beforeMember = builder.Services.Count;
+            // Why here rather than in the endpoint's own Configure: the collection is what knows the
+            // tag, and applying it while cycling means a member cannot be missed or spelled differently.
+            DeclaredEndpoints.Tag(member.EndpointType, Tag);
+
             var result = member.Register(builder, loggerFactory);
             if (result.IsFailure)
             {
@@ -379,15 +427,17 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// </summary>
     /// <param name="host">The built host.</param>
         /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
     /// <returns>The host, or the first failure encountered.</returns>
     public IGenericResult<IHost> Initialize(
         IHost host,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        bool force = false)
     {
         // Why the flag is set here rather than after the work: a phase that failed halfway
         // has already registered whatever came before the failure, and re-entering would do
         // that part twice.
-        if (Initialized || SkipInitialization)
+        if (!force && (Initialized || SkipInitialization))
         {
             return GenericResult<IHost>.Success(host);
         }

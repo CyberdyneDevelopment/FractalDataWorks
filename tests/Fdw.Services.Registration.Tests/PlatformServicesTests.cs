@@ -32,9 +32,9 @@ public sealed class PlatformServicesTests : IDisposable
         public ServiceTypeCollectionDescriptor Descriptor(string category, Type collectionType) => new(
             category,
             collectionType,
-            (builder, _) => { ConfigureCalls++; return GenericResult<IHostApplicationBuilder>.Success(builder); },
-            (builder, _) => { RegisterCalls++; return GenericResult<IHostApplicationBuilder>.Success(builder); },
-            (host, _) => { InitializeCalls++; return GenericResult<IHost>.Success(host); });
+            (builder, _, _) => { ConfigureCalls++; return GenericResult<IHostApplicationBuilder>.Success(builder); },
+            (builder, _, _) => { RegisterCalls++; return GenericResult<IHostApplicationBuilder>.Success(builder); },
+            (host, _, _) => { InitializeCalls++; return GenericResult<IHost>.Success(host); });
     }
 
     [Fact]

@@ -234,10 +234,11 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
 
     /// <summary>Runs this endpoint's Configure body.</summary>
     /// <param name="builder">The host builder.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
     /// <returns>The builder, or a failure the caller decides what to do with.</returns>
-    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder)
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, bool force = false)
     {
-        if (Configured || SkipConfiguration)
+        if (!force && (Configured || SkipConfiguration))
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
@@ -256,10 +257,23 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
     /// directly to register does so: skipping is a composition decision the collection makes while
     /// cycling, and burying it here would make a direct call silently do nothing.
     /// </remarks>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
     public IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        bool force = false)
     {
+        // Why the option checks its own switch rather than trusting the collection to filter it out:
+        // an endpoint is reachable directly as well as through its collection, and a switch only half
+        // its callers honour is not a switch. AddTransient and Declare are not free to repeat either -
+        // declaring the same endpoint twice registers the route twice.
+        if (!force && (Registered || SkipRegistration))
+        {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        Registered = true;
+
         // The endpoint registers ITSELF, in two places, then runs whatever else it needs.
         //
         // DI, so the container can construct it. And DeclaredEndpoints, because FastEndpoints has no
@@ -276,10 +290,11 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
     /// <summary>Runs this endpoint's Initialize body.</summary>
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
     /// <returns>The host, or a failure the caller decides what to do with.</returns>
-    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
     {
-        if (Initialized || SkipInitialization)
+        if (!force && (Initialized || SkipInitialization))
         {
             return GenericResult<IHost>.Success(host);
         }

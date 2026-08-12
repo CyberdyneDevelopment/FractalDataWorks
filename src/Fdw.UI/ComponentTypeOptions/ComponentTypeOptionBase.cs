@@ -196,9 +196,9 @@ public abstract class ComponentTypeOptionBase : TypeOptionBase<int, ComponentTyp
     }
 
     /// <inheritdoc />
-    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder)
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, bool force = false)
     {
-        if (Configured || SkipConfiguration)
+        if (!force && (Configured || SkipConfiguration))
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
@@ -224,11 +224,16 @@ public abstract class ComponentTypeOptionBase : TypeOptionBase<int, ComponentTyp
     /// <see cref="SkipRegistration"/> is honoured by the COLLECTION while cycling, not here: an
     /// option asked directly to register does so, because skipping is a composition decision.
     /// </remarks>
+    /// <param name="builder">The host builder.</param>
+    /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <returns>The builder, or the failure that stopped it.</returns>
     public IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        bool force = false)
     {
-        if (Registered || SkipRegistration)
+        if (!force && (Registered || SkipRegistration))
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
@@ -239,9 +244,9 @@ public abstract class ComponentTypeOptionBase : TypeOptionBase<int, ComponentTyp
     }
 
     /// <inheritdoc />
-    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
     {
-        if (Initialized || SkipInitialization)
+        if (!force && (Initialized || SkipInitialization))
         {
             return GenericResult<IHost>.Success(host);
         }

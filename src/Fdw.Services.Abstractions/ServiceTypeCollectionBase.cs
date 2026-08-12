@@ -411,9 +411,10 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// binds to this inherited static; the generated part supplies the registry contents and the typed
     /// lookups.
     /// </remarks>
-    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
-        if (Configured || SkipConfiguration)
+        if (!force && (Configured || SkipConfiguration))
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
@@ -434,9 +435,10 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// <c>ProviderType</c>, the generated part registers the provider into DI around this call, so the
     /// provider is wired whether or not an application replaced the option sweep.
     /// </remarks>
-    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
-        if (Registered || SkipRegistration)
+        if (!force && (Registered || SkipRegistration))
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
@@ -455,9 +457,10 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// The <c>xxxTypes</c> class this is called on is written by <c>ServiceTypeCollectionGenerator</c>
     /// from the <c>[ServiceTypeCollection]</c> attribute, not by hand.
     /// </remarks>
-    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
     {
-        if (Initialized || SkipInitialization)
+        if (!force && (Initialized || SkipInitialization))
         {
             return GenericResult<IHost>.Success(host);
         }
