@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
+using NSwag.Generation.AspNetCore;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -48,7 +49,7 @@ namespace Fdw.Hosting.ApiHost;
 /// held as fields here and initialized in <c>Initialize</c>, they cannot drift apart the way a
 /// local in Program.cs and a matching call eighty lines later can.
 /// </remarks>
-public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
+public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase, IApiHostServiceType
 {
     private readonly DataSetQueryDocumentProcessor _dataSetQueryProcessor = new();
     private readonly PermissionFilterDocumentProcessor _permissionFilterProcessor = new();
@@ -100,10 +101,9 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
                     // a host's own pass only ever sees operations that survived the filter.
                     s.DocumentProcessors.Add(_permissionFilterProcessor);
 
-                    foreach (var processor in AdditionalDocumentProcessors)
-                    {
-                        s.DocumentProcessors.Add(processor);
-                    }
+                    // Last, so a host's own pass only ever sees a document the framework has
+                    // already filtered — the permission processor above cannot be bypassed.
+                    DocumentationMethod(s);
 
                     if (ServerUrls.Count > 0)
                     {
@@ -272,17 +272,42 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
 
     /// <summary>Sets the body that configures FastEndpoints for this host.</summary>
     /// <param name="method">The body.</param>
-    public void Endpoints(Action<Config> method)
-        => EndpointsMethod = method ?? throw new ArgumentNullException(nameof(method));
+    /// <inheritdoc />
+    public IApiHostServiceType Endpoints(Action<Config> method)
+    {
+        EndpointsMethod = method ?? throw new ArgumentNullException(nameof(method));
+        return this;
+    }
 
     /// <summary>Gets the route prefix every endpoint sits under.</summary>
-    protected virtual string RoutePrefix => "api/v1";
+    protected string RoutePrefix { get; private set; } = "api/v1";
 
     /// <summary>Gets the claim type roles are read from.</summary>
-    protected virtual string RoleClaimType => "roles";
+    protected string RoleClaimType { get; private set; } = "roles";
 
     /// <summary>Gets a value indicating whether the multitenancy middleware runs.</summary>
-    protected virtual bool HasMultitenancy => false;
+    protected bool HasMultitenancy { get; private set; }
+
+    /// <inheritdoc />
+    public IApiHostServiceType Routing(string prefix)
+    {
+        RoutePrefix = prefix ?? throw new ArgumentNullException(nameof(prefix));
+        return this;
+    }
+
+    /// <inheritdoc />
+    public IApiHostServiceType Roles(string claimType)
+    {
+        RoleClaimType = claimType ?? throw new ArgumentNullException(nameof(claimType));
+        return this;
+    }
+
+    /// <inheritdoc />
+    public IApiHostServiceType Multitenancy(bool enabled)
+    {
+        HasMultitenancy = enabled;
+        return this;
+    }
 
     /// <summary>
     /// Gets the body that adds middleware between the framework pipeline and FastEndpoints.
@@ -302,8 +327,12 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
 
     /// <summary>Sets the body that adds middleware between the framework pipeline and FastEndpoints.</summary>
     /// <param name="method">The body.</param>
-    public void Pipeline(Action<IApplicationBuilder> method)
-        => PipelineMethod = method ?? throw new ArgumentNullException(nameof(method));
+    /// <inheritdoc />
+    public IApiHostServiceType Pipeline(Action<IApplicationBuilder> method)
+    {
+        PipelineMethod = method ?? throw new ArgumentNullException(nameof(method));
+        return this;
+    }
 
     /// <summary>
     /// Gets the body that maps routes beyond the endpoints and the framework's own.
@@ -312,8 +341,12 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
 
     /// <summary>Sets the body that maps routes beyond the endpoints and the framework's own.</summary>
     /// <param name="method">The body.</param>
-    public void Mapping(Action<IEndpointRouteBuilder> method)
-        => MapMethod = method ?? throw new ArgumentNullException(nameof(method));
+    /// <inheritdoc />
+    public IApiHostServiceType Mapping(Action<IEndpointRouteBuilder> method)
+    {
+        MapMethod = method ?? throw new ArgumentNullException(nameof(method));
+        return this;
+    }
 
     /// <summary>
     /// Writes the framework's error envelope for bodyless 401 and 403 responses.
@@ -345,28 +378,69 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase
     }
 
     /// <summary>Gets the title the generated document carries.</summary>
-    protected abstract string DocumentTitle { get; }
+    /// <remarks>
+    /// A settable value rather than an abstract property, and that is the point of this whole group.
+    /// An abstract property can only be supplied by deriving, so every deployment had to publish a
+    /// service-type package containing nothing but its own constants — which a shared bundle then
+    /// could not carry, because those constants belong to one host. Set from Program.cs instead.
+    /// </remarks>
+    protected string DocumentTitle { get; private set; } = string.Empty;
 
     /// <summary>Gets the document version.</summary>
-    protected virtual string DocumentVersion => "v1";
+    protected string DocumentVersion { get; private set; } = "v1";
 
     /// <summary>Gets the document description.</summary>
-    protected abstract string DocumentDescription { get; }
+    protected string DocumentDescription { get; private set; } = string.Empty;
 
     /// <summary>
     /// Gets the public origins the document advertises. Empty leaves whatever NSwag inferred.
     /// </summary>
-    protected virtual IReadOnlyList<string> ServerUrls => Array.Empty<string>();
+    protected IReadOnlyList<string> ServerUrls { get; private set; } = Array.Empty<string>();
 
     /// <summary>
-    /// Gets processors this host adds after the framework's.
+    /// Gets the body run against the document after the framework's own processors.
     /// </summary>
     /// <remarks>
-    /// Ordering is the point: these run after the permission filter, so a host pass only ever sees
-    /// operations the caller can actually invoke.
+    /// Additive rather than replacing: the permission processor hides operations the caller cannot
+    /// invoke, and a host that replaced the document body would drop it silently.
     /// </remarks>
-    protected virtual IReadOnlyList<IDocumentProcessor> AdditionalDocumentProcessors =>
-        Array.Empty<IDocumentProcessor>();
+    protected Action<AspNetCoreOpenApiDocumentGeneratorSettings> DocumentationMethod { get; private set; }
+        = static _ => { };
+
+    /// <inheritdoc />
+    public IApiHostServiceType Title(string value)
+    {
+        DocumentTitle = value ?? throw new ArgumentNullException(nameof(value));
+        return this;
+    }
+
+    /// <inheritdoc />
+    public IApiHostServiceType Version(string value)
+    {
+        DocumentVersion = value ?? throw new ArgumentNullException(nameof(value));
+        return this;
+    }
+
+    /// <inheritdoc />
+    public IApiHostServiceType Summary(string value)
+    {
+        DocumentDescription = value ?? throw new ArgumentNullException(nameof(value));
+        return this;
+    }
+
+    /// <inheritdoc />
+    public IApiHostServiceType Origins(params string[] urls)
+    {
+        ServerUrls = urls ?? throw new ArgumentNullException(nameof(urls));
+        return this;
+    }
+
+    /// <inheritdoc />
+    public IApiHostServiceType Documentation(Action<AspNetCoreOpenApiDocumentGeneratorSettings> method)
+    {
+        DocumentationMethod = method ?? throw new ArgumentNullException(nameof(method));
+        return this;
+    }
 
     /// <summary>
     /// Gets the endpoint collections this host owns — none.

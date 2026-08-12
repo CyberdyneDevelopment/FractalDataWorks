@@ -37,7 +37,7 @@ namespace Fdw.Hosting.UiHost;
 /// because it validates against the authenticated user. And MapRazorComponents comes last, after
 /// everything it depends on.
 /// </remarks>
-public abstract class UiHostServiceTypeBase : UiServiceTypeBase
+public abstract class UiHostServiceTypeBase : UiServiceTypeBase, IUiHostServiceType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="UiHostServiceTypeBase"/> class.
@@ -62,10 +62,32 @@ public abstract class UiHostServiceTypeBase : UiServiceTypeBase
     /// A <see cref="Type"/> rather than a generic parameter because MapRazorComponents is generic
     /// over it and a service type cannot be. Invoked reflectively once, at Initialize.
     /// </remarks>
-    protected abstract Type RootComponent { get; }
+    protected Type? RootComponent { get; private set; }
 
     /// <summary>Gets the path the exception handler redirects to outside development.</summary>
-    protected virtual string ErrorPath => "/Error";
+    protected string ErrorPath { get; private set; } = "/Error";
+
+    /// <summary>Sets the root component the router mounts.</summary>
+    /// <remarks>
+    /// Settable rather than abstract, so a skin supplies it from Program.cs instead of publishing a
+    /// service-type package that exists only to name its own App class.
+    /// </remarks>
+    /// <param name="component">The skin's root component.</param>
+    /// <returns>This, for chaining.</returns>
+    public IUiHostServiceType Root(Type component)
+    {
+        RootComponent = component ?? throw new ArgumentNullException(nameof(component));
+        return this;
+    }
+
+    /// <summary>Sets the path the exception handler redirects to outside development.</summary>
+    /// <param name="path">The error path.</param>
+    /// <returns>This, for chaining.</returns>
+    public IUiHostServiceType Error(string path)
+    {
+        ErrorPath = path ?? throw new ArgumentNullException(nameof(path));
+        return this;
+    }
 
     /// <summary>
     /// Gets the collections whose components this host serves — none by default.
@@ -91,13 +113,21 @@ public abstract class UiHostServiceTypeBase : UiServiceTypeBase
 
     /// <summary>Sets the body that adds middleware between the framework pipeline and the router.</summary>
     /// <param name="method">The body.</param>
-    public void Pipeline(Action<IApplicationBuilder> method)
-        => PipelineMethod = method ?? throw new ArgumentNullException(nameof(method));
+    /// <inheritdoc />
+    public IUiHostServiceType Pipeline(Action<IApplicationBuilder> method)
+    {
+        PipelineMethod = method ?? throw new ArgumentNullException(nameof(method));
+        return this;
+    }
 
     /// <summary>Sets the body that maps routes this skin serves beyond its components.</summary>
     /// <param name="method">The body.</param>
-    public void Mapping(Action<IEndpointRouteBuilder> method)
-        => MapMethod = method ?? throw new ArgumentNullException(nameof(method));
+    /// <inheritdoc />
+    public IUiHostServiceType Mapping(Action<IEndpointRouteBuilder> method)
+    {
+        MapMethod = method ?? throw new ArgumentNullException(nameof(method));
+        return this;
+    }
 
     private static IGenericResult<IHostApplicationBuilder> RegisterUiSurface(IHostApplicationBuilder builder)
     {
@@ -163,12 +193,18 @@ public abstract class UiHostServiceTypeBase : UiServiceTypeBase
 
     private void MapRootComponent(WebApplication app)
     {
+        // Why loud: a skin that never called Root has no component for the router to mount, so every
+        // page 404s while the host starts cleanly. Nothing downstream would say why.
+        var root = RootComponent
+            ?? throw new InvalidOperationException(
+                $"{Name} has no root component. Call Root(typeof(App)) on it before the host builds.");
+
         // MapRazorComponents<TRoot> is generic and TRoot is only known to the deriving host, so the
         // call is made reflectively. The alternative — a generic service type — cannot work, because
         // the collection stores its members as a non-generic base.
         var mapped = typeof(RazorComponentsEndpointRouteBuilderExtensions)
             .GetMethod(nameof(RazorComponentsEndpointRouteBuilderExtensions.MapRazorComponents))!
-            .MakeGenericMethod(RootComponent)
+            .MakeGenericMethod(root)
             .Invoke(null, [app]);
 
         if (mapped is not RazorComponentsEndpointConventionBuilder route)
