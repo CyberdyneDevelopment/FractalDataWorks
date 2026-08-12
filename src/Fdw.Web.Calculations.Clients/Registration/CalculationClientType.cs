@@ -30,7 +30,7 @@ public sealed class CalculationClientType : ApiClientTypeBase<CalculationApiClie
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
 
             // Why: register as both concrete and interface so [Inject] ICalculationApiClient resolves

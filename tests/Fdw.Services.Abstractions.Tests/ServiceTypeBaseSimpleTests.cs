@@ -69,10 +69,16 @@ public class ServiceTypeBaseSimpleTests
             : base("Simple", "SimpleSection", "Simple Service", "Simple description",
                    "SimpleCategory")
         {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
 
-                RegisterConfiguration(builder.Services);
+                // Inline, because binding from appsettings is three lines in the body that wants it
+                // rather than a helper on every service type that does not.
+                builder.Services.AddOptions<SimpleConfig>()
+                    .BindConfiguration(SectionName)
+                    .ValidateDataAnnotations()
+                    .ValidateOnStart();
+
                 return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
@@ -150,7 +156,7 @@ public class ServiceTypeBaseSimpleTests
         var builder = Host.CreateApplicationBuilder();
 
         // Act
-        var result = serviceType.Register(builder, null, "TestStore", "TestPath", "TestContainer");
+        var result = serviceType.Register(builder, null);
 
         // Assert
         result.ShouldNotBeNull();
@@ -167,7 +173,7 @@ public class ServiceTypeBaseSimpleTests
         var loggerFactory = new NullLoggerFactory();
 
         // Act
-        var result = serviceType.Register(builder, loggerFactory, "TestStore", "TestPath", "TestContainer");
+        var result = serviceType.Register(builder, loggerFactory);
 
         // Assert
         result.ShouldNotBeNull();

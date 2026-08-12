@@ -51,7 +51,7 @@ public sealed class SyntheticSecretManagerType
             maxSecretSizeBytes: 32767,
             defaultContainerName: "SyntheticSecretManager")
     {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.AddSingleton<ISyntheticSecretManagerFactory, SyntheticSecretManagerFactory>();
 

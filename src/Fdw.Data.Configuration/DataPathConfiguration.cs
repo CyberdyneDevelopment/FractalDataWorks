@@ -69,7 +69,12 @@ public partial class DataPathConfiguration : IGenericConfiguration
     /// <summary>
     /// Gets or sets the full path string (e.g., "dbo.Customers", "/api/v1/orders").
     /// </summary>
-    public string Path { get; set; } = string.Empty;
+    /// <remarks>
+    /// Named PathName and not Path: a member called Path shadows <see cref="System.IO.Path"/> inside
+    /// the declaring type, so <c>Path.Combine(...)</c> there resolves to this string and fails to
+    /// compile in a way that reads as nonsense.
+    /// </remarks>
+    public string PathName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the DataPath type discriminator (e.g., "Schema", "Directory", "UrlPrefix").

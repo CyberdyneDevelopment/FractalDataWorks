@@ -28,7 +28,7 @@ public sealed class DefaultAuditServiceType : AuditServiceTypeBase
             "Default Audit Services",
             "Default audit trail service using DataGateway persistence")
     {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.TryAddScoped<IAuditService, AuditService>();
             return GenericResult<IHostApplicationBuilder>.Success(builder);

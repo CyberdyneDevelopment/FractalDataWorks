@@ -153,9 +153,9 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
         var discoveredPathNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var path in discovered.Paths)
         {
-            discoveredPathNames.Add(path.Path);
+            discoveredPathNames.Add(path.PathName);
 
-            if (existingPaths.TryGetValue(path.Path, out var existingPath))
+            if (existingPaths.TryGetValue(path.PathName, out var existingPath))
             {
                 // Update existing path
                 var updateResult = await SyncPath(
@@ -233,7 +233,7 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
             Id = Guid.NewGuid(),
             Name = discoveredPath.Name,
             DataStoreId = dataStoreId,
-            Path = discoveredPath.Path,
+            PathName = discoveredPath.PathName,
             PathType = discoveredPath.PathType,
             SourceDescription = discoveredPath.SourceDescription
         };
@@ -245,7 +245,7 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
         }
 
         var pathId = savePathResult.Value!.Id;
-        schemaBuilder.AppendLine(CultureInfo.InvariantCulture, $"PATH:{discoveredPath.Path}");
+        schemaBuilder.AppendLine(CultureInfo.InvariantCulture, $"PATH:{discoveredPath.PathName}");
 
         foreach (var container in discoveredPath.Containers)
         {
@@ -369,7 +369,7 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
             }
         }
 
-        schemaBuilder.AppendLine(CultureInfo.InvariantCulture, $"PATH:{discoveredPath.Path}");
+        schemaBuilder.AppendLine(CultureInfo.InvariantCulture, $"PATH:{discoveredPath.PathName}");
 
         // Sync containers from the cached DataPath hierarchy
         var existingContainers = LoadExistingContainers(existingPath);
@@ -509,9 +509,9 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
 
         foreach (var path in dataStoreResult.Value.Paths)
         {
-            if (!string.IsNullOrEmpty(path.Path))
+            if (!string.IsNullOrEmpty(path.PathName))
             {
-                existingPaths[path.Path] = path;
+                existingPaths[path.PathName] = path;
             }
         }
         return existingPaths;
@@ -525,7 +525,7 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
     {
         foreach (var existingPath in existingPaths.Values)
         {
-            if (!discoveredPathNames.Contains(existingPath.Path))
+            if (!discoveredPathNames.Contains(existingPath.PathName))
             {
                 var deleteResult = await _dataPathProvider.Delete(existingPath.Id, cancellationToken).ConfigureAwait(false);
                 if (deleteResult.IsSuccess)

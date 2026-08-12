@@ -45,7 +45,7 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
         // Why: IExecutionTracker + IEscalationService persist execution/runtime data to OpsDb (ops
         // schema), so they take the "OpsDb" data store the collection passes in. Scoped because they
         // depend on the scoped IDataGateway.
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             // Why here and not a Configure phase: escalation-policy config lives in
             // ConfigurationDb.workflow and is read through IConfigurationGateway — nothing binds from

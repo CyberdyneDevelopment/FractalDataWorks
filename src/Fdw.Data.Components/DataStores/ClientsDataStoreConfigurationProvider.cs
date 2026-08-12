@@ -187,7 +187,7 @@ public sealed class ClientsDataStoreConfigurationProvider : IServiceConfiguratio
         {
             Id = dto.Id,
             Name = dto.Name,
-            Path = dto.PhysicalPath,
+            PathName = dto.PhysicalPath,
             Description = dto.Description,
             SourceDescription = dto.SourceDescription,
             PathType = dto.PathType,

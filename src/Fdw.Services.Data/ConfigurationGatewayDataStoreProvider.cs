@@ -352,7 +352,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
 
     /// <inheritdoc/>
     // Why (FDW-583): this overload is the terminal, explicitly-addressed lookup — its only caller is
-    // DataGatewayService.ResolveContainer, resolving the one path the caller named in target.Path. A
+    // DataGatewayService.ResolveContainer, resolving the one path the caller named in target.PathName. A
     // miss here is the final answer (operation cannot complete), unlike the probe loops elsewhere that
     // scan every path expecting most to miss — so a miss is logged at Error here, in addition to the
     // Debug-level DataStoreLoaderLog.PathNotFound the node's own Path(name) already logs internally.

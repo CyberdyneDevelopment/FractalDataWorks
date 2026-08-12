@@ -27,7 +27,7 @@ public sealed class DefaultAgentActionServiceType : AgentActionTypeBase<IGeneric
             "Default Agent Actions",
             "Default agent action review service using DataGateway persistence")
     {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
 
             // Why Scoped: AgentActionService requires IDataGateway (scoped) via constructor injection.

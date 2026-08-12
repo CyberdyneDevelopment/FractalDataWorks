@@ -49,7 +49,7 @@ public abstract class UiHostServiceTypeBase : UiServiceTypeBase, IUiHostServiceT
     protected UiHostServiceTypeBase(string name, string sectionName, string displayName, string description)
         : base(name, sectionName, displayName, description)
     {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
             RegisterUiSurface(builder));
 
         Initialization(InitializeUiSurface);

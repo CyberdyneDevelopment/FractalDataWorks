@@ -48,16 +48,6 @@ public abstract class ApiServiceTypeBase
     /// <inheritdoc />
     public abstract IReadOnlyList<IEndpointTypeCollection> EndpointCollections { get; }
 
-    /// <summary>
-    /// Gets or sets a value indicating whether this whole domain should be passed over.
-    /// </summary>
-    /// <remarks>
-    /// The outermost of three levels — domain, resource, endpoint. Setting this leaves every
-    /// collection and every endpoint beneath it unregistered without touching any of them, which is
-    /// what makes "this domain is broken, turn it off, turn it back on when it is fixed" one
-    /// decision rather than dozens.
-    /// </remarks>
-    public bool SkipRegistration { get; set; }
 
     /// <summary>
     /// Runs Configure for every endpoint collection this domain owns.

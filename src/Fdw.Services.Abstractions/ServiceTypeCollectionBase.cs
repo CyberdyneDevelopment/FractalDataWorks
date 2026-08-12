@@ -156,8 +156,11 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
         {
             foreach (var option in Options)
             {
-                var result = option.Register(builder, loggerFactory,
-                    option.DefaultDataStoreName, option.DefaultPathName, option.DefaultContainerName);
+                // Why not threaded in: the option already exposes DefaultDataStoreName, DefaultPathName
+                // and DefaultContainerName, so passing them back to it was the collection reading three
+                // values off an option and handing them straight back — on every call site, for the few
+                // bodies that read them.
+                var result = option.Register(builder, loggerFactory);
                 if (result.IsFailure)
                     return Stop<IHostApplicationBuilder>(loggerFactory, "Register", option, result);
             }

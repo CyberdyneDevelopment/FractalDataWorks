@@ -29,7 +29,7 @@ public sealed class ConfigurationClientType : ApiClientTypeBase<ConfigurationApi
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.AddScoped<ConfigurationApiClient>(sp =>
             {

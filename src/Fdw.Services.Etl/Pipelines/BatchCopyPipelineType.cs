@@ -104,7 +104,7 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
 
             // Why: register the ETL-kind header provider (idempotent TryAdd) that EtlPipelineTypes' generated
@@ -135,12 +135,12 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
 
             // Why: Lazy<IConfigurationGateway> defers cfg resolution until first runtime query, avoiding
             // circular dependency with the DataGateway that hasn't been built yet at registration time.
-            // dataStoreName flows from TypeCollection.Configure() so "ConfigurationDb" is never hardcoded here.
+            // DataStore flows from TypeCollection.Configure() so "ConfigurationDb" is never hardcoded here.
             builder.Services.AddSingleton(sp => new DefaultConfigurationProvider<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>(
                 sp.GetRequiredService<ILoggerFactory>().CreateLogger<DefaultConfigurationProvider<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>>(),
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                dataStoreName,
-                pathName,
+                DataStore,
+                PathName,
                 new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
 
             // Why: a pipeline type can't run without the execution queue + its background consumer, so the

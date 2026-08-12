@@ -38,7 +38,7 @@ public sealed class SingleTenantMultitenancyType : MultitenancyTypeBase<ISingleT
         // selected from ConfigurationSchema.Multitenancy (configurationSchema.json) -- so the binding
         // was a lever that looked live and was not.
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
 
             RegisterAlwaysOnContexts(builder.Services);

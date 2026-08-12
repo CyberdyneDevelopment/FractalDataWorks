@@ -44,7 +44,7 @@ public sealed class LocalHealthMonitorType
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             DefaultHealthMonitorProvider.Register(Name, sp => sp.GetRequiredService<LocalHealthMonitorFactory>());
             builder.Services.TryAddSingleton<LocalHealthMonitorFactory>();

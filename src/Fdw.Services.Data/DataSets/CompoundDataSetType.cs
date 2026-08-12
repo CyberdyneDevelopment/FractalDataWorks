@@ -220,7 +220,7 @@ public sealed class CompoundDataSetType : DataSetTypeBase
 
         // Resolve primary container from the DataStore provider.
         var containerResult = await ctx.DataStoreProvider
-            .Get(primarySource.DataStoreName, primarySource.Path, primaryContainerName, ct)
+            .Get(primarySource.DataStoreName, primarySource.PathName, primaryContainerName, ct)
             .ConfigureAwait(false);
         if (!containerResult.IsSuccess || containerResult.Value == null)
             return GenericResult<T>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, primarySource.SourceName));

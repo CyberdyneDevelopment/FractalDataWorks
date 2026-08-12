@@ -152,11 +152,11 @@ public class ServiceTypePhaseReportingTests
         var log = new CapturingLoggerFactory();
 
         // TestServiceType sets a Register body in its constructor; AlternateTestServiceType does not.
-        new TestServiceType().Register(NewBuilder(), log, "Store", "Path", "Container");
+        new TestServiceType().Register(NewBuilder(), log);
         var withBody = log.Messages.ToList();
 
         log.Messages.Clear();
-        new AlternateTestServiceType().Register(NewBuilder(), log, "Store", "Path", "Container");
+        new AlternateTestServiceType().Register(NewBuilder(), log);
 
         withBody.ShouldContain(m => m.Contains("CUSTOM implementation", StringComparison.Ordinal));
         log.Messages.ShouldContain(m => m.Contains("DEFAULT implementation", StringComparison.Ordinal));
@@ -174,8 +174,8 @@ public class ServiceTypePhaseReportingTests
         ServiceTypeCollectionBase<OptionBase, ISweepCase>.Register(NewBuilder(), log);
         log.Messages.Clear();
 
-        new TestServiceType().Register(NewBuilder(), log, "Store", "Path", "Container");
-        new AlternateTestServiceType().Register(NewBuilder(), log, "Store", "Path", "Container");
+        new TestServiceType().Register(NewBuilder(), log);
+        new AlternateTestServiceType().Register(NewBuilder(), log);
 
         log.Messages.ShouldContain(m => m.Contains("option #1", StringComparison.Ordinal));
         log.Messages.ShouldContain(m => m.Contains("option #2", StringComparison.Ordinal));
@@ -188,7 +188,7 @@ public class ServiceTypePhaseReportingTests
     {
         var log = new CapturingLoggerFactory();
 
-        new TestServiceType().Register(NewBuilder(), log, "Store", "Path", "Container");
+        new TestServiceType().Register(NewBuilder(), log);
 
         log.Messages.ShouldContain(m => m.Contains("completed successfully", StringComparison.Ordinal));
     }

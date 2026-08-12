@@ -62,7 +62,7 @@ public abstract class VsCodeCommandTypeBase<THandler>
 
         // Why keyed on CommandId: the shell resolves a handler by the id VS Code sends, and every
         // command in the collection registers against the same IVsCodeCommandHandler service type.
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.AddKeyedSingleton<IVsCodeCommandHandler, THandler>(CommandId);
             return GenericResult<IHostApplicationBuilder>.Success(builder);

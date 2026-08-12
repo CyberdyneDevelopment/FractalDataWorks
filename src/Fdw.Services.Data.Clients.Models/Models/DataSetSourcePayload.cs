@@ -19,7 +19,12 @@ public sealed class DataSetSourcePayload
     /// <summary>Gets or sets the connection type.</summary>
     public string? ConnectionType { get; set; }
     /// <summary>Gets or sets the path within the DataStore.</summary>
-    public string Path { get; set; } = string.Empty;
+    /// <remarks>
+    /// Named PathName and not Path: a member called Path shadows <see cref="System.IO.Path"/> inside
+    /// the declaring type, so <c>Path.Combine(...)</c> there resolves to this string and fails to
+    /// compile in a way that reads as nonsense.
+    /// </remarks>
+    public string PathName { get; set; } = string.Empty;
     /// <summary>Gets or sets the container name.</summary>
     public string ContainerName { get; set; } = string.Empty;
     /// <summary>Gets or sets whether pushdown is supported.</summary>

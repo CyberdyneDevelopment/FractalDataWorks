@@ -71,7 +71,7 @@ public sealed class RoslynWorkspaceConnectionType
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.AddSingleton<IRoslynWorkspaceFactory, RoslynWorkspaceFactory>();
             // Why: a Roslyn workspace is opened from a solution path on disk and declares no authentication
@@ -83,8 +83,8 @@ public sealed class RoslynWorkspaceConnectionType
                     sp.GetService<ILogger<RoslynWorkspaceConnectionConfigurationProvider>>()
                         ?? NullLogger<RoslynWorkspaceConnectionConfigurationProvider>.Instance,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    dataStoreName,
-                    pathName,
+                    DataStore,
+                    PathName,
                     new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<RoslynWorkspaceConnectionConfiguration>>(
                 sp => sp.GetRequiredService<RoslynWorkspaceConnectionConfigurationProvider>());

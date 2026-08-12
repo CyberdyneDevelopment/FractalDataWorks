@@ -30,7 +30,7 @@ public sealed class ProfileClientType : ApiClientTypeBase<ProfileApiClient>
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.AddScoped<ProfileApiClient>(sp =>
             {

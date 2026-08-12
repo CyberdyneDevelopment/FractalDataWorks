@@ -75,7 +75,7 @@ public class ServiceTypePhaseFuncTests
         configured.IsSuccess.ShouldBeTrue();
         configured.Value.ShouldBeSameAs(builder);
 
-        var registered = serviceType.Register(builder, null, "Store", "path", "container");
+        var registered = serviceType.Register(builder, null);
         registered.IsSuccess.ShouldBeTrue();
         registered.Value.ShouldBeSameAs(builder);
 
@@ -103,9 +103,9 @@ public class ServiceTypePhaseFuncTests
     {
         var serviceType = new TestServiceType();
         var replacement = NewBuilder();
-        serviceType.Registration((_, _, _, _, _) => GenericResult<IHostApplicationBuilder>.Success(replacement));
+        serviceType.Registration((_, _) => GenericResult<IHostApplicationBuilder>.Success(replacement));
 
-        serviceType.Register(NewBuilder(), null, "Store", "path", "container")
+        serviceType.Register(NewBuilder(), null)
             .Value.ShouldBeSameAs(replacement);
     }
 
@@ -184,20 +184,16 @@ public class ServiceTypePhaseFuncTests
         protected InvariantWiringBase()
             : base("Invariant", "Services:Invariant", "Invariant", "Base with invariant wiring", "Testing")
         {
+            // Prepend, not an override: the base contributes here in its own constructor, and the
+            // derived constructor that runs afterwards chains onto it rather than assigning over it.
+            PrependRegistration((builder, loggerFactory) =>
+            {
+                BaseRegisterCount++;
+                return GenericResult<IHostApplicationBuilder>.Success(builder);
+            });
         }
 
         public int BaseRegisterCount { get; private set; }
-
-        public override IGenericResult<IHostApplicationBuilder> Register(
-            IHostApplicationBuilder builder,
-            ILoggerFactory? loggerFactory,
-            string dataStoreName,
-            string pathName,
-            string containerName)
-        {
-            BaseRegisterCount++;
-            return base.Register(builder, loggerFactory, dataStoreName, pathName, containerName);
-        }
     }
 
     private sealed class OptionThatSetsItsOwnRegistration : InvariantWiringBase
@@ -205,7 +201,7 @@ public class ServiceTypePhaseFuncTests
         public int OwnRegisterCount { get; private set; }
 
         public OptionThatSetsItsOwnRegistration()
-            => Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+            => Registration((builder, loggerFactory) =>
             {
                 OwnRegisterCount++;
                 return GenericResult<IHostApplicationBuilder>.Success(builder);
@@ -215,14 +211,14 @@ public class ServiceTypePhaseFuncTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void ABaseInvokerOverrideStillRunsWhenTheOptionSetsItsOwnRegistrationBody()
+    public void PrependedBaseWiringStillRunsWhenTheOptionSetsItsOwnRegistrationBody()
     {
-        // The gerund REPLACES the func, so a base that called Registration(...) in its constructor
-        // would be silently clobbered by the derived constructor running after it. Overriding the
-        // invoker is the sanctioned way to add wiring an option cannot drop.
+        // Registration(...) REPLACES, so a base calling it in its constructor is silently clobbered
+        // by the derived constructor running after. PrependRegistration chains instead, so the base's
+        // wiring runs first and the option cannot drop it.
         var option = new OptionThatSetsItsOwnRegistration();
 
-        option.Register(NewBuilder(), loggerFactory: null, "Store", "path", "container");
+        option.Register(NewBuilder(), loggerFactory: null);
 
         option.BaseRegisterCount.ShouldBe(1);
         option.OwnRegisterCount.ShouldBe(1);

@@ -18,7 +18,7 @@ public sealed class TestServiceType : ServiceTypeBase<ITestService, TestServiceF
     public TestServiceType()
         : base("TestType", "Services:TestType", "Test Type", "A test service type", "Testing")
     {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
         return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

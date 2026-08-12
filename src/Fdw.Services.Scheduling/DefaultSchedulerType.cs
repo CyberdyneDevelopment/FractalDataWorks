@@ -68,7 +68,7 @@ public sealed class DefaultSchedulerType
             return GenericResult<IHost>.Success(host);
         });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
 
             // Why Scoped: the factory requires IDataGateway (scoped) via constructor injection.

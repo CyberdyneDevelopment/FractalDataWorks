@@ -70,7 +70,7 @@ public sealed class FileSystemConnectionType
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.AddSingleton<IFileSystemConnectionFactory, FileSystemConnectionFactory>();
             // Why (FDW-403 slice 2 follow-up): mirror Http/MsSql — register a typed
@@ -80,8 +80,8 @@ public sealed class FileSystemConnectionType
                 new FileSystemConnectionConfigurationProvider(
                     sp.GetService<ILogger<FileSystemConnectionConfigurationProvider>>() ?? NullLogger<FileSystemConnectionConfigurationProvider>.Instance,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    dataStoreName,
-                    pathName,
+                    DataStore,
+                    PathName,
                     new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<FileSystemConnectionConfiguration>>(
                 sp => sp.GetRequiredService<FileSystemConnectionConfigurationProvider>());

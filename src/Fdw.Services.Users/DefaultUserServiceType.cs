@@ -59,7 +59,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             // Why: UserConfigurationProvider is the sole owner of usr.Users gateway access. Registered
             // as a singleton so the underlying DefaultConfigurationProvider cache is shared across requests.
@@ -67,7 +67,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
                 new UserConfigurationProvider(
                     sp.GetService<ILogger<UserConfigurationProvider>>(),
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    dataStoreName, "usr",
+                    DataStore, "usr",
                     new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
             builder.Services.TryAddSingleton<DefaultConfigurationProvider<UserConfiguration, UserConfigurationCommand>>(
                 sp => sp.GetRequiredService<UserConfigurationProvider>());
@@ -79,7 +79,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
                 new UserTenantConfigurationProvider(
                     sp.GetService<ILogger<UserTenantConfigurationProvider>>(),
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    dataStoreName, "tenant",
+                    DataStore, "tenant",
                     new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
             builder.Services.TryAddSingleton<DefaultConfigurationProvider<UserTenantConfiguration, UserTenantConfigurationCommand>>(
                 sp => sp.GetRequiredService<UserTenantConfigurationProvider>());
@@ -93,7 +93,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
                 new UserPreferenceConfigurationProvider(
                     sp.GetService<ILogger<UserPreferenceConfigurationProvider>>(),
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    dataStoreName, "usr",
+                    DataStore, "usr",
                     new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
 
             // Why: the credential edge hashes-on-arrival and forwards derived hashes to the password

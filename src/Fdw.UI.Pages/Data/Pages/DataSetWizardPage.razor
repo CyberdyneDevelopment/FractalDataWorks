@@ -611,7 +611,7 @@
                 DataStoreName = s.DataStoreName,
                 ConnectionName = s.ConnectionName,
                 ConnectionType = s.ConnectionType,
-                Path = s.Path,
+                PathName = s.PathName,
                 ContainerName = s.ContainerName,
                 SupportsPredicatePushdown = s.SupportsPredicatePushdown,
                 IsPrimary = s.IsPrimary,
@@ -804,7 +804,7 @@
         CreateDataSetSourcePayload source)
     {
         source.DataStoreName = chain.Count > 0 ? chain[0].Name : string.Empty;
-        source.Path = chain.Count > 1 ? chain[1].Name : string.Empty;
+        source.PathName = chain.Count > 1 ? chain[1].Name : string.Empty;
         source.ContainerName = chain.Count > 2 ? chain[2].Name : string.Empty;
         source.ContainerId = chain.Count > 2 ? (Guid?)chain[2].Id : null;
     }

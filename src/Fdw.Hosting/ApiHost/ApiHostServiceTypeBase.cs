@@ -64,7 +64,7 @@ public abstract class ApiHostServiceTypeBase : ApiServiceTypeBase, IApiHostServi
     protected ApiHostServiceTypeBase(string name, string sectionName, string displayName, string description)
         : base(name, sectionName, displayName, description)
     {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
             RegisterApiSurface(builder));
 
         Initialization(InitializeApiSurface);

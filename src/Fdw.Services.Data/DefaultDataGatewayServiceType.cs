@@ -35,7 +35,7 @@ public sealed class DefaultDataGatewayServiceType : DataGatewayTypeBase<IGeneric
             "Default DataGateway",
             "Default DataGateway with DataStoreProvider, SchemaInformation, and DataSetResolver")
     {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
 
             // Why: IDataStoreProvider/ConfigurationGatewayDataStoreProvider registration is NOT duplicated

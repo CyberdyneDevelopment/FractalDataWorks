@@ -19,7 +19,12 @@ public sealed class ContainerInitializationResult
     public string ContainerName { get; init; } = string.Empty;
 
     /// <summary>Gets the physical path within the DataStore.</summary>
-    public string Path { get; init; } = string.Empty;
+    /// <remarks>
+    /// Named PathName and not Path: a member called Path shadows <see cref="System.IO.Path"/> inside
+    /// the declaring type, so <c>Path.Combine(...)</c> there resolves to this string and fails to
+    /// compile in a way that reads as nonsense.
+    /// </remarks>
+    public string PathName { get; init; } = string.Empty;
 
     /// <summary>Gets the fields mapped from the container's field list to abstract DataSet types.</summary>
     public IReadOnlyList<CreateDataSetFieldRequest> Fields { get; init; } = [];

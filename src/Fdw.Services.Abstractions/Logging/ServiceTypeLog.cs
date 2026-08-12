@@ -954,4 +954,24 @@ public static partial class ServiceTypeLog
         ILogger logger,
         string commandType,
         string serviceTypeName);
+
+    /// <summary>
+    /// Logs that a phase setter was handed nothing.
+    /// </summary>
+    /// <remarks>
+    /// Reported rather than thrown. These setters run in constructors, which run during module
+    /// initialization before Main() — a throw there surfaces as a TypeInitializationException naming
+    /// the type but not the call, and it takes the process down before any host has said what it was
+    /// doing. Reporting leaves the existing body in place, which is the honest outcome: the caller
+    /// contributed nothing, and everything already chained still runs.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 61013,
+        Level = LogLevel.Error,
+        Message = "[{optionName}] {phase} was handed a null body by {setter}; the existing body is unchanged")]
+    public static partial IGenericMessage PhaseBodyNull(
+        ILogger logger,
+        string optionName,
+        string phase,
+        string setter);
 }

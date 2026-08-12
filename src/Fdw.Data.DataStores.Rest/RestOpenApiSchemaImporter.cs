@@ -237,7 +237,7 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
             {
                 Id = Guid.NewGuid(),
                 Name = operationId,
-                Path = $"{baseUrl.TrimEnd('/')}{pathTemplate}",
+                PathName = $"{baseUrl.TrimEnd('/')}{pathTemplate}",
                 PathType = "HttpPath",
                 SourceDescription = string.IsNullOrEmpty(operation.Summary) ? operation.Description : operation.Summary
             };

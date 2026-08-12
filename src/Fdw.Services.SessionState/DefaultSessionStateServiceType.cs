@@ -30,7 +30,7 @@ public sealed class DefaultSessionStateServiceType : SessionStateServiceTypeBase
             "Default Session State",
             "Default session state service using DataGateway persistence with Blazor circuit handler")
     {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
 
             // Why: SessionStateConfigurationProvider owns all gateway access for this domain.

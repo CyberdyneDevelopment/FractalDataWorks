@@ -51,7 +51,7 @@ public abstract class GetDataStorePathsEndpointBase : CrudGetEndpoint<DataStoreN
             Id = path.Id,
             Name = path.Name,
             PathType = path.PathType ?? string.Empty,
-            Path = path.Path,
+            PathName = path.PathName,
             Description = path.Description,
             Containers = (path.Containers ?? []).Select(MapContainer).ToList()
         };

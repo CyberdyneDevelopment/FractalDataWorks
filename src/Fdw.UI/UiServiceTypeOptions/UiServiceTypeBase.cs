@@ -50,14 +50,6 @@ public abstract class UiServiceTypeBase
     /// <inheritdoc />
     public abstract IReadOnlyList<IComponentTypeCollection> ComponentCollections { get; }
 
-    /// <summary>
-    /// Gets or sets a value indicating whether this whole domain should be passed over.
-    /// </summary>
-    /// <remarks>
-    /// The outermost of three levels — domain, collection, component. Setting this leaves
-    /// everything beneath it unregistered without touching any of it.
-    /// </remarks>
-    public bool SkipRegistration { get; set; }
 
     /// <summary>
     /// Gets the assemblies Blazor must scan to find this domain's components.
