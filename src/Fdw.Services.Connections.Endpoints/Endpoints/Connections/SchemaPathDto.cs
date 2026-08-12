@@ -14,11 +14,11 @@ public sealed class SchemaPathDto
 
     /// <summary>Gets or sets the path value.</summary>
     /// <remarks>
-    /// Named PathName and not Path: a member called Path shadows <see cref="System.IO.Path"/> inside
-    /// the declaring type, so <c>Path.Combine(...)</c> there resolves to this string and fails to
+    /// Named PathValue and not Path: a member called Path shadows <see cref="System.IO.Path"/> inside
+    /// the declaring type, so <c>Path.Combine(...)</c> there resolves to this value and fails to
     /// compile in a way that reads as nonsense.
     /// </remarks>
-    public string PathName { get; set; } = string.Empty;
+    public string PathValue { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the containers in this path.</summary>
     public IReadOnlyList<SchemaContainerDto> Containers { get; set; } = [];
@@ -29,7 +29,7 @@ public sealed class SchemaPathDto
         return new SchemaPathDto
         {
             Name = config.Name,
-            PathName = config.PathName,
+            PathValue = config.PathValue,
             Containers = (config.Containers ?? []).Select(c => SchemaContainerDto.FromConfig(c)).ToList()
         };
     }

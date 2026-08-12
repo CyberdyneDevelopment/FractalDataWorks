@@ -124,7 +124,7 @@
                                         <tr>
                                             <td><div class="cellpad nm">@source.SourceName</div></td>
                                             <td class="mut mono">@source.DataStoreName</td>
-                                            <td class="mut mono">@source.PathName</td>
+                                            <td class="mut mono">@source.PathValue</td>
                                             <td>
                                                 @if (source.IsPrimary)
                                                 {
@@ -269,7 +269,7 @@
                                                     <tr>
                                                         <td><div class="cellpad nm mono">@src.SourceName</div></td>
                                                         <td class="mut mono">@src.DataStoreName</td>
-                                                        <td class="mut mono">@src.PathName</td>
+                                                        <td class="mut mono">@src.PathValue</td>
                                                         <td class="mut mono">@src.ContainerName</td>
                                                         <td>
                                                             @if (src.IsPrimary)
@@ -842,7 +842,7 @@
         {
             SourceName = _addSourceAlias.Trim(),
             DataStoreName = _addSourceDataStore.Trim(),
-            PathName = _addSourcePath.Trim(),
+            PathValue = _addSourcePath.Trim(),
             ContainerName = _addSourceContainer.Trim(),
             IsPrimary = false,
             FieldMappings = [],

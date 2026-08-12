@@ -190,7 +190,7 @@ public sealed class RestOpenApiSchemaImporterTests : IDisposable
         dataStore.ServiceOptionType.ShouldBe("Rest");
         dataStore.Paths.Count.ShouldBe(2);
         dataStore.Paths.Select(p => p.Name).ShouldBe(["listPets", "createPet"], ignoreOrder: true);
-        dataStore.Paths.ShouldAllBe(p => p.PathName == "http://api.example.com/pets");
+        dataStore.Paths.ShouldAllBe(p => p.PathValue == "http://api.example.com/pets");
         dataStore.Paths.ShouldAllBe(p => p.PathType == "HttpPath");
         dataStore.Paths.ShouldAllBe(p => p.Containers.Count == 1);
         dataStore.Paths.ShouldAllBe(p => p.Containers[0].TypeId == "Endpoint");

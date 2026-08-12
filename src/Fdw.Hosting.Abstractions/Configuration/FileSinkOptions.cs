@@ -18,11 +18,11 @@ public class FileSinkOptions
     /// Gets or sets the log file path. Supports date tokens like {Date}.
     /// </summary>
     /// <remarks>
-    /// Named PathName and not Path: a member called Path shadows <see cref="System.IO.Path"/> inside
-    /// the declaring type, so <c>Path.Combine(...)</c> there resolves to this string and fails to
+    /// Named PathValue and not Path: a member called Path shadows <see cref="System.IO.Path"/> inside
+    /// the declaring type, so <c>Path.Combine(...)</c> there resolves to this value and fails to
     /// compile in a way that reads as nonsense.
     /// </remarks>
-    public string PathName { get; set; } = "logs/fdw-.log";
+    public string PathValue { get; set; } = "logs/fdw-.log";
 
     /// <summary>
     /// Gets or sets the rolling interval: "Infinite", "Year", "Month", "Day", "Hour", "Minute".

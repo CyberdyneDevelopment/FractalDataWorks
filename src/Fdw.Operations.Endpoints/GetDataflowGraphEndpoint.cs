@@ -169,7 +169,7 @@ public abstract class GetDataflowGraphEndpoint : EndpointWithoutRequest<Dataflow
                     ["connectionName"] = source.ConnectionName ?? "",
                     ["dataStoreName"] = source.DataStoreName ?? "",
                     ["priority"] = source.Priority,
-                    ["path"] = source.PathName ?? "",
+                    ["path"] = source.PathValue ?? "",
                     ["containerName"] = source.ContainerName ?? "",
                     ["httpEndpoint"] = source.HttpEndpoint ?? "",
                     ["filePath"] = source.FilePath ?? ""

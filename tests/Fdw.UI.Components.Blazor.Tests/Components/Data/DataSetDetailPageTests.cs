@@ -135,7 +135,7 @@ public sealed class DataSetDetailPageTests : IDisposable
         {
             SourceName = "Primary",
             DataStoreName = "Sql1",
-            PathName = "dbo.Customers",
+            PathValue = "dbo.Customers",
             IsPrimary = true,
             FieldMappings = [new DataSetFieldMappingPayload { DataSetFieldName = "Id", SourceName = "Primary", SourceFieldName = "CustId" }]
         };

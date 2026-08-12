@@ -15,11 +15,11 @@ public sealed class DataSetSourceEditorPayload
 
     /// <summary>Gets or sets the schema/path within the DataStore.</summary>
     /// <remarks>
-    /// Named PathName and not Path: a member called Path shadows <see cref="System.IO.Path"/> inside
-    /// the declaring type, so <c>Path.Combine(...)</c> there resolves to this string and fails to
+    /// Named PathValue and not Path: a member called Path shadows <see cref="System.IO.Path"/> inside
+    /// the declaring type, so <c>Path.Combine(...)</c> there resolves to this value and fails to
     /// compile in a way that reads as nonsense.
     /// </remarks>
-    public string PathName { get; set; } = string.Empty;
+    public string PathValue { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the container (table) name within the path.</summary>
     public string ContainerName { get; set; } = string.Empty;

@@ -211,7 +211,7 @@ public sealed class FederatedDataSetType : DataSetTypeBase
             return GenericResult<MaterializedSource>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, sourceName));
 
         var containerResult = await ctx.DataStoreProvider
-            .Get(sourceConfig.DataStoreName, sourceConfig.PathName, containerName, ct)
+            .Get(sourceConfig.DataStoreName, sourceConfig.PathValue, containerName, ct)
             .ConfigureAwait(false);
         if (!containerResult.IsSuccess || containerResult.Value is null)
             return GenericResult<MaterializedSource>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, sourceName));

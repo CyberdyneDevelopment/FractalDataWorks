@@ -131,7 +131,7 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpoint<PreviewDataSe
         var previewResult = await DataGateway
             .Execute<System.Collections.Generic.IEnumerable<ExpandoObject>>(
                 previewCommand,
-                new DataStoreTarget(source.DataStoreName, source.PathName, source.ContainerName),
+                new DataStoreTarget(source.DataStoreName, source.PathValue, source.ContainerName),
                 ct)
             .ConfigureAwait(false);
 

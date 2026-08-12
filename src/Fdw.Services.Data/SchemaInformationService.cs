@@ -327,7 +327,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
     {
         var existingPaths = _dataPathOptions.CurrentValue
             .Where(p => p.DataStoreId == savedDataStoreId)
-            .ToDictionary(p => p.PathName, StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(p => p.PathValue, StringComparer.OrdinalIgnoreCase);
 
         var pathsWritten = 0;
         var containersWritten = 0;
@@ -380,7 +380,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
         {
             Name = pathKey,
             DataStoreId = dataStoreId,
-            PathName = pathKey
+            PathValue = pathKey
         };
         var savedPathResult = await writer.Save(pathConfig, ct).ConfigureAwait(false);
         if (!savedPathResult.IsSuccess || savedPathResult.Value == null)

@@ -81,15 +81,15 @@ public sealed partial class DataSetSourceConfiguration : IGenericConfiguration
     /// Used together with <see cref="ContainerName"/> to address the physical container.
     /// </summary>
     /// <remarks>
-    /// Named PathName and not Path: a member called Path shadows <see cref="System.IO.Path"/> inside
-    /// the declaring type, so <c>Path.Combine(...)</c> there resolves to this string and fails to
+    /// Named PathValue and not Path: a member called Path shadows <see cref="System.IO.Path"/> inside
+    /// the declaring type, so <c>Path.Combine(...)</c> there resolves to this value and fails to
     /// compile in a way that reads as nonsense.
     /// </remarks>
-    public string PathName { get; set; } = string.Empty;
+    public string PathValue { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the container name within the path (e.g., the table/view name).
-    /// Used together with <see cref="PathName"/> to address the physical container.
+    /// Used together with <see cref="PathValue"/> to address the physical container.
     /// </summary>
     public string ContainerName { get; set; } = string.Empty;
 
