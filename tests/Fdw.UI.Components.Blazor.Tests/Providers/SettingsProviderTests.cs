@@ -1,3 +1,5 @@
+using Fdw.UI.Themes.Clients.ApiClients;
+using Fdw.Services.Settings.Clients;
 using Bunit;
 using Fdw.Services.Settings.Clients.Models;
 using Fdw.UI.Themes.Clients.Models;
@@ -12,8 +14,9 @@ namespace Fdw.UI.Components.Blazor.Tests.Providers;
 
 /// <summary>
 /// Tests for <see cref="SettingsProvider"/> headless component.
-/// Uses MockHttpHandler because SettingsApiClient and ThemeApiClient are created
-/// internally via IHttpClientFactory.
+/// Uses MockHttpHandler behind the typed clients the provider injects. SettingsProvider takes
+/// SettingsApiClient and ThemeApiClient from DI rather than building them from an
+/// IHttpClientFactory, because their client service types already register them.
 /// </summary>
 [Trait("Category", "Ui")]
 public sealed class SettingsProviderTests : IDisposable
@@ -32,6 +35,8 @@ public sealed class SettingsProviderTests : IDisposable
         factoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
         _ctx.Services.AddSingleton(factoryMock.Object);
+        _ctx.Services.AddSingleton(new SettingsApiClient(httpClient, NullLogger<SettingsApiClient>.Instance));
+        _ctx.Services.AddSingleton(new ThemeApiClient(httpClient, NullLogger<ThemeApiClient>.Instance));
         _ctx.Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         _ctx.Services.AddSingleton<ILogger<SettingsProvider>>(NullLogger<SettingsProvider>.Instance);
 
