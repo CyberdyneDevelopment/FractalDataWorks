@@ -62,4 +62,43 @@ public static partial class EndpointRegistrationLog
         Level = LogLevel.Error,
         Message = "No endpoint declared itself. Every group registered without contributing an endpoint type, so there is nothing to hand FastEndpoints.")]
     public static partial IGenericMessage NoEndpointsDeclared(ILogger logger);
+
+    // ── OpenAPI document processors ─────────────────────────────────────────────────────────────
+    // Why these are logged at all: a document processor that is never attached, and one that is
+    // attached but never handed a service provider, both fail by doing nothing. The document simply
+    // renders unfiltered. PermissionFilterDocumentProcessor is what keeps the anonymous Scalar page
+    // from listing every operation in the app, so "silently did nothing" is a security-relevant
+    // outcome that previously produced no output at any level.
+
+    /// <summary>Logged as each document processor is attached to the OpenAPI document settings.</summary>
+    [MessageLogging(
+        EventId = 11020,
+        Level = LogLevel.Trace,
+        Message = "OpenAPI document processor '{processorType}' attached to document '{documentName}'")]
+    public static partial IGenericMessage OpenApiProcessorAttached(ILogger logger, string processorType, string documentName);
+
+    /// <summary>Logged once the Register phase has attached every document processor.</summary>
+    [MessageLogging(
+        EventId = 11021,
+        Level = LogLevel.Debug,
+        Message = "OpenAPI document '{documentName}' registered with {count} document processor(s): [{processorTypes}]")]
+    public static partial IGenericMessage OpenApiProcessorsRegistered(ILogger logger, string documentName, int count, string processorTypes);
+
+    /// <summary>Logged as each stateful processor receives the built service provider.</summary>
+    [MessageLogging(
+        EventId = 11022,
+        Level = LogLevel.Trace,
+        Message = "OpenAPI document processor '{processorType}' initialized with the built service provider")]
+    public static partial IGenericMessage OpenApiProcessorInitialized(ILogger logger, string processorType);
+
+    /// <summary>
+    /// Logged when the Initialize phase runs with no processors to hand a provider to. Critical
+    /// because the processors that need one are the filtering processors: without them the OpenAPI
+    /// document is served unfiltered to every caller, including anonymous ones.
+    /// </summary>
+    [MessageLogging(
+        EventId = 61002,
+        Level = LogLevel.Critical,
+        Message = "OpenAPI Initialize ran with NO document processors registered — the document will be served UNFILTERED to every caller, anonymous included. The Register phase did not attach them.")]
+    public static partial IGenericMessage OpenApiProcessorsMissing(ILogger logger);
 }

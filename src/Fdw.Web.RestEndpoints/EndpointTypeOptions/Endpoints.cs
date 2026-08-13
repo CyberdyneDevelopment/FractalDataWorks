@@ -4,11 +4,13 @@ using Fdw.Collections;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Web.RestEndpoints.Logging;
+using Fdw.Web.RestEndpoints.OpenApi;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Fdw.Results;
 using FastEndpoints;
+using FastEndpoints.Swagger;
 
 namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
 
@@ -57,6 +59,14 @@ public partial class Endpoints : ServiceTypeCollectionBase<IEndpointTypeCollecti
     /// emit a partial onto this type and cannot cross an assembly.
     /// </remarks>
     public static IReadOnlyCollection<IEndpointTypeCollection> Groups() => EndpointGroups.All();
+
+    // Why these are held rather than constructed twice: the Register phase attaches the instance to
+    // the OpenAPI document settings, and the Initialize phase must hand that SAME instance the built
+    // service provider. Two constructions would attach one object and initialize another, leaving the
+    // document holding a processor whose provider is null — which no-ops silently.
+    private static PermissionFilterDocumentProcessor? PermissionFilter { get; set; }
+
+    private static DataSetQueryDocumentProcessor? DataSetQuery { get; set; }
 
     static Endpoints()
     {
@@ -119,7 +129,14 @@ public partial class Endpoints : ServiceTypeCollectionBase<IEndpointTypeCollecti
                 o.SourceGeneratorDiscoveredTypes.AddRange(DeclaredEndpoints.Types);
             });
 
+            // Why the accessor is registered HERE and not in the host: it exists for
+            // PermissionFilterDocumentProcessor below, which reads the caller's claims through it at
+            // document-generation time. Registered beside the processor that needs it, deleting
+            // either one is visibly deleting half a pair.
             builder.Services.AddHttpContextAccessor();
+
+            RegisterOpenApiDocument(builder, loggerFactory);
+
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
@@ -134,6 +151,8 @@ public partial class Endpoints : ServiceTypeCollectionBase<IEndpointTypeCollecti
                 }
             }
 
+            InitializeOpenApiProcessors(host, loggerFactory);
+
             if (host is IApplicationBuilder app)
             {
                 app.UseFastEndpoints();
@@ -141,5 +160,77 @@ public partial class Endpoints : ServiceTypeCollectionBase<IEndpointTypeCollecti
 
             return GenericResult<IHost>.Success(host);
         });
+    }
+
+    // Why the OpenAPI document is built here rather than in each host's Program.cs: these processors
+    // describe endpoints, and this collection is what knows the endpoints. Left to the host, the
+    // SwaggerDocument call carried only a title and no processors at all — so the permission filter
+    // and the dataset injection never ran, and the document listed every operation in the app to
+    // anonymous callers. Nothing reported it, because a processor that is never attached does not
+    // fail; it is simply absent.
+    //
+    // Why the two stateful processors are kept: they cannot be constructed with a service provider
+    // (none exists before Build), so they take one in Initialize. Holding the instances is the only
+    // way the Initialize phase can reach the same objects the document holds.
+    //
+    // AuthAndTagDocumentProcessor is deliberately NOT attached here: it requires a clientId and scope,
+    // which are per-application values this collection has no non-arbitrary source for. A host that
+    // wants it attaches it itself rather than having this invent a default.
+    private static void RegisterOpenApiDocument(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory)
+    {
+        var documentName = builder.Environment.ApplicationName;
+        var logger = loggerFactory?.CreateLogger(nameof(Endpoints)) ?? NullLogger.Instance;
+
+        PermissionFilter = new PermissionFilterDocumentProcessor();
+        DataSetQuery = new DataSetQueryDocumentProcessor();
+        var valuesFromSchema = new ValuesFromSchemaDocumentProcessor();
+
+        builder.Services.SwaggerDocument(o =>
+        {
+            o.DocumentSettings = s =>
+            {
+                s.Title = documentName;
+                s.DocumentProcessors.Add(PermissionFilter);
+                s.DocumentProcessors.Add(DataSetQuery);
+                s.DocumentProcessors.Add(valuesFromSchema);
+            };
+        });
+
+        EndpointRegistrationLog.OpenApiProcessorAttached(logger, nameof(PermissionFilterDocumentProcessor), documentName);
+        EndpointRegistrationLog.OpenApiProcessorAttached(logger, nameof(DataSetQueryDocumentProcessor), documentName);
+        EndpointRegistrationLog.OpenApiProcessorAttached(logger, nameof(ValuesFromSchemaDocumentProcessor), documentName);
+        EndpointRegistrationLog.OpenApiProcessorsRegistered(
+            logger,
+            documentName,
+            3,
+            $"{nameof(PermissionFilterDocumentProcessor)}, {nameof(DataSetQueryDocumentProcessor)}, {nameof(ValuesFromSchemaDocumentProcessor)}");
+    }
+
+    // Why this is a separate phase and not part of Register: both processors read services
+    // (IHttpContextAccessor for the caller's claims, the dataset providers for the schema) at
+    // document-generation time, and neither can be handed a provider before Build. Their Process()
+    // opens with a null-provider guard and returns silently, so skipping this step does not throw —
+    // the document just comes out unfiltered, which is exactly the failure that hid here before.
+    private static void InitializeOpenApiProcessors(IHost host, ILoggerFactory? loggerFactory)
+    {
+        var logger = loggerFactory?.CreateLogger(nameof(Endpoints)) ?? NullLogger.Instance;
+
+        if (PermissionFilter is null && DataSetQuery is null)
+        {
+            EndpointRegistrationLog.OpenApiProcessorsMissing(logger);
+            return;
+        }
+
+        if (PermissionFilter is not null)
+        {
+            PermissionFilter.Initialize(host.Services);
+            EndpointRegistrationLog.OpenApiProcessorInitialized(logger, nameof(PermissionFilterDocumentProcessor));
+        }
+
+        if (DataSetQuery is not null)
+        {
+            DataSetQuery.Initialize(host.Services);
+            EndpointRegistrationLog.OpenApiProcessorInitialized(logger, nameof(DataSetQueryDocumentProcessor));
+        }
     }
 }
