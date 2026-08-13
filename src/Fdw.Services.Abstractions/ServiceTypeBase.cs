@@ -57,14 +57,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// </remarks>
     // Why MD5: deterministic hashing for a stable id, not security.
 #pragma warning disable CA5351, SCS0006, CA1850
-    protected static Guid DeriveId(string name)
-    {
-        if (name is null)
-            throw new ArgumentNullException(nameof(name));
-
-        using var md5 = System.Security.Cryptography.MD5.Create();
-        return new Guid(md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(name)));
-    }
+    protected static Guid DeriveId(string name) => OptionId.Derive(name);
 #pragma warning restore CA5351, SCS0006, CA1850
 
     /// <summary>Gets the name of this service type — its discriminator within the collection.</summary>
@@ -85,13 +78,18 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     public string SectionName => ConfigurationKey;
 
     /// <inheritdoc />
-    public string DefaultDataStoreName { get; }
+    public string DataStore { get; }
 
     /// <inheritdoc />
-    public string DefaultPathName { get; }
+    /// <remarks>
+    /// Named PathName and not Path: a member called Path shadows <see cref="System.IO.Path"/> inside
+    /// the declaring type, so <c>Path.Combine(...)</c> there resolves to this string and fails to
+    /// compile in a way that reads as nonsense.
+    /// </remarks>
+    public string PathName { get; }
 
     /// <inheritdoc />
-    public string DefaultContainerName { get; }
+    public string Container { get; }
 
     // ── The three registration methods ──────────────────────────────────────────────────────────
     // Each one is a func holding the body, a gerund that sets it, and a method that invokes it. The
@@ -104,13 +102,43 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     // replaced needed a virtual, an override, a nullable override field and an Invoke wrapper that
     // checked the field before falling through to virtual dispatch — four moving parts for one body.
 
+    /// <summary>Gets a value indicating whether Configure has run.</summary>
+    /// <remarks>
+    /// A phase runs once. Idempotence is what makes chaining safe: a body appended by one contributor
+    /// cannot re-run what an earlier one already did, however many times a phase is invoked.
+    /// </remarks>
+    public bool Configured { get; private set; }
+
+    /// <summary>Gets a value indicating whether Register has run.</summary>
+    public bool Registered { get; private set; }
+
+    /// <summary>Gets a value indicating whether Initialize has run.</summary>
+    public bool Initialized { get; private set; }
+
+    /// <summary>Gets or sets a value indicating whether this option is switched off.</summary>
+    /// <remarks>
+    /// Checked by the option itself, not only by the collection cycling it — calling a phase directly
+    /// must honour the switch too, or the switch means nothing to half its callers.
+    /// </remarks>
+    public bool SkipRegistration { get; set; }
+    /// <summary>Gets or sets a value indicating whether Configure is switched off.</summary>
+    /// <remarks>
+    /// One flag per phase, because they are switched off for different reasons: a domain may
+    /// need its services registered while its post-Build wiring is suppressed, and a single flag
+    /// named for one phase silently governing the other two says something false about what it does.
+    /// </remarks>
+    public bool SkipConfiguration { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether Initialize is switched off.</summary>
+    public bool SkipInitialization { get; set; }
+
     /// <summary>Gets this option's Configure body.</summary>
     protected Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> ConfigurationMethod { get; private set; }
         = static builder => GenericResult<IHostApplicationBuilder>.Success(builder);
 
     /// <summary>Gets this option's Register body.</summary>
-    protected Func<IHostApplicationBuilder, ILoggerFactory?, string, string, string, IGenericResult<IHostApplicationBuilder>> RegistrationMethod { get; private set; }
-        = static (builder, loggerFactory, dataStoreName, pathName, containerName) => GenericResult<IHostApplicationBuilder>.Success(builder);
+    protected Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> RegistrationMethod { get; private set; }
+        = static (builder, loggerFactory) => GenericResult<IHostApplicationBuilder>.Success(builder);
 
     /// <summary>Gets this option's Initialize body.</summary>
     /// <remarks>
@@ -132,46 +160,176 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     // outside, from one whose body ran and did nothing. When a service fails to resolve later, that
     // is the first fact worth having and the hardest to recover after the fact.
 
-    /// <summary>Gets a value indicating whether this option supplied its own Configure body.</summary>
-    protected bool ConfigurationIsCustom { get; private set; }
 
-    /// <summary>Gets a value indicating whether this option supplied its own Register body.</summary>
-    protected bool RegistrationIsCustom { get; private set; }
-
-    /// <summary>Gets a value indicating whether this option supplied its own Initialize body.</summary>
-    protected bool InitializationIsCustom { get; private set; }
 
     /// <summary>Sets this option's Configure body.</summary>
     /// <param name="method">The replacement delegate.</param>
     public void Configuration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
     {
-        ConfigurationMethod = method ?? throw new ArgumentNullException(nameof(method));
-        ConfigurationIsCustom = true;
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Configure", nameof(method));
+            return;
+        }
+
+        ConfigurationMethod = method;
+    }
+
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>
+    /// Prefer this to <see cref="Configuration"/>. Replacing discards the base's own body along with
+    /// anything another contributor added, and nothing reports that it happened — the option simply
+    /// stops doing part of its job. Appending cannot lose work, so the guarantee does not rest on a
+    /// caller remembering to capture what was there first.
+    /// </remarks>
+    /// <param name="method">The body to run after.</param>
+    public void AppendConfiguration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Configure", nameof(method));
+            return;
+        }
+
+        var existing = ConfigurationMethod;
+        ConfigurationMethod = (builder) =>
+        {
+            var result = existing(builder);
+            return result.IsFailure ? result : method(builder);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public void PrependConfiguration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Configure", nameof(method));
+            return;
+        }
+
+        var existing = ConfigurationMethod;
+        ConfigurationMethod = (builder) =>
+        {
+            var result = method(builder);
+            return result.IsFailure ? result : existing(builder);
+        };
     }
 
     /// <summary>Sets this option's Register body.</summary>
     /// <param name="method">The replacement delegate.</param>
-    public void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, string, string, string, IGenericResult<IHostApplicationBuilder>> method)
+    public void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
     {
-        RegistrationMethod = method ?? throw new ArgumentNullException(nameof(method));
-        RegistrationIsCustom = true;
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Register", nameof(method));
+            return;
+        }
+
+        RegistrationMethod = method;
+    }
+
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>
+    /// Prefer this to <see cref="Registration"/>. Replacing discards the base's own body along with
+    /// anything another contributor added, and nothing reports that it happened — the option simply
+    /// stops doing part of its job. Appending cannot lose work, so the guarantee does not rest on a
+    /// caller remembering to capture what was there first.
+    /// </remarks>
+    /// <param name="method">The body to run after.</param>
+    public void AppendRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Register", nameof(method));
+            return;
+        }
+
+        var existing = RegistrationMethod;
+        RegistrationMethod = (builder, loggerFactory) =>
+        {
+            var result = existing(builder, loggerFactory);
+            return result.IsFailure ? result : method(builder, loggerFactory);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public void PrependRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Register", nameof(method));
+            return;
+        }
+
+        var existing = RegistrationMethod;
+        RegistrationMethod = (builder, loggerFactory) =>
+        {
+            var result = method(builder, loggerFactory);
+            return result.IsFailure ? result : existing(builder, loggerFactory);
+        };
     }
 
     /// <summary>Sets this option's Initialize body.</summary>
     /// <param name="method">The replacement delegate.</param>
     public void Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
     {
-        InitializationMethod = method ?? throw new ArgumentNullException(nameof(method));
-        InitializationIsCustom = true;
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Initialize", nameof(method));
+            return;
+        }
+
+        InitializationMethod = method;
     }
 
-    // Why these three are virtual: the gerund setters REPLACE a body, which is the intended semantic
-    // for an option customizing its own phase. But it makes a base class unable to contribute wiring
-    // that must always run — a base that calls Registration(...) in its constructor is silently
-    // clobbered when the derived constructor calls Registration(...) afterwards, and the base's
-    // registrations simply never happen. Overriding the INVOKER is the sanctioned way to add
-    // invariant, non-overridable wiring: do the base's work, then delegate to base.Xxx(...) so the
-    // option's own func still runs.
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>
+    /// Prefer this to <see cref="Initialization"/>. Replacing discards the base's own body along with
+    /// anything another contributor added, and nothing reports that it happened — the option simply
+    /// stops doing part of its job. Appending cannot lose work, so the guarantee does not rest on a
+    /// caller remembering to capture what was there first.
+    /// </remarks>
+    /// <param name="method">The body to run after.</param>
+    public void AppendInitialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
+    {
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Initialize", nameof(method));
+            return;
+        }
+
+        var existing = InitializationMethod;
+        InitializationMethod = (host, loggerFactory) =>
+        {
+            var result = existing(host, loggerFactory);
+            return result.IsFailure ? result : method(host, loggerFactory);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public void PrependInitialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
+    {
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Initialize", nameof(method));
+            return;
+        }
+
+        var existing = InitializationMethod;
+        InitializationMethod = (host, loggerFactory) =>
+        {
+            var result = method(host, loggerFactory);
+            return result.IsFailure ? result : existing(host, loggerFactory);
+        };
+    }
+
+    // Why none of these is virtual: an override is invisible to the chain, which invokes the func a
+    // level holds. The reason one used to be needed — a base contributing wiring that a derived
+    // Registration(...) would clobber — is what Append and Prepend remove.
 
     /// <inheritdoc />
     /// <remarks>
@@ -179,31 +337,56 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// <c>ServiceTypeCollectionGenerator</c> from the <c>[ServiceTypeCollection]</c> attribute, not by
     /// hand. It is that generated sweep which calls this, in the order the log line reports.
     /// </remarks>
-    public virtual IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
-        => RunPhase(loggerFactory, "Configure", ConfigurationIsCustom, ServiceTypePhaseSequence.Configure,
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
+    {
+        if (!force && (Configured || SkipConfiguration))
+        {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        var result = RunPhase(loggerFactory, "Configure", ServiceTypePhaseSequence.Configure,
             () => ConfigurationMethod(builder));
+        Configured = true;
+        return result;
+    }
 
     /// <inheritdoc />
     /// <remarks>
     /// Called by the generated collection's phase-2 sweep. Where the collection declares a
     /// <c>ProviderType</c>, the generated part registers that provider independently of this call.
     /// </remarks>
-    public virtual IGenericResult<IHostApplicationBuilder> Register(
+    public IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
-        ILoggerFactory? loggerFactory,
-        string dataStoreName,
-        string pathName,
-        string containerName)
-        => RunPhase(loggerFactory, "Register", RegistrationIsCustom, ServiceTypePhaseSequence.Register,
-            () => RegistrationMethod(builder, loggerFactory, dataStoreName, pathName, containerName));
+        ILoggerFactory? loggerFactory = null,
+        bool force = false)
+    {
+        if (!force && (Registered || SkipRegistration))
+        {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        var result = RunPhase(loggerFactory, "Register", ServiceTypePhaseSequence.Register,
+            () => RegistrationMethod(builder, loggerFactory));
+        Registered = true;
+        return result;
+    }
 
     /// <inheritdoc />
     /// <remarks>
     /// Called by the generated collection's phase-3 sweep, after the host has been built.
     /// </remarks>
-    public virtual IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
-        => RunPhase(loggerFactory, "Initialize", InitializationIsCustom, ServiceTypePhaseSequence.Initialize,
+    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
+    {
+        if (!force && (Initialized || SkipInitialization))
+        {
+            return GenericResult<IHost>.Success(host);
+        }
+
+        var result = RunPhase(loggerFactory, "Initialize", ServiceTypePhaseSequence.Initialize,
             () => InitializationMethod(host, loggerFactory));
+        Initialized = true;
+        return result;
+    }
 
     // Why the body arrives as a thunk rather than the func itself: the three phases take different
     // arguments, and closing over them here keeps one logging contract instead of three that drift.
@@ -219,18 +402,14 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     private IGenericResult<T> RunPhase<T>(
         ILoggerFactory? loggerFactory,
         string phase,
-        bool isCustom,
         ServiceTypePhaseSequence sequence,
         Func<IGenericResult<T>> body)
     {
         var logger = loggerFactory?.CreateLogger(GetType().FullName ?? Name) ?? (ILogger)NullLogger.Instance;
         var ordinal = sequence.NextOption();
-        var implementation = isCustom ? "custom" : "default";
-
-        if (isCustom)
-            ServiceTypeLog.OptionPhaseCustom(logger, Name, phase, ordinal, sequence.CurrentCollectionName, ServiceTypeLog.PhaseDocumentation);
-        else
-            ServiceTypeLog.OptionPhaseDefault(logger, Name, phase, ordinal, sequence.CurrentCollectionName, ServiceTypeLog.PhaseDocumentation);
+        // Why one message rather than a custom/default split: a body that has been appended to is
+        // neither, so the distinction stopped describing anything real.
+        ServiceTypeLog.OptionPhaseCustom(logger, Name, phase, ordinal, sequence.CurrentCollectionName, ServiceTypeLog.PhaseDocumentation);
 
         try
         {
@@ -246,31 +425,15 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
         }
         catch (Exception ex)
         {
-            ServiceTypeLog.OptionPhaseFailed(logger, ex, Name, phase, ordinal, sequence.CurrentCollectionName, implementation);
+            ServiceTypeLog.OptionPhaseFailed(logger, ex, Name, phase, ordinal, sequence.CurrentCollectionName, "chained");
             return GenericResult<T>.Failure(
                 ServiceTypeResultCodes.ByName("OptionPhaseFailed"),
                 ResultDetails.Create("OptionName", Name)
                     .With("Phase", phase)
                     .With("Ordinal", ordinal)
                     .With("CollectionName", sequence.CurrentCollectionName)
-                    .With("Implementation", implementation)
-                    .With("ErrorMessage", ex.Message));
+                                        .With("ErrorMessage", ex.Message));
         }
-    }
-
-    /// <summary>
-    /// Binds this service type's configuration section from appsettings.json.
-    /// </summary>
-    /// <param name="services">The service collection to bind against.</param>
-    protected void RegisterConfiguration(IServiceCollection services)
-    {
-        if (services is null)
-            throw new ArgumentNullException(nameof(services));
-
-        services.AddOptions<TConfiguration>()
-            .BindConfiguration(SectionName)
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
     }
 
     /// <summary>
@@ -295,8 +458,8 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
         string defaultContainerName = "")
         : base(DeriveId(name), name, sectionName, displayName, description, category)
     {
-        DefaultDataStoreName = defaultDataStoreName;
-        DefaultPathName = defaultPathName;
-        DefaultContainerName = defaultContainerName;
+        DataStore = defaultDataStoreName;
+        PathName = defaultPathName;
+        Container = defaultContainerName;
     }
 }

@@ -22,6 +22,7 @@ public static class DeclaredEndpoints
     private static readonly List<Type> Declared = new();
     private static readonly System.Threading.Lock Gate = new();
 
+
     /// <summary>
     /// Gets the endpoint types declared so far.
     /// </summary>
@@ -98,4 +99,5 @@ public static class DeclaredEndpoints
             }
         }
     }
+
 }

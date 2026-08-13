@@ -47,7 +47,7 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
 
             RegisterSettingProvider<ServerSettingConfiguration, ServerSettingConfigurationCommand>(builder.Services);

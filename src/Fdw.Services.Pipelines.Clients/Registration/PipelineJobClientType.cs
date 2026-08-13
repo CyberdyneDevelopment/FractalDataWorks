@@ -30,7 +30,7 @@ public sealed class PipelineJobClientType : ApiClientTypeBase<IPipelineJobClient
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.AddScoped<IPipelineJobClient>(sp =>
             {

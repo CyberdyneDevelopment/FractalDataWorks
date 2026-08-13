@@ -246,7 +246,7 @@ public sealed class SimpleDataSetType : DataSetTypeBase
             return GenericResult<T>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, sourceConfig.SourceName));
 
         var containerResult = await ctx.DataStoreProvider
-            .Get(sourceConfig.DataStoreName, sourceConfig.Path, containerName, ct)
+            .Get(sourceConfig.DataStoreName, sourceConfig.PathValue, containerName, ct)
             .ConfigureAwait(false);
         if (!containerResult.IsSuccess || containerResult.Value == null)
             return GenericResult<T>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, sourceConfig.SourceName));

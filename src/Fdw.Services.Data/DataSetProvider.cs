@@ -46,7 +46,8 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     /// <param name="builder">The host application builder.</param>
     /// <param name="loggerFactory">Optional logger factory for startup diagnostics.</param>
     /// <returns>The builder, for chaining.</returns>
-    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         if (loggerFactory != null)
         {
@@ -62,7 +63,8 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     /// </summary>
     /// <param name="builder">The host application builder.</param>
     /// <param name="loggerFactory">Optional logger factory for startup diagnostics.</param>
-    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         var services = builder.Services;
         // Why: the DataSet domain registers the gateway-backed DataSetConfigurationProvider it
@@ -109,7 +111,8 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     /// </summary>
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">Optional logger factory.</param>
-    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         var logger = loggerFactory?.CreateLogger<DataSetProvider>()
             ?? host.Services.GetRequiredService<ILoggerFactory>().CreateLogger<DataSetProvider>();

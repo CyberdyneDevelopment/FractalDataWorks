@@ -25,7 +25,7 @@ public sealed class DefaultPipelineServiceType : PipelineServiceTypeBase
             "Default Pipeline Service",
             "Gateway-backed pipeline configuration provider (pipe schema)")
     {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
 
             PipelineServiceConfigurationProvider.RegisterDomainConfiguration(builder.Services);

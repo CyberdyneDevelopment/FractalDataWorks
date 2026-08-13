@@ -29,7 +29,7 @@ public sealed class UserClientType : ApiClientTypeBase<UserApiClient>
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.AddScoped<UserApiClient>(sp =>
             {

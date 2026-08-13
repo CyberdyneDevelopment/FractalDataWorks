@@ -283,7 +283,7 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
             {
                 Id = Guid.NewGuid(),
                 Name = entitySetName,
-                Path = $"{baseUrl.TrimEnd('/')}/{entitySetName}",
+                PathValue = $"{baseUrl.TrimEnd('/')}/{entitySetName}",
                 PathType = "HttpPath"
             };
             path.Containers.Add(container);

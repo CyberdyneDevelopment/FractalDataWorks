@@ -92,10 +92,35 @@ public class DefaultServiceProvider<TService, TConfiguration, TFactory, TConfigu
             return;
         }
 
+        // Why the provider names itself in every line: this type is generic and shared by ~12
+        // domains, so "drained 0 registrations" is meaningless without saying WHICH provider drained
+        // nothing. GetType() is the closed, derived type (DefaultConnectionProvider), not this base.
+        var providerType = GetType().Name;
+
         foreach (var registration in _registered)
         {
-            _factories[registration.Key] = registration.Value(services);
+            var factory = registration.Value(services);
+            _factories[registration.Key] = factory;
             ServiceLogger.ProviderFactoryRegistered(_logger, registration.Key);
+            ServiceLogger.FactoryResolvedIntoProvider(
+                _logger, providerType, factory?.GetType().Name ?? "<null>", registration.Key);
+        }
+
+        ServiceLogger.ProviderFactoryRegistryDrained(
+            _logger, providerType, _factories.Count, string.Join(", ", _factories.Keys));
+
+        // Why Critical and why here: this is the only moment the emptiness is knowable before some
+        // later request fails on it. A provider with no factories cannot create anything for the
+        // rest of its scope, so it is reported once, loudly, at the point of construction rather
+        // than as a stream of per-request errors that name the symptom instead of the cause.
+        if (_factories.Count == 0)
+        {
+            ServiceLogger.ProviderFactoryRegistryEmpty(_logger, providerType);
+        }
+        else
+        {
+            ServiceLogger.ProviderReady(
+                _logger, providerType, _factories.Count, string.Join(", ", _factories.Keys));
         }
 
         foreach (var registration in _registeredConfigurationProviders)

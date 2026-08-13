@@ -129,20 +129,23 @@ public sealed class ServiceTypeCollectionPhaseMethodsAnalyzer : DiagnosticAnalyz
             Rule,
             type.Locations.Length > 0 ? type.Locations[0] : Location.None,
             type.Name,
-            $"{Short(returnType)} {phaseName}({Short(firstParameterType)}, ILoggerFactory?)"));
+            $"{Short(returnType)} {phaseName}({Short(firstParameterType)}, ILoggerFactory?, bool)"));
     }
 
     private static bool IsPhaseMethod(IMethodSymbol method, string firstParameterType, string returnType)
     {
         if (!method.IsStatic
             || method.DeclaredAccessibility != Accessibility.Public
-            || method.Parameters.Length != 2)
+            || method.Parameters.Length is not (2 or 3))
         {
             return false;
         }
 
         return Is(method.Parameters[0].Type, firstParameterType)
             && Is(method.Parameters[1].Type, LoggerFactory)
+            // Why three is allowed: the third is the optional force flag, which lets a caller run a
+            // phase out of the normal order. A collection that predates it still satisfies the shape.
+            && (method.Parameters.Length == 2 || method.Parameters[2].Type.SpecialType == SpecialType.System_Boolean)
             && Is(method.ReturnType, returnType);
     }
 

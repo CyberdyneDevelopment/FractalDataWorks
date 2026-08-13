@@ -75,34 +75,236 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// members themselves — which is what makes "this resource is broken, turn it off, turn it back
     /// on when it is fixed" a single decision rather than one per endpoint.
     /// </remarks>
+
+    /// <summary>Gets or sets a value indicating whether this whole resource is passed over.</summary>
+    /// <remarks>Set this and every member goes with it, without touching the members themselves.</remarks>
     public bool SkipRegistration { get; set; }
+
+    /// <summary>Gets the data store this collection's configuration rows live in.</summary>
+    /// <remarks>Virtual so a resource that lives elsewhere says so, rather than the framework
+    /// guessing from a name.</remarks>
+    /// <summary>Gets this collection's identity as a parent collection sees it.</summary>
+    /// <remarks>
+    /// A TypeCollection is keyed by an int derived from its type name; a ServiceTypeCollection keys
+    /// its members by Guid. This collection is both - a collection of options, and a member of one -
+    /// so it carries the Guid the parent needs alongside the int its own members are found by.
+    ///
+    /// Derived from the name rather than generated: the same collection must be the same
+    /// identity in every process that loads it, and Guid.NewGuid() would give a different answer on
+    /// each start - so a configuration row written against one run would not be found by the next.
+    /// </remarks>
+    public new Guid Id => OptionId.Derive(Name);
+
+    /// <summary>Gets the data store this collection's configuration rows live in.</summary>
+    /// <remarks>Virtual so a resource that lives elsewhere says so, rather than the framework
+    /// guessing from a name.</remarks>
+    public virtual string DataStore => "ConfigurationDb";
+
+    /// <summary>Gets the schema within that store.</summary>
+    public virtual string PathName => "web";
+
+    /// <summary>Gets the table within that schema.</summary>
+    public virtual string Container => Name;
+
+    /// <summary>Gets or sets a value indicating whether Configure is switched off.</summary>
+    /// <remarks>One flag per phase: they are switched off for different reasons, and a single
+    /// flag named for one phase silently governing the other two says something false.</remarks>
+    public bool SkipConfiguration { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether Initialize is switched off.</summary>
+    public bool SkipInitialization { get; set; }
+
+    /// <summary>Gets a value indicating whether Configure has run.</summary>
+    /// <remarks>A phase runs once, so a chained body cannot re-cycle members an earlier one
+    /// already drove.</remarks>
+    public bool Configured { get; private set; }
+
+    /// <summary>Gets a value indicating whether Register has run.</summary>
+    public bool Registered { get; private set; }
+
+    /// <summary>Gets a value indicating whether Initialize has run.</summary>
+    public bool Initialized { get; private set; }
 
     /// <summary>Sets the body run during Configure.</summary>
     /// <param name="method">The body.</param>
     public void Configuration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
         => ConfigurationMethod = method ?? throw new ArgumentNullException(nameof(method));
 
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>Prefer this to <see cref="Configuration"/>, which assigns and so discards anything
+    /// another contributor already chained. The member cycle is not at risk either way - it lives
+    /// in the invoker, and this body runs alongside it rather than instead of it.</remarks>
+    /// <param name="method">The body to run after.</param>
+    public void AppendConfiguration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = ConfigurationMethod;
+        if (existing is null)
+        {
+            ConfigurationMethod = method;
+            return;
+        }
+
+        ConfigurationMethod = (builder) =>
+        {
+            var result = existing(builder);
+            return result.IsFailure ? result : method(builder);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public void PrependConfiguration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = ConfigurationMethod;
+        if (existing is null)
+        {
+            ConfigurationMethod = method;
+            return;
+        }
+
+        ConfigurationMethod = (builder) =>
+        {
+            var result = method(builder);
+            return result.IsFailure ? result : existing(builder);
+        };
+    }
+
     /// <summary>Sets the body run during Register.</summary>
     /// <param name="method">The body.</param>
     public void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
         => RegistrationMethod = method ?? throw new ArgumentNullException(nameof(method));
+
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>Prefer this to <see cref="Registration"/>, which assigns and so discards anything
+    /// another contributor already chained. The member cycle is not at risk either way - it lives
+    /// in the invoker, and this body runs alongside it rather than instead of it.</remarks>
+    /// <param name="method">The body to run after.</param>
+    public void AppendRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = RegistrationMethod;
+        if (existing is null)
+        {
+            RegistrationMethod = method;
+            return;
+        }
+
+        RegistrationMethod = (builder, loggerFactory) =>
+        {
+            var result = existing(builder, loggerFactory);
+            return result.IsFailure ? result : method(builder, loggerFactory);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public void PrependRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = RegistrationMethod;
+        if (existing is null)
+        {
+            RegistrationMethod = method;
+            return;
+        }
+
+        RegistrationMethod = (builder, loggerFactory) =>
+        {
+            var result = method(builder, loggerFactory);
+            return result.IsFailure ? result : existing(builder, loggerFactory);
+        };
+    }
 
     /// <summary>Sets the body run during Initialize.</summary>
     /// <param name="method">The body.</param>
     public void Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
         => InitializationMethod = method ?? throw new ArgumentNullException(nameof(method));
 
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>Prefer this to <see cref="Initialization"/>, which assigns and so discards anything
+    /// another contributor already chained. The member cycle is not at risk either way - it lives
+    /// in the invoker, and this body runs alongside it rather than instead of it.</remarks>
+    /// <param name="method">The body to run after.</param>
+    public void AppendInitialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = InitializationMethod;
+        if (existing is null)
+        {
+            InitializationMethod = method;
+            return;
+        }
+
+        InitializationMethod = (host, loggerFactory) =>
+        {
+            var result = existing(host, loggerFactory);
+            return result.IsFailure ? result : method(host, loggerFactory);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public void PrependInitialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = InitializationMethod;
+        if (existing is null)
+        {
+            InitializationMethod = method;
+            return;
+        }
+
+        InitializationMethod = (host, loggerFactory) =>
+        {
+            var result = method(host, loggerFactory);
+            return result.IsFailure ? result : existing(host, loggerFactory);
+        };
+    }
+
     /// <summary>
     /// Runs Configure for this resource: its own body if one was set, then every member not skipped.
     /// </summary>
     /// <param name="builder">The host builder.</param>
-        /// <returns>The builder, or the first failure encountered.</returns>
-    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder)
+    /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <returns>The builder, or the first failure encountered.</returns>
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
-        if (SkipRegistration)
+        // Why the flag is set here rather than after the work: a phase that failed halfway
+        // has already registered whatever came before the failure, and re-entering would do
+        // that part twice.
+        if (!force && (Configured || SkipConfiguration))
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
+
+        Configured = true;
 
         if (ConfigurationMethod is not null)
         {
@@ -137,19 +339,25 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// and the answer is measured, as the service-descriptor delta across each call, rather than
     /// taken from what a body says it registers.
     /// </remarks>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
     public IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        bool force = false)
     {
         // Why: the factory is null until the host has one, and reporting is not optional work that
         // gets dropped when it is — NullLogger keeps every call below unconditional and silent.
         var logger = loggerFactory?.CreateLogger(LogCategory) ?? NullLogger.Instance;
 
-        if (SkipRegistration)
+        if (!force && (Registered || SkipRegistration))
         {
             EndpointRegistrationLog.GroupSkipped(logger, Name);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
+
+        // Why the flag is set here rather than after the work: a phase that failed halfway has already
+        // registered whatever came before the failure, and re-entering would do that part twice.
+        Registered = true;
 
         // Why: zero when no body was set is the measurement, not a stand-in for one — a group that
         // declared no registration body of its own contributed nothing to the container.
@@ -204,15 +412,22 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// </summary>
     /// <param name="host">The built host.</param>
         /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
     /// <returns>The host, or the first failure encountered.</returns>
     public IGenericResult<IHost> Initialize(
         IHost host,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        bool force = false)
     {
-        if (SkipRegistration)
+        // Why the flag is set here rather than after the work: a phase that failed halfway
+        // has already registered whatever came before the failure, and re-entering would do
+        // that part twice.
+        if (!force && (Initialized || SkipInitialization))
         {
             return GenericResult<IHost>.Success(host);
         }
+
+        Initialized = true;
 
         if (InitializationMethod is not null)
         {

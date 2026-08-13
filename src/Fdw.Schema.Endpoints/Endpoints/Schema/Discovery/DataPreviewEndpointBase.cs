@@ -215,7 +215,7 @@ public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, Dat
     {
         ProjectionExpression? projection = BuildProjection(columns);
 
-        // Why: address is DataStoreName/PathName/ContainerName — the gateway resolves this
+        // Why: address is DataStoreName.Path/ContainerName — the gateway resolves this
         // to the correct connection, schema, and table. Connection is invisible above this layer.
         var command = new QueryCommand<Dictionary<string, object?>>
         {

@@ -7,7 +7,9 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Fdw.Abstractions;
 using Fdw.Configuration;
@@ -37,29 +39,6 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
     where TFactory : IConnectionFactory<TService, TConfiguration>
 {
     /// <inheritdoc />
-    // Why this is on the base and not in each option's Registration body: DefaultConnectionProvider
-    // resolves connections through its OWN factory registry, which it fills once per scope from the
-    // funcs options register — but no connection option registered one, so every create failed with
-    // "No factory registered for service option type 'MsSql' ... on composed-header path" and no
-    // connection could be opened at all. Every connection option needs exactly this registration and
-    // already names its factory as TFactory, so the base does it for all of them; an option cannot
-    // forget it, and there is nothing to duplicate six times.
-    //
-    // The func is deferred — it runs in the provider's constructor, once the container exists — so it
-    // does not matter that the option's own Register (which puts TFactory into DI) runs after this.
-    public override IGenericResult<IHostApplicationBuilder> Register(
-        IHostApplicationBuilder builder,
-        ILoggerFactory? loggerFactory,
-        string dataStoreName,
-        string pathName,
-        string containerName)
-    {
-        DefaultConnectionProvider.Register(
-            Name,
-            sp => (IServiceFactory<IGenericConnection>)sp.GetRequiredService<TFactory>()!);
-
-        return base.Register(builder, loggerFactory, dataStoreName, pathName, containerName);
-    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionTypeBase{TService,TFactory,TConfiguration}"/> class.
@@ -82,6 +61,36 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
                defaultPathName: "conn",
                defaultContainerName: defaultContainerName)
     {
+        // Why on the base rather than in each option's own body: DefaultConnectionProvider resolves
+        // connections through its own factory registry, filled once per scope from the funcs options
+        // register. No connection option registered one, so every create failed with "No factory
+        // registered for service option type 'MsSql'" and no connection could be opened at all. Every
+        // option needs exactly this and already names its factory as TFactory, so the base does it for
+        // all of them - an option cannot forget it, and there is nothing to duplicate six times.
+        //
+        // The func is deferred, running in the provider's constructor once the container exists, so it
+        // does not matter that the option's own body puts TFactory into DI after this.
+        PrependRegistration((builder, loggerFactory) =>
+        {
+            DefaultConnectionProvider.Register(
+                Name,
+                sp => (IServiceFactory<IGenericConnection>)sp.GetRequiredService<TFactory>()!);
+
+            // Why the BASE logs under its own type: this registration is the base's contribution on
+            // the option's behalf, and the derived option logs its own wiring separately. Reading
+            // base-then-derived in SourceContext order is what makes it visible that BOTH ran — the
+            // absence of this line is precisely the signature of a derived option having replaced
+            // the phase body and discarded what the base contributed.
+            ServiceLogger.FactoryRegistrationDeferred(
+                loggerFactory?.CreateLogger<ConnectionTypeBase<TService, TFactory, TConfiguration>>()
+                    ?? NullLogger<ConnectionTypeBase<TService, TFactory, TConfiguration>>.Instance,
+                nameof(ConnectionTypeBase<TService, TFactory, TConfiguration>),
+                Name,
+                typeof(TFactory).Name);
+
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+
     }
 
     /// <summary>

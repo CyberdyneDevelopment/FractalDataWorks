@@ -45,7 +45,7 @@ public sealed class HttpSessionStateServiceType : SessionStateServiceTypeBase<IG
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.AddScoped<ISessionStateService, HttpSessionStateService>();
             return GenericResult<IHostApplicationBuilder>.Success(builder);

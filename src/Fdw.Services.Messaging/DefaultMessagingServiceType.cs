@@ -25,7 +25,7 @@ public sealed class DefaultMessagingServiceType : MessagingServiceTypeBase
             "Default Messaging",
             "Default messaging services with message and access request support")
     {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.AddScoped<IMessageService, MessageService>();
             builder.Services.AddScoped<IAccessRequestService, AccessRequestService>();

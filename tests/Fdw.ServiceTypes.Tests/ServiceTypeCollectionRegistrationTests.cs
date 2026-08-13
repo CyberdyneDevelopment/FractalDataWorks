@@ -44,19 +44,18 @@ public class ServiceTypeCollectionRegistrationTests
         public string DisplayName => Name;
         public string Description => Name;
         public string Category => "NotCategorized";
-        public string DefaultDataStoreName => "ConfigurationDb";
-        public string DefaultPathName => "cfg";
-        public string DefaultContainerName => Name;
+        public string DataStore => "ConfigurationDb";
+        public string PathName => "cfg";
+        public string Container => Name;
 
-        public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+        public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
             => GenericResult<IHostApplicationBuilder>.Success(builder);
 
         public IGenericResult<IHostApplicationBuilder> Register(
-            IHostApplicationBuilder builder, ILoggerFactory? loggerFactory,
-            string dataStoreName, string pathName, string containerName)
+            IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
             => GenericResult<IHostApplicationBuilder>.Success(builder);
 
-        public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+        public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
             => GenericResult<IHost>.Success(host);
     }
 

@@ -156,8 +156,11 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
         {
             foreach (var option in Options)
             {
-                var result = option.Register(builder, loggerFactory,
-                    option.DefaultDataStoreName, option.DefaultPathName, option.DefaultContainerName);
+                // Why not threaded in: the option already exposes DefaultDataStoreName, DefaultPathName
+                // and DefaultContainerName, so passing them back to it was the collection reading three
+                // values off an option and handing them straight back — on every call site, for the few
+                // bodies that read them.
+                var result = option.Register(builder, loggerFactory);
                 if (result.IsFailure)
                     return Stop<IHostApplicationBuilder>(loggerFactory, "Register", option, result);
             }
@@ -221,6 +224,33 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     protected static bool InitializationIsCustom { get; private set; }
 
     /// <summary>Gets this collection's Configure body.</summary>
+    /// <summary>Gets a value indicating whether Configure has run.</summary>
+    /// <remarks>
+    /// Per closed generic, like everything else static here: each collection tracks its own phases,
+    /// and a phase runs once so that a chained body cannot re-cycle members an earlier one already did.
+    /// </remarks>
+    public static bool Configured { get; private set; }
+
+    /// <summary>Gets a value indicating whether Register has run.</summary>
+    public static bool Registered { get; private set; }
+
+    /// <summary>Gets a value indicating whether Initialize has run.</summary>
+    public static bool Initialized { get; private set; }
+
+    /// <summary>Gets or sets a value indicating whether Configure is switched off.</summary>
+    /// <remarks>
+    /// One flag per phase, because they are switched off for different reasons: a domain may need
+    /// its services registered while its post-Build wiring is suppressed.
+    /// </remarks>
+    public static bool SkipConfiguration { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether Register is switched off.</summary>
+    public static bool SkipRegistration { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether Initialize is switched off.</summary>
+    public static bool SkipInitialization { get; set; }
+
+    /// <summary>Gets this collection's Configure body.</summary>
     protected static Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> ConfigurationFunc => _configurationFunc;
 
     /// <summary>Gets this collection's Register body.</summary>
@@ -228,6 +258,45 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
 
     /// <summary>Gets this collection's Initialize body.</summary>
     protected static Func<IHost, ILoggerFactory?, IGenericResult<IHost>> InitializationFunc => _initializationFunc;
+
+
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>
+    /// Prefer this to <see cref="Configuration"/>, which assigns and so discards the member cycle this
+    /// collection starts with, along with anything another contributor added.
+    /// </remarks>
+    /// <param name="method">The body to run after.</param>
+    public static void AppendConfiguration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = _configurationFunc;
+        _configurationFunc = (builder, loggerFactory) =>
+        {
+            var result = existing(builder, loggerFactory);
+            return result.IsFailure ? result : method(builder, loggerFactory);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public static void PrependConfiguration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = _configurationFunc;
+        _configurationFunc = (builder, loggerFactory) =>
+        {
+            var result = method(builder, loggerFactory);
+            return result.IsFailure ? result : existing(builder, loggerFactory);
+        };
+    }
 
     /// <summary>Replaces this collection's Configure body. Call before Configure runs.</summary>
     /// <param name="method">The replacement delegate.</param>
@@ -237,12 +306,90 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
         ConfigurationIsCustom = true;
     }
 
+
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>
+    /// Prefer this to <see cref="Registration"/>, which assigns and so discards the member cycle this
+    /// collection starts with, along with anything another contributor added.
+    /// </remarks>
+    /// <param name="method">The body to run after.</param>
+    public static void AppendRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = _registerFunc;
+        _registerFunc = (builder, loggerFactory) =>
+        {
+            var result = existing(builder, loggerFactory);
+            return result.IsFailure ? result : method(builder, loggerFactory);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public static void PrependRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = _registerFunc;
+        _registerFunc = (builder, loggerFactory) =>
+        {
+            var result = method(builder, loggerFactory);
+            return result.IsFailure ? result : existing(builder, loggerFactory);
+        };
+    }
+
     /// <summary>Replaces this collection's Register body. Call before Register runs.</summary>
     /// <param name="method">The replacement delegate.</param>
     public static void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
     {
         _registerFunc = method ?? throw new ArgumentNullException(nameof(method));
         RegistrationIsCustom = true;
+    }
+
+
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>
+    /// Prefer this to <see cref="Initialization"/>, which assigns and so discards the member cycle this
+    /// collection starts with, along with anything another contributor added.
+    /// </remarks>
+    /// <param name="method">The body to run after.</param>
+    public static void AppendInitialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = _initializationFunc;
+        _initializationFunc = (host, loggerFactory) =>
+        {
+            var result = existing(host, loggerFactory);
+            return result.IsFailure ? result : method(host, loggerFactory);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public static void PrependInitialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = _initializationFunc;
+        _initializationFunc = (host, loggerFactory) =>
+        {
+            var result = method(host, loggerFactory);
+            return result.IsFailure ? result : existing(host, loggerFactory);
+        };
     }
 
     /// <summary>Replaces this collection's Initialize body. Call before Initialize runs.</summary>
@@ -264,9 +411,19 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// binds to this inherited static; the generated part supplies the registry contents and the typed
     /// lookups.
     /// </remarks>
-    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
-        => RunPhase(builder, loggerFactory, "Configure", ConfigurationIsCustom,
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
+    {
+        if (!force && (Configured || SkipConfiguration))
+        {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        var phaseResult = RunPhase(builder, loggerFactory, "Configure", ConfigurationIsCustom,
             ServiceTypePhaseSequence.Configure, _configurationFunc);
+        Configured = true;
+        return phaseResult;
+    }
 
     /// <summary>Each option registers its factory and configuration provider.</summary>
     /// <param name="builder">The host application builder.</param>
@@ -278,9 +435,19 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// <c>ProviderType</c>, the generated part registers the provider into DI around this call, so the
     /// provider is wired whether or not an application replaced the option sweep.
     /// </remarks>
-    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
-        => RunPhase(builder, loggerFactory, "Register", RegistrationIsCustom,
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
+    {
+        if (!force && (Registered || SkipRegistration))
+        {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        var phaseResult = RunPhase(builder, loggerFactory, "Register", RegistrationIsCustom,
             ServiceTypePhaseSequence.Register, _registerFunc);
+        Registered = true;
+        return phaseResult;
+    }
 
     /// <summary>Post-Build initialization.</summary>
     /// <param name="host">The built host. Its <c>Services</c> is the provider this phase used to take.</param>
@@ -290,9 +457,19 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// The <c>xxxTypes</c> class this is called on is written by <c>ServiceTypeCollectionGenerator</c>
     /// from the <c>[ServiceTypeCollection]</c> attribute, not by hand.
     /// </remarks>
-    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
-        => RunPhase(host, loggerFactory, "Initialize", InitializationIsCustom,
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
+    {
+        if (!force && (Initialized || SkipInitialization))
+        {
+            return GenericResult<IHost>.Success(host);
+        }
+
+        var phaseResult = RunPhase(host, loggerFactory, "Initialize", InitializationIsCustom,
             ServiceTypePhaseSequence.Initialize, _initializationFunc);
+        Initialized = true;
+        return phaseResult;
+    }
 
     // Why one runner rather than three copies of the same ceremony: the phases differ only in what
     // flows through them, and a logging contract that drifts between phases is worse than none.

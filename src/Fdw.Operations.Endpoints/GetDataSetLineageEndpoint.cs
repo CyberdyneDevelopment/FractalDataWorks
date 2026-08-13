@@ -147,8 +147,8 @@ public abstract class GetDataSetLineageEndpoint : Endpoint<DataSetLineageRequest
             if (!string.IsNullOrEmpty(s.ContainerName))
             {
                 sourceType = "Database";
-                physicalLocation = !string.IsNullOrEmpty(s.Path)
-                    ? $"{s.Path}.{s.ContainerName}"
+                physicalLocation = !string.IsNullOrEmpty(s.PathValue)
+                    ? $"{s.PathValue}.{s.ContainerName}"
                     : s.ContainerName;
             }
             else if (!string.IsNullOrEmpty(s.HttpEndpoint))

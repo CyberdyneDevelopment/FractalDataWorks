@@ -35,29 +35,20 @@ public abstract class ApiClientTypeBase<TClient>
     protected ApiClientTypeBase(string name, string displayName)
         : base(name, "ApiClients", displayName, $"{displayName} HTTP client")
     {
+        // Why Prepend: every one of the ~35 concrete client types contributes its own Registration
+        // body, and the handler has to be in the container before any of them attaches it to a named
+        // client. Prepending puts this first and leaves everything already chained intact — the
+        // failure this replaces was a base-constructor Registration(...) being assigned over by the
+        // derived constructor that ran after it, so BearerTokenHandler was registered for no client
+        // at all and the host threw at first client construction.
+        PrependRegistration((builder, loggerFactory) =>
+        {
+            builder.Services.AddTransient<BearerTokenHandler>();
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+
     }
 
-    /// <inheritdoc />
-    // Why an invoker override instead of Registration(...) in the constructor: every one of the ~35
-    // concrete client types sets its own Registration body, and the gerund setter REPLACES rather than
-    // composes — so a base-constructor call is overwritten by the derived constructor that runs after
-    // it, and BearerTokenHandler was never registered for any client. Each client attaches the handler
-    // to its named HttpClient via AddBearerTokenHandler(), which only adds it to the pipeline; without
-    // this the host throws at first client construction:
-    //   No service for type 'Fdw.Web.Http.Authentication.BearerTokenHandler' has been registered.
-    public override IGenericResult<IHostApplicationBuilder> Register(
-        IHostApplicationBuilder builder,
-        ILoggerFactory? loggerFactory,
-        string dataStoreName,
-        string pathName,
-        string containerName)
-    {
-        if (builder is null) throw new System.ArgumentNullException(nameof(builder));
-
-        builder.Services.AddTransient<BearerTokenHandler>();
-
-        return base.Register(builder, loggerFactory, dataStoreName, pathName, containerName);
-    }
 
     /// <summary>
     /// Resolves the base URL for THIS client: the per-client entry

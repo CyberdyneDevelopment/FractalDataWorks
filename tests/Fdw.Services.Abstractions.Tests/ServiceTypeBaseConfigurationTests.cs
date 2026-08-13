@@ -70,65 +70,21 @@ public class ServiceTypeBaseConfigurationTests
             : base("ConfigTest", "ConfigTestSection", "Config Test Service", "Test",
                    "Test")
         {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
 
-                RegisterConfiguration(builder.Services);
+                // Inline, because binding from appsettings is three lines in the body that wants
+                // it rather than a helper on every service type that does not.
+                builder.Services.AddOptions<SimpleConfig>()
+                    .BindConfiguration(SectionName)
+                    .ValidateDataAnnotations()
+                    .ValidateOnStart();
+
                 return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
         }
 
         // Expose protected method for testing
-        public void TestRegisterConfiguration(IServiceCollection services)
-        {
-            RegisterConfiguration(services);
-        }
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void RegisterConfigurationThrowsWhenServicesIsNull()
-    {
-        // Arrange
-        var serviceType = new ConfigurationTestServiceType();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            serviceType.TestRegisterConfiguration(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void RegisterConfigurationAddsOptionsConfiguration()
-    {
-        // Arrange
-        var serviceType = new ConfigurationTestServiceType();
-        var services = new ServiceCollection();
-
-        // Act
-        serviceType.TestRegisterConfiguration(services);
-
-        // Assert
-        services.ShouldContain(sd => sd.ServiceType.Name.Contains("IConfigureOptions"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void RegisterCallsRegisterConfiguration()
-    {
-        // Arrange
-        var serviceType = new ConfigurationTestServiceType();
-        var builder = Host.CreateApplicationBuilder();
-
-        // Act
-        var result = serviceType.Register(builder, null, "TestStore", "TestPath", "TestContainer");
-
-        // Assert
-        result.ShouldNotBeNull();
-        builder.Services.ShouldContain(sd => sd.ServiceType.Name.Contains("IConfigureOptions"));
     }
 }

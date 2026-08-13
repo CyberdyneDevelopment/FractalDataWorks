@@ -50,8 +50,6 @@ public sealed class RoslynWorkspaceConnectionType
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            var provider = (DefaultConnectionProvider)services.GetRequiredService<IConnectionProvider>();
-
             // Why: attach the typed-body provider to the HEADER provider so conn.RoslynWorkspaceConnection is
             // reachable by discriminator dispatch, exactly as every other connection type does. This was the
             // only ConnectionTypes option missing the call, and its absence was not inert: a live
@@ -71,7 +69,12 @@ public sealed class RoslynWorkspaceConnectionType
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        // Why Append and not Registration: Registration REPLACES the phase body, and
+        // ConnectionTypeBase's constructor has already prepended this option's factory registration
+        // onto it. Replacing therefore silently discards the base's contribution — which is exactly
+        // how every connection kind stopped being creatable while each option's own wiring kept
+        // working and logging success. Appending composes onto what the base put there.
+        AppendRegistration((builder, loggerFactory) =>
         {
             builder.Services.AddSingleton<IRoslynWorkspaceFactory, RoslynWorkspaceFactory>();
             // Why: a Roslyn workspace is opened from a solution path on disk and declares no authentication
@@ -83,8 +86,8 @@ public sealed class RoslynWorkspaceConnectionType
                     sp.GetService<ILogger<RoslynWorkspaceConnectionConfigurationProvider>>()
                         ?? NullLogger<RoslynWorkspaceConnectionConfigurationProvider>.Instance,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    dataStoreName,
-                    pathName,
+                    DataStore,
+                    PathName,
                     new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<RoslynWorkspaceConnectionConfiguration>>(
                 sp => sp.GetRequiredService<RoslynWorkspaceConnectionConfigurationProvider>());

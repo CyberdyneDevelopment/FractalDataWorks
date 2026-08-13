@@ -48,7 +48,7 @@ public sealed class ConfigurationGatewayServiceType : DataGatewayTypeBase<IGener
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
 
             // Why: IConfigurationGateway is NOT registered here. The host registers it via

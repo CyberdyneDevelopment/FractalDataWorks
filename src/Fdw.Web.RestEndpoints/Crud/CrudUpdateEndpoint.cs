@@ -26,6 +26,15 @@ public abstract class CrudUpdateEndpoint<TUpdateRequest, TDetail> : Endpoint<TUp
     /// </summary>
     protected abstract string ResourceName { get; }
 
+    /// <summary>Gets the documentation tag this endpoint appears under.</summary>
+    /// <remarks>
+    /// Derived from the resource, like the route and the policy beside it, rather than stated by
+    /// each endpoint. Stated, it was the same string repeated for every endpoint over a resource -
+    /// and a wrong route 404s where a wrong tag just drops the endpoint out of its group in the
+    /// documentation, with nothing to say so.
+    /// </remarks>
+    protected virtual string EndpointTag => ResourceName;
+
     /// <summary>
     /// Gets the write policy for this endpoint.
     /// </summary>
@@ -73,7 +82,9 @@ public abstract class CrudUpdateEndpoint<TUpdateRequest, TDetail> : Endpoint<TUp
             s.Description = EndpointDescription;
         });
 
-        ConfigureEndpoint();
+        Description(x => x.WithTags(EndpointTag));
+
+    ConfigureEndpoint();
     }
 
     /// <summary>

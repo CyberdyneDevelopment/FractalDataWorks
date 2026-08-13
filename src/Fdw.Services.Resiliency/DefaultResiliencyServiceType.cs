@@ -34,7 +34,7 @@ public sealed class DefaultResiliencyServiceType : ResiliencyServiceTypeBase
     // "Unable to resolve IResiliencyPolicyProvider").
     // EmptyResiliencyPolicyProvider is a baseline implementation that reports no policies; callers
     // pass null policyId to bypass it. The full dual-source provider is tracked as FDW-400.
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.TryAddSingleton<IResiliencyPipelineFactory, ResiliencyPipelineFactory>();
             builder.Services.TryAddSingleton<IResiliencyPolicyProvider, EmptyResiliencyPolicyProvider>();

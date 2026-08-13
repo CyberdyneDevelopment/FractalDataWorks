@@ -50,7 +50,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             "Default authorization service with ASP.NET Core policy bridge and database-backed permissions",
             defaultContainerName: "Role")
     {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
 
             // Why: UserRoleConfigurationProvider must be registered before EffectivePermissionResolver
@@ -105,7 +105,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                 new DefaultConfigurationProvider<PermissionConfiguration, PermissionConfigurationCommand>(
                     sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<PermissionConfiguration, PermissionConfigurationCommand>>()!,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    dataStoreName, pathNameAuthz,
+                    DataStore, pathNameAuthz,
                     new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<PermissionConfiguration>>(sp =>
                 sp.GetRequiredService<DefaultConfigurationProvider<PermissionConfiguration, PermissionConfigurationCommand>>());
@@ -115,7 +115,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                 new DefaultConfigurationProvider<RolePermissionConfiguration, RolePermissionConfigurationCommand>(
                     sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<RolePermissionConfiguration, RolePermissionConfigurationCommand>>()!,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    dataStoreName, pathNameAuthz,
+                    DataStore, pathNameAuthz,
                     new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<RolePermissionConfiguration>>(sp =>
                 sp.GetRequiredService<DefaultConfigurationProvider<RolePermissionConfiguration, RolePermissionConfigurationCommand>>());

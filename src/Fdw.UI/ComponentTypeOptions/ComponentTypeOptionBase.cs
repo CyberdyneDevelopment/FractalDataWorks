@@ -37,6 +37,28 @@ public abstract class ComponentTypeOptionBase : TypeOptionBase<int, ComponentTyp
 
     /// <inheritdoc />
     public bool SkipRegistration { get; set; }
+    /// <summary>Gets or sets a value indicating whether Configure is switched off.</summary>
+    /// <remarks>
+    /// One flag per phase, because they are switched off for different reasons: a domain may
+    /// need its services registered while its post-Build wiring is suppressed, and a single flag
+    /// named for one phase silently governing the other two says something false about what it does.
+    /// </remarks>
+    public bool SkipConfiguration { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether Initialize is switched off.</summary>
+    public bool SkipInitialization { get; set; }
+
+    /// <summary>Gets a value indicating whether Configure has run.</summary>
+    /// <remarks>A phase runs once, and the option checks its own switch rather than trusting the
+    /// collection to filter it out - a component is reachable directly as well as through its
+    /// collection, and a switch only half its callers honour is not a switch.</remarks>
+    public bool Configured { get; private set; }
+
+    /// <summary>Gets a value indicating whether Register has run.</summary>
+    public bool Registered { get; private set; }
+
+    /// <summary>Gets a value indicating whether Initialize has run.</summary>
+    public bool Initialized { get; private set; }
 
     /// <summary>Gets the body run during Configure.</summary>
     protected Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> ConfigurationMethod { get; private set; }
@@ -55,19 +77,136 @@ public abstract class ComponentTypeOptionBase : TypeOptionBase<int, ComponentTyp
     public void Configuration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
         => ConfigurationMethod = method ?? throw new ArgumentNullException(nameof(method));
 
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>Prefer this to <see cref="Configuration"/>, which assigns and so discards anything
+    /// another contributor already chained.</remarks>
+    /// <param name="method">The body to run after.</param>
+    public void AppendConfiguration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = ConfigurationMethod;
+        ConfigurationMethod = (builder) =>
+        {
+            var result = existing(builder);
+            return result.IsFailure ? result : method(builder);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public void PrependConfiguration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = ConfigurationMethod;
+        ConfigurationMethod = (builder) =>
+        {
+            var result = method(builder);
+            return result.IsFailure ? result : existing(builder);
+        };
+    }
+
     /// <summary>Sets the body run during Register.</summary>
     /// <param name="method">The body.</param>
     public void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
         => RegistrationMethod = method ?? throw new ArgumentNullException(nameof(method));
+
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>Prefer this to <see cref="Registration"/>, which assigns and so discards anything
+    /// another contributor already chained.</remarks>
+    /// <param name="method">The body to run after.</param>
+    public void AppendRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = RegistrationMethod;
+        RegistrationMethod = (builder, loggerFactory) =>
+        {
+            var result = existing(builder, loggerFactory);
+            return result.IsFailure ? result : method(builder, loggerFactory);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public void PrependRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = RegistrationMethod;
+        RegistrationMethod = (builder, loggerFactory) =>
+        {
+            var result = method(builder, loggerFactory);
+            return result.IsFailure ? result : existing(builder, loggerFactory);
+        };
+    }
 
     /// <summary>Sets the body run during Initialize.</summary>
     /// <param name="method">The body.</param>
     public void Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
         => InitializationMethod = method ?? throw new ArgumentNullException(nameof(method));
 
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>Prefer this to <see cref="Initialization"/>, which assigns and so discards anything
+    /// another contributor already chained.</remarks>
+    /// <param name="method">The body to run after.</param>
+    public void AppendInitialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = InitializationMethod;
+        InitializationMethod = (host, loggerFactory) =>
+        {
+            var result = existing(host, loggerFactory);
+            return result.IsFailure ? result : method(host, loggerFactory);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public void PrependInitialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = InitializationMethod;
+        InitializationMethod = (host, loggerFactory) =>
+        {
+            var result = method(host, loggerFactory);
+            return result.IsFailure ? result : existing(host, loggerFactory);
+        };
+    }
+
     /// <inheritdoc />
-    public virtual IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder)
-        => ConfigurationMethod(builder);
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, bool force = false)
+    {
+        if (!force && (Configured || SkipConfiguration))
+        {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        var result = ConfigurationMethod(builder);
+        Configured = true;
+        return result;
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -85,14 +224,37 @@ public abstract class ComponentTypeOptionBase : TypeOptionBase<int, ComponentTyp
     /// <see cref="SkipRegistration"/> is honoured by the COLLECTION while cycling, not here: an
     /// option asked directly to register does so, because skipping is a composition decision.
     /// </remarks>
-    public virtual IGenericResult<IHostApplicationBuilder> Register(
+    /// <param name="builder">The host builder.</param>
+    /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <returns>The builder, or the failure that stopped it.</returns>
+    public IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
-        ILoggerFactory? loggerFactory = null)
-        => RegistrationMethod(builder, loggerFactory);
+        ILoggerFactory? loggerFactory = null,
+        bool force = false)
+    {
+        if (!force && (Registered || SkipRegistration))
+        {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        var result = RegistrationMethod(builder, loggerFactory);
+        Registered = true;
+        return result;
+    }
 
     /// <inheritdoc />
-    public virtual IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
-        => InitializationMethod(host, loggerFactory);
+    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
+    {
+        if (!force && (Initialized || SkipInitialization))
+        {
+            return GenericResult<IHost>.Success(host);
+        }
+
+        var result = InitializationMethod(host, loggerFactory);
+        Initialized = true;
+        return result;
+    }
 
     /// <summary>
     /// Derives an option's name from the component it declares.

@@ -72,7 +72,7 @@ public sealed class ChainedExternalIdentityProvisionerType
             return GenericResult<IHost>.Success(host);
         });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
 
             // Why: registers the header (ExternalIdentityProvisionerConfigurationProvider) config provider
@@ -83,8 +83,8 @@ public sealed class ChainedExternalIdentityProvisionerType
                 new ChainedExternalIdentityProvisionerConfigurationProvider(
                     sp.GetService<ILogger<ChainedExternalIdentityProvisionerConfigurationProvider>>()!,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    dataStoreName,
-                    pathName,
+                    DataStore,
+                    PathName,
                     new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
 
             // Why: the factory is a PURE constructor (logger only) — it holds no providers and resolves

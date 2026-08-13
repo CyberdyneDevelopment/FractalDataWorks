@@ -30,7 +30,7 @@ public sealed class SchemaClientType : ApiClientTypeBase<SchemaApiClient>
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
 
             // TableWizardProvider [Inject]s ISchemaProvider — without this the schema wizard crashes.

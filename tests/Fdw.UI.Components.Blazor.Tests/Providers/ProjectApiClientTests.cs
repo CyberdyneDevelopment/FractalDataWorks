@@ -38,7 +38,7 @@ public sealed class ProjectApiClientTests
         var handler = new MockHttpHandler().RespondWith("projects", items);
         var client = CreateClient(handler);
 
-        var result = await client.ListProjects();
+        var result = await client.ListProjects(TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -52,7 +52,7 @@ public sealed class ProjectApiClientTests
         var handler = new MockHttpHandler().RespondError("projects");
         var client = CreateClient(handler);
 
-        var result = await client.ListProjects();
+        var result = await client.ListProjects(TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
     }
@@ -69,7 +69,7 @@ public sealed class ProjectApiClientTests
         var handler = new MockHttpHandler().RespondWith($"projects/{projectId}", project);
         var client = CreateClient(handler);
 
-        var result = await client.GetProject(projectId);
+        var result = await client.GetProject(projectId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -84,7 +84,7 @@ public sealed class ProjectApiClientTests
         var handler = new MockHttpHandler().RespondError($"projects/{projectId}");
         var client = CreateClient(handler);
 
-        var result = await client.GetProject(projectId);
+        var result = await client.GetProject(projectId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
     }
@@ -99,7 +99,7 @@ public sealed class ProjectApiClientTests
         var handler = new MockHttpHandler().RespondOk($"projects/{projectId}");
         var client = CreateClient(handler);
 
-        var result = await client.DeleteProject(projectId);
+        var result = await client.DeleteProject(projectId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
     }
@@ -112,7 +112,7 @@ public sealed class ProjectApiClientTests
         var handler = new MockHttpHandler().RespondError($"projects/{projectId}");
         var client = CreateClient(handler);
 
-        var result = await client.DeleteProject(projectId);
+        var result = await client.DeleteProject(projectId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
     }
@@ -149,7 +149,7 @@ public sealed class ProjectApiClientTests
         var handler = new MockHttpHandler().RespondError($"executions/{executionId}");
         var client = CreateClient(handler);
 
-        var result = await client.GetExecutionStatus(executionId);
+        var result = await client.GetExecutionStatus(executionId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
     }

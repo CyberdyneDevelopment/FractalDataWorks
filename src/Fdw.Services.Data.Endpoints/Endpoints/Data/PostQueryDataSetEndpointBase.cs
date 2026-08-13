@@ -155,7 +155,7 @@ public abstract class PostQueryDataSetEndpointBase : Endpoint<PostQueryDataSetRe
         var queryResult = await _dataGateway
             .Execute<IEnumerable<ExpandoObject>>(
                 command,
-                new DataStoreTarget(primarySource.DataStoreName, primarySource.Path, primarySource.ContainerName),
+                new DataStoreTarget(primarySource.DataStoreName, primarySource.PathValue, primarySource.ContainerName),
                 ct)
             .ConfigureAwait(false);
 

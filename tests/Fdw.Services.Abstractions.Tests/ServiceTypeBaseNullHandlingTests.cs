@@ -88,7 +88,7 @@ public class ServiceTypeBaseNullHandlingTests
             : base("Test", "TestSection", "Test", "Test",
                    "Test")
         {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
                 return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

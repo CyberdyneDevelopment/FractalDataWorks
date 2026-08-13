@@ -38,7 +38,7 @@ public sealed class DataStoreProviderClientType : ApiClientTypeBase<IDataStorePr
     /// Initializes a new instance of the <see cref="DataStoreProviderClientType"/> class.
     /// </summary>
     public DataStoreProviderClientType() : base("DataStoreProviderClient", "DataStore Provider (Clients-backed)") {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.TryAddScoped<IServiceConfigurationProvider<DataStoreConfiguration>, ClientsDataStoreConfigurationProvider>();
             builder.Services.TryAddScoped<IDataStoreBuilderSelector, GenericBuilderSelector>();

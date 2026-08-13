@@ -50,8 +50,6 @@ public sealed class FileSystemConnectionType
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            var provider = (DefaultConnectionProvider)services.GetRequiredService<IConnectionProvider>();
-
             // Why: Typed body providers are registered with the header provider (ConnectionConfigurationProvider)
             // via discriminator dispatch. FileSystemConnectionConfiguration no longer inherits
             // ConnectionConfiguration — it implements IConnectionConfiguration directly.
@@ -70,7 +68,12 @@ public sealed class FileSystemConnectionType
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        // Why Append and not Registration: Registration REPLACES the phase body, and
+        // ConnectionTypeBase's constructor has already prepended this option's factory registration
+        // onto it. Replacing therefore silently discards the base's contribution — which is exactly
+        // how every connection kind stopped being creatable while each option's own wiring kept
+        // working and logging success. Appending composes onto what the base put there.
+        AppendRegistration((builder, loggerFactory) =>
         {
             builder.Services.AddSingleton<IFileSystemConnectionFactory, FileSystemConnectionFactory>();
             // Why (FDW-403 slice 2 follow-up): mirror Http/MsSql — register a typed
@@ -80,8 +83,8 @@ public sealed class FileSystemConnectionType
                 new FileSystemConnectionConfigurationProvider(
                     sp.GetService<ILogger<FileSystemConnectionConfigurationProvider>>() ?? NullLogger<FileSystemConnectionConfigurationProvider>.Instance,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    dataStoreName,
-                    pathName,
+                    DataStore,
+                    PathName,
                     new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<FileSystemConnectionConfiguration>>(
                 sp => sp.GetRequiredService<FileSystemConnectionConfigurationProvider>());

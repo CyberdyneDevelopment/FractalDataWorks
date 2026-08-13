@@ -122,9 +122,7 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
         if (configured.IsFailure)
             return configured;
 
-        var registered = option.Register(
-            builder, loggerFactory,
-            option.DefaultDataStoreName, option.DefaultPathName, option.DefaultContainerName);
+        var registered = option.Register(builder, loggerFactory);
         if (registered.IsFailure)
             return registered;
 

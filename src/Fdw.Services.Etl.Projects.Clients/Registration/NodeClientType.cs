@@ -28,7 +28,7 @@ public sealed class NodeClientType : ApiClientTypeBase<NodeApiClient>
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.AddScoped<NodeApiClient>(sp =>
             {

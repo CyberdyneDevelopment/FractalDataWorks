@@ -97,7 +97,16 @@ public interface IServiceType : IServiceType<Guid>, IServiceTypeRegistration
 
     /// <summary>Sets this option's Register body.</summary>
     /// <param name="method">The replacement delegate.</param>
-    void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, string, string, string, IGenericResult<IHostApplicationBuilder>> method);
+    void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method);
+
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>Prefer this to <see cref="Registration"/>, which discards what is already there.</remarks>
+    /// <param name="method">The body to run after.</param>
+    void AppendRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method);
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    void PrependRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method);
 
     /// <summary>Sets this option's Initialize body.</summary>
     /// <param name="method">The replacement delegate.</param>

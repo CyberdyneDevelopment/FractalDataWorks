@@ -266,4 +266,75 @@ public static partial class ServiceLogger
     [MessageLogging(EventId = 91011, Level = LogLevel.Error, Message = "Factory type '{factoryType}' for '{serviceOptionType}' is not registered in the container")]
     public static partial IGenericMessage FactoryTypeNotResolved(ILogger logger, string factoryType, string serviceOptionType);
 
+    // ── The factory-registry lifecycle ──────────────────────────────────────────────────────────
+    // Why these exist: the registry is what Get(name) dispatches on, and until now NOTHING on the
+    // path that fills it said anything. A registration that never happened and one that happened
+    // and was later discarded produced byte-identical logs — silence — which is how six connection
+    // kinds went unregistered through several releases without a single line naming the gap.
+    //
+    // Volume thins as severity rises, deliberately: Trace names every individual registration and
+    // where it came from, Debug and Information summarise per provider, and Critical fires once for
+    // the condition under which the domain cannot function at all.
+
+    /// <summary>
+    /// Logs, at the moment an option declares its factory, that the registration is deferred until
+    /// the container exists. Trace: one line per option per host — the finest grain there is.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="declaringType"/> is the type that performed the registration — a BASE class
+    /// registering on a derived option's behalf reports itself here, so the base's contribution and
+    /// the option's own are distinguishable in the log rather than both reading as "the option".
+    /// </remarks>
+    [MessageLogging(EventId = 11034, Level = LogLevel.Trace, Message = "Factory registration deferred by {declaringType} for service option '{serviceOptionType}': factory type '{factoryType}' resolves at provider construction")]
+    public static partial IGenericMessage FactoryRegistrationDeferred(ILogger logger, string declaringType, string serviceOptionType, string factoryType);
+
+    /// <summary>
+    /// Logs each deferred registration as the provider resolves it. Trace: one line per factory per
+    /// provider instance, naming what was resolved and into which provider.
+    /// </summary>
+    [MessageLogging(EventId = 11035, Level = LogLevel.Trace, Message = "{providerType} resolved factory '{factoryType}' for service option '{serviceOptionType}'")]
+    public static partial IGenericMessage FactoryResolvedIntoProvider(ILogger logger, string providerType, string factoryType, string serviceOptionType);
+
+    /// <summary>
+    /// Logs the outcome of draining the deferred registry into one provider instance. Debug: one
+    /// line per provider instance, summarising what Trace listed individually.
+    /// </summary>
+    [MessageLogging(EventId = 11036, Level = LogLevel.Debug, Message = "{providerType} drained {count} deferred factory registration(s): [{serviceOptionTypes}]")]
+    public static partial IGenericMessage ProviderFactoryRegistryDrained(ILogger logger, string providerType, int count, string serviceOptionTypes);
+
+    /// <summary>
+    /// Logs that a provider is ready to serve. Information: the milestone a reader scanning at
+    /// default verbosity needs to confirm the domain came up with the members it expected.
+    /// </summary>
+    [MessageLogging(EventId = 11037, Level = LogLevel.Information, Message = "{providerType} ready: {count} service option(s) creatable — [{serviceOptionTypes}]")]
+    public static partial IGenericMessage ProviderReady(ILogger logger, string providerType, int count, string serviceOptionTypes);
+
+    /// <summary>
+    /// Logs that a declared factory type could not be resolved from the container. Warning: the
+    /// option is loaded but unusable, which is a real defect for that kind and harmless for the rest.
+    /// </summary>
+    [MessageLogging(EventId = 61005, Level = LogLevel.Warning, Message = "{providerType}: factory type '{factoryType}' for service option '{serviceOptionType}' did not resolve from the container — '{serviceOptionType}' will not be creatable")]
+    public static partial IGenericMessage FactoryTypeUnresolvable(ILogger logger, string providerType, string factoryType, string serviceOptionType);
+
+    /// <summary>
+    /// Logs a factory lookup that missed, naming what IS registered. Error: one request failed, and
+    /// the registry contents are the single most useful fact for telling "never registered" apart
+    /// from "registered under a different discriminator".
+    /// </summary>
+    [MessageLogging(EventId = 61006, Level = LogLevel.Error, Message = "{providerType} has no factory for service option '{serviceOptionType}' (requested for '{name}'); registered: [{registered}]")]
+    public static partial IGenericMessage FactoryLookupMiss(ILogger logger, string providerType, string serviceOptionType, string name, string registered);
+
+    /// <summary>
+    /// Logs a provider constructed with an entirely empty factory registry. Critical: not one
+    /// service of this domain can ever be created by this instance, so every downstream failure is
+    /// a symptom of this line. Fires once per provider instance, never per request.
+    /// </summary>
+    /// <remarks>
+    /// Why Critical rather than Error: an Error says one operation failed; this says the domain is
+    /// inoperable for the lifetime of the instance. It is the boot-time condition a host would want
+    /// to fail fast on, and the line whose absence made this class of defect invisible.
+    /// </remarks>
+    [MessageLogging(EventId = 61007, Level = LogLevel.Critical, Message = "{providerType} was constructed with an EMPTY factory registry — no service option of this domain can be created. Every option's registration either never ran or was discarded before the provider was built.")]
+    public static partial IGenericMessage ProviderFactoryRegistryEmpty(ILogger logger, string providerType);
+
 }

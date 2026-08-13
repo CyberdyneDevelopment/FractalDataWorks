@@ -51,7 +51,7 @@ public sealed class SecretManagerTypeBaseTests
                 supportsTagging: supportsTagging,
                 priority: priority)
         {
-        Registration((builder, loggerFactory, dataStoreName, pathName, containerName) =>
+        Registration((builder, loggerFactory) =>
         {
                 return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

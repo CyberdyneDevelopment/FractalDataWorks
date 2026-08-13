@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Fdw.Collections;
 using Fdw.Results;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -13,10 +15,33 @@ namespace Fdw.UI.ComponentTypeOptions;
 /// Exists because <c>All()</c> is a generated STATIC on each derived collection, so no base and no
 /// service type can call it generically.
 /// </remarks>
-public interface IComponentTypeCollection
+public interface IComponentTypeCollection : IServiceTypeRegistration
 {
     /// <summary>Gets or sets a value indicating whether this whole domain should be passed over.</summary>
     bool SkipRegistration { get; set; }
+
+    /// <summary>Gets the data store this collection's configuration rows live in.</summary>
+    /// <remarks>
+    /// Declared here so a collection is a first-class member of a parent collection: the parent is
+    /// a ServiceTypeCollection, and its members must satisfy IServiceTypeRegistration. These three
+    /// are a property of a resource, not of a single component, which is why they belong at this level.
+    /// </remarks>
+    /// <summary>Gets this collection's identity as its parent collection sees it.</summary>
+    /// <remarks>
+    /// Narrowed from ITypeOption's object. A parent collection keys its members by Guid, and the
+    /// lookup it builds infers its key type from this property - left as object, the dictionary
+    /// comes out keyed by object and does not match the Guid one the parent declares.
+    /// </remarks>
+    new Guid Id { get; }
+
+    /// <summary>Gets the data store this collection's configuration rows live in.</summary>
+    new string DataStore { get; }
+
+    /// <summary>Gets the schema within that store.</summary>
+    new string PathName { get; }
+
+    /// <summary>Gets the table within that schema.</summary>
+    new string Container { get; }
 
     /// <summary>Gets the components declared against this collection, skipped ones included.</summary>
     IEnumerable<IComponentTypeOption> Members { get; }
@@ -32,20 +57,6 @@ public interface IComponentTypeCollection
     /// </remarks>
     IEnumerable<Assembly> ComponentAssemblies { get; }
 
-    /// <summary>Runs Configure for this domain, then for each component not skipped.</summary>
-    /// <param name="builder">The host builder.</param>
-    /// <returns>The builder, or the first failure encountered.</returns>
-    IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder);
 
-    /// <summary>Runs Register for this domain, then for each component not skipped.</summary>
-    /// <param name="builder">The host builder.</param>
-    /// <param name="loggerFactory">The logger factory, if the host has one yet.</param>
-    /// <returns>The builder, or the first failure encountered.</returns>
-    IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null);
 
-    /// <summary>Runs Initialize for this domain, then for each component not skipped.</summary>
-    /// <param name="host">The built host.</param>
-    /// <param name="loggerFactory">The logger factory.</param>
-    /// <returns>The host, or the first failure encountered.</returns>
-    IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null);
 }

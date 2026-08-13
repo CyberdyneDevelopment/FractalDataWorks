@@ -551,7 +551,7 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
                 {
                     Id = Guid.NewGuid(),
                     Name = dbObject.ObjectName,
-                    Path = $"{dbObject.SchemaName}.{dbObject.ObjectName}",
+                    PathValue = $"{dbObject.SchemaName}.{dbObject.ObjectName}",
                     PathType = "DatabasePath",
                     SourceDescription = null
                 };

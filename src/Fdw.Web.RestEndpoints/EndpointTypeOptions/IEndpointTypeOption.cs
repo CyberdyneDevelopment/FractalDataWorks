@@ -53,17 +53,20 @@ public interface IEndpointTypeOption : ITypeOption<int, EndpointTypeOptionBase>
     /// <summary>Runs this endpoint's Configure body.</summary>
     /// <param name="builder">The host builder.</param>
     /// <returns>The builder, or a failure the caller decides what to do with.</returns>
-    IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder);
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, bool force = false);
 
     /// <summary>Runs this endpoint's Register body.</summary>
     /// <param name="builder">The host builder.</param>
     /// <param name="loggerFactory">The logger factory, if the host has one yet.</param>
     /// <returns>The builder, or a failure the caller decides what to do with.</returns>
-    IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null);
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false);
 
     /// <summary>Runs this endpoint's Initialize body.</summary>
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">The logger factory.</param>
     /// <returns>The host, or a failure the caller decides what to do with.</returns>
-    IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null);
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false);
 }

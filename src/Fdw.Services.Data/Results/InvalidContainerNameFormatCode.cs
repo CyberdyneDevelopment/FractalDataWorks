@@ -16,7 +16,7 @@ public sealed class InvalidContainerNameFormatCode : DataServiceResultCodeBase
     /// </summary>
     public InvalidContainerNameFormatCode()
         : base(21013, "InvalidContainerNameFormat", ResultSeverities.ByName("Error"),
-            "Invalid container name format. Expected 'StoreName.PathName', got '{ContainerName}'",
+            "Invalid container name format. Expected 'StoreName.Path', got '{ContainerName}'",
             isRetryable: false)
     {
     }

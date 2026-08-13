@@ -374,7 +374,7 @@ public sealed class ODataSchemaImporterTests
         results[0].IsSuccess.ShouldBeTrue();
         var path = results[0].Value!;
         path.Name.ShouldBe("Widgets");
-        path.Path.ShouldBe("http://host/odata/Widgets");
+        path.PathValue.ShouldBe("http://host/odata/Widgets");
         path.PathType.ShouldBe("HttpPath");
         path.Containers.Count.ShouldBe(1);
         path.Containers[0].TypeId.ShouldBe("Endpoint");
@@ -445,7 +445,7 @@ public sealed class ODataSchemaImporterTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Containers[0].Fields.ShouldBeEmpty();
-        result.Value!.Path.ShouldBe("http://host/odata/Widgets");
+        result.Value!.PathValue.ShouldBe("http://host/odata/Widgets");
     }
 
     private static (string BaseUrl, string MetadataUrl) InvokeNormalizeMetadataUrl(string source)

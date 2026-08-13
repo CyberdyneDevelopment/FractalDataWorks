@@ -18,7 +18,12 @@ public class DataStorePathResponse
     public string PathType { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the actual path value.</summary>
-    public string Path { get; set; } = string.Empty;
+    /// <remarks>
+    /// Named PathValue and not Path: a member called Path shadows <see cref="System.IO.Path"/> inside
+    /// the declaring type, so <c>Path.Combine(...)</c> there resolves to this value and fails to
+    /// compile in a way that reads as nonsense.
+    /// </remarks>
+    public string PathValue { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the path description.</summary>
     public string? Description { get; set; }
