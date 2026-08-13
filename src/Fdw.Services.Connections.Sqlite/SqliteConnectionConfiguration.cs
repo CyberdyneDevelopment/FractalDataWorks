@@ -102,6 +102,6 @@ public partial class SqliteConnectionConfiguration : IConnectionConfiguration
     /// connection like any other; it is not a special-cased pair of columns.
     /// </remarks>
     [NotMapped]
-    [ConfigurationChildTable("SqliteConnectionAuthentication")]
+    [ConfigurationChildTable("SqliteConnectionProperty")]
     public IDictionary<string, string?> AdditionalProperties { get; set; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 }

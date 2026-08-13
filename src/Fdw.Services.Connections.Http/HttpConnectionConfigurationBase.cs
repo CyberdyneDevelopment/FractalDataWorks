@@ -133,7 +133,7 @@ public abstract class HttpConnectionConfigurationBase : IConnectionConfiguration
     /// [NotMapped] because the values live in the child KVP table, not columns on this row.
     /// </remarks>
     [NotMapped]
-    [Fdw.Data.ConfigurationChildTable("HttpConnectionAuthentication")]
+    [Fdw.Data.ConfigurationChildTable("HttpConnectionProperty")]
     public IDictionary<string, string?> AdditionalProperties { get; set; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>

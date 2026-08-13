@@ -144,7 +144,7 @@ public partial class PostgreSqlConnectionConfiguration : IConnectionConfiguratio
     /// [NotMapped] because the values live in the child KVP table, not a column on this row.
     /// </remarks>
     [NotMapped]
-    [ConfigurationChildTable("PostgreSqlConnectionAuthentication")]
+    [ConfigurationChildTable("PostgreSqlConnectionProperty")]
     public IDictionary<string, string?> AdditionalProperties { get; set; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
     #endregion

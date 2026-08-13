@@ -112,7 +112,7 @@ public partial class MsSqlConnectionConfiguration : IConnectionConfiguration
     /// The factory resolves the typed authentication instance via MsSqlAuthenticationTypes.ByName(AuthenticationType).
     /// </remarks>
     [NotMapped]
-    [ConfigurationChildTable("MsSqlConnectionAuthentication")]
+    [ConfigurationChildTable("MsSqlConnectionProperty")]
     public IDictionary<string, string?> AdditionalProperties { get; set; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
