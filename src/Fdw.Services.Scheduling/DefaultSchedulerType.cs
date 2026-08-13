@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.ServiceTypes;
+using Fdw.ServiceTypes.Logging;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
@@ -15,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Results;
 
 namespace Fdw.Services.Scheduling;
@@ -49,6 +51,8 @@ public sealed class DefaultSchedulerType
         {
             var services = host.Services;
             var provider = services.GetRequiredService<IFdwServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration>>();
+            var log = loggerFactory?.CreateLogger<DefaultSchedulerType>()
+                ?? NullLogger<DefaultSchedulerType>.Instance;
 
             var factory = services.GetRequiredService<ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>>();
             var factoryRegResult = provider.Register(Name, factory);
@@ -62,9 +66,28 @@ public sealed class DefaultSchedulerType
             var parentRegResult = provider.Register(configProvider);
             if (!factoryRegResult.IsSuccess || !configRegResult.IsSuccess || !parentRegResult.IsSuccess)
             {
+                // Why this exit is logged at Error and the success path at Trace: the exit returns
+                // SUCCESS to the host. Without a line here the scheduler simply does not come up and
+                // the host starts as though it had — the failure is knowable only at the first
+                // Get("DefaultScheduler"), long after anything can point back to this method. The
+                // three results are reported together because they take one exit; the reason names
+                // whichever of them actually refused.
+                ServiceTypeLog.OptionFactoryRegistrationFailed(
+                    log,
+                    nameof(DefaultSchedulerType),
+                    Name,
+                    nameof(DefaultSchedulingFactory),
+                    // Why the first FAILING result rather than the first non-null message: a result
+                    // that succeeded can still carry a message, so coalescing on messages would
+                    // report a success line as the reason the registration failed.
+                    (!factoryRegResult.IsSuccess ? factoryRegResult
+                        : !configRegResult.IsSuccess ? configRegResult
+                        : parentRegResult).CurrentMessage);
                 return GenericResult<IHost>.Success(host);
             }
-    
+
+            ServiceTypeLog.OptionFactoryRegistered(log, nameof(DefaultSchedulerType), Name, nameof(DefaultSchedulingFactory));
+
             return GenericResult<IHost>.Success(host);
         });
 
