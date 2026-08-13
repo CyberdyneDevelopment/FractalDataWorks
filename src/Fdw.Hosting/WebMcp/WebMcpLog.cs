@@ -7,7 +7,8 @@ namespace Fdw.Hosting.WebMcp;
 
 /// <summary>
 /// MessageLogging for WebMCP tool discovery and serving operations.
-/// EventId range: 7194-7201
+/// EventIds are categorized numbers (<c>Category = Id / 10000</c>), drawn from this package's open
+/// band: 11018-11031 informational/operational, 51002 auth, 61004-61005 configuration.
 /// </summary>
 [ExcludeFromCodeCoverage(Justification = "MessageLogging partial class - implementation is source-generated")]
 [MessageLoggingTypeCode("HOSTING")]
@@ -36,4 +37,36 @@ internal static partial class WebMcpLog
 
     [MessageLogging(EventId = 11023, Level = LogLevel.Debug, Message = "WebMCP agent request authenticated: '{label}' (userId={userId}) → {route}")]
     public static partial IGenericMessage AgentRequestAuthenticated(ILogger logger, string label, string userId, string route);
+
+    [MessageLogging(EventId = 11024, Level = LogLevel.Trace, Message = "WebMCP scanned assembly '{assemblyName}': {typeCount} type(s) examined")]
+    public static partial IGenericMessage AssemblyScanned(ILogger logger, string assemblyName, int typeCount);
+
+    [MessageLogging(EventId = 11025, Level = LogLevel.Trace, Message = "WebMCP route resolved for '{typeName}': '{route}' (via {strategy})")]
+    public static partial IGenericMessage RouteResolved(ILogger logger, string typeName, string route, string strategy);
+
+    [MessageLogging(EventId = 11026, Level = LogLevel.Trace, Message = "WebMCP HTTP method resolved for '{typeName}': {httpMethod} (via {strategy})")]
+    public static partial IGenericMessage HttpMethodResolved(ILogger logger, string typeName, string httpMethod, string strategy);
+
+    [MessageLogging(EventId = 11027, Level = LogLevel.Trace, Message = "WebMCP endpoint types resolved for '{typeName}': request={requestType}, response={responseType}")]
+    public static partial IGenericMessage EndpointTypesResolved(ILogger logger, string typeName, string requestType, string responseType);
+
+    [MessageLogging(EventId = 11028, Level = LogLevel.Trace, Message = "WebMCP generating script for {toolCount} tool(s)")]
+    public static partial IGenericMessage GeneratingScript(ILogger logger, int toolCount);
+
+    [MessageLogging(EventId = 11029, Level = LogLevel.Trace, Message = "WebMCP emitted tool '{name}': {httpMethod} {route} ({propertyCount} schema property/properties)")]
+    public static partial IGenericMessage ToolScriptEmitted(ILogger logger, string name, string httpMethod, string route, int propertyCount);
+
+    [MessageLogging(EventId = 11030, Level = LogLevel.Trace, Message = "WebMCP mapped schema property '{toolName}.{propertyName}' to type '{jsonType}' format '{format}'")]
+    public static partial IGenericMessage SchemaPropertyMapped(ILogger logger, string toolName, string propertyName, string jsonType, string format);
+
+    // Why the key value is never a parameter: this script is served publicly, and the whole point of
+    // logging here is to make the injection decision auditable without putting the secret in a log sink.
+    [MessageLogging(EventId = 11031, Level = LogLevel.Debug, Message = "WebMCP client API key injection for header '{headerName}': {injected}")]
+    public static partial IGenericMessage ClientKeyInjection(ILogger logger, string headerName, bool injected);
+
+    // Why Warning rather than a silent skip: an omitted property is invisible to the agent, which
+    // then cannot supply it and cannot be told why its call was incomplete. Saying so at build-up
+    // time is the difference between a known limitation and a mystery.
+    [MessageLogging(EventId = 61005, Level = LogLevel.Warning, Message = "WebMCP omitted schema property '{toolName}.{propertyName}' - CLR type '{clrType}' has no JSON Schema mapping, so an agent cannot supply it")]
+    public static partial IGenericMessage SchemaPropertySkipped(ILogger logger, string toolName, string propertyName, string clrType);
 }

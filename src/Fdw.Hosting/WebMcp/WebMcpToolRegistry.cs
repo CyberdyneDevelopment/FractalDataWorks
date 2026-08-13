@@ -37,105 +37,156 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
                     : [];
             }
 
+            WebMcpLog.AssemblyScanned(logger, assembly.GetName().Name ?? assembly.FullName ?? "unknown", types.Length);
+
             foreach (var type in types)
             {
-                if (type.IsAbstract || type.IsInterface)
+                var descriptor = DescribeTool(type, logger);
+                if (descriptor is null)
                 {
                     continue;
                 }
-
-                var toolAttr = type.GetCustomAttribute<WebMcpToolAttribute>();
-                if (toolAttr is null)
-                {
-                    continue;
-                }
-
-                WebMcpLog.DiscoveringTool(logger, type.FullName ?? type.Name);
-
-                var route = ResolveRoute(type);
-                if (route is null)
-                {
-                    WebMcpLog.ToolSkipped(logger, type.FullName ?? type.Name);
-                    continue;
-                }
-
-                var httpMethod = ResolveHttpMethod(type, toolAttr);
-                var (requestType, responseType) = ResolveTypeArguments(type);
-
-                var descriptor = new WebMcpToolDescriptor(
-                    toolAttr.Name,
-                    toolAttr.Description,
-                    route,
-                    httpMethod,
-                    toolAttr.ReadOnly,
-                    requestType,
-                    responseType);
 
                 _tools.Add(descriptor);
-                WebMcpLog.ToolDiscovered(logger, toolAttr.Name, route, httpMethod);
+                WebMcpLog.ToolDiscovered(logger, descriptor.Name, descriptor.Route, descriptor.HttpMethod);
             }
         }
 
         WebMcpLog.ToolsRegistered(logger, _tools.Count);
     }
 
+    /// <summary>
+    /// Builds the descriptor for one candidate type, or returns <see langword="null"/> when the type
+    /// is not a tool or its route cannot be resolved.
+    /// </summary>
+    private static WebMcpToolDescriptor? DescribeTool(Type type, ILogger logger)
+    {
+        if (type.IsAbstract || type.IsInterface)
+        {
+            return null;
+        }
+
+        var toolAttr = type.GetCustomAttribute<WebMcpToolAttribute>();
+        if (toolAttr is null)
+        {
+            return null;
+        }
+
+        WebMcpLog.DiscoveringTool(logger, type.FullName ?? type.Name);
+
+        var route = ResolveRoute(type, logger);
+        if (route is null)
+        {
+            WebMcpLog.ToolSkipped(logger, type.FullName ?? type.Name);
+            return null;
+        }
+
+        var (requestType, responseType) = ResolveTypeArguments(type);
+
+        WebMcpLog.EndpointTypesResolved(
+            logger,
+            type.FullName ?? type.Name,
+            requestType?.FullName ?? "none",
+            responseType?.FullName ?? "none");
+
+        return new WebMcpToolDescriptor(
+            toolAttr.Name,
+            toolAttr.Description,
+            route,
+            ResolveHttpMethod(type, toolAttr, logger),
+            toolAttr.ReadOnly,
+            requestType,
+            responseType);
+    }
+
     // ── Route resolution ────────────────────────────────────────────────────
 
-    private static string? ResolveRoute(Type endpointType)
+    /// <summary>
+    /// Maps a FastEndpoints attribute name to its HTTP verb. Keyed by name rather than type so this
+    /// project keeps no hard dependency on a particular FastEndpoints version.
+    /// </summary>
+    private static readonly Dictionary<string, string> HttpAttributeMethods = new(StringComparer.Ordinal)
     {
-        // Strategy 1: look for a public const or static string field named "Route"
+        ["HttpGetAttribute"] = "GET",
+        ["HttpPostAttribute"] = "POST",
+        ["HttpPutAttribute"] = "PUT",
+        ["HttpPatchAttribute"] = "PATCH",
+        ["HttpDeleteAttribute"] = "DELETE",
+    };
+
+    private static string? ResolveRoute(Type endpointType, ILogger logger)
+    {
+        var typeName = endpointType.FullName ?? endpointType.Name;
+
+        if (RouteFromField(endpointType) is { } fieldRoute)
+        {
+            WebMcpLog.RouteResolved(logger, typeName, fieldRoute, "static Route field");
+            return fieldRoute;
+        }
+
+        if (RouteFromProperty(endpointType) is { } propertyRoute)
+        {
+            WebMcpLog.RouteResolved(logger, typeName, propertyRoute, "static Route property");
+            return propertyRoute;
+        }
+
+        return RouteFromHttpAttribute(endpointType, logger);
+    }
+
+    /// <summary>Strategy 1: a public const or static string field named <c>Route</c>.</summary>
+    private static string? RouteFromField(Type endpointType)
+    {
         var routeField = endpointType.GetField(
             "Route",
             BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
 
-        if (routeField is not null && routeField.FieldType == typeof(string))
+        if (routeField is null || routeField.FieldType != typeof(string))
         {
-            var value = routeField.GetValue(null) as string;
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                return value;
-            }
+            return null;
         }
 
-        // Strategy 2: look for a public static string property named "Route"
+        return routeField.GetValue(null) as string is { } value && !string.IsNullOrWhiteSpace(value)
+            ? value
+            : null;
+    }
+
+    /// <summary>Strategy 2: a public static string property named <c>Route</c>.</summary>
+    private static string? RouteFromProperty(Type endpointType)
+    {
         var routeProp = endpointType.GetProperty(
             "Route",
             BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
 
-        if (routeProp is not null && routeProp.PropertyType == typeof(string))
+        if (routeProp is null || routeProp.PropertyType != typeof(string))
         {
-            var value = routeProp.GetValue(null) as string;
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                return value;
-            }
+            return null;
         }
 
-        // Strategy 3: look for a FastEndpoints [Http*] attribute by name
-        //   (avoids a hard dependency on FastEndpoints from this project)
+        return routeProp.GetValue(null) as string is { } value && !string.IsNullOrWhiteSpace(value)
+            ? value
+            : null;
+    }
+
+    /// <summary>
+    /// Strategy 3: a FastEndpoints <c>[Http*]</c> attribute, matched by attribute name so this
+    /// project keeps no hard dependency on a particular FastEndpoints version.
+    /// </summary>
+    private static string? RouteFromHttpAttribute(Type endpointType, ILogger logger)
+    {
         foreach (var attr in endpointType.GetCustomAttributes())
         {
             var attrType = attr.GetType();
-            var attrName = attrType.Name;
 
-            if (!string.Equals(attrName, "HttpGetAttribute", StringComparison.Ordinal)
-                && !string.Equals(attrName, "HttpPostAttribute", StringComparison.Ordinal)
-                && !string.Equals(attrName, "HttpPutAttribute", StringComparison.Ordinal)
-                && !string.Equals(attrName, "HttpPatchAttribute", StringComparison.Ordinal)
-                && !string.Equals(attrName, "HttpDeleteAttribute", StringComparison.Ordinal))
+            if (!HttpAttributeMethods.ContainsKey(attrType.Name))
             {
                 continue;
             }
 
-            // FastEndpoints Http* attributes expose a "Route" property
-            var routeAttrProp = attrType.GetProperty("Route");
-            if (routeAttrProp is not null)
+            if (attrType.GetProperty("Route")?.GetValue(attr) as string is { } value
+                && !string.IsNullOrWhiteSpace(value))
             {
-                var value = routeAttrProp.GetValue(attr) as string;
-                if (!string.IsNullOrWhiteSpace(value))
-                {
-                    return value;
-                }
+                WebMcpLog.RouteResolved(logger, endpointType.FullName ?? endpointType.Name, value, attrType.Name);
+                return value;
             }
         }
 
@@ -144,33 +195,44 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
 
     // ── HTTP method resolution ───────────────────────────────────────────────
 
-    private static string ResolveHttpMethod(Type endpointType, WebMcpToolAttribute toolAttr)
+    private static string ResolveHttpMethod(Type endpointType, WebMcpToolAttribute toolAttr, ILogger logger)
     {
+        var typeName = endpointType.FullName ?? endpointType.Name;
+
         // Explicit override wins
         if (!string.IsNullOrWhiteSpace(toolAttr.HttpMethod))
         {
-            return toolAttr.HttpMethod!.ToUpperInvariant();
+            var explicitMethod = toolAttr.HttpMethod!.ToUpperInvariant();
+            WebMcpLog.HttpMethodResolved(logger, typeName, explicitMethod, "WebMcpTool.HttpMethod");
+            return explicitMethod;
         }
 
         // Inspect FastEndpoints [Http*] attribute names
         foreach (var attr in endpointType.GetCustomAttributes())
         {
-            var name = attr.GetType().Name;
+            var attrName = attr.GetType().Name;
 
-            if (string.Equals(name, "HttpGetAttribute", StringComparison.Ordinal)) return "GET";
-            if (string.Equals(name, "HttpPostAttribute", StringComparison.Ordinal)) return "POST";
-            if (string.Equals(name, "HttpPutAttribute", StringComparison.Ordinal)) return "PUT";
-            if (string.Equals(name, "HttpPatchAttribute", StringComparison.Ordinal)) return "PATCH";
-            if (string.Equals(name, "HttpDeleteAttribute", StringComparison.Ordinal)) return "DELETE";
+            if (HttpAttributeMethods.TryGetValue(attrName, out var attributeMethod))
+            {
+                return Resolved(attributeMethod, attrName);
+            }
         }
 
         // Fall back to base class name heuristics
-        var typeName = endpointType.Name;
-        if (typeName.StartsWith("Create", StringComparison.OrdinalIgnoreCase)) return "POST";
-        if (typeName.StartsWith("Update", StringComparison.OrdinalIgnoreCase)) return "PUT";
-        if (typeName.StartsWith("Delete", StringComparison.OrdinalIgnoreCase)) return "DELETE";
+        if (endpointType.Name.StartsWith("Create", StringComparison.OrdinalIgnoreCase)) return Resolved("POST", "class-name heuristic");
+        if (endpointType.Name.StartsWith("Update", StringComparison.OrdinalIgnoreCase)) return Resolved("PUT", "class-name heuristic");
+        if (endpointType.Name.StartsWith("Delete", StringComparison.OrdinalIgnoreCase)) return Resolved("DELETE", "class-name heuristic");
 
-        return "GET";
+        // Why this is logged with its strategy named rather than returned quietly: GET here is a
+        // guess, not a declaration. Naming the strategy is what lets a wrong verb be spotted in a
+        // log instead of as a failing agent call.
+        return Resolved("GET", "default - no method declared");
+
+        string Resolved(string method, string strategy)
+        {
+            WebMcpLog.HttpMethodResolved(logger, typeName, method, strategy);
+            return method;
+        }
     }
 
     // ── Generic type argument resolution ────────────────────────────────────
