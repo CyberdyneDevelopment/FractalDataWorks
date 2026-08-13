@@ -209,6 +209,17 @@ public sealed class DefaultConnectionProvider
         if (!Factories.TryGetValue(serviceOptionType, out var factory))
         {
             ConnectionProviderLogger.ComposedHeaderNoFactory(_logger, serviceOptionType, header.Name);
+
+            // Why the registry contents travel with the miss: "no factory for 'MsSql'" cannot
+            // distinguish an empty registry from one holding a different discriminator, and those
+            // have opposite causes. Printing what IS registered answers that in the same line.
+            ServiceLogger.FactoryLookupMiss(
+                _logger,
+                GetType().Name,
+                serviceOptionType,
+                header.Name,
+                Factories.Count == 0 ? "<empty>" : string.Join(", ", Factories.Keys));
+
             return GenericResult<IGenericConnection>.Failure(
                 ServiceLogger.NoServiceTypeForOption(_logger, serviceOptionType, header.Name));
         }

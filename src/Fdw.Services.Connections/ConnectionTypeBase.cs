@@ -7,7 +7,9 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Fdw.Abstractions;
 using Fdw.Configuration;
@@ -73,6 +75,18 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
             DefaultConnectionProvider.Register(
                 Name,
                 sp => (IServiceFactory<IGenericConnection>)sp.GetRequiredService<TFactory>()!);
+
+            // Why the BASE logs under its own type: this registration is the base's contribution on
+            // the option's behalf, and the derived option logs its own wiring separately. Reading
+            // base-then-derived in SourceContext order is what makes it visible that BOTH ran — the
+            // absence of this line is precisely the signature of a derived option having replaced
+            // the phase body and discarded what the base contributed.
+            ServiceLogger.FactoryRegistrationDeferred(
+                loggerFactory?.CreateLogger<ConnectionTypeBase<TService, TFactory, TConfiguration>>()
+                    ?? NullLogger<ConnectionTypeBase<TService, TFactory, TConfiguration>>.Instance,
+                nameof(ConnectionTypeBase<TService, TFactory, TConfiguration>),
+                Name,
+                typeof(TFactory).Name);
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

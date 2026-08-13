@@ -7,6 +7,7 @@ using Fdw.Services.Abstractions.Health;
 using Fdw.Services.Configuration;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Commands;
+using Fdw.Services.Connections.Logging;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -32,8 +33,25 @@ public class ConnectionConfigurationProvider : DefaultConfigurationProvider<Conn
     /// non-default store/path, call <see cref="DefaultConfigurationProvider{TConfig,TCommand}.SetConfiguration"/>
     /// on the resolved singleton — never register a second time with different arguments.
     /// </summary>
-    public static void RegisterDomainConfiguration(IServiceCollection services)
+    /// <param name="services">The container to register this domain's configuration providers into.</param>
+    /// <param name="loggerFactory">
+    /// The caller's logger factory, when it has one. Optional because this is a static cascade
+    /// invoked from several places, not all of which hold a factory — but every caller that does
+    /// should pass it: without it this method is silent, and a silent registration step is exactly
+    /// what makes a missing registration undiagnosable from the log.
+    /// </param>
+    public static void RegisterDomainConfiguration(IServiceCollection services, ILoggerFactory? loggerFactory = null)
     {
+        // Why ILogger<ConnectionConfigurationProvider> and not a category string: the SourceContext
+        // then names the type this registration is FOR, so a reader sees which domain's providers
+        // these lines describe without decoding the message.
+        ILogger<ConnectionConfigurationProvider> logger =
+            loggerFactory?.CreateLogger<ConnectionConfigurationProvider>()
+            ?? NullLogger<ConnectionConfigurationProvider>.Instance;
+
+        ConnectionProviderLogger.DomainConfigurationRegistering(
+            logger, nameof(ConnectionConfigurationProvider));
+
         services.TryAddSingleton<ConnectionConfigurationProvider>(sp =>
             new ConnectionConfigurationProvider(
                 sp.GetService<ILogger<ConnectionConfigurationProvider>>()!,
@@ -81,6 +99,9 @@ public class ConnectionConfigurationProvider : DefaultConfigurationProvider<Conn
 
         // Why: IServiceConnectionProvider serves framework-internal connections (e.g. ConfigurationDb).
         services.TryAddSingleton<IServiceConnectionProvider, DefaultServiceConnectionProvider>();
+
+        ConnectionProviderLogger.DomainConfigurationRegistered(
+            logger, nameof(ConnectionConfigurationProvider));
     }
 
     /// <summary>Initializes a new instance of the <see cref="ConnectionConfigurationProvider"/> class.</summary>

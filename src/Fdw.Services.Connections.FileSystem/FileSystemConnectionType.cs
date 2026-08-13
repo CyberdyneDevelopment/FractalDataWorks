@@ -68,16 +68,14 @@ public sealed class FileSystemConnectionType
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        Registration((builder, loggerFactory) =>
+        // Why Append and not Registration: Registration REPLACES the phase body, and
+        // ConnectionTypeBase's constructor has already prepended this option's factory registration
+        // onto it. Replacing therefore silently discards the base's contribution — which is exactly
+        // how every connection kind stopped being creatable while each option's own wiring kept
+        // working and logging success. Appending composes onto what the base put there.
+        AppendRegistration((builder, loggerFactory) =>
         {
             builder.Services.AddSingleton<IFileSystemConnectionFactory, FileSystemConnectionFactory>();
-            // Why here and not Initialize: DefaultConnectionProvider is Scoped and dispatches on its
-            // own factory registry, so a factory nobody registers makes every Get(name) for this
-            // discriminator fail with "No registered service type matches ServiceOptionType". The
-            // deferred func is the registration form this phase is for: it needs no live container,
-            // and each scope's provider resolves it once in its constructor, so the registration
-            // outlives the startup scope.
-            DefaultConnectionProvider.Register(Name, sp => sp.GetRequiredService<IFileSystemConnectionFactory>());
             // Why (FDW-403 slice 2 follow-up): mirror Http/MsSql — register a typed
             // FileSystemConnectionConfigurationProvider so DefaultConnectionProvider can resolve
             // child config rows (conn.FileSystemConnection) by parent ConnectionId.

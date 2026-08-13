@@ -825,4 +825,29 @@ public static partial class ConnectionProviderLogger
     public static partial IGenericMessage ConnectionStaleOnCreation(
         ILogger<DefaultConnectionProvider> logger,
         string connectionName);
+
+    /// <summary>
+    /// Logs the start of the domain configuration cascade. Trace: the finest grain — it fires once
+    /// per option that calls the cascade, and the cascade is idempotent, so repeats are expected
+    /// and are themselves the evidence that every option is calling it.
+    /// </summary>
+    [MessageLogging(
+        EventId = 11016,
+        Level = LogLevel.Trace,
+        Message = "{providerType}: registering domain configuration (header provider, typed-config abstractions, health checkable, health service)")]
+    public static partial IGenericMessage DomainConfigurationRegistering(
+        ILogger<ConnectionConfigurationProvider> logger,
+        string providerType);
+
+    /// <summary>
+    /// Logs completion of the domain configuration cascade. Debug: one line summarising what the
+    /// Trace above announced, so a reader at Debug sees the step happened without the per-call noise.
+    /// </summary>
+    [MessageLogging(
+        EventId = 11017,
+        Level = LogLevel.Debug,
+        Message = "{providerType}: domain configuration registered (idempotent — first caller wins)")]
+    public static partial IGenericMessage DomainConfigurationRegistered(
+        ILogger<ConnectionConfigurationProvider> logger,
+        string providerType);
 }
