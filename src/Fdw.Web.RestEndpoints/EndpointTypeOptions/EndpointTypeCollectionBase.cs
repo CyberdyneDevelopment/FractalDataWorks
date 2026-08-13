@@ -75,17 +75,6 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// members themselves — which is what makes "this resource is broken, turn it off, turn it back
     /// on when it is fixed" a single decision rather than one per endpoint.
     /// </remarks>
-    /// <summary>Gets the documentation tag every endpoint in this collection appears under.</summary>
-    /// <remarks>
-    /// Declared by the collection because it is a property of the resource, not of any one endpoint.
-    /// Stated per endpoint it was the same string repeated nineteen times for connections and twelve
-    /// for datasets, where one omission drops that endpoint out of its group in the documentation and
-    /// nothing says so.
-    ///
-    /// Virtual with the collection's own name as the answer: a collection whose tag differs from its
-    /// name says so, and one whose does not says nothing.
-    /// </remarks>
-    public virtual string Tag => Name;
 
     /// <summary>Gets or sets a value indicating whether this whole resource is passed over.</summary>
     /// <remarks>Set this and every member goes with it, without touching the members themselves.</remarks>
@@ -399,10 +388,6 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
             }
 
             var beforeMember = builder.Services.Count;
-            // Why here rather than in the endpoint's own Configure: the collection is what knows the
-            // tag, and applying it while cycling means a member cannot be missed or spelled differently.
-            DeclaredEndpoints.Tag(member.EndpointType, Tag);
-
             var result = member.Register(builder, loggerFactory);
             if (result.IsFailure)
             {
