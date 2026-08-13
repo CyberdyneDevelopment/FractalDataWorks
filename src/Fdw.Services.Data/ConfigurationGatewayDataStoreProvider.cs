@@ -46,7 +46,10 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     /// Phase 1a: Configures IOptions bindings for DataStore configurations.
     /// Call before Build(). Configuration source must be added BEFORE calling this method.
     /// </summary>
-    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    /// <param name="builder">The host builder.</param>
+    /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
 
         // Why: ctrl-tier IDataStore tree (built by DataStoreLoader.BuildTreeFromFlatLists, used by
@@ -78,7 +81,10 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     /// Phase 1b: Registers required services (factories) for all data store types.
     /// Call before Build().
     /// </summary>
-    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    /// <param name="builder">The host builder.</param>
+    /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         var services = builder.Services;
         // Why: the DataStore domain registers the gateway-backed DataStoreConfigurationProvider it
@@ -157,7 +163,10 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     /// same three-phase shape every swept domain declares — the actual work (async config load) is in
     /// <see cref="LoadStores"/>, blocked-on here exactly once at startup.
     /// </remarks>
-    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    /// <param name="host">The built host.</param>
+    /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         // Why the scope: this provider is Scoped, so resolving it from the root provider throws under
         // Development ValidateScopes.

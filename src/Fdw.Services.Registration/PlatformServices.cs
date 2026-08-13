@@ -114,11 +114,14 @@ public static class PlatformServices
     /// <c>PlatformServices.Connection?.Configure(...)</c>), since <see cref="PlatformServiceEntry.Configure"/>
     /// is idempotent. Replaces the manual, per-domain <c>XxxServiceTypes.Configure(builder, loggerFactory)</c> calls.
     /// </summary>
+    /// <param name="builder">The host builder.</param>
+    /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
     // Why the sweep stops at the first failing domain: the domains after it are ordered AFTER it
     // because they may depend on it. Continuing would register them against a dependency that is not
     // there, turning one legible failure into a cascade of unrelated-looking ones. The caller gets the
     // first failure, which is the one that explains the rest.
-    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         EnsureFrozen();
         foreach (var entry in _frozenOrder)
@@ -144,7 +147,10 @@ public static class PlatformServices
     /// <c>PlatformServices.Connection?.Register(...)</c>), since <see cref="PlatformServiceEntry.Register"/>
     /// is idempotent. Replaces the manual, per-domain <c>XxxServiceTypes.Register(services, loggerFactory)</c> calls.
     /// </summary>
-    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    /// <param name="builder">The host builder.</param>
+    /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         EnsureFrozen();
         foreach (var entry in _frozenOrder)
@@ -165,7 +171,10 @@ public static class PlatformServices
     /// <c>PlatformServices.Connection?.Initialize(...)</c>), since <see cref="PlatformServiceEntry.Initialize"/>
     /// is idempotent. Replaces the manual, per-domain <c>XxxServiceTypes.Initialize(host, loggerFactory)</c> calls.
     /// </summary>
-    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    /// <param name="host">The built host.</param>
+    /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         EnsureFrozen();
         foreach (var entry in _frozenOrder)
