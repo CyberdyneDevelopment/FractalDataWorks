@@ -974,4 +974,218 @@ public static partial class ServiceTypeLog
         string optionName,
         string phase,
         string setter);
+
+    // ── The domain-registration pyramid ─────────────────────────────────────────────────────────
+    // DefaultServiceProvider already narrates the FACTORY registry: which factories it resolved, how
+    // many it drained, and — Critical — when it drained none. It cannot narrate anything above that,
+    // because it is one generic type shared by ~12 domains and it is constructed long after the
+    // decisions that determine what it will find. Three facts live only up here, in the collection:
+    //
+    //   * how many options the domain swept, and which — the provider sees only what survived
+    //   * which concrete provider was bound to which DI service type — the key a consumer injects
+    //   * whether the domain's configuration source was ever registered — the provider's own
+    //     constructor never learns that one was SUPPOSED to be, so a provider with no parent looks
+    //     to it exactly like a provider that does not need one
+    //
+    // These live in ONE place, not per domain, for the reason the catalog gives: the same logical
+    // meaning must be the same number everywhere. Every collection passes its own name, and calls
+    // them through an ILogger<TCollection>, so SourceContext names the collection while the EventId
+    // stays constant across all of them.
+    //
+    // Volume thins as severity rises: Trace per declaration and per provider construction, Debug for
+    // the per-domain summaries, Information for the one milestone a default-verbosity reader needs,
+    // and the category-6 tier for the setup faults — a registration that did not happen is a
+    // boot-time configuration fault, not an unexpected internal one.
+
+    /// <summary>
+    /// Logs that a collection has declared its domain provider with the container. Trace: one line
+    /// per domain per host, at the moment the declaration is made rather than when it is honoured.
+    /// </summary>
+    /// <remarks>
+    /// The pair to <c>DomainProviderConstructing</c>. Seeing this line without ever seeing that one
+    /// means nothing in the host ever asked the domain for a service — which is a different problem
+    /// from the domain being unable to serve, and the two are otherwise indistinguishable.
+    /// </remarks>
+    /// <remarks>
+    /// Why this names the DI service type and not the concrete provider, while the construction line
+    /// below does the opposite: at declaration time the contract is the only thing that exists, and it
+    /// is the thing a consumer has to inject. The concrete type is reported where there is an instance
+    /// to report it from. Each line names what it actually has rather than restating a compile-time
+    /// generic that no one at that point has yet built.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 11060,
+        Level = LogLevel.Trace,
+        Message = "[{collectionName}] declared its domain provider for DI service type '{providerServiceType}'; construction deferred to first scope")]
+    public static partial IGenericMessage DomainProviderDeclared(
+        ILogger logger,
+        string collectionName,
+        string providerServiceType);
+
+    /// <summary>
+    /// Logs each construction of the domain provider. Trace: one line per scope per domain — the
+    /// highest-volume line in this set, and the only one that says a scope actually wanted the domain.
+    /// </summary>
+    [MessageLogging(
+        EventId = 11061,
+        Level = LogLevel.Trace,
+        Message = "[{collectionName}] constructing domain provider '{providerType}' for this scope")]
+    public static partial IGenericMessage DomainProviderConstructing(
+        ILogger logger,
+        string collectionName,
+        string providerType);
+
+    /// <summary>
+    /// Logs the outcome of the option sweep. Debug: one line per domain per host, summarising what
+    /// the per-option Trace lines listed individually.
+    /// </summary>
+    [MessageLogging(
+        EventId = 11062,
+        Level = LogLevel.Debug,
+        Message = "[{collectionName}] option sweep completed: {count} option(s) — [{optionNames}]")]
+    public static partial IGenericMessage DomainOptionSweepCompleted(
+        ILogger logger,
+        string collectionName,
+        int count,
+        string optionNames);
+
+    /// <summary>
+    /// Logs that the domain provider took its configuration source. Debug: one line per scope per
+    /// domain, and the positive counterpart of <c>DomainHasNoConfigurationSource</c>.
+    /// </summary>
+    [MessageLogging(
+        EventId = 11063,
+        Level = LogLevel.Debug,
+        Message = "[{collectionName}] domain provider '{providerType}' took '{configurationProviderType}' as its configuration source")]
+    public static partial IGenericMessage DomainConfigurationSourceAttached(
+        ILogger logger,
+        string collectionName,
+        string providerType,
+        string configurationProviderType);
+
+    /// <summary>
+    /// Logs that a domain finished phase 2. Information: the one milestone per domain a reader at
+    /// default verbosity needs — what came up, with which options, and behind which DI service type.
+    /// </summary>
+    /// <remarks>
+    /// The DI service type is carried because "the domain registered" is not actionable without it:
+    /// the failure this whole set exists to make visible reads as a service option being unknown, and
+    /// the first thing that answers it is knowing which provider a consumer is actually injecting.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 11064,
+        Level = LogLevel.Information,
+        Message = "[{collectionName}] registered: {count} service option(s) — [{optionNames}]; consumers reach them through '{providerServiceType}'")]
+    public static partial IGenericMessage DomainRegistered(
+        ILogger logger,
+        string collectionName,
+        int count,
+        string optionNames,
+        string providerServiceType);
+
+    /// <summary>
+    /// Logs an option registering its factory with an already-live domain provider. Trace: one line
+    /// per option that wires itself during Initialize rather than Register.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="declaringType"/> is the type that performed the registration, so a base
+    /// registering on a derived option's behalf is distinguishable from the option's own wiring.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 11065,
+        Level = LogLevel.Trace,
+        Message = "{declaringType} registered factory '{factoryType}' for service option '{optionName}' with the live domain provider")]
+    public static partial IGenericMessage OptionFactoryRegistered(
+        ILogger logger,
+        string declaringType,
+        string optionName,
+        string factoryType);
+
+    /// <summary>
+    /// Logs a domain whose provider is registered but which swept no options at all.
+    /// </summary>
+    /// <remarks>
+    /// Warning, and the textbook case for that tier: the domain LOADED — its provider is resolvable
+    /// and every consumer injecting it will get one — but it is unusable, because a provider with no
+    /// options can create nothing. It is not Critical here because nothing has asked yet; a host may
+    /// legitimately reference a domain's package without referencing any of its option packages.
+    /// The moment something does ask, <c>DefaultServiceProvider</c> reports the empty registry at
+    /// Critical, and this line is what says whether the options were never declared (this fired) or
+    /// declared and then lost (this did not).
+    /// </remarks>
+    [MessageLogging(
+        EventId = 61016,
+        Level = LogLevel.Warning,
+        Message = "[{collectionName}] registered '{providerServiceType}' but swept ZERO options — the provider is resolvable and can create nothing. Reference the package(s) declaring this domain's [ServiceTypeOption] types.")]
+    public static partial IGenericMessage DomainRegisteredWithNoOptions(
+        ILogger logger,
+        string collectionName,
+        string providerServiceType);
+
+    /// <summary>
+    /// Logs a domain provider refusing the configuration source it was offered.
+    /// </summary>
+    /// <remarks>
+    /// Error: one operation failed. Both participating types are named because the two causes look
+    /// identical from the message alone — the provider rejecting a source it cannot use, and the
+    /// wrong source having been resolved for it — and they have opposite fixes.
+    /// </remarks>
+    /// <remarks>
+    /// <paramref name="reason"/> is nullable because <c>CurrentMessage</c> is: a refusal that carried
+    /// no message is a different fact from one that carried an empty one, and substituting a stand-in
+    /// string here would erase the difference at the only place it is visible.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 61017,
+        Level = LogLevel.Error,
+        Message = "[{collectionName}] domain provider '{providerType}' refused '{configurationProviderType}' as its configuration source: {reason}")]
+    public static partial IGenericMessage DomainConfigurationSourceRejected(
+        ILogger logger,
+        string collectionName,
+        string providerType,
+        string configurationProviderType,
+        string? reason);
+
+    /// <summary>
+    /// Logs a domain provider constructed with no configuration source at all.
+    /// </summary>
+    /// <remarks>
+    /// Critical, for the same reason an empty factory registry is: this instance cannot resolve a
+    /// single configuration row for the rest of its scope, so every <c>Get(name)</c> on it fails and
+    /// every one of those failures is a symptom of this line. It is reported HERE and not by the
+    /// provider because the provider cannot know the difference — a null parent is simply what it
+    /// was constructed with, whereas the collection is the thing that knows one was meant to arrive.
+    /// </remarks>
+    /// <remarks>
+    /// Category 6, not 9: the configuration provider is missing because nothing registered it, which
+    /// is a setup fault in how the host was composed — not an unexpected internal condition.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 61018,
+        Level = LogLevel.Critical,
+        Message = "[{collectionName}] no '{configurationProviderType}' is registered, so domain provider '{providerType}' has NO configuration source — every lookup by name on this domain fails for the life of this scope.")]
+    public static partial IGenericMessage DomainHasNoConfigurationSource(
+        ILogger logger,
+        string collectionName,
+        string providerType,
+        string configurationProviderType);
+
+    /// <summary>
+    /// Logs an option failing to register its factory with an already-live domain provider.
+    /// </summary>
+    /// <remarks>
+    /// Error, and it carries the option and factory names because the failure is otherwise invisible:
+    /// these registrations happen during Initialize, where several call sites still return success to
+    /// the host afterwards. Without this line the domain simply comes up one option short.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 61019,
+        Level = LogLevel.Error,
+        Message = "{declaringType} could not register factory '{factoryType}' for service option '{optionName}': {reason}. '{optionName}' will not be creatable.")]
+    public static partial IGenericMessage OptionFactoryRegistrationFailed(
+        ILogger logger,
+        string declaringType,
+        string optionName,
+        string factoryType,
+        string? reason);
 }

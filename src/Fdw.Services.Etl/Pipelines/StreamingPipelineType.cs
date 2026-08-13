@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Fdw.Collections;
 using Fdw.Data.Abstractions;
@@ -11,6 +12,7 @@ using Fdw.Abstractions;
 using Fdw.Configuration;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.ServiceTypes.Logging;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl;
@@ -68,6 +70,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
         {
             var services = host.Services;
             var provider = services.GetRequiredService<IFdwServiceProvider<IEtlPipeline, PipelineConfiguration>>();
+            var log = loggerFactory?.CreateLogger<StreamingPipelineType>() ?? NullLogger<StreamingPipelineType>.Instance;
 
             // Resolve factory from DI (registered in Phase 1)
             var factory = services.GetRequiredService<IStreamingPipelineFactory>();
@@ -75,7 +78,24 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             // Register factory instance with provider
             var factoryResult = provider.Register(Name, factory);
             if (!factoryResult.IsSuccess)
+            {
+                // Why this exit is logged at Error: it returns SUCCESS to the host. Without a line
+                // here this engine simply is not creatable and the host starts as though it were —
+                // the gap surfaces only at the first pipeline run, far from the method that caused it.
+                ServiceTypeLog.OptionFactoryRegistrationFailed(
+                    log,
+                    nameof(StreamingPipelineType),
+                    Name,
+                    nameof(IStreamingPipelineFactory),
+                    factoryResult.CurrentMessage);
                 return GenericResult<IHost>.Success(host);
+            }
+
+            ServiceTypeLog.OptionFactoryRegistered(
+                log,
+                nameof(StreamingPipelineType),
+                Name,
+                nameof(IStreamingPipelineFactory));
 
             // Why: Resolve from DI — provider was registered with Lazy<IConfigurationGateway> in the option's Register phase.
             // Not registered with the runtime IFdwServiceProvider (typed to the ETL-kind EtlPipelineConfiguration,

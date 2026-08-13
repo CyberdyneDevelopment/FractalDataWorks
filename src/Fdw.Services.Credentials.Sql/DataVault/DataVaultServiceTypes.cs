@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
+using System.Linq;
 using Fdw.Results;
 using Microsoft.Extensions.Hosting;
 
@@ -48,8 +49,16 @@ public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
     static DataVaultServiceTypes()
     {
         var sweepOptions = RegisterFunc;
+
+        // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
+        // three points below — the deferred declaration, the milestone, and the zero-option warning.
+        // Written out three times it is three chances for them to disagree.
+        var providerService = typeof(IDataVaultProvider).ToString();
+
         Registration((builder, loggerFactory) =>
         {
+            var log = loggerFactory?.CreateLogger<DataVaultServiceTypes>() ?? NullLogger<DataVaultServiceTypes>.Instance;
+
             // Why the result is read: this replacement calls the func it captured, and discarding
             // what that returned meant an option that failed to register was followed by this body
             // registering the provider anyway and reporting success.
@@ -57,13 +66,26 @@ public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
             if (registered.IsFailure)
                 return registered;
 
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionSweepCompleted(log, nameof(DataVaultServiceTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(DataVaultServiceTypes), providerService);
+
             builder.Services.AddScoped<IDataVaultProvider>(sp =>
             {
                 var provider = new DefaultDataVaultProvider(
                     sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultDataVaultProvider>()
                     ?? NullLogger<DefaultDataVaultProvider>.Instance);
-                var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger("DataVaultServiceTypes");
+
+                // Why ILogger<DataVaultServiceTypes> and not CreateLogger("DataVaultServiceTypes"): SourceContext then
+                // carries the namespace-qualified collection, and the category cannot drift from the
+                // type it claims to name. The provider logs its own lines under its own type, so the
+                // two layers read base-then-derived rather than collapsing onto one category.
+                var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<DataVaultServiceTypes>()
+                    ?? NullLogger<DataVaultServiceTypes>.Instance;
+                ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(DataVaultServiceTypes), provider.GetType().Name);
                 try
                 {
                     if (sp.GetService<IServiceConfigurationProvider<DataVaultConfiguration>>() is { } cfgProvider)
@@ -71,19 +93,42 @@ public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
                         var parentResult = provider.Register(cfgProvider);
-                        if (!parentResult.IsSuccess && stLogger != null)
-                            ServiceTypeLog.FactoryRegistrationFailed(stLogger, "DataVaultServiceTypes", parentResult.CurrentMessage ?? "DataVaultServiceTypes");
+                        if (parentResult.IsSuccess)
+                            ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(DataVaultServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name);
+                        else
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(DataVaultServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                    }
+                    else
+                    {
+                        // Why Critical, and why the collection says it rather than the provider: from
+                        // inside the provider a null parent is indistinguishable from a domain that needs
+                        // none. This is the one place that knows one was meant to arrive, and without it
+                        // the domain fails every lookup by name for the life of the scope with nothing
+                        // pointing back here.
+                        ServiceTypeLog.DomainHasNoConfigurationSource(
+                            stLogger,
+                            nameof(DataVaultServiceTypes),
+                            provider.GetType().Name,
+                            typeof(IServiceConfigurationProvider<DataVaultConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)
                 {
                     // Why rethrow: a throw here was previously silent, and a provider that failed to take
                     // its parent is unusable in a way that only surfaces much later.
-                    if (stLogger != null) ServiceTypeLog.FactoryRegistrationException(stLogger, ex, "DataVaultServiceTypes");
+                    ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(DataVaultServiceTypes));
                     throw;
                 }
                 return provider;
             });
+
+            // Why the milestone comes after the registration and not before: it states that the domain
+            // finished phase 2, which is only true once the provider is actually in the container.
+            if (declaredOptions.Length == 0)
+                ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(DataVaultServiceTypes), providerService);
+            else
+                ServiceTypeLog.DomainRegistered(log, nameof(DataVaultServiceTypes), declaredOptions.Length, optionNames, providerService);
+
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
     }
