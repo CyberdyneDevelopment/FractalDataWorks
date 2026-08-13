@@ -55,4 +55,11 @@ public static partial class EndpointRegistrationLog
         Level = LogLevel.Information,
         Message = "[{groupName}] SKIPPED entirely — SkipRegistration is set on the group")]
     public static partial IGenericMessage GroupSkipped(ILogger logger, string groupName);
+
+    /// <summary>Logged when the registration chain completes having declared no endpoint at all.</summary>
+    [MessageLogging(
+        EventId = 91014,
+        Level = LogLevel.Error,
+        Message = "No endpoint declared itself. Every group registered without contributing an endpoint type, so there is nothing to hand FastEndpoints.")]
+    public static partial IGenericMessage NoEndpointsDeclared(ILogger logger);
 }

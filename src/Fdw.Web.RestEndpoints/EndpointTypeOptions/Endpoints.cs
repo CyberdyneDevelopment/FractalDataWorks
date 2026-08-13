@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Web.RestEndpoints.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
@@ -91,14 +93,30 @@ public partial class Endpoints : ServiceTypeCollectionBase<IEndpointTypeCollecti
                 }
             }
 
+            // Why the count is checked rather than left to fail later: with nothing declared,
+            // AddFastEndpoints throws its own "unable to find any endpoint declarations", which says
+            // nothing about which step went wrong. An application that reaches here having registered
+            // no endpoint has a broken registration chain, and this names it.
+            if (DeclaredEndpoints.Count == 0)
+            {
+                return GenericResult<IHostApplicationBuilder>.Failure(
+                    EndpointRegistrationLog.NoEndpointsDeclared(
+                        loggerFactory?.CreateLogger(nameof(Endpoints)) ?? NullLogger.Instance));
+            }
+
             builder.Services.AddFastEndpoints(o =>
             {
-                // Why discovery is off: an endpoint is registered because its collection declared it.
-                // Scanning would add every endpoint type in every loaded assembly regardless of
-                // whether any collection claims it, which is the opposite of the switch these
-                // collections exist to provide.
+                // Why discovery is off and the types are handed over instead: an endpoint is
+                // registered because its collection declared it. Scanning would add every endpoint
+                // type in every loaded assembly regardless of whether a collection claims it, which
+                // is the opposite of the switch these collections exist to provide.
+                //
+                // FastEndpoints offers no per-endpoint registration call. With auto-discovery off the
+                // only way in is this list, which is why DeclaredEndpoints exists - each option adds
+                // its own type as it registers, and this is where the collection gets passed across.
+                // Filter is not used: it narrows what discovery found, and there is no discovery.
                 o.DisableAutoDiscovery = true;
-                o.Filter = DeclaredEndpoints.IsDeclared;
+                o.SourceGeneratorDiscoveredTypes.AddRange(DeclaredEndpoints.Types);
             });
 
             builder.Services.AddHttpContextAccessor();
