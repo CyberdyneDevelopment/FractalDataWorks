@@ -121,6 +121,38 @@ public static partial class AegisLog
         Message = "Required value '{name}' was not provided.")]
     public static partial IGenericMessage RequiredValueMissing(ILogger logger, string name);
 
+    // ── Host registration phases ────────────────────────────────────────────────────────────────
+    // Why this host logs its phases at all: it registers secret managers and nothing else, so when a
+    // phase fails silently the first symptom is a secret that will not resolve — a runtime error far
+    // from the startup step that actually broke. Volume thins as severity rises: Trace names each
+    // phase as it begins, Debug reports it completing, Critical fires when one fails, because a
+    // failed phase means this host cannot serve a single secret for the rest of its life.
+
+    /// <summary>Trace: one line per phase as it begins. The finest grain — three lines per startup.</summary>
+    [MessageLogging(
+        EventId = 11011,
+        Level = LogLevel.Trace,
+        Message = "Aegis host phase '{phase}' starting")]
+    public static partial IGenericMessage HostPhaseStarting(ILogger logger, string phase);
+
+    /// <summary>Debug: the phase finished and the host may proceed to the next one.</summary>
+    [MessageLogging(
+        EventId = 11012,
+        Level = LogLevel.Debug,
+        Message = "Aegis host phase '{phase}' completed")]
+    public static partial IGenericMessage HostPhaseCompleted(ILogger logger, string phase);
+
+    /// <summary>
+    /// Critical: the phase failed, so this host's secret managers are not registered and no secret
+    /// can be resolved for the lifetime of the process. Carries the underlying reason rather than
+    /// restating the phase, because the inner failure already names what actually broke.
+    /// </summary>
+    [MessageLogging(
+        EventId = 61000,
+        Level = LogLevel.Critical,
+        Message = "Aegis host phase '{phase}' FAILED — secret managers are not registered and no secret can be resolved: {reason}")]
+    public static partial IGenericMessage HostPhaseFailed(ILogger logger, string phase, string? reason);
+
     /// <summary>Logs that a submitted parameter is not permitted by the command's allow-list.</summary>
     [MessageLogging(
         EventId = 21000,

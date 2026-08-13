@@ -333,9 +333,9 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
 
     /// <inheritdoc />
     /// <remarks>
-    /// The collection that sweeps this option — <c>ConnectionTypes</c> and the rest — is written by
+    /// The collection that collects this option — <c>ConnectionTypes</c> and the rest — is written by
     /// <c>ServiceTypeCollectionGenerator</c> from the <c>[ServiceTypeCollection]</c> attribute, not by
-    /// hand. It is that generated sweep which calls this, in the order the log line reports.
+    /// hand. It is that generated collect which calls this, in the order the log line reports.
     /// </remarks>
     public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
@@ -346,13 +346,24 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
 
         var result = RunPhase(loggerFactory, "Configure", ServiceTypePhaseSequence.Configure,
             () => ConfigurationMethod(builder));
+        // Why the latch is only set on success: this flag is what makes the phase run-once, and the
+        // early return above turns an already-latched phase into an unconditional Success. Setting it
+        // after a failure therefore records a phase that did not happen as done, and every later call
+        // reports success for work that never ran - the failure is logged once and then permanently
+        // papered over. Returning first leaves the phase un-latched so a caller that retries actually
+        // retries.
+        if (result.IsFailure)
+        {
+            return result;
+        }
+
         Configured = true;
         return result;
     }
 
     /// <inheritdoc />
     /// <remarks>
-    /// Called by the generated collection's phase-2 sweep. Where the collection declares a
+    /// Called by the generated collection's phase-2 collect. Where the collection declares a
     /// <c>ProviderType</c>, the generated part registers that provider independently of this call.
     /// </remarks>
     public IGenericResult<IHostApplicationBuilder> Register(
@@ -367,13 +378,24 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
 
         var result = RunPhase(loggerFactory, "Register", ServiceTypePhaseSequence.Register,
             () => RegistrationMethod(builder, loggerFactory));
+        // Why the latch is only set on success: this flag is what makes the phase run-once, and the
+        // early return above turns an already-latched phase into an unconditional Success. Setting it
+        // after a failure therefore records a phase that did not happen as done, and every later call
+        // reports success for work that never ran - the failure is logged once and then permanently
+        // papered over. Returning first leaves the phase un-latched so a caller that retries actually
+        // retries.
+        if (result.IsFailure)
+        {
+            return result;
+        }
+
         Registered = true;
         return result;
     }
 
     /// <inheritdoc />
     /// <remarks>
-    /// Called by the generated collection's phase-3 sweep, after the host has been built.
+    /// Called by the generated collection's phase-3 collect, after the host has been built.
     /// </remarks>
     public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
     {
@@ -384,6 +406,17 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
 
         var result = RunPhase(loggerFactory, "Initialize", ServiceTypePhaseSequence.Initialize,
             () => InitializationMethod(host, loggerFactory));
+        // Why the latch is only set on success: this flag is what makes the phase run-once, and the
+        // early return above turns an already-latched phase into an unconditional Success. Setting it
+        // after a failure therefore records a phase that did not happen as done, and every later call
+        // reports success for work that never ran - the failure is logged once and then permanently
+        // papered over. Returning first leaves the phase un-latched so a caller that retries actually
+        // retries.
+        if (result.IsFailure)
+        {
+            return result;
+        }
+
         Initialized = true;
         return result;
     }
@@ -395,7 +428,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     // the process ends. A framework does not get to make that call — the host may want to abort on a
     // failed domain or run without it, and it can only choose if the failure arrives as a value. The
     // catch is the boundary where an option that still throws is converted into the result everything
-    // above this expects, so one badly-behaved option cannot unwind a sweep that was handling failures.
+    // above this expects, so one badly-behaved option cannot unwind a collect that was handling failures.
     //
     // A body that returns a failure is passed through untouched: it already carries its own domain's
     // code, which is more specific than anything this could substitute. Only the throw needs a code.

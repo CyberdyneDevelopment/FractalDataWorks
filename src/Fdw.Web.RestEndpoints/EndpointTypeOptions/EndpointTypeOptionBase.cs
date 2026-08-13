@@ -244,6 +244,15 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
         }
 
         var result = ConfigurationMethod(builder);
+        // Why the latch is only set on success: the early return above turns an already-latched phase
+        // into an unconditional Success, so latching after a failure records work that never happened
+        // as done and reports success for it forever after. Returning first leaves the phase
+        // un-latched, so a caller that retries actually retries.
+        if (result.IsFailure)
+        {
+            return result;
+        }
+
         Configured = true;
         return result;
     }
@@ -300,6 +309,15 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
         }
 
         var result = InitializationMethod(host, loggerFactory);
+        // Why the latch is only set on success: the early return above turns an already-latched phase
+        // into an unconditional Success, so latching after a failure records work that never happened
+        // as done and reports success for it forever after. Returning first leaves the phase
+        // un-latched, so a caller that retries actually retries.
+        if (result.IsFailure)
+        {
+            return result;
+        }
+
         Initialized = true;
         return result;
     }

@@ -27,7 +27,7 @@ namespace Fdw.Services.Etl.Projects;
 /// These registrations were previously three public static helpers on <c>OrchestrationTypes</c>
 /// with no caller inside the framework, so every host had to invoke them from its own
 /// <c>Program.cs</c> — the arrangement this option removes. The bodies move here unchanged in
-/// substance; what changes is that the module initializer sweeps them, so a host that references
+/// substance; what changes is that the module initializer collects them, so a host that references
 /// this package gets the domain without naming any of it.
 ///
 /// Why it joins <see cref="PipelineServiceTypes"/> rather than a collection of its own: there is

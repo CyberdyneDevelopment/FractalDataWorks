@@ -38,17 +38,17 @@ public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
     // Configure(), Register() and Initialize() are source-generated
 
     /// <summary>
-    /// Sets this collection's Register body: the option sweep, then this domain's provider.
+    /// Sets this collection's Register body: the option collect, then this domain's provider.
     /// </summary>
     /// <remarks>
     /// The provider is one registration for the whole collection and this declaration already names it,
     /// so the body that registers it is written here beside the declaration. Setting it as the phase's
     /// body is what makes it replaceable: an application calling <c>Registration(...)</c> replaces the
-    /// sweep and this registration together, which is the correct semantic for a host taking over phase 2.
+    /// collect and this registration together, which is the correct semantic for a host taking over phase 2.
     /// </remarks>
     static DataVaultServiceTypes()
     {
-        var sweepOptions = RegisterFunc;
+        var collectOptions = RegisterFunc;
 
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
@@ -62,14 +62,14 @@ public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
             // Why the result is read: this replacement calls the func it captured, and discarding
             // what that returned meant an option that failed to register was followed by this body
             // registering the provider anyway and reporting success.
-            var registered = sweepOptions(builder, loggerFactory);
+            var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
                 return registered;
 
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
 
-            ServiceTypeLog.DomainOptionSweepCompleted(log, nameof(DataVaultServiceTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(DataVaultServiceTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(DataVaultServiceTypes), providerService);
 
             builder.Services.AddScoped<IDataVaultProvider>(sp =>

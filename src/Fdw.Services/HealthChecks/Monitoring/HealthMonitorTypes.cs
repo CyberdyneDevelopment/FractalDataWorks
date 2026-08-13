@@ -53,17 +53,17 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
 {
 
     /// <summary>
-    /// Sets this collection's Register body: the option sweep, then this domain's provider.
+    /// Sets this collection's Register body: the option collect, then this domain's provider.
     /// </summary>
     /// <remarks>
     /// The provider is one registration for the whole collection and this declaration already names it,
     /// so the body that registers it is written here beside the declaration. Setting it as the phase's
     /// body is what makes it replaceable: an application calling <c>Registration(...)</c> replaces the
-    /// sweep and this registration together, which is the correct semantic for a host taking over phase 2.
+    /// collect and this registration together, which is the correct semantic for a host taking over phase 2.
     /// </remarks>
     static HealthMonitorTypes()
     {
-        var sweepOptions = RegisterFunc;
+        var collectOptions = RegisterFunc;
 
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
@@ -74,19 +74,19 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
         {
             var log = loggerFactory?.CreateLogger<HealthMonitorTypes>() ?? NullLogger<HealthMonitorTypes>.Instance;
 
-            // Why the sweep's result is read and returned: this body composes ONTO the default sweep,
-            // and it used to discard what the sweep returned — so an option that failed to register was
+            // Why the collect's result is read and returned: this body composes ONTO the default collect,
+            // and it used to discard what the collect returned — so an option that failed to register was
             // followed by this method registering the provider anyway and reporting success. The
             // provider would then resolve and serve a collection that is missing a member. Stopping
             // here means the caller learns about the first failure instead of a later, stranger one.
-            var swept = sweepOptions(builder, loggerFactory);
-            if (swept.IsFailure)
-                return swept;
+            var collected = collectOptions(builder, loggerFactory);
+            if (collected.IsFailure)
+                return collected;
 
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
 
-            ServiceTypeLog.DomainOptionSweepCompleted(log, nameof(HealthMonitorTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(HealthMonitorTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(HealthMonitorTypes), providerService);
 
             builder.Services.AddScoped<IHealthMonitorProvider>(sp =>

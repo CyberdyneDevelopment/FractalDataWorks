@@ -42,7 +42,7 @@ namespace Fdw.Services.Connections;
 /// Why <see cref="IServiceScopeFactory"/> in the constructor, not <see cref="IConnectionProvider"/> or
 /// <see cref="IConnectionHealthService"/> directly: this worker is registered as a singleton
 /// <see cref="IHostedService"/>, but <c>IConnectionProvider</c> and <c>IConnectionHealthService</c> are
-/// Scoped (the latter depends on the Scoped <c>IDataGateway</c>). A scope is created per sweep — the
+/// Scoped (the latter depends on the Scoped <c>IDataGateway</c>). A scope is created per collect — the
 /// same pattern <see cref="ConnectionsHealthCheckable"/> documents and
 /// <c>PipelineExecutionBackgroundService</c> uses for its per-execution scope.
 /// </para>
@@ -66,7 +66,7 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionHealthMonitorWorker"/> class.
     /// </summary>
-    /// <param name="scopeFactory">Factory used to create one DI scope per sweep.</param>
+    /// <param name="scopeFactory">Factory used to create one DI scope per collect.</param>
     /// <param name="logger">Optional logger; falls back to <see cref="NullLogger{T}"/>.</param>
     public ConnectionHealthMonitorWorker(IServiceScopeFactory scopeFactory, ILogger<ConnectionHealthMonitorWorker>? logger = null)
     {
@@ -97,7 +97,7 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
         {
             while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
             {
-                // Why the same early exit is honored per tick and not only at startup: the startup sweep
+                // Why the same early exit is honored per tick and not only at startup: the startup collect
                 // can miss the condition when the very first load fails transiently (that path logs the
                 // usual Error and keeps monitoring), so the first tick that resolves to container-absence
                 // is where the idle state is recognized instead.
@@ -120,7 +120,7 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
         ConnectionHealthMonitorWorkerLog.WorkerStopping(_logger);
     }
 
-    /// <summary>Runs the one-time HealthCheckOnStartup sweep over every enabled connection.</summary>
+    /// <summary>Runs the one-time HealthCheckOnStartup collect over every enabled connection.</summary>
     /// <param name="ct">Token observed for host shutdown.</param>
     /// <returns>
     /// <c>false</c> when this host's configuration store registers no connection container — the caller
@@ -159,7 +159,7 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
         return true;
     }
 
-    /// <summary>Runs one scan-tick sweep, probing every enabled connection whose own interval is due.</summary>
+    /// <summary>Runs one scan-tick collect, probing every enabled connection whose own interval is due.</summary>
     /// <param name="ct">Token observed for host shutdown.</param>
     /// <returns>
     /// <c>false</c> when this host's configuration store registers no connection container — the caller

@@ -160,7 +160,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     /// </summary>
     /// <remarks>
     /// Normalized to a synchronous <c>void</c> signature so <c>[PlatformServiceProvider]</c> matches the
-    /// same three-phase shape every swept domain declares — the actual work (async config load) is in
+    /// same three-phase shape every collected domain declares — the actual work (async config load) is in
     /// <see cref="LoadStores"/>, blocked-on here exactly once at startup.
     /// </remarks>
     /// <param name="host">The built host.</param>
@@ -174,7 +174,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         var provider = scope.ServiceProvider.GetRequiredService<IDataStoreProvider>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<ConfigurationGatewayDataStoreProvider>>();
 
-        // Why: Initialize is the synchronous fail-fast startup phase (the swept shape requires a void
+        // Why: Initialize is the synchronous fail-fast startup phase (the collected shape requires a void
         // Initialize); the async config load is blocked-on exactly once at startup, no sync context —
         // the same sanctioned sync-over-async seam OpenIddictSigningKeyConfigurator uses.
 #pragma warning disable VSTHRD002

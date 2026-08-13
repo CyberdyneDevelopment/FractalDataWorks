@@ -887,7 +887,7 @@ public static partial class ServiceTypeLog
 
     /// <summary>
     /// Logs that an option phase threw. The exception is converted to a failure result after this is
-    /// logged, so one throwing option cannot unwind a sweep that is handling failures as values.
+    /// logged, so one throwing option cannot unwind a collect that is handling failures as values.
     /// </summary>
     [MessageLogging(
         EventId = 61012,
@@ -924,7 +924,7 @@ public static partial class ServiceTypeLog
         string reason);
 
     /// <summary>
-    /// Logs that a collection's sweep stopped because one of its options returned a failure.
+    /// Logs that a collection's collect stopped because one of its options returned a failure.
     /// </summary>
     [MessageLogging(
         EventId = 61014,
@@ -981,7 +981,7 @@ public static partial class ServiceTypeLog
     // because it is one generic type shared by ~12 domains and it is constructed long after the
     // decisions that determine what it will find. Three facts live only up here, in the collection:
     //
-    //   * how many options the domain swept, and which — the provider sees only what survived
+    //   * how many options the domain collected, and which — the provider sees only what survived
     //   * which concrete provider was bound to which DI service type — the key a consumer injects
     //   * whether the domain's configuration source was ever registered — the provider's own
     //     constructor never learns that one was SUPPOSED to be, so a provider with no parent looks
@@ -1036,14 +1036,14 @@ public static partial class ServiceTypeLog
         string providerType);
 
     /// <summary>
-    /// Logs the outcome of the option sweep. Debug: one line per domain per host, summarising what
+    /// Logs the outcome of the option collect. Debug: one line per domain per host, summarising what
     /// the per-option Trace lines listed individually.
     /// </summary>
     [MessageLogging(
         EventId = 11062,
         Level = LogLevel.Debug,
-        Message = "[{collectionName}] option sweep completed: {count} option(s) — [{optionNames}]")]
-    public static partial IGenericMessage DomainOptionSweepCompleted(
+        Message = "[{collectionName}] options collected: {count} option(s) — [{optionNames}]")]
+    public static partial IGenericMessage DomainOptionsCollected(
         ILogger logger,
         string collectionName,
         int count,
@@ -1102,7 +1102,7 @@ public static partial class ServiceTypeLog
         string factoryType);
 
     /// <summary>
-    /// Logs a domain whose provider is registered but which swept no options at all.
+    /// Logs a domain whose provider is registered but which collected no options at all.
     /// </summary>
     /// <remarks>
     /// Warning, and the textbook case for that tier: the domain LOADED — its provider is resolvable
@@ -1116,7 +1116,7 @@ public static partial class ServiceTypeLog
     [MessageLogging(
         EventId = 61016,
         Level = LogLevel.Warning,
-        Message = "[{collectionName}] registered '{providerServiceType}' but swept ZERO options — the provider is resolvable and can create nothing. Reference the package(s) declaring this domain's [ServiceTypeOption] types.")]
+        Message = "[{collectionName}] registered '{providerServiceType}' but collected ZERO options — the provider is resolvable and can create nothing. Reference the package(s) declaring this domain's [ServiceTypeOption] types.")]
     public static partial IGenericMessage DomainRegisteredWithNoOptions(
         ILogger logger,
         string collectionName,

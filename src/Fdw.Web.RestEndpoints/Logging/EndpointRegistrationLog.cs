@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
 
 /// <summary>
-/// What each endpoint and group put into the container, as the sweep runs.
+/// What each endpoint and group put into the container, as the collect runs.
 /// </summary>
 /// <remarks>
 /// The point of declaring endpoints rather than scanning for them is being able to answer "what got
@@ -42,7 +42,7 @@ public static partial class EndpointRegistrationLog
         int serviceCount,
         string endpointType);
 
-    /// <summary>Logged for each endpoint the sweep passes over.</summary>
+    /// <summary>Logged for each endpoint the collect passes over.</summary>
     [MessageLogging(
         EventId = 91012,
         Level = LogLevel.Information,

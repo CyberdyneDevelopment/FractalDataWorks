@@ -57,7 +57,7 @@ public static class PlatformServices
     /// from the attribute, never by a hand-written call site (there is no host-side setter). A "declared
     /// choice" domain (e.g. Multitenancy, the auth-server roles) declares this on the attribute so every
     /// host is excluded from the <see cref="Configure"/>/<see cref="Register"/>/<see cref="Initialize"/>
-    /// sweeps automatically. The flag stays visible on the returned <see cref="PlatformServiceEntry.Manual"/>
+    /// collects automatically. The flag stays visible on the returned <see cref="PlatformServiceEntry.Manual"/>
     /// as the indicator that the domain is handled out-of-band, and the host drives it (if at all) by
     /// dot-walking the entry.
     /// </param>
@@ -117,7 +117,7 @@ public static class PlatformServices
     /// <param name="builder">The host builder.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
-    // Why the sweep stops at the first failing domain: the domains after it are ordered AFTER it
+    // Why the collect stops at the first failing domain: the domains after it are ordered AFTER it
     // because they may depend on it. Continuing would register them against a dependency that is not
     // there, turning one legible failure into a cascade of unrelated-looking ones. The caller gets the
     // first failure, which is the one that explains the rest.
@@ -129,8 +129,8 @@ public static class PlatformServices
             if (entry.Manual) continue;
             // Why the entry and not its Descriptor: the entry is what consults a phase replacement
             // and records that the phase ran. Reaching past it to the descriptor made a Configure
-            // replacement silently not run under the sweep, and left Configured unset so neither the
-            // lock-at-sweep guard nor the already-run skip fired — the exact silent no-op they exist for.
+            // replacement silently not run under the collect, and left Configured unset so neither the
+            // lock-at-collect guard nor the already-run skip fired — the exact silent no-op they exist for.
             var result = entry.Configure(builder, loggerFactory);
             if (result.IsFailure)
                 return result;

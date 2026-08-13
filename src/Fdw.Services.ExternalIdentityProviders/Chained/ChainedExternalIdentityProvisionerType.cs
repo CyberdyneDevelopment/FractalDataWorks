@@ -69,7 +69,7 @@ public sealed class ChainedExternalIdentityProvisionerType
             // line names the option and nothing else. This one names the type that did the registering
             // and the factory it registered, which is what distinguishes a base wiring an option from
             // the option wiring itself — and no failure line is needed alongside it, because unlike the
-            // other options in this domain these three results propagate and the sweep reports them.
+            // other options in this domain these three results propagate and the collect reports them.
             ServiceTypeLog.OptionFactoryRegistered(
                 logger, nameof(ChainedExternalIdentityProvisionerType), Name, factory.GetType().Name);
 

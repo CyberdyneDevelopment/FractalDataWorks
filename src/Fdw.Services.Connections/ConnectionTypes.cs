@@ -46,7 +46,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
     IConnectionType<IGenericConnection, ConnectionConfiguration, IConnectionFactory<IGenericConnection, ConnectionConfiguration>>>
 {
     /// <summary>
-    /// Sets this collection's Register body: the option sweep, then this domain's provider.
+    /// Sets this collection's Register body: the option collect, then this domain's provider.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -57,7 +57,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
     /// </para>
     /// <para>
     /// Setting it as the phase's body is what makes it replaceable: an application calling
-    /// <c>Registration(...)</c> in its own start-up replaces the sweep and this registration together,
+    /// <c>Registration(...)</c> in its own start-up replaces the collect and this registration together,
     /// which is the correct semantic — a host that supplies its own phase 2 is taking responsibility for
     /// the whole of it, and the phase reports that it is running a custom implementation.
     /// </para>
@@ -69,7 +69,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
     /// </remarks>
     static ConnectionTypes()
     {
-        var sweepOptions = RegisterFunc;
+        var collectOptions = RegisterFunc;
 
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
@@ -83,14 +83,14 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
             // Why the result is read: this replacement calls the func it captured, and discarding
             // what that returned meant an option that failed to register was followed by this body
             // registering the provider anyway and reporting success.
-            var registered = sweepOptions(builder, loggerFactory);
+            var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
                 return registered;
 
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
 
-            ServiceTypeLog.DomainOptionSweepCompleted(log, nameof(ConnectionTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(ConnectionTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(ConnectionTypes), providerService);
 
             builder.Services.AddScoped<IConnectionProvider>(sp =>

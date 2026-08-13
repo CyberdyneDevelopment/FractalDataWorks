@@ -162,7 +162,7 @@ public static class Program
         // BearerTokenHandler itself. The client options only ATTACH the handler to their pipeline
         // (the IHttpClientBuilder overload) — putting it in DI is the app's job, and this is the
         // seam Fdw provides for it. The named HttpClients themselves need nothing from us: each
-        // client option's Configure already calls AddHttpClient(Name, ...) during the sweep below.
+        // client option's Configure already calls AddHttpClient(Name, ...) during the collect below.
         services.AddBearerTokenHandler<InstanceAccessTokenProvider>();
 
         // Instance routing has no shared extension — it is genuinely TUI-specific, because this is

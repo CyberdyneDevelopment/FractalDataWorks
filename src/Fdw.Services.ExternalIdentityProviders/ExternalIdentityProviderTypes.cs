@@ -17,7 +17,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
 
 /// <summary>
 /// Collection of external identity provider service types. Structurally copies
-/// <c>TokenManagerTypes</c> and is swept by PlatformServices like every other domain — no host
+/// <c>TokenManagerTypes</c> and is collected by PlatformServices like every other domain — no host
 /// registers it by hand. Unlike TokenManagers, this is NOT a "declared choice" domain: multiple
 /// <c>auth.ExternalIdentityProvider</c> config rows may be simultaneously active, and the caller
 /// (<c>ConnectTokenEndpointBase</c>, via <see cref="ExternalIdentityProviderResolver"/>) selects one by
@@ -41,17 +41,17 @@ public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
     // Configure(), Register(), Initialize() are source-generated.
 
     /// <summary>
-    /// Sets this collection's Register body: the option sweep, then this domain's provider.
+    /// Sets this collection's Register body: the option collect, then this domain's provider.
     /// </summary>
     /// <remarks>
     /// The provider is one registration for the whole collection and this declaration already names it,
     /// so the body that registers it is written here beside the declaration. Setting it as the phase's
     /// body is what makes it replaceable: an application calling <c>Registration(...)</c> replaces the
-    /// sweep and this registration together, which is the correct semantic for a host taking over phase 2.
+    /// collect and this registration together, which is the correct semantic for a host taking over phase 2.
     /// </remarks>
     static ExternalIdentityProviderTypes()
     {
-        var sweepOptions = RegisterFunc;
+        var collectOptions = RegisterFunc;
 
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
@@ -65,14 +65,14 @@ public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
             // Why the result is read: this replacement calls the func it captured, and discarding
             // what that returned meant an option that failed to register was followed by this body
             // registering the provider anyway and reporting success.
-            var registered = sweepOptions(builder, loggerFactory);
+            var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
                 return registered;
 
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
 
-            ServiceTypeLog.DomainOptionSweepCompleted(log, nameof(ExternalIdentityProviderTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(ExternalIdentityProviderTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(ExternalIdentityProviderTypes), providerService);
 
             builder.Services.AddScoped<IFdwServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>>(sp =>

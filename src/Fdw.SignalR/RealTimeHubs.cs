@@ -29,11 +29,11 @@ namespace Fdw.SignalR;
 /// </para>
 /// <para>
 /// <c>[PlatformServiceProvider]</c> marks this hand-written three-phase class for the
-/// <c>PlatformServicesRegistrationGenerator</c> sweep, alongside every <c>[ServiceTypeCollection]</c>
+/// <c>PlatformServicesRegistrationGenerator</c> collect, alongside every <c>[ServiceTypeCollection]</c>
 /// domain — <see cref="Configure"/> and <see cref="Initialize"/> are no-ops declared only to
 /// satisfy the required shape; <see cref="Register"/> does the only real pre-Build work this domain
 /// needs. Endpoint mapping is a post-Build
-/// call each host still makes manually — it is not part of this three-phase shape and is not swept.
+/// call each host still makes manually — it is not part of this three-phase shape and is not collected.
 /// </para>
 /// </remarks>
 [TypeCollection(typeof(RealTimeHubOptionBase), typeof(IRealTimeHub), typeof(RealTimeHubs))]

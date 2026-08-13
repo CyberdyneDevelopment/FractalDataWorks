@@ -679,10 +679,10 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
     }
 
     // Emits this collection's phase-2 entry point, which adds the domain provider to DI and then runs
-    // the base's Register — the option sweep, its logging and its run-order numbering.
+    // the base's Register — the option collect, its logging and its run-order numbering.
     //
     // Why it shadows the inherited static rather than replacing RegisterFunc: the provider registration
-    // is invariant. An application may legitimately replace the option sweep, and when it does the
+    // is invariant. An application may legitimately replace the option collect, and when it does the
     // provider must still be registered; a body swapped in via Registration(...) would take the provider
     // with it. Shadowing puts the invariant wiring OUTSIDE the swappable body, which is the same reason
     // ServiceTypeBase makes its option-level invokers virtual.
@@ -692,7 +692,7 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
     // compile time. Nothing dispatches these phases through the base type.
     private static void AppendProviderRegisterOverride(StringBuilder bodySb, ServiceTypeCollectionModel collection)
     {
-        bodySb.AppendLine("        /// <summary>Phase 2 — registers this domain's provider, then sweeps the options.</summary>");
+        bodySb.AppendLine("        /// <summary>Phase 2 — registers this domain's provider, then collects the options.</summary>");
         bodySb.AppendLine("        /// <param name=\"builder\">The host application builder.</param>");
         bodySb.AppendLine("        /// <param name=\"loggerFactory\">The host's logger factory, when one is available.</param>");
         bodySb.AppendLine("        /// <returns>The builder on success; a failure carrying the reason otherwise.</returns>");

@@ -37,13 +37,13 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     public bool Registered { get; private set; }
 
     /// <summary>
-    /// Whether this domain is excluded from the <see cref="PlatformServices"/> sweeps
+    /// Whether this domain is excluded from the <see cref="PlatformServices"/> collects
     /// (<see cref="PlatformServices.Configure"/>/<see cref="PlatformServices.Register"/>/
     /// <see cref="PlatformServices.Initialize"/>) and driven manually by the host instead.
     /// </summary>
     /// <remarks>
     /// Why: "declared choice" domains (e.g. Multitenancy, the auth-server roles) have multiple options
-    /// registering the SAME interfaces — a blanket sweep would leave the winner to module-initializer
+    /// registering the SAME interfaces — a blanket collect would leave the winner to module-initializer
     /// discovery order. The domain declares itself manual via <c>[ServiceTypeCollection(Manual = true)]</c>
     /// (there is no host-side setter); a host reads this indicator to see the domain is handled
     /// out-of-band and drives exactly ONE option by its configured name. Set once at construction.
@@ -53,11 +53,11 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     // ── Phase-delegate replacements (author-curated variant selection; the keyset stays frozen) ─────────
     // Why: the frozen registry locks the SET of entries (no add/remove), but an entry is a mutable
     // reference type — exactly as Initialized/Registered are mutated post-freeze. That lets a host SELECT
-    // an alternative phase delegate BEFORE the sweep runs, without touching discovery determinism. The
+    // an alternative phase delegate BEFORE the collect runs, without touching discovery determinism. The
     // BLESSED use is an author-curated named variant (a collection's own UseXxx() calls the matching
     // gerund setter with a delegate the AUTHOR wrote — keeps registration FDW-owned); the raw setter is
-    // the documented escape hatch. Each replacement is locked once its phase has run (lock-at-sweep), so
-    // behaviour is deterministic from the first sweep onward.
+    // the documented escape hatch. Each replacement is locked once its phase has run (lock-at-collect), so
+    // behaviour is deterministic from the first collect onward.
     //
     // Why the gerund and not OverrideXxx: `override` means virtual dispatch in C#, and this is not that —
     // it swaps a delegate. The same word is already spoken for one level down, where ServiceTypeBase
@@ -71,7 +71,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// Selects an alternative Configure phase delegate for this entry, replacing the descriptor default.
     /// Intended for a collection author to expose named variants (e.g. <c>UseThinClient()</c> that forwards
     /// an author-written delegate here); the raw setter is the documented escape hatch. Must be called
-    /// BEFORE the Configure sweep runs for this entry. Returns <c>this</c> for fluent chaining.
+    /// BEFORE the Configure collect runs for this entry. Returns <c>this</c> for fluent chaining.
     /// </summary>
     /// <exception cref="InvalidOperationException">The Configure phase has already run for this entry.</exception>
     public PlatformServiceEntry Configuration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> replacement)
@@ -80,7 +80,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
         if (Configured)
             throw new InvalidOperationException(
                 $"Cannot replace Configure for '{CategoryName}': the Configure phase has already run. " +
-                "Phase replacements must be selected before the sweep (lock-at-sweep).");
+                "Phase replacements must be selected before the collect (lock-at-collect).");
         _configurationMethod = replacement;
         return this;
     }
@@ -88,7 +88,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// <summary>
     /// Selects an alternative Register phase delegate for this entry, replacing the descriptor default.
     /// See <see cref="Configuration"/> for intended (author-variant) vs escape-hatch usage. Must be
-    /// called BEFORE the Register sweep runs for this entry. Returns <c>this</c> for fluent chaining.
+    /// called BEFORE the Register collect runs for this entry. Returns <c>this</c> for fluent chaining.
     /// </summary>
     /// <exception cref="InvalidOperationException">The Register phase has already run for this entry.</exception>
     public PlatformServiceEntry Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> replacement)
@@ -97,7 +97,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
         if (Registered)
             throw new InvalidOperationException(
                 $"Cannot replace Register for '{CategoryName}': the Register phase has already run. " +
-                "Phase replacements must be selected before the sweep (lock-at-sweep).");
+                "Phase replacements must be selected before the collect (lock-at-collect).");
         _registrationMethod = replacement;
         return this;
     }
@@ -105,7 +105,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// <summary>
     /// Selects an alternative Initialize phase delegate for this entry, replacing the descriptor default.
     /// See <see cref="Configuration"/> for intended (author-variant) vs escape-hatch usage. Must be
-    /// called BEFORE the Initialize sweep runs for this entry. Returns <c>this</c> for fluent chaining.
+    /// called BEFORE the Initialize collect runs for this entry. Returns <c>this</c> for fluent chaining.
     /// </summary>
     /// <exception cref="InvalidOperationException">The Initialize phase has already run for this entry.</exception>
     public PlatformServiceEntry Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> replacement)
@@ -114,7 +114,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
         if (Initialized)
             throw new InvalidOperationException(
                 $"Cannot replace Initialize for '{CategoryName}': the Initialize phase has already run. " +
-                "Phase replacements must be selected before the sweep (lock-at-sweep).");
+                "Phase replacements must be selected before the collect (lock-at-collect).");
         _initializationMethod = replacement;
         return this;
     }
@@ -123,10 +123,10 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// Runs this domain's Initialize phase, unless it has already run. Lets a caller dot-walk to a
     /// specific domain (e.g. <c>PlatformServices.Connection?.Initialize(host, loggerFactory)</c>) and
     /// initialize it manually, in whatever order matters, before a later
-    /// <see cref="PlatformServices.Initialize"/> sweep skips anything already done.
+    /// <see cref="PlatformServices.Initialize"/> collect skips anything already done.
     /// </summary>
     // Why the flag is set even when the phase failed: it records that this domain's Initialize HAS
-    // RUN, not that it succeeded. Leaving it unset would let a later sweep run it a second time on top
+    // RUN, not that it succeeded. Leaving it unset would let a later collect run it a second time on top
     // of whatever the first attempt already did — double-initializing the part that worked in order to
     // retry the part that did not. The failure goes to the caller; the re-run does not happen.
     public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
@@ -167,7 +167,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// so a specific domain can be dot-walked directly (e.g.
     /// <c>PlatformServices.Connection?.Register(services, loggerFactory)</c>) without reaching through
     /// <see cref="Descriptor"/> explicitly. Idempotent like <see cref="Initialize"/> — a host that
-    /// registers a <c>Manual</c> domain explicitly and is then swept by <see cref="PlatformServices.Register"/>
+    /// registers a <c>Manual</c> domain explicitly and is then collected by <see cref="PlatformServices.Register"/>
     /// (or vice versa) does not double-register the domain's services.
     /// </summary>
     // Why the flag is set even when the phase failed: see Initialize — it records that the phase ran.
