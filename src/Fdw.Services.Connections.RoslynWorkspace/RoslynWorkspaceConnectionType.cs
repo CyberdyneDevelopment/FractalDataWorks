@@ -50,8 +50,6 @@ public sealed class RoslynWorkspaceConnectionType
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            var provider = (DefaultConnectionProvider)services.GetRequiredService<IConnectionProvider>();
-
             // Why: attach the typed-body provider to the HEADER provider so conn.RoslynWorkspaceConnection is
             // reachable by discriminator dispatch, exactly as every other connection type does. This was the
             // only ConnectionTypes option missing the call, and its absence was not inert: a live
@@ -78,6 +76,13 @@ public sealed class RoslynWorkspaceConnectionType
             // type, so this is the ONE connection kind that legitimately gets the no-secret-manager
             // constructor. DI picks it because there is no other.
             builder.Services.AddSingleton<IRoslynWorkspaceConnectionFactory, RoslynWorkspaceConnectionFactory>();
+            // Why here and not Initialize: DefaultConnectionProvider is Scoped and dispatches on its
+            // own factory registry, so a factory nobody registers makes every Get(name) for this
+            // discriminator fail with "No registered service type matches ServiceOptionType". The
+            // deferred func is the registration form this phase is for: it needs no live container,
+            // and each scope's provider resolves it once in its constructor, so the registration
+            // outlives the startup scope.
+            DefaultConnectionProvider.Register(Name, sp => sp.GetRequiredService<IRoslynWorkspaceConnectionFactory>());
             builder.Services.TryAddSingleton<RoslynWorkspaceConnectionConfigurationProvider>(sp =>
                 new RoslynWorkspaceConnectionConfigurationProvider(
                     sp.GetService<ILogger<RoslynWorkspaceConnectionConfigurationProvider>>()

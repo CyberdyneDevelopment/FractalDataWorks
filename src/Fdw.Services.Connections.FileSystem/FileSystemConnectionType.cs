@@ -50,8 +50,6 @@ public sealed class FileSystemConnectionType
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            var provider = (DefaultConnectionProvider)services.GetRequiredService<IConnectionProvider>();
-
             // Why: Typed body providers are registered with the header provider (ConnectionConfigurationProvider)
             // via discriminator dispatch. FileSystemConnectionConfiguration no longer inherits
             // ConnectionConfiguration — it implements IConnectionConfiguration directly.
@@ -73,6 +71,13 @@ public sealed class FileSystemConnectionType
         Registration((builder, loggerFactory) =>
         {
             builder.Services.AddSingleton<IFileSystemConnectionFactory, FileSystemConnectionFactory>();
+            // Why here and not Initialize: DefaultConnectionProvider is Scoped and dispatches on its
+            // own factory registry, so a factory nobody registers makes every Get(name) for this
+            // discriminator fail with "No registered service type matches ServiceOptionType". The
+            // deferred func is the registration form this phase is for: it needs no live container,
+            // and each scope's provider resolves it once in its constructor, so the registration
+            // outlives the startup scope.
+            DefaultConnectionProvider.Register(Name, sp => sp.GetRequiredService<IFileSystemConnectionFactory>());
             // Why (FDW-403 slice 2 follow-up): mirror Http/MsSql — register a typed
             // FileSystemConnectionConfigurationProvider so DefaultConnectionProvider can resolve
             // child config rows (conn.FileSystemConnection) by parent ConnectionId.
