@@ -11,7 +11,7 @@ namespace Fdw.ServiceTypes.Results;
 /// </summary>
 /// <remarks>
 /// The numbers here are the SAME numbers as the failure log methods they pair with in
-/// <c>ServiceTypeLog</c> — 61011 for the collection sweep, 61012 for a single option. A phase failure
+/// <c>ServiceTypeLog</c> — 61011 for the collection collect, 61012 for a single option. A phase failure
 /// is reported once as a log message and once as a result code, and the shared number is what ties
 /// the two records of one event together.
 /// </remarks>

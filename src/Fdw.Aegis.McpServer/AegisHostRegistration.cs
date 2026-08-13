@@ -5,6 +5,9 @@ using Fdw.Aegis;
 using Fdw.Aegis.Abstractions;
 using Fdw.Aegis.Configuration;
 using Fdw.Aegis.Targets;
+using Fdw.Results;
+using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Aegis.Logging;
 using Fdw.Services.Connections.Http;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Configuration;
@@ -92,23 +95,60 @@ public static class AegisHostRegistration
     /// <c>IFdwServiceProvider&lt;ISecretManager, SecretManagerConfiguration&gt;</c> the
     /// <see cref="AegisInjector"/> resolves secret managers through.
     /// </summary>
-    public static void Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
     {
-        ArgumentNullException.ThrowIfNull(builder);
-        SecretManagerTypes.Configure(builder, loggerFactory);
+        // Why ILogger<AegisHostRegistration>: SourceContext then names the type the line was written
+        // in, so these phase lines are attributable to the host registration rather than to whichever
+        // collection happens to be running underneath.
+        var logger = Logger(loggerFactory);
+        AegisLog.HostPhaseStarting(logger, nameof(Configure));
+
+        // Why the result is returned rather than discarded: a phase that fails returns a coded
+        // failure and logs it once. Swallowing it here left this host starting up as though its
+        // secret managers had registered, so the first secret resolution failed instead - far from
+        // the cause, and for a secrets host that is the worst place to discover it.
+        var result = SecretManagerTypes.Configure(builder, loggerFactory);
+        if (result.IsFailure)
+        {
+            AegisLog.HostPhaseFailed(logger, nameof(Configure), result.CurrentMessage);
+            return result;
+        }
+
+        AegisLog.HostPhaseCompleted(logger, nameof(Configure));
+        return result;
     }
+
+    // Why CreateLogger(typeof(...)) and not ILogger<AegisHostRegistration>: this class is static, and
+    // a static type cannot be a generic type argument (CS0718). The Type overload sets the same
+    // category the generic form would, so SourceContext still names this type — which is the whole
+    // reason for the typed logger: these phase lines are attributable to the host registration rather
+    // than to whichever collection is running underneath.
+    //
+    // Why a helper rather than repeating the expression three times: every phase needs the same
+    // logger, and loggerFactory is optional so each site would otherwise carry the same
+    // null-coalesce. NullLogger keeps the phases working when no factory is supplied — the one
+    // fallback the codebase allows.
+    private static ILogger Logger(ILoggerFactory? loggerFactory) =>
+        loggerFactory?.CreateLogger(typeof(AegisHostRegistration))
+        ?? NullLogger.Instance;
 
     /// <summary>
     /// Phase 1b (before Build): registers <see cref="SecretManagerTypes"/>' required services, the
     /// declared schema as <see cref="IOptions{TOptions}"/>, one named <see cref="System.Net.Http.HttpClient"/>
     /// per declared HTTP connection, and the Aegis injector pipeline itself.
     /// </summary>
-    public static void Register(IHostApplicationBuilder builder, ConfigurationSchema schema, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ConfigurationSchema schema, ILoggerFactory? loggerFactory = null)
     {
-        ArgumentNullException.ThrowIfNull(builder);
-        ArgumentNullException.ThrowIfNull(schema);
 
-        SecretManagerTypes.Register(builder, loggerFactory);
+        var logger = Logger(loggerFactory);
+        AegisLog.HostPhaseStarting(logger, nameof(Register));
+
+        var secretManagersRegistered = SecretManagerTypes.Register(builder, loggerFactory);
+        if (secretManagersRegistered.IsFailure)
+        {
+            AegisLog.HostPhaseFailed(logger, nameof(Register), secretManagersRegistered.CurrentMessage);
+            return secretManagersRegistered;
+        }
 
         // Why: every SecretManager-kind [ServiceTypeOption]'s Register (and the shared
         // SecretManagerConfigurationProvider it registers) constructs a DefaultConfigurationProvider
@@ -145,6 +185,9 @@ public static class AegisHostRegistration
         builder.Services.AddScoped<IApprovalPolicyEvaluator, PreApprovedPolicyEvaluator>();
         builder.Services.AddScoped<IAegisInjectionTarget, HttpHeaderInjectionTarget>();
         builder.Services.AddScoped<AegisInjector>();
+
+        AegisLog.HostPhaseCompleted(logger, nameof(Register));
+        return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
     /// <summary>
@@ -159,22 +202,35 @@ public static class AegisHostRegistration
     /// configuration (declared JSON instead of ConfigurationDb) and leaves the resolution path
     /// identical, so <c>AegisInjector</c> holds no directory and names no specific secret manager.
     /// </remarks>
-    public static void Initialize(IHost host, ConfigurationSchema schema, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHost> Initialize(IHost host, ConfigurationSchema schema, ILoggerFactory? loggerFactory = null)
     {
-        ArgumentNullException.ThrowIfNull(host);
-        ArgumentNullException.ThrowIfNull(schema);
-
         var services = host.Services;
 
-        SecretManagerTypes.Initialize(host, loggerFactory);
+        var logger = Logger(loggerFactory);
+        AegisLog.HostPhaseStarting(logger, nameof(Initialize));
+
+        var secretManagersInitialized = SecretManagerTypes.Initialize(host, loggerFactory);
+        if (secretManagersInitialized.IsFailure)
+        {
+            AegisLog.HostPhaseFailed(logger, nameof(Initialize), secretManagersInitialized.CurrentMessage);
+            return secretManagersInitialized;
+        }
 
         var parentResult = services
             .GetRequiredService<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>()
             .Register(new DeclaredSecretManagerConfigurationProvider([.. schema.SecretManagers]));
 
-        if (!parentResult.IsSuccess)
-            throw new InvalidOperationException(
-                "Failed to register the declared secret-manager configuration provider: "
-                + parentResult.CurrentMessage);
+        // Why this returns rather than throws: an exception decides for the host that the process
+        // ends. Registration failures arrive here as values from every other phase, and this one was
+        // the odd path out - it aborted startup with a stack trace where its siblings returned a coded
+        // failure the caller could log and act on.
+        if (parentResult.IsFailure)
+        {
+            AegisLog.HostPhaseFailed(logger, nameof(Initialize), parentResult.CurrentMessage);
+            return parentResult.ToNewResult<IHost>();
+        }
+
+        AegisLog.HostPhaseCompleted(logger, nameof(Initialize));
+        return GenericResult<IHost>.Success(host);
     }
 }

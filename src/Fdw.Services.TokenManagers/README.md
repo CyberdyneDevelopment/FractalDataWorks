@@ -8,7 +8,7 @@ Registration lives in the option, not in a host's `Program.cs`. Each option carr
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `TokenManagerTypes` | class | Collection of token manager service types. Structurally copies SchedulerTypes and is swept by… |
+| `TokenManagerTypes` | class | Collection of token manager service types. Structurally copies SchedulerTypes and is collected by… |
 
 ## Configuration
 

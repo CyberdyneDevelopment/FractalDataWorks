@@ -39,7 +39,7 @@ internal sealed class ServiceTypePhaseSequence
     /// </summary>
     /// <remarks>
     /// An empty value is meaningful rather than missing: it says an option's phase ran without a
-    /// collection sweep around it — a direct invocation off the supported path — and that is exactly
+    /// collection collect around it — a direct invocation off the supported path — and that is exactly
     /// what the reader of such a line needs to know.
     /// </remarks>
     internal string CurrentCollectionName { get; private set; } = string.Empty;

@@ -36,7 +36,7 @@ namespace Fdw.Services.Multitenancy;
 /// directly, instead of the generated blanket Configure/Register that would iterate every discovered
 /// option; Register/Initialize become no-ops since Configure already did the only work needed. This
 /// makes the domain self-selecting — it is no longer <c>[ServiceTypeCollection(Manual = true)]</c>; it
-/// participates in the ordinary PlatformServices Configure/Register/Initialize sweeps like every other
+/// participates in the ordinary PlatformServices Configure/Register/Initialize collects like every other
 /// domain, and the "exactly one option runs" guarantee lives here instead of in each host's Program.cs.
 /// </para>
 /// </remarks>
@@ -51,7 +51,7 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
     // this type's static constructor (for the deferred-freeze RegisterMember discovery), and C# permits
     // only one `static ClassName()` per type across all partial declarations — a second one is a compile
     // error. A module initializer runs at ASSEMBLY LOAD, strictly before any static constructor in the
-    // assembly can fire, so these overrides are guaranteed in place before PlatformServices' sweep (or any
+    // assembly can fire, so these overrides are guaranteed in place before PlatformServices' collect (or any
     // direct MultitenancyTypes.Configure/Register/Initialize call) could otherwise run the generated
     // default (iterate every discovered option), which this domain must never do. Accessing
     // MultitenancyTypes.Configuration(...) below also triggers this type's own static constructor first
@@ -67,7 +67,7 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
         Configuration(SelectAndConfigureSingleOption);
         // Why no-op: SelectAndConfigureSingleOption already ran the selected option's full
         // Configure/Register before Build(). These stay overridden (rather than left at
-        // the generated default) so the ordinary PlatformServices sweep does not ALSO iterate and
+        // the generated default) so the ordinary PlatformServices collect does not ALSO iterate and
         // register every discovered option — this domain runs exactly one.
         Registration(static (builder, _) => GenericResult<IHostApplicationBuilder>.Success(builder));
         Initialization(static (host, _) => GenericResult<IHost>.Success(host));
@@ -116,7 +116,7 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
             return GenericResult<IHostApplicationBuilder>.Failure(MultitenancyLog.ChoiceNotFound(logger, choice));
         }
 
-        // Why this collection selects ONE option instead of sweeping all of them: multitenancy is a
+        // Why this collection selects ONE option instead of collecting all of them: multitenancy is a
         // host-wide choice, so exactly the configured option runs its phases.
         var configured = option.Configure(builder);
         if (configured.IsFailure)

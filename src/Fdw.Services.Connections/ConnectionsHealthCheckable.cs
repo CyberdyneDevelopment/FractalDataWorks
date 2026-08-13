@@ -121,7 +121,7 @@ public sealed class ConnectionsHealthCheckable : IHealthCheckable
     }
 
     // Why: one connection's outcome, isolated so a single resolution/probe failure never aborts the
-    // rest of the sweep — every enabled connection gets its own line in the aggregate Description.
+    // rest of the collect — every enabled connection gets its own line in the aggregate Description.
     private async Task<(IHealthState Status, string Detail)> ProbeOne(
         ConnectionConfiguration connection,
         IConnectionProvider connectionProvider,

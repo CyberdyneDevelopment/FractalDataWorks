@@ -49,9 +49,31 @@ public static class Program
         // connection here (NEVER AddConfigurationGateway) — see AegisHostRegistration.Register.
         var schema = AegisHostRegistration.LoadSchema("aegisSchema.json");
 
-        // Phase 1a/1b (before Build).
-        AegisHostRegistration.Configure(builder, loggerFactory: null);
-        AegisHostRegistration.Register(builder, schema, loggerFactory: null);
+        // Phase 1a/1b (before Build). Why the results are checked: a phase that fails returns a
+        // coded failure, and continuing past it builds a host whose secret managers are not
+        // registered - which surfaces later as a secret that cannot be resolved, far from the cause.
+        // Failing here names the phase that actually broke.
+        var configured = AegisHostRegistration.Configure(builder, loggerFactory: null);
+        if (configured.IsFailure)
+        {
+            // Why stderr and not a logger: this mirrors the Serilog guard above — stdout is the
+            // MCP protocol channel, so a startup failure has exactly one safe place to go.
+            await Console.Error.WriteLineAsync(
+                "Aegis MCP server: host registration failed: " + (configured.CurrentMessage ?? string.Empty))
+                .ConfigureAwait(false);
+            return 1;
+        }
+
+        var registered = AegisHostRegistration.Register(builder, schema, loggerFactory: null);
+        if (registered.IsFailure)
+        {
+            // Why stderr and not a logger: this mirrors the Serilog guard above — stdout is the
+            // MCP protocol channel, so a startup failure has exactly one safe place to go.
+            await Console.Error.WriteLineAsync(
+                "Aegis MCP server: host registration failed: " + (registered.CurrentMessage ?? string.Empty))
+                .ConfigureAwait(false);
+            return 1;
+        }
 
         builder.Services
             .AddMcpServer()
@@ -61,7 +83,16 @@ public static class Program
         var app = builder.Build();
 
         // Phase 2 (after Build).
-        AegisHostRegistration.Initialize(app, schema, loggerFactory: null);
+        var initialized = AegisHostRegistration.Initialize(app, schema, loggerFactory: null);
+        if (initialized.IsFailure)
+        {
+            // Why stderr and not a logger: this mirrors the Serilog guard above — stdout is the
+            // MCP protocol channel, so a startup failure has exactly one safe place to go.
+            await Console.Error.WriteLineAsync(
+                "Aegis MCP server: host registration failed: " + (initialized.CurrentMessage ?? string.Empty))
+                .ConfigureAwait(false);
+            return 1;
+        }
 
         // Why AegisLog rather than a raw stderr write: this is the server's one startup fact, and it
         // belongs in the same structured stream (carrying the same AEG-prefixed Code) as every other

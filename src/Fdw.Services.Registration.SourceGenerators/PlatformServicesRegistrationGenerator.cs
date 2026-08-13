@@ -200,7 +200,7 @@ public sealed class PlatformServicesRegistrationGenerator : IIncrementalGenerato
 
         // Why: Manual mirrors [ServiceTypeCollection(Manual = true)] — a "declared choice" domain
         // (e.g. Multitenancy, the auth-server roles) declares this once on the attribute so every host's
-        // generated registration excludes it from the sweeps. The attribute is the only way to set the
+        // generated registration excludes it from the collects. The attribute is the only way to set the
         // flag; there is no host-side setter.
         var manualArg = attribute.NamedArguments
             .FirstOrDefault(kvp => string.Equals(kvp.Key, "Manual", StringComparison.Ordinal)).Value;

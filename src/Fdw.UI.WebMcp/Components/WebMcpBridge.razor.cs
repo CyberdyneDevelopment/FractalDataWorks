@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
@@ -55,6 +56,19 @@ public sealed partial class WebMcpBridge : ComponentBase, IAsyncDisposable
     // less specific log line. Nothing downstream reads it.
     [Parameter]
     public string Route { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the identity recorded against every tool call this bridge serves — typically the
+    /// user the agent acts on behalf of, plus the agent key's label.
+    /// </summary>
+    /// <remarks>
+    /// Left unset, invocations are still executed and logged, but each one also logs that it could
+    /// not be attributed. That is deliberate: an unattributable autonomous action is worth a warning
+    /// rather than a quiet gap in the record, and refusing to run would break pages that legitimately
+    /// expose read-only tools before sign-in.
+    /// </remarks>
+    [Parameter]
+    public string AgentIdentity { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the optional logger. Falls back to <see cref="NullLogger{T}.Instance"/>.
@@ -258,27 +272,42 @@ public sealed partial class WebMcpBridge : ComponentBase, IAsyncDisposable
     [JSInvokable]
     public async Task<string> ExecuteTool(string name, string argumentsJson)
     {
-        WebMcpUiLog.ToolInvoked(ResolvedLogger, name);
+        // Why every call gets an id: attempt, gate decision and outcome are separate lines, and with
+        // several agents on one page nothing else pairs them back together afterwards.
+        var invocationId = Guid.CreateVersion7().ToString("N", CultureInfo.InvariantCulture);
+        var agent = AgentIdentity;
+
+        WebMcpUiLog.AgentToolAttempted(ResolvedLogger, agent, name, invocationId, argumentsJson);
+
+        if (string.IsNullOrWhiteSpace(AgentIdentity))
+            WebMcpUiLog.UnattributedInvocation(ResolvedLogger, name, invocationId);
 
         var tool = FindTool(name);
         if (tool is null)
-            return ErrorPayload(WebMcpUiLog.ToolNotFound(ResolvedLogger, name).Message);
+            return ErrorPayload(WebMcpUiLog.ToolNotFound(ResolvedLogger, agent, name, invocationId).Message);
 
         if (tool.RequiresConfirmation)
         {
+            WebMcpUiLog.ConfirmationRequested(ResolvedLogger, agent, name, invocationId);
+
             var handler = ConfirmationHandler;
 
             if (handler is null)
-                return ErrorPayload(WebMcpUiLog.ConfirmationHandlerMissing(ResolvedLogger, name).Message);
+                return ErrorPayload(WebMcpUiLog.ConfirmationHandlerMissing(ResolvedLogger, agent, name, invocationId).Message);
 
             if (!await handler(new WebMcpConfirmationRequest { ToolName = name, ArgumentsJson = argumentsJson }))
-                return ErrorPayload(WebMcpUiLog.ConfirmationDeclined(ResolvedLogger, name).Message);
+                return ErrorPayload(WebMcpUiLog.ConfirmationDeclined(ResolvedLogger, agent, name, invocationId).Message);
+
+            // Why an approval is recorded and not just a refusal: this is the moment responsibility
+            // for an autonomous action transfers to a person, and it is the line that answers "who
+            // let it do that".
+            WebMcpUiLog.ConfirmationGranted(ResolvedLogger, agent, name, invocationId);
         }
 
-        return await Invoke(tool, argumentsJson);
+        return await Invoke(tool, argumentsJson, agent, invocationId);
     }
 
-    private async Task<string> Invoke(WebMcpUiTool tool, string argumentsJson)
+    private async Task<string> Invoke(WebMcpUiTool tool, string argumentsJson, string agent, string invocationId)
     {
         JsonDocument document;
 
@@ -288,21 +317,32 @@ public sealed partial class WebMcpBridge : ComponentBase, IAsyncDisposable
         }
         catch (JsonException ex)
         {
-            return ErrorPayload(WebMcpUiLog.InvalidArguments(ResolvedLogger, tool.Name, ex.Message).Message);
+            return ErrorPayload(WebMcpUiLog.InvalidArguments(ResolvedLogger, agent, tool.Name, invocationId, ex.Message).Message);
         }
 
         using (document)
         {
+            var startedAt = Stopwatch.GetTimestamp();
+
             try
             {
-                return await tool.Execute(document.RootElement, _lifetime.Token);
+                var payload = await tool.Execute(document.RootElement, _lifetime.Token);
+
+                WebMcpUiLog.AgentToolSucceeded(
+                    ResolvedLogger,
+                    agent,
+                    tool.Name,
+                    invocationId,
+                    (long)Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds);
+
+                return payload;
             }
             catch (Exception ex)
             {
                 // Why catch broadly: this is the JS interop boundary. An escaping exception would
                 // surface to the agent as an opaque interop failure with no server-side record, so
                 // every failure is logged here and returned as a structured payload instead.
-                return ErrorPayload(WebMcpUiLog.ToolExecutionFailed(ResolvedLogger, ex, tool.Name).Message);
+                return ErrorPayload(WebMcpUiLog.ToolExecutionFailed(ResolvedLogger, ex, agent, tool.Name, invocationId).Message);
             }
         }
     }

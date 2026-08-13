@@ -48,7 +48,7 @@ public interface IEndpointTypeOption : ITypeOption<int, EndpointTypeOptionBase>
 
     // The three phases belong on the interface, not just the base, because a collection cycles its
     // members as IEndpointTypeOption — it is the declared contract that has to carry them, or the
-    // sweep can see an endpoint and not be able to run it.
+    // collect can see an endpoint and not be able to run it.
 
     /// <summary>Runs this endpoint's Configure body.</summary>
     /// <param name="builder">The host builder.</param>

@@ -11,7 +11,7 @@ namespace Fdw.ServiceTypes.Results;
 /// <remarks>
 /// Carried when the option's own phase body threw. An option that fails deliberately returns its own
 /// domain's code instead — this one names the option, its position and the phase, so a failure with
-/// no better code still says which option in which sweep produced it.
+/// no better code still says which option in which collect produced it.
 /// </remarks>
 [TypeOption(typeof(ServiceTypeResultCodes), "OptionPhaseFailed", RestrictToCurrentCompilation = true)]
 [ExcludeFromCodeCoverage]

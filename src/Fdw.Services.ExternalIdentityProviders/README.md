@@ -9,7 +9,7 @@ Registration lives in the option, not in a host's `Program.cs`. Each option carr
 | Type | Kind | Purpose |
 |---|---|---|
 | `ExternalIdentityProviderTypes` | class | Collection of external identity provider service types. Structurally copies TokenManagerTypes and is… |
-| `ExternalIdentityProvisionerTypes` | class | Collection of external identity provisioner service types. Structurally copies and is swept by… |
+| `ExternalIdentityProvisionerTypes` | class | Collection of external identity provisioner service types. Structurally copies and is collected by… |
 
 ## Options (1 declared)
 

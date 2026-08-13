@@ -9,6 +9,7 @@ using Fdw.Results;
 using Fdw.Services.Abstractions.Health.Monitoring;
 using Fdw.Services.Abstractions.Health.Monitoring.Logging;
 using Fdw.Services.HealthChecks.Monitoring;
+using Fdw.Services.Logging;
 using Fdw.Web.Http.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,6 +57,21 @@ public sealed class HttpHealthMonitorClientType
         Registration((builder, loggerFactory) =>
         {
             DefaultHealthMonitorProvider.Register(Name, sp => sp.GetRequiredService<HttpHealthMonitorFactory>());
+
+            // Why this line exists at all: the call above writes into a STATIC registry that nothing
+            // else narrates. Until the provider drains it — much later, in another scope — a
+            // registration that never happened and one that happened and was then discarded are
+            // byte-identical in the log, because both are silence. This says which type registered
+            // what, for which option, at the moment it happened. It matters more for this option than
+            // for its sibling: this one lives in a different assembly from the domain, so its absence
+            // is also the signature of the host never having referenced the package.
+            ServiceLogger.FactoryRegistrationDeferred(
+                loggerFactory?.CreateLogger<HttpHealthMonitorClientType>()
+                    ?? NullLogger<HttpHealthMonitorClientType>.Instance,
+                nameof(HttpHealthMonitorClientType),
+                Name,
+                nameof(HttpHealthMonitorFactory));
+
             builder.Services.TryAddSingleton<HttpHealthMonitorFactory>();
             HealthMonitorConfigurationProvider.RegisterDomainConfiguration(builder.Services);
             return GenericResult<IHostApplicationBuilder>.Success(builder);

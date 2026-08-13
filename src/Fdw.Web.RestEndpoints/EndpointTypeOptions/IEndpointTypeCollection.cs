@@ -19,7 +19,7 @@ namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
 ///
 /// Each concrete collection satisfies <see cref="Members"/> by returning its own generated
 /// <c>All()</c>. That one line per collection is the bridge between the static generated surface
-/// and the polymorphism the registration sweep needs.
+/// and the polymorphism the registration collect needs.
 /// </remarks>
 public interface IEndpointTypeCollection : IServiceTypeRegistration
 {

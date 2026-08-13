@@ -7,14 +7,14 @@ namespace Fdw.Collections;
 /// Marks a hand-written three-phase class (declaring static
 /// <c>Configure&lt;TBuilder&gt;(TBuilder, ILoggerFactory?)</c>, <c>Register(IServiceCollection, ILoggerFactory?)</c>,
 /// and <c>Initialize(IServiceProvider, ILoggerFactory?)</c> methods) for discovery by
-/// <c>PlatformServicesRegistrationGenerator</c>, so it is swept into
+/// <c>PlatformServicesRegistrationGenerator</c>, so it is collected into
 /// <c>Fdw.ServiceTypes.PlatformServices</c> alongside every <c>[ServiceTypeCollection]</c>-decorated class.
 /// </summary>
 /// <remarks>
 /// Unlike <see cref="ServiceTypeCollectionAttribute"/>, this attribute triggers no TypeCollection source
 /// generator — the class already declares the three phase methods by hand (e.g. a provider class such as
 /// <c>DataSetProvider</c>/<c>ConfigurationGatewayDataStoreProvider</c> that isn't itself a TypeCollection). Applying this
-/// attribute is purely a discovery signal for the PlatformServices sweep.
+/// attribute is purely a discovery signal for the PlatformServices collect.
 /// </remarks>
 // Why: pure attribute definition (declarative metadata only, consumed by a source generator) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
@@ -37,7 +37,7 @@ public sealed class PlatformServiceProviderAttribute : Attribute
 
     /// <summary>
     /// Declares this a "declared choice" domain — mirrors <see cref="ServiceTypeCollectionAttribute.Manual"/>.
-    /// When true, the PlatformServices sweeps (<c>Configure</c>/<c>Register</c>/<c>Initialize</c>) skip
+    /// When true, the PlatformServices collects (<c>Configure</c>/<c>Register</c>/<c>Initialize</c>) skip
     /// it and a host resolves the one configured option explicitly instead. Default is false.
     /// </summary>
     public bool Manual { get; set; }

@@ -207,7 +207,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     // framework's body or an application's replacement is the one about to run.
     //
     // Why this is worth a log line: replacing a phase body is invisible from the outside. When a domain
-    // silently fails to register, the first question is whether the option sweep everyone assumes runs
+    // silently fails to register, the first question is whether the option collect everyone assumes runs
     // actually ran — and until now nothing in the process could answer it.
     //
     // These track APPLICATION replacement only. The generated part of a collection contributes its
@@ -421,6 +421,17 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
 
         var phaseResult = RunPhase(builder, loggerFactory, "Configure", ConfigurationIsCustom,
             ServiceTypePhaseSequence.Configure, _configurationFunc);
+        // Why the latch is only set on success: this flag is what makes the phase run-once, and the
+        // early return above turns an already-latched phase into an unconditional Success. Setting it
+        // after a failure therefore records a phase that did not happen as done, and every later call
+        // reports success for work that never ran - the failure is logged once and then permanently
+        // papered over. Returning first leaves the phase un-latched so a caller that retries actually
+        // retries.
+        if (phaseResult.IsFailure)
+        {
+            return phaseResult;
+        }
+
         Configured = true;
         return phaseResult;
     }
@@ -433,7 +444,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// The <c>xxxTypes</c> class this is called on is written by <c>ServiceTypeCollectionGenerator</c>
     /// from the <c>[ServiceTypeCollection]</c> attribute, not by hand. Where that attribute names a
     /// <c>ProviderType</c>, the generated part registers the provider into DI around this call, so the
-    /// provider is wired whether or not an application replaced the option sweep.
+    /// provider is wired whether or not an application replaced the option collect.
     /// </remarks>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
     public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
@@ -445,6 +456,17 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
 
         var phaseResult = RunPhase(builder, loggerFactory, "Register", RegistrationIsCustom,
             ServiceTypePhaseSequence.Register, _registerFunc);
+        // Why the latch is only set on success: this flag is what makes the phase run-once, and the
+        // early return above turns an already-latched phase into an unconditional Success. Setting it
+        // after a failure therefore records a phase that did not happen as done, and every later call
+        // reports success for work that never ran - the failure is logged once and then permanently
+        // papered over. Returning first leaves the phase un-latched so a caller that retries actually
+        // retries.
+        if (phaseResult.IsFailure)
+        {
+            return phaseResult;
+        }
+
         Registered = true;
         return phaseResult;
     }
@@ -467,6 +489,17 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
 
         var phaseResult = RunPhase(host, loggerFactory, "Initialize", InitializationIsCustom,
             ServiceTypePhaseSequence.Initialize, _initializationFunc);
+        // Why the latch is only set on success: this flag is what makes the phase run-once, and the
+        // early return above turns an already-latched phase into an unconditional Success. Setting it
+        // after a failure therefore records a phase that did not happen as done, and every later call
+        // reports success for work that never ran - the failure is logged once and then permanently
+        // papered over. Returning first leaves the phase un-latched so a caller that retries actually
+        // retries.
+        if (phaseResult.IsFailure)
+        {
+            return phaseResult;
+        }
+
         Initialized = true;
         return phaseResult;
     }
@@ -506,7 +539,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
             var result = body(subject, loggerFactory);
 
             // Why only the success line is conditional: a failure has already been logged with the
-            // option that caused it by the sweep, or by the option's own runner. Logging it again here
+            // option that caused it by the collect, or by the option's own runner. Logging it again here
             // would report one failure twice, at two altitudes, as if they were two events.
             if (result.IsSuccess)
                 ServiceTypeLog.CollectionPhaseSucceeded(logger, CollectionName, phase, position, Options.Length);

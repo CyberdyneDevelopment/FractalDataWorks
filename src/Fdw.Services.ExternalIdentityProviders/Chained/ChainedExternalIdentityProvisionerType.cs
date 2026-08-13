@@ -6,6 +6,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.ExternalIdentityProviders.Abstractions;
 using Fdw.Services.ExternalIdentityProviders.Logging;
 using Fdw.ServiceTypes;
+using Fdw.ServiceTypes.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -63,6 +64,14 @@ public sealed class ChainedExternalIdentityProvisionerType
 
             var factoryResult = provider.Register("Chained", factory);
             if (!factoryResult.IsSuccess) return factoryResult.ToNewResult<IHost>();
+
+            // Why Trace here when ProviderRegistered already reports this option at Information: that
+            // line names the option and nothing else. This one names the type that did the registering
+            // and the factory it registered, which is what distinguishes a base wiring an option from
+            // the option wiring itself — and no failure line is needed alongside it, because unlike the
+            // other options in this domain these three results propagate and the collect reports them.
+            ServiceTypeLog.OptionFactoryRegistered(
+                logger, nameof(ChainedExternalIdentityProvisionerType), Name, factory.GetType().Name);
 
             var headerResult = provider.Register("Chained", headerProvider);
             if (!headerResult.IsSuccess) return headerResult.ToNewResult<IHost>();

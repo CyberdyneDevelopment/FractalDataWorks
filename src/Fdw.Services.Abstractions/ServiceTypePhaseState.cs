@@ -6,7 +6,7 @@ namespace Fdw.ServiceTypes;
 
 /// <summary>
 /// Process registry of which three-phase registration steps have already run, so no step runs twice and a
-/// caller can control order by running one step ahead of the sweep. Run-state is tracked at two
+/// caller can control order by running one step ahead of the collect. Run-state is tracked at two
 /// granularities:
 /// <list type="bullet">
 /// <item><description>the whole service type COLLECTION for a phase (e.g. <c>ConnectionTypes.Register</c>), and</description></item>

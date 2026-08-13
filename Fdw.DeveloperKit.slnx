@@ -195,7 +195,6 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Fdw.Hosting.Cli/Fdw.Hosting.Cli.csproj" />
-    <Project Path="src/Fdw.Hosting.MsSql/Fdw.Hosting.MsSql.csproj" />
     <Project Path="src/Fdw.Hosting/Fdw.Hosting.csproj" />
     <Project Path="src/Fdw.Intelligence.Abstractions/Fdw.Intelligence.Abstractions.csproj" />
     <Project Path="src/Fdw.Intelligence/Fdw.Intelligence.csproj" />
@@ -576,7 +575,6 @@
     <Project Path="tests/Fdw.Data.SourceGenerators.Tests/Fdw.Data.SourceGenerators.Tests.csproj" />
     <Project Path="tests/Fdw.Data.Tests/Fdw.Data.Tests.csproj" />
     <Project Path="tests/Fdw.Expressions.Tests/Fdw.Expressions.Tests.csproj" />
-    <Project Path="tests/Fdw.Hosting.MsSql.Tests/Fdw.Hosting.MsSql.Tests.csproj" />
     <Project Path="tests/Fdw.Hosting.Tests/Fdw.Hosting.Tests.csproj" />
     <Project Path="tests/Fdw.Mcp.Bus.Tests/Fdw.Mcp.Bus.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />

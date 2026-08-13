@@ -33,7 +33,7 @@ namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
 public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBase, IEndpointTypeOption>, IEndpointTypeCollection
     where TBase : EndpointTypeOptionBase, IEndpointTypeOption
 {
-    // Why: one fixed category for the whole sweep, not the concrete collection's type name. A host
+    // Why: one fixed category for the whole collect, not the concrete collection's type name. A host
     // filtering its startup log wants "show me what registration did" as a single switch; a
     // per-collection category would make that a wildcard the collections have to keep agreeing on.
     private const string LogCategory = "Fdw.Web.RestEndpoints.EndpointRegistration";
@@ -378,7 +378,7 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
 
         // Why: every declared member, not Selected(Members) — an endpoint switched off has to be
         // named as switched off. Filtering first is what makes a skipped endpoint indistinguishable
-        // from one that was never declared, which is the state this sweep exists to make visible.
+        // from one that was never declared, which is the state this collect exists to make visible.
         foreach (var member in Members)
         {
             if (member.SkipRegistration)

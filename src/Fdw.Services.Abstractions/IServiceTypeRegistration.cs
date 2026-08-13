@@ -13,12 +13,12 @@ namespace Fdw.Collections;
 /// <para>
 /// Why this exists in Fdw.Collections rather than beside <c>IServiceType</c>: every ServiceTypeCollection
 /// derives from <see cref="ServiceTypeCollectionBase{TBase,TInterface}"/>, which lives here, and the
-/// collection's phase sweep has to call these members on each of its options. <c>IServiceType</c> cannot
+/// collection's phase collect has to call these members on each of its options. <c>IServiceType</c> cannot
 /// move here to supply them — it depends on <c>Fdw.Abstractions</c> and <c>Fdw.Configuration</c>, and this
 /// package is a leaf that those depend on, so the reference would invert.
 /// </para>
 /// <para>
-/// So the phases are declared here as the minimum the sweep needs, and <c>IServiceType</c> extends this.
+/// So the phases are declared here as the minimum the collect needs, and <c>IServiceType</c> extends this.
 /// Nothing implements it directly — it is a contract for the collection to call through, not a second
 /// abstraction for options to satisfy.
 /// </para>

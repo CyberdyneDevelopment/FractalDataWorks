@@ -20,21 +20,21 @@ public static partial class ConnectionHealthMonitorWorkerLog
     [MessageLogging(EventId = 12201, Level = LogLevel.Information, Message = "Connection health monitor worker stopping")]
     public static partial IGenericMessage WorkerStopping(ILogger logger);
 
-    /// <summary>Logs that loading connection configurations for a health check sweep failed.</summary>
-    [MessageLogging(EventId = 12202, Level = LogLevel.Error, Message = "Failed to load connection configurations for health monitor sweep: {reason}")]
+    /// <summary>Logs that loading connection configurations for a health check collect failed.</summary>
+    [MessageLogging(EventId = 12202, Level = LogLevel.Error, Message = "Failed to load connection configurations during the health monitor pass: {reason}")]
     public static partial IGenericMessage LoadConnectionsFailed(ILogger logger, string reason);
 
     /// <summary>Logs that a specific connection is about to be probed.</summary>
-    [MessageLogging(EventId = 12203, Level = LogLevel.Trace, Message = "Probing connection '{connectionName}' for health monitor sweep")]
+    [MessageLogging(EventId = 12203, Level = LogLevel.Trace, Message = "Probing connection '{connectionName}' during the health monitor pass")]
     public static partial IGenericMessage ProbingConnection(ILogger logger, string connectionName);
 
-    /// <summary>Logs that resolving a connection through IConnectionProvider failed during the sweep.</summary>
-    [MessageLogging(EventId = 12204, Level = LogLevel.Error, Message = "Failed to resolve connection '{connectionName}' for health monitor sweep: {reason}")]
+    /// <summary>Logs that resolving a connection through IConnectionProvider failed during the collect.</summary>
+    [MessageLogging(EventId = 12204, Level = LogLevel.Error, Message = "Failed to resolve connection '{connectionName}' during the health monitor pass: {reason}")]
     public static partial IGenericMessage ConnectionResolutionFailed(ILogger logger, string connectionName, string reason);
 
     /// <summary>Logs that a connection has health checks enabled but its type does not support probing.</summary>
     // Why Debug, not Warning (FDW-583): whether a connection type implements ISupportsHealthProbe is a
-    // permanent static property of that type — this fires on every sweep forever and can never be
+    // permanent static property of that type — this fires on every collect forever and can never be
     // "fixed" at runtime, so it is not an actionable warning.
     [MessageLogging(EventId = 12205, Level = LogLevel.Debug, Message = "Connection '{connectionName}' has health checks enabled but its connection type does not support health probing — skipping")]
     public static partial IGenericMessage NoProbeCapability(ILogger logger, string connectionName);

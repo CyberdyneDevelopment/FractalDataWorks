@@ -7,6 +7,7 @@ using Fdw.ServiceTypes.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Linq;
 using Fdw.Results;
 using Microsoft.Extensions.Hosting;
 
@@ -45,7 +46,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
     IConnectionType<IGenericConnection, ConnectionConfiguration, IConnectionFactory<IGenericConnection, ConnectionConfiguration>>>
 {
     /// <summary>
-    /// Sets this collection's Register body: the option sweep, then this domain's provider.
+    /// Sets this collection's Register body: the option collect, then this domain's provider.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -56,7 +57,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
     /// </para>
     /// <para>
     /// Setting it as the phase's body is what makes it replaceable: an application calling
-    /// <c>Registration(...)</c> in its own start-up replaces the sweep and this registration together,
+    /// <c>Registration(...)</c> in its own start-up replaces the collect and this registration together,
     /// which is the correct semantic — a host that supplies its own phase 2 is taking responsibility for
     /// the whole of it, and the phase reports that it is running a custom implementation.
     /// </para>
@@ -68,15 +69,29 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
     /// </remarks>
     static ConnectionTypes()
     {
-        var sweepOptions = RegisterFunc;
+        var collectOptions = RegisterFunc;
+
+        // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
+        // three points below — the deferred declaration, the milestone, and the zero-option warning.
+        // Written out three times it is three chances for them to disagree.
+        var providerService = typeof(IConnectionProvider).ToString();
+
         Registration((builder, loggerFactory) =>
         {
+            var log = loggerFactory?.CreateLogger<ConnectionTypes>() ?? NullLogger<ConnectionTypes>.Instance;
+
             // Why the result is read: this replacement calls the func it captured, and discarding
             // what that returned meant an option that failed to register was followed by this body
             // registering the provider anyway and reporting success.
-            var registered = sweepOptions(builder, loggerFactory);
+            var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
                 return registered;
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(ConnectionTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(ConnectionTypes), providerService);
 
             builder.Services.AddScoped<IConnectionProvider>(sp =>
             {
@@ -84,7 +99,14 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                     sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConnectionProvider>()
                     ?? NullLogger<DefaultConnectionProvider>.Instance);
-                var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger("ConnectionTypes");
+
+                // Why ILogger<ConnectionTypes> and not CreateLogger("ConnectionTypes"): SourceContext then
+                // carries the namespace-qualified collection, and the category cannot drift from the
+                // type it claims to name. The provider logs its own lines under its own type, so the
+                // two layers read base-then-derived rather than collapsing onto one category.
+                var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<ConnectionTypes>()
+                    ?? NullLogger<ConnectionTypes>.Instance;
+                ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(ConnectionTypes), provider.GetType().Name);
                 try
                 {
                     if (sp.GetService<IServiceConfigurationProvider<ConnectionConfiguration>>() is { } cfgProvider)
@@ -92,19 +114,42 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
                         var parentResult = provider.Register(cfgProvider);
-                        if (!parentResult.IsSuccess && stLogger != null)
-                            ServiceTypeLog.FactoryRegistrationFailed(stLogger, "ConnectionTypes", parentResult.CurrentMessage ?? "ConnectionTypes");
+                        if (parentResult.IsSuccess)
+                            ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(ConnectionTypes), provider.GetType().Name, cfgProvider.GetType().Name);
+                        else
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(ConnectionTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                    }
+                    else
+                    {
+                        // Why Critical, and why the collection says it rather than the provider: from
+                        // inside the provider a null parent is indistinguishable from a domain that needs
+                        // none. This is the one place that knows one was meant to arrive, and without it
+                        // the domain fails every lookup by name for the life of the scope with nothing
+                        // pointing back here.
+                        ServiceTypeLog.DomainHasNoConfigurationSource(
+                            stLogger,
+                            nameof(ConnectionTypes),
+                            provider.GetType().Name,
+                            typeof(IServiceConfigurationProvider<ConnectionConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)
                 {
                     // Why rethrow: a throw here was previously silent, and a provider that failed to take
                     // its parent is unusable in a way that only surfaces much later.
-                    if (stLogger != null) ServiceTypeLog.FactoryRegistrationException(stLogger, ex, "ConnectionTypes");
+                    ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(ConnectionTypes));
                     throw;
                 }
                 return provider;
             });
+
+            // Why the milestone comes after the registration and not before: it states that the domain
+            // finished phase 2, which is only true once the provider is actually in the container.
+            if (declaredOptions.Length == 0)
+                ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(ConnectionTypes), providerService);
+            else
+                ServiceTypeLog.DomainRegistered(log, nameof(ConnectionTypes), declaredOptions.Length, optionNames, providerService);
+
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
     }

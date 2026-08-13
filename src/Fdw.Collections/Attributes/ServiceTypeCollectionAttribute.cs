@@ -131,7 +131,7 @@ public sealed class ServiceTypeCollectionAttribute : Attribute
     /// <c>Fdw.Services.Registration.SourceGenerators</c> module initializer registers this
     /// collection into <c>PlatformServices</c> as manual: the <c>Configure</c>/<c>Register</c>/
     /// <c>Initialize</c> phases skip it, and a host resolves the one configured option
-    /// explicitly instead. Default is false (the collection participates in the sweeps).
+    /// explicitly instead. Default is false (the collection participates in the collects).
     /// </summary>
     public bool Manual { get; set; }
 
