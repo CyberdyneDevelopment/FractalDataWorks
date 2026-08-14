@@ -4,6 +4,7 @@
 @using System.Linq
 @using System.Threading
 @using System.Threading.Tasks
+
 @using Microsoft.AspNetCore.Components
 @using Microsoft.Extensions.Logging
 @using Microsoft.Extensions.Logging.Abstractions
@@ -17,6 +18,15 @@
 @inject IHttpClientFactory HttpClientFactory
 @inject ILoggerFactory? LoggerFactory
 @inject ILogger<MessageProvider>? LoggerParam
+
+@* Why: a Blazor component's continuations must stay on the renderer's synchronisation context.
+   ConfigureAwait(false) moves them off it, and a bare StateHasChanged() then throws "The current
+   thread is not associated with the Dispatcher", terminating the circuit — so a recoverable failure
+   destroyed the user's whole session instead of rendering an error. Observed in reference-ui
+   2026-08-14. No analyzer catches this - MA0004 is
+   severity=none in .editorconfig - so the rule holds by convention only. The alternative,
+   used by DataCommandProvider, is to keep ConfigureAwait(false) and marshal every state
+   touch through InvokeAsync; either is correct, mixing them is what breaks. *@
 
 @* Headless provider — no markup. Renders child content only. *@
 @if (MessageListContent is not null)
@@ -101,17 +111,17 @@
 
         if (AutoLoad)
         {
-            await LoadMessages(null, null, null, 0, 50).ConfigureAwait(false);
+            await LoadMessages(null, null, null, 0, 50);
         }
 
         if (AutoLoadMessageId.HasValue)
         {
-            await LoadMessageDetail(AutoLoadMessageId.Value).ConfigureAwait(false);
+            await LoadMessageDetail(AutoLoadMessageId.Value);
         }
 
         if (AutoLoadAccessRequests)
         {
-            await LoadAccessRequests().ConfigureAwait(false);
+            await LoadAccessRequests();
         }
     }
 
@@ -170,7 +180,7 @@
                 status: status,
                 skip: skip,
                 take: take,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+                cancellationToken: cancellationToken);
 
             _unreadCount = _messages.Count(m => m.IsUnread);
         }
@@ -194,11 +204,11 @@
 
         try
         {
-            _detailMessage = await _messageApi!.GetMessage(id, cancellationToken).ConfigureAwait(false);
+            _detailMessage = await _messageApi!.GetMessage(id, cancellationToken);
 
             if (_detailMessage is not null && _detailMessage.ReadAt is null)
             {
-                await _messageApi!.MarkRead(id, cancellationToken).ConfigureAwait(false);
+                await _messageApi!.MarkRead(id, cancellationToken);
             }
         }
         catch (Exception ex)
@@ -221,7 +231,7 @@
 
         try
         {
-            _accessRequests = await _messageApi!.GetAccessRequests(cancellationToken).ConfigureAwait(false);
+            _accessRequests = await _messageApi!.GetAccessRequests(cancellationToken);
         }
         catch (Exception ex)
         {
@@ -231,11 +241,15 @@
         finally
         {
             _isLoadingAccessRequests = false;
-            // Why: the GetAccessRequests await used ConfigureAwait(false), so this continuation resumes on a
-            // thread-pool thread, not the Blazor Dispatcher. Calling StateHasChanged() directly there throws
-            // "current thread is not associated with the Dispatcher" — which aborted the circuit and discarded
-            // the loaded rows (page rendered empty). InvokeAsync marshals the render back onto the Dispatcher.
-            await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            // Why this one is still marshalled while its siblings call StateHasChanged() directly: the
+            // ConfigureAwait(false) that made it necessary is gone from this file, so the continuation
+            // already resumes on the Dispatcher. InvokeAsync is kept because it is correct either way and
+            // costs nothing in a finally, where the path in is the least predictable.
+            //
+            // The history is worth keeping: this single call site was patched when the throw was first
+            // hit here, and the eight bare StateHasChanged() calls beside it were left exposed to the
+            // same fault. That is what made it a file-wide fix rather than another local one.
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -243,7 +257,7 @@
     {
         try
         {
-            await _messageApi!.MarkRead(id, cancellationToken).ConfigureAwait(false);
+            await _messageApi!.MarkRead(id, cancellationToken);
             var updated = _messages.Select(m => m.Id == id ? UpdateMessageReadAt(m) : m).ToList();
             _messages = updated;
             _unreadCount = _messages.Count(m => m.IsUnread);
@@ -259,7 +273,7 @@
     {
         try
         {
-            await _messageApi!.MarkAllRead(cancellationToken).ConfigureAwait(false);
+            await _messageApi!.MarkAllRead(cancellationToken);
             var updated = _messages.Select(m => m.ReadAt is null ? UpdateMessageReadAt(m) : m).ToList();
             _messages = updated;
             _unreadCount = 0;
@@ -275,7 +289,7 @@
     {
         try
         {
-            await _messageApi!.Archive(id, cancellationToken).ConfigureAwait(false);
+            await _messageApi!.Archive(id, cancellationToken);
             var now = DateTime.UtcNow;
             var updated = _messages.Select(m => m.Id == id
                 ? new ClientModels.MessagePayload
@@ -302,7 +316,7 @@
     {
         try
         {
-            await _messageApi!.Dismiss(id, cancellationToken).ConfigureAwait(false);
+            await _messageApi!.Dismiss(id, cancellationToken);
             var now = DateTime.UtcNow;
             var updated = _messages.Select(m => m.Id == id
                 ? new ClientModels.MessagePayload
@@ -329,8 +343,8 @@
     {
         try
         {
-            await _messageApi!.ApproveAccessRequest(id, notes, cancellationToken).ConfigureAwait(false);
-            await LoadAccessRequests(cancellationToken).ConfigureAwait(false);
+            await _messageApi!.ApproveAccessRequest(id, notes, cancellationToken);
+            await LoadAccessRequests(cancellationToken);
         }
         catch (Exception ex)
         {
@@ -342,8 +356,8 @@
     {
         try
         {
-            await _messageApi!.DenyAccessRequest(id, notes, cancellationToken).ConfigureAwait(false);
-            await LoadAccessRequests(cancellationToken).ConfigureAwait(false);
+            await _messageApi!.DenyAccessRequest(id, notes, cancellationToken);
+            await LoadAccessRequests(cancellationToken);
         }
         catch (Exception ex)
         {
@@ -355,7 +369,7 @@
     {
         try
         {
-            await _messageApi!.CreateAccessRequest(model, cancellationToken).ConfigureAwait(false);
+            await _messageApi!.CreateAccessRequest(model, cancellationToken);
         }
         catch (Exception ex)
         {

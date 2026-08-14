@@ -13,6 +13,15 @@
 @using System.Threading.Tasks
 @using Fdw.Services.SessionState.Components.Logging
 
+@* Why: a Blazor component's continuations must stay on the renderer's synchronisation context.
+   ConfigureAwait(false) moves them off it, and the StateHasChanged() that follows then throws
+   "The current thread is not associated with the Dispatcher", which terminates the circuit — so a
+   recoverable failure (a 400 from the service below) destroyed the user's whole session instead of
+   rendering an error. Observed in reference-ui 2026-08-14. No analyzer catches this - MA0004 is
+   severity=none in .editorconfig - so the rule holds by convention only. The alternative,
+   used by DataCommandProvider, is to keep ConfigureAwait(false) and marshal every state
+   touch through InvokeAsync; either is correct, mixing them is what breaks. *@
+
 @if (ChildContent is not null)
 {
     @ChildContent(_context)
@@ -66,7 +75,7 @@
 
         try
         {
-            var authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var nameIdClaim = authState.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             _userId = nameIdClaim is not null
                 ? nameIdClaim
@@ -78,14 +87,13 @@
                 return;
             }
 
-            var keysResult = await SessionStateService.GetAllKeys(_userId, cancellationToken).ConfigureAwait(false);
+            var keysResult = await SessionStateService.GetAllKeys(_userId, cancellationToken);
 
             if (keysResult.IsSuccess && keysResult.Value is not null)
             {
                 foreach (var key in keysResult.Value)
                 {
-                    var valueResult = await SessionStateService.GetState<object>(_userId, key, cancellationToken)
-                        .ConfigureAwait(false);
+                    var valueResult = await SessionStateService.GetState<object>(_userId, key, cancellationToken);
 
                     if (valueResult.IsSuccess)
                     {
@@ -128,7 +136,7 @@
 
         SessionStateProviderLog.SavingState(_logger, key);
 
-        var result = await SessionStateService.SaveState(_userId, key, value).ConfigureAwait(false);
+        var result = await SessionStateService.SaveState(_userId, key, value);
 
         if (result.IsSuccess)
         {
@@ -154,7 +162,7 @@
 
         SessionStateProviderLog.DeletingState(_logger, key);
 
-        var result = await SessionStateService.DeleteState(_userId, key).ConfigureAwait(false);
+        var result = await SessionStateService.DeleteState(_userId, key);
 
         if (result.IsSuccess)
         {
