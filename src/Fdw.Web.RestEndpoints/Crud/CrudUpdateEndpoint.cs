@@ -117,11 +117,7 @@ public abstract class CrudUpdateEndpoint<TUpdateRequest, TDetail> : Endpoint<TUp
                 OnNotFound(resourceName);
                 HttpContext.Response.StatusCode = 404;
                 HttpContext.Response.ContentType = "application/json";
-                await HttpContext.Response.WriteAsJsonAsync(new
-                {
-                    errorCode = "NotFound",
-                    messages = new[] { $"{ResourceName} '{resourceName}' was not found." }
-                }, ct).ConfigureAwait(false);
+                await HttpContext.Response.WriteAsJsonAsync(NotFoundProblem($"{ResourceName} '{resourceName}' was not found."), ct).ConfigureAwait(false);
                 return;
             }
 
@@ -227,4 +223,31 @@ public abstract class CrudUpdateEndpoint<TUpdateRequest, TDetail> : Endpoint<TUp
         PATCH
     }
 #pragma warning restore FDW017
+
+    /// <summary>Builds the RFC 7807 body for a resource that does not exist.</summary>
+    /// <param name="detail">What was looked for.</param>
+    /// <returns>The problem.</returns>
+    /// <remarks>
+    /// Why not an anonymous object: this branch answered 404 with {errorCode, messages[]} while every
+    /// other failure from the same endpoint went through ResultHttpStatusMapper and came back as
+    /// ProblemDetails. One endpoint, two error shapes, decided by which branch fired.
+    /// </remarks>
+    private Microsoft.AspNetCore.Mvc.ProblemDetails NotFoundProblem(string detail)
+    {
+        // Why fully qualified: FastEndpoints ships its own ProblemDetails and both are in scope
+        // here. Both are RFC 7807 on the wire; this is the one ResultHttpStatusMapper emits, so
+        // every failure from this endpoint has one shape whichever branch produced it.
+        var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails
+        {
+            Status = 404,
+            Title = "Not found",
+            Detail = detail,
+            Instance = HttpContext.Request.Path.HasValue ? HttpContext.Request.Path.Value : null,
+        };
+
+        problem.Extensions["code"] = "NotFound";
+        problem.Extensions["referenceId"] = HttpContext.TraceIdentifier;
+        problem.Extensions["isRetryable"] = false;
+        return problem;
+    }
 }
