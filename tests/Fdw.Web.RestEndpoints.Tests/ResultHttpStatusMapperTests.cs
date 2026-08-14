@@ -88,8 +88,8 @@ public class ResultHttpStatusMapperTests
 
         // Assert
         statusCode.ShouldBe(expectedStatus);
-        response.Message.ShouldNotBeNullOrEmpty();
-        response.Code.ShouldBe($"TEST-{codeNumber}");
+        response.Detail.ShouldNotBeNullOrEmpty();
+        response.Extensions["code"].ShouldBe($"TEST-{codeNumber}");
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class ResultHttpStatusMapperTests
 
         // Assert
         statusCode.ShouldBe(500);
-        response.Message.ShouldBe("An unexpected error occurred");
+        response.Detail.ShouldBe("An unexpected error occurred");
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class ResultHttpStatusMapperTests
 
         // Assert
         statusCode.ShouldBe(500);
-        response.Code.ShouldBe("UNKNOWN_ERROR");
+        response.Extensions["code"].ShouldBe("UNKNOWN_ERROR");
     }
 
     #endregion
@@ -149,15 +149,15 @@ public class ResultHttpStatusMapperTests
         var (_, response) = ResultHttpStatusMapper.Map(result, context);
 
         // Assert -- no server addresses, SQL text, or usernames
-        response.Message.ShouldNotContain("SELECT");
-        response.Message.ShouldNotContain("INSERT");
-        response.Message.ShouldNotContain("DELETE");
-        response.Message.ShouldNotContain("UPDATE");
-        response.Message.ShouldNotContain("10.10.10");
-        response.Message.ShouldNotContain("localhost");
-        response.Message.ShouldNotContain("sa ");
-        response.Message.ShouldNotContain("password", Case.Insensitive);
-        response.Message.ShouldNotContain("connection string", Case.Insensitive);
+        response.Detail.ShouldNotContain("SELECT");
+        response.Detail.ShouldNotContain("INSERT");
+        response.Detail.ShouldNotContain("DELETE");
+        response.Detail.ShouldNotContain("UPDATE");
+        response.Detail.ShouldNotContain("10.10.10");
+        response.Detail.ShouldNotContain("localhost");
+        response.Detail.ShouldNotContain("sa ");
+        response.Detail.ShouldNotContain("password", Case.Insensitive);
+        response.Detail.ShouldNotContain("connection string", Case.Insensitive);
     }
 
     #endregion
@@ -178,7 +178,7 @@ public class ResultHttpStatusMapperTests
         var (_, response) = ResultHttpStatusMapper.Map(result, context);
 
         // Assert
-        response.ReferenceId.ShouldBe(traceId);
+        response.Extensions["referenceId"].ShouldBe(traceId);
     }
 
     [Fact]
@@ -194,7 +194,7 @@ public class ResultHttpStatusMapperTests
         var (_, response) = ResultHttpStatusMapper.Map(result, context);
 
         // Assert
-        response.ReferenceId.ShouldNotBeNullOrEmpty();
+        (response.Extensions["referenceId"] as string).ShouldNotBeNullOrEmpty();
     }
 
     #endregion
@@ -222,7 +222,7 @@ public class ResultHttpStatusMapperTests
         var (_, response) = ResultHttpStatusMapper.Map(result, context);
 
         // Assert
-        response.IsRetryable.ShouldBe(expectedRetryable);
+        response.Extensions["isRetryable"].ShouldBe(expectedRetryable);
     }
 
     #endregion
