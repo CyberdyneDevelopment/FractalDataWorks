@@ -85,6 +85,8 @@ public sealed class AuthentikClientCredentialsIdentityService
         if (!secret.IsSuccess || secret.Value is null)
             return secret.ToNewResult<IssuedIdentityToken>();
 
+        IdentityLog.ClientSecretResolved(Logger, Name, secretManagerName);
+
         using var clientSecretValue = secret.Value;
         if (clientSecretValue.GetStringValue() is not { Length: > 0 } clientSecret)
             return GenericResult<IssuedIdentityToken>.Failure(IdentityLog.ConfigurationValueMissing(Logger, Name, secretKeyName));

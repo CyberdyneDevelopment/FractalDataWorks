@@ -75,6 +75,65 @@ public static partial class IdentityLog
     [MessageLogging(EventId = 11005, Level = LogLevel.Trace, Message = "Outbound request carrying managed identity: configuration '{configurationName}' for audience '{audience}'")]
     public static partial IGenericMessage OutboundTokenAttached(ILogger logger, string configurationName, string audience);
 
+    /// <summary>Logs the outbound token request as it is about to be sent.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="configurationName">The identity configuration being used.</param>
+    /// <param name="tokenEndpoint">The endpoint being posted to.</param>
+    /// <param name="grantType">The OAuth2 grant type.</param>
+    /// <param name="parameterNames">The names (never values) of the parameters being sent.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 11006, Level = LogLevel.Trace, Message = "Posting token request: configuration '{configurationName}' to '{tokenEndpoint}' grant={grantType} params=[{parameterNames}]")]
+    public static partial IGenericMessage PostingTokenRequest(ILogger logger, string configurationName, string tokenEndpoint, string grantType, string parameterNames);
+
+    /// <summary>Logs the raw status the identity provider answered with.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="configurationName">The identity configuration being used.</param>
+    /// <param name="tokenEndpoint">The endpoint that answered.</param>
+    /// <param name="statusCode">The HTTP status returned.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 11007, Level = LogLevel.Trace, Message = "Token endpoint answered: configuration '{configurationName}' at '{tokenEndpoint}' status={statusCode}")]
+    public static partial IGenericMessage TokenEndpointAnswered(ILogger logger, string configurationName, string tokenEndpoint, int statusCode);
+
+    /// <summary>Logs that no live cached token was found, so one will be acquired.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="configurationName">The identity configuration.</param>
+    /// <param name="audience">The audience asked for.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 11008, Level = LogLevel.Trace, Message = "No live cached token: configuration '{configurationName}' for audience '{audience}' — acquiring")]
+    public static partial IGenericMessage TokenCacheMiss(ILogger logger, string configurationName, string audience);
+
+    /// <summary>Logs that a caller waited on the acquisition gate rather than starting its own acquisition.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="configurationName">The identity configuration.</param>
+    /// <param name="audience">The audience asked for.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 11009, Level = LogLevel.Trace, Message = "Waiting on in-flight acquisition: configuration '{configurationName}' for audience '{audience}'")]
+    public static partial IGenericMessage AwaitingInFlightAcquisition(ILogger logger, string configurationName, string audience);
+
+    /// <summary>Logs that the federated assertion was located and is about to be exchanged.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="configurationName">The identity configuration.</param>
+    /// <param name="source">The assertion source that supplied it.</param>
+    /// <param name="location">Where the source read it from.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 11010, Level = LogLevel.Trace, Message = "Federated assertion located: configuration '{configurationName}' via {source} at '{location}'")]
+    public static partial IGenericMessage AssertionLocated(ILogger logger, string configurationName, string source, string location);
+
+    /// <summary>Logs that the client secret was resolved from its secret manager.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="configurationName">The identity configuration.</param>
+    /// <param name="secretManagerName">The secret manager that supplied it.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 11011, Level = LogLevel.Trace, Message = "Client secret resolved: configuration '{configurationName}' from secret manager '{secretManagerName}'")]
+    public static partial IGenericMessage ClientSecretResolved(ILogger logger, string configurationName, string secretManagerName);
+
+    /// <summary>Logs that the domain could not construct any identity service at all.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="configurationName">The identity configuration.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 91003, Level = LogLevel.Critical, Message = "The identity domain cannot serve '{configurationName}' — no outbound call requiring managed identity can succeed")]
+    public static partial IGenericMessage DomainUnusable(ILogger logger, string configurationName);
+
     /// <summary>Logs that the identity provider rejected this service's credential.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="configurationName">The identity configuration used.</param>

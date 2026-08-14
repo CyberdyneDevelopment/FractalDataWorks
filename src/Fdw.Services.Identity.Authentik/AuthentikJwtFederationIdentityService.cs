@@ -76,6 +76,8 @@ public sealed class AuthentikJwtFederationIdentityService
         if (assertion.IsFailure || assertion.Value is not { Length: > 0 } assertionValue)
             return assertion.ToNewResult<IssuedIdentityToken>();
 
+        IdentityLog.AssertionLocated(Logger, Name, assertionSource, assertionLocation);
+
         return await _tokenEndpoint.Exchange(
             Name,
             tokenEndpoint,

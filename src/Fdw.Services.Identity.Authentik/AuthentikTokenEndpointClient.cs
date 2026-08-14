@@ -79,6 +79,10 @@ public sealed class AuthentikTokenEndpointClient
         if (request.Scopes.Count > 0)
             form["scope"] = string.Join(" ", request.Scopes);
 
+        // Trace names the parameters but never their values — client_secret and client_assertion are
+        // credentials, and a trace log that carried them would defeat the point of short-lived tokens.
+        IdentityLog.PostingTokenRequest(_logger, configurationName, tokenEndpoint, "client_credentials", string.Join(", ", form.Keys));
+
         HttpResponseMessage response;
         try
         {
@@ -103,6 +107,7 @@ public sealed class AuthentikTokenEndpointClient
 
         using (response)
         {
+            IdentityLog.TokenEndpointAnswered(_logger, configurationName, tokenEndpoint, (int)response.StatusCode);
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)

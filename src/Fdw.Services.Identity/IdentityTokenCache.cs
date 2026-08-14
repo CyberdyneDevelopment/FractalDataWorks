@@ -66,7 +66,12 @@ public sealed class IdentityTokenCache : IIdentityTokenCache
         if (TryServe(configurationName, request, out var cached))
             return GenericResult<IssuedIdentityToken>.Success(cached);
 
+        IdentityLog.TokenCacheMiss(_logger, configurationName, request.Audience);
+
         var gate = _gates.GetOrAdd(KeyFor(configurationName, request), _ => new SemaphoreSlim(1, 1));
+        if (gate.CurrentCount == 0)
+            IdentityLog.AwaitingInFlightAcquisition(_logger, configurationName, request.Audience);
+
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
