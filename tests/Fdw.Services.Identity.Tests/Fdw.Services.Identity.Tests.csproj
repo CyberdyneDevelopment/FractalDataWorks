@@ -20,5 +20,6 @@
     <ProjectReference Include="..\..\src\Fdw.Services.Identity.Endpoints\Fdw.Services.Identity.Endpoints.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Registration\Fdw.Services.Registration.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Registration.SourceGenerators\Fdw.Services.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Identity.FdwOpenIddict\Fdw.Services.Identity.FdwOpenIddict.csproj" />
   </ItemGroup>
 </Project>

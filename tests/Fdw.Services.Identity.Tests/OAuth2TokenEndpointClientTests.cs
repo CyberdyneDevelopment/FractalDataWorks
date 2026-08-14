@@ -11,14 +11,14 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.Identity.Tests;
 
 /// <summary>
-/// Tests for <see cref="AuthentikTokenEndpointClient"/>, stubbing the HTTP boundary.
+/// Tests for <see cref="OAuth2TokenEndpointClient"/>, stubbing the HTTP boundary.
 /// </summary>
 /// <remarks>
 /// The error-response shape asserted here is the one the live Authentik at
 /// <c>login.cyberdynedevelopment.dev</c> actually returns for an unknown client:
 /// <c>{"error":"invalid_client","error_description":"..."}</c> with HTTP 400.
 /// </remarks>
-public class AuthentikTokenEndpointClientTests
+public class OAuth2TokenEndpointClientTests
 {
     private const string Endpoint = "https://login.example.dev/application/o/token/";
     private const string Issuer = "https://login.example.dev/application/o/etl/";
@@ -44,10 +44,10 @@ public class AuthentikTokenEndpointClientTests
         }
     }
 
-    private static (AuthentikTokenEndpointClient Client, StubHandler Handler) Client(HttpStatusCode status, string body)
+    private static (OAuth2TokenEndpointClient Client, StubHandler Handler) Client(HttpStatusCode status, string body)
     {
         var handler = new StubHandler(status, body);
-        return (new AuthentikTokenEndpointClient(new HttpClient(handler), NullLogger.Instance), handler);
+        return (new OAuth2TokenEndpointClient(new HttpClient(handler), NullLogger.Instance), handler);
     }
 
     [Fact]

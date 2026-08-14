@@ -11,34 +11,34 @@ using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Commands;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.Services.Identity.Authentik;
+namespace Fdw.Services.Identity.FdwOpenIddict;
 
 /// <summary>
-/// Proves this service's identity to Authentik with an OAuth 2.0 client-credentials grant
-/// (RFC 6749 §4.4) backed by an Authentik Service Account.
+/// Proves this service's identity to FDW's own OpenIddict authorization server with an OAuth 2.0
+/// client-credentials grant (RFC 6749 §4.4).
 /// </summary>
 /// <remarks>
 /// The client secret is resolved through <c>ISecretManager</c> at acquisition time and never held on
 /// this instance. Holding it in a field would keep a long-lived credential in process memory for the
 /// life of the service, which is a worse exposure than the per-acquisition read it replaces.
 /// </remarks>
-public sealed class AuthentikClientCredentialsIdentityService
-    : IdentityServiceBase<AuthentikClientCredentialsConfiguration, AuthentikClientCredentialsIdentityService>
+public sealed class FdwOpenIddictIdentityService
+    : IdentityServiceBase<FdwOpenIddictConfiguration, FdwOpenIddictIdentityService>
 {
     private readonly OAuth2TokenEndpointClient _tokenEndpoint;
     private readonly Lazy<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>> _secretManagers;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AuthentikClientCredentialsIdentityService"/> class.
+    /// Initializes a new instance of the <see cref="FdwOpenIddictIdentityService"/> class.
     /// </summary>
     /// <param name="logger">The logger for this service.</param>
     /// <param name="configuration">The typed configuration body for this identity.</param>
     /// <param name="tokenEndpoint">The shared token-endpoint client.</param>
     /// <param name="secretManagers">Provider resolving the named secret manager that holds this identity's client secret.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="tokenEndpoint"/> or <paramref name="secretManagers"/> is null.</exception>
-    public AuthentikClientCredentialsIdentityService(
-        ILogger<AuthentikClientCredentialsIdentityService>? logger,
-        AuthentikClientCredentialsConfiguration configuration,
+    public FdwOpenIddictIdentityService(
+        ILogger<FdwOpenIddictIdentityService>? logger,
+        FdwOpenIddictConfiguration configuration,
         OAuth2TokenEndpointClient tokenEndpoint,
         Lazy<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>> secretManagers)
         : base(logger, configuration)
@@ -55,8 +55,8 @@ public sealed class AuthentikClientCredentialsIdentityService
         if (request is null)
             return GenericResult<IssuedIdentityToken>.Failure(IdentityLog.ConfigurationValueMissing(Logger, Name, nameof(request)));
 
-        // NO FALLBACKS: every one of these is required to reach the provider at all. A missing value
-        // is reported by name and fails, never substituted.
+        // NO FALLBACKS: every one of these is required to reach the authorization server at all. A
+        // missing value is reported by name and fails, never substituted.
         if (Configuration.TokenEndpoint is not { Length: > 0 } tokenEndpoint)
             return GenericResult<IssuedIdentityToken>.Failure(IdentityLog.ConfigurationValueMissing(Logger, Name, nameof(Configuration.TokenEndpoint)));
         if (Configuration.Issuer is not { Length: > 0 } issuer)
@@ -68,7 +68,7 @@ public sealed class AuthentikClientCredentialsIdentityService
         if (Configuration.SecretKeyName is not { Length: > 0 } secretKeyName)
             return GenericResult<IssuedIdentityToken>.Failure(IdentityLog.ConfigurationValueMissing(Logger, Name, nameof(Configuration.SecretKeyName)));
 
-        IdentityLog.AcquiringToken(Logger, Name, "AuthentikClientCredentials", request.Audience);
+        IdentityLog.AcquiringToken(Logger, Name, "FdwOpenIddict", request.Audience);
 
         // Why resolved by name at acquisition rather than injected: the configuration names WHICH
         // secret manager holds this identity's secret, and binding one at construction would ignore

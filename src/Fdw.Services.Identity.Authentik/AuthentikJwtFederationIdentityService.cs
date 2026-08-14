@@ -25,7 +25,7 @@ public sealed class AuthentikJwtFederationIdentityService
 {
     private const string JwtBearerAssertionType = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
 
-    private readonly AuthentikTokenEndpointClient _tokenEndpoint;
+    private readonly OAuth2TokenEndpointClient _tokenEndpoint;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AuthentikJwtFederationIdentityService"/> class.
@@ -37,7 +37,7 @@ public sealed class AuthentikJwtFederationIdentityService
     public AuthentikJwtFederationIdentityService(
         ILogger<AuthentikJwtFederationIdentityService>? logger,
         AuthentikJwtFederationConfiguration configuration,
-        AuthentikTokenEndpointClient tokenEndpoint)
+        OAuth2TokenEndpointClient tokenEndpoint)
         : base(logger, configuration)
     {
         _tokenEndpoint = tokenEndpoint ?? throw new ArgumentNullException(nameof(tokenEndpoint));
