@@ -134,6 +134,10 @@ public static class Program
         services.AddSingleton<IConnectionManager, ConnectionManager>();
         services.AddSingleton<ISettingsService, SettingsService>();
 
+        // Why singleton: the suite is a folder on disk, so the service holds no per-use state —
+        // it locates the folder, shells out and reads the run record back.
+        services.AddSingleton<INewmanSuiteService, NewmanSuiteService>();
+
         ConfigureApiClients(builder);
     }
 
