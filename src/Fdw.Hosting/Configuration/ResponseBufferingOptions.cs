@@ -20,7 +20,7 @@ namespace Fdw.Hosting.Configuration;
 /// </para>
 /// <para>
 /// Bound to the <c>ResponseBuffering</c> configuration section by
-/// <see cref="Extensions.ResponseBufferingExtensions.UseFrameworkResponseBuffering"/>.
+/// <c>ResponseBufferingMiddleware</c>.
 /// </para>
 /// </remarks>
 // Why: pure DTO, only auto-properties bound from IOptions, no logic.
