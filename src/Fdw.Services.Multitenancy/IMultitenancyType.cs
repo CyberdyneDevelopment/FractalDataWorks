@@ -15,7 +15,7 @@ public interface IMultitenancyType : IServiceType
     /// <remarks>
     /// The host reads its configured <c>Multitenancy</c> row's <c>ServiceOptionType</c>, looks the
     /// option up via <see cref="MultitenancyTypes.ByName(string)"/>, and uses this property to derive
-    /// the boolean <c>UseFrameworkApplicationPipeline</c> expects — never by sniffing whether a
+    /// whether tenant resolution belongs in its pipeline — never by sniffing whether a
     /// configuration section is present (NO FALLBACKS: an unrecognized ServiceOptionType is a
     /// startup failure, not a silent single-tenant default).
     /// </remarks>
