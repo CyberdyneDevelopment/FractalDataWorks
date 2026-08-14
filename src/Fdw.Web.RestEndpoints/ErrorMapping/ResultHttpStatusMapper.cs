@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Fdw.Results;
 using Fdw.Results.Abstractions;
-using Fdw.Web.RestEndpoints.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Fdw.Web.RestEndpoints.ErrorMapping;
 
@@ -27,7 +27,7 @@ public static class ResultHttpStatusMapper
     /// <param name="result">The result containing failure information.</param>
     /// <param name="httpContext">The HTTP context for correlation ID extraction.</param>
     /// <returns>A tuple of HTTP status code and ErrorResponse.</returns>
-    public static (int StatusCode, ErrorResponse Response) Map(IGenericResult result, HttpContext httpContext)
+    public static (int StatusCode, ProblemDetails Response) Map(IGenericResult result, HttpContext httpContext)
     {
         var referenceId = httpContext.TraceIdentifier;
         var code = ExtractResultCode(result);
@@ -41,26 +41,26 @@ public static class ResultHttpStatusMapper
             {
                 // Why: status, retryability, and the client-safe copy all travel with the category
                 // option (set via its constructor) — no per-code table and no dispatch on the id here.
-                return (category.HttpStatus, new ErrorResponse
-                {
-                    Code = code.Code,
-                    Message = category.ClientMessage,
-                    ReferenceId = referenceId,
-                    IsRetryable = category.IsRetryable,
-                    Action = category.ClientAction,
-                });
+                return (category.HttpStatus, Build(
+                    category.HttpStatus,
+                    category.ClientMessage,
+                    code.Code,
+                    referenceId,
+                    category.IsRetryable,
+                    category.ClientAction,
+                    httpContext));
             }
         }
 
         // Default: 500 with a generic message (uncategorized/legacy code, or no code at all).
-        return (500, new ErrorResponse
-        {
-            Code = code?.Code ?? "UNKNOWN_ERROR",
-            Message = "An unexpected error occurred",
-            ReferenceId = referenceId,
-            IsRetryable = false,
-            Action = "Contact your administrator",
-        });
+        return (500, Build(
+            500,
+            "An unexpected error occurred",
+            code?.Code ?? "UNKNOWN_ERROR",
+            referenceId,
+            false,
+            "Contact your administrator",
+            httpContext));
     }
 
     private static IResultCode? ExtractResultCode(IGenericResult result)
@@ -84,5 +84,36 @@ public static class ResultHttpStatusMapper
         }
 
         return null;
+    }
+
+    /// <summary>Builds the RFC 7807 body, carrying FDW's own fields as extensions.</summary>
+    /// <remarks>
+    /// Why ProblemDetails and not a bespoke model: every HTTP client, OpenAPI generator and agent
+    /// framework already understands status/title/detail. The FDW-specific parts a caller may still
+    /// want - the result code, the trace id, whether retrying could help, and what to do about it -
+    /// travel as extensions, so nothing is lost and nothing has to be taught.
+    /// </remarks>
+    private static ProblemDetails Build(
+        int status,
+        string? message,
+        string code,
+        string referenceId,
+        bool isRetryable,
+        string? action,
+        HttpContext httpContext)
+    {
+        var problem = new ProblemDetails
+        {
+            Status = status,
+            Title = message,
+            Detail = message,
+            Instance = httpContext.Request.Path.HasValue ? httpContext.Request.Path.Value : null,
+        };
+
+        problem.Extensions["code"] = code;
+        problem.Extensions["referenceId"] = referenceId;
+        problem.Extensions["isRetryable"] = isRetryable;
+        problem.Extensions["action"] = action;
+        return problem;
     }
 }

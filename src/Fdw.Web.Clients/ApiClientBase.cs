@@ -154,17 +154,21 @@ public abstract class ApiClientBase
     /// </summary>
     private async Task<IGenericMessage> NonSuccessDetail(string method, string path, HttpResponseMessage response, CancellationToken ct)
     {
-        // Why: FDW endpoints return the real failure reason in the response body
-        // (e.g. {"errorCode":"...","messages":["User 'x' already exists"]}). Reporting only the
-        // status code discarded it, so providers/UI could never surface the actual error. Read the
-        // body (capped) into the structured message; callers surface result.CurrentMessage.
+        // Why: endpoints return the real failure reason in the body. Reporting only the status code
+        // discarded it, so providers/UI could never surface the actual error.
+        //
+        // Why parsed rather than pasted: the body is RFC 7807 ProblemDetails, so detail/title carry a
+        // sentence meant for a human and the extensions carry the result code. Dumping the raw JSON
+        // into the message put braces and quoting in front of the operator - and in front of an agent
+        // that then has to guess which field mattered. A body that is not ProblemDetails falls through
+        // to the capped raw text, because something unparseable is still better than a bare status.
         string detail;
         try
         {
             var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             detail = string.IsNullOrWhiteSpace(body)
                 ? $"status {(int)response.StatusCode}"
-                : (body.Length > 500 ? body[..500] : body).Trim();
+                : DescribeBody(body, (int)response.StatusCode);
         }
         catch (OperationCanceledException)
         {
@@ -497,5 +501,38 @@ public abstract class ApiClientBase
             return GenericResult.Failure(
                 ClientLog.UnexpectedError(Logger, ex, "DELETE", RequestUri(path), ex.Message));
         }
+    }
+
+    /// <summary>Turns a response body into one readable sentence.</summary>
+    /// <param name="body">The raw response body.</param>
+    /// <param name="statusCode">The HTTP status, used when the body says nothing useful.</param>
+    /// <returns>The description.</returns>
+    private static string DescribeBody(string body, int statusCode)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.ValueKind == JsonValueKind.Object)
+            {
+                var text = doc.RootElement.TryGetProperty("detail", out var d) ? d.GetString() : null;
+                if (string.IsNullOrWhiteSpace(text) && doc.RootElement.TryGetProperty("title", out var t))
+                {
+                    text = t.GetString();
+                }
+
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    return doc.RootElement.TryGetProperty("code", out var c) && c.GetString() is string codeText
+                        ? $"{text} ({codeText})"
+                        : text;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Not ProblemDetails, and not worth failing over - fall through to the raw text.
+        }
+
+        return (body.Length > 500 ? body[..500] : body).Trim();
     }
 }
