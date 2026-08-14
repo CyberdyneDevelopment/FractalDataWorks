@@ -111,4 +111,37 @@ public static partial class EndpointRegistrationLog
         Level = LogLevel.Debug,
         Message = "No endpoint groups joined; this host serves no REST endpoints, so FastEndpoints {phase} is skipped")]
     public static partial IGenericMessage NoEndpointGroups(ILogger logger, string phase);
+
+    /// <summary>Logs how many groups joined, before any is registered.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="groupCount">How many groups joined EndpointGroups.</param>
+    /// <returns>The message.</returns>
+    [MessageLogging(
+        EventId = 11024,
+        Level = LogLevel.Trace,
+        Message = "Endpoint registration starting over {groupCount} joined group(s)")]
+    public static partial IGenericMessage EndpointGroupsJoined(ILogger logger, int groupCount);
+
+    /// <summary>Logs a single group about to register.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="group">The group type name.</param>
+    /// <param name="memberCount">How many options the group holds.</param>
+    /// <returns>The message.</returns>
+    [MessageLogging(
+        EventId = 11025,
+        Level = LogLevel.Trace,
+        Message = "Registering endpoint group {group} holding {memberCount} option(s)")]
+    public static partial IGenericMessage EndpointGroupRegistering(ILogger logger, string group, int memberCount);
+
+    /// <summary>Logs what a group actually contributed.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="group">The group type name.</param>
+    /// <param name="contributed">How many endpoint types it added.</param>
+    /// <param name="runningTotal">Declared endpoints after this group.</param>
+    /// <returns>The message.</returns>
+    [MessageLogging(
+        EventId = 11026,
+        Level = LogLevel.Debug,
+        Message = "Endpoint group {group} contributed {contributed} endpoint type(s); {runningTotal} declared so far")]
+    public static partial IGenericMessage EndpointGroupContributed(ILogger logger, string group, int contributed, int runningTotal);
 }

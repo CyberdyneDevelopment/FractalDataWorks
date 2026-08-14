@@ -94,13 +94,26 @@ public partial class Endpoints : ServiceTypeCollectionBase<IEndpointTypeCollecti
             // Why the groups are cycled here rather than being this collection's own members: a group
             // joins EndpointGroups, which is membership and crosses packages. This collection is what
             // PlatformServices drives, so it is where that list gets walked.
+            // Why each group is named as it registers: when nothing ends up declared, the useful
+            // question is which group contributed nothing, and a silent loop cannot answer it.
+            var registrationLogger = loggerFactory?.CreateLogger(nameof(Endpoints)) ?? NullLogger.Instance;
+            EndpointRegistrationLog.EndpointGroupsJoined(registrationLogger, Groups().Count);
+
             foreach (var group in Groups())
             {
+                var groupName = group.GetType().Name;
+                var before = DeclaredEndpoints.Count;
+                EndpointRegistrationLog.EndpointGroupRegistering(
+                    registrationLogger, groupName, group.Members.Count());
+
                 var result = group.Register(builder, loggerFactory);
                 if (result.IsFailure)
                 {
                     return result;
                 }
+
+                EndpointRegistrationLog.EndpointGroupContributed(
+                    registrationLogger, groupName, DeclaredEndpoints.Count - before, DeclaredEndpoints.Count);
             }
 
             // Why no groups is a different answer from no endpoints: a host that joined no group
