@@ -215,7 +215,7 @@
 
         try
         {
-            var result = await _dataSetApi!.DeleteTransform(id, cancellationToken);
+            var result = await _dataSetApi!.DeleteTransform(FieldMappingId, id, cancellationToken);
             if (result.IsSuccess)
             {
                 FieldMappingTransformProviderLog.DeletedTransform(_logger, idString);

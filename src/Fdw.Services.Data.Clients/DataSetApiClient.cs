@@ -90,7 +90,7 @@ public class DataSetApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the list of transforms.</returns>
     public virtual Task<IGenericResult<IReadOnlyList<FieldMappingTransformPayload>>> GetTransforms(Guid fieldMappingId, CancellationToken ct = default)
-        => GetList<FieldMappingTransformPayload>($"datasets/field-mappings/{fieldMappingId}/transforms", ct);
+        => GetList<FieldMappingTransformPayload>($"field-mappings/{fieldMappingId}/transforms", ct);
 
     /// <summary>
     /// Creates a new field mapping transform.
@@ -99,7 +99,7 @@ public class DataSetApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the created transform.</returns>
     public virtual Task<IGenericResult<FieldMappingTransformPayload>> SaveTransform(SaveFieldMappingTransformRequest request, CancellationToken ct = default)
-        => Post<SaveFieldMappingTransformRequest, FieldMappingTransformPayload>("datasets/field-mappings/transforms", request, ct);
+        => Post<SaveFieldMappingTransformRequest, FieldMappingTransformPayload>($"field-mappings/{request.FieldMappingId}/transforms", request, ct);
 
     /// <summary>
     /// Updates an existing field mapping transform.
@@ -108,17 +108,23 @@ public class DataSetApiClient : ApiClientBase
     /// <param name="request">The save transform request.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the updated transform.</returns>
+    // Why this one is left pointing at nothing: there is no update endpoint for a transform. The
+    // server exposes create (POST), delete and reorder on /field-mappings/{FieldMappingId}/transforms
+    // and no PUT for a single transform, so no path correction makes this reach a handler. Nothing
+    // calls it. Deleting it or adding the endpoint is a decision, and guessing a route would just
+    // move the 404 somewhere less obvious.
     public virtual Task<IGenericResult<FieldMappingTransformPayload>> UpdateTransform(Guid transformId, SaveFieldMappingTransformRequest request, CancellationToken ct = default)
         => Put<SaveFieldMappingTransformRequest, FieldMappingTransformPayload>($"datasets/field-mappings/transforms/{transformId}", request, ct);
 
     /// <summary>
     /// Deletes a field mapping transform.
     /// </summary>
+    /// <param name="fieldMappingId">The field mapping the transform belongs to.</param>
     /// <param name="transformId">The transform identifier.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result indicating whether the deletion succeeded.</returns>
-    public virtual Task<IGenericResult> DeleteTransform(Guid transformId, CancellationToken ct = default)
-        => Delete($"datasets/field-mappings/transforms/{transformId}", ct);
+    public virtual Task<IGenericResult> DeleteTransform(Guid fieldMappingId, Guid transformId, CancellationToken ct = default)
+        => Delete($"field-mappings/{fieldMappingId}/transforms/{transformId}", ct);
 
     /// <summary>
     /// Reorders transforms for a field mapping.
@@ -128,7 +134,7 @@ public class DataSetApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result indicating whether the reorder succeeded.</returns>
     public virtual Task<IGenericResult> ReorderTransforms(Guid fieldMappingId, ReorderTransformsRequest request, CancellationToken ct = default)
-        => Put<ReorderTransformsRequest>($"datasets/field-mappings/{fieldMappingId}/transforms/reorder", request, ct);
+        => Put<ReorderTransformsRequest>($"field-mappings/{fieldMappingId}/transforms/reorder", request, ct);
 
     /// <summary>
     /// Gets all available transform types.
@@ -136,7 +142,7 @@ public class DataSetApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the list of available transform types.</returns>
     public virtual Task<IGenericResult<IReadOnlyList<TransformTypePayload>>> GetAvailableTransformTypes(CancellationToken ct = default)
-        => GetList<TransformTypePayload>("datasets/transform-types", ct);
+        => GetList<TransformTypePayload>("transform-types", ct);
 
     /// <summary>
     /// Gets all available DataSet types from the server's DataSetTypes TypeCollection.
