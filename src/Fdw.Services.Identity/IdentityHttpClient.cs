@@ -1,10 +1,10 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Fdw.Services.Identity.Authentik;
+namespace Fdw.Services.Identity;
 
 /// <summary>
-/// The named <c>HttpClient</c> both Authentik identity mechanisms use to reach the token endpoint.
+/// The named <c>HttpClient</c> every identity mechanism uses to reach its OAuth 2.0 token endpoint.
 /// </summary>
 /// <remarks>
 /// Registered through <c>IHttpClientFactory</c> rather than constructed per service so that socket
@@ -12,10 +12,10 @@ namespace Fdw.Services.Identity.Authentik;
 /// either exhausts sockets or pins stale DNS, and the identity provider is exactly the dependency
 /// that must not become the reason outbound calls stop working.
 /// </remarks>
-public static class AuthentikHttpClient
+public static class IdentityHttpClient
 {
     /// <summary>The name this client is registered and resolved under.</summary>
-    public const string Name = "Fdw.Identity.Authentik";
+    public const string Name = "Fdw.Identity.OAuth2";
 
     /// <summary>
     /// How long a token-endpoint call may take before it is treated as unreachable.
@@ -28,8 +28,8 @@ public static class AuthentikHttpClient
     public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// Registers the named client, idempotently — every Authentik option calls this, and a deployment
-    /// running both mechanisms must not end up with two competing registrations.
+    /// Registers the named client, idempotently — every identity option calls this, and a deployment
+    /// running several mechanisms must not end up with competing registrations.
     /// </summary>
     /// <param name="services">The service collection to register into.</param>
     public static void Register(IServiceCollection services)

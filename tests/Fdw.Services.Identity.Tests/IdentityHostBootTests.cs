@@ -54,6 +54,7 @@ public sealed class IdentityHostBootTests
     [Theory]
     [InlineData("AuthentikClientCredentials")]
     [InlineData("AuthentikJwtFederation")]
+    [InlineData("FdwOpenIddict")]
     public void EachMechanismRegistersItsFactoryWithTheDomainProvider(string mechanism)
     {
         // This is the assertion that proves the option attached AND its Register body ran: the
@@ -134,7 +135,7 @@ public sealed class IdentityHostBootTests
     }
 
     [Fact]
-    public void TheAuthentikHttpClientIsRegisteredUnderItsOwnName()
+    public void TheIdentityHttpClientIsRegisteredUnderItsOwnName()
     {
         var builder = Builder();
         IdentityServiceTypes.Configure(builder, NullLoggerFactory.Instance, Force);
@@ -143,7 +144,7 @@ public sealed class IdentityHostBootTests
         using var host = builder.Build();
 
         host.Services.GetRequiredService<IHttpClientFactory>()
-            .CreateClient(Fdw.Services.Identity.Authentik.AuthentikHttpClient.Name)
+            .CreateClient(Fdw.Services.Identity.IdentityHttpClient.Name)
             .ShouldNotBeNull();
     }
 

@@ -42,9 +42,9 @@ public sealed class AuthentikJwtFederationIdentityType
             DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>
                 .Register(Name, sp => new AuthentikJwtFederationIdentityFactory(
                     sp.GetService<ILoggerFactory>(),
-                    sp.GetRequiredService<IHttpClientFactory>().CreateClient(AuthentikHttpClient.Name)));
+                    sp.GetRequiredService<IHttpClientFactory>().CreateClient(IdentityHttpClient.Name)));
 
-            AuthentikHttpClient.Register(builder.Services);
+            IdentityHttpClient.Register(builder.Services);
 
             IdentityLog.MechanismRegistered(log, Name);
             return GenericResult<IHostApplicationBuilder>.Success(builder);

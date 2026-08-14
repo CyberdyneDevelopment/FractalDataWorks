@@ -11,18 +11,20 @@ using Fdw.Services.Identity.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Fdw.Services.Identity.Authentik;
+namespace Fdw.Services.Identity;
 
 /// <summary>
-/// Posts an OAuth 2.0 token request to Authentik's token endpoint and reads the issued token back.
+/// Posts an OAuth 2.0 client-credentials token request to a provider's token endpoint and reads the
+/// issued token back.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Both Authentik mechanisms this package ships use <c>grant_type=client_credentials</c> against the
-/// same endpoint and differ only in how the request authenticates itself — a <c>client_secret</c> for
-/// the service-account mechanism, a <c>client_assertion</c> for the federated-JWT one. That
-/// difference is the caller's contribution to the form; everything after it (transport, status
-/// handling, response parsing, expiry computation) is identical and lives here once.
+/// Every identity mechanism uses <c>grant_type=client_credentials</c> (RFC 6749 §4.4) and differs
+/// only in how the request authenticates itself — a <c>client_secret</c> for service-account
+/// mechanisms, a <c>client_assertion</c> for federated-JWT ones. That difference is the caller's
+/// contribution to the form; everything after it (transport, status handling, response parsing,
+/// expiry computation) is identical and lives here once, for every provider. Nothing in this class
+/// is specific to one identity provider — it is the OAuth 2.0 exchange itself.
 /// </para>
 /// <para>
 /// Nothing in this class logs a credential or a token value. Failures report the endpoint, the
@@ -30,16 +32,16 @@ namespace Fdw.Services.Identity.Authentik;
 /// handing a reader the ability to impersonate the service.
 /// </para>
 /// </remarks>
-public sealed class AuthentikTokenEndpointClient
+public sealed class OAuth2TokenEndpointClient
 {
     private readonly HttpClient _http;
     private readonly ILogger _logger;
 
-    /// <summary>Initializes a new instance of the <see cref="AuthentikTokenEndpointClient"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="OAuth2TokenEndpointClient"/> class.</summary>
     /// <param name="http">The HTTP client used to reach the token endpoint.</param>
     /// <param name="logger">The logger for this client.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="http"/> is null.</exception>
-    public AuthentikTokenEndpointClient(HttpClient http, ILogger? logger = null)
+    public OAuth2TokenEndpointClient(HttpClient http, ILogger? logger = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
         _logger = logger ?? NullLogger.Instance;
@@ -72,7 +74,7 @@ public sealed class AuthentikTokenEndpointClient
         foreach (var parameter in credentialForm)
             form[parameter.Key] = parameter.Value;
 
-        // Why the audience goes on the wire: Authentik scopes the issued token to it, and a token
+        // Why the audience goes on the wire: the provider scopes the issued token to it, and a token
         // that names no audience is one any peer would have to accept on trust.
         form["audience"] = request.Audience;
 
@@ -112,8 +114,8 @@ public sealed class AuthentikTokenEndpointClient
 
             if (!response.IsSuccessStatusCode)
             {
-                // Why 400/401 read as a rejected credential rather than a transport fault: Authentik
-                // answers a bad client secret or an untrusted assertion with those, and an operator
+                // Why 400/401 read as a rejected credential rather than a transport fault: providers
+                // answer a bad client secret or an untrusted assertion with those, and an operator
                 // needs "the provider refused us" to be distinguishable from "the provider is down".
                 return GenericResult<IssuedIdentityToken>.Failure(
                     response.StatusCode is System.Net.HttpStatusCode.BadRequest or System.Net.HttpStatusCode.Unauthorized
@@ -190,7 +192,7 @@ public sealed class AuthentikTokenEndpointClient
         catch (JsonException ex)
         {
             // Why the exception is logged rather than swallowed: a non-JSON error body means the
-            // request did not reach Authentik's OAuth handler at all (a proxy error page, a wrong
+            // request did not reach the provider's OAuth handler at all (a proxy error page, a wrong
             // endpoint path), which is a different fault from a rejected credential and would
             // otherwise be reported as one. Why the raw body is not returned: an arbitrary error page
             // is not guaranteed to be free of sensitive content.

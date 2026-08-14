@@ -55,7 +55,7 @@ internal sealed class AuthentikJwtFederationIdentityFactory
             new AuthentikJwtFederationIdentityService(
                 _loggerFactory.CreateLogger<AuthentikJwtFederationIdentityService>(),
                 typed,
-                new AuthentikTokenEndpointClient(_http, _loggerFactory.CreateLogger<AuthentikTokenEndpointClient>())));
+                new OAuth2TokenEndpointClient(_http, _loggerFactory.CreateLogger<OAuth2TokenEndpointClient>())));
     }
 
     /// <inheritdoc />

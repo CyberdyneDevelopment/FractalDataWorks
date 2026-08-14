@@ -11,12 +11,12 @@ using Fdw.Services.SecretManagers.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Fdw.Services.Identity.Authentik;
+namespace Fdw.Services.Identity.FdwOpenIddict;
 
 /// <summary>
-/// Builds <see cref="AuthentikClientCredentialsIdentityService"/> instances from a resolved
+/// Builds <see cref="FdwOpenIddictIdentityService"/> instances from a resolved
 /// <see cref="IdentityServiceConfiguration"/> header whose <c>Configuration</c> property carries the
-/// composed <see cref="AuthentikClientCredentialsConfiguration"/> typed body.
+/// composed <see cref="FdwOpenIddictConfiguration"/> typed body.
 /// </summary>
 /// <remarks>
 /// This factory takes no identity provider. It is resolved from inside the scoped resolver lambda for
@@ -26,26 +26,26 @@ namespace Fdw.Services.Identity.Authentik;
 /// <see cref="Lazy{T}"/> so that even that resolution happens after the container is built rather
 /// than while this domain's own resolver lambda is still running.
 /// </remarks>
-internal sealed class AuthentikClientCredentialsIdentityFactory
+internal sealed class FdwOpenIddictIdentityFactory
     : IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>
 {
     private readonly ILoggerFactory _loggerFactory;
-    private readonly ILogger<AuthentikClientCredentialsIdentityFactory> _logger;
+    private readonly ILogger<FdwOpenIddictIdentityFactory> _logger;
     private readonly HttpClient _http;
     private readonly Lazy<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>> _secretManagers;
 
-    /// <summary>Initializes a new instance of the <see cref="AuthentikClientCredentialsIdentityFactory"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="FdwOpenIddictIdentityFactory"/> class.</summary>
     /// <param name="loggerFactory">The logger factory for created services.</param>
-    /// <param name="http">The HTTP client used to reach Authentik's token endpoint.</param>
+    /// <param name="http">The HTTP client used to reach the FDW authorization server's token endpoint.</param>
     /// <param name="secretManagers">Provider resolving the named secret manager holding the client secret.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="http"/> or <paramref name="secretManagers"/> is null.</exception>
-    public AuthentikClientCredentialsIdentityFactory(
+    public FdwOpenIddictIdentityFactory(
         ILoggerFactory? loggerFactory,
         HttpClient http,
         Lazy<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>> secretManagers)
     {
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
-        _logger = _loggerFactory.CreateLogger<AuthentikClientCredentialsIdentityFactory>();
+        _logger = _loggerFactory.CreateLogger<FdwOpenIddictIdentityFactory>();
         _http = http ?? throw new ArgumentNullException(nameof(http));
         _secretManagers = secretManagers ?? throw new ArgumentNullException(nameof(secretManagers));
     }
@@ -59,13 +59,13 @@ internal sealed class AuthentikClientCredentialsIdentityFactory
         // Why this fails rather than constructing with an empty body: runtime dispatch reads only the
         // typed body, so a header that arrived without one would produce a service whose every field
         // is null and whose first acquisition fails somewhere far from the cause.
-        if (configuration.Configuration is not AuthentikClientCredentialsConfiguration typed)
+        if (configuration.Configuration is not FdwOpenIddictConfiguration typed)
             return GenericResult<IIdentityService>.Failure(
-                IdentityLog.TypedBodyMissing(_logger, configuration.Name, "AuthentikClientCredentials"));
+                IdentityLog.TypedBodyMissing(_logger, configuration.Name, "FdwOpenIddict"));
 
         return GenericResult<IIdentityService>.Success(
-            new AuthentikClientCredentialsIdentityService(
-                _loggerFactory.CreateLogger<AuthentikClientCredentialsIdentityService>(),
+            new FdwOpenIddictIdentityService(
+                _loggerFactory.CreateLogger<FdwOpenIddictIdentityService>(),
                 typed,
                 new OAuth2TokenEndpointClient(_http, _loggerFactory.CreateLogger<OAuth2TokenEndpointClient>()),
                 _secretManagers));
@@ -76,7 +76,7 @@ internal sealed class AuthentikClientCredentialsIdentityFactory
         => configuration is IdentityServiceConfiguration header
             ? Create(header)
             : GenericResult<IIdentityService>.Failure(
-                IdentityLog.TypedBodyMissing(_logger, configuration?.Name ?? "(null)", "AuthentikClientCredentials"));
+                IdentityLog.TypedBodyMissing(_logger, configuration?.Name ?? "(null)", "FdwOpenIddict"));
 
     /// <inheritdoc />
     public IGenericResult<T> Create<T>(IGenericConfiguration configuration) where T : IGenericService
@@ -88,7 +88,7 @@ internal sealed class AuthentikClientCredentialsIdentityFactory
         return result.Value is T typed
             ? GenericResult<T>.Success(typed)
             : GenericResult<T>.Failure(
-                IdentityLog.ResultTypeMismatch(_logger, typeof(T).Name, nameof(AuthentikClientCredentialsIdentityService)));
+                IdentityLog.ResultTypeMismatch(_logger, typeof(T).Name, nameof(FdwOpenIddictIdentityService)));
     }
 
     /// <inheritdoc />
