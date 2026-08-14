@@ -113,6 +113,8 @@ The reference Management UI implementations live in separate repositories:
 49. [OpsDb Configuration](12-13-OpsDb-Configuration.md) - Operations database setup
 50. [Claim Types](12-15-Claim-Types.md) - The ClaimDefinitions TypeCollection; adding a new JWT claim
 51. [Real-Time Hub Path](12-16-Realtime-Hub-Path.md) - RealTimeHubBase + RealTimeHubs collection; add a SignalR hub as one [TypeOption]
+52. [Managed Identity](12-17-Managed-Identity.md) - IIdentityService: proving this process's own identity for outbound calls, instead of a static shared secret
+53. [Granting Managed Identity Access](12-18-Granting-Managed-Identity-Access.md) - Which role to assign for identities:read / identities:write, and how to confirm it took effect
 
 ## API Endpoints
 
