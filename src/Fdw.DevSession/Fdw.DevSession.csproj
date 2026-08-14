@@ -15,5 +15,11 @@
     <ProjectReference Include="..\Fdw.Messages\Fdw.Messages.csproj" />
     <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <!-- Why: the session ledger is published to the MCP event bus rather than a private audit
+         store, so a live subscriber and a late replayer see exactly the same history. -->
+    <ProjectReference Include="..\Fdw.Mcp.Bus.Abstractions\Fdw.Mcp.Bus.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 </Project>
