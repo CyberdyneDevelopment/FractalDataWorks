@@ -17,6 +17,7 @@
     <ProjectReference Include="..\..\src\Fdw.Services.Identity\Fdw.Services.Identity.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Identity.Abstractions\Fdw.Services.Identity.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Identity.Authentik\Fdw.Services.Identity.Authentik.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Identity.Endpoints\Fdw.Services.Identity.Endpoints.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Registration\Fdw.Services.Registration.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Registration.SourceGenerators\Fdw.Services.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
