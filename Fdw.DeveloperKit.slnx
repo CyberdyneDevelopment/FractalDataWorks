@@ -241,6 +241,7 @@
     <Project Path="src/Fdw.Data.UI.Components/Fdw.Data.UI.Components.csproj" />
     <Project Path="src/Fdw.Data/Fdw.Data.csproj" />
     <Project Path="src/Fdw.DevSession.Abstractions/Fdw.DevSession.Abstractions.csproj" />
+    <Project Path="src/Fdw.DevSession/Fdw.DevSession.csproj" />
     <Project Path="src/Fdw.Hosting.Abstractions/Fdw.Hosting.Abstractions.csproj" />
     <Project Path="src/Fdw.Results/Fdw.Results.csproj" />
     <Project Path="src/Fdw.Schema.Abstractions/Fdw.Schema.Abstractions.csproj" />
@@ -575,6 +576,14 @@
     <Project Path="tests/Fdw.Data.RowSources.Tests/Fdw.Data.RowSources.Tests.csproj" />
     <Project Path="tests/Fdw.Data.SourceGenerators.Tests/Fdw.Data.SourceGenerators.Tests.csproj" />
     <Project Path="tests/Fdw.Data.Tests/Fdw.Data.Tests.csproj" />
+    <Project Path="tests/Fdw.DevSession.Tests/Fdw.DevSession.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
     <Project Path="tests/Fdw.Expressions.Tests/Fdw.Expressions.Tests.csproj" />
     <Project Path="tests/Fdw.Hosting.Tests/Fdw.Hosting.Tests.csproj" />
     <Project Path="tests/Fdw.Mcp.Bus.Tests/Fdw.Mcp.Bus.Tests.csproj">
