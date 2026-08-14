@@ -1,9 +1,12 @@
+using System.Diagnostics;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Hosting.UiHost.Authentication;
+using Fdw.Hosting.UiHost.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Hosting.UiHost.Endpoints;
 
@@ -16,9 +19,12 @@ namespace Fdw.Hosting.UiHost.Endpoints;
 /// </remarks>
 public abstract class CookieLoginEndpointBase : EndpointWithoutRequest
 {
+    private const string LoginRoute = "/auth/login";
+
     private readonly CookieSignInOptions options;
     private readonly IHttpClientFactory clients;
     private readonly ILoggerFactory? loggerFactory;
+    private readonly ILogger<CookieLoginEndpointBase> logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CookieLoginEndpointBase"/> class.
@@ -34,12 +40,14 @@ public abstract class CookieLoginEndpointBase : EndpointWithoutRequest
         this.options = options;
         this.clients = clients;
         this.loggerFactory = loggerFactory;
+        logger = loggerFactory?.CreateLogger<CookieLoginEndpointBase>()
+                 ?? NullLogger<CookieLoginEndpointBase>.Instance;
     }
 
     /// <inheritdoc />
     public override void Configure()
     {
-        Post("/auth/login");
+        Post(LoginRoute);
 
         // Why anonymous: this is the route a caller uses to stop being anonymous.
         AllowAnonymous();
@@ -47,9 +55,19 @@ public abstract class CookieLoginEndpointBase : EndpointWithoutRequest
         // Why form data with no antiforgery token: the login form is posted by a caller who has no
         // token yet, which is the one place the check cannot apply.
         AllowFormData();
+
+        CookieSignInEndpointLog.LoginEndpointConfigured(logger, LoginRoute);
     }
 
     /// <inheritdoc />
-    public override Task HandleAsync(CancellationToken ct) =>
-        CookieSignInRoutes.SignIn(HttpContext, clients, options, loggerFactory);
+    public override async Task HandleAsync(CancellationToken ct)
+    {
+        CookieSignInEndpointLog.LoginHandling(logger);
+        var started = Stopwatch.GetTimestamp();
+
+        await CookieSignInRoutes.SignIn(HttpContext, clients, options, loggerFactory).ConfigureAwait(false);
+
+        CookieSignInEndpointLog.LoginHandled(
+            logger, (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+    }
 }
