@@ -195,6 +195,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Fdw.Hosting.Cli/Fdw.Hosting.Cli.csproj" />
+    <Project Path="src/Fdw.Hosting.UiHost.Endpoints/Fdw.Hosting.UiHost.Endpoints.csproj" />
     <Project Path="src/Fdw.Hosting/Fdw.Hosting.csproj" />
     <Project Path="src/Fdw.Intelligence.Abstractions/Fdw.Intelligence.Abstractions.csproj" />
     <Project Path="src/Fdw.Intelligence/Fdw.Intelligence.csproj" />

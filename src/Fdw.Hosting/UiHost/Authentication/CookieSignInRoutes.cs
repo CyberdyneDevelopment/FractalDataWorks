@@ -27,9 +27,14 @@ namespace Fdw.Hosting.UiHost.Authentication;
 /// OpenIddict password grant, read the token, build a principal from its claims, store the tokens
 /// on the cookie. Only <see cref="CookieSignInOptions"/> differs between deployments.
 ///
-/// Minimal-API handlers rather than FastEndpoints classes because these are form posts from a login
-/// page, not part of the API surface: a skin has no other reason to take FastEndpoints, and they are
-/// never described in an OpenAPI document.
+/// These were minimal-API handlers on the reasoning that a skin has no other reason to take
+/// FastEndpoints. That reasoning does not hold: a skin takes Fdw.Web.RestEndpoints with Fdw.Hosting
+/// whether or not it serves an API, so the endpoint collection is present and counting. Routes
+/// mapped this way are invisible to it — they work, while the collection sees nothing declared and
+/// fails the host on the grounds that a registration chain producing no endpoints is broken.
+///
+/// So the handlers stay here, and Fdw.Hosting.UiHost.Endpoints wraps each one in a declared endpoint
+/// type. The exchange is unchanged; it is now something the collection can count.
 /// </remarks>
 public static class CookieSignInRoutes
 {
@@ -51,7 +56,13 @@ public static class CookieSignInRoutes
             SignOut(context, clients, options, loggerFactory));
     }
 
-    private static async Task SignIn(
+    /// <summary>Performs the token-for-cookie exchange. Public so a declared endpoint type can call it.</summary>
+    /// <param name="context">The request.</param>
+    /// <param name="clients">The client factory.</param>
+    /// <param name="options">The values this deployment supplies.</param>
+    /// <param name="loggerFactory">The logger factory.</param>
+    /// <returns>A task.</returns>
+    public static async Task SignIn(
         HttpContext context,
         IHttpClientFactory clients,
         CookieSignInOptions options,
@@ -149,7 +160,13 @@ public static class CookieSignInRoutes
         context.Response.Redirect(returnUrl);
     }
 
-    private static async Task SignOut(
+    /// <summary>Clears the cookie and best-effort revokes the refresh token.</summary>
+    /// <param name="context">The request.</param>
+    /// <param name="clients">The client factory.</param>
+    /// <param name="options">The values this deployment supplies.</param>
+    /// <param name="loggerFactory">The logger factory.</param>
+    /// <returns>A task.</returns>
+    public static async Task SignOut(
         HttpContext context,
         IHttpClientFactory clients,
         CookieSignInOptions options,
