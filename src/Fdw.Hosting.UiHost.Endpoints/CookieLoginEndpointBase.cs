@@ -14,19 +14,19 @@ namespace Fdw.Hosting.UiHost.Endpoints;
 /// The exchange itself is <see cref="CookieSignInRoutes.SignIn"/> — unchanged, and still shared with
 /// any host that maps the routes directly. This type exists so the endpoint collection can count it.
 /// </remarks>
-public sealed class CookieLoginEndpoint : EndpointWithoutRequest
+public abstract class CookieLoginEndpointBase : EndpointWithoutRequest
 {
     private readonly CookieSignInOptions options;
     private readonly IHttpClientFactory clients;
     private readonly ILoggerFactory? loggerFactory;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CookieLoginEndpoint"/> class.
+    /// Initializes a new instance of the <see cref="CookieLoginEndpointBase"/> class.
     /// </summary>
     /// <param name="options">The values this deployment supplies.</param>
     /// <param name="clients">The client factory.</param>
     /// <param name="loggerFactory">The logger factory.</param>
-    public CookieLoginEndpoint(
+    protected CookieLoginEndpointBase(
         CookieSignInOptions options,
         IHttpClientFactory clients,
         ILoggerFactory? loggerFactory)

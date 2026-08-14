@@ -7,7 +7,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
-    <Description>The cookie sign-in and sign-out endpoints for a Blazor UI host, declared so the endpoint collection can see them.</Description>
+    <Description>Abstract cookie sign-in and sign-out endpoint bases for a Blazor UI host. A consuming layer closes them and declares the closures to the endpoint collection.</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,7 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\Fdw.Web.RestEndpoints\Fdw.Web.RestEndpoints.csproj" />
     <ProjectReference Include="..\Fdw.Hosting\Fdw.Hosting.csproj" />
   </ItemGroup>

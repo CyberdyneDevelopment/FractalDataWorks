@@ -33,8 +33,9 @@ namespace Fdw.Hosting.UiHost.Authentication;
 /// mapped this way are invisible to it — they work, while the collection sees nothing declared and
 /// fails the host on the grounds that a registration chain producing no endpoints is broken.
 ///
-/// So the handlers stay here, and Fdw.Hosting.UiHost.Endpoints wraps each one in a declared endpoint
-/// type. The exchange is unchanged; it is now something the collection can count.
+/// So the handlers stay here, Fdw.Hosting.UiHost.Endpoints wraps each one in an abstract endpoint
+/// base, and a consuming layer closes those bases and declares the closures. The exchange is
+/// unchanged; it is now something the collection can count.
 /// </remarks>
 public static class CookieSignInRoutes
 {

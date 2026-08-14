@@ -13,19 +13,19 @@ namespace Fdw.Hosting.UiHost.Endpoints;
 /// <remarks>
 /// The work is <see cref="CookieSignInRoutes.SignOut"/>; this type is the declaration.
 /// </remarks>
-public sealed class CookieLogoutEndpoint : EndpointWithoutRequest
+public abstract class CookieLogoutEndpointBase : EndpointWithoutRequest
 {
     private readonly CookieSignInOptions options;
     private readonly IHttpClientFactory clients;
     private readonly ILoggerFactory? loggerFactory;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CookieLogoutEndpoint"/> class.
+    /// Initializes a new instance of the <see cref="CookieLogoutEndpointBase"/> class.
     /// </summary>
     /// <param name="options">The values this deployment supplies.</param>
     /// <param name="clients">The client factory.</param>
     /// <param name="loggerFactory">The logger factory.</param>
-    public CookieLogoutEndpoint(
+    protected CookieLogoutEndpointBase(
         CookieSignInOptions options,
         IHttpClientFactory clients,
         ILoggerFactory? loggerFactory)
