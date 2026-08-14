@@ -55,6 +55,9 @@
     <ProjectReference Include="..\Fdw.Services.Multitenancy.Clients\Fdw.Services.Multitenancy.Clients.csproj" />
     <ProjectReference Include="..\Fdw.Services.Quality.Clients\Fdw.Services.Quality.Clients.csproj" />
     <ProjectReference Include="..\Fdw.Services.Etl.Projects.Clients\Fdw.Services.Etl.Projects.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>
