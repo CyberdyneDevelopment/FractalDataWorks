@@ -30,6 +30,19 @@ public interface IAgentKeyService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Validates a presented raw agent key and resolves the user the agent acts on behalf of.
+    /// </summary>
+    /// <remarks>
+    /// Without this, a key can be minted and listed but can never authenticate — the agent_key
+    /// grant has no edge to call.
+    /// </remarks>
+    /// <param name="rawKey">The raw key presented by the caller.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IGenericResult<AgentKeyValidationResult>> ValidateKey(
+        string rawKey,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns all active agent keys for the specified user (summary view only — no raw values).
     /// </summary>
     /// <param name="userId">The ID of the user whose keys to list.</param>

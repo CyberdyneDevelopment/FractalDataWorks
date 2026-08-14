@@ -32,6 +32,19 @@ public interface IAgentKeyVault : IDataVault
     Task<IGenericResult<Guid>> Create(Guid userId, string userName, string rawKey, string label, DateTime? expiresAt, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Validates a presented raw key against the stored peppered hash in constant time, honouring
+    /// active state and expiry, and resolves the user the agent acts on behalf of.
+    /// </summary>
+    /// <remarks>
+    /// The key identifies its own owner, so no user id is supplied. A vault that also implements
+    /// <see cref="IPatVault"/> carries an identically-shaped token validator, so at least one of the
+    /// two is an explicit interface implementation on the concrete vault.
+    /// </remarks>
+    /// <param name="rawKey">The raw key presented by the caller.</param>
+    /// <param name="cancellationToken">Propagated cancellation token.</param>
+    Task<IGenericResult<AgentKeyValidationResult>> Validate(string rawKey, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns metadata summaries for a user's active keys — never a hash or raw key.
     /// </summary>
     /// <param name="userId">The user whose keys to list.</param>

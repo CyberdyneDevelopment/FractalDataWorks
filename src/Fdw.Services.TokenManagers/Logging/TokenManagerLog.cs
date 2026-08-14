@@ -153,4 +153,11 @@ public static partial class TokenManagerLog
         Level = LogLevel.Warning,
         Message = "Grant type '{grantType}' subject '{subject}' could not be resolved to a user")]
     public static partial IGenericMessage SubjectNotResolved(ILogger logger, string grantType, string subject);
+
+    /// <summary>Logs that the agent_key grant was requested but no agent-key service is registered.</summary>
+    [MessageLogging(
+        EventId = 7456,
+        Level = LogLevel.Error,
+        Message = "Grant type 'agent_key' requires an IAgentKeyService, but none is registered")]
+    public static partial IGenericMessage AgentKeyServiceNotConfigured(ILogger logger);
 }

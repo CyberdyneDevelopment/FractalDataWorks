@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.Authentication.Abstractions;
+using Fdw.Services.Authentication.Abstractions.Methods;
 using Fdw.Services.SecretManagers;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.TokenManagers.Abstractions;
@@ -33,6 +34,9 @@ public sealed class AuthenticationService : IAuthenticationService
     private readonly IUserCredentialService _userCredentialService;
     private readonly UserConfigurationProvider _userConfigurationProvider;
     private readonly IFdwServiceProvider<ISecretManager, SecretManagerConfiguration> _secretManagerProvider;
+    // Why: optional — a host that issues no agent keys need not register the edge. The agent_key
+    // grant fails loud when it is absent rather than silently falling through to another verifier.
+    private readonly IAgentKeyService? _agentKeyService;
     private readonly ILogger<AuthenticationService> _logger;
 
     /// <summary>
@@ -57,11 +61,13 @@ public sealed class AuthenticationService : IAuthenticationService
         IUserCredentialService userCredentialService,
         UserConfigurationProvider userConfigurationProvider,
         IFdwServiceProvider<ISecretManager, SecretManagerConfiguration> secretManagerProvider,
-        ILogger<AuthenticationService>? logger)
+        ILogger<AuthenticationService>? logger,
+        IAgentKeyService? agentKeyService = null)
     {
         _tokenManagerProvider = tokenManagerProvider ?? throw new ArgumentNullException(nameof(tokenManagerProvider));
         _tokenManagerConfigurationProvider = tokenManagerConfigurationProvider ?? throw new ArgumentNullException(nameof(tokenManagerConfigurationProvider));
         _userCredentialService = userCredentialService ?? throw new ArgumentNullException(nameof(userCredentialService));
+        _agentKeyService = agentKeyService;
         // Why: resolves the username carried in TokenIssuanceRequest.Subject (password/agent_key
         // grants) to the durable user Id before calling IUserCredentialService.Verify, which is
         // keyed by Id, not username.
@@ -209,15 +215,34 @@ public sealed class AuthenticationService : IAuthenticationService
             userId = userResult.Value.Id;
         }
 
-        var secretType = string.Equals(request.GrantType, "agent_key", StringComparison.OrdinalIgnoreCase)
-            ? "AgentKey"
-            : "Password";
+        // Why: an agent key is not a user secret. IUserCredentialService is the PASSWORD edge and
+        // says so — it rejects every secretType but Password — so routing agent_key there could
+        // never succeed. The agent-key edge verifies the key itself, which also resolves its owner.
+        if (string.Equals(request.GrantType, "agent_key", StringComparison.OrdinalIgnoreCase))
+            return await VerifyAgentKey(request, userId, cancellationToken).ConfigureAwait(false);
 
-        var verifyResult = await _userCredentialService.Verify(userId, secretType, request.Credential, cancellationToken).ConfigureAwait(false);
+        var verifyResult = await _userCredentialService.Verify(userId, "Password", request.Credential, cancellationToken).ConfigureAwait(false);
         if (!verifyResult.IsSuccess)
             return verifyResult;
 
         if (!verifyResult.Value!.GrantsAccess)
+            return GenericResult.Failure(TokenManagerLog.CredentialDenied(_logger, request.GrantType));
+
+        return GenericResult.Success();
+    }
+
+    private async Task<IGenericResult> VerifyAgentKey(TokenIssuanceRequest request, Guid userId, CancellationToken cancellationToken)
+    {
+        if (_agentKeyService is null)
+            return GenericResult.Failure(TokenManagerLog.AgentKeyServiceNotConfigured(_logger));
+
+        var keyResult = await _agentKeyService.ValidateKey(request.Credential!, cancellationToken).ConfigureAwait(false);
+        if (!keyResult.IsSuccess)
+            return keyResult;
+
+        // Why: the key carries its own owner. Requiring it to match the resolved subject stops a
+        // valid key being presented for somebody else's account.
+        if (!keyResult.Value!.IsValid || keyResult.Value.UserId != userId)
             return GenericResult.Failure(TokenManagerLog.CredentialDenied(_logger, request.GrantType));
 
         return GenericResult.Success();
