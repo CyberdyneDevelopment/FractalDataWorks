@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Fdw.DevSession.Abstractions;
 using Fdw.DevSession.Git;
@@ -10,6 +11,10 @@ public sealed class GitWorktreeEngineTests
 {
     private static GitWorktreeEngine CreateEngine() => new(new GitProcessRunner());
 
+    // Why: xUnit's own token, so cancelling a run actually interrupts the git subprocesses these
+    // tests spawn instead of waiting them out.
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
+
     [Fact]
     public async Task CreateBranch_creates_the_branch_at_the_requested_base()
     {
@@ -17,7 +22,8 @@ public sealed class GitWorktreeEngineTests
         var engine = CreateEngine();
 
         var result = await engine.CreateBranch(
-            new IsolationRequest(repository.Path, "main", "feature/work"));
+            new IsolationRequest(repository.Path, "main", "feature/work"),
+            Token);
 
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         result.Value!.BranchName.ShouldBe("feature/work");
@@ -33,7 +39,8 @@ public sealed class GitWorktreeEngineTests
         var engine = CreateEngine();
 
         var result = await engine.CreateBranch(
-            new IsolationRequest(repository.Path, "no-such-ref", "feature/work"));
+            new IsolationRequest(repository.Path, "no-such-ref", "feature/work"),
+            Token);
 
         result.IsFailure.ShouldBeTrue();
         result.CurrentMessage.ShouldNotBeNullOrWhiteSpace();
@@ -50,7 +57,8 @@ public sealed class GitWorktreeEngineTests
         var engine = CreateEngine();
 
         var result = await engine.CreateBranch(
-            new IsolationRequest(repository.Path, "main", "feature/from-local"));
+            new IsolationRequest(repository.Path, "main", "feature/from-local"),
+            Token);
 
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         // Why this test exists: branching from a fetched origin/* ref instead of the caller's local
@@ -67,7 +75,8 @@ public sealed class GitWorktreeEngineTests
         var engine = CreateEngine();
 
         var result = await engine.CreateWorktree(
-            new IsolationRequest(repository.Path, "main", "feature/wt") { WorktreePath = worktreePath });
+            new IsolationRequest(repository.Path, "main", "feature/wt") { WorktreePath = worktreePath },
+            Token);
 
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         result.Value!.WorktreePath.ShouldBe(worktreePath);
@@ -83,12 +92,13 @@ public sealed class GitWorktreeEngineTests
         var engine = CreateEngine();
 
         var result = await engine.CreateWorktree(
-            new IsolationRequest(repository.Path, "main", "feature/no-path"));
+            new IsolationRequest(repository.Path, "main", "feature/no-path"),
+            Token);
 
         // Why: the engine must not invent a filesystem location. Remove() later deletes whatever
         // path is recorded here, so a guessed one is actively dangerous.
         result.IsFailure.ShouldBeTrue();
-        result.CurrentMessage.ShouldContain("worktree path");
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("worktree path");
     }
 
     [Fact]
@@ -97,11 +107,12 @@ public sealed class GitWorktreeEngineTests
         using var repository = TemporaryRepository.CreateWithInitialCommit();
         var worktreePath = Path.Combine(repository.Root, "wt");
         var engine = CreateEngine();
-        var copy = (await engine.CreateWorktree(
-            new IsolationRequest(repository.Path, "main", "feature/commit") { WorktreePath = worktreePath })).Value!;
+        var created = await engine.CreateWorktree(
+            new IsolationRequest(repository.Path, "main", "feature/commit") { WorktreePath = worktreePath },
+            Token);
         File.WriteAllText(Path.Combine(worktreePath, "added.txt"), "new work");
 
-        var result = await engine.Commit(copy, "add work");
+        var result = await engine.Commit(created.Value!, "add work", Token);
 
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         result.Value!.Length.ShouldBe(40);
@@ -114,13 +125,14 @@ public sealed class GitWorktreeEngineTests
         using var repository = TemporaryRepository.CreateWithInitialCommit();
         var worktreePath = Path.Combine(repository.Root, "wt");
         var engine = CreateEngine();
-        var copy = (await engine.CreateWorktree(
-            new IsolationRequest(repository.Path, "main", "feature/empty") { WorktreePath = worktreePath })).Value!;
+        var created = await engine.CreateWorktree(
+            new IsolationRequest(repository.Path, "main", "feature/empty") { WorktreePath = worktreePath },
+            Token);
 
-        var result = await engine.Commit(copy, "nothing changed");
+        var result = await engine.Commit(created.Value!, "nothing changed", Token);
 
         result.IsFailure.ShouldBeTrue();
-        result.CurrentMessage.ShouldContain("Nothing to commit");
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("Nothing to commit");
     }
 
     [Fact]
@@ -129,12 +141,13 @@ public sealed class GitWorktreeEngineTests
         using var repository = TemporaryRepository.CreateWithInitialCommit();
         var worktreePath = Path.Combine(repository.Root, "wt");
         var engine = CreateEngine();
-        var copy = (await engine.CreateWorktree(
-            new IsolationRequest(repository.Path, "main", "feature/merge") { WorktreePath = worktreePath })).Value!;
+        var created = await engine.CreateWorktree(
+            new IsolationRequest(repository.Path, "main", "feature/merge") { WorktreePath = worktreePath },
+            Token);
         File.WriteAllText(Path.Combine(worktreePath, "merged.txt"), "content");
-        await engine.Commit(copy, "work to merge");
+        await engine.Commit(created.Value!, "work to merge", Token);
 
-        var result = await engine.Merge(repository.Path, "feature/merge", "main");
+        var result = await engine.Merge(repository.Path, "feature/merge", "main", Token);
 
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         File.Exists(Path.Combine(repository.Path, "merged.txt")).ShouldBeTrue();
@@ -146,15 +159,16 @@ public sealed class GitWorktreeEngineTests
         using var repository = TemporaryRepository.CreateWithInitialCommit();
         var worktreePath = Path.Combine(repository.Root, "wt");
         var engine = CreateEngine();
-        var copy = (await engine.CreateWorktree(
-            new IsolationRequest(repository.Path, "main", "feature/conflict") { WorktreePath = worktreePath })).Value!;
+        var created = await engine.CreateWorktree(
+            new IsolationRequest(repository.Path, "main", "feature/conflict") { WorktreePath = worktreePath },
+            Token);
         File.WriteAllText(Path.Combine(worktreePath, "README.md"), "branch version");
-        await engine.Commit(copy, "branch edit");
+        await engine.Commit(created.Value!, "branch edit", Token);
         repository.WriteFile("README.md", "main version");
         repository.Git("add", "-A");
         repository.Git("commit", "-m", "main edit");
 
-        var result = await engine.Merge(repository.Path, "feature/conflict", "main");
+        var result = await engine.Merge(repository.Path, "feature/conflict", "main", Token);
 
         // Why: which side wins is never the engine's call, so a conflict is surfaced, not resolved
         // and not auto-aborted.
@@ -168,10 +182,11 @@ public sealed class GitWorktreeEngineTests
         using var repository = TemporaryRepository.CreateWithInitialCommit();
         var worktreePath = Path.Combine(repository.Root, "wt");
         var engine = CreateEngine();
-        var copy = (await engine.CreateWorktree(
-            new IsolationRequest(repository.Path, "main", "feature/remove") { WorktreePath = worktreePath })).Value!;
+        var created = await engine.CreateWorktree(
+            new IsolationRequest(repository.Path, "main", "feature/remove") { WorktreePath = worktreePath },
+            Token);
 
-        var result = await engine.Remove(copy);
+        var result = await engine.Remove(created.Value!, Token);
 
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         result.Value.ShouldBeTrue();
@@ -184,24 +199,27 @@ public sealed class GitWorktreeEngineTests
     {
         using var repository = TemporaryRepository.CreateWithInitialCommit();
         var engine = CreateEngine();
-        var copy = (await engine.CreateBranch(
-            new IsolationRequest(repository.Path, "main", "feature/branch-only"))).Value!;
+        var created = await engine.CreateBranch(
+            new IsolationRequest(repository.Path, "main", "feature/branch-only"),
+            Token);
 
-        var result = await engine.Remove(copy);
+        var result = await engine.Remove(created.Value!, Token);
 
         // Why: Remove deletes a working directory. Being handed a copy that never had one means the
         // caller confused two isolation levels; succeeding quietly would hide that.
         result.IsFailure.ShouldBeTrue();
-        result.CurrentMessage.ShouldContain("no worktree path");
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("no worktree path");
     }
 
     [Fact]
-    public async Task Run_fails_loud_when_the_working_directory_does_not_exist()
+    public async Task Engine_fails_loud_when_the_repository_path_does_not_exist()
     {
         var engine = CreateEngine();
+        var missing = Path.Combine(Path.GetTempPath(), "fdw-does-not-exist-" + Path.GetRandomFileName());
 
         var result = await engine.CreateBranch(
-            new IsolationRequest(Path.Combine(Path.GetTempPath(), "fdw-does-not-exist-" + Path.GetRandomFileName()), "main", "b"));
+            new IsolationRequest(missing, "main", "feature/nowhere"),
+            Token);
 
         result.IsFailure.ShouldBeTrue();
         result.CurrentMessage.ShouldNotBeNullOrWhiteSpace();
@@ -218,7 +236,8 @@ public sealed class GitWorktreeEngineTests
         // directly, so the registered isolation level and the engine stay in agreement.
         var result = await new WorktreeIsolation().Materialize(
             engine,
-            new IsolationRequest(repository.Path, "main", "feature/via-option") { WorktreePath = worktreePath });
+            new IsolationRequest(repository.Path, "main", "feature/via-option") { WorktreePath = worktreePath },
+            Token);
 
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         Directory.Exists(worktreePath).ShouldBeTrue();
