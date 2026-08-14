@@ -30,7 +30,12 @@ public sealed class AuthentikClientCredentialsIdentityType
     public AuthentikClientCredentialsIdentityType()
         : base("AuthentikClientCredentials", defaultContainerName: "AuthentikClientCredentialsIdentity")
     {
-        Registration((builder, loggerFactory) =>
+        // Why Append and not Registration: Registration ASSIGNS, discarding whatever body was already
+        // installed — including a segment a base constructor prepended. ConnectionTypeBase prepends its
+        // factory registration that way, and six connection kinds silently stopped being creatable when
+        // their options used Registration (af522f014). This base prepends nothing today, so either is
+        // correct right now; Append stays correct if that ever changes.
+        AppendRegistration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<AuthentikClientCredentialsIdentityType>()
                 ?? NullLogger<AuthentikClientCredentialsIdentityType>.Instance;
