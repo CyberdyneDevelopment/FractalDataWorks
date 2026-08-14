@@ -101,4 +101,14 @@ public static partial class EndpointRegistrationLog
         Level = LogLevel.Critical,
         Message = "OpenAPI Initialize ran with NO document processors registered — the document will be served UNFILTERED to every caller, anonymous included. The Register phase did not attach them.")]
     public static partial IGenericMessage OpenApiProcessorsMissing(ILogger logger);
+
+    /// <summary>Logs a host that declares no endpoint groups at all.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="phase">The phase being skipped.</param>
+    /// <returns>The message.</returns>
+    [MessageLogging(
+        EventId = 11023,
+        Level = LogLevel.Debug,
+        Message = "No endpoint groups joined; this host serves no REST endpoints, so FastEndpoints {phase} is skipped")]
+    public static partial IGenericMessage NoEndpointGroups(ILogger logger, string phase);
 }

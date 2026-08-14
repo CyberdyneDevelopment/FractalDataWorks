@@ -103,9 +103,21 @@ public partial class Endpoints : ServiceTypeCollectionBase<IEndpointTypeCollecti
                 }
             }
 
+            // Why no groups is a different answer from no endpoints: a host that joined no group
+            // serves no REST endpoints, which a Blazor skin legitimately does not. Failing it would
+            // be this collection insisting every host it runs in is an API. AddFastEndpoints is
+            // skipped rather than called with nothing, and Initialize skips UseFastEndpoints to
+            // match - splitting that pair is what produces "No service for type 'FastEndpoint...'".
+            if (Groups().Count == 0)
+            {
+                EndpointRegistrationLog.NoEndpointGroups(
+                    loggerFactory?.CreateLogger(nameof(Endpoints)) ?? NullLogger.Instance, "registration");
+                return GenericResult<IHostApplicationBuilder>.Success(builder);
+            }
+
             // Why the count is checked rather than left to fail later: with nothing declared,
             // AddFastEndpoints throws its own "unable to find any endpoint declarations", which says
-            // nothing about which step went wrong. An application that reaches here having registered
+            // nothing about which step went wrong. A host that joined a group and still declared
             // no endpoint has a broken registration chain, and this names it.
             if (DeclaredEndpoints.Count == 0)
             {
@@ -149,6 +161,14 @@ public partial class Endpoints : ServiceTypeCollectionBase<IEndpointTypeCollecti
                 {
                     return result;
                 }
+            }
+
+            // The other half of the pair above: nothing was added, so nothing is used.
+            if (Groups().Count == 0)
+            {
+                EndpointRegistrationLog.NoEndpointGroups(
+                    loggerFactory?.CreateLogger(nameof(Endpoints)) ?? NullLogger.Instance, "initialization");
+                return GenericResult<IHost>.Success(host);
             }
 
             InitializeOpenApiProcessors(host, loggerFactory);
