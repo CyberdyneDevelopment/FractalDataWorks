@@ -384,7 +384,30 @@ public sealed partial class WebMcpBridge : ComponentBase, IAsyncDisposable
                 WebMcpUiLog.TeardownInterrupted(ResolvedLogger, ex);
             }
 
-            await _module.DisposeAsync();
+            try
+            {
+                // Why this needs the same guard as the unregister above: releasing a JS object
+                // reference is itself an interop call. The ordinary reason this component is being
+                // disposed is that the circuit died, and on a dead circuit this throws exactly like
+                // the unregister does. Unguarded it escaped DisposeAsync and surfaced as a SECOND
+                // unhandled circuit exception stacked on top of whatever killed the circuit —
+                // observed in production, where it followed an unrelated SchemaProvider failure and
+                // buried the real cause under a WebMCP stack trace.
+                //
+                // Why a separate try rather than extending the one above: the unregister failing
+                // must not skip the release, or the reference leaks on every teardown that trips
+                // the first call.
+                await _module.DisposeAsync();
+            }
+            catch (JSDisconnectedException ex)
+            {
+                WebMcpUiLog.TeardownInterrupted(ResolvedLogger, ex);
+            }
+            catch (OperationCanceledException ex)
+            {
+                WebMcpUiLog.TeardownInterrupted(ResolvedLogger, ex);
+            }
+
             _module = null;
         }
 

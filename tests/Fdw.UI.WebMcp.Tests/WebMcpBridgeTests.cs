@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Bunit;
 using Fdw.UI.WebMcp;
 using Fdw.UI.WebMcp.Components;
+using Microsoft.JSInterop;
 using Shouldly;
 using Xunit;
 using TestContext = Bunit.BunitContext;
@@ -353,5 +354,45 @@ public sealed class WebMcpBridgeTests
                 .Add(x => x.Name, "no_handler")
                 .Add(x => x.Description, "Missing OnExecute.")
                 .Add(x => x.InputSchema, ObjectSchema))));
+    }
+
+    // ── Teardown ──────────────────────────────────────────────────────────────────
+
+    /// <remarks>
+    /// <para>
+    /// The disposal path had no test at all, which is how an unguarded interop call reached
+    /// production: the usual reason this component is disposed is that the circuit died, and every
+    /// interop call throws once it has. An exception escaping DisposeAsync surfaces as a second
+    /// unhandled circuit exception stacked on whatever killed the circuit, burying the real cause.
+    /// </para>
+    /// <para>
+    /// Scope, stated honestly: this covers the unregister call refusing. It does NOT reproduce the
+    /// escape actually seen in production, which came from releasing the module reference — bUnit's
+    /// module stub cannot be made to throw on its own DisposeAsync, so this test passes with or
+    /// without that guard. That branch is guarded by inspection, not by this test. Anyone widening
+    /// this suite should reach for a fake IJSRuntime returning a module whose DisposeAsync throws.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Ui")]
+    public async Task DisposeDoesNotThrowWhenTheCircuitHasAlreadyDisconnected()
+    {
+        using var ctx = new TestContext();
+
+        var module = ctx.JSInterop.SetupModule(ModulePath);
+        module.Setup<WebMcpRegistrationOutcome>("register", _ => true)
+              .SetResult(new WebMcpRegistrationOutcome { Supported = true, Registered = 1 });
+        module.SetupVoid("unregister", _ => true)
+              .SetException(new JSDisconnectedException("The circuit has disconnected."));
+
+        var cut = ctx.Render<WebMcpBridge>(p => p
+            .AddChildContent<WebMcpPageTool>(t => t
+                .Add(x => x.Name, "read_grid")
+                .Add(x => x.Description, "Read the grid.")
+                .Add(x => x.InputSchema, ObjectSchema)
+                .Add(x => x.OnExecute, Ok)));
+
+        await Should.NotThrowAsync(async () => await cut.Instance.DisposeAsync());
     }
 }
