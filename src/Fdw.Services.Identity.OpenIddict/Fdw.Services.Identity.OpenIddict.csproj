@@ -30,10 +30,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>Fdw.Services.Identity.FdwOpenIddict</RootNamespace>
-    <PackageId>Fdw.Services.Identity.FdwOpenIddict</PackageId>
-    <Title>Fdw Managed Identity — FDW OpenIddict</Title>
-    <Description>Managed-identity mechanism for FDW's own OpenIddict authorization server: an FDW service proves its identity to a sibling FDW service with an OAuth2 client-credentials grant, with no external identity provider involved.</Description>
+    <RootNamespace>Fdw.Services.Identity.OpenIddict</RootNamespace>
+    <PackageId>Fdw.Services.Identity.OpenIddict</PackageId>
+    <Title>Fdw Managed Identity — OpenIddict</Title>
+    <Description>Managed-identity mechanism for an OpenIddict authorization server, typically FDW's own: a service proves its identity with an OAuth2 client-credentials grant, with no external identity provider involved.</Description>
     <IsPackable>true</IsPackable>
   </PropertyGroup>
 

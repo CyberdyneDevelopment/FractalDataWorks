@@ -54,7 +54,7 @@ public sealed class IdentityHostBootTests
     [Theory]
     [InlineData("AuthentikClientCredentials")]
     [InlineData("AuthentikJwtFederation")]
-    [InlineData("FdwOpenIddict")]
+    [InlineData("OpenIddict")]
     public void EachMechanismRegistersItsFactoryWithTheDomainProvider(string mechanism)
     {
         // This is the assertion that proves the option attached AND its Register body ran: the

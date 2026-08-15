@@ -15,20 +15,20 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Fdw.Services.Identity.FdwOpenIddict;
+namespace Fdw.Services.Identity.OpenIddict;
 
 /// <summary>
-/// The FDW OpenIddict identity mechanism — an FDW service authenticating to FDW's own authorization
-/// server with a client id and secret, for service-to-service calls inside the deployment.
+/// The OpenIddict identity mechanism — a service authenticating to an OpenIddict authorization server
+/// with a client id and secret, for service-to-service calls inside the deployment.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(IdentityServiceTypes), "FdwOpenIddict")]
-public sealed class FdwOpenIddictIdentityType
+[ServiceTypeOption(typeof(IdentityServiceTypes), "OpenIddict")]
+public sealed class OpenIddictIdentityType
     : IdentityServiceTypeBase<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>>
 {
-    /// <summary>Initializes a new instance of the <see cref="FdwOpenIddictIdentityType"/> class.</summary>
-    public FdwOpenIddictIdentityType()
-        : base("FdwOpenIddict", defaultContainerName: "FdwOpenIddictIdentity")
+    /// <summary>Initializes a new instance of the <see cref="OpenIddictIdentityType"/> class.</summary>
+    public OpenIddictIdentityType()
+        : base("OpenIddict", defaultContainerName: "OpenIddictIdentity")
     {
         // Why Append and not Registration: Registration ASSIGNS, discarding whatever body was already
         // installed — including a segment a base constructor prepended. ConnectionTypeBase prepends its
@@ -37,15 +37,15 @@ public sealed class FdwOpenIddictIdentityType
         // correct right now; Append stays correct if that ever changes.
         AppendRegistration((builder, loggerFactory) =>
         {
-            var log = loggerFactory?.CreateLogger<FdwOpenIddictIdentityType>()
-                ?? NullLogger<FdwOpenIddictIdentityType>.Instance;
+            var log = loggerFactory?.CreateLogger<OpenIddictIdentityType>()
+                ?? NullLogger<OpenIddictIdentityType>.Instance;
 
             // Why the option registers its own factory: this is the registry the domain provider reads
             // to turn a configuration's ServiceOptionType into something that can build the service. An
             // option that skips it resolves to "No registered service type matches ServiceOptionType"
             // at the first request, which reads like a configuration fault and is not one.
             DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>
-                .Register(Name, sp => new FdwOpenIddictIdentityFactory(
+                .Register(Name, sp => new OpenIddictIdentityFactory(
                     sp.GetService<ILoggerFactory>(),
                     sp.GetRequiredService<IHttpClientFactory>().CreateClient(IdentityHttpClient.Name),
                     sp.GetRequiredService<Lazy<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>>()));

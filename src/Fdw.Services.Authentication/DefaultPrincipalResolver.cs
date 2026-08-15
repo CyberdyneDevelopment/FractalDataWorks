@@ -186,7 +186,7 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
             _logger, userIdStr, resolvedTenantId.ToString(), permResult.Value!.Count, allRoles.Count);
 
         var claims = BuildClaims(userId, resolvedTenantId, resolvedOrgId, permResult.Value!, allRoles, isCrossTenant: false);
-        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "FdwOpenIddict"));
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "OpenIddict"));
 
         var roleClaimCount = claims.Count(c => string.Equals(c.Type, ClaimDefinitions.roles.Name, StringComparison.OrdinalIgnoreCase));
         var permClaimCount = claims.Count(c => string.Equals(c.Type, ClaimDefinitions.perm.Name, StringComparison.OrdinalIgnoreCase));
@@ -303,7 +303,7 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
         var allRoles = MergeRoles(additionalRoles, await LoadRoleNames(userId, cancellationToken).ConfigureAwait(false));
 
         var claims = BuildClaims(userId, tenantId: null, orgId: null, permResult.Value!, allRoles, isCrossTenant: true);
-        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "FdwOpenIddict"));
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "OpenIddict"));
 
         var permClaimCount = claims.Count(c => string.Equals(c.Type, ClaimDefinitions.perm.Name, StringComparison.OrdinalIgnoreCase));
         PrincipalResolverLog.ResolveClaimsTrace(

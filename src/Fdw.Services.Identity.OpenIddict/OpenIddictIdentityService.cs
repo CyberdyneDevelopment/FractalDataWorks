@@ -11,34 +11,34 @@ using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Commands;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.Services.Identity.FdwOpenIddict;
+namespace Fdw.Services.Identity.OpenIddict;
 
 /// <summary>
-/// Proves this service's identity to FDW's own OpenIddict authorization server with an OAuth 2.0
-/// client-credentials grant (RFC 6749 §4.4).
+/// Proves this service's identity to an OpenIddict authorization server — typically FDW's own — with
+/// an OAuth 2.0 client-credentials grant (RFC 6749 §4.4).
 /// </summary>
 /// <remarks>
 /// The client secret is resolved through <c>ISecretManager</c> at acquisition time and never held on
 /// this instance. Holding it in a field would keep a long-lived credential in process memory for the
 /// life of the service, which is a worse exposure than the per-acquisition read it replaces.
 /// </remarks>
-public sealed class FdwOpenIddictIdentityService
-    : IdentityServiceBase<FdwOpenIddictConfiguration, FdwOpenIddictIdentityService>
+public sealed class OpenIddictIdentityService
+    : IdentityServiceBase<OpenIddictConfiguration, OpenIddictIdentityService>
 {
     private readonly OAuth2TokenEndpointClient _tokenEndpoint;
     private readonly Lazy<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>> _secretManagers;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="FdwOpenIddictIdentityService"/> class.
+    /// Initializes a new instance of the <see cref="OpenIddictIdentityService"/> class.
     /// </summary>
     /// <param name="logger">The logger for this service.</param>
     /// <param name="configuration">The typed configuration body for this identity.</param>
     /// <param name="tokenEndpoint">The shared token-endpoint client.</param>
     /// <param name="secretManagers">Provider resolving the named secret manager that holds this identity's client secret.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="tokenEndpoint"/> or <paramref name="secretManagers"/> is null.</exception>
-    public FdwOpenIddictIdentityService(
-        ILogger<FdwOpenIddictIdentityService>? logger,
-        FdwOpenIddictConfiguration configuration,
+    public OpenIddictIdentityService(
+        ILogger<OpenIddictIdentityService>? logger,
+        OpenIddictConfiguration configuration,
         OAuth2TokenEndpointClient tokenEndpoint,
         Lazy<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>> secretManagers)
         : base(logger, configuration)
@@ -68,7 +68,7 @@ public sealed class FdwOpenIddictIdentityService
         if (Configuration.SecretKeyName is not { Length: > 0 } secretKeyName)
             return GenericResult<IssuedIdentityToken>.Failure(IdentityLog.ConfigurationValueMissing(Logger, Name, nameof(Configuration.SecretKeyName)));
 
-        IdentityLog.AcquiringToken(Logger, Name, "FdwOpenIddict", request.Audience);
+        IdentityLog.AcquiringToken(Logger, Name, "OpenIddict", request.Audience);
 
         // Why resolved by name at acquisition rather than injected: the configuration names WHICH
         // secret manager holds this identity's secret, and binding one at construction would ignore

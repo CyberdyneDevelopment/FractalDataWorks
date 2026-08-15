@@ -4,11 +4,11 @@ using Fdw.Configuration;
 using Fdw.Data;
 using Fdw.Services.Identity.Abstractions;
 
-namespace Fdw.Services.Identity.FdwOpenIddict;
+namespace Fdw.Services.Identity.OpenIddict;
 
 /// <summary>
-/// Typed configuration body for the FDW OpenIddict mechanism — an FDW service proving its identity to
-/// a sibling FDW service against FDW's own OpenIddict authorization server.
+/// Typed configuration body for the OpenIddict mechanism — a service proving its identity against an
+/// OpenIddict authorization server, typically FDW's own.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -29,23 +29,24 @@ namespace Fdw.Services.Identity.FdwOpenIddict;
 /// declared a separate <c>IOutboundCredentialService</c> for exactly this case; it was a second answer
 /// to the same question, and callers would have had to know which of the two their peer had been
 /// wired with. It never acquired an implementation and has been deleted. <c>TokenEndpoint</c> pointing
-/// at FDW's own <c>/connect/token</c> instead of an external IdP is the entire difference between this
-/// mechanism and any other, and that belongs in a configuration row.
+/// at one server's <c>/connect/token</c> rather than another's is the entire difference between this
+/// mechanism and any other, and that belongs in a configuration row — which is also why this mechanism
+/// is named for the technology, not for whose instance it happens to point at.
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
-[ManagedConfiguration(ServiceCategory = "Identity", ServiceType = "FdwOpenIddict")]
-public partial class FdwOpenIddictConfiguration : IIdentityServiceConfiguration
+[ManagedConfiguration(ServiceCategory = "Identity", ServiceType = "OpenIddict")]
+public partial class OpenIddictConfiguration : IIdentityServiceConfiguration
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="FdwOpenIddictConfiguration"/> class.
+    /// Initializes a new instance of the <see cref="OpenIddictConfiguration"/> class.
     /// </summary>
-    public FdwOpenIddictConfiguration()
+    public OpenIddictConfiguration()
     {
         ServiceType = "Identity";
         SectionName = "Identities";
-        ServiceOptionType = "FdwOpenIddict";
+        ServiceOptionType = "OpenIddict";
     }
 
     /// <summary>Gets or sets the durable logical identity across versions. No default — the database assigns identity.</summary>
@@ -60,13 +61,13 @@ public partial class FdwOpenIddictConfiguration : IIdentityServiceConfiguration
     /// <summary>Gets or sets the service-type domain — always <c>"Identity"</c>.</summary>
     public string ServiceType { get; set; }
 
-    /// <summary>Gets or sets the TypeOption discriminator — always <c>"FdwOpenIddict"</c>.</summary>
+    /// <summary>Gets or sets the TypeOption discriminator — always <c>"OpenIddict"</c>.</summary>
     public string? ServiceOptionType { get; set; }
 
-    /// <summary>Gets or sets the issuer URL of the FDW authorization server (e.g. <c>https://api.example.dev/</c>).</summary>
+    /// <summary>Gets or sets the issuer URL of the OpenIddict authorization server (e.g. <c>https://api.example.dev/</c>).</summary>
     public string? Issuer { get; set; }
 
-    /// <summary>Gets or sets the absolute token endpoint URL — FDW's own <c>/connect/token</c>.</summary>
+    /// <summary>Gets or sets the absolute token endpoint URL — the server's <c>/connect/token</c>.</summary>
     public string? TokenEndpoint { get; set; }
 
     /// <summary>Gets or sets the OpenIddict client id registered for this service (e.g. <c>fdw.scheduler</c>).</summary>
