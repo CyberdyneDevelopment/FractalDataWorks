@@ -37,6 +37,15 @@ public static class PostgreSqlSchemaConversion
             IsNullable = discovered.IsNullable,
             IsIdentity = discovered.IsIdentity,
             IsComputed = discovered.IsComputed,
+            // Why discovery decides this and a read never does: a database-generated surrogate is a
+            // storage detail, and returning it puts one in a dataset. Discovery is writing the
+            // declaration, so choosing here produces something an admin can see and change; deriving
+            // the same thing while answering a query would change what every existing query returns
+            // with nobody having asked. Only an identity PK is assumed hidden - a primary key the
+            // source did not generate is a real value and stays visible.
+            Visibility = discovered.IsPrimaryKey && discovered.IsIdentity
+                ? FieldVisibilities.ByName("NotVisible")
+                : FieldVisibilities.ByName("Visible"),
             TypeSystemId = "PostgreSql",
             ConverterTypeId = 0
         };

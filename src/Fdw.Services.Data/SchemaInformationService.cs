@@ -492,7 +492,12 @@ public sealed class SchemaInformationService : ISchemaInformationService
                         Name = field.Name,
                         DataContainerId = savedContainerId,
                         // Why: IsNullable/Ordinal now live on data.MsSqlDataContainerField (typed body).
-                        DataType = field.FieldType.TypeName
+                        DataType = field.FieldType.TypeName,
+                        // Why propagated rather than decided here: whatever produced this field already
+                        // knows whether it is a storage detail - discovery reads the source catalog and
+                        // marks an identity primary key NotVisible. Re-deriving it here would be a second
+                        // opinion, and the two would drift.
+                        VisibilityId = field.Visibility.Name
                     };
                     var savedFieldResult = await fieldWriter.Save(fieldConfig, ct).ConfigureAwait(false);
                     if (!savedFieldResult.IsSuccess)
