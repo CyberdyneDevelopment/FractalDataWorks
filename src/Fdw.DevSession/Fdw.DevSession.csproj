@@ -25,6 +25,9 @@
     <!-- Why: the session ledger is published to the MCP event bus rather than a private audit
          store, so a live subscriber and a late replayer see exactly the same history. -->
     <ProjectReference Include="..\Fdw.Mcp.Bus.Abstractions\Fdw.Mcp.Bus.Abstractions.csproj" />
+    <!-- Why: AddDevSessions registers the bus it depends on rather than demanding the caller has
+         done so, per the cascade rule that a domain registers the providers it needs. -->
+    <ProjectReference Include="..\Fdw.Mcp.Bus\Fdw.Mcp.Bus.csproj" />
     <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
     <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
