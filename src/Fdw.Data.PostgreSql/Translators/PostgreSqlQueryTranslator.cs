@@ -313,8 +313,8 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
         }
 
         // Schema-driven — root container with a populated Schema.
-        if (container.Schema.Fields.Count > 0)
-            return $"SELECT {string.Join(", ", container.Schema.Fields.Select(f => Col(f.Name)))}";
+        if (container.Schema.GetProjectableFields().Count > 0)
+            return $"SELECT {string.Join(", ", container.Schema.GetProjectableFields().Select(f => Col(f.Name)))}";
 
         // Why: this branch is unreachable — caller validates at least one source of column
         // names exists before calling BuildSelectStatement. Defensive throw.

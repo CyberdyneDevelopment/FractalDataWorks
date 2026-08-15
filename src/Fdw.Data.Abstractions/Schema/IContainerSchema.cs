@@ -34,6 +34,10 @@ public interface IContainerSchema : ISchemaDefinition<IField>
     /// </summary>
     IReadOnlyList<IField> GetIdentityFields();
 
+    /// <summary>Gets the fields a dataset may select.</summary>
+    /// <returns>The projectable fields.</returns>
+    IReadOnlyList<IField> GetProjectableFields();
+
     /// <summary>
     /// Get fields with Attribute role (descriptive, dimensional).
     /// </summary>
