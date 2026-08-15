@@ -28,7 +28,7 @@ namespace Fdw.Services.Connections;
 /// <para>
 /// Why the Scoped <see cref="IConnectionProvider"/> is never captured in the constructor: this
 /// checkable is registered as a Singleton (see
-/// <see cref="ConnectionConfigurationProvider.RegisterDomainConfiguration(IServiceCollection, Microsoft.Extensions.Logging.ILoggerFactory?)"/>),
+/// <see cref="ConnectionTypes"/>),
 /// alongside every other domain-level <see cref="IHealthCheckable"/>. Capturing a Scoped service in a
 /// Singleton constructor would pin it to the first scope that ever resolved this class. Instead, both
 /// <see cref="ConnectionConfigurationProvider"/> and <see cref="IConnectionProvider"/> are resolved

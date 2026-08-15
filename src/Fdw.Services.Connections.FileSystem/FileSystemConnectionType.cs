@@ -91,7 +91,6 @@ public sealed class FileSystemConnectionType
             // Why: RegisterFactory (below) requires ConnectionConfigurationProvider (the shared header
             // provider for the whole Connections domain) to already be registered. TryAddSingleton makes
             // this idempotent — every connection-kind option calls it, harmlessly redundant after the first.
-            ConnectionConfigurationProvider.RegisterDomainConfiguration(builder.Services);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 

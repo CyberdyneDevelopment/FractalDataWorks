@@ -95,7 +95,6 @@ public sealed class RoslynWorkspaceConnectionType
             // provider for the whole Connections domain) to already be registered. Every other connection
             // kind calls this; RoslynWorkspace did not, so in a host where it was the only registered
             // connection kind the header provider was never registered at all.
-            ConnectionConfigurationProvider.RegisterDomainConfiguration(builder.Services);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
