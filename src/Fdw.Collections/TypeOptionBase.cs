@@ -136,3 +136,91 @@ public abstract class TypeOptionBase<TKey, T> : ITypeOption<TKey, T>
     /// </summary>
     public override string ToString() => Name;
 }
+
+/// <summary>
+/// Base class for type option types keyed on <see cref="int"/>, the key type nearly every option
+/// family uses. Spares an option from restating <c>TypeOptionBase&lt;int, T&gt;</c> at every
+/// declaration site.
+/// </summary>
+/// <typeparam name="TBase">The derived type option type (CRTP pattern).</typeparam>
+public abstract class TypeOptionBase<TBase> : TypeOptionBase<int, TBase>
+    where TBase : ITypeOption<int, TBase>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TypeOptionBase{TBase}"/> class with default category.
+    /// </summary>
+    /// <param name="id">The unique identifier for this type option value.</param>
+    /// <param name="name">The name of this type option value.</param>
+    /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
+    protected TypeOptionBase(int id, string name) : base(id, name)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TypeOptionBase{TBase}"/> class.
+    /// </summary>
+    /// <param name="id">The unique identifier for this type option value.</param>
+    /// <param name="name">The name of this type option value.</param>
+    /// <param name="category">The category of this type option value. Pass null or empty string for default "NotCategorized".</param>
+    /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
+    protected TypeOptionBase(int id, string name, string? category) : base(id, name, category)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TypeOptionBase{TBase}"/> class with full metadata.
+    /// </summary>
+    /// <param name="id">The unique identifier for this type option value.</param>
+    /// <param name="name">The name of this type option value.</param>
+    /// <param name="configurationKey">The configuration key for service registration and lookups.</param>
+    /// <param name="displayName">The display name for user-facing representations.</param>
+    /// <param name="description">The detailed description of this type option.</param>
+    /// <param name="category">The category of this type option value.</param>
+    /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
+    protected TypeOptionBase(int id, string name, string configurationKey, string displayName, string description, string? category)
+        : base(id, name, configurationKey, displayName, description, category)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TypeOptionBase{TBase}"/> class, deriving its id
+    /// from <paramref name="name"/> via a stable FNV-1a hash instead of taking one explicitly.
+    /// </summary>
+    /// <param name="name">The name of this type option value.</param>
+    /// <exception cref="ArgumentNullException">Thrown when name is null or empty.</exception>
+    /// <remarks>
+    /// A derived id is a hash of the name, so renaming an option changes its id and orphans any
+    /// stored row that referenced the old one. That makes an option's name part of its contract
+    /// once anything persists it.
+    /// </remarks>
+    protected TypeOptionBase(string name) : base(GenerateIdFromName(name), name)
+    {
+    }
+
+    /// <summary>
+    /// Derives a stable identifier from an option's name using FNV-1a.
+    /// </summary>
+    /// <param name="name">The option name.</param>
+    /// <returns>A stable non-negative id.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when name is null or empty.</exception>
+    protected static int GenerateIdFromName(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            throw new ArgumentNullException(nameof(name));
+        }
+
+        unchecked
+        {
+            const int offset = (int)2166136261;
+            const int prime = 16777619;
+            var hash = offset;
+            foreach (var c in name)
+            {
+                hash = (hash ^ c) * prime;
+            }
+
+            return hash & 0x7FFFFFFF;
+        }
+    }
+}
