@@ -65,7 +65,7 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpoint<Add
                 IsNullable = f.IsNullable,
                 Ordinal = f.Ordinal,
                 IsSystemProvided = f.IsSystemProvided,
-                Visible = f.Visible,
+                VisibilityId = f.VisibilityId,
                 Description = f.Description,
             }).ToList(),
         };

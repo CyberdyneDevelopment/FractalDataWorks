@@ -77,12 +77,12 @@ public partial class DataContainerFieldConfiguration : IGenericConfiguration
     public bool IsSystemProvided { get; set; }
 
     /// <summary>
-    /// Gets or sets whether this column is visible to the application. <c>Visible=false</c> marks a
+    /// Gets or sets the FieldVisibilities option name for this column. <c>NotVisible</c> marks a
     /// DB-only column the app never sees — the physical RowId PK and every <c>{Parent}RowId</c> FK. It
     /// stays in the column metadata so the key metadata can reference it for the in-DB join, but it is
-    /// excluded from POCOs/DTOs and app-facing projections. Maps to <c>data.DataContainerField.Visible</c>.
+    /// excluded from POCOs/DTOs and app-facing projections. Maps to <c>data.DataContainerField.VisibilityId</c>. <c>Visible</c>.
     /// </summary>
-    public bool Visible { get; set; } = true;
+    public string VisibilityId { get; set; } = "Visible";
 
     /// <summary>
     /// Gets or sets the optional description for this field.
