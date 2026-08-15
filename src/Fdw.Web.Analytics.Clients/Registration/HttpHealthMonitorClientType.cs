@@ -73,7 +73,6 @@ public sealed class HttpHealthMonitorClientType
                 nameof(HttpHealthMonitorFactory));
 
             builder.Services.TryAddSingleton<HttpHealthMonitorFactory>();
-            HealthMonitorConfigurationProvider.RegisterDomainConfiguration(builder.Services);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 

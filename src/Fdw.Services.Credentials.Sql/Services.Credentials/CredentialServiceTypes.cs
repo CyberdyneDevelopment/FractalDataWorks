@@ -11,6 +11,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Linq;
 using Fdw.Results;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 namespace Fdw.Services.Credentials;
@@ -69,6 +72,23 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<CredentialServiceTypes>() ?? NullLogger<CredentialServiceTypes>.Instance;
+
+            // Why this collection registers the provider and the provider does not register itself: the
+            // owner of a registration is the type that knows the thing exists, and this collection ships
+            // beside it. It goes before the collect because each option registers itself against this
+            // provider, so it has to be there when the member cycle runs.
+            builder.Services.TryAddSingleton<CredentialServiceConfigurationProvider>(sp =>
+                new CredentialServiceConfigurationProvider(
+                    sp.GetService<ILogger<CredentialServiceConfigurationProvider>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+
+            // Why the forwards: consumers inject the base DefaultConfigurationProvider<TConfig, TCommand>,
+            // and the generated provider wiring looks the domain provider up as IServiceConfigurationProvider<T>.
+            builder.Services.TryAddSingleton<DefaultConfigurationProvider<CredentialServiceConfiguration, CredentialServiceConfigurationCommand>>(
+                sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<CredentialServiceConfiguration>>(
+                sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());
 
             // Why the result is read: this replacement calls the func it captured, and discarding
             // what that returned meant an option that failed to register was followed by this body

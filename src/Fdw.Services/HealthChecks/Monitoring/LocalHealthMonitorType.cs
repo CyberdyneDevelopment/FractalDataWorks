@@ -63,9 +63,8 @@ public sealed class LocalHealthMonitorType
                 nameof(LocalHealthMonitorFactory));
 
             builder.Services.TryAddSingleton<LocalHealthMonitorFactory>();
-            // Why: RegisterFactory (below) requires the domain config provider to already be registered.
-            // Idempotent TryAdd inside — every health monitor option calls it, first registration wins.
-            HealthMonitorConfigurationProvider.RegisterDomainConfiguration(builder.Services);
+            // Why nothing registers the domain provider here: HealthMonitorTypes registers it before
+            // running the options, so it is present by the time this option needs it.
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 

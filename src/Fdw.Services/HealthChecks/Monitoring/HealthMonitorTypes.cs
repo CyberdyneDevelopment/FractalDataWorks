@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Linq;
 using Fdw.Results;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 namespace Fdw.Services.HealthChecks.Monitoring;
@@ -73,6 +74,14 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<HealthMonitorTypes>() ?? NullLogger<HealthMonitorTypes>.Instance;
+
+            // Why this collection registers the provider and the provider does not register itself: the
+            // owner of a registration is the type that knows the thing exists, and this collection ships
+            // beside it. It goes before the collect because each monitor option registers itself against
+            // this provider, so it has to be there when the member cycle runs.
+            builder.Services.TryAddSingleton<HealthMonitorConfigurationProvider>();
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<HealthMonitorConfiguration>>(
+                sp => sp.GetRequiredService<HealthMonitorConfigurationProvider>());
 
             // Why the collect's result is read and returned: this body composes ONTO the default collect,
             // and it used to discard what the collect returned — so an option that failed to register was

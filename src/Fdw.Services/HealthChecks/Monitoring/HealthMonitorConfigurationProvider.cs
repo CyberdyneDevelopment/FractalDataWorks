@@ -34,18 +34,6 @@ public sealed class HealthMonitorConfigurationProvider : IServiceConfigurationPr
     private readonly ILogger _logger;
 
     /// <summary>
-    /// Registers this provider with DI. Called from each health monitor option's
-    /// <c>Register</c> (idempotent TryAdd — every option calls it, first wins),
-    /// never from an application's <c>Program.cs</c>.
-    /// </summary>
-    public static void RegisterDomainConfiguration(IServiceCollection services)
-    {
-        services.TryAddSingleton<HealthMonitorConfigurationProvider>();
-        services.TryAddSingleton<IServiceConfigurationProvider<HealthMonitorConfiguration>>(
-            sp => sp.GetRequiredService<HealthMonitorConfigurationProvider>());
-    }
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="HealthMonitorConfigurationProvider"/> class.
     /// </summary>
     public HealthMonitorConfigurationProvider(
