@@ -10,6 +10,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Why: ScopePaths is the whole basis of strand fencing and is tested directly rather than
+         only through the coordinator, but it is not part of this package's public surface. -->
+    <InternalsVisibleTo Include="Fdw.DevSession.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Fdw.DevSession.Abstractions\Fdw.DevSession.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
     <ProjectReference Include="..\Fdw.Messages\Fdw.Messages.csproj" />
