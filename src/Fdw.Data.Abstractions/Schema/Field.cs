@@ -73,4 +73,12 @@ public sealed class Field : IField
     /// Gets or initializes whether this field's value is provided by the system.
     /// </summary>
     public bool IsSystemProvided { get; init; }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Why the default is Visible: a field the builder produced without consulting a VisibilityId is
+    /// an ordinary field. Defaulting the other way would silently drop columns from every projection
+    /// the moment a transport built a field list without setting this.
+    /// </remarks>
+    public IFieldVisibility Visibility { get; init; } = FieldVisibilities.ByName("Visible");
 }

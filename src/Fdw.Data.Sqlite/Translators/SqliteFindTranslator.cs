@@ -96,9 +96,9 @@ public sealed class SqliteFindTranslator : SqliteDataCommandTranslatorBase
         var dialect = dbPath.Dialect;
         var sql = new StringBuilder("SELECT");
 
-        if (container.Schema.Fields.Count > 0)
+        if (container.Schema.GetProjectableFields().Count > 0)
         {
-            var fields = string.Join(", ", container.Schema.Fields.Select(f => dialect.QuoteIdentifier(f.Name)));
+            var fields = string.Join(", ", container.Schema.GetProjectableFields().Select(f => dialect.QuoteIdentifier(f.Name)));
             sql.Append(CultureInfo.InvariantCulture, $" {fields}");
         }
         else

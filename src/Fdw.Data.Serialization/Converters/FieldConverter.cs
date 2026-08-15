@@ -26,6 +26,7 @@ public sealed class FieldConverter : JsonConverter<IField>
         bool isIdentity = false;
         bool isComputed = false;
         bool isSystemProvided = false;
+        string? visibilityId = null;
         string? description = null;
         string? typeSystemId = null;
         int? converterTypeId = null;
@@ -44,6 +45,7 @@ public sealed class FieldConverter : JsonConverter<IField>
                     ref name, ref fieldType, ref role,
                     ref isNullable, ref isIdentity, ref isComputed,
                     ref isSystemProvided,
+                ref visibilityId,
                     ref description, ref typeSystemId, ref converterTypeId);
             }
         }
@@ -52,7 +54,7 @@ public sealed class FieldConverter : JsonConverter<IField>
             throw new JsonException("Field must have Name and FieldType properties");
 
         return CreateField(name!, fieldType, role, isNullable,
-            isIdentity, isComputed, isSystemProvided, description, typeSystemId, converterTypeId);
+            isIdentity, isComputed, isSystemProvided, description, typeSystemId, converterTypeId, visibilityId);
     }
 
     private static void ReadProperty(
@@ -66,6 +68,7 @@ public sealed class FieldConverter : JsonConverter<IField>
         ref bool isIdentity,
         ref bool isComputed,
         ref bool isSystemProvided,
+        ref string? visibilityId,
         ref string? description,
         ref string? typeSystemId,
         ref int? converterTypeId)
@@ -100,6 +103,9 @@ public sealed class FieldConverter : JsonConverter<IField>
             case "IsSystemProvided":
                 isSystemProvided = reader.GetBoolean();
                 break;
+            case "VisibilityId":
+                visibilityId = reader.GetString();
+                break;
             case "Description":
                 description = reader.GetString();
                 break;
@@ -122,7 +128,8 @@ public sealed class FieldConverter : JsonConverter<IField>
         bool isSystemProvided,
         string? description,
         string? typeSystemId,
-        int? converterTypeId)
+        int? converterTypeId,
+        string? visibilityId)
     {
         return new Field
         {
@@ -136,7 +143,13 @@ public sealed class FieldConverter : JsonConverter<IField>
             IsSystemProvided = isSystemProvided,
             Description = description,
             TypeSystemId = typeSystemId,
-            ConverterTypeId = converterTypeId
+            ConverterTypeId = converterTypeId,
+            // Why resolved here: the schema carries the option's name, and the runtime field carries
+            // the option. A name the collection does not know is a declaration error, and ByName
+            // answers with the NotFound sentinel rather than null so it surfaces as one.
+            Visibility = visibilityId is null
+                ? FieldVisibilities.ByName("Visible")
+                : FieldVisibilities.ByName(visibilityId)
         };
     }
 

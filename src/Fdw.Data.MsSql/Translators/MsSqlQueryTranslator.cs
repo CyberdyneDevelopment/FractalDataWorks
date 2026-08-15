@@ -405,9 +405,9 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
         }
 
         // Root container with a populated Schema (TableContainer flow).
-        if (container.Schema.Fields.Count > 0)
+        if (container.Schema.GetProjectableFields().Count > 0)
         {
-            return $"SELECT {string.Join(", ", container.Schema.Fields.Select(f => Col(f.Name)))}";
+            return $"SELECT {string.Join(", ", container.Schema.GetProjectableFields().Select(f => Col(f.Name)))}";
         }
 
         // Adapter flow with empty Schema — use container field names from IDataNode.Fields.

@@ -137,9 +137,9 @@ public sealed class PostgreSqlFindTranslator : PostgreSqlDataCommandTranslatorBa
         sql.Append("SELECT");
 
         // Project all fields from container schema or SELECT *
-        if (container.Schema.Fields.Count > 0)
+        if (container.Schema.GetProjectableFields().Count > 0)
         {
-            var fields = string.Join(", ", container.Schema.Fields.Select(f => dialect.QuoteIdentifier(f.Name)));
+            var fields = string.Join(", ", container.Schema.GetProjectableFields().Select(f => dialect.QuoteIdentifier(f.Name)));
             sql.Append(CultureInfo.InvariantCulture, $" {fields}");
         }
         else

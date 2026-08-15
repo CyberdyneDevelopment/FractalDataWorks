@@ -25,8 +25,12 @@ public class CreateDataStoreContainerFieldRequest
     /// </summary>
     public bool IsSystemProvided { get; set; }
 
-    /// <summary>Gets or sets whether the field is visible to the application.</summary>
-    public bool Visible { get; set; } = true;
+    /// <summary>Gets or sets the FieldVisibilities option name for the field.</summary>
+    /// <remarks>
+    /// "Visible" or "NotVisible". A physical key field is declared NotVisible: the key definition
+    /// names it, and no dataset selects it.
+    /// </remarks>
+    public string VisibilityId { get; set; } = "Visible";
 
     /// <summary>Gets or sets the optional field description.</summary>
     public string? Description { get; set; }

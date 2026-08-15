@@ -84,6 +84,15 @@ public sealed class MsSqlDataField : IMsSqlDataField, IField
     bool IField.IsComputed => _isComputed;
     bool IField.IsSystemProvided => _isSystemProvided || _isIdentity || _isComputed;
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// Why Visible here rather than derived from IsSystemProvided: an identity or computed column is
+    /// not automatically a column a dataset must not see, and deciding that here would change what
+    /// every existing query returns without anyone asking for it. The value belongs to the container
+    /// declaration (VisibilityId) and is supplied by the builder that reads it.
+    /// </remarks>
+    IFieldVisibility IField.Visibility => FieldVisibilities.ByName("Visible");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MsSqlDataField"/> class.
     /// </summary>

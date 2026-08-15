@@ -97,6 +97,17 @@ public sealed class ContainerSchema : IContainerSchema
         Fields.Where(f => f.Role.IsKeyRole).ToList();
 
     /// <summary>
+    /// Get the fields a dataset may select.
+    /// </summary>
+    /// <remarks>
+    /// Every command that builds a column list from the container reads this rather than Fields.
+    /// Fields is the container as declared — which is what an admin or analyst authoring it needs to
+    /// see, including the physical key. A dataset gets what the container chose to expose.
+    /// </remarks>
+    public IReadOnlyList<IField> GetProjectableFields() =>
+        Fields.Where(f => f.Visibility.AllowsProjection).ToList();
+
+    /// <summary>
     /// Get fields with Attribute role (descriptive, dimensional).
     /// </summary>
     /// <remarks>

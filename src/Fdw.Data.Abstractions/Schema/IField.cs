@@ -62,4 +62,15 @@ public interface IField : IPropertyDefinition
     /// SYSDATETIMEOFFSET()) and any source-system-generated values (REST server timestamps, etc.).
     /// </remarks>
     bool IsSystemProvided { get; }
+
+    /// <summary>
+    /// Gets whether this field may be projected into a dataset.
+    /// </summary>
+    /// <remarks>
+    /// Read from <c>data.DataContainerField.VisibilityId</c>. A physical key field is declared so the
+    /// key definition can name it and is NotVisible so no dataset can select it — the container
+    /// abstraction exists so a caller never sees a storage detail. Authoring surfaces read the whole
+    /// field list; only projection consults this.
+    /// </remarks>
+    IFieldVisibility Visibility { get; }
 }

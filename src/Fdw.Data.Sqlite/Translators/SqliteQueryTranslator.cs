@@ -271,8 +271,8 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
             return $"SELECT {string.Join(", ", projection.PropertyNames.Select(Col))}";
         }
 
-        if (container.Schema.Fields.Count > 0)
-            return $"SELECT {string.Join(", ", container.Schema.Fields.Select(f => Col(f.Name)))}";
+        if (container.Schema.GetProjectableFields().Count > 0)
+            return $"SELECT {string.Join(", ", container.Schema.GetProjectableFields().Select(f => Col(f.Name)))}";
 
         if (containerFieldNames is { Count: > 0 })
             return $"SELECT {string.Join(", ", containerFieldNames.Select(Col))}";
