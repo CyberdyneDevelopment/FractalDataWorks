@@ -240,6 +240,7 @@
     <Project Path="src/Fdw.Data.UI.Components/Fdw.Data.UI.Components.csproj" />
     <Project Path="src/Fdw.Data/Fdw.Data.csproj" />
     <Project Path="src/Fdw.DevSession.Abstractions/Fdw.DevSession.Abstractions.csproj" />
+    <Project Path="src/Fdw.DevSession.McpServer/Fdw.DevSession.McpServer.csproj" />
     <Project Path="src/Fdw.DevSession/Fdw.DevSession.csproj" />
     <Project Path="src/Fdw.Hosting.Abstractions/Fdw.Hosting.Abstractions.csproj" />
     <Project Path="src/Fdw.Results/Fdw.Results.csproj" />
