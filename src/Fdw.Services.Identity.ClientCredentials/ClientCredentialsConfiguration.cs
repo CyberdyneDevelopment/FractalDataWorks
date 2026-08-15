@@ -4,11 +4,12 @@ using Fdw.Configuration;
 using Fdw.Data;
 using Fdw.Services.Identity.Abstractions;
 
-namespace Fdw.Services.Identity.OpenIddict;
+namespace Fdw.Services.Identity.ClientCredentials;
 
 /// <summary>
-/// Typed configuration body for the OpenIddict mechanism — a service proving its identity against an
-/// OpenIddict authorization server, typically FDW's own.
+/// Typed configuration body for the client-credentials mechanism — a service proving its identity
+/// with an OAuth 2.0 client-credentials grant against any conforming token endpoint. FDW's own
+/// OpenIddict authorization server is the usual target.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -36,17 +37,17 @@ namespace Fdw.Services.Identity.OpenIddict;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
-[ManagedConfiguration(ServiceCategory = "Identity", ServiceType = "OpenIddict")]
-public partial class OpenIddictConfiguration : IIdentityServiceConfiguration
+[ManagedConfiguration(ServiceCategory = "Identity", ServiceType = "ClientCredentials")]
+public partial class ClientCredentialsConfiguration : IIdentityServiceConfiguration
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="OpenIddictConfiguration"/> class.
+    /// Initializes a new instance of the <see cref="ClientCredentialsConfiguration"/> class.
     /// </summary>
-    public OpenIddictConfiguration()
+    public ClientCredentialsConfiguration()
     {
         ServiceType = "Identity";
         SectionName = "Identities";
-        ServiceOptionType = "OpenIddict";
+        ServiceOptionType = "ClientCredentials";
     }
 
     /// <summary>Gets or sets the durable logical identity across versions. No default — the database assigns identity.</summary>
@@ -61,16 +62,16 @@ public partial class OpenIddictConfiguration : IIdentityServiceConfiguration
     /// <summary>Gets or sets the service-type domain — always <c>"Identity"</c>.</summary>
     public string ServiceType { get; set; }
 
-    /// <summary>Gets or sets the TypeOption discriminator — always <c>"OpenIddict"</c>.</summary>
+    /// <summary>Gets or sets the TypeOption discriminator — always <c>"ClientCredentials"</c>.</summary>
     public string? ServiceOptionType { get; set; }
 
-    /// <summary>Gets or sets the issuer URL of the OpenIddict authorization server (e.g. <c>https://api.example.dev/</c>).</summary>
+    /// <summary>Gets or sets the issuer URL of the authorization server (e.g. <c>https://api.example.dev/</c>).</summary>
     public string? Issuer { get; set; }
 
     /// <summary>Gets or sets the absolute token endpoint URL — the server's <c>/connect/token</c>.</summary>
     public string? TokenEndpoint { get; set; }
 
-    /// <summary>Gets or sets the OpenIddict client id registered for this service (e.g. <c>fdw.scheduler</c>).</summary>
+    /// <summary>Gets or sets the client id registered for this service at that server (e.g. <c>fdw.scheduler</c>).</summary>
     public string? ClientId { get; set; }
 
     /// <summary>Gets or sets the name of the secret manager that holds this identity's client secret.</summary>
