@@ -1,10 +1,12 @@
 using System;
+using Fdw.Data;
 
 namespace Fdw.Operations.Endpoints;
 
 /// <summary>
 /// Internal entity for querying chain steps for lineage tracking.
 /// </summary>
+[GenerateMapper]
 public class ChainStepLineageRecord
 {
     /// <summary>Gets or sets the chain step identifier.</summary>

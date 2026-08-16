@@ -1,10 +1,12 @@
 using System;
+using Fdw.Data;
 
 namespace Fdw.Operations.Endpoints;
 
 /// <summary>
 /// Internal entity for querying chain step source fields for lineage tracking.
 /// </summary>
+[GenerateMapper]
 public class ChainStepSourceFieldRecord
 {
     /// <summary>Gets or sets the source field record identifier.</summary>
