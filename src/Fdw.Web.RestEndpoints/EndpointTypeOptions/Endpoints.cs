@@ -168,7 +168,7 @@ public partial class Endpoints : ServiceTypeCollectionBase<IEndpointTypeCollecti
                     .Distinct()
                     .SelectMany(assembly => assembly.GetTypes())
                     .Where(t => t is { IsAbstract: false, IsInterface: false }
-                        && typeof(FastEndpoints.IValidator).IsAssignableFrom(t)))
+                        && typeof(FluentValidation.IValidator).IsAssignableFrom(t)))
                 {
                     o.SourceGeneratorDiscoveredTypes.Add(validatorType);
                 }
