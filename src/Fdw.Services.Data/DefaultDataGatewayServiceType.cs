@@ -78,6 +78,19 @@ public sealed class DefaultDataGatewayServiceType : DataGatewayTypeBase<IGeneric
             builder.Services.TryAddSingleton<DataGatewayResultCache>();
             builder.Services.AddSingleton<ICacheInvalidator>(sp => sp.GetRequiredService<DataGatewayResultCache>());
 
+            // Why the Lazy wrapper is registered here too: every DefaultConfigurationProvider<,> takes
+            // Lazy<ICacheInvalidator?> on its constructor, and until now only the bare interface was
+            // registered — so 39 provider registrations across the framework each hand-built their own
+            // wrapper. This is the type that knows the invalidator exists, so the wrapper belongs beside
+            // it, exactly as ConfigurationGatewayServiceType registers Lazy<IConfigurationGateway> beside
+            // the gateway. Consumers resolve it instead of constructing it.
+            //
+            // Why Lazy at all: it defers resolution past domain-registration time. Why the nullable T
+            // inside: a host that never registers this domain has no invalidator, and the provider reads
+            // _invalidator?.Value and treats null as "nothing to evict" rather than failing.
+            builder.Services.TryAddSingleton(sp => new Lazy<ICacheInvalidator?>(
+                () => sp.GetService<ICacheInvalidator>()));
+
             // Why: Replace any prior IDataGateway registration; the real one is the scoped decorator chain below.
             var existing = builder.Services.FirstOrDefault(d => d.ServiceType == typeof(IDataGateway));
             if (existing != null)
