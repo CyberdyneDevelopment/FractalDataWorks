@@ -1,5 +1,7 @@
 using System;
 using Fdw.Collections;
+using Fdw.Data.Abstractions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.Abstractions;
 
@@ -44,6 +46,9 @@ public abstract class DataMapperBase<TSource, TTarget>(
     /// <returns>The mapped value in target type system.</returns>
     public virtual object? MapViaClr(object? sourceValue)
     {
+        DataMapperBaseLog.MappingViaClr(
+            NullLogger<DataMapperBase<TSource, TTarget>>.Instance, SourceConverter.Name, TargetConverter.Name);
+
         // Step 1: Source → CLR
         var clrValue = SourceConverter.ToClr(sourceValue);
 

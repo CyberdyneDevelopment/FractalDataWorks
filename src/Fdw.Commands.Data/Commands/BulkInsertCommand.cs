@@ -4,6 +4,8 @@ using Fdw.Collections;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Abstractions;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data;
 
@@ -51,5 +53,6 @@ public sealed class BulkInsertCommand<T> : DataCommandBase<int, IEnumerable<T>>
     public BulkInsertCommand(IEnumerable<T> data)
         : base("BulkInsert", data)
     {
+        BulkInsertCommandLog.CommandCreated(NullLogger<BulkInsertCommand<T>>.Instance, typeof(T).Name);
     }
 }

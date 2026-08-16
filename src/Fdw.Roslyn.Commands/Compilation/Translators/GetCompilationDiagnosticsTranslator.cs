@@ -11,6 +11,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Compilation.Commands;
 using Fdw.Roslyn.Commands.Compilation.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 
 namespace Fdw.Roslyn.Commands.Compilation.Translators;
@@ -48,6 +49,8 @@ public sealed class GetCompilationDiagnosticsTranslator
             _ => DiagnosticSeverity.Warning
         };
 
+        GetCompilationDiagnosticsTranslatorLog.Retrieving(Logger, command.FilePath ?? string.Empty, command.ProjectName ?? string.Empty, minSeverity.ToString());
+
         IEnumerable<Diagnostic> diagnostics;
         string? filePath = null;
         string? projectName = null;
@@ -57,19 +60,28 @@ public sealed class GetCompilationDiagnosticsTranslator
             filePath = command.FilePath;
             var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
             if (documentId is null)
+            {
+                GetCompilationDiagnosticsTranslatorLog.DocumentNotFound(Logger, command.FilePath);
                 return GenericResult<QueryResult<DiagnosticsData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+            }
 
             var document = solution.GetDocument(documentId);
             if (document is null)
+            {
+                GetCompilationDiagnosticsTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
                 return GenericResult<QueryResult<DiagnosticsData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+            }
 
             var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
             if (semanticModel is null)
+            {
+                GetCompilationDiagnosticsTranslatorLog.FailedToGetSemanticModel(Logger, command.FilePath);
                 return GenericResult<QueryResult<DiagnosticsData>>.Failure(
                 RoslynResultCodes.ByName("FailedToGetSemanticModel"));
+            }
 
             diagnostics = semanticModel.GetDiagnostics(cancellationToken: cancellationToken);
         }
@@ -80,19 +92,26 @@ public sealed class GetCompilationDiagnosticsTranslator
                 string.Equals(p.Name, command.ProjectName, StringComparison.OrdinalIgnoreCase));
 
             if (project is null)
+            {
+                GetCompilationDiagnosticsTranslatorLog.ProjectNotFound(Logger, command.ProjectName);
                 return GenericResult<QueryResult<DiagnosticsData>>.Failure(
                 RoslynResultCodes.ByName("ProjectNotFound"),
                 ResultDetails.Create().With("ProjectName", command.ProjectName));
+            }
 
             var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
             if (compilation is null)
+            {
+                GetCompilationDiagnosticsTranslatorLog.FailedToGetCompilation(Logger, command.ProjectName);
                 return GenericResult<QueryResult<DiagnosticsData>>.Failure(
                 RoslynResultCodes.ByName("FailedToGetCompilation"));
+            }
 
             diagnostics = compilation.GetDiagnostics(cancellationToken);
         }
         else
         {
+            GetCompilationDiagnosticsTranslatorLog.EitherFilePathOrProjectNameRequired(Logger);
             return GenericResult<QueryResult<DiagnosticsData>>.Failure(
                 RoslynResultCodes.ByName("EitherFilePathOrProjectNameRequired"));
         }
@@ -128,6 +147,8 @@ public sealed class GetCompilationDiagnosticsTranslator
         var result = new QueryResult<DiagnosticsData>(
             $"Found {filteredDiagnostics.Count} diagnostics",
             data);
+
+        GetCompilationDiagnosticsTranslatorLog.Retrieved(Logger, filteredDiagnostics.Count);
 
         return GenericResult<QueryResult<DiagnosticsData>>.Success(result);
     }

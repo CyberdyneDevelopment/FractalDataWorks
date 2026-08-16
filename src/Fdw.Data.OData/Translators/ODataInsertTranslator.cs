@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.OData.Logging;
 using Fdw.Data.OData.Results;
 using Fdw.Results;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.OData;
 
@@ -51,10 +53,14 @@ public sealed class ODataInsertTranslator : ODataCommandTranslatorBase
         IStorageContainer container,
         CancellationToken cancellationToken = default)
     {
+        ODataInsertTranslatorLog.Translating(
+            NullLogger<ODataInsertTranslator>.Instance, container?.Name ?? "<null>");
+
         try
         {
             if (container == null)
             {
+                ODataInsertTranslatorLog.ContainerNull(NullLogger<ODataInsertTranslator>.Instance);
                 return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                     GenericResult<HttpRequestMessage>.Failure(
                         ODataResultCodes.ByName("ContainerNull")));
@@ -63,6 +69,8 @@ public sealed class ODataInsertTranslator : ODataCommandTranslatorBase
             // Get entity data from metadata
             if (command.Metadata == null || !command.Metadata.TryGetValue("Data", out var dataObj) || dataObj == null)
             {
+                ODataInsertTranslatorLog.InsertDataRequired(
+                    NullLogger<ODataInsertTranslator>.Instance, container.Name);
                 return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                     GenericResult<HttpRequestMessage>.Failure(
                         ODataResultCodes.ByName("InsertDataRequired")));
@@ -82,11 +90,15 @@ public sealed class ODataInsertTranslator : ODataCommandTranslatorBase
                 Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
             };
 
+            ODataInsertTranslatorLog.Translated(NullLogger<ODataInsertTranslator>.Instance, container.Name);
+
             return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                 GenericResult<HttpRequestMessage>.Success(request));
         }
         catch (Exception ex)
         {
+            ODataInsertTranslatorLog.InsertTranslationFailed(
+                NullLogger<ODataInsertTranslator>.Instance, ex, container?.Name ?? "<null>", ex.Message);
             return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                 GenericResult<HttpRequestMessage>.Failure(
                     ODataResultCodes.ByName("InsertTranslationFailed"),

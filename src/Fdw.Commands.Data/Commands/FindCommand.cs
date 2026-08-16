@@ -4,6 +4,8 @@ using Fdw.Collections;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Abstractions;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data;
 
@@ -46,6 +48,7 @@ public sealed class FindCommand<T> : DataCommandBase<IEnumerable<FindResult<T>>>
     public FindCommand()
         : base("Find")
     {
+        FindCommandLog.CommandCreated(NullLogger<FindCommand<T>>.Instance, typeof(T).Name);
     }
 
     /// <summary>

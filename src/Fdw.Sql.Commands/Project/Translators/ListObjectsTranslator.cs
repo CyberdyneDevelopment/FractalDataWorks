@@ -7,8 +7,10 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Sql.Commands.Abstractions;
 using Fdw.Sql.Commands.Abstractions.Results;
+using Fdw.Sql.Commands.Logging;
 using Fdw.Sql.Commands.Project.Commands;
 using Fdw.Sql.Workspace;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.SqlServer.Dac.Model;
 
 namespace Fdw.Sql.Commands.Project.Translators;
@@ -28,6 +30,9 @@ public sealed class ListObjectsTranslator : SqlCommandTranslatorBase<ListObjects
         ISqlWorkspace workspace,
         CancellationToken cancellationToken = default)
     {
+        var logger = NullLogger<ListObjectsTranslator>.Instance;
+        ListObjectsTranslatorLog.Translating(logger, command.ObjectKind ?? string.Empty, command.Schema ?? string.Empty);
+
         var kindFilter = ResolveKind(command.ObjectKind);
         var schemaFilter = command.Schema;
 
@@ -60,6 +65,7 @@ public sealed class ListObjectsTranslator : SqlCommandTranslatorBase<ListObjects
                    .ThenBy(o => o.Name, StringComparer.OrdinalIgnoreCase)
                    .ToList());
 
+        ListObjectsTranslatorLog.ObjectsFound(logger, results.Count);
         return Task.FromResult<IGenericResult<QueryResult<IReadOnlyList<SqlObjectInfo>>>>(
             GenericResult<QueryResult<IReadOnlyList<SqlObjectInfo>>>.Success(result));
     }

@@ -11,6 +11,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Compilation.Commands;
 using Fdw.Roslyn.Commands.Compilation.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -41,25 +42,36 @@ public sealed class ValidateSyntaxTranslator
         SyntaxTree syntaxTree;
         string? filePath = null;
 
+        ValidateSyntaxTranslatorLog.Validating(Logger, command.FilePath ?? string.Empty, !string.IsNullOrEmpty(command.Code));
+
         if (!string.IsNullOrEmpty(command.FilePath))
         {
             filePath = command.FilePath;
             var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
 
             if (documentId is null)
+            {
+                ValidateSyntaxTranslatorLog.DocumentNotFound(Logger, command.FilePath);
                 return GenericResult<QueryResult<ValidateSyntaxData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+            }
 
             var document = solution.GetDocument(documentId);
             if (document is null)
+            {
+                ValidateSyntaxTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
                 return GenericResult<QueryResult<ValidateSyntaxData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+            }
 
             var tree = await document.GetSyntaxTreeAsync(cancellationToken).ConfigureAwait(false);
             if (tree is null)
+            {
+                ValidateSyntaxTranslatorLog.FailedToGetSyntaxTree(Logger, command.FilePath);
                 return GenericResult<QueryResult<ValidateSyntaxData>>.Failure(
                 RoslynResultCodes.ByName("FailedToGetSyntaxTree"));
+            }
 
             syntaxTree = tree;
         }
@@ -69,6 +81,7 @@ public sealed class ValidateSyntaxTranslator
         }
         else
         {
+            ValidateSyntaxTranslatorLog.EitherFilePathOrCodeRequired(Logger);
             return GenericResult<QueryResult<ValidateSyntaxData>>.Failure(
                 RoslynResultCodes.ByName("EitherFilePathOrCodeRequired"));
         }
@@ -106,6 +119,8 @@ public sealed class ValidateSyntaxTranslator
             : $"Found {errors.Count} syntax errors";
 
         var result = new QueryResult<ValidateSyntaxData>(summary, data);
+
+        ValidateSyntaxTranslatorLog.Validated(Logger, isValid, errors.Count);
 
         return GenericResult<QueryResult<ValidateSyntaxData>>.Success(result);
     }

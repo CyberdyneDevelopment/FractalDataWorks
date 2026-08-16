@@ -10,6 +10,7 @@ using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Generation.Commands;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -39,27 +40,41 @@ public sealed class GenerateMethodTranslator : RoslynCommandTranslatorBase<Gener
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(command.MethodName))
+        {
+            GenerateMethodTranslatorLog.MethodNameRequired(Logger);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("MethodNameRequired"));
+        }
+
+        GenerateMethodTranslatorLog.Generating(Logger, command.MethodName, command.FilePath, command.Line, command.Column);
 
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            GenerateMethodTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            GenerateMethodTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            GenerateMethodTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
@@ -70,8 +85,11 @@ public sealed class GenerateMethodTranslator : RoslynCommandTranslatorBase<Gener
             .FirstOrDefault();
 
         if (typeDecl is null)
+        {
+            GenerateMethodTranslatorLog.NoTypeDeclarationFoundAtPosition(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("NoTypeDeclarationFoundAtPosition"));
+        }
 
         // Adjust return type for async
         var actualReturnType = command.ReturnType;
@@ -187,6 +205,8 @@ public sealed class GenerateMethodTranslator : RoslynCommandTranslatorBase<Gener
                 TextChangeCount = 1
             }
         };
+
+        GenerateMethodTranslatorLog.Generated(Logger, command.MethodName, paramList.Length);
 
         return GenericResult<MutationResult>.Success(
             new MutationResult(

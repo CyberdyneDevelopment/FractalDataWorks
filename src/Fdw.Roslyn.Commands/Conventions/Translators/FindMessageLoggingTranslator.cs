@@ -10,6 +10,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Conventions.Commands;
 using Fdw.Roslyn.Commands.Conventions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -37,6 +38,8 @@ public sealed class FindMessageLoggingTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        FindMessageLoggingTranslatorLog.Scanning(Logger, command.ProjectFilter ?? "(all)");
+
         var loggingMethods = new List<LoggingMethodInfo>();
         var eventIdRanges = new Dictionary<string, List<int>>(StringComparer.Ordinal);
 
@@ -133,6 +136,8 @@ public sealed class FindMessageLoggingTranslator
         var result = new QueryResult<MessageLoggingData>(
             $"Found {loggingMethods.Count} MessageLogging methods",
             data);
+
+        FindMessageLoggingTranslatorLog.Found(Logger, loggingMethods.Count);
 
         return GenericResult<QueryResult<MessageLoggingData>>.Success(result);
     }

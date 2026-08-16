@@ -1,6 +1,8 @@
 using Fdw.Services.SecretManagers.Abstractions;
+using Fdw.Services.SecretManagers.Logging;
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.SecretManagers.Commands;
 
@@ -32,6 +34,7 @@ public sealed class GetSecretManagerVersionsCommand : SecretManagerCommandBase, 
         TimeSpan? timeout = null)
         : base("GetSecretVersions", container, secretKey, typeof(IEnumerable<SecretValue>), parameters, metadata, timeout)
     {
+        GetSecretManagerVersionsCommandLog.Constructed(NullLogger<GetSecretManagerVersionsCommand>.Instance, container, secretKey);
     }
 
     /// <summary>

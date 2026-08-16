@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Fdw.Abstractions;
+using Fdw.Commands.Data.Abstractions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data.Abstractions;
 
@@ -27,11 +29,20 @@ public abstract class DataCommandBase : IDataCommand
     /// <param name="category">The command category (defaults to "Data").</param>
     protected DataCommandBase(string commandType, string category = "Data")
     {
+        if (commandType is null)
+        {
+            // Why: reported defect (see logging-pass report) — this constructor throws instead of
+            // returning IGenericResult. Logged here per scope; the throw below is left in place.
+            DataCommandBaseLog.CommandTypeMissing(NullLogger<DataCommandBase>.Instance);
+        }
+
         CommandId = Guid.NewGuid();
         CreatedAt = DateTime.UtcNow;
         CommandType = commandType ?? throw new ArgumentNullException(nameof(commandType));
         Category = category ?? "Data";
         Metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        DataCommandBaseLog.CommandCreated(NullLogger<DataCommandBase>.Instance, CommandId, CommandType, Category);
     }
 
     /// <summary>

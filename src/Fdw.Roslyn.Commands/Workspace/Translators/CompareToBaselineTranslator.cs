@@ -9,6 +9,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Workspace.Commands;
 using Fdw.Roslyn.Commands.Workspace.Results;
 using Fdw.Workspace.Roslyn;
@@ -40,11 +41,15 @@ public sealed class CompareToBaselineTranslator
         CancellationToken cancellationToken = default)
 #pragma warning restore MA0051
     {
+        CompareToBaselineTranslatorLog.Comparing(Logger);
+
         // Baseline comparison requires workspace access - handler provides baseline via command
         var baseline = command.BaselineSolution;
 
         if (baseline is null)
         {
+            CompareToBaselineTranslatorLog.NoBaseline(Logger);
+
             var data = new ComparisonData
             {
                 HasBaseline = false,
@@ -133,6 +138,8 @@ public sealed class CompareToBaselineTranslator
         var queryResult = new QueryResult<ComparisonData>(
             $"Found {changes.Count} changes from baseline",
             comparisonData);
+
+        CompareToBaselineTranslatorLog.Compared(Logger, changes.Count);
 
         return GenericResult<QueryResult<ComparisonData>>.Success(queryResult);
     }

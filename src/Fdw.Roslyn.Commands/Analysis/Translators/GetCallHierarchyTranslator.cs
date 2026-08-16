@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Analysis.Commands;
 using Fdw.Roslyn.Commands.Analysis.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.FindSymbols;
@@ -37,24 +38,35 @@ public sealed class GetCallHierarchyTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        GetCallHierarchyTranslatorLog.Building(Logger, command.FilePath, command.Line, command.Column, command.Direction, command.MaxDepth);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            GetCallHierarchyTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<QueryResult<CallHierarchyData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            GetCallHierarchyTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<CallHierarchyData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            GetCallHierarchyTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<CallHierarchyData>>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
@@ -62,8 +74,11 @@ public sealed class GetCallHierarchyTranslator
                   ?? semanticModel.GetDeclaredSymbol(token.Parent!, cancellationToken);
 
         if (symbol is not IMethodSymbol methodSymbol)
+        {
+            GetCallHierarchyTranslatorLog.SymbolNotMethod(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<QueryResult<CallHierarchyData>>.Failure(
                 RoslynResultCodes.ByName("SymbolNotMethod"));
+        }
 
         var hierarchy = new List<CallHierarchyEntry>();
 
@@ -87,6 +102,8 @@ public sealed class GetCallHierarchyTranslator
         var result = new QueryResult<CallHierarchyData>(
             $"Built {command.Direction} hierarchy for '{methodSymbol.Name}' with {hierarchy.Count} entries",
             data);
+
+        GetCallHierarchyTranslatorLog.Built(Logger, methodSymbol.ToDisplayString(), command.Direction, hierarchy.Count);
 
         return GenericResult<QueryResult<CallHierarchyData>>.Success(result);
     }

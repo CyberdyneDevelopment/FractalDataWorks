@@ -7,11 +7,13 @@ using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.MsSql.Logging;
 using Fdw.Data.MsSql.Results;
 using Fdw.Data.MsSql.Translators;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.MsSql;
 
@@ -71,16 +73,22 @@ public sealed class MsSqlBatchInsertTranslator : MsSqlDataCommandTranslatorBase
         IStorageContainer container,
         CancellationToken cancellationToken = default)
     {
+        MsSqlBatchInsertTranslatorLog.Translating(
+            NullLogger<MsSqlBatchInsertTranslator>.Instance, container?.Name ?? "<null>");
+
         try
         {
             if (container == null)
             {
+                MsSqlBatchInsertTranslatorLog.ContainerNull(NullLogger<MsSqlBatchInsertTranslator>.Instance);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("ContainerNull")));
             }
 
             if (container.Path is not IDatabasePath dbPath)
             {
+                MsSqlBatchInsertTranslatorLog.InvalidContainerPath(
+                    NullLogger<MsSqlBatchInsertTranslator>.Instance, container.Name);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("InvalidContainerPath")));
             }
@@ -89,6 +97,8 @@ public sealed class MsSqlBatchInsertTranslator : MsSqlDataCommandTranslatorBase
             var dataObj = GetCommandData(command);
             if (dataObj == null)
             {
+                MsSqlBatchInsertTranslatorLog.MissingInputData(
+                    NullLogger<MsSqlBatchInsertTranslator>.Instance, "InsertCommand", container.Name);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(
                         MsSqlDataResultCodes.ByName("MissingInputData"),
@@ -98,6 +108,8 @@ public sealed class MsSqlBatchInsertTranslator : MsSqlDataCommandTranslatorBase
             // Ensure data is a collection
             if (dataObj is not IEnumerable collection)
             {
+                MsSqlBatchInsertTranslatorLog.InvalidDataType(
+                    NullLogger<MsSqlBatchInsertTranslator>.Instance, container.Name, dataObj.GetType().Name);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(
                         MsSqlDataResultCodes.ByName("InvalidDataType"),
@@ -111,6 +123,8 @@ public sealed class MsSqlBatchInsertTranslator : MsSqlDataCommandTranslatorBase
         }
         catch (Exception ex)
         {
+            MsSqlBatchInsertTranslatorLog.BatchInsertTranslationFailed(
+                NullLogger<MsSqlBatchInsertTranslator>.Instance, ex, container?.Name ?? "<null>", ex.Message);
             return Task.FromResult(
                 GenericResult<SqlCommand>.Failure(
                     MsSqlDataResultCodes.ByName("BatchInsertTranslationFailed"),
@@ -141,6 +155,10 @@ public sealed class MsSqlBatchInsertTranslator : MsSqlDataCommandTranslatorBase
 
         if (fields.Count == 0)
         {
+            // Why: reported as a defect (FDW rule) — a translator should return IGenericResult, not
+            // throw. Left in place per instructions; the caller's try/catch converts it to a Failure.
+            MsSqlBatchInsertTranslatorLog.NoInsertableFields(
+                NullLogger<MsSqlBatchInsertTranslator>.Instance, container.Name);
             throw new InvalidOperationException($"Container {container.Name} has no insertable fields");
         }
 
@@ -164,6 +182,9 @@ public sealed class MsSqlBatchInsertTranslator : MsSqlDataCommandTranslatorBase
 
         if (entities.Count == 0)
         {
+            // Why: same throw-instead-of-result defect as above — logged, not converted.
+            MsSqlBatchInsertTranslatorLog.EmptyCollection(
+                NullLogger<MsSqlBatchInsertTranslator>.Instance, container.Name);
             throw new InvalidOperationException("Cannot insert empty collection");
         }
 
@@ -206,6 +227,9 @@ public sealed class MsSqlBatchInsertTranslator : MsSqlDataCommandTranslatorBase
         {
             command.Parameters.Add(param);
         }
+
+        MsSqlBatchInsertTranslatorLog.Translated(
+            NullLogger<MsSqlBatchInsertTranslator>.Instance, container.Name, sqlBatches.Count, entities.Count);
 
         return command;
     }

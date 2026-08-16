@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Conventions.Commands;
 using Fdw.Roslyn.Commands.Conventions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -40,6 +41,8 @@ public sealed class ValidateResultHandlingTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        ValidateResultHandlingTranslatorLog.Scanning(Logger, command.ProjectFilter ?? "(all)");
+
         var issues = new List<ResultHandlingIssue>();
 
         foreach (var project in solution.Projects)
@@ -115,6 +118,7 @@ public sealed class ValidateResultHandlingTranslator
                 // Why: per-project failures are tolerated by design (best-effort scan), but
                 // record the failure in the result data so it isn't silently swallowed —
                 // FDW014 demands the exception be visible in the returned GenericResult.
+                ValidateResultHandlingTranslatorLog.ProjectScanFailed(Logger, project.Name, ex.GetType().Name, ex.Message);
                 issues.Add(new ResultHandlingIssue
                 {
                     Severity = "Error",
@@ -140,6 +144,8 @@ public sealed class ValidateResultHandlingTranslator
 
         var summary = $"Found {issues.Count} discarded IGenericResult call site(s)";
         var result = new QueryResult<ResultHandlingValidationData>(summary, data);
+
+        ValidateResultHandlingTranslatorLog.Found(Logger, issues.Count);
 
         return GenericResult<QueryResult<ResultHandlingValidationData>>.Success(result, summary);
     }

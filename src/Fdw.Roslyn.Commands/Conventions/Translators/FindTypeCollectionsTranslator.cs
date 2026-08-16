@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Conventions.Commands;
 using Fdw.Roslyn.Commands.Conventions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -35,6 +36,8 @@ public sealed class FindTypeCollectionsTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        FindTypeCollectionsTranslatorLog.Scanning(Logger);
+
         var typeCollections = new List<TypeCollectionInfo>();
 
         foreach (var project in solution.Projects)
@@ -86,6 +89,8 @@ public sealed class FindTypeCollectionsTranslator
         var result = new QueryResult<TypeCollectionsData>(
             $"Found {typeCollections.Count} TypeCollections",
             data);
+
+        FindTypeCollectionsTranslatorLog.Found(Logger, typeCollections.Count);
 
         return GenericResult<QueryResult<TypeCollectionsData>>.Success(result);
     }

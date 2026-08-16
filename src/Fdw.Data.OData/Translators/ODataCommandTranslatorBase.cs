@@ -9,7 +9,9 @@ using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.OData.Logging;
 using Fdw.Results;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.OData;
 
@@ -65,12 +67,20 @@ public abstract class ODataCommandTranslatorBase : DataCommandTranslatorBase<Htt
     /// </summary>
     private static string BuildODataNode(IFilterNode node)
     {
-        return node switch
+        switch (node)
         {
-            FilterCondition condition => BuildODataCondition(condition),
-            FilterGroup group => BuildODataGroup(group),
-            _ => throw new InvalidOperationException($"Unknown filter node type: {node.GetType().Name}")
-        };
+            case FilterCondition condition:
+                return BuildODataCondition(condition);
+            case FilterGroup group:
+                return BuildODataGroup(group);
+            default:
+                // Why: reported as a defect (FDW rule) — a translator should return IGenericResult,
+                // not throw. Left in place per instructions; the caller's try/catch converts it to
+                // a Failure.
+                ODataCommandTranslatorBaseLog.UnknownFilterNodeType(
+                    NullLogger<ODataCommandTranslatorBase>.Instance, node.GetType().Name);
+                throw new InvalidOperationException($"Unknown filter node type: {node.GetType().Name}");
+        }
     }
 
     /// <summary>

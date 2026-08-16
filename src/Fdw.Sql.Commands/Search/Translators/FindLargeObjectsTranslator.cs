@@ -5,7 +5,9 @@ using Fdw.Results;
 using Fdw.Sql.Commands.Abstractions;
 using Fdw.Sql.Commands.Abstractions.Results;
 using Fdw.Sql.Commands.Search.Commands;
+using Fdw.Sql.Commands.Logging;
 using Fdw.Sql.Workspace;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Sql.Commands.Search.Translators;
 
@@ -15,6 +17,10 @@ public sealed class FindLargeObjectsTranslator : SqlCommandTranslatorBase<FindLa
     public FindLargeObjectsTranslator() : base("FindLargeObjects", "Stub. Full implementation pending.") { }
 
     public override Task<IGenericResult<QueryResult<string>>> Translate(FindLargeObjectsCommand command, ISqlWorkspace workspace, CancellationToken cancellationToken = default)
-        => Task.FromResult<IGenericResult<QueryResult<string>>>(
-            GenericResult<QueryResult<string>>.Failure(SqlResultCodes.NotYetImplemented));
+    {
+        var logger = NullLogger<FindLargeObjectsTranslator>.Instance;
+        FindLargeObjectsTranslatorLog.Translating(logger, nameof(FindLargeObjectsCommand));
+        return Task.FromResult<IGenericResult<QueryResult<string>>>(
+            GenericResult<QueryResult<string>>.Failure(FindLargeObjectsTranslatorLog.NotYetImplemented(logger, nameof(FindLargeObjectsCommand))));
+    }
 }

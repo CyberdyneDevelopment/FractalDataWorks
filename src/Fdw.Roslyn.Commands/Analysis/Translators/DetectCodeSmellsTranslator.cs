@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Analysis.Commands;
 using Fdw.Roslyn.Commands.Analysis.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -42,21 +43,32 @@ public sealed class DetectCodeSmellsTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        DetectCodeSmellsTranslatorLog.Scanning(Logger, command.FilePath);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            DetectCodeSmellsTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<QueryResult<CodeSmellsData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            DetectCodeSmellsTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<CodeSmellsData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         if (syntaxRoot is null)
+        {
+            DetectCodeSmellsTranslatorLog.FailedToGetSyntaxRoot(Logger, command.FilePath);
             return GenericResult<QueryResult<CodeSmellsData>>.Failure(
                 RoslynResultCodes.ByName("FailedToGetSyntaxRoot"));
+        }
 
         var smells = new List<CodeSmell>();
 
@@ -172,6 +184,8 @@ public sealed class DetectCodeSmellsTranslator
         var result = new QueryResult<CodeSmellsData>(
             $"Detected {smells.Count} code smells: {highSeverity} high, {mediumSeverity} medium, {lowSeverity} low",
             data);
+
+        DetectCodeSmellsTranslatorLog.Detected(Logger, command.FilePath, smells.Count, highSeverity, mediumSeverity, lowSeverity);
 
         return GenericResult<QueryResult<CodeSmellsData>>.Success(result);
     }

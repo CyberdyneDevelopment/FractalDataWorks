@@ -8,6 +8,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Workspace.Commands;
 using Microsoft.CodeAnalysis;
 
@@ -34,8 +35,11 @@ public sealed class GetChangeLedgerTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        GetChangeLedgerTranslatorLog.Getting(Logger);
+
         if (command.Ledger is null)
         {
+            GetChangeLedgerTranslatorLog.LedgerNotAvailable(Logger);
             return Task.FromResult(GenericResult<QueryResult<ChangeLedgerData>>.Failure(
                 RoslynResultCodes.ByName("LedgerNotAvailable")));
         }
@@ -56,6 +60,8 @@ public sealed class GetChangeLedgerTranslator
         var result = new QueryResult<ChangeLedgerData>(
             $"Change ledger contains {entries.Count} entries",
             data);
+
+        GetChangeLedgerTranslatorLog.Retrieved(Logger, entries.Count);
 
         return Task.FromResult<IGenericResult<QueryResult<ChangeLedgerData>>>(
             GenericResult<QueryResult<ChangeLedgerData>>.Success(result));

@@ -6,11 +6,13 @@ using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.MsSql.Logging;
 using Fdw.Data.MsSql.Results;
 using Fdw.Data.MsSql.Translators;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.MsSql;
 
@@ -55,10 +57,14 @@ public sealed class MsSqlInsertTranslator : MsSqlDataCommandTranslatorBase
         IStorageContainer container,
         CancellationToken cancellationToken = default)
     {
+        MsSqlInsertTranslatorLog.Translating(
+            NullLogger<MsSqlInsertTranslator>.Instance, container?.Name ?? "<null>");
+
         try
         {
             if (container == null)
             {
+                MsSqlInsertTranslatorLog.ContainerNull(NullLogger<MsSqlInsertTranslator>.Instance);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("ContainerNull")));
             }
@@ -66,6 +72,8 @@ public sealed class MsSqlInsertTranslator : MsSqlDataCommandTranslatorBase
             // Validate container path is a database path
             if (container.Path is not IDatabasePath dbPath)
             {
+                MsSqlInsertTranslatorLog.InvalidContainerPath(
+                    NullLogger<MsSqlInsertTranslator>.Instance, container.Name);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("InvalidContainerPath")));
             }
@@ -74,6 +82,8 @@ public sealed class MsSqlInsertTranslator : MsSqlDataCommandTranslatorBase
             var dataObj = GetCommandData(command);
             if (dataObj == null)
             {
+                MsSqlInsertTranslatorLog.MissingInputData(
+                    NullLogger<MsSqlInsertTranslator>.Instance, "InsertCommand", container.Name);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(
                         MsSqlDataResultCodes.ByName("MissingInputData"),
@@ -83,10 +93,15 @@ public sealed class MsSqlInsertTranslator : MsSqlDataCommandTranslatorBase
             // Build INSERT statement
             var sqlCommand = BuildInsertStatement(container, dbPath, dataObj);
 
+            MsSqlInsertTranslatorLog.Translated(
+                NullLogger<MsSqlInsertTranslator>.Instance, container.Name, sqlCommand.Parameters.Count);
+
             return Task.FromResult(GenericResult<SqlCommand>.Success(sqlCommand));
         }
         catch (Exception ex)
         {
+            MsSqlInsertTranslatorLog.InsertTranslationFailed(
+                NullLogger<MsSqlInsertTranslator>.Instance, ex, container?.Name ?? "<null>", ex.Message);
             return Task.FromResult(
                 GenericResult<SqlCommand>.Failure(
                     MsSqlDataResultCodes.ByName("InsertTranslationFailed"),
@@ -111,6 +126,10 @@ public sealed class MsSqlInsertTranslator : MsSqlDataCommandTranslatorBase
 
         if (fields.Count == 0)
         {
+            // Why: reported as a defect (FDW rule) — a translator should return IGenericResult, not
+            // throw. Left in place per instructions; the caller's try/catch converts it to a Failure.
+            MsSqlInsertTranslatorLog.NoInsertableFields(
+                NullLogger<MsSqlInsertTranslator>.Instance, container.Name);
             throw new InvalidOperationException($"Container {container.Name} has no insertable fields");
         }
 
@@ -122,6 +141,9 @@ public sealed class MsSqlInsertTranslator : MsSqlDataCommandTranslatorBase
 
         if (fieldNames.Count == 0)
         {
+            // Why: same throw-instead-of-result defect as above — logged, not converted.
+            MsSqlInsertTranslatorLog.NoMatchingProperties(
+                NullLogger<MsSqlInsertTranslator>.Instance, container.Name);
             throw new InvalidOperationException(
                 $"Data object has no properties matching insertable fields for container {container.Name}");
         }

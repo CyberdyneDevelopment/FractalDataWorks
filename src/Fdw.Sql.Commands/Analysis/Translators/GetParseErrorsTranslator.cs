@@ -5,7 +5,9 @@ using Fdw.Results;
 using Fdw.Sql.Commands.Abstractions;
 using Fdw.Sql.Commands.Abstractions.Results;
 using Fdw.Sql.Commands.Analysis.Commands;
+using Fdw.Sql.Commands.Logging;
 using Fdw.Sql.Workspace;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Sql.Commands.Analysis.Translators;
 
@@ -15,6 +17,10 @@ public sealed class GetParseErrorsTranslator : SqlCommandTranslatorBase<GetParse
     public GetParseErrorsTranslator() : base("GetParseErrors", "Stub. Full implementation pending.") { }
 
     public override Task<IGenericResult<QueryResult<string>>> Translate(GetParseErrorsCommand command, ISqlWorkspace workspace, CancellationToken cancellationToken = default)
-        => Task.FromResult<IGenericResult<QueryResult<string>>>(
-            GenericResult<QueryResult<string>>.Failure(SqlResultCodes.NotYetImplemented));
+    {
+        var logger = NullLogger<GetParseErrorsTranslator>.Instance;
+        GetParseErrorsTranslatorLog.Translating(logger, nameof(GetParseErrorsCommand));
+        return Task.FromResult<IGenericResult<QueryResult<string>>>(
+            GenericResult<QueryResult<string>>.Failure(GetParseErrorsTranslatorLog.NotYetImplemented(logger, nameof(GetParseErrorsCommand))));
+    }
 }

@@ -7,6 +7,7 @@ using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Formatting.Commands;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.CodeAnalysis.Text;
@@ -33,16 +34,24 @@ public sealed class FormatSelectionTranslator : RoslynCommandTranslatorBase<Form
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        FormatSelectionTranslatorLog.Formatting(Logger, command.FilePath, command.StartLine, command.EndLine);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            FormatSelectionTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            FormatSelectionTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
@@ -65,6 +74,8 @@ public sealed class FormatSelectionTranslator : RoslynCommandTranslatorBase<Form
                 TextChangeCount = changes.Count
             });
         }
+
+        FormatSelectionTranslatorLog.Formatted(Logger, command.FilePath, command.StartLine, command.EndLine, changes.Count);
 
         return GenericResult<MutationResult>.Success(
             new MutationResult(

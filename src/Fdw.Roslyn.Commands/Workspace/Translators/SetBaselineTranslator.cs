@@ -8,6 +8,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Workspace.Commands;
 using Fdw.Roslyn.Commands.Workspace.Results;
 using Fdw.Workspace.Roslyn;
@@ -37,6 +38,8 @@ public sealed class SetBaselineTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        SetBaselineTranslatorLog.Setting(Logger);
+
         // Handler will store the solution as baseline based on this result
         var projectCount = solution.Projects.Count();
         var documentCount = solution.Projects.Sum(p => p.Documents.Count());
@@ -52,6 +55,8 @@ public sealed class SetBaselineTranslator
             $"Set baseline with {projectCount} projects and {documentCount} documents",
             solution,
             data);
+
+        SetBaselineTranslatorLog.Set(Logger, projectCount, documentCount);
 
         return Task.FromResult<IGenericResult<MutationResult<BaselineData>>>(
             GenericResult<MutationResult<BaselineData>>.Success(result));

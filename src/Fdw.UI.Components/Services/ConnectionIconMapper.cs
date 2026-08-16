@@ -1,6 +1,9 @@
 namespace Fdw.UI.Components.Services;
 
 using System;
+using Fdw.UI.Components.Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 /// <summary>
 /// Maps connection type names to icon categories and display metadata.
@@ -12,8 +15,23 @@ public static class ConnectionIconMapper
     /// Gets icon metadata for a connection type.
     /// </summary>
     /// <param name="connectionType">The connection type name (e.g., "MsSql", "PostgreSql").</param>
+    /// <param name="logger">Optional logger. Falls back to <see cref="NullLogger.Instance"/> when not supplied.</param>
     /// <returns>A <see cref="ConnectionIcon"/> with category, icon key, and label.</returns>
-    public static ConnectionIcon FromType(string? connectionType)
+    // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions; this static
+    // helper has no DI-constructed instance to hold a logger, so it is threaded through as an
+    // optional trailing parameter instead, mirroring the EntityPicker/ObjectPicker component pattern.
+    public static ConnectionIcon FromType(string? connectionType, ILogger? logger = null)
+    {
+        var effectiveLogger = logger ?? NullLogger.Instance;
+        ConnectionIconMapperLog.MappingConnectionType(effectiveLogger, connectionType);
+
+        var icon = ResolveIcon(connectionType, effectiveLogger);
+
+        ConnectionIconMapperLog.MappedConnectionType(effectiveLogger, connectionType, icon.IconKey, icon.IconCategory);
+        return icon;
+    }
+
+    private static ConnectionIcon ResolveIcon(string? connectionType, ILogger effectiveLogger)
     {
         if (string.IsNullOrEmpty(connectionType))
         {
@@ -61,6 +79,7 @@ public static class ConnectionIconMapper
             return new ConnectionIcon("Storage", "cloud", "storage");
         }
 
+        ConnectionIconMapperLog.UnrecognizedConnectionType(effectiveLogger, connectionType);
         return new ConnectionIcon(connectionType, "database", connectionType.ToLowerInvariant());
     }
 }

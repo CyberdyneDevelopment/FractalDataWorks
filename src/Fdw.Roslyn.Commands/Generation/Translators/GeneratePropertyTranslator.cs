@@ -10,6 +10,7 @@ using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Generation.Commands;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -39,35 +40,55 @@ public sealed class GeneratePropertyTranslator : RoslynCommandTranslatorBase<Gen
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(command.PropertyName))
+        {
+            GeneratePropertyTranslatorLog.PropertyNameRequired(Logger);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("PropertyNameRequired"));
+        }
 
         if (string.IsNullOrEmpty(command.PropertyType))
+        {
+            GeneratePropertyTranslatorLog.PropertyTypeRequired(Logger);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("PropertyTypeRequired"));
+        }
 
         if (!command.HasGetter && !command.HasSetter)
+        {
+            GeneratePropertyTranslatorLog.PropertyMustHaveGetterOrSetter(Logger);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("PropertyMustHaveGetterOrSetter"));
+        }
+
+        GeneratePropertyTranslatorLog.Generating(Logger, command.PropertyName, command.PropertyType, command.FilePath, command.Line, command.Column);
 
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            GeneratePropertyTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            GeneratePropertyTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            GeneratePropertyTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
@@ -78,8 +99,11 @@ public sealed class GeneratePropertyTranslator : RoslynCommandTranslatorBase<Gen
             .FirstOrDefault();
 
         if (typeDecl is null)
+        {
+            GeneratePropertyTranslatorLog.NoTypeDeclarationFoundAtPosition(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("NoTypeDeclarationFoundAtPosition"));
+        }
 
         PropertyDeclarationSyntax property;
 
@@ -150,6 +174,8 @@ public sealed class GeneratePropertyTranslator : RoslynCommandTranslatorBase<Gen
                 TextChangeCount = 1
             }
         };
+
+        GeneratePropertyTranslatorLog.Generated(Logger, command.PropertyName, command.PropertyType);
 
         return GenericResult<MutationResult>.Success(
             new MutationResult(

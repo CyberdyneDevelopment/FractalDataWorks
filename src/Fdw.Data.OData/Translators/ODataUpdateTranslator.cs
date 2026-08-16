@@ -10,8 +10,10 @@ using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Conventions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.OData.Logging;
 using Fdw.Data.OData.Results;
 using Fdw.Results;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.OData;
 
@@ -55,10 +57,14 @@ public sealed class ODataUpdateTranslator : ODataCommandTranslatorBase
         IStorageContainer container,
         CancellationToken cancellationToken = default)
     {
+        ODataUpdateTranslatorLog.Translating(
+            NullLogger<ODataUpdateTranslator>.Instance, container?.Name ?? "<null>");
+
         try
         {
             if (container == null)
             {
+                ODataUpdateTranslatorLog.ContainerNull(NullLogger<ODataUpdateTranslator>.Instance);
                 return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                     GenericResult<HttpRequestMessage>.Failure(
                         ODataResultCodes.ByName("ContainerNull")));
@@ -67,6 +73,8 @@ public sealed class ODataUpdateTranslator : ODataCommandTranslatorBase
             // Get entity data from metadata
             if (command.Metadata == null || !command.Metadata.TryGetValue("Data", out var dataObj) || dataObj == null)
             {
+                ODataUpdateTranslatorLog.UpdateDataRequired(
+                    NullLogger<ODataUpdateTranslator>.Instance, container.Name);
                 return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                     GenericResult<HttpRequestMessage>.Failure(
                         ODataResultCodes.ByName("UpdateDataRequired")));
@@ -76,10 +84,15 @@ public sealed class ODataUpdateTranslator : ODataCommandTranslatorBase
             var resourceId = ExtractResourceId(command, container, dataObj);
             if (resourceId == null)
             {
+                ODataUpdateTranslatorLog.UpdateResourceIdNotFound(
+                    NullLogger<ODataUpdateTranslator>.Instance, container.Name);
                 return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                     GenericResult<HttpRequestMessage>.Failure(
                         ODataResultCodes.ByName("UpdateResourceIdNotFound")));
             }
+
+            ODataUpdateTranslatorLog.ResourceIdResolved(
+                NullLogger<ODataUpdateTranslator>.Instance, container.Name, resourceId.ToString() ?? string.Empty);
 
             // Build relative path with resource ID
             var basePath = container.Name.StartsWith('/')
@@ -96,11 +109,15 @@ public sealed class ODataUpdateTranslator : ODataCommandTranslatorBase
                 Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
             };
 
+            ODataUpdateTranslatorLog.Translated(NullLogger<ODataUpdateTranslator>.Instance, container.Name);
+
             return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                 GenericResult<HttpRequestMessage>.Success(request));
         }
         catch (Exception ex)
         {
+            ODataUpdateTranslatorLog.UpdateTranslationFailed(
+                NullLogger<ODataUpdateTranslator>.Instance, ex, container?.Name ?? "<null>", ex.Message);
             return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                 GenericResult<HttpRequestMessage>.Failure(
                     ODataResultCodes.ByName("UpdateTranslationFailed"),

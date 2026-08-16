@@ -1,6 +1,8 @@
 using Fdw.Services.SecretManagers.Abstractions;
+using Fdw.Services.SecretManagers.Logging;
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.SecretManagers.Commands;
 
@@ -28,6 +30,7 @@ public sealed class ListSecretsManagerCommand : SecretManagerCommandBase, ISecre
         TimeSpan? timeout = null)
         : base("ListSecrets", container, null, typeof(IReadOnlyList<ISecretMetadata>), parameters, metadata, timeout)
     {
+        ListSecretsManagerCommandLog.Constructed(NullLogger<ListSecretsManagerCommand>.Instance, container);
     }
 
     /// <inheritdoc/>

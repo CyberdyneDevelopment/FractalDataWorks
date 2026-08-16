@@ -11,6 +11,7 @@ using Fdw.Results;
 using Fdw.Services.Abstractions.Commands;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Abstractions.Logging;
+using Fdw.Services.SecretManagers.Logging;
 
 namespace Fdw.Services.SecretManagers.Commands;
 
@@ -52,7 +53,14 @@ public abstract class SecretManagerCommandBase : ISecretManagerCommand
         ILogger<SecretManagerCommandBase>? logger = null)
     {
         if (string.IsNullOrWhiteSpace(commandType))
+        {
+            // Why: reported as a defect (FDW rule) — a command should return IGenericResult, not
+            // throw. Left in place per instructions (constructors cannot return IGenericResult);
+            // logged via the sanctioned NullLogger fallback since _logger isn't assigned yet.
+            SecretManagerCommandBaseLog.RequiredValueMissing(
+                logger ?? NullLogger<SecretManagerCommandBase>.Instance, nameof(commandType));
             throw new ArgumentException("ManagementCommand type cannot be null or empty.", nameof(commandType));
+        }
 
         var commandGuid = Guid.NewGuid();
         BaseCommandId = commandGuid;
@@ -63,7 +71,15 @@ public abstract class SecretManagerCommandBase : ISecretManagerCommand
         CommandType = commandType;
         Container = container;
         SecretKey = secretKey;
-        ExpectedResultType = expectedResultType ?? throw new ArgumentNullException(nameof(expectedResultType));
+        if (expectedResultType is null)
+        {
+            // Why: same throw-instead-of-result defect as above — logged, not converted.
+            SecretManagerCommandBaseLog.RequiredValueMissing(
+                logger ?? NullLogger<SecretManagerCommandBase>.Instance, nameof(expectedResultType));
+            throw new ArgumentNullException(nameof(expectedResultType));
+        }
+
+        ExpectedResultType = expectedResultType;
         Timeout = timeout;
         _logger = logger ?? NullLogger<SecretManagerCommandBase>.Instance;
 
@@ -143,6 +159,8 @@ public abstract class SecretManagerCommandBase : ISecretManagerCommand
     /// <inheritdoc/>
     public virtual IGenericResult Validate()
     {
+        SecretManagerCommandBaseLog.Validating(_logger, CommandType);
+
         var errors = new List<ValidationFailure>();
 
         // Validate managementCommand type
@@ -172,6 +190,7 @@ public abstract class SecretManagerCommandBase : ISecretManagerCommand
         var validationResult = new ValidationResult(errors);
         if (validationResult.IsValid)
         {
+            SecretManagerCommandBaseLog.ValidationPassed(_logger, CommandType);
             return GenericResult.Success();
         }
 

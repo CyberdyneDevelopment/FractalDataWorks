@@ -10,6 +10,7 @@ using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Generation.Commands;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -38,24 +39,35 @@ public sealed class GenerateConstructorTranslator : RoslynCommandTranslatorBase<
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        GenerateConstructorTranslatorLog.Generating(Logger, command.FilePath, command.Line, command.Column);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            GenerateConstructorTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            GenerateConstructorTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            GenerateConstructorTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
@@ -66,13 +78,19 @@ public sealed class GenerateConstructorTranslator : RoslynCommandTranslatorBase<
             .FirstOrDefault();
 
         if (typeDecl is null)
+        {
+            GenerateConstructorTranslatorLog.NoTypeDeclarationFoundAtPosition(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("NoTypeDeclarationFoundAtPosition"));
+        }
 
         var symbol = semanticModel.GetDeclaredSymbol(typeDecl, cancellationToken);
         if (symbol is not INamedTypeSymbol typeSymbol)
+        {
+            GenerateConstructorTranslatorLog.FailedToGetTypeSymbol(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToGetTypeSymbol"));
+        }
 
         var typeName = typeSymbol.Name;
 
@@ -84,8 +102,11 @@ public sealed class GenerateConstructorTranslator : RoslynCommandTranslatorBase<
             .ToList();
 
         if (fields.Count == 0)
+        {
+            GenerateConstructorTranslatorLog.NoFieldsFoundToGenerateConstructorParameters(Logger, typeName);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("NoFieldsFoundToGenerateConstructorParameters"));
+        }
 
         // Build constructor parameters
         var parameters = new List<ParameterSyntax>();
@@ -160,6 +181,8 @@ public sealed class GenerateConstructorTranslator : RoslynCommandTranslatorBase<
                 TextChangeCount = 1
             }
         };
+
+        GenerateConstructorTranslatorLog.Generated(Logger, typeName, fields.Count);
 
         return GenericResult<MutationResult>.Success(
             new MutationResult(

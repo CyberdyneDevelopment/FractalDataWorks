@@ -2,8 +2,10 @@ using System.Collections;
 using System.Data;
 using System.Text.Json;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Data.MsSql.Logging;
 using Fdw.Services.Connections.Sql;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.MsSql.Translators;
 
@@ -65,9 +67,13 @@ public abstract class MsSqlDataCommandTranslatorBase : SqlDataCommandTranslatorB
     // Why static: same CS0507/CA1822 rationale as CreateCommand.
     protected static void AddParameter(SqlCommand command, string name, object? value)
     {
-        var materialized = value is IEnumerable enumerable && value is not string
-            ? JsonSerializer.Serialize(enumerable)
-            : value;
+        object? materialized = value;
+        if (value is IEnumerable enumerable && value is not string)
+        {
+            MsSqlDataCommandTranslatorBaseLog.SerializingEnumerableParameter(
+                NullLogger<MsSqlDataCommandTranslatorBase>.Instance, name);
+            materialized = JsonSerializer.Serialize(enumerable);
+        }
 
         var param = new SqlParameter($"@{name}", materialized ?? (object)System.DBNull.Value);
         command.Parameters.Add(param);

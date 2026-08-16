@@ -3,7 +3,9 @@ using Fdw.Collections;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Abstractions;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Logging;
 using Fdw.Data.Abstractions;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data;
 
@@ -42,6 +44,7 @@ public sealed class DeleteCommand : DataCommandBase<int>, IFilterableCommand
     public DeleteCommand()
         : base("Delete")
     {
+        DeleteCommandLog.CommandCreated(NullLogger<DeleteCommand>.Instance);
     }
 
     /// <summary>

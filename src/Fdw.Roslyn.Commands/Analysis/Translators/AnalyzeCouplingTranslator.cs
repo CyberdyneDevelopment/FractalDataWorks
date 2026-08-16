@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Analysis.Commands;
 using Fdw.Roslyn.Commands.Analysis.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -37,24 +38,35 @@ public sealed class AnalyzeCouplingTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        AnalyzeCouplingTranslatorLog.Analyzing(Logger, command.FilePath, command.Line, command.Column);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            AnalyzeCouplingTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<QueryResult<CouplingAnalysisData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            AnalyzeCouplingTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<CouplingAnalysisData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            AnalyzeCouplingTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<CouplingAnalysisData>>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
@@ -62,8 +74,11 @@ public sealed class AnalyzeCouplingTranslator
                   ?? semanticModel.GetDeclaredSymbol(token.Parent!, cancellationToken);
 
         if (symbol is not INamedTypeSymbol typeSymbol)
+        {
+            AnalyzeCouplingTranslatorLog.SymbolNotType(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<QueryResult<CouplingAnalysisData>>.Failure(
                 RoslynResultCodes.ByName("SymbolNotType"));
+        }
 
         // Calculate Efferent Coupling (Ce)
         var efferentTypes = new HashSet<string>(StringComparer.Ordinal);
@@ -170,6 +185,8 @@ public sealed class AnalyzeCouplingTranslator
         var result = new QueryResult<CouplingAnalysisData>(
             $"Coupling for '{typeSymbol.Name}': Ce={ce}, Ca={ca}, Instability={instability:F2}",
             data);
+
+        AnalyzeCouplingTranslatorLog.Analyzed(Logger, typeSymbol.ToDisplayString(), ce, ca, instability);
 
         return GenericResult<QueryResult<CouplingAnalysisData>>.Success(result);
     }

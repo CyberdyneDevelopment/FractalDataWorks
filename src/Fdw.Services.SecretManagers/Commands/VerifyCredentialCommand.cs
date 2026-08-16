@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Abstractions.Results;
+using Fdw.Services.SecretManagers.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.SecretManagers.Commands;
 
@@ -32,8 +34,25 @@ public sealed class VerifyCredentialCommand : SecretManagerCommandBase, ISecretM
             timeout)
     {
         UserId = userId;
-        CredentialType = credentialType ?? throw new ArgumentNullException(nameof(credentialType));
-        CandidateValue = candidateValue ?? throw new ArgumentNullException(nameof(candidateValue));
+        if (credentialType is null)
+        {
+            // Why: reported as a defect (FDW rule) — a command should return IGenericResult, not
+            // throw. Left in place per instructions (constructors cannot return IGenericResult).
+            VerifyCredentialCommandLog.RequiredValueMissing(NullLogger<VerifyCredentialCommand>.Instance, nameof(credentialType));
+            throw new ArgumentNullException(nameof(credentialType));
+        }
+
+        if (candidateValue is null)
+        {
+            // Why: same throw-instead-of-result defect as above — logged, not converted.
+            VerifyCredentialCommandLog.RequiredValueMissing(NullLogger<VerifyCredentialCommand>.Instance, nameof(candidateValue));
+            throw new ArgumentNullException(nameof(candidateValue));
+        }
+
+        CredentialType = credentialType;
+        CandidateValue = candidateValue;
+
+        VerifyCredentialCommandLog.Constructed(NullLogger<VerifyCredentialCommand>.Instance, userId, credentialType);
     }
 
     /// <summary>

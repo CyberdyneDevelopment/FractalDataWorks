@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Fdw.Results;
 using Fdw.Services.SecretManagers.Abstractions;
+using Fdw.Services.SecretManagers.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.SecretManagers.Commands;
 
@@ -33,7 +35,14 @@ public sealed class DeleteSecretManagerCommand : SecretManagerCommandBase, ISecr
         : base("DeleteSecret", container, secretKey, typeof(IGenericResult), parameters, metadata, timeout)
     {
         if (string.IsNullOrWhiteSpace(secretKey))
+        {
+            // Why: reported as a defect (FDW rule) — a command should return IGenericResult, not
+            // throw. Left in place per instructions (constructors cannot return IGenericResult).
+            DeleteSecretManagerCommandLog.RequiredValueMissing(NullLogger<DeleteSecretManagerCommand>.Instance, nameof(secretKey));
             throw new ArgumentException("Secret key cannot be null or empty for DeleteSecret operation.", nameof(secretKey));
+        }
+
+        DeleteSecretManagerCommandLog.Constructed(NullLogger<DeleteSecretManagerCommand>.Instance, container, secretKey);
     }
 
     /// <inheritdoc/>

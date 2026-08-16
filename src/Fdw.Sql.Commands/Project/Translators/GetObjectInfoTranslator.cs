@@ -6,8 +6,11 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Sql.Commands.Abstractions;
 using Fdw.Sql.Commands.Abstractions.Results;
+using Fdw.Sql.Commands.Logging;
 using Fdw.Sql.Commands.Project.Commands;
 using Fdw.Sql.Workspace;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.SqlServer.Dac.Model;
 
 namespace Fdw.Sql.Commands.Project.Translators;
@@ -22,9 +25,12 @@ public sealed class GetObjectInfoTranslator : SqlCommandTranslatorBase<GetObject
         ISqlWorkspace workspace,
         CancellationToken cancellationToken = default)
     {
+        var logger = NullLogger<GetObjectInfoTranslator>.Instance;
+        GetObjectInfoTranslatorLog.Translating(logger, command.ObjectName ?? string.Empty, command.Schema ?? string.Empty);
+
         if (string.IsNullOrWhiteSpace(command.ObjectName))
             return Task.FromResult<IGenericResult<QueryResult<SqlObjectDetail>>>(
-                GenericResult<QueryResult<SqlObjectDetail>>.Failure(SqlResultCodes.ObjectNameRequired));
+                GenericResult<QueryResult<SqlObjectDetail>>.Failure(GetObjectInfoTranslatorLog.ObjectNameRequired(logger)));
 
         var match = workspace.Model.GetObjects(DacQueryScopes.Default)
             .FirstOrDefault(o =>
@@ -40,10 +46,10 @@ public sealed class GetObjectInfoTranslator : SqlCommandTranslatorBase<GetObject
 
         if (match is null)
             return Task.FromResult<IGenericResult<QueryResult<SqlObjectDetail>>>(
-                GenericResult<QueryResult<SqlObjectDetail>>.Failure(SqlResultCodes.ObjectNotFound,
-                    ResultDetails.Create("ObjectName", command.ObjectName)));
+                GenericResult<QueryResult<SqlObjectDetail>>.Failure(
+                    GetObjectInfoTranslatorLog.ObjectNotFound(logger, command.ObjectName)));
 
-        var scriptText = TryGetScript(match);
+        var scriptText = TryGetScript(match, logger);
 
         var detail = new SqlObjectDetail(
             Name: match.Name.Parts[match.Name.Parts.Count - 1],
@@ -51,6 +57,7 @@ public sealed class GetObjectInfoTranslator : SqlCommandTranslatorBase<GetObject
             Kind: match.ObjectType.Name,
             Definition: scriptText);
 
+        GetObjectInfoTranslatorLog.ObjectFound(logger, detail.FullName, detail.Kind);
         return Task.FromResult<IGenericResult<QueryResult<SqlObjectDetail>>>(
             GenericResult<QueryResult<SqlObjectDetail>>.Success(
                 new QueryResult<SqlObjectDetail>($"Object '{detail.FullName}' ({detail.Kind})", detail)));
@@ -58,7 +65,7 @@ public sealed class GetObjectInfoTranslator : SqlCommandTranslatorBase<GetObject
 
     // Why: GetScript() throws for non-scriptable object types; extracting it here keeps the
     // swallow-and-continue (null Definition) out of the IGenericResult-returning Translate method.
-    private static string? TryGetScript(TSqlObject obj)
+    private static string? TryGetScript(TSqlObject obj, ILogger logger)
     {
         try
         {
@@ -69,6 +76,7 @@ public sealed class GetObjectInfoTranslator : SqlCommandTranslatorBase<GetObject
             // Why: not all SQL objects are scriptable. Return null Definition and continue;
             // ex.Message observed to satisfy FDW022.
             _ = ex.Message;
+            GetObjectInfoTranslatorLog.ScriptUnavailable(logger, obj.Name.ToString(), obj.ObjectType.Name);
             return null;
         }
     }

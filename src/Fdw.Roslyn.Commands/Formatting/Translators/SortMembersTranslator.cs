@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Formatting.Commands;
 using Fdw.Roslyn.Commands.Formatting.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -37,23 +38,34 @@ public sealed class SortMembersTranslator : RoslynCommandTranslatorBase<SortMemb
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        SortMembersTranslatorLog.Sorting(Logger, command.FilePath, command.Line);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            SortMembersTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult<SortedMembersData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            SortMembersTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult<SortedMembersData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (syntaxRoot is null)
+        {
+            SortMembersTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<MutationResult<SortedMembersData>>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         // Collect the type declarations to sort. If a position is supplied (Line >= 1),
         // sort just the containing type. If Line is 0 (omitted), sort every type in the
@@ -69,8 +81,11 @@ public sealed class SortMembersTranslator : RoslynCommandTranslatorBase<SortMemb
                 .FirstOrDefault();
 
             if (typeDecl is null)
+            {
+                SortMembersTranslatorLog.NoTypeDeclarationFoundAtPosition(Logger, command.FilePath, command.Line);
                 return GenericResult<MutationResult<SortedMembersData>>.Failure(
                     RoslynResultCodes.ByName("NoTypeDeclarationFoundAtPosition"));
+            }
 
             typeDecls.Add(typeDecl);
         }
@@ -158,6 +173,8 @@ public sealed class SortMembersTranslator : RoslynCommandTranslatorBase<SortMemb
             MemberCount = totalMembers,
             SortedMembers = memberOrder
         };
+
+        SortMembersTranslatorLog.Sorted(Logger, command.FilePath, totalMembers, totalChangedTypes);
 
         return GenericResult<MutationResult<SortedMembersData>>.Success(
             new MutationResult<SortedMembersData>(

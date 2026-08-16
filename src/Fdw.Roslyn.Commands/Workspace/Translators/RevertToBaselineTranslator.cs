@@ -9,6 +9,7 @@ using Fdw.Results;
 using Fdw.Results.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Workspace.Commands;
 using Fdw.Roslyn.Commands.Workspace.Results;
 using Fdw.Workspace.Roslyn;
@@ -38,11 +39,14 @@ public sealed class RevertToBaselineTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        RevertToBaselineTranslatorLog.Reverting(Logger);
+
         // Handler provides baseline via command property
         var baseline = command.BaselineSolution;
 
         if (baseline is null)
         {
+            RevertToBaselineTranslatorLog.NoBaselineSet(Logger);
             return Task.FromResult<IGenericResult<MutationResult<BaselineData>>>(
                 GenericResult<MutationResult<BaselineData>>.Failure(
                     RoslynResultCodes.ByName("NoBaselineSet")));
@@ -63,6 +67,8 @@ public sealed class RevertToBaselineTranslator
             $"Reverted to baseline with {projectCount} projects",
             baseline,
             data);
+
+        RevertToBaselineTranslatorLog.Reverted(Logger, projectCount);
 
         return Task.FromResult<IGenericResult<MutationResult<BaselineData>>>(
             GenericResult<MutationResult<BaselineData>>.Success(result));

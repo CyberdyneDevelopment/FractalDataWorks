@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data;
 
@@ -29,5 +31,6 @@ public sealed class TruncateCommand : DataCommandBase<int>
     public TruncateCommand()
         : base("Truncate")
     {
+        TruncateCommandLog.CommandCreated(NullLogger<TruncateCommand>.Instance);
     }
 }

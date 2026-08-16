@@ -4,7 +4,9 @@ using Fdw.Collections;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Abstractions;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Logging;
 using Fdw.Data.Abstractions;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data;
 
@@ -44,6 +46,7 @@ public sealed class QueryCommand<T> : DataCommandBase<IEnumerable<T>>, IQueryCom
     public QueryCommand()
         : base("Query")
     {
+        QueryCommandLog.CommandCreated(NullLogger<QueryCommand<T>>.Instance, typeof(T).Name);
     }
 
     /// <summary>

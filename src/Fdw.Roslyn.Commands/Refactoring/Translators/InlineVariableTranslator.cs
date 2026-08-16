@@ -7,6 +7,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Refactoring.Commands;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -36,24 +37,35 @@ public sealed class InlineVariableTranslator : RoslynCommandTranslatorBase<Inlin
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        InlineVariableTranslatorLog.Inlining(Logger, command.FilePath, command.Line, command.Column);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            InlineVariableTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            InlineVariableTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            InlineVariableTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
@@ -61,8 +73,11 @@ public sealed class InlineVariableTranslator : RoslynCommandTranslatorBase<Inlin
                   ?? semanticModel.GetDeclaredSymbol(token.Parent!, cancellationToken);
 
         if (symbol is not ILocalSymbol localSymbol)
+        {
+            InlineVariableTranslatorLog.SymbolNotLocalVariable(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("SymbolNotLocalVariable"));
+        }
 
         var variableName = localSymbol.Name;
 
@@ -72,8 +87,11 @@ public sealed class InlineVariableTranslator : RoslynCommandTranslatorBase<Inlin
             .FirstOrDefault();
 
         if (declarator?.Initializer is null)
+        {
+            InlineVariableTranslatorLog.VariableMustHaveInitializerToBeInlined(Logger, command.FilePath, variableName);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("VariableMustHaveInitializerToBeInlined"));
+        }
 
         var initializerExpression = declarator.Initializer.Value;
 
@@ -130,6 +148,8 @@ public sealed class InlineVariableTranslator : RoslynCommandTranslatorBase<Inlin
         // Why: no SymbolChange recorded — locals aren't migration surface (nothing outside this
         // method can reference them), so file-level recording via the handler's ledger hook is
         // sufficient here.
+        InlineVariableTranslatorLog.Inlined(Logger, variableName, referenceLocations.Count);
+
         return GenericResult<MutationResult>.Success(
             new MutationResult(
                 $"Inlined variable '{variableName}' at {referenceLocations.Count} locations",

@@ -10,10 +10,12 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Projects.Commands;
 using Fdw.Roslyn.Commands.Projects.Helpers;
 using Fdw.Roslyn.Commands.Projects.Results;
 using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Roslyn.Commands.Projects.Translators;
 
@@ -39,7 +41,9 @@ public sealed class MoveProjectsTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
-        var validationFailure = Validate(command, solution);
+        MoveProjectsTranslatorLog.Computing(Logger, command.Moves.Count);
+
+        var validationFailure = Validate(command, solution, Logger);
         if (validationFailure != null)
         {
             return Task.FromResult(validationFailure);
@@ -69,6 +73,8 @@ public sealed class MoveProjectsTranslator
                       $"{slnxChanges.ProjectPathChanges.Count} .slnx path change(s)";
 
         var pathChanges = ComputePathChanges(projectMoves, csprojChanges, slnxChanges);
+
+        MoveProjectsTranslatorLog.Computed(Logger, projectMoves.Count, csprojChanges.Count, slnxChanges.ProjectPathChanges.Count);
 
         return Task.FromResult<IGenericResult<MutationResult<MoveProjectsResult>>>(
             GenericResult<MutationResult<MoveProjectsResult>>.Success(
@@ -111,10 +117,12 @@ public sealed class MoveProjectsTranslator
 
     private static IGenericResult<MutationResult<MoveProjectsResult>>? Validate(
         MoveProjectsCommand command,
-        Solution solution)
+        Solution solution,
+        ILogger logger)
     {
         if (command.Moves.Count == 0)
         {
+            MoveProjectsTranslatorLog.NoMovesSpecified(logger);
             return GenericResult<MutationResult<MoveProjectsResult>>.Failure(
                 RoslynResultCodes.ByName("NoMovesSpecified"));
         }
@@ -124,6 +132,7 @@ public sealed class MoveProjectsTranslator
         {
             if (!seen.Add(move.ProjectName))
             {
+                MoveProjectsTranslatorLog.DuplicateProjectInBatch(logger, move.ProjectName);
                 return GenericResult<MutationResult<MoveProjectsResult>>.Failure(
                     RoslynResultCodes.ByName("DuplicateProjectInBatch"),
                     ResultDetails.Create("ProjectName", move.ProjectName));
@@ -138,6 +147,7 @@ public sealed class MoveProjectsTranslator
         {
             if (!projectsByName.TryGetValue(move.ProjectName, out var project))
             {
+                MoveProjectsTranslatorLog.ProjectNotFound(logger, move.ProjectName);
                 return GenericResult<MutationResult<MoveProjectsResult>>.Failure(
                     RoslynResultCodes.ByName("ProjectNotFound"),
                     ResultDetails.Create("ProjectName", move.ProjectName));
@@ -146,6 +156,7 @@ public sealed class MoveProjectsTranslator
             var currentSubfolder = ProjectPathComputer.GetCurrentSubfolder(project.FilePath!, sourceRoot);
             if (string.Equals(currentSubfolder, move.TargetFolder, StringComparison.OrdinalIgnoreCase))
             {
+                MoveProjectsTranslatorLog.TargetSameAsCurrent(logger, move.ProjectName);
                 return GenericResult<MutationResult<MoveProjectsResult>>.Failure(
                     RoslynResultCodes.ByName("TargetSameAsCurrent"),
                     ResultDetails.Create("ProjectName", move.ProjectName));

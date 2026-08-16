@@ -7,8 +7,10 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Sql.Commands.Abstractions;
 using Fdw.Sql.Commands.Abstractions.Results;
+using Fdw.Sql.Commands.Logging;
 using Fdw.Sql.Commands.Project.Commands;
 using Fdw.Sql.Workspace;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.SqlServer.Dac.Model;
 
 namespace Fdw.Sql.Commands.Project.Translators;
@@ -23,12 +25,16 @@ public sealed class ListSchemasTranslator : SqlCommandTranslatorBase<ListSchemas
         ISqlWorkspace workspace,
         CancellationToken cancellationToken = default)
     {
+        var logger = NullLogger<ListSchemasTranslator>.Instance;
+        ListSchemasTranslatorLog.Translating(logger);
+
         var schemas = workspace.Model.GetObjects(DacQueryScopes.Default, ModelSchema.Schema)
             .Select(o => o.Name.Parts[o.Name.Parts.Count - 1])
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        ListSchemasTranslatorLog.SchemasFound(logger, schemas.Count);
         return Task.FromResult<IGenericResult<QueryResult<IReadOnlyList<string>>>>(
             GenericResult<QueryResult<IReadOnlyList<string>>>.Success(
                 new QueryResult<IReadOnlyList<string>>($"Found {schemas.Count} schema(s)", schemas)));

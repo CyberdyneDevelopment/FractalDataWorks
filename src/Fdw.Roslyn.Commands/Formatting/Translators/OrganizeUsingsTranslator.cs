@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Formatting.Commands;
 using Fdw.Roslyn.Commands.Formatting.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -36,21 +37,32 @@ public sealed class OrganizeUsingsTranslator : RoslynCommandTranslatorBase<Organ
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        OrganizeUsingsTranslatorLog.Organizing(Logger, command.FilePath, command.SystemFirst);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            OrganizeUsingsTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult<OrganizedUsingsData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            OrganizeUsingsTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult<OrganizedUsingsData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         if (syntaxRoot is null)
+        {
+            OrganizeUsingsTranslatorLog.FailedToGetSyntaxRoot(Logger, command.FilePath);
             return GenericResult<MutationResult<OrganizedUsingsData>>.Failure(
                 RoslynResultCodes.ByName("FailedToGetSyntaxRoot"));
+        }
 
         // Get all using directives
         var usings = syntaxRoot.DescendantNodes()
@@ -59,6 +71,7 @@ public sealed class OrganizeUsingsTranslator : RoslynCommandTranslatorBase<Organ
 
         if (usings.Count == 0)
         {
+            OrganizeUsingsTranslatorLog.NoUsingsToOrganize(Logger, command.FilePath);
             var emptyData = new OrganizedUsingsData
             {
                 UsingCount = 0,
@@ -120,6 +133,8 @@ public sealed class OrganizeUsingsTranslator : RoslynCommandTranslatorBase<Organ
             UsingCount = usings.Count,
             OrganizedUsings = organizedUsings
         };
+
+        OrganizeUsingsTranslatorLog.Organized(Logger, command.FilePath, usings.Count);
 
         return GenericResult<MutationResult<OrganizedUsingsData>>.Success(
             new MutationResult<OrganizedUsingsData>(

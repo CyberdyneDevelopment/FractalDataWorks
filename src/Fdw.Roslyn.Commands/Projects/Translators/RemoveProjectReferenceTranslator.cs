@@ -8,6 +8,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Projects.Commands;
 using Fdw.Roslyn.Commands.Projects.Results;
 using Microsoft.CodeAnalysis;
@@ -34,11 +35,14 @@ public sealed class RemoveProjectReferenceTranslator : RoslynCommandTranslatorBa
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        RemoveProjectReferenceTranslatorLog.Removing(Logger, command.ProjectName, command.ReferenceName);
+
         var project = solution.Projects.FirstOrDefault(p =>
             string.Equals(p.Name, command.ProjectName, StringComparison.OrdinalIgnoreCase));
 
         if (project is null)
         {
+            RemoveProjectReferenceTranslatorLog.ProjectNotFound(Logger, command.ProjectName);
             return Task.FromResult<IGenericResult<MutationResult<RemoveProjectReferenceResult>>>(
                 GenericResult<MutationResult<RemoveProjectReferenceResult>>.Failure(
                 RoslynResultCodes.ByName("ProjectNotFound"),
@@ -50,6 +54,7 @@ public sealed class RemoveProjectReferenceTranslator : RoslynCommandTranslatorBa
 
         if (referenceProject is null)
         {
+            RemoveProjectReferenceTranslatorLog.ReferenceProjectNotFound(Logger, command.ReferenceName);
             return Task.FromResult<IGenericResult<MutationResult<RemoveProjectReferenceResult>>>(
                 GenericResult<MutationResult<RemoveProjectReferenceResult>>.Failure(
                 RoslynResultCodes.ByName("ReferenceProjectNotFound"),
@@ -62,6 +67,8 @@ public sealed class RemoveProjectReferenceTranslator : RoslynCommandTranslatorBa
 
         if (existingReference is null)
         {
+            RemoveProjectReferenceTranslatorLog.NotFound(Logger, command.ProjectName, command.ReferenceName);
+
             var notFoundResult = new RemoveProjectReferenceResult(
                 projectName: command.ProjectName,
                 referenceName: command.ReferenceName,
@@ -88,6 +95,8 @@ public sealed class RemoveProjectReferenceTranslator : RoslynCommandTranslatorBa
             $"Removed reference to {command.ReferenceName} from {command.ProjectName}",
             newSolution,
             result);
+
+        RemoveProjectReferenceTranslatorLog.Removed(Logger, command.ProjectName, command.ReferenceName);
 
         return Task.FromResult(GenericResult<MutationResult<RemoveProjectReferenceResult>>.Success(mutationResult));
     }

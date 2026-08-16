@@ -5,7 +5,9 @@ using Fdw.Results;
 using Fdw.Sql.Commands.Abstractions;
 using Fdw.Sql.Commands.Abstractions.Results;
 using Fdw.Sql.Commands.Refactoring.Commands;
+using Fdw.Sql.Commands.Logging;
 using Fdw.Sql.Workspace;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Sql.Commands.Refactoring.Translators;
 
@@ -15,6 +17,10 @@ public sealed class RenameFunctionTranslator : SqlCommandTranslatorBase<RenameFu
     public RenameFunctionTranslator() : base("RenameFunction", "Stub. Full implementation pending.") { }
 
     public override Task<IGenericResult<QueryResult<string>>> Translate(RenameFunctionCommand command, ISqlWorkspace workspace, CancellationToken cancellationToken = default)
-        => Task.FromResult<IGenericResult<QueryResult<string>>>(
-            GenericResult<QueryResult<string>>.Failure(SqlResultCodes.NotYetImplemented));
+    {
+        var logger = NullLogger<RenameFunctionTranslator>.Instance;
+        RenameFunctionTranslatorLog.Translating(logger, nameof(RenameFunctionCommand));
+        return Task.FromResult<IGenericResult<QueryResult<string>>>(
+            GenericResult<QueryResult<string>>.Failure(RenameFunctionTranslatorLog.NotYetImplemented(logger, nameof(RenameFunctionCommand))));
+    }
 }

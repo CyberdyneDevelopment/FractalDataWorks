@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Analysis.Commands;
 using Fdw.Roslyn.Commands.Analysis.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -36,23 +37,34 @@ public sealed class AnalyzeNullabilityTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        AnalyzeNullabilityTranslatorLog.Analyzing(Logger, command.FilePath);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            AnalyzeNullabilityTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<QueryResult<NullabilityAnalysisData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            AnalyzeNullabilityTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<NullabilityAnalysisData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            AnalyzeNullabilityTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<NullabilityAnalysisData>>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var symbols = new List<NullabilitySymbol>();
 
@@ -116,6 +128,8 @@ public sealed class AnalyzeNullabilityTranslator
         var result = new QueryResult<NullabilityAnalysisData>(
             $"Analyzed {symbols.Count} symbols: {nullableCount} nullable, {nonNullableCount} non-nullable",
             data);
+
+        AnalyzeNullabilityTranslatorLog.Analyzed(Logger, command.FilePath, symbols.Count, nullableCount, nonNullableCount);
 
         return GenericResult<QueryResult<NullabilityAnalysisData>>.Success(result);
     }

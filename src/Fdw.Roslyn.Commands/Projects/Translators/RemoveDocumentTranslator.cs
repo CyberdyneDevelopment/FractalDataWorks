@@ -8,6 +8,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Projects.Commands;
 using Fdw.Roslyn.Commands.Projects.Results;
 using Microsoft.CodeAnalysis;
@@ -34,11 +35,14 @@ public sealed class RemoveDocumentTranslator : RoslynCommandTranslatorBase<Remov
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        RemoveDocumentTranslatorLog.Removing(Logger, command.ProjectName, command.DocumentPath);
+
         var project = solution.Projects.FirstOrDefault(p =>
             string.Equals(p.Name, command.ProjectName, StringComparison.OrdinalIgnoreCase));
 
         if (project is null)
         {
+            RemoveDocumentTranslatorLog.ProjectNotFound(Logger, command.ProjectName);
             return Task.FromResult<IGenericResult<MutationResult<RemoveDocumentResult>>>(
                 GenericResult<MutationResult<RemoveDocumentResult>>.Failure(
                 RoslynResultCodes.ByName("ProjectNotFound"),
@@ -52,6 +56,8 @@ public sealed class RemoveDocumentTranslator : RoslynCommandTranslatorBase<Remov
 
         if (document is null)
         {
+            RemoveDocumentTranslatorLog.NotFound(Logger, command.ProjectName, command.DocumentPath);
+
             var notFoundResult = new RemoveDocumentResult(
                 projectName: command.ProjectName,
                 documentName: command.DocumentPath,
@@ -80,6 +86,8 @@ public sealed class RemoveDocumentTranslator : RoslynCommandTranslatorBase<Remov
             $"Removed document {document.Name} from {command.ProjectName}",
             newSolution,
             result);
+
+        RemoveDocumentTranslatorLog.Removed(Logger, command.ProjectName, document.Name);
 
         return Task.FromResult(GenericResult<MutationResult<RemoveDocumentResult>>.Success(mutationResult));
     }

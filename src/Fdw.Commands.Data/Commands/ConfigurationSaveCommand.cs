@@ -5,6 +5,8 @@ using Fdw.Collections;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Abstractions;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data;
 
@@ -67,6 +69,13 @@ public sealed class ConfigurationSaveCommand<T> : DataCommandBase<int, T>, IConf
         : base("ConfigurationSave", data)
     {
         AdditionalColumnValues = additionalColumnValues ?? EmptyReadOnlyDictionary;
+
+        ConfigurationSaveCommandLog.CommandCreated(NullLogger<ConfigurationSaveCommand<T>>.Instance, typeof(T).Name);
+        if (AdditionalColumnValues.Count > 0)
+        {
+            ConfigurationSaveCommandLog.AdditionalColumnsIncluded(
+                NullLogger<ConfigurationSaveCommand<T>>.Instance, typeof(T).Name, AdditionalColumnValues.Count);
+        }
     }
 
     /// <inheritdoc/>

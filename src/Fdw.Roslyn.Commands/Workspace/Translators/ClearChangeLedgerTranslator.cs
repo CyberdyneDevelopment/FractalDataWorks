@@ -5,6 +5,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Workspace.Commands;
 using Fdw.Roslyn.Commands.Workspace.Results;
 using Microsoft.CodeAnalysis;
@@ -37,6 +38,8 @@ public sealed class ClearChangeLedgerTranslator
         CancellationToken cancellationToken = default)
     {
         if (command is null) throw new ArgumentNullException(nameof(command));
+
+        ClearChangeLedgerTranslatorLog.Clearing(Logger, command.Reason ?? string.Empty);
 
         return Task.FromResult<IGenericResult<IRoslynCommandResult>>(
             GenericResult<IRoslynCommandResult>.Success(

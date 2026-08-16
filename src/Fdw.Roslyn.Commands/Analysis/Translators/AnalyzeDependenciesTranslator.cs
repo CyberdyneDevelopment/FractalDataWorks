@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Analysis.Commands;
 using Fdw.Roslyn.Commands.Analysis.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -37,24 +38,35 @@ public sealed class AnalyzeDependenciesTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        AnalyzeDependenciesTranslatorLog.Analyzing(Logger, command.FilePath, command.Line, command.Column, command.IncludeSystemTypes);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            AnalyzeDependenciesTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<QueryResult<DependencyAnalysisData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            AnalyzeDependenciesTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<DependencyAnalysisData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            AnalyzeDependenciesTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<DependencyAnalysisData>>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
@@ -62,8 +74,11 @@ public sealed class AnalyzeDependenciesTranslator
                   ?? semanticModel.GetDeclaredSymbol(token.Parent!, cancellationToken);
 
         if (symbol is not INamedTypeSymbol typeSymbol)
+        {
+            AnalyzeDependenciesTranslatorLog.SymbolNotType(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<QueryResult<DependencyAnalysisData>>.Failure(
                 RoslynResultCodes.ByName("SymbolNotType"));
+        }
 
         var dependencies = new HashSet<string>(StringComparer.Ordinal);
         var dependencyDetails = new List<TypeDependency>();
@@ -108,6 +123,8 @@ public sealed class AnalyzeDependenciesTranslator
         var result = new QueryResult<DependencyAnalysisData>(
             $"Found {dependencyDetails.Count} dependencies for '{typeSymbol.Name}'",
             data);
+
+        AnalyzeDependenciesTranslatorLog.Analyzed(Logger, typeSymbol.ToDisplayString(), dependencyDetails.Count);
 
         return GenericResult<QueryResult<DependencyAnalysisData>>.Success(result);
     }

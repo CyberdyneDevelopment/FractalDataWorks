@@ -6,6 +6,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Navigation.Commands;
 using Fdw.Roslyn.Commands.Navigation.Results;
 using Microsoft.CodeAnalysis;
@@ -35,23 +36,34 @@ public sealed class GetNamespaceTranslator : RoslynCommandTranslatorBase<GetName
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        GetNamespaceTranslatorLog.Finding(Logger, command.FilePath, command.Line, command.Column);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            GetNamespaceTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<QueryResult<NamespaceInfo>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            GetNamespaceTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<NamespaceInfo>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (syntaxRoot is null)
+        {
+            GetNamespaceTranslatorLog.FailedToGetSyntaxRoot(Logger, command.FilePath);
             return GenericResult<QueryResult<NamespaceInfo>>.Failure(
                 RoslynResultCodes.ByName("FailedToGetSyntaxRoot"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
 
@@ -102,12 +114,17 @@ public sealed class GetNamespaceTranslator : RoslynCommandTranslatorBase<GetName
         }
 
         if (namespaceInfo is null)
+        {
+            GetNamespaceTranslatorLog.NoNamespaceFoundAtPosition(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<QueryResult<NamespaceInfo>>.Failure(
                 RoslynResultCodes.ByName("NoNamespaceFoundAtPosition"));
+        }
 
         var result = new QueryResult<NamespaceInfo>(
             $"Found namespace '{namespaceInfo.Name}'",
             namespaceInfo);
+
+        GetNamespaceTranslatorLog.Found(Logger, namespaceInfo.Name);
 
         return GenericResult<QueryResult<NamespaceInfo>>.Success(result);
     }

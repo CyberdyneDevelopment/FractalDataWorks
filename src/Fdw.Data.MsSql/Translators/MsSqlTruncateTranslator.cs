@@ -4,11 +4,13 @@ using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.MsSql.Logging;
 using Fdw.Data.MsSql.Results;
 using Fdw.Data.MsSql.Translators;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.MsSql;
 
@@ -46,27 +48,38 @@ public sealed class MsSqlTruncateTranslator : MsSqlDataCommandTranslatorBase
         IStorageContainer container,
         CancellationToken cancellationToken = default)
     {
+        MsSqlTruncateTranslatorLog.Translating(
+            NullLogger<MsSqlTruncateTranslator>.Instance, container?.Name ?? "<null>");
+
         try
         {
             if (container == null)
             {
+                MsSqlTruncateTranslatorLog.ContainerNull(NullLogger<MsSqlTruncateTranslator>.Instance);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("ContainerNull")));
             }
 
             if (container.Path is not IDatabasePath dbPath)
             {
+                MsSqlTruncateTranslatorLog.InvalidContainerPath(
+                    NullLogger<MsSqlTruncateTranslator>.Instance, container.Name);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("InvalidContainerPath")));
             }
 
             // Why: empty the whole container — an unconditional DELETE (no WHERE). DELETE rather than
             // TRUNCATE TABLE so the operation needs only a DELETE grant and tolerates FK references.
-            return Task.FromResult(
-                GenericResult<SqlCommand>.Success(CreateCommand($"DELETE FROM {BuildQualifiedTableName(dbPath)}")));
+            var sqlCommand = CreateCommand($"DELETE FROM {BuildQualifiedTableName(dbPath)}");
+
+            MsSqlTruncateTranslatorLog.Translated(NullLogger<MsSqlTruncateTranslator>.Instance, container.Name);
+
+            return Task.FromResult(GenericResult<SqlCommand>.Success(sqlCommand));
         }
         catch (Exception ex)
         {
+            MsSqlTruncateTranslatorLog.TruncateTranslationFailed(
+                NullLogger<MsSqlTruncateTranslator>.Instance, ex, container?.Name ?? "<null>", ex.Message);
             return Task.FromResult(
                 GenericResult<SqlCommand>.Failure(
                     MsSqlDataResultCodes.ByName("DeleteTranslationFailed"),

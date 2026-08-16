@@ -5,11 +5,13 @@ using Fdw.Collections.Attributes;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.MsSql.Logging;
 using Fdw.Data.MsSql.Results;
 using Fdw.Data.MsSql.Translators;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.MsSql;
 
@@ -49,16 +51,23 @@ public sealed class MsSqlConfigurationDeleteTranslator : MsSqlDataCommandTransla
         IStorageContainer container,
         CancellationToken cancellationToken = default)
     {
+        MsSqlConfigurationDeleteTranslatorLog.Translating(
+            NullLogger<MsSqlConfigurationDeleteTranslator>.Instance, container?.Name ?? "<null>");
+
         try
         {
             if (container == null)
             {
+                MsSqlConfigurationDeleteTranslatorLog.ContainerNull(
+                    NullLogger<MsSqlConfigurationDeleteTranslator>.Instance);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("ContainerNull")));
             }
 
             if (container.Path is not IDatabasePath dbPath)
             {
+                MsSqlConfigurationDeleteTranslatorLog.InvalidContainerPath(
+                    NullLogger<MsSqlConfigurationDeleteTranslator>.Instance, container.Name);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("InvalidContainerPath")));
             }
@@ -66,6 +75,9 @@ public sealed class MsSqlConfigurationDeleteTranslator : MsSqlDataCommandTransla
             var dataObj = GetCommandData(command);
             if (dataObj == null || dataObj is not Guid logicalId)
             {
+                MsSqlConfigurationDeleteTranslatorLog.MissingInputData(
+                    NullLogger<MsSqlConfigurationDeleteTranslator>.Instance,
+                    "ConfigurationDeleteCommand", container.Name);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(
                         MsSqlDataResultCodes.ByName("MissingInputData"),
@@ -76,14 +88,23 @@ public sealed class MsSqlConfigurationDeleteTranslator : MsSqlDataCommandTransla
             // own [Id] — the only way to retire a KVP property-collection child, whose identity is
             // (owner, Name) and which therefore has no [Id] column to key on.
             var ownerFk = (command as ConfigurationDeleteCommand)?.OwnerForeignKeyColumn;
+            MsSqlConfigurationDeleteTranslatorLog.ResolvedDeleteKind(
+                NullLogger<MsSqlConfigurationDeleteTranslator>.Instance,
+                container.Name,
+                string.IsNullOrEmpty(ownerFk) ? "version-on-write" : "scoped");
             var sqlCommand = string.IsNullOrEmpty(ownerFk)
                 ? BuildVersionOnWriteDeleteStatement(dbPath, container.Name, logicalId)
                 : BuildScopedDeleteStatement(dbPath, container, ownerFk, logicalId);
+
+            MsSqlConfigurationDeleteTranslatorLog.Translated(
+                NullLogger<MsSqlConfigurationDeleteTranslator>.Instance, container.Name);
 
             return Task.FromResult(GenericResult<SqlCommand>.Success(sqlCommand));
         }
         catch (Exception ex)
         {
+            MsSqlConfigurationDeleteTranslatorLog.DeleteTranslationFailed(
+                NullLogger<MsSqlConfigurationDeleteTranslator>.Instance, ex, container?.Name ?? "<null>", ex.Message);
             return Task.FromResult(
                 GenericResult<SqlCommand>.Failure(
                     MsSqlDataResultCodes.ByName("DeleteTranslationFailed"),
@@ -110,6 +131,10 @@ public sealed class MsSqlConfigurationDeleteTranslator : MsSqlDataCommandTransla
     {
         if (string.IsNullOrEmpty(dbPath.Schema))
         {
+            // Why: reported as a defect (FDW rule) — a translator should return IGenericResult, not
+            // throw. Left in place per instructions; the caller's try/catch converts it to a Failure.
+            MsSqlConfigurationDeleteTranslatorLog.NoSchemaDefined(
+                NullLogger<MsSqlConfigurationDeleteTranslator>.Instance, container.Name);
             throw new InvalidOperationException(
                 $"Container {container.Name} has no schema defined. ConfigurationDelete requires a schema-qualified table path.");
         }
@@ -120,6 +145,9 @@ public sealed class MsSqlConfigurationDeleteTranslator : MsSqlDataCommandTransla
 
         if (!TryResolveOwnerForeignKey(container, ownerLogicalFkColumn, out var physicalColumn, out var parentSchema, out var parentTable))
         {
+            // Why: same throw-instead-of-result defect as above — logged, not converted.
+            MsSqlConfigurationDeleteTranslatorLog.UnresolvableOwnerForeignKey(
+                NullLogger<MsSqlConfigurationDeleteTranslator>.Instance, container.Name, ownerLogicalFkColumn);
             throw new InvalidOperationException(
                 $"Container {container.Name} declares no foreign key matching logical owner column '{ownerLogicalFkColumn}'. " +
                 "A scoped configuration delete cannot resolve the owner without it.");
@@ -195,6 +223,10 @@ public sealed class MsSqlConfigurationDeleteTranslator : MsSqlDataCommandTransla
 
         if (string.IsNullOrEmpty(dbPath.Schema))
         {
+            // Why: reported as a defect (FDW rule) — a translator should return IGenericResult, not
+            // throw. Left in place per instructions; the caller's try/catch converts it to a Failure.
+            MsSqlConfigurationDeleteTranslatorLog.NoSchemaDefined(
+                NullLogger<MsSqlConfigurationDeleteTranslator>.Instance, tableName);
             throw new InvalidOperationException(
                 $"Container {tableName} has no schema defined. ConfigurationDelete requires a schema-qualified table path.");
         }

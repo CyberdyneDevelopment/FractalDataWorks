@@ -11,12 +11,14 @@ using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Generation.Commands;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 // Why: Fdw.Roslyn.Commands.Project namespace now lives in this assembly; alias
 // disambiguates the Roslyn Project type from the sibling namespace.
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using Fdw.Conventions;
 
 namespace Fdw.Roslyn.Commands.Generation.Translators;
 
@@ -36,6 +38,11 @@ public sealed class GenerateTestsTranslator : RoslynCommandTranslatorBase<Genera
 
     /// <inheritdoc/>
 #pragma warning disable MA0051 // Linear code generation: analyze class, build test file via StringBuilder
+    // Why the override: adding trace and error logging to a method that was already at the line
+    // limit pushed it two lines past. The method is linear generation — analyze, then build a file
+    // with a StringBuilder — so splitting it would scatter one readable sequence across helpers to
+    // satisfy a counter, which the existing MA0051 suppression above says the same thing about.
+    [ConventionOverride(MaxMethodLines = 140)]
     public override async Task<IGenericResult<MutationResult>> Translate(
         GenerateTestsCommand command,
         Solution solution,
@@ -43,22 +50,31 @@ public sealed class GenerateTestsTranslator : RoslynCommandTranslatorBase<Genera
     {
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            GenerateTestsTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            GenerateTestsTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            GenerateTestsTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
@@ -69,13 +85,19 @@ public sealed class GenerateTestsTranslator : RoslynCommandTranslatorBase<Genera
             .FirstOrDefault();
 
         if (typeDecl is null)
+        {
+            GenerateTestsTranslatorLog.NoTypeDeclarationFoundAtPosition(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("NoTypeDeclarationFoundAtPosition"));
+        }
 
         var symbol = semanticModel.GetDeclaredSymbol(typeDecl, cancellationToken);
         if (symbol is not INamedTypeSymbol typeSymbol)
+        {
+            GenerateTestsTranslatorLog.FailedToGetTypeSymbol(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToGetTypeSymbol"));
+        }
 
         var typeName = typeSymbol.Name;
         var ns = typeSymbol.ContainingNamespace.ToDisplayString();
@@ -89,8 +111,13 @@ public sealed class GenerateTestsTranslator : RoslynCommandTranslatorBase<Genera
             .ToList();
 
         if (publicMethods.Count == 0)
+        {
+            GenerateTestsTranslatorLog.NoPublicMethodsFoundToGenerateTests(Logger, typeName);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("NoPublicMethodsFoundToGenerateTests"));
+        }
+
+        GenerateTestsTranslatorLog.Generating(Logger, command.FilePath, command.Line, command.Column, command.TestFramework);
 
         var sb = new StringBuilder();
         var (testAttribute, factAttribute) = GetFrameworkAttributes(command.TestFramework);
@@ -156,9 +183,12 @@ public sealed class GenerateTestsTranslator : RoslynCommandTranslatorBase<Genera
         {
             targetProject = solution.Projects.FirstOrDefault(p => string.Equals(p.Name, command.TestProjectName, StringComparison.Ordinal));
             if (targetProject is null)
+            {
+                GenerateTestsTranslatorLog.TestProjectNotFound(Logger, command.TestProjectName);
                 return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("TestProjectNotFound"),
                 ResultDetails.Create().With("TestProjectName", command.TestProjectName));
+            }
         }
         else
         {
@@ -167,8 +197,11 @@ public sealed class GenerateTestsTranslator : RoslynCommandTranslatorBase<Genera
                 ?? solution.Projects.FirstOrDefault();
 
             if (targetProject is null)
+            {
+                GenerateTestsTranslatorLog.NoProjectsFoundInSolution(Logger);
                 return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("NoProjectsFoundInSolution"));
+            }
         }
 
         var fileName = $"{typeName}Tests.cs";
@@ -182,8 +215,11 @@ public sealed class GenerateTestsTranslator : RoslynCommandTranslatorBase<Genera
             // Update existing document
             var existingDoc = targetProject.GetDocument(existingDocId);
             if (existingDoc is null)
+            {
+                GenerateTestsTranslatorLog.FailedToLoadExistingDocument(Logger, fileName);
                 return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadExistingDocument"));
+            }
 
             newDocument = existingDoc.WithSyntaxRoot(compilationUnit);
         }
@@ -202,6 +238,8 @@ public sealed class GenerateTestsTranslator : RoslynCommandTranslatorBase<Genera
                 TextChangeCount = publicMethods.Count
             }
         };
+
+        GenerateTestsTranslatorLog.Generated(Logger, typeName, publicMethods.Count);
 
         return GenericResult<MutationResult>.Success(
             new MutationResult(

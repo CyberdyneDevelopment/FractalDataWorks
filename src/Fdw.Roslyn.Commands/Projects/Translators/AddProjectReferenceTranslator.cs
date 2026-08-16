@@ -8,6 +8,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Projects.Commands;
 using Fdw.Roslyn.Commands.Projects.Results;
 using Microsoft.CodeAnalysis;
@@ -34,11 +35,14 @@ public sealed class AddProjectReferenceTranslator : RoslynCommandTranslatorBase<
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        AddProjectReferenceTranslatorLog.Adding(Logger, command.ProjectName, command.ReferenceName);
+
         var project = solution.Projects.FirstOrDefault(p =>
             string.Equals(p.Name, command.ProjectName, StringComparison.OrdinalIgnoreCase));
 
         if (project is null)
         {
+            AddProjectReferenceTranslatorLog.ProjectNotFound(Logger, command.ProjectName);
             return Task.FromResult<IGenericResult<MutationResult<AddProjectReferenceResult>>>(
                 GenericResult<MutationResult<AddProjectReferenceResult>>.Failure(
                 RoslynResultCodes.ByName("ProjectNotFound"),
@@ -50,6 +54,7 @@ public sealed class AddProjectReferenceTranslator : RoslynCommandTranslatorBase<
 
         if (referenceProject is null)
         {
+            AddProjectReferenceTranslatorLog.ReferenceProjectNotFound(Logger, command.ReferenceName);
             return Task.FromResult<IGenericResult<MutationResult<AddProjectReferenceResult>>>(
                 GenericResult<MutationResult<AddProjectReferenceResult>>.Failure(
                 RoslynResultCodes.ByName("ReferenceProjectNotFound"),
@@ -59,6 +64,8 @@ public sealed class AddProjectReferenceTranslator : RoslynCommandTranslatorBase<
         // Check if reference already exists
         if (project.ProjectReferences.Any(r => r.ProjectId == referenceProject.Id))
         {
+            AddProjectReferenceTranslatorLog.AlreadyExists(Logger, command.ProjectName, command.ReferenceName);
+
             var existingResult = new AddProjectReferenceResult(
                 projectName: command.ProjectName,
                 referenceName: command.ReferenceName,
@@ -85,6 +92,8 @@ public sealed class AddProjectReferenceTranslator : RoslynCommandTranslatorBase<
             $"Added reference to {command.ReferenceName} in {command.ProjectName}",
             newSolution,
             result);
+
+        AddProjectReferenceTranslatorLog.Added(Logger, command.ProjectName, command.ReferenceName);
 
         return Task.FromResult(GenericResult<MutationResult<AddProjectReferenceResult>>.Success(mutationResult));
     }

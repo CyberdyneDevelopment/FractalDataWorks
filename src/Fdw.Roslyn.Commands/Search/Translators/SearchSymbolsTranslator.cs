@@ -6,6 +6,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Search.Commands;
 using Fdw.Roslyn.Commands.Search.Results;
 using Microsoft.CodeAnalysis;
@@ -35,9 +36,12 @@ public sealed class SearchSymbolsTranslator : RoslynCommandTranslatorBase<Search
     {
         if (string.IsNullOrEmpty(command.Pattern))
         {
+            SearchSymbolsTranslatorLog.PatternRequired(Logger);
             return GenericResult<QueryResult<IReadOnlyList<SymbolInfoResult>>>.Failure(
                 RoslynResultCodes.ByName("PatternRequired"));
         }
+
+        SearchSymbolsTranslatorLog.Searching(Logger, command.Pattern, command.MaxResults);
 
         var matches = new List<SymbolInfoResult>();
 
@@ -76,6 +80,8 @@ public sealed class SearchSymbolsTranslator : RoslynCommandTranslatorBase<Search
         var result = new QueryResult<IReadOnlyList<SymbolInfoResult>>(
             $"Found {matches.Count} symbols matching '{command.Pattern}'",
             matches);
+
+        SearchSymbolsTranslatorLog.Found(Logger, command.Pattern, matches.Count);
 
         return GenericResult<QueryResult<IReadOnlyList<SymbolInfoResult>>>.Success(result);
     }

@@ -54,7 +54,7 @@ public sealed class SessionReattachTests : IDisposable
         seedStore.EnsureStoreExists().IsSuccess.ShouldBeTrue();
 
         var originalId = Guid.NewGuid();
-        (await seedStore.SaveSession(NewPersisted(originalId, "agent-alpha"), CancellationToken.None))
+        (await seedStore.SaveSession(NewPersisted(originalId, "agent-alpha"), TestContext.Current.CancellationToken))
             .IsSuccess.ShouldBeTrue();
 
         // A brand new manager over the same store — the stand-in for a reconnecting process.
@@ -63,7 +63,7 @@ public sealed class SessionReattachTests : IDisposable
         reconnected.FindSessionByConversationId("agent-alpha")
             .ShouldBeNull("the sync overload only sees sessions this process created");
 
-        var found = await reconnected.FindSessionByConversationId("agent-alpha", CancellationToken.None);
+        var found = await reconnected.FindSessionByConversationId("agent-alpha", TestContext.Current.CancellationToken);
 
         found.ShouldNotBeNull("a reconnecting agent must find the session it already had");
         found!.Id.ShouldBe(originalId);
@@ -74,12 +74,12 @@ public sealed class SessionReattachTests : IDisposable
     {
         var seedStore = NewStore();
         seedStore.EnsureStoreExists().IsSuccess.ShouldBeTrue();
-        (await seedStore.SaveSession(NewPersisted(Guid.NewGuid(), "agent-alpha"), CancellationToken.None))
+        (await seedStore.SaveSession(NewPersisted(Guid.NewGuid(), "agent-alpha"), TestContext.Current.CancellationToken))
             .IsSuccess.ShouldBeTrue();
 
         using var manager = NewManager(NewStore());
 
-        (await manager.FindSessionByConversationId("agent-beta", CancellationToken.None))
+        (await manager.FindSessionByConversationId("agent-beta", TestContext.Current.CancellationToken))
             .ShouldBeNull("a different agent must get its own session, not someone else's");
     }
 
@@ -90,7 +90,7 @@ public sealed class SessionReattachTests : IDisposable
 
         // Why this case matters: an empty id must never match, or every caller that omitted a
         // conversation id would collide onto one shared session.
-        (await manager.FindSessionByConversationId(string.Empty, CancellationToken.None))
+        (await manager.FindSessionByConversationId(string.Empty, TestContext.Current.CancellationToken))
             .ShouldBeNull();
     }
 

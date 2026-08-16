@@ -8,6 +8,7 @@ using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Analysis.Helpers;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Refactoring.Commands;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -38,24 +39,35 @@ public sealed class EncapsulateFieldTranslator : RoslynCommandTranslatorBase<Enc
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        EncapsulateFieldTranslatorLog.Encapsulating(Logger, command.FilePath, command.Line, command.Column);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            EncapsulateFieldTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            EncapsulateFieldTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            EncapsulateFieldTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
@@ -63,8 +75,11 @@ public sealed class EncapsulateFieldTranslator : RoslynCommandTranslatorBase<Enc
                   ?? semanticModel.GetDeclaredSymbol(token.Parent!, cancellationToken);
 
         if (symbol is not IFieldSymbol fieldSymbol)
+        {
+            EncapsulateFieldTranslatorLog.SymbolNotField(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("SymbolNotField"));
+        }
 
         var fieldName = fieldSymbol.Name;
         var propertyName = command.PropertyName ?? GeneratePropertyName(fieldName);
@@ -92,14 +107,20 @@ public sealed class EncapsulateFieldTranslator : RoslynCommandTranslatorBase<Enc
         // so external references already point to the right member after the rename.
         var renamedDocument = renamedSolution.GetDocument(documentId);
         if (renamedDocument is null)
+        {
+            EncapsulateFieldTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var renamedRoot = await renamedDocument.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var renamedText = await renamedDocument.GetTextAsync(cancellationToken).ConfigureAwait(false);
         if (renamedRoot is null)
+        {
+            EncapsulateFieldTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         // Position may have shifted by rename, so locate the renamed field by the new name.
         var fieldDeclaration = renamedRoot.DescendantNodes()
@@ -108,8 +129,11 @@ public sealed class EncapsulateFieldTranslator : RoslynCommandTranslatorBase<Enc
                 .Any(v => string.Equals(v.Identifier.Text, propertyName, StringComparison.Ordinal)));
 
         if (fieldDeclaration is null)
+        {
+            EncapsulateFieldTranslatorLog.CouldNotFindFieldDeclaration(Logger, command.FilePath, propertyName);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("CouldNotFindFieldDeclaration"));
+        }
 
         var propertyDecl = BuildAutoPropertyDeclaration(fieldSymbol, propertyName);
         var newRoot = renamedRoot.ReplaceNode(fieldDeclaration, propertyDecl);
@@ -156,6 +180,8 @@ public sealed class EncapsulateFieldTranslator : RoslynCommandTranslatorBase<Enc
                 document.Project.AssemblyName, document.Project.AssemblyName,
                 NamespaceLayout.RelativePosition(document.Project, document.FilePath))
         };
+
+        EncapsulateFieldTranslatorLog.Encapsulated(Logger, fieldName, propertyName, changeCount, fileChanges.Count);
 
         return GenericResult<MutationResult>.Success(
             new MutationResult(

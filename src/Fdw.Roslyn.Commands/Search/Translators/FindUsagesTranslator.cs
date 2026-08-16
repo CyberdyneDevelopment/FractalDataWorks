@@ -7,6 +7,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Search.Commands;
 using Fdw.Roslyn.Commands.Search.Results;
 using Microsoft.CodeAnalysis;
@@ -37,13 +38,17 @@ public sealed class FindUsagesTranslator : RoslynCommandTranslatorBase<FindUsage
     {
         if (string.IsNullOrEmpty(command.FilePath))
         {
+            FindUsagesTranslatorLog.FilePathRequired(Logger);
             return GenericResult<QueryResult<IReadOnlyList<UsageInfo>>>.Failure(
                 RoslynResultCodes.ByName("FilePathRequired"));
         }
 
+        FindUsagesTranslatorLog.Finding(Logger, command.FilePath, command.Position);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
         {
+            FindUsagesTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<QueryResult<IReadOnlyList<UsageInfo>>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
@@ -52,6 +57,7 @@ public sealed class FindUsagesTranslator : RoslynCommandTranslatorBase<FindUsage
         var document = solution.GetDocument(documentId);
         if (document is null)
         {
+            FindUsagesTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<IReadOnlyList<UsageInfo>>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
         }
@@ -61,6 +67,7 @@ public sealed class FindUsagesTranslator : RoslynCommandTranslatorBase<FindUsage
 
         if (semanticModel is null || syntaxRoot is null)
         {
+            FindUsagesTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<IReadOnlyList<UsageInfo>>>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
         }
@@ -71,6 +78,7 @@ public sealed class FindUsagesTranslator : RoslynCommandTranslatorBase<FindUsage
 
         if (symbol is null)
         {
+            FindUsagesTranslatorLog.NoSymbolFoundAtOffset(Logger, command.FilePath, command.Position);
             return GenericResult<QueryResult<IReadOnlyList<UsageInfo>>>.Failure(
                 RoslynResultCodes.ByName("NoSymbolFoundAtOffset"),
                 ResultDetails.Create().With("Position", command.Position));
@@ -99,6 +107,7 @@ public sealed class FindUsagesTranslator : RoslynCommandTranslatorBase<FindUsage
         catch (Exception ex)
         {
             // Why: per-call failures are tolerated (best-effort); record so they are visible.
+            FindUsagesTranslatorLog.ReferencesLookupFailed(Logger, symbol.Name, ex.GetType().Name);
             usages =
             [
                 new UsageInfo(
@@ -123,6 +132,8 @@ public sealed class FindUsagesTranslator : RoslynCommandTranslatorBase<FindUsage
 
         var summary = $"Found {usages.Count} usages of '{symbol.Name}'";
         var result = new QueryResult<IReadOnlyList<UsageInfo>>(summary, usages);
+
+        FindUsagesTranslatorLog.Found(Logger, symbol.Name, usages.Count);
 
         return GenericResult<QueryResult<IReadOnlyList<UsageInfo>>>.Success(result, summary);
     }

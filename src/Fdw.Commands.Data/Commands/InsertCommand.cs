@@ -3,6 +3,8 @@ using Fdw.Collections;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Abstractions;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data;
 
@@ -42,5 +44,6 @@ public sealed class InsertCommand<T> : DataCommandBase<int, T>
     public InsertCommand(T data)
         : base("Insert", data)
     {
+        InsertCommandLog.CommandCreated(NullLogger<InsertCommand<T>>.Instance, typeof(T).Name);
     }
 }

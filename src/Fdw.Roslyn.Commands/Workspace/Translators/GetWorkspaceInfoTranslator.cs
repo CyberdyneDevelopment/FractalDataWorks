@@ -8,6 +8,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Workspace.Commands;
 using Fdw.Roslyn.Commands.Workspace.Results;
 using Fdw.Workspace.Roslyn;
@@ -36,6 +37,8 @@ public sealed class GetWorkspaceInfoTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        GetWorkspaceInfoTranslatorLog.Getting(Logger);
+
         var projectCount = solution.Projects.Count();
         var documentCount = solution.Projects.Sum(p => p.Documents.Count());
 
@@ -57,6 +60,8 @@ public sealed class GetWorkspaceInfoTranslator
         var result = new QueryResult<WorkspaceInfoData>(
             $"Workspace contains {projectCount} projects and {documentCount} documents",
             data);
+
+        GetWorkspaceInfoTranslatorLog.Retrieved(Logger, projectCount, documentCount);
 
         return Task.FromResult<IGenericResult<QueryResult<WorkspaceInfoData>>>(
             GenericResult<QueryResult<WorkspaceInfoData>>.Success(result));

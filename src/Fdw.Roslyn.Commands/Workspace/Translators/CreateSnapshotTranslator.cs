@@ -8,6 +8,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Workspace.Commands;
 using Fdw.Roslyn.Commands.Workspace.Results;
 using Fdw.Workspace.Roslyn;
@@ -39,10 +40,13 @@ public sealed class CreateSnapshotTranslator
     {
         if (string.IsNullOrWhiteSpace(command.SnapshotName))
         {
+            CreateSnapshotTranslatorLog.SnapshotNameRequired(Logger);
             return Task.FromResult<IGenericResult<MutationResult<SnapshotData>>>(
                 GenericResult<MutationResult<SnapshotData>>.Failure(
                 RoslynResultCodes.ByName("SnapshotNameRequired")));
         }
+
+        CreateSnapshotTranslatorLog.Creating(Logger, command.SnapshotName);
 
         // Generate a new snapshot ID - handler will use this to store the snapshot
         var snapshotId = Guid.NewGuid().ToString("N");
@@ -64,6 +68,8 @@ public sealed class CreateSnapshotTranslator
             $"Created snapshot '{command.SnapshotName}'",
             solution,
             data);
+
+        CreateSnapshotTranslatorLog.Created(Logger, command.SnapshotName, projectCount, documentCount);
 
         return Task.FromResult<IGenericResult<MutationResult<SnapshotData>>>(
             GenericResult<MutationResult<SnapshotData>>.Success(result));

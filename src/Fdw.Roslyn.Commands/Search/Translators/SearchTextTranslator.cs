@@ -8,6 +8,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Search.Commands;
 using Fdw.Roslyn.Commands.Search.Results;
 using Microsoft.CodeAnalysis;
@@ -38,9 +39,12 @@ public sealed class SearchTextTranslator : RoslynCommandTranslatorBase<SearchTex
     {
         if (string.IsNullOrEmpty(command.Pattern))
         {
+            SearchTextTranslatorLog.PatternRequired(Logger);
             return GenericResult<QueryResult<IReadOnlyList<TextMatchInfo>>>.Failure(
                 RoslynResultCodes.ByName("PatternRequired"));
         }
+
+        SearchTextTranslatorLog.Searching(Logger, command.Pattern, command.IsRegex, command.CaseSensitive, command.MaxResults);
 
         var matches = new List<TextMatchInfo>();
         var filesWithMatches = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -57,6 +61,7 @@ public sealed class SearchTextTranslator : RoslynCommandTranslatorBase<SearchTex
             }
             catch (ArgumentException ex)
             {
+                SearchTextTranslatorLog.InvalidRegexPattern(Logger, command.Pattern, ex.Message);
                 return GenericResult<QueryResult<IReadOnlyList<TextMatchInfo>>>.Failure(
                 RoslynResultCodes.ByName("InvalidRegexPattern"),
                 ResultDetails.Create().With("ErrorMessage", ex.Message));
@@ -100,6 +105,8 @@ public sealed class SearchTextTranslator : RoslynCommandTranslatorBase<SearchTex
         var result = new QueryResult<IReadOnlyList<TextMatchInfo>>(
             $"Found {matches.Count} matches in {filesWithMatches.Count} files",
             matches);
+
+        SearchTextTranslatorLog.Found(Logger, matches.Count, filesWithMatches.Count);
 
         return GenericResult<QueryResult<IReadOnlyList<TextMatchInfo>>>.Success(result);
     }

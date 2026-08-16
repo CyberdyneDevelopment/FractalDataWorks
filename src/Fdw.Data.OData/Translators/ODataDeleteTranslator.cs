@@ -8,8 +8,10 @@ using Fdw.Collections.Attributes;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.OData.Logging;
 using Fdw.Data.OData.Results;
 using Fdw.Results;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.OData;
 
@@ -52,10 +54,14 @@ public sealed class ODataDeleteTranslator : ODataCommandTranslatorBase
         IStorageContainer container,
         CancellationToken cancellationToken = default)
     {
+        ODataDeleteTranslatorLog.Translating(
+            NullLogger<ODataDeleteTranslator>.Instance, container?.Name ?? "<null>");
+
         try
         {
             if (container == null)
             {
+                ODataDeleteTranslatorLog.ContainerNull(NullLogger<ODataDeleteTranslator>.Instance);
                 return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                     GenericResult<HttpRequestMessage>.Failure(
                         ODataResultCodes.ByName("ContainerNull")));
@@ -64,6 +70,8 @@ public sealed class ODataDeleteTranslator : ODataCommandTranslatorBase
             // Get filter from metadata (REQUIRED for safety)
             if (command.Metadata == null || !command.Metadata.TryGetValue("Filter", out var filterObj))
             {
+                ODataDeleteTranslatorLog.DeleteFilterRequired(
+                    NullLogger<ODataDeleteTranslator>.Instance, container.Name);
                 return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                     GenericResult<HttpRequestMessage>.Failure(
                         ODataResultCodes.ByName("DeleteFilterRequired")));
@@ -72,6 +80,8 @@ public sealed class ODataDeleteTranslator : ODataCommandTranslatorBase
             var filter = filterObj as IFilterExpression;
             if (filter == null || filter.Root == null)
             {
+                ODataDeleteTranslatorLog.DeleteFilterInvalid(
+                    NullLogger<ODataDeleteTranslator>.Instance, container.Name);
                 return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                     GenericResult<HttpRequestMessage>.Failure(
                         ODataResultCodes.ByName("DeleteFilterInvalid")));
@@ -81,6 +91,8 @@ public sealed class ODataDeleteTranslator : ODataCommandTranslatorBase
             var resourceId = ExtractResourceId(filter, container);
             if (resourceId == null)
             {
+                ODataDeleteTranslatorLog.DeleteResourceIdNotFound(
+                    NullLogger<ODataDeleteTranslator>.Instance, container.Name);
                 return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                     GenericResult<HttpRequestMessage>.Failure(
                         ODataResultCodes.ByName("DeleteResourceIdNotFound")));
@@ -95,11 +107,15 @@ public sealed class ODataDeleteTranslator : ODataCommandTranslatorBase
             // Get HTTP DELETE request
             var request = new HttpRequestMessage(HttpMethod.Delete, relativePath);
 
+            ODataDeleteTranslatorLog.Translated(NullLogger<ODataDeleteTranslator>.Instance, container.Name);
+
             return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                 GenericResult<HttpRequestMessage>.Success(request));
         }
         catch (Exception ex)
         {
+            ODataDeleteTranslatorLog.DeleteTranslationFailed(
+                NullLogger<ODataDeleteTranslator>.Instance, ex, container?.Name ?? "<null>", ex.Message);
             return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                 GenericResult<HttpRequestMessage>.Failure(
                     ODataResultCodes.ByName("DeleteTranslationFailed"),

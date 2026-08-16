@@ -7,6 +7,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Refactoring.Commands;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -34,23 +35,34 @@ public sealed class RemoveUnusedUsingsTranslator : RoslynCommandTranslatorBase<R
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        RemoveUnusedUsingsTranslatorLog.Scanning(Logger, command.FilePath);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            RemoveUnusedUsingsTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            RemoveUnusedUsingsTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            RemoveUnusedUsingsTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var diagnostics = semanticModel.GetDiagnostics(cancellationToken: cancellationToken);
 
@@ -113,6 +125,7 @@ public sealed class RemoveUnusedUsingsTranslator : RoslynCommandTranslatorBase<R
 
         if (unusedUsings.Count == 0)
         {
+            RemoveUnusedUsingsTranslatorLog.NoneFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Success(
                 new MutationResult(
                     "No unused using directives found",
@@ -131,6 +144,8 @@ public sealed class RemoveUnusedUsingsTranslator : RoslynCommandTranslatorBase<R
                 TextChangeCount = unusedUsings.Count
             }
         };
+
+        RemoveUnusedUsingsTranslatorLog.Removed(Logger, command.FilePath, unusedUsings.Count);
 
         return GenericResult<MutationResult>.Success(
             new MutationResult(

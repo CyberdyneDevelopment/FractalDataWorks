@@ -9,6 +9,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Projects.Commands;
 using Fdw.Roslyn.Commands.Projects.Results;
 using Microsoft.CodeAnalysis;
@@ -35,11 +36,14 @@ public sealed class ListReferencesTranslator : RoslynCommandTranslatorBase<ListR
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        ListReferencesTranslatorLog.Listing(Logger, command.ProjectName);
+
         var project = solution.Projects.FirstOrDefault(p =>
             string.Equals(p.Name, command.ProjectName, StringComparison.OrdinalIgnoreCase));
 
         if (project is null)
         {
+            ListReferencesTranslatorLog.ProjectNotFound(Logger, command.ProjectName);
             return Task.FromResult<IGenericResult<QueryResult<ReferenceListResult>>>(
                 GenericResult<QueryResult<ReferenceListResult>>.Failure(
                 RoslynResultCodes.ByName("ProjectNotFound"),
@@ -76,6 +80,8 @@ public sealed class ListReferencesTranslator : RoslynCommandTranslatorBase<ListR
         var queryResult = new QueryResult<ReferenceListResult>(
             $"Found {allReferences.Count} references in {project.Name}",
             result);
+
+        ListReferencesTranslatorLog.Listed(Logger, project.Name, allReferences.Count);
 
         return Task.FromResult(GenericResult<QueryResult<ReferenceListResult>>.Success(queryResult));
     }

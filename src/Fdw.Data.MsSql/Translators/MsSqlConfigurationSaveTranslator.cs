@@ -8,11 +8,13 @@ using Fdw.Commands.Data.Abstractions;
 using Fdw.Conventions;
 using Fdw.Data.Abstractions;
 using Fdw.Data.Abstractions.Mappers.PocoMappers;
+using Fdw.Data.MsSql.Logging;
 using Fdw.Data.MsSql.Results;
 using Fdw.Data.MsSql.Translators;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.MsSql;
 
@@ -55,16 +57,23 @@ public sealed class MsSqlConfigurationSaveTranslator : MsSqlDataCommandTranslato
         CancellationToken cancellationToken = default)
 #pragma warning restore MA0051
     {
+        MsSqlConfigurationSaveTranslatorLog.Translating(
+            NullLogger<MsSqlConfigurationSaveTranslator>.Instance, container?.Name ?? "<null>");
+
         try
         {
             if (container == null)
             {
+                MsSqlConfigurationSaveTranslatorLog.ContainerNull(
+                    NullLogger<MsSqlConfigurationSaveTranslator>.Instance);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("ContainerNull")));
             }
 
             if (container.Path is not IDatabasePath dbPath)
             {
+                MsSqlConfigurationSaveTranslatorLog.InvalidContainerPath(
+                    NullLogger<MsSqlConfigurationSaveTranslator>.Instance, container.Name);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("InvalidContainerPath")));
             }
@@ -72,6 +81,9 @@ public sealed class MsSqlConfigurationSaveTranslator : MsSqlDataCommandTranslato
             var dataObj = GetCommandData(command);
             if (dataObj == null)
             {
+                MsSqlConfigurationSaveTranslatorLog.MissingInputData(
+                    NullLogger<MsSqlConfigurationSaveTranslator>.Instance,
+                    "ConfigurationSaveCommand", container.Name);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(
                         MsSqlDataResultCodes.ByName("MissingInputData"),
@@ -86,10 +98,15 @@ public sealed class MsSqlConfigurationSaveTranslator : MsSqlDataCommandTranslato
 
             var sqlCommand = BuildVersionOnWriteSaveStatement(dbPath, container, dataObj, extra);
 
+            MsSqlConfigurationSaveTranslatorLog.Translated(
+                NullLogger<MsSqlConfigurationSaveTranslator>.Instance, container.Name, sqlCommand.Parameters.Count);
+
             return Task.FromResult(GenericResult<SqlCommand>.Success(sqlCommand));
         }
         catch (Exception ex)
         {
+            MsSqlConfigurationSaveTranslatorLog.SaveTranslationFailed(
+                NullLogger<MsSqlConfigurationSaveTranslator>.Instance, ex, container?.Name ?? "<null>", ex.Message);
             return Task.FromResult(
                 GenericResult<SqlCommand>.Failure(
                     MsSqlDataResultCodes.ByName("InsertTranslationFailed"),
@@ -140,6 +157,10 @@ public sealed class MsSqlConfigurationSaveTranslator : MsSqlDataCommandTranslato
 
         if (string.IsNullOrEmpty(dbPath.Schema))
         {
+            // Why: reported as a defect (FDW rule) — a translator should return IGenericResult, not
+            // throw. Left in place per instructions; the caller's try/catch converts it to a Failure.
+            MsSqlConfigurationSaveTranslatorLog.NoSchemaDefined(
+                NullLogger<MsSqlConfigurationSaveTranslator>.Instance, container.Name);
             throw new InvalidOperationException(
                 $"Container {container.Name} has no schema defined. ConfigurationSave requires a schema-qualified table path.");
         }
@@ -156,6 +177,9 @@ public sealed class MsSqlConfigurationSaveTranslator : MsSqlDataCommandTranslato
         var mapper = PocoMapperCollection.ByName(dataType.Name);
         if (mapper == PocoMapperCollection.NotFound)
         {
+            // Why: same throw-instead-of-result defect as above — logged, not converted.
+            MsSqlConfigurationSaveTranslatorLog.NoPocoMapperRegistered(
+                NullLogger<MsSqlConfigurationSaveTranslator>.Instance, dataType.Name);
             throw new InvalidOperationException(
                 $"No PocoMapper registered for type {dataType.Name}. Ensure it has [GenerateMapper].");
         }
@@ -192,6 +216,9 @@ public sealed class MsSqlConfigurationSaveTranslator : MsSqlDataCommandTranslato
 
         if (columnNames.Count == 0 && fkResolutions.Count == 0)
         {
+            // Why: same throw-instead-of-result defect as above — logged, not converted.
+            MsSqlConfigurationSaveTranslatorLog.NoInsertableColumns(
+                NullLogger<MsSqlConfigurationSaveTranslator>.Instance, dataType.Name, table);
             throw new InvalidOperationException(
                 $"No insertable columns for type {dataType.Name} in container {table}. " +
                 $"Verify container field metadata is seeded and property names match column names.");

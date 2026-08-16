@@ -11,6 +11,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Compilation.Commands;
 using Fdw.Roslyn.Commands.Compilation.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 
 namespace Fdw.Roslyn.Commands.Compilation.Translators;
@@ -36,23 +37,34 @@ public sealed class CompileDocumentTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        CompileDocumentTranslatorLog.Compiling(Logger, command.FilePath);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            CompileDocumentTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<QueryResult<CompileDocumentData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            CompileDocumentTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<CompileDocumentData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var project = document.Project;
         var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
 
         if (compilation is null)
+        {
+            CompileDocumentTranslatorLog.FailedToGetCompilation(Logger, command.FilePath);
             return GenericResult<QueryResult<CompileDocumentData>>.Failure(
                 RoslynResultCodes.ByName("FailedToGetCompilation"));
+        }
 
         var diagnostics = compilation.GetDiagnostics(cancellationToken);
 
@@ -91,6 +103,8 @@ public sealed class CompileDocumentTranslator
             : $"Compilation succeeded with {warnings.Count} warnings";
 
         var result = new QueryResult<CompileDocumentData>(summary, data);
+
+        CompileDocumentTranslatorLog.Compiled(Logger, command.FilePath, errors.Count, warnings.Count);
 
         return GenericResult<QueryResult<CompileDocumentData>>.Success(result);
     }
