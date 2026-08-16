@@ -299,4 +299,18 @@ public class DataSetConfigurationProvider : DefaultConfigurationProvider<DataSet
         DataSetConfigurationProviderLog.SaveFieldsSaved(_logger, dataSetId);
         return GenericResult.Success();
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// A DataSet has no parent. DataSetConfiguration is declared with no parent type — a top-level
+    /// named configuration like a Connection or a Pipeline — so there is nothing to look for and this
+    /// does not look.
+    ///
+    /// data.DataSet does carry a foreign key, to data.DataSetCategory. A category is something a
+    /// dataset cites, not something it belongs to, and the base cannot tell those apart from the
+    /// constraint alone: it read the citation as a parent, built a parent-join query, and refused to
+    /// resolve any dataset by name.
+    /// </remarks>
+    protected override IGenericResult<ParentJoinInfo> ResolveParentJoin()
+        => GenericResult<ParentJoinInfo>.Success(ParentJoinInfo.None);
 }

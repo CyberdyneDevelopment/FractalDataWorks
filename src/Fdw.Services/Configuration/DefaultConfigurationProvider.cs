@@ -690,7 +690,11 @@ public class DefaultConfigurationProvider<TConfig, TCommand> : IServiceConfigura
     // container metadata — NEVER hardcoded or string-stripped. ParentJoinColumn is the parent's
     // physical PK (the FK target, e.g. RowId); ParentKeyColumn is the parent's durable-Id column
     // (the filter, e.g. Id). HasParent=false is the no-join sentinel → the caller uses the [Id] path.
-    private sealed record ParentJoinInfo(
+    /// <summary>
+    /// How a child row reaches its parent: the child's foreign key column, the parent table, and the
+    /// parent columns to join and filter on. <see cref="ParentJoinInfo.None"/> means no parent.
+    /// </summary>
+    protected sealed record ParentJoinInfo(
         bool HasParent,
         string ChildForeignKeyColumn,
         string ParentTable,
@@ -698,6 +702,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand> : IServiceConfigura
         string ParentKeyColumn)
     {
         // Why: the sentinel for a root table (no parent FK) — the caller branches to the [Id] path.
+        /// <summary>The sentinel meaning this configuration has no parent.</summary>
         public static ParentJoinInfo None { get; } =
             new(false, string.Empty, string.Empty, string.Empty, string.Empty);
     }
@@ -715,7 +720,21 @@ public class DefaultConfigurationProvider<TConfig, TCommand> : IServiceConfigura
     // MessageLogging, never a silent fall-through) when the container IS present and declares a parent
     // FK but the parent's join/filter keys cannot be resolved — that is a configuration defect.
     // </para>
-    private IGenericResult<ParentJoinInfo> ResolveParentJoin()
+    /// <summary>
+    /// Works out whether this configuration has a parent, and how to join to it.
+    /// </summary>
+    /// <returns>The parent join, or <see cref="ParentJoinInfo.None"/> when there is no parent.</returns>
+    /// <remarks>
+    /// The base infers this from container metadata by looking for a declared foreign key, which
+    /// answers a narrower question than the one asked: a foreign key can mean the row belongs to a
+    /// parent, or only that it cites a lookup. Read as a parent, a citation makes the base build a
+    /// parent-join query and refuse to resolve the row by its own name.
+    ///
+    /// A provider is written for one configuration type, so a type that knows it has no parent should
+    /// override this and say so rather than leave it to be inferred from whatever constraints happen
+    /// to exist in the database.
+    /// </remarks>
+    protected virtual IGenericResult<ParentJoinInfo> ResolveParentJoin()
     {
         var stores = _gateway.Value.DataStores;
         IDataStore? store = null;
