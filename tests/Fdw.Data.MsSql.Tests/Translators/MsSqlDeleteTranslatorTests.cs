@@ -23,6 +23,7 @@ public sealed class MsSqlDeleteTranslatorTests
         var dbPath = new DatabasePath("", schema, name);
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns([]);
+        containerSchema.Setup(s => s.GetProjectableFields()).Returns([]);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Name).Returns(name);
@@ -113,6 +114,7 @@ public sealed class MsSqlDeleteTranslatorTests
         var mockPath = new Mock<IPath>();
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns([]);
+        mockSchema.Setup(s => s.GetProjectableFields()).Returns([]);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Path).Returns(mockPath.Object);

@@ -35,6 +35,7 @@ public sealed class PooledRowMapperAdditionalTests
         var container = new Mock<IStorageContainer>();
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns(new List<IField> { field.Object });
+        schema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { field.Object });
         container.Setup(c => c.Schema).Returns(schema.Object);
 
         var source = new Mock<IRecordCursor>();
@@ -67,6 +68,7 @@ public sealed class PooledRowMapperAdditionalTests
         var container = new Mock<IStorageContainer>();
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns(new List<IField> { field.Object });
+        schema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { field.Object });
         container.Setup(c => c.Schema).Returns(schema.Object);
 
         var source = new Mock<IRecordCursor>();
@@ -96,6 +98,7 @@ public sealed class PooledRowMapperAdditionalTests
         var container = new Mock<IStorageContainer>();
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns(new List<IField> { field.Object });
+        schema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { field.Object });
         container.Setup(c => c.Schema).Returns(schema.Object);
 
         var source = new Mock<IRecordCursor>();
@@ -161,6 +164,10 @@ public sealed class PooledRowMapperAdditionalTests
         var container = new Mock<IStorageContainer>();
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns(new List<IField>
+        {
+            field1.Object, field2.Object, field3.Object
+        });
+        schema.Setup(s => s.GetProjectableFields()).Returns(new List<IField>
         {
             field1.Object, field2.Object, field3.Object
         });
@@ -243,6 +250,7 @@ public sealed class PooledRowMapperAdditionalTests
         }
 
         schema.Setup(s => s.Fields).Returns(fields);
+        schema.Setup(s => s.GetProjectableFields()).Returns(fields);
         container.Setup(c => c.Schema).Returns(schema.Object);
 
         return container;

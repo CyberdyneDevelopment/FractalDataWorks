@@ -34,6 +34,7 @@ public sealed class PostgreSqlUpdateTranslatorTests
         var dbPath = new PostgreSqlDatabasePath(null, "public", name);
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(fields ?? []);
+        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? []);
 
         var metadata = new Dictionary<string, object>();
         if (primaryKeyFieldName != null)
@@ -148,6 +149,7 @@ public sealed class PostgreSqlUpdateTranslatorTests
         var mockPath = new Mock<IPath>();
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns([]);
+        mockSchema.Setup(s => s.GetProjectableFields()).Returns([]);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Path).Returns(mockPath.Object);

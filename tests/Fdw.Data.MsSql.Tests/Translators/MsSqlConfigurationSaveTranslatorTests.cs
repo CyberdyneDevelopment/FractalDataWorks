@@ -76,6 +76,7 @@ public sealed class MsSqlConfigurationSaveTranslatorTests
         };
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(fields);
+        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields);
 
         var parentPath = new Mock<IDataPath>();
         parentPath.Setup(p => p.Name).Returns("conn");

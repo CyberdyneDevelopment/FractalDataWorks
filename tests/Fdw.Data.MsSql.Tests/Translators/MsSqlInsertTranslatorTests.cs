@@ -36,6 +36,7 @@ public sealed class MsSqlInsertTranslatorTests
         var dbPath = new DatabasePath("", "dbo", name);
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(fields ?? []);
+        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? []);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Name).Returns(name);
@@ -141,6 +142,7 @@ public sealed class MsSqlInsertTranslatorTests
         var mockPath = new Mock<IPath>();
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns([]);
+        mockSchema.Setup(s => s.GetProjectableFields()).Returns([]);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Path).Returns(mockPath.Object);

@@ -54,6 +54,7 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         var dbPath = new DatabasePath("", "dbo", name);
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(fields ?? []);
+        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? []);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Name).Returns(name);

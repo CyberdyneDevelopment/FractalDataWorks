@@ -20,6 +20,7 @@ public sealed class ODataQueryTranslatorTests
     {
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns([]);
+        schema.Setup(s => s.GetProjectableFields()).Returns([]);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Name).Returns(name);

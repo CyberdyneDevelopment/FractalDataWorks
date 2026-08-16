@@ -23,6 +23,7 @@ public sealed class MsSqlFindTranslatorTests
 
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns(fields ?? Array.Empty<IField>());
+        mockSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? Array.Empty<IField>());
 
         var mockContainer = new Mock<IStorageContainer>();
         mockContainer.Setup(c => c.Name).Returns(tableName);

@@ -47,6 +47,7 @@ public sealed class ODataUpdateTranslatorGapTests
     {
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns(fields ?? []);
+        schema.Setup(s => s.GetProjectableFields()).Returns(fields ?? []);
 
         // Why: GetPrimaryKeyFieldName() reads Metadata["SurrogateKeyField"] — set up here
         // to replace the removed IField.IsPrimaryKey approach.

@@ -30,6 +30,7 @@ internal static class ContainerStub
 
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns(fields.Cast<IField>().ToList());
+        schema.Setup(s => s.GetProjectableFields()).Returns(fields.Cast<IField>().ToList());
 
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns("TestContainer");

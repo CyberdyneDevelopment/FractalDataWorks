@@ -38,6 +38,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         mockField.Setup(f => f.IsComputed).Returns(false);
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(new[] { mockField.Object });
+        containerSchema.Setup(s => s.GetProjectableFields()).Returns(new[] { mockField.Object });
 
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns(name);
@@ -317,6 +318,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
 
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(new[] { fields.Object });
+        containerSchema.Setup(s => s.GetProjectableFields()).Returns(new[] { fields.Object });
 
         var dbPath = new DatabasePath("", "dbo", "Test");
         var container = new Mock<IDataContainer>();

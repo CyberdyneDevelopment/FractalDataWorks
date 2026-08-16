@@ -41,6 +41,7 @@ public sealed class MsSqlUpdateTranslatorGapTests
         var dbPath = new DatabasePath("", "dbo", name);
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(fields ?? []);
+        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? []);
 
         // Why: GetPrimaryKeyFieldName() reads Metadata["SurrogateKeyField"] — set up here
         // to replace the removed IField.IsPrimaryKey approach.
@@ -202,6 +203,7 @@ public sealed class MsSqlUpdateTranslatorGapTests
             CreateField("Value").Object
         };
         containerSchema.Setup(s => s.Fields).Returns(fields);
+        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields);
 
         var metadata = new Dictionary<string, object> { ["SurrogateKeyField"] = "Id" };
         var container = new Mock<IStorageContainer>();

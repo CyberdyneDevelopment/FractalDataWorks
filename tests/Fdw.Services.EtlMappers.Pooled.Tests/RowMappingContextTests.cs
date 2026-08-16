@@ -111,6 +111,7 @@ public sealed class RowMappingContextTests
         }
 
         schema.Setup(s => s.Fields).Returns(fields);
+        schema.Setup(s => s.GetProjectableFields()).Returns(fields);
         container.Setup(c => c.Schema).Returns(schema.Object);
 
         return (reader, container);

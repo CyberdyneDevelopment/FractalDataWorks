@@ -37,6 +37,7 @@ public sealed class MsSqlUpdateTranslatorTests
         var dbPath = new DatabasePath("", "dbo", name);
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(fields ?? []);
+        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? []);
 
         // Why: GetPrimaryKeyFieldName() reads from Metadata["SurrogateKeyField"] — set up here
         // to replace the removed IField.IsPrimaryKey approach.
@@ -170,6 +171,7 @@ public sealed class MsSqlUpdateTranslatorTests
         var mockPath = new Mock<IPath>();
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns([]);
+        mockSchema.Setup(s => s.GetProjectableFields()).Returns([]);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Path).Returns(mockPath.Object);

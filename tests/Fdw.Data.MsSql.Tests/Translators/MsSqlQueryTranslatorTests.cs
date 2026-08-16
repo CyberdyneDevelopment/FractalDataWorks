@@ -35,6 +35,7 @@ public sealed class MsSqlQueryTranslatorTests
         // helper supplies a single Id field so the existing test suite (which doesn't care
         // about the column list, only the SELECT/FROM shape) continues to compile.
         containerSchema.Setup(s => s.Fields).Returns(fields ?? new[] { CreateField("Id").Object });
+        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? new[] { CreateField("Id").Object });
 
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns(name);
@@ -410,6 +411,7 @@ public sealed class MsSqlQueryTranslatorTests
         var mockPath = new Mock<IPath>();
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns([]);
+        mockSchema.Setup(s => s.GetProjectableFields()).Returns([]);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Path).Returns(mockPath.Object);
@@ -466,6 +468,7 @@ public sealed class MsSqlQueryTranslatorTests
         var fields = new[] { CreateField("Id").Object, CreateField("Name").Object };
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(fields);
+        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields);
 
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns("Customers");

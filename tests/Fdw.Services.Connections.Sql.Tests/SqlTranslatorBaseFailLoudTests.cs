@@ -29,6 +29,7 @@ public sealed class SqlTranslatorBaseFailLoudTests
         var nonDbPath = new Mock<IPath>();
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns([]);
+        schema.Setup(s => s.GetProjectableFields()).Returns([]);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Path).Returns(nonDbPath.Object);
@@ -89,6 +90,7 @@ public sealed class SqlTranslatorBaseFailLoudTests
 
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns([idField.Object]);
+        schema.Setup(s => s.GetProjectableFields()).Returns([idField.Object]);
 
         var container = new Mock<IDataContainer>();
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);

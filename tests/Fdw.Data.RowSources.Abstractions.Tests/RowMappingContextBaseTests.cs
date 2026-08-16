@@ -148,6 +148,7 @@ public class RowMappingContextBaseTests
 
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns(new List<IField> { mockField1.Object, mockField2.Object }.AsReadOnly());
+        mockSchema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { mockField1.Object, mockField2.Object }.AsReadOnly());
 
         var mockContainer = new Mock<IStorageContainer>();
         mockContainer.Setup(c => c.Schema).Returns(mockSchema.Object);
@@ -175,6 +176,7 @@ public class RowMappingContextBaseTests
 
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns(new List<IField> { mockField.Object }.AsReadOnly());
+        mockSchema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { mockField.Object }.AsReadOnly());
 
         var mockContainer = new Mock<IStorageContainer>();
         mockContainer.Setup(c => c.Schema).Returns(mockSchema.Object);
@@ -198,6 +200,7 @@ public class RowMappingContextBaseTests
 
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns(new List<IField> { mockField.Object }.AsReadOnly());
+        mockSchema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { mockField.Object }.AsReadOnly());
 
         var mockContainer = new Mock<IStorageContainer>();
         mockContainer.Setup(c => c.Schema).Returns(mockSchema.Object);
@@ -225,6 +228,7 @@ public class RowMappingContextBaseTests
 
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns(new List<IField> { mockField.Object }.AsReadOnly());
+        mockSchema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { mockField.Object }.AsReadOnly());
 
         var mockContainer = new Mock<IStorageContainer>();
         mockContainer.Setup(c => c.Schema).Returns(mockSchema.Object);
@@ -250,6 +254,7 @@ public class RowMappingContextBaseTests
 
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns(new List<IField> { mockField.Object }.AsReadOnly());
+        mockSchema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { mockField.Object }.AsReadOnly());
 
         var mockContainer = new Mock<IStorageContainer>();
         mockContainer.Setup(c => c.Schema).Returns(mockSchema.Object);
@@ -269,6 +274,7 @@ public class RowMappingContextBaseTests
 
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns(new List<IField>().AsReadOnly());
+        mockSchema.Setup(s => s.GetProjectableFields()).Returns(new List<IField>().AsReadOnly());
 
         var mockContainer = new Mock<IStorageContainer>();
         mockContainer.Setup(c => c.Schema).Returns(mockSchema.Object);
