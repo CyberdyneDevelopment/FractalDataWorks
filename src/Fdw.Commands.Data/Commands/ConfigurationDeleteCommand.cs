@@ -4,6 +4,8 @@ using Fdw.Collections;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Abstractions;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data;
 
@@ -41,6 +43,7 @@ public sealed class ConfigurationDeleteCommand : DataCommandBase<int, Guid>
     public ConfigurationDeleteCommand(Guid logicalId)
         : base("ConfigurationDelete", logicalId)
     {
+        ConfigurationDeleteCommandLog.CommandCreated(NullLogger<ConfigurationDeleteCommand>.Instance, logicalId);
     }
 
     /// <summary>
@@ -63,9 +66,16 @@ public sealed class ConfigurationDeleteCommand : DataCommandBase<int, Guid>
         : base("ConfigurationDelete", ownerLogicalId)
     {
         if (string.IsNullOrEmpty(ownerForeignKeyColumn))
+        {
+            // Why: reported defect (see logging-pass report) — this constructor throws instead of
+            // returning IGenericResult. Logged here per scope; the throw below is left in place.
+            ConfigurationDeleteCommandLog.OwnerForeignKeyColumnMissing(NullLogger<ConfigurationDeleteCommand>.Instance);
             throw new ArgumentException("Owner foreign key column is required for a scoped configuration delete.", nameof(ownerForeignKeyColumn));
+        }
 
         OwnerForeignKeyColumn = ownerForeignKeyColumn;
+        ConfigurationDeleteCommandLog.ScopedCommandCreated(
+            NullLogger<ConfigurationDeleteCommand>.Instance, ownerLogicalId, ownerForeignKeyColumn);
     }
 
     /// <summary>

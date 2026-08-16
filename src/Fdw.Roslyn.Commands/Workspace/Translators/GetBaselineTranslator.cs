@@ -8,6 +8,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Workspace.Commands;
 using Fdw.Roslyn.Commands.Workspace.Results;
 using Fdw.Workspace.Roslyn;
@@ -36,11 +37,15 @@ public sealed class GetBaselineTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        GetBaselineTranslatorLog.Getting(Logger);
+
         // Baseline is provided by handler via command property
         var baseline = command.BaselineSolution;
 
         if (baseline is null)
         {
+            GetBaselineTranslatorLog.NoBaseline(Logger);
+
             var data = new BaselineData
             {
                 HasBaseline = false,
@@ -69,6 +74,8 @@ public sealed class GetBaselineTranslator
         var queryResult = new QueryResult<BaselineData>(
             $"Baseline has {projectCount} projects and {documentCount} documents",
             baselineData);
+
+        GetBaselineTranslatorLog.Retrieved(Logger, projectCount, documentCount);
 
         return Task.FromResult<IGenericResult<QueryResult<BaselineData>>>(
             GenericResult<QueryResult<BaselineData>>.Success(queryResult));

@@ -7,6 +7,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Projects.Commands;
 using Fdw.Roslyn.Commands.Projects.Results;
 using Microsoft.CodeAnalysis;
@@ -33,6 +34,8 @@ public sealed class ListProjectsTranslator : RoslynCommandTranslatorBase<ListPro
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        ListProjectsTranslatorLog.Listing(Logger);
+
         var projects = solution.Projects
             .Select(p => new ProjectSummary(
                 name: p.Name,
@@ -47,6 +50,8 @@ public sealed class ListProjectsTranslator : RoslynCommandTranslatorBase<ListPro
         var queryResult = new QueryResult<ProjectListResult>(
             $"Found {projects.Count} projects",
             result);
+
+        ListProjectsTranslatorLog.Listed(Logger, projects.Count);
 
         return Task.FromResult(GenericResult<QueryResult<ProjectListResult>>.Success(queryResult));
     }

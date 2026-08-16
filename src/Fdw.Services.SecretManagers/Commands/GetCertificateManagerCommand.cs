@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Fdw.Services.SecretManagers.Abstractions;
+using Fdw.Services.SecretManagers.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.SecretManagers.Commands;
 
@@ -51,7 +53,14 @@ public sealed class GetCertificateManagerCommand : SecretManagerCommandBase, ISe
         : base("GetCertificate", container, certificateName, typeof(SecretValue), parameters, metadata, timeout)
     {
         if (string.IsNullOrWhiteSpace(certificateName))
+        {
+            // Why: reported as a defect (FDW rule) — a command should return IGenericResult, not
+            // throw. Left in place per instructions (constructors cannot return IGenericResult).
+            GetCertificateManagerCommandLog.RequiredValueMissing(NullLogger<GetCertificateManagerCommand>.Instance, nameof(certificateName));
             throw new ArgumentException("Certificate name cannot be null or empty for GetCertificate operation.", nameof(certificateName));
+        }
+
+        GetCertificateManagerCommandLog.Constructed(NullLogger<GetCertificateManagerCommand>.Instance, container, certificateName);
     }
 
     /// <inheritdoc/>
@@ -110,7 +119,12 @@ public sealed class GetCertificateManagerCommand : SecretManagerCommandBase, ISe
         TimeSpan? timeout = null)
     {
         if (string.IsNullOrWhiteSpace(version))
+        {
+            // Why: same throw-instead-of-result defect as the constructor guard above — logged,
+            // not converted.
+            GetCertificateManagerCommandLog.RequiredValueMissing(NullLogger<GetCertificateManagerCommand>.Instance, nameof(version));
             throw new ArgumentException("Version cannot be null or empty.", nameof(version));
+        }
 
         var parameters = new Dictionary<string, object?>(StringComparer.Ordinal)
         {

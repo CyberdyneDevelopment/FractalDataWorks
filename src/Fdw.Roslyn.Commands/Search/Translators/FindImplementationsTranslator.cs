@@ -6,6 +6,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Search.Commands;
 using Fdw.Roslyn.Commands.Search.Results;
 using Microsoft.CodeAnalysis;
@@ -36,13 +37,17 @@ public sealed class FindImplementationsTranslator : RoslynCommandTranslatorBase<
     {
         if (string.IsNullOrEmpty(command.FilePath))
         {
+            FindImplementationsTranslatorLog.FilePathRequired(Logger);
             return GenericResult<QueryResult<IReadOnlyList<ImplementationInfo>>>.Failure(
                 RoslynResultCodes.ByName("FilePathRequired"));
         }
 
+        FindImplementationsTranslatorLog.Finding(Logger, command.FilePath, command.Position);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
         {
+            FindImplementationsTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<QueryResult<IReadOnlyList<ImplementationInfo>>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
@@ -51,6 +56,7 @@ public sealed class FindImplementationsTranslator : RoslynCommandTranslatorBase<
         var document = solution.GetDocument(documentId);
         if (document is null)
         {
+            FindImplementationsTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<IReadOnlyList<ImplementationInfo>>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
         }
@@ -60,6 +66,7 @@ public sealed class FindImplementationsTranslator : RoslynCommandTranslatorBase<
 
         if (semanticModel is null || syntaxRoot is null)
         {
+            FindImplementationsTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<IReadOnlyList<ImplementationInfo>>>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
         }
@@ -70,6 +77,7 @@ public sealed class FindImplementationsTranslator : RoslynCommandTranslatorBase<
 
         if (symbol is null)
         {
+            FindImplementationsTranslatorLog.NoSymbolFoundAtOffset(Logger, command.FilePath, command.Position);
             return GenericResult<QueryResult<IReadOnlyList<ImplementationInfo>>>.Failure(
                 RoslynResultCodes.ByName("NoSymbolFoundAtOffset"),
                 ResultDetails.Create().With("Position", command.Position));
@@ -123,6 +131,8 @@ public sealed class FindImplementationsTranslator : RoslynCommandTranslatorBase<
 
         var summary = $"Found {implementations.Count} implementations of '{symbol.Name}'";
         var result = new QueryResult<IReadOnlyList<ImplementationInfo>>(summary, implementations);
+
+        FindImplementationsTranslatorLog.Found(Logger, symbol.Name, implementations.Count);
 
         return GenericResult<QueryResult<IReadOnlyList<ImplementationInfo>>>.Success(result, summary);
     }

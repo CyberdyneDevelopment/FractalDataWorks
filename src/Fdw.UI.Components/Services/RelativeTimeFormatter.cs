@@ -2,6 +2,9 @@ namespace Fdw.UI.Components.Services;
 
 using System;
 using System.Globalization;
+using Fdw.UI.Components.Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 /// <summary>
 /// Formats <see cref="DateTimeOffset"/> values as human-readable relative time strings.
@@ -12,23 +15,40 @@ public static class RelativeTimeFormatter
     /// Formats a <see cref="DateTimeOffset"/> as a relative time string (e.g., "5 min ago").
     /// </summary>
     /// <param name="timestamp">The timestamp to format.</param>
+    /// <param name="logger">Optional logger. Falls back to <see cref="NullLogger.Instance"/> when not supplied.</param>
     /// <returns>A human-readable relative time string.</returns>
-    public static string Format(DateTimeOffset? timestamp)
+    // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions; this static
+    // helper has no DI-constructed instance to hold a logger, so it is threaded through as an
+    // optional trailing parameter instead, mirroring the EntityPicker/ObjectPicker component pattern.
+    public static string Format(DateTimeOffset? timestamp, ILogger? logger = null)
     {
         if (!timestamp.HasValue)
         {
+            RelativeTimeFormatterLog.FormattingNullTimestamp(logger ?? NullLogger.Instance);
             return "Never";
         }
 
-        return Format(timestamp.Value);
+        return Format(timestamp.Value, logger);
     }
 
     /// <summary>
     /// Formats a <see cref="DateTimeOffset"/> as a relative time string (e.g., "5 min ago").
     /// </summary>
     /// <param name="timestamp">The timestamp to format.</param>
+    /// <param name="logger">Optional logger. Falls back to <see cref="NullLogger.Instance"/> when not supplied.</param>
     /// <returns>A human-readable relative time string.</returns>
-    public static string Format(DateTimeOffset timestamp)
+    public static string Format(DateTimeOffset timestamp, ILogger? logger = null)
+    {
+        var effectiveLogger = logger ?? NullLogger.Instance;
+        RelativeTimeFormatterLog.FormattingTimestamp(effectiveLogger, timestamp);
+
+        var result = ResolveRelativeTime(timestamp);
+
+        RelativeTimeFormatterLog.FormattedTimestamp(effectiveLogger, timestamp, result);
+        return result;
+    }
+
+    private static string ResolveRelativeTime(DateTimeOffset timestamp)
     {
         var elapsed = DateTimeOffset.UtcNow - timestamp;
 

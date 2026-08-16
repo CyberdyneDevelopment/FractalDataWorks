@@ -7,6 +7,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Workspace.Commands;
 using Fdw.Roslyn.Commands.Workspace.Helpers;
 using Fdw.Roslyn.Commands.Workspace.Results;
@@ -43,8 +44,13 @@ public sealed class RepairMovedReferencesTranslator
         CancellationToken cancellationToken = default)
     {
         if (command is null)
+        {
+            RepairMovedReferencesTranslatorLog.CommandCannotBeNull(Logger);
             return GenericResult<IRoslynCommandResult>.Failure(
                 RoslynResultCodes.ByName("CommandCannotBeNull"));
+        }
+
+        RepairMovedReferencesTranslatorLog.Repairing(Logger, command.Scope ?? "(whole solution)", command.DryRun);
 
         // Why: two sources, one repair path. The producer has a session ledger; a consumer who merely
         // bumped a version has only the published guide. Neither is guessed at — if the caller named a
@@ -54,38 +60,53 @@ public sealed class RepairMovedReferencesTranslator
         {
             var guidePath = ResolveAgainstSolution(solution, command.GuidePath!);
             if (guidePath is null)
+            {
+                RepairMovedReferencesTranslatorLog.RelativeOutputPathNeedsSolutionPath(Logger, command.GuidePath!);
                 return GenericResult<IRoslynCommandResult>.Failure(
                     RoslynResultCodes.ByName("RelativeOutputPathNeedsSolutionPath"),
                     ResultDetails.Create().With("OutputPath", command.GuidePath!));
+            }
 
             if (!File.Exists(guidePath))
+            {
+                RepairMovedReferencesTranslatorLog.MigrationGuideNotUsable(Logger, guidePath, "does not exist");
                 return GenericResult<IRoslynCommandResult>.Failure(
                     RoslynResultCodes.ByName("MigrationGuideNotUsable"),
                     ResultDetails.Create().With("GuidePath", guidePath).With("Problem", "does not exist"));
+            }
 
             var moves = MigrationGuideReader.ReadAssemblyMoves(guidePath);
             if (moves.Count == 0)
+            {
+                RepairMovedReferencesTranslatorLog.MigrationGuideNotUsable(Logger, guidePath, "records no cross-assembly moves, so it cannot explain a missing type");
                 return GenericResult<IRoslynCommandResult>.Failure(
                     RoslynResultCodes.ByName("MigrationGuideNotUsable"),
                     ResultDetails.Create().With("GuidePath", guidePath)
                         .With("Problem", "records no cross-assembly moves, so it cannot explain a missing type"));
+            }
 
             index = new LedgerAssemblyIndex(moves);
         }
         else
         {
             if (command.Ledger is null)
+            {
+                RepairMovedReferencesTranslatorLog.LedgerNotAvailable(Logger);
                 return GenericResult<IRoslynCommandResult>.Failure(
                     RoslynResultCodes.ByName("LedgerNotAvailable"));
+            }
 
             index = new LedgerAssemblyIndex(command.Ledger.Entries);
         }
         var errors = await CollectUnresolvedNameErrors(solution, command.Scope, cancellationToken).ConfigureAwait(false);
 
         if (errors.Count == 0)
+        {
+            RepairMovedReferencesTranslatorLog.NoReferenceErrorsFound(Logger, command.Scope ?? "(whole solution)");
             return GenericResult<IRoslynCommandResult>.Failure(
                 RoslynResultCodes.ByName("NoReferenceErrorsFound"),
                 ResultDetails.Create().With("Scope", command.Scope ?? "(whole solution)"));
+        }
 
         var outcome = Classify(errors, index);
 
@@ -101,14 +122,20 @@ public sealed class RepairMovedReferencesTranslator
         {
             var planPath = ResolveAgainstSolution(solution, command.ApplyFromPath!);
             if (planPath is null)
+            {
+                RepairMovedReferencesTranslatorLog.RelativeOutputPathNeedsSolutionPath(Logger, command.ApplyFromPath!);
                 return GenericResult<IRoslynCommandResult>.Failure(
                     RoslynResultCodes.ByName("RelativeOutputPathNeedsSolutionPath"),
                     ResultDetails.Create().With("OutputPath", command.ApplyFromPath!));
+            }
 
             if (!File.Exists(planPath))
+            {
+                RepairMovedReferencesTranslatorLog.RepairPlanNotFound(Logger, planPath);
                 return GenericResult<IRoslynCommandResult>.Failure(
                     RoslynResultCodes.ByName("RepairPlanNotFound"),
                     ResultDetails.Create().With("PlanPath", planPath));
+            }
 
             fromFile = ReferenceRepairPlanFile.ReadApprovedIds(planPath);
         }
@@ -120,9 +147,12 @@ public sealed class RepairMovedReferencesTranslator
         {
             var previewPath = ResolveAgainstSolution(solution, command.PreviewPath!);
             if (previewPath is null)
+            {
+                RepairMovedReferencesTranslatorLog.RelativeOutputPathNeedsSolutionPath(Logger, command.PreviewPath!);
                 return GenericResult<IRoslynCommandResult>.Failure(
                     RoslynResultCodes.ByName("RelativeOutputPathNeedsSolutionPath"),
                     ResultDetails.Create().With("OutputPath", command.PreviewPath!));
+            }
 
             ReferenceRepairPlanFile.Write(previewPath, proposals, DateTimeOffset.Now);
         }
@@ -155,6 +185,8 @@ public sealed class RepairMovedReferencesTranslator
             $"{proposals.Count} reference(s) explained by the ledger, {outcome.Unresolved.Count} error(s) not; " +
             $"{approved.Count} approved, {rejected.Count} rejected, {pathChanges.Count} added in memory, " +
             $"{data.WrittenToDiskCount} written to disk";
+
+        RepairMovedReferencesTranslatorLog.Repaired(Logger, errors.Count, proposals.Count, outcome.Unresolved.Count, command.DryRun);
 
         if (command.DryRun)
             return GenericResult<IRoslynCommandResult>.Success(

@@ -10,6 +10,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Formatting.Commands;
 using Fdw.Roslyn.Commands.Formatting.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 
@@ -38,14 +39,20 @@ public sealed class NormalizeLineEndingsTranslator : RoslynCommandTranslatorBase
     {
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            NormalizeLineEndingsTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult<LineEndingData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            NormalizeLineEndingsTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult<LineEndingData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
         var content = text.ToString();
@@ -65,6 +72,8 @@ public sealed class NormalizeLineEndingsTranslator : RoslynCommandTranslatorBase
             "cr" => "CR",
             _ => "LF"
         };
+
+        NormalizeLineEndingsTranslatorLog.Normalizing(Logger, command.FilePath, lineEndingName);
 
         // Count different line ending types
         var crlfCount = 0;
@@ -152,6 +161,8 @@ public sealed class NormalizeLineEndingsTranslator : RoslynCommandTranslatorBase
             OriginalLfCount = lfCount,
             OriginalCrCount = crCount
         };
+
+        NormalizeLineEndingsTranslatorLog.Normalized(Logger, command.FilePath, normalizedCount, lineEndingName);
 
         return GenericResult<MutationResult<LineEndingData>>.Success(
             new MutationResult<LineEndingData>(

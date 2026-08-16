@@ -5,7 +5,9 @@ using Fdw.Results;
 using Fdw.Sql.Commands.Abstractions;
 using Fdw.Sql.Commands.Abstractions.Results;
 using Fdw.Sql.Commands.Navigation.Commands;
+using Fdw.Sql.Commands.Logging;
 using Fdw.Sql.Workspace;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Sql.Commands.Navigation.Translators;
 
@@ -15,6 +17,10 @@ public sealed class FindDefinitionTranslator : SqlCommandTranslatorBase<FindDefi
     public FindDefinitionTranslator() : base("FindDefinition", "Stub. Full implementation pending.") { }
 
     public override Task<IGenericResult<QueryResult<string>>> Translate(FindDefinitionCommand command, ISqlWorkspace workspace, CancellationToken cancellationToken = default)
-        => Task.FromResult<IGenericResult<QueryResult<string>>>(
-            GenericResult<QueryResult<string>>.Failure(SqlResultCodes.NotYetImplemented));
+    {
+        var logger = NullLogger<FindDefinitionTranslator>.Instance;
+        FindDefinitionTranslatorLog.Translating(logger, nameof(FindDefinitionCommand));
+        return Task.FromResult<IGenericResult<QueryResult<string>>>(
+            GenericResult<QueryResult<string>>.Failure(FindDefinitionTranslatorLog.NotYetImplemented(logger, nameof(FindDefinitionCommand))));
+    }
 }

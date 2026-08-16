@@ -11,6 +11,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Compilation.Commands;
 using Fdw.Roslyn.Commands.Compilation.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -39,21 +40,32 @@ public sealed class GetSyntaxTreeTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        GetSyntaxTreeTranslatorLog.Retrieving(Logger, command.FilePath, command.IncludeTrivia);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            GetSyntaxTreeTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<QueryResult<SyntaxTreeData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            GetSyntaxTreeTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<SyntaxTreeData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var syntaxTree = await document.GetSyntaxTreeAsync(cancellationToken).ConfigureAwait(false);
         if (syntaxTree is null)
+        {
+            GetSyntaxTreeTranslatorLog.FailedToGetSyntaxTree(Logger, command.FilePath);
             return GenericResult<QueryResult<SyntaxTreeData>>.Failure(
                 RoslynResultCodes.ByName("FailedToGetSyntaxTree"));
+        }
 
         var root = await syntaxTree.GetRootAsync(cancellationToken).ConfigureAwait(false);
 
@@ -97,6 +109,8 @@ public sealed class GetSyntaxTreeTranslator
         var result = new QueryResult<SyntaxTreeData>(
             $"Retrieved syntax tree for {command.FilePath}",
             data);
+
+        GetSyntaxTreeTranslatorLog.Retrieved(Logger, command.FilePath, data.NodeCount);
 
         return GenericResult<QueryResult<SyntaxTreeData>>.Success(result);
     }

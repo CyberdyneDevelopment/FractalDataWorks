@@ -7,10 +7,12 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Search.Commands;
 using Fdw.Roslyn.Commands.Search.Results;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Roslyn.Commands.Search.Translators;
 
@@ -35,6 +37,8 @@ public sealed class FindUnusedTranslator : RoslynCommandTranslatorBase<FindUnuse
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        FindUnusedTranslatorLog.Scanning(Logger, command.IncludePrivate, command.IncludeInternal, command.MaxResults);
+
         var unusedMembers = new List<UnusedMemberInfo>();
 
         foreach (var project in solution.Projects)
@@ -77,7 +81,7 @@ public sealed class FindUnusedTranslator : RoslynCommandTranslatorBase<FindUnuse
                         if (IsExcluded(symbol))
                             continue;
 
-                        var refsResult = await HasReferences(symbol, solution, cancellationToken).ConfigureAwait(false);
+                        var refsResult = await HasReferences(symbol, solution, Logger, cancellationToken).ConfigureAwait(false);
                         if (!refsResult.IsSuccess || refsResult.Value)
                             continue;
 
@@ -111,11 +115,13 @@ public sealed class FindUnusedTranslator : RoslynCommandTranslatorBase<FindUnuse
         var summary = $"Found {unusedMembers.Count} unused members";
         var result = new QueryResult<IReadOnlyList<UnusedMemberInfo>>(summary, unusedMembers);
 
+        FindUnusedTranslatorLog.Found(Logger, unusedMembers.Count);
+
         return GenericResult<QueryResult<IReadOnlyList<UnusedMemberInfo>>>.Success(result, summary);
     }
 
     private static async Task<IGenericResult<bool>> HasReferences(
-        ISymbol symbol, Microsoft.CodeAnalysis.Solution solution, CancellationToken cancellationToken)
+        ISymbol symbol, Microsoft.CodeAnalysis.Solution solution, ILogger logger, CancellationToken cancellationToken)
     {
         try
         {
@@ -128,6 +134,7 @@ public sealed class FindUnusedTranslator : RoslynCommandTranslatorBase<FindUnuse
         {
             // Why: if we can't determine references, conservatively treat as used (true).
             // The failure is surfaced in the result so the caller can choose to log it.
+            FindUnusedTranslatorLog.ReferenceCheckFailed(logger, symbol.Name, ex.GetType().Name);
             return GenericResult<bool>.Success(true,
                 $"FindReferencesAsync failed for {symbol.Name}: {ex.GetType().Name}: {ex.Message}");
         }

@@ -1,4 +1,6 @@
 using System;
+using Fdw.Data.Abstractions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.Abstractions;
 
@@ -26,5 +28,10 @@ public sealed class DefaultDataMapper<TSource, TTarget>(
     /// </summary>
     /// <param name="sourceValue">The source value to map.</param>
     /// <returns>The mapped value via CLR intermediary.</returns>
-    public override object? Map(object? sourceValue) => MapViaClr(sourceValue);
+    public override object? Map(object? sourceValue)
+    {
+        DefaultDataMapperLog.UsingDefaultMapper(
+            NullLogger<DefaultDataMapper<TSource, TTarget>>.Instance, SourceConverter.Name, TargetConverter.Name);
+        return MapViaClr(sourceValue);
+    }
 }

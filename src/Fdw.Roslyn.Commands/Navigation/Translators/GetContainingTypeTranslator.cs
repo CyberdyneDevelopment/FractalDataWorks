@@ -7,6 +7,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Navigation.Commands;
 using Fdw.Roslyn.Commands.Navigation.Results;
 using Microsoft.CodeAnalysis;
@@ -35,24 +36,35 @@ public sealed class GetContainingTypeTranslator : RoslynCommandTranslatorBase<Ge
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        GetContainingTypeTranslatorLog.Finding(Logger, command.FilePath, command.Line, command.Column, command.IncludeNested);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            GetContainingTypeTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<QueryResult<IReadOnlyList<TypeInfoResult>>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            GetContainingTypeTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<IReadOnlyList<TypeInfoResult>>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            GetContainingTypeTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<IReadOnlyList<TypeInfoResult>>>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
 
@@ -94,13 +106,18 @@ public sealed class GetContainingTypeTranslator : RoslynCommandTranslatorBase<Ge
         }
 
         if (containingTypes.Count == 0)
+        {
+            GetContainingTypeTranslatorLog.NoContainingTypeFoundAtPosition(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<QueryResult<IReadOnlyList<TypeInfoResult>>>.Failure(
                 RoslynResultCodes.ByName("NoContainingTypeFoundAtPosition"));
+        }
 
         var primaryType = containingTypes[0].Name;
         var result = new QueryResult<IReadOnlyList<TypeInfoResult>>(
             $"Found containing type '{primaryType}'",
             containingTypes);
+
+        GetContainingTypeTranslatorLog.Found(Logger, primaryType, containingTypes.Count);
 
         return GenericResult<QueryResult<IReadOnlyList<TypeInfoResult>>>.Success(result);
     }

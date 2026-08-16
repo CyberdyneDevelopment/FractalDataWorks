@@ -5,7 +5,9 @@ using Fdw.Results;
 using Fdw.Sql.Commands.Abstractions;
 using Fdw.Sql.Commands.Abstractions.Results;
 using Fdw.Sql.Commands.Generation.Commands;
+using Fdw.Sql.Commands.Logging;
 using Fdw.Sql.Workspace;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Sql.Commands.Generation.Translators;
 
@@ -15,6 +17,10 @@ public sealed class GenerateFunctionTranslator : SqlCommandTranslatorBase<Genera
     public GenerateFunctionTranslator() : base("GenerateFunction", "Stub. Full implementation pending.") { }
 
     public override Task<IGenericResult<QueryResult<string>>> Translate(GenerateFunctionCommand command, ISqlWorkspace workspace, CancellationToken cancellationToken = default)
-        => Task.FromResult<IGenericResult<QueryResult<string>>>(
-            GenericResult<QueryResult<string>>.Failure(SqlResultCodes.NotYetImplemented));
+    {
+        var logger = NullLogger<GenerateFunctionTranslator>.Instance;
+        GenerateFunctionTranslatorLog.Translating(logger, nameof(GenerateFunctionCommand));
+        return Task.FromResult<IGenericResult<QueryResult<string>>>(
+            GenericResult<QueryResult<string>>.Failure(GenerateFunctionTranslatorLog.NotYetImplemented(logger, nameof(GenerateFunctionCommand))));
+    }
 }

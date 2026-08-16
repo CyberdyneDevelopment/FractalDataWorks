@@ -8,6 +8,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Projects.Commands;
 using Fdw.Roslyn.Commands.Projects.Results;
 using Microsoft.CodeAnalysis;
@@ -34,11 +35,14 @@ public sealed class ListDocumentsTranslator : RoslynCommandTranslatorBase<ListDo
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        ListDocumentsTranslatorLog.Listing(Logger, command.ProjectName, command.Pattern ?? string.Empty);
+
         var project = solution.Projects.FirstOrDefault(p =>
             string.Equals(p.Name, command.ProjectName, StringComparison.OrdinalIgnoreCase));
 
         if (project is null)
         {
+            ListDocumentsTranslatorLog.ProjectNotFound(Logger, command.ProjectName);
             return Task.FromResult<IGenericResult<QueryResult<DocumentListResult>>>(
                 GenericResult<QueryResult<DocumentListResult>>.Failure(
                 RoslynResultCodes.ByName("ProjectNotFound"),
@@ -65,6 +69,8 @@ public sealed class ListDocumentsTranslator : RoslynCommandTranslatorBase<ListDo
         var queryResult = new QueryResult<DocumentListResult>(
             $"Found {documentList.Count} documents in {project.Name}",
             result);
+
+        ListDocumentsTranslatorLog.Listed(Logger, project.Name, documentList.Count);
 
         return Task.FromResult(GenericResult<QueryResult<DocumentListResult>>.Success(queryResult));
     }

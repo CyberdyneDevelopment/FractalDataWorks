@@ -7,6 +7,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Refactoring.Commands;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -38,23 +39,34 @@ public sealed class AddUsingsTranslator : RoslynCommandTranslatorBase<AddUsingsC
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        AddUsingsTranslatorLog.Adding(Logger, command.FilePath);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            AddUsingsTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            AddUsingsTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            AddUsingsTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         // Get existing usings
         var existingUsings = syntaxRoot.DescendantNodes()
@@ -131,6 +143,8 @@ public sealed class AddUsingsTranslator : RoslynCommandTranslatorBase<AddUsingsC
                 TextChangeCount = missingUsings.Count
             }
         };
+
+        AddUsingsTranslatorLog.Added(Logger, command.FilePath, missingUsings.Count);
 
         return GenericResult<MutationResult>.Success(
             new MutationResult(

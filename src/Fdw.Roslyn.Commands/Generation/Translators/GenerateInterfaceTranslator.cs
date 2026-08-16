@@ -11,6 +11,7 @@ using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Generation.Commands;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 // Why: Fdw.Roslyn.Commands.Project namespace now lives in this assembly; alias
@@ -41,12 +42,20 @@ public sealed class GenerateInterfaceTranslator : RoslynCommandTranslatorBase<Ge
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(command.InterfaceName))
+        {
+            GenerateInterfaceTranslatorLog.InterfaceNameRequired(Logger);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("InterfaceNameRequired"));
+        }
 
         if (string.IsNullOrEmpty(command.Namespace))
+        {
+            GenerateInterfaceTranslatorLog.NamespaceRequired(Logger);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("NamespaceRequired"));
+        }
+
+        GenerateInterfaceTranslatorLog.Generating(Logger, command.InterfaceName, command.Namespace);
 
         var methods = string.IsNullOrEmpty(command.Methods)
             ? Array.Empty<string>()
@@ -101,16 +110,22 @@ public sealed class GenerateInterfaceTranslator : RoslynCommandTranslatorBase<Ge
         {
             targetProject = solution.Projects.FirstOrDefault(p => string.Equals(p.Name, command.ProjectName, StringComparison.Ordinal));
             if (targetProject is null)
+            {
+                GenerateInterfaceTranslatorLog.ProjectNotFound(Logger, command.ProjectName);
                 return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("ProjectNotFound"),
                 ResultDetails.Create().With("ProjectName", command.ProjectName));
+            }
         }
         else
         {
             targetProject = solution.Projects.FirstOrDefault();
             if (targetProject is null)
+            {
+                GenerateInterfaceTranslatorLog.NoProjectsFoundInSolution(Logger);
                 return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("NoProjectsFoundInSolution"));
+            }
         }
 
         var fileName = $"{command.InterfaceName}.cs";
@@ -125,8 +140,11 @@ public sealed class GenerateInterfaceTranslator : RoslynCommandTranslatorBase<Ge
             // Update existing document
             var existingDoc = targetProject.GetDocument(existingDocId);
             if (existingDoc is null)
+            {
+                GenerateInterfaceTranslatorLog.FailedToLoadExistingDocument(Logger, fileName);
                 return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadExistingDocument"));
+            }
 
             newDocument = existingDoc.WithSyntaxRoot(compilationUnit);
         }
@@ -149,6 +167,8 @@ public sealed class GenerateInterfaceTranslator : RoslynCommandTranslatorBase<Ge
         };
 
         await Task.CompletedTask.ConfigureAwait(false);
+
+        GenerateInterfaceTranslatorLog.Generated(Logger, command.InterfaceName, memberCount);
 
         return GenericResult<MutationResult>.Success(
             new MutationResult(

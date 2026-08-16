@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Conventions.Commands;
 using Fdw.Roslyn.Commands.Conventions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -36,6 +37,8 @@ public sealed class AnalyzeExceptionUsageTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        AnalyzeExceptionUsageTranslatorLog.Analyzing(Logger, command.ProjectFilter ?? "(all)");
+
         var throwStatements = new List<ThrowStatementInfo>();
         var tryCatchBlocks = new List<TryCatchBlockInfo>();
 
@@ -126,6 +129,8 @@ public sealed class AnalyzeExceptionUsageTranslator
         var result = new QueryResult<ExceptionUsageAnalysisData>(
             $"Found {throwStatements.Count} throw statements and {tryCatchBlocks.Count} try-catch blocks",
             data);
+
+        AnalyzeExceptionUsageTranslatorLog.Analyzed(Logger, throwStatements.Count, tryCatchBlocks.Count);
 
         return GenericResult<QueryResult<ExceptionUsageAnalysisData>>.Success(result);
     }

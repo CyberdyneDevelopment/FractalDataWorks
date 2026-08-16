@@ -7,6 +7,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Workspace.Commands;
 using Microsoft.CodeAnalysis;
 
@@ -35,15 +36,19 @@ public sealed class WriteMigrationGuideTranslator
     {
         if (command.Ledger is null)
         {
+            WriteMigrationGuideTranslatorLog.LedgerNotAvailable(Logger);
             return GenericResult<QueryResult<MigrationGuideResult>>.Failure(
                 RoslynResultCodes.ByName("LedgerNotAvailable"));
         }
 
         if (string.IsNullOrWhiteSpace(command.OutputPath))
         {
+            WriteMigrationGuideTranslatorLog.OutputPathRequired(Logger);
             return GenericResult<QueryResult<MigrationGuideResult>>.Failure(
                 RoslynResultCodes.ByName("OutputPathRequired"));
         }
+
+        WriteMigrationGuideTranslatorLog.Writing(Logger, command.OutputPath);
 
         // Why: header-only use — an in-memory/no-path solution renders a nameless guide header;
         // the absence is passed through explicitly, never replaced with an invented name.
@@ -61,6 +66,7 @@ public sealed class WriteMigrationGuideTranslator
             var solutionDirectory = solution.FilePath is null ? null : Path.GetDirectoryName(solution.FilePath);
             if (string.IsNullOrEmpty(solutionDirectory))
             {
+                WriteMigrationGuideTranslatorLog.RelativeOutputPathNeedsSolutionPath(Logger, command.OutputPath);
                 return GenericResult<QueryResult<MigrationGuideResult>>.Failure(
                     RoslynResultCodes.ByName("RelativeOutputPathNeedsSolutionPath"),
                     ResultDetails.Create().With("OutputPath", command.OutputPath));
@@ -75,12 +81,15 @@ public sealed class WriteMigrationGuideTranslator
 
         if (!writeResult.IsSuccess || writeResult.Value is null)
         {
+            WriteMigrationGuideTranslatorLog.WriteFailed(Logger, outputPath);
             return writeResult.ToNewResult<QueryResult<MigrationGuideResult>>();
         }
 
         var result = new QueryResult<MigrationGuideResult>(
             $"Migration guide written to '{command.OutputPath}' with {writeResult.Value.EntryCount} entries",
             writeResult.Value);
+
+        WriteMigrationGuideTranslatorLog.Written(Logger, command.OutputPath, writeResult.Value.EntryCount);
 
         return GenericResult<QueryResult<MigrationGuideResult>>.Success(result);
     }

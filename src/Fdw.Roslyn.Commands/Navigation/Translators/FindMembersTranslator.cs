@@ -7,6 +7,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Navigation.Commands;
 using Fdw.Roslyn.Commands.Navigation.Results;
 using Microsoft.CodeAnalysis;
@@ -34,24 +35,35 @@ public sealed class FindMembersTranslator : RoslynCommandTranslatorBase<FindMemb
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        FindMembersTranslatorLog.Finding(Logger, command.FilePath, command.Line, command.Column, command.IncludeInherited);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            FindMembersTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<QueryResult<IReadOnlyList<MemberInfo>>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            FindMembersTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<IReadOnlyList<MemberInfo>>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            FindMembersTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<IReadOnlyList<MemberInfo>>>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
@@ -59,8 +71,11 @@ public sealed class FindMembersTranslator : RoslynCommandTranslatorBase<FindMemb
                   ?? semanticModel.GetDeclaredSymbol(token.Parent!, cancellationToken);
 
         if (symbol is not INamedTypeSymbol typeSymbol)
+        {
+            FindMembersTranslatorLog.SymbolNotType(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<QueryResult<IReadOnlyList<MemberInfo>>>.Failure(
                 RoslynResultCodes.ByName("SymbolNotType"));
+        }
 
         var allowedKinds = ParseMemberKinds(command.MemberKinds);
         var members = new List<MemberInfo>();
@@ -86,6 +101,8 @@ public sealed class FindMembersTranslator : RoslynCommandTranslatorBase<FindMemb
         var result = new QueryResult<IReadOnlyList<MemberInfo>>(
             $"Found {members.Count} member(s) in '{typeSymbol.Name}'",
             members);
+
+        FindMembersTranslatorLog.Found(Logger, typeSymbol.Name, members.Count);
 
         return GenericResult<QueryResult<IReadOnlyList<MemberInfo>>>.Success(result);
     }

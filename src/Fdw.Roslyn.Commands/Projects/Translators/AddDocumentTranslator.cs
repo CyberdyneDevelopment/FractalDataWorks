@@ -8,6 +8,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Projects.Commands;
 using Fdw.Roslyn.Commands.Projects.Results;
 using Microsoft.CodeAnalysis;
@@ -35,11 +36,14 @@ public sealed class AddDocumentTranslator : RoslynCommandTranslatorBase<AddDocum
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        AddDocumentTranslatorLog.Adding(Logger, command.ProjectName, command.DocumentName);
+
         var project = solution.Projects.FirstOrDefault(p =>
             string.Equals(p.Name, command.ProjectName, StringComparison.OrdinalIgnoreCase));
 
         if (project is null)
         {
+            AddDocumentTranslatorLog.ProjectNotFound(Logger, command.ProjectName);
             return Task.FromResult<IGenericResult<MutationResult<AddDocumentResult>>>(
                 GenericResult<MutationResult<AddDocumentResult>>.Failure(
                 RoslynResultCodes.ByName("ProjectNotFound"),
@@ -53,6 +57,8 @@ public sealed class AddDocumentTranslator : RoslynCommandTranslatorBase<AddDocum
 
         if (existingDoc is not null)
         {
+            AddDocumentTranslatorLog.AlreadyExists(Logger, command.ProjectName, command.DocumentName);
+
             var existingResult = new AddDocumentResult(
                 projectName: command.ProjectName,
                 documentName: command.DocumentName,
@@ -86,6 +92,8 @@ public sealed class AddDocumentTranslator : RoslynCommandTranslatorBase<AddDocum
             $"Added document {command.DocumentName} to {command.ProjectName}",
             newSolution,
             result);
+
+        AddDocumentTranslatorLog.Added(Logger, command.ProjectName, command.DocumentName);
 
         return Task.FromResult(GenericResult<MutationResult<AddDocumentResult>>.Success(mutationResult));
     }

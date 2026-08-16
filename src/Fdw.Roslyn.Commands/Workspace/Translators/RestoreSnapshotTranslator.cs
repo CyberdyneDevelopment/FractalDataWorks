@@ -9,6 +9,7 @@ using Fdw.Results;
 using Fdw.Results.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Workspace.Commands;
 using Fdw.Roslyn.Commands.Workspace.Results;
 using Fdw.Workspace.Roslyn;
@@ -40,15 +41,19 @@ public sealed class RestoreSnapshotTranslator
     {
         if (string.IsNullOrWhiteSpace(command.SnapshotId))
         {
+            RestoreSnapshotTranslatorLog.SnapshotIdRequired(Logger);
             return Task.FromResult<IGenericResult<MutationResult<SnapshotData>>>(
                 GenericResult<MutationResult<SnapshotData>>.Failure(
                 RoslynResultCodes.ByName("SnapshotIdRequired")));
         }
 
+        RestoreSnapshotTranslatorLog.Restoring(Logger, command.SnapshotId);
+
         // Handler provides snapshot solution via command property
         var restoredSolution = command.SnapshotSolution;
         if (restoredSolution is null)
         {
+            RestoreSnapshotTranslatorLog.SnapshotNotFound(Logger, command.SnapshotId);
             return Task.FromResult<IGenericResult<MutationResult<SnapshotData>>>(
                 GenericResult<MutationResult<SnapshotData>>.Failure(
                     RoslynResultCodes.ByName("SnapshotNotFound"),
@@ -72,6 +77,8 @@ public sealed class RestoreSnapshotTranslator
             $"Restored snapshot '{command.SnapshotId}'",
             restoredSolution,
             data);
+
+        RestoreSnapshotTranslatorLog.Restored(Logger, command.SnapshotId, projectCount, documentCount);
 
         return Task.FromResult<IGenericResult<MutationResult<SnapshotData>>>(
             GenericResult<MutationResult<SnapshotData>>.Success(mutationResult));

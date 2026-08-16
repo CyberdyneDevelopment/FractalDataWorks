@@ -5,7 +5,9 @@ using Fdw.Results;
 using Fdw.Sql.Commands.Abstractions;
 using Fdw.Sql.Commands.Abstractions.Results;
 using Fdw.Sql.Commands.Build.Commands;
+using Fdw.Sql.Commands.Logging;
 using Fdw.Sql.Workspace;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Sql.Commands.Build.Translators;
 
@@ -15,6 +17,10 @@ public sealed class GetDiagnosticsTranslator : SqlCommandTranslatorBase<GetDiagn
     public GetDiagnosticsTranslator() : base("GetDiagnostics", "Stub. Full implementation pending.") { }
 
     public override Task<IGenericResult<QueryResult<string>>> Translate(GetDiagnosticsCommand command, ISqlWorkspace workspace, CancellationToken cancellationToken = default)
-        => Task.FromResult<IGenericResult<QueryResult<string>>>(
-            GenericResult<QueryResult<string>>.Failure(SqlResultCodes.NotYetImplemented));
+    {
+        var logger = NullLogger<GetDiagnosticsTranslator>.Instance;
+        GetDiagnosticsTranslatorLog.Translating(logger, nameof(GetDiagnosticsCommand));
+        return Task.FromResult<IGenericResult<QueryResult<string>>>(
+            GenericResult<QueryResult<string>>.Failure(GetDiagnosticsTranslatorLog.NotYetImplemented(logger, nameof(GetDiagnosticsCommand))));
+    }
 }

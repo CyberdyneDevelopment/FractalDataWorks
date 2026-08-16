@@ -9,6 +9,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Search.Commands;
 using Fdw.Roslyn.Commands.Search.Results;
 using Microsoft.CodeAnalysis;
@@ -37,6 +38,8 @@ public sealed class FindDuplicatesTranslator : RoslynCommandTranslatorBase<FindD
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        FindDuplicatesTranslatorLog.Scanning(Logger, command.MinLines, command.MinTokens);
+
         var codeBlocks = new Dictionary<string, List<DuplicateCodeBlock>>(StringComparer.Ordinal);
 
         foreach (var project in solution.Projects)
@@ -96,6 +99,8 @@ public sealed class FindDuplicatesTranslator : RoslynCommandTranslatorBase<FindD
         var result = new QueryResult<IReadOnlyList<DuplicateGroup>>(
             $"Found {duplicates.Count} duplicate code blocks",
             duplicates);
+
+        FindDuplicatesTranslatorLog.Found(Logger, duplicates.Count);
 
         return GenericResult<QueryResult<IReadOnlyList<DuplicateGroup>>>.Success(result);
     }

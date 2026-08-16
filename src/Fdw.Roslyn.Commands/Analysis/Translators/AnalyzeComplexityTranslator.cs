@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Analysis.Commands;
 using Fdw.Roslyn.Commands.Analysis.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -36,21 +37,32 @@ public sealed class AnalyzeComplexityTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        AnalyzeComplexityTranslatorLog.Analyzing(Logger, command.FilePath, command.Threshold);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            AnalyzeComplexityTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<QueryResult<ComplexityAnalysisData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            AnalyzeComplexityTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<ComplexityAnalysisData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         if (syntaxRoot is null)
+        {
+            AnalyzeComplexityTranslatorLog.FailedToGetSyntaxRoot(Logger, command.FilePath);
             return GenericResult<QueryResult<ComplexityAnalysisData>>.Failure(
                 RoslynResultCodes.ByName("FailedToGetSyntaxRoot"));
+        }
 
         var methods = new List<MethodComplexity>();
 
@@ -83,6 +95,8 @@ public sealed class AnalyzeComplexityTranslator
         var result = new QueryResult<ComplexityAnalysisData>(
             $"Analyzed {methods.Count} methods, {highComplexity.Count} exceed threshold",
             data);
+
+        AnalyzeComplexityTranslatorLog.Analyzed(Logger, command.FilePath, methods.Count, highComplexity.Count, command.Threshold);
 
         return GenericResult<QueryResult<ComplexityAnalysisData>>.Success(result);
     }

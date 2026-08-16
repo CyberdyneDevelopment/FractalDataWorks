@@ -11,6 +11,7 @@ using Fdw.Results;
 using Fdw.Results.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Refactoring.Commands;
 using Fdw.Roslyn.Commands.Refactoring.Results;
 using Microsoft.CodeAnalysis;
@@ -51,6 +52,8 @@ public sealed class ResolveInheritDocTranslator : RoslynCommandTranslatorBase<Re
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        ResolveInheritDocTranslatorLog.Resolving(Logger, command.FilePath ?? string.Empty, command.ProjectName ?? string.Empty);
+
         var scope = SelectScope(command, solution);
         if (!scope.IsSuccess)
             return GenericResult<MutationResult<ResolveInheritDocResult>>.Failure(scope.Code!, scope.Details);
@@ -94,26 +97,36 @@ public sealed class ResolveInheritDocTranslator : RoslynCommandTranslatorBase<Re
         var result = new ResolveInheritDocResult(filesScanned, changedFiles.Count, sitesResolved, unresolved.Count, unresolved);
         var summary = $"Resolved {sitesResolved} inheritdoc site(s) across {changedFiles.Count} file(s); {unresolved.Count} unresolved.";
 
+        ResolveInheritDocTranslatorLog.Resolved(Logger, sitesResolved, changedFiles.Count, unresolved.Count);
+
         return GenericResult<MutationResult<ResolveInheritDocResult>>.Success(
             new MutationResult<ResolveInheritDocResult>(summary, currentSolution, changedFiles, result));
     }
 
-    private static ScopeSelection SelectScope(ResolveInheritDocCommand command, Solution solution)
+    private ScopeSelection SelectScope(ResolveInheritDocCommand command, Solution solution)
     {
         if (!string.IsNullOrEmpty(command.FilePath))
         {
             var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
-            return documentId is null
-                ? ScopeSelection.Fail(RoslynResultCodes.ByName("DocumentNotFound"), ResultDetails.Create().With("FilePath", command.FilePath))
-                : ScopeSelection.Ok(new[] { documentId });
+            if (documentId is null)
+            {
+                ResolveInheritDocTranslatorLog.DocumentNotFound(Logger, command.FilePath);
+                return ScopeSelection.Fail(RoslynResultCodes.ByName("DocumentNotFound"), ResultDetails.Create().With("FilePath", command.FilePath));
+            }
+
+            return ScopeSelection.Ok(new[] { documentId });
         }
 
         if (!string.IsNullOrEmpty(command.ProjectName))
         {
             var project = solution.Projects.FirstOrDefault(p => string.Equals(p.Name, command.ProjectName, StringComparison.Ordinal));
-            return project is null
-                ? ScopeSelection.Fail(RoslynResultCodes.ByName("ProjectNotFound"), ResultDetails.Create().With("ProjectName", command.ProjectName))
-                : ScopeSelection.Ok(project.DocumentIds);
+            if (project is null)
+            {
+                ResolveInheritDocTranslatorLog.ProjectNotFound(Logger, command.ProjectName);
+                return ScopeSelection.Fail(RoslynResultCodes.ByName("ProjectNotFound"), ResultDetails.Create().With("ProjectName", command.ProjectName));
+            }
+
+            return ScopeSelection.Ok(project.DocumentIds);
         }
 
         return ScopeSelection.Ok(solution.Projects.SelectMany(p => p.DocumentIds).ToList());

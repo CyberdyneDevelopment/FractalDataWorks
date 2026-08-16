@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Data.Common;
 using Fdw.Collections;
 using Fdw.Configuration;
+using Fdw.Data.Abstractions.Logging;
 using Fdw.Results;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.Abstractions.Mappers.PocoMappers;
 
@@ -24,6 +26,7 @@ public abstract class PocoMapperBase : TypeOptionBase<string, PocoMapperBase>, I
         : base(typeFullName, targetType.Name)
     {
         TargetType = targetType;
+        PocoMapperBaseLog.MapperRegistering(NullLogger<PocoMapperBase>.Instance, typeFullName, targetType.Name);
     }
 
     /// <inheritdoc/>

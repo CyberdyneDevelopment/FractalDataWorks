@@ -9,11 +9,13 @@ using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Conventions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.MsSql.Logging;
 using Fdw.Data.MsSql.Results;
 using Fdw.Data.MsSql.Translators;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.MsSql;
 
@@ -79,16 +81,22 @@ public sealed class MsSqlBulkInsertTranslator : MsSqlDataCommandTranslatorBase
         IStorageContainer container,
         CancellationToken cancellationToken = default)
     {
+        MsSqlBulkInsertTranslatorLog.Translating(
+            NullLogger<MsSqlBulkInsertTranslator>.Instance, container?.Name ?? "<null>");
+
         try
         {
             if (container == null)
             {
+                MsSqlBulkInsertTranslatorLog.ContainerNull(NullLogger<MsSqlBulkInsertTranslator>.Instance);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("ContainerNull")));
             }
 
             if (container.Path is not IDatabasePath dbPath)
             {
+                MsSqlBulkInsertTranslatorLog.InvalidContainerPath(
+                    NullLogger<MsSqlBulkInsertTranslator>.Instance, container.Name);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("InvalidContainerPath")));
             }
@@ -97,6 +105,8 @@ public sealed class MsSqlBulkInsertTranslator : MsSqlDataCommandTranslatorBase
             var dataObj = GetCommandData(command);
             if (dataObj == null)
             {
+                MsSqlBulkInsertTranslatorLog.MissingInputData(
+                    NullLogger<MsSqlBulkInsertTranslator>.Instance, "BulkInsertCommand", container.Name);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(
                         MsSqlDataResultCodes.ByName("MissingInputData"),
@@ -105,6 +115,8 @@ public sealed class MsSqlBulkInsertTranslator : MsSqlDataCommandTranslatorBase
 
             if (dataObj is not IEnumerable collection)
             {
+                MsSqlBulkInsertTranslatorLog.InvalidDataType(
+                    NullLogger<MsSqlBulkInsertTranslator>.Instance, container.Name, dataObj.GetType().Name);
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(
                         MsSqlDataResultCodes.ByName("InvalidDataType"),
@@ -118,6 +130,8 @@ public sealed class MsSqlBulkInsertTranslator : MsSqlDataCommandTranslatorBase
         }
         catch (Exception ex)
         {
+            MsSqlBulkInsertTranslatorLog.BulkInsertTranslationFailed(
+                NullLogger<MsSqlBulkInsertTranslator>.Instance, ex, container?.Name ?? "<null>", ex.Message);
             return Task.FromResult(
                 GenericResult<SqlCommand>.Failure(
                     MsSqlDataResultCodes.ByName("BulkInsertTranslationFailed"),
@@ -144,6 +158,10 @@ public sealed class MsSqlBulkInsertTranslator : MsSqlDataCommandTranslatorBase
 
         if (fields.Count == 0)
         {
+            // Why: reported as a defect (FDW rule) — a translator should return IGenericResult, not
+            // throw. Left in place per instructions; the caller's try/catch converts it to a Failure.
+            MsSqlBulkInsertTranslatorLog.NoInsertableFields(
+                NullLogger<MsSqlBulkInsertTranslator>.Instance, container.Name);
             throw new InvalidOperationException($"Container {container.Name} has no insertable fields");
         }
 
@@ -161,6 +179,9 @@ public sealed class MsSqlBulkInsertTranslator : MsSqlDataCommandTranslatorBase
         command.Parameters.Add(new SqlParameter("@__BulkCopy_Destination", BuildSchemaQualifiedTableName(dbPath)));
         command.Parameters.Add(new SqlParameter("@__BulkCopy_ColumnMappings",
             string.Join(",", fields.Select(f => f.Name))));
+
+        MsSqlBulkInsertTranslatorLog.Translated(
+            NullLogger<MsSqlBulkInsertTranslator>.Instance, container.Name, dataTable.Rows.Count);
 
         return command;
     }

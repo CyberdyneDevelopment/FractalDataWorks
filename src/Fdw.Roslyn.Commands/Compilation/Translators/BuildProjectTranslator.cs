@@ -11,6 +11,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Compilation.Commands;
 using Fdw.Roslyn.Commands.Compilation.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 
 namespace Fdw.Roslyn.Commands.Compilation.Translators;
@@ -37,18 +38,26 @@ public sealed class BuildProjectTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        BuildProjectTranslatorLog.Building(Logger, command.ProjectName);
+
         var project = solution.Projects.FirstOrDefault(p =>
             string.Equals(p.Name, command.ProjectName, StringComparison.OrdinalIgnoreCase));
 
         if (project is null)
+        {
+            BuildProjectTranslatorLog.ProjectNotFound(Logger, command.ProjectName);
             return GenericResult<QueryResult<BuildProjectData>>.Failure(
                 RoslynResultCodes.ByName("ProjectNotFound"),
                 ResultDetails.Create().With("ProjectName", command.ProjectName));
+        }
 
         var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
         if (compilation is null)
+        {
+            BuildProjectTranslatorLog.FailedToGetCompilation(Logger, command.ProjectName);
             return GenericResult<QueryResult<BuildProjectData>>.Failure(
                 RoslynResultCodes.ByName("FailedToGetCompilation"));
+        }
 
         var diagnostics = compilation.GetDiagnostics(cancellationToken);
 
@@ -100,6 +109,8 @@ public sealed class BuildProjectTranslator
             : $"Build succeeded with {warnings.Count} warnings";
 
         var result = new QueryResult<BuildProjectData>(summary, data);
+
+        BuildProjectTranslatorLog.Built(Logger, command.ProjectName, errors.Count, warnings.Count);
 
         return GenericResult<QueryResult<BuildProjectData>>.Success(result);
     }

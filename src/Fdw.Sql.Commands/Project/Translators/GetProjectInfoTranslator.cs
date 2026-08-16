@@ -6,8 +6,10 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Sql.Commands.Abstractions;
 using Fdw.Sql.Commands.Abstractions.Results;
+using Fdw.Sql.Commands.Logging;
 using Fdw.Sql.Commands.Project.Commands;
 using Fdw.Sql.Workspace;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.SqlServer.Dac.Model;
 
 namespace Fdw.Sql.Commands.Project.Translators;
@@ -22,6 +24,9 @@ public sealed class GetProjectInfoTranslator : SqlCommandTranslatorBase<GetProje
         ISqlWorkspace workspace,
         CancellationToken cancellationToken = default)
     {
+        var logger = NullLogger<GetProjectInfoTranslator>.Instance;
+        GetProjectInfoTranslatorLog.Translating(logger);
+
         var byKind = new Dictionary<string, int>(System.StringComparer.OrdinalIgnoreCase);
         foreach (var obj in workspace.Model.GetObjects(DacQueryScopes.Default))
         {
@@ -34,6 +39,7 @@ public sealed class GetProjectInfoTranslator : SqlCommandTranslatorBase<GetProje
             TotalObjectCount: byKind.Values.Sum(),
             ObjectCountsByKind: byKind);
 
+        GetProjectInfoTranslatorLog.ProjectSummarized(logger, summary.ProjectPath, summary.ScriptCount, summary.TotalObjectCount);
         return Task.FromResult<IGenericResult<QueryResult<SqlProjectSummary>>>(
             GenericResult<QueryResult<SqlProjectSummary>>.Success(
                 new QueryResult<SqlProjectSummary>(

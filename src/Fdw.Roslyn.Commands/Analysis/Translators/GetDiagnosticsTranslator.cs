@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Analysis.Commands;
 using Fdw.Roslyn.Commands.Analysis.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 
 namespace Fdw.Roslyn.Commands.Analysis.Translators;
@@ -36,7 +37,12 @@ public sealed class GetDiagnosticsTranslator
         CancellationToken cancellationToken = default)
     {
         if (!Enum.TryParse<DiagnosticSeverity>(command.Severity, ignoreCase: true, out var minSeverity))
+        {
+            GetDiagnosticsTranslatorLog.InvalidSeverityFallback(Logger, command.Severity);
             minSeverity = DiagnosticSeverity.Warning;
+        }
+
+        GetDiagnosticsTranslatorLog.Retrieving(Logger, command.FilePath ?? string.Empty, command.ProjectName ?? string.Empty, minSeverity.ToString());
 
         var diagnostics = new List<DiagnosticInfo>();
 
@@ -44,14 +50,20 @@ public sealed class GetDiagnosticsTranslator
         {
             var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
             if (documentId is null)
+            {
+                GetDiagnosticsTranslatorLog.DocumentNotFound(Logger, command.FilePath);
                 return GenericResult<QueryResult<DiagnosticsData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+            }
 
             var document = solution.GetDocument(documentId);
             if (document is null)
+            {
+                GetDiagnosticsTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
                 return GenericResult<QueryResult<DiagnosticsData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+            }
 
             var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
             if (semanticModel is not null)
@@ -100,6 +112,8 @@ public sealed class GetDiagnosticsTranslator
         var result = new QueryResult<DiagnosticsData>(
             $"Found {diagnostics.Count} diagnostics",
             data);
+
+        GetDiagnosticsTranslatorLog.Retrieved(Logger, diagnostics.Count);
 
         return GenericResult<QueryResult<DiagnosticsData>>.Success(result);
     }

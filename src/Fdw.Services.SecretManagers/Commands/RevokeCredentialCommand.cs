@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Fdw.Services.SecretManagers.Abstractions;
+using Fdw.Services.SecretManagers.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.SecretManagers.Commands;
 
@@ -29,7 +31,16 @@ public sealed class RevokeCredentialCommand : SecretManagerCommandBase, ISecretM
             timeout)
     {
         CredentialId = credentialId;
-        CredentialType = credentialType ?? throw new ArgumentNullException(nameof(credentialType));
+        if (credentialType is null)
+        {
+            // Why: reported as a defect (FDW rule) — a command should return IGenericResult, not
+            // throw. Left in place per instructions (constructors cannot return IGenericResult).
+            RevokeCredentialCommandLog.RequiredValueMissing(NullLogger<RevokeCredentialCommand>.Instance, nameof(credentialType));
+            throw new ArgumentNullException(nameof(credentialType));
+        }
+
+        CredentialType = credentialType;
+        RevokeCredentialCommandLog.Constructed(NullLogger<RevokeCredentialCommand>.Instance, credentialId, credentialType);
     }
 
     /// <summary>

@@ -7,6 +7,7 @@ using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Formatting.Commands;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Formatting;
 
@@ -32,16 +33,24 @@ public sealed class FormatDocumentTranslator : RoslynCommandTranslatorBase<Forma
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        FormatDocumentTranslatorLog.Formatting(Logger, command.FilePath);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            FormatDocumentTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            FormatDocumentTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var originalText = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
@@ -60,6 +69,8 @@ public sealed class FormatDocumentTranslator : RoslynCommandTranslatorBase<Forma
                 TextChangeCount = changes.Count
             });
         }
+
+        FormatDocumentTranslatorLog.Formatted(Logger, command.FilePath, changes.Count);
 
         return GenericResult<MutationResult>.Success(
             new MutationResult(

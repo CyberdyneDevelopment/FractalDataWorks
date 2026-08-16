@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Formatting.Commands;
 using Fdw.Roslyn.Commands.Formatting.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -37,23 +38,34 @@ public sealed class ApplyNamingConventionsTranslator : RoslynCommandTranslatorBa
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        ApplyNamingConventionsTranslatorLog.Checking(Logger, command.FilePath, command.UseAsyncSuffix);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            ApplyNamingConventionsTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult<NamingConventionsData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            ApplyNamingConventionsTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult<NamingConventionsData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            ApplyNamingConventionsTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<MutationResult<NamingConventionsData>>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var violations = new List<NamingViolation>();
         var currentSolution = solution;
@@ -156,6 +168,8 @@ public sealed class ApplyNamingConventionsTranslator : RoslynCommandTranslatorBa
         {
             Violations = violations
         };
+
+        ApplyNamingConventionsTranslatorLog.Checked(Logger, command.FilePath, violations.Count);
 
         return GenericResult<MutationResult<NamingConventionsData>>.Success(
             new MutationResult<NamingConventionsData>(

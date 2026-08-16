@@ -10,6 +10,7 @@ using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Analysis.Commands;
 using Fdw.Roslyn.Commands.Analysis.Helpers;
 using Fdw.Roslyn.Commands.Analysis.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 
 namespace Fdw.Roslyn.Commands.Analysis.Translators;
@@ -41,8 +42,13 @@ public sealed class FindNamespaceMismatchesTranslator
         CancellationToken cancellationToken = default)
     {
         if (command is null)
+        {
+            FindNamespaceMismatchesTranslatorLog.CommandCannotBeNull(Logger);
             return GenericResult<QueryResult<NamespaceMismatchReport>>.Failure(
                 RoslynResultCodes.ByName("CommandCannotBeNull"));
+        }
+
+        FindNamespaceMismatchesTranslatorLog.Scanning(Logger, command.Scope ?? "(whole solution)", command.IncludeTests);
 
         var projects = SelectProjects(solution, command);
         var mismatches = new List<NamespaceMismatch>();
@@ -76,11 +82,16 @@ public sealed class FindNamespaceMismatchesTranslator
         var kept = ApplyKindFilter(mismatches, command.IncludeKinds);
 
         if (kept.Count == 0)
+        {
+            FindNamespaceMismatchesTranslatorLog.NamespaceMismatchesNotFound(Logger, command.Scope ?? "(whole solution)");
             return GenericResult<QueryResult<NamespaceMismatchReport>>.Failure(
                 RoslynResultCodes.ByName("NamespaceMismatchesNotFound"),
                 ResultDetails.Create().With("Scope", command.Scope ?? "(whole solution)"));
+        }
 
         var report = BuildReport(kept, typesScanned, command.IncludeTests, command.IncludeTypes, command.MaxTypesPerGroup);
+
+        FindNamespaceMismatchesTranslatorLog.Completed(Logger, typesScanned, report.TotalMismatches, report.GroupCount);
 
         return GenericResult<QueryResult<NamespaceMismatchReport>>.Success(
             new QueryResult<NamespaceMismatchReport>(

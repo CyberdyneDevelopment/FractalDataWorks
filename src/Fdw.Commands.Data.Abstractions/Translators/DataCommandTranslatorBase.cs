@@ -3,8 +3,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Collections;
 using Fdw.Commands.Abstractions;
+using Fdw.Commands.Data.Abstractions.Logging;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data.Abstractions;
 
@@ -35,6 +37,9 @@ public abstract class DataCommandTranslatorBase<TCommand> : IDataCommandTranslat
         Id = GenerateIdFromName(name);
         Name = name;
         DomainName = domainName;
+
+        DataCommandTranslatorBaseLog.TranslatorInitializing(
+            NullLogger<DataCommandTranslatorBase<TCommand>>.Instance, name, domainName);
     }
 
     /// <summary>
@@ -43,7 +48,12 @@ public abstract class DataCommandTranslatorBase<TCommand> : IDataCommandTranslat
     private static int GenerateIdFromName(string name)
     {
         if (string.IsNullOrEmpty(name))
+        {
+            // Why: reported defect (see logging-pass report) — this method throws instead of the
+            // constructor returning an IGenericResult. Logged here per scope; throw left in place.
+            DataCommandTranslatorBaseLog.TranslatorNameMissing(NullLogger<DataCommandTranslatorBase<TCommand>>.Instance);
             throw new ArgumentNullException(nameof(name));
+        }
 
         unchecked
         {

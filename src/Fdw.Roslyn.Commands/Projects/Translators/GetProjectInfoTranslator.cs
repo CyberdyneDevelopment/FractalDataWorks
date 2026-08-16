@@ -9,6 +9,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Projects.Commands;
 using Fdw.Roslyn.Commands.Projects.Results;
 using Microsoft.CodeAnalysis;
@@ -36,11 +37,14 @@ public sealed class GetProjectInfoTranslator : RoslynCommandTranslatorBase<GetPr
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        GetProjectInfoTranslatorLog.Retrieving(Logger, command.ProjectName);
+
         var project = solution.Projects.FirstOrDefault(p =>
             string.Equals(p.Name, command.ProjectName, StringComparison.OrdinalIgnoreCase));
 
         if (project is null)
         {
+            GetProjectInfoTranslatorLog.ProjectNotFound(Logger, command.ProjectName);
             return Task.FromResult<IGenericResult<QueryResult<ProjectInfoResult>>>(
                 GenericResult<QueryResult<ProjectInfoResult>>.Failure(
                 RoslynResultCodes.ByName("ProjectNotFound"),
@@ -74,6 +78,8 @@ public sealed class GetProjectInfoTranslator : RoslynCommandTranslatorBase<GetPr
         var queryResult = new QueryResult<ProjectInfoResult>(
             $"Retrieved info for project {project.Name}",
             result);
+
+        GetProjectInfoTranslatorLog.Retrieved(Logger, project.Name, result.DocumentCount);
 
         return Task.FromResult(GenericResult<QueryResult<ProjectInfoResult>>.Success(queryResult));
     }

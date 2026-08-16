@@ -12,6 +12,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Compilation.Commands;
 using Fdw.Roslyn.Commands.Compilation.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Emit;
 
@@ -39,18 +40,26 @@ public sealed class EmitAssemblyTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        EmitAssemblyTranslatorLog.Emitting(Logger, command.ProjectName, command.OutputPath);
+
         var project = solution.Projects.FirstOrDefault(p =>
             string.Equals(p.Name, command.ProjectName, StringComparison.OrdinalIgnoreCase));
 
         if (project is null)
+        {
+            EmitAssemblyTranslatorLog.ProjectNotFound(Logger, command.ProjectName);
             return GenericResult<QueryResult<EmitAssemblyData>>.Failure(
                 RoslynResultCodes.ByName("ProjectNotFound"),
                 ResultDetails.Create().With("ProjectName", command.ProjectName));
+        }
 
         var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
         if (compilation is null)
+        {
+            EmitAssemblyTranslatorLog.FailedToGetCompilation(Logger, command.ProjectName);
             return GenericResult<QueryResult<EmitAssemblyData>>.Failure(
                 RoslynResultCodes.ByName("FailedToGetCompilation"));
+        }
 
         var diagnostics = compilation.GetDiagnostics(cancellationToken);
         var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
@@ -82,6 +91,8 @@ public sealed class EmitAssemblyTranslator
             var result = new QueryResult<EmitAssemblyData>(
                 $"Compilation failed with {errors.Count} errors",
                 data);
+
+            EmitAssemblyTranslatorLog.CompilationHasErrors(Logger, command.ProjectName, errors.Count);
 
             return GenericResult<QueryResult<EmitAssemblyData>>.Success(result);
         }
@@ -126,6 +137,7 @@ public sealed class EmitAssemblyTranslator
             };
 
             var failResult = new QueryResult<EmitAssemblyData>("Failed to emit assembly", failData);
+            EmitAssemblyTranslatorLog.EmitFailed(Logger, command.OutputPath, emitErrors.Count);
             return GenericResult<QueryResult<EmitAssemblyData>>.Success(failResult);
         }
 
@@ -139,6 +151,8 @@ public sealed class EmitAssemblyTranslator
         var successResult = new QueryResult<EmitAssemblyData>(
             $"Assembly emitted to {command.OutputPath}",
             successData);
+
+        EmitAssemblyTranslatorLog.Emitted(Logger, command.OutputPath);
 
         return GenericResult<QueryResult<EmitAssemblyData>>.Success(successResult);
     }

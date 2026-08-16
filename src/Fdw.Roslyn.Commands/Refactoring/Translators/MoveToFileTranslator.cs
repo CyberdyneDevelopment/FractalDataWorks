@@ -9,6 +9,7 @@ using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Analysis.Helpers;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Refactoring.Commands;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -38,24 +39,35 @@ public sealed class MoveToFileTranslator : RoslynCommandTranslatorBase<MoveToFil
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        MoveToFileTranslatorLog.Moving(Logger, command.FilePath, command.Line, command.Column);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            MoveToFileTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            MoveToFileTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            MoveToFileTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
@@ -66,13 +78,19 @@ public sealed class MoveToFileTranslator : RoslynCommandTranslatorBase<MoveToFil
             .FirstOrDefault();
 
         if (typeDecl is null)
+        {
+            MoveToFileTranslatorLog.NoTypeDeclarationFoundAtPosition(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("NoTypeDeclarationFoundAtPosition"));
+        }
 
         var typeSymbol = semanticModel.GetDeclaredSymbol(typeDecl, cancellationToken);
         if (typeSymbol is null)
+        {
+            MoveToFileTranslatorLog.FailedToGetTypeSymbol(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToGetTypeSymbol"));
+        }
 
         var typeName = typeSymbol.Name;
         var fqn = SymbolFqn.Of(typeSymbol);
@@ -86,8 +104,11 @@ public sealed class MoveToFileTranslator : RoslynCommandTranslatorBase<MoveToFil
             .ToList();
 
         if (allTypes.Count == 1)
+        {
+            MoveToFileTranslatorLog.TypeAlreadyOnlyTypeInFile(Logger, command.FilePath, typeName);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("TypeAlreadyOnlyTypeInFile"));
+        }
 
         // Get namespace and using directives
         var namespaceDecl = typeDecl.Ancestors()
@@ -156,6 +177,8 @@ public sealed class MoveToFileTranslator : RoslynCommandTranslatorBase<MoveToFil
                 document.Project.AssemblyName, document.Project.AssemblyName,
                 NamespaceLayout.RelativePosition(document.Project, newFilePath))
         };
+
+        MoveToFileTranslatorLog.Moved(Logger, typeName, newFileName);
 
         return GenericResult<MutationResult>.Success(
             new MutationResult(

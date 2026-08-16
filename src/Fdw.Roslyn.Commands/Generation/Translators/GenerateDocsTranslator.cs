@@ -10,6 +10,7 @@ using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Generation.Commands;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -37,23 +38,34 @@ public sealed class GenerateDocsTranslator : RoslynCommandTranslatorBase<Generat
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        GenerateDocsTranslatorLog.Generating(Logger, command.FilePath, command.IncludePrivate);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            GenerateDocsTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            GenerateDocsTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            GenerateDocsTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var nodesToDocument = new List<SyntaxNode>();
         var replacements = new Dictionary<SyntaxNode, SyntaxNode>();
@@ -117,8 +129,11 @@ public sealed class GenerateDocsTranslator : RoslynCommandTranslatorBase<Generat
         }
 
         if (documentedCount == 0)
+        {
+            GenerateDocsTranslatorLog.NoUndocumentedMembersFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("NoUndocumentedMembersFound"));
+        }
 
         var newRoot = syntaxRoot.ReplaceNodes(replacements.Keys, (original, _) => replacements[original]);
 
@@ -132,6 +147,8 @@ public sealed class GenerateDocsTranslator : RoslynCommandTranslatorBase<Generat
                 TextChangeCount = documentedCount
             }
         };
+
+        GenerateDocsTranslatorLog.Generated(Logger, command.FilePath, documentedCount);
 
         return GenericResult<MutationResult>.Success(
             new MutationResult(

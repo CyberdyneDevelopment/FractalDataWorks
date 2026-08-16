@@ -5,6 +5,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Workspace.Commands;
 using Microsoft.CodeAnalysis;
 
@@ -38,6 +39,8 @@ public sealed class ApplyWorkspaceChangesTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        ApplyWorkspaceChangesTranslatorLog.Applying(Logger);
+
         var placeholder = new QueryResult<IReadOnlyList<string>>(
             "Pending — applied by the command handler", System.Array.Empty<string>());
 

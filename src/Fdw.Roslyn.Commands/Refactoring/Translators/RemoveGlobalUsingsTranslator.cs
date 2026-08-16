@@ -8,6 +8,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Refactoring.Commands;
 using Fdw.Roslyn.Commands.Refactoring.Helpers;
 using Fdw.Roslyn.Commands.Refactoring.Results;
@@ -48,6 +49,8 @@ public sealed class RemoveGlobalUsingsTranslator
     {
         if (command is null) throw new ArgumentNullException(nameof(command));
         if (solution is null) throw new ArgumentNullException(nameof(solution));
+
+        RemoveGlobalUsingsTranslatorLog.Removing(Logger, command.Project ?? string.Empty, command.DryRun);
 
         if (string.IsNullOrWhiteSpace(command.Project))
             return Fail("ProjectNotSpecified", ResultDetails.Create());
@@ -149,6 +152,8 @@ public sealed class RemoveGlobalUsingsTranslator
             (resolved.Count > 0 ? $"; {resolved.Count} diagnostic(s) RESOLVED by the removal" : string.Empty) +
             (command.DryRun ? " (preview)" : string.Empty);
 
+        RemoveGlobalUsingsTranslatorLog.Removed(Logger, project.Name, data.Removed.Count, repaired.Count);
+
         if (command.DryRun)
             return GenericResult<IRoslynCommandResult>.Success(
                 new QueryResult<RemoveGlobalUsingsData>(summary, data));
@@ -164,8 +169,11 @@ public sealed class RemoveGlobalUsingsTranslator
     }
 #pragma warning restore MA0051
 
-    private static IGenericResult<IRoslynCommandResult> Fail(string code, ResultDetails details) =>
-        GenericResult<IRoslynCommandResult>.Failure(RoslynResultCodes.ByName(code), details);
+    private IGenericResult<IRoslynCommandResult> Fail(string code, ResultDetails details)
+    {
+        RemoveGlobalUsingsTranslatorLog.Failed(Logger, code);
+        return GenericResult<IRoslynCommandResult>.Failure(RoslynResultCodes.ByName(code), details);
+    }
 
     /// <summary>
     /// Reads the imports MSBuild supplies, by parsing the generated GlobalUsings file.

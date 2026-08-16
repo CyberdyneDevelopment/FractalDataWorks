@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Fdw.Services.SecretManagers.Abstractions;
+using Fdw.Services.SecretManagers.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.SecretManagers.Commands;
 
@@ -35,7 +37,14 @@ public sealed class SetSecretManagerCommand : SecretManagerCommandBase, ISecretM
         : base("SetSecret", container, secretKey, typeof(SecretValue), CreateParametersWithValue(secretValue, parameters), metadata, timeout)
     {
         if (string.IsNullOrWhiteSpace(secretKey))
+        {
+            // Why: reported as a defect (FDW rule) — a command should return IGenericResult, not
+            // throw. Left in place per instructions (constructors cannot return IGenericResult).
+            SetSecretManagerCommandLog.RequiredValueMissing(NullLogger<SetSecretManagerCommand>.Instance, nameof(secretKey));
             throw new ArgumentException("Secret key cannot be null or empty for SetSecret operation.", nameof(secretKey));
+        }
+
+        SetSecretManagerCommandLog.Constructed(NullLogger<SetSecretManagerCommand>.Instance, container, secretKey);
     }
 
     /// <inheritdoc/>

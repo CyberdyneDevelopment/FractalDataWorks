@@ -8,6 +8,7 @@ using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Formatting.Commands;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -34,21 +35,32 @@ public sealed class AddBracesTranslator : RoslynCommandTranslatorBase<AddBracesC
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        AddBracesTranslatorLog.Adding(Logger, command.FilePath);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            AddBracesTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            AddBracesTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         if (syntaxRoot is null)
+        {
+            AddBracesTranslatorLog.FailedToGetSyntaxRoot(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToGetSyntaxRoot"));
+        }
 
         var rewriter = new AddBracesRewriter();
         var newRoot = rewriter.Visit(syntaxRoot);
@@ -64,6 +76,8 @@ public sealed class AddBracesTranslator : RoslynCommandTranslatorBase<AddBracesC
                 TextChangeCount = rewriter.ChangeCount
             });
         }
+
+        AddBracesTranslatorLog.Added(Logger, command.FilePath, rewriter.ChangeCount);
 
         return GenericResult<MutationResult>.Success(
             new MutationResult(

@@ -11,6 +11,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Compilation.Commands;
 using Fdw.Roslyn.Commands.Compilation.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -39,23 +40,34 @@ public sealed class GetSemanticModelTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        GetSemanticModelTranslatorLog.Retrieving(Logger, command.FilePath);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            GetSemanticModelTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<QueryResult<SemanticModelData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            GetSemanticModelTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<SemanticModelData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            GetSemanticModelTranslatorLog.FailedToGetSemanticModel(Logger, command.FilePath);
             return GenericResult<QueryResult<SemanticModelData>>.Failure(
                 RoslynResultCodes.ByName("FailedToGetSemanticModel"));
+        }
 
         var declaredSymbols = new List<SymbolDeclaration>();
 
@@ -112,6 +124,8 @@ public sealed class GetSemanticModelTranslator
         var result = new QueryResult<SemanticModelData>(
             $"Retrieved semantic model for {command.FilePath}",
             data);
+
+        GetSemanticModelTranslatorLog.Retrieved(Logger, command.FilePath, declaredSymbols.Count);
 
         return GenericResult<QueryResult<SemanticModelData>>.Success(result);
     }

@@ -8,6 +8,7 @@ using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Analysis.Helpers;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Refactoring.Commands;
 using Fdw.Roslyn.Commands.Refactoring.Helpers;
 using Fdw.Roslyn.Commands.Refactoring.Results;
@@ -39,32 +40,49 @@ public sealed class MoveNamespaceTranslator
         CancellationToken cancellationToken = default)
     {
         if (command is null)
+        {
+            MoveNamespaceTranslatorLog.CommandCannotBeNull(Logger);
             return GenericResult<IRoslynCommandResult>.Failure(
                 RoslynResultCodes.ByName("CommandCannotBeNull"));
+        }
 
         if (string.IsNullOrWhiteSpace(command.OldNamespace) || string.IsNullOrWhiteSpace(command.NewNamespace))
+        {
+            MoveNamespaceTranslatorLog.NamespaceRequired(Logger);
             return GenericResult<IRoslynCommandResult>.Failure(
                 RoslynResultCodes.ByName("NamespaceRequired"));
+        }
+
+        MoveNamespaceTranslatorLog.Moving(Logger, command.OldNamespace, command.NewNamespace, command.DryRun);
 
         if (string.Equals(command.OldNamespace, command.NewNamespace, StringComparison.Ordinal))
+        {
+            MoveNamespaceTranslatorLog.TargetSameAsCurrent(Logger, command.OldNamespace);
             return GenericResult<IRoslynCommandResult>.Failure(
                 RoslynResultCodes.ByName("TargetSameAsCurrent"),
                 ResultDetails.Create().With("Namespace", command.OldNamespace));
+        }
 
         // Why: this rewrite is solution-wide. A workspace loaded without its test projects would produce a
         // rewrite that is incomplete BY CONSTRUCTION and — worse — record it in the ledger as complete.
         // Refusing is the only honest option; silently narrowing the blast radius of a rename is not.
         if (!solution.Projects.Any(p => TestProjectDetector.IsTestProject(p.Name)))
+        {
+            MoveNamespaceTranslatorLog.TestProjectsNotLoaded(Logger);
             return GenericResult<IRoslynCommandResult>.Failure(
                 RoslynResultCodes.ByName("TestProjectsNotLoaded"),
                 ResultDetails.Create().With("ExcludedCount", "all"));
+        }
 
         var rewrite = await RewriteSolution(solution, command, cancellationToken).ConfigureAwait(false);
 
         if (rewrite.ChangedFiles.Count == 0)
+        {
+            MoveNamespaceTranslatorLog.NoTypesMatchedSelector(Logger, command.OldNamespace);
             return GenericResult<IRoslynCommandResult>.Failure(
                 RoslynResultCodes.ByName("NoTypesMatchedSelector"),
                 ResultDetails.Create().With("Selector", command.OldNamespace));
+        }
 
         // Why: this rewrite touches the whole solution, so it is the LAST place to guess. Compile what it
         // changed and say what broke — collisions the caller must resolve, and references the rewrite
@@ -90,22 +108,28 @@ public sealed class MoveNamespaceTranslator
         // does; it is a real run, which would write an unchecked rewrite to disk and record it in the
         // ledger as though it had been verified, that must still refuse.
         if (!command.DryRun && !command.AcceptUnverified && unverifiable.Count > 0)
+        {
+            MoveNamespaceTranslatorLog.ChangeCannotBeVerified(Logger, command.NewNamespace, unverifiable.Count);
             return GenericResult<IRoslynCommandResult>.Failure(
                 RoslynResultCodes.ByName("ChangeCannotBeVerified"),
                 ResultDetails.Create()
                     .With("ProjectCount", unverifiable.Count.ToString(System.Globalization.CultureInfo.InvariantCulture))
                     .With("Detail", unverifiable[0].Detail));
+        }
 
         var collisions = probed.Count(b => string.Equals(b.Kind, "TypeCollision", StringComparison.Ordinal));
         var unresolved = probed.Count(b => string.Equals(b.Kind, "UnresolvedReference", StringComparison.Ordinal));
 
         if (!command.DryRun && !command.AcceptUnverified && probed.Count > 0)
+        {
+            MoveNamespaceTranslatorLog.ChangeWouldNotCompile(Logger, command.NewNamespace, collisions, unresolved);
             return GenericResult<IRoslynCommandResult>.Failure(
                 RoslynResultCodes.ByName("ChangeWouldNotCompile"),
                 ResultDetails.Create()
                     .With("CollisionCount", collisions.ToString(System.Globalization.CultureInfo.InvariantCulture))
                     .With("UnresolvedCount", unresolved.ToString(System.Globalization.CultureInfo.InvariantCulture))
                     .With("First", probed[0].Detail));
+        }
 
         var data = new MoveNamespaceData
         {
@@ -130,6 +154,8 @@ public sealed class MoveNamespaceTranslator
         var summary =
             $"{(command.DryRun ? "[DryRun] " : string.Empty)}Renamed namespace '{command.OldNamespace}' to " +
             $"'{command.NewNamespace}': {rewrite.ReferenceCount} reference(s) across {rewrite.ChangedFiles.Count} file(s)";
+
+        MoveNamespaceTranslatorLog.Moved(Logger, command.OldNamespace, command.NewNamespace, rewrite.ReferenceCount, rewrite.ChangedFiles.Count, command.DryRun);
 
         if (command.DryRun)
             return GenericResult<IRoslynCommandResult>.Success(

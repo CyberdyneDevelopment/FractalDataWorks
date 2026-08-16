@@ -11,6 +11,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Compilation.Commands;
 using Fdw.Roslyn.Commands.Compilation.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -37,18 +38,26 @@ public sealed class GetCompilationOptionsTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        GetCompilationOptionsTranslatorLog.Retrieving(Logger, command.ProjectName);
+
         var project = solution.Projects.FirstOrDefault(p =>
             string.Equals(p.Name, command.ProjectName, StringComparison.OrdinalIgnoreCase));
 
         if (project is null)
+        {
+            GetCompilationOptionsTranslatorLog.ProjectNotFound(Logger, command.ProjectName);
             return GenericResult<QueryResult<CompilationOptionsData>>.Failure(
                 RoslynResultCodes.ByName("ProjectNotFound"),
                 ResultDetails.Create().With("ProjectName", command.ProjectName));
+        }
 
         var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
         if (compilation is null)
+        {
+            GetCompilationOptionsTranslatorLog.FailedToGetCompilation(Logger, command.ProjectName);
             return GenericResult<QueryResult<CompilationOptionsData>>.Failure(
                 RoslynResultCodes.ByName("FailedToGetCompilation"));
+        }
 
         var options = compilation.Options;
         var csharpOptions = options as CSharpCompilationOptions;
@@ -71,6 +80,8 @@ public sealed class GetCompilationOptionsTranslator
         var result = new QueryResult<CompilationOptionsData>(
             $"Retrieved compilation options for {command.ProjectName}",
             data);
+
+        GetCompilationOptionsTranslatorLog.Retrieved(Logger, command.ProjectName);
 
         return GenericResult<QueryResult<CompilationOptionsData>>.Success(result);
     }

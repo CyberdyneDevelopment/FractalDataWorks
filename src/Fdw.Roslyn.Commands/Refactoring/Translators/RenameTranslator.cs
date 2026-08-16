@@ -8,6 +8,7 @@ using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Analysis.Helpers;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Refactoring.Commands;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Rename;
@@ -36,24 +37,35 @@ public sealed class RenameTranslator : RoslynCommandTranslatorBase<RenameCommand
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        RenameTranslatorLog.Renaming(Logger, command.FilePath, command.Line, command.Column, command.NewName);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            RenameTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            RenameTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            RenameTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
@@ -61,8 +73,11 @@ public sealed class RenameTranslator : RoslynCommandTranslatorBase<RenameCommand
                   ?? semanticModel.GetDeclaredSymbol(token.Parent!, cancellationToken);
 
         if (symbol is null)
+        {
+            RenameTranslatorLog.NoSymbolFoundAtPosition(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("NoSymbolFoundAtPosition"));
+        }
 
         var oldName = symbol.Name;
         var oldFqn = SymbolFqn.Of(symbol);
@@ -121,6 +136,8 @@ public sealed class RenameTranslator : RoslynCommandTranslatorBase<RenameCommand
                 document.Project.AssemblyName, document.Project.AssemblyName,
                 NamespaceLayout.RelativePosition(document.Project, document.FilePath))
         };
+
+        RenameTranslatorLog.Renamed(Logger, oldName, command.NewName, changeCount, changedFiles.Count);
 
         return GenericResult<MutationResult>.Success(
             new MutationResult(

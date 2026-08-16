@@ -8,6 +8,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Formatting.Commands;
 using Fdw.Roslyn.Commands.Formatting.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 
@@ -33,16 +34,24 @@ public sealed class RemoveTrailingWhitespaceTranslator : RoslynCommandTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        RemoveTrailingWhitespaceTranslatorLog.Scanning(Logger, command.FilePath);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            RemoveTrailingWhitespaceTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult<TrailingWhitespaceData>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            RemoveTrailingWhitespaceTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult<TrailingWhitespaceData>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
@@ -85,6 +94,8 @@ public sealed class RemoveTrailingWhitespaceTranslator : RoslynCommandTranslator
             LineCount = linesWithTrailingWhitespace.Count,
             AffectedLines = linesWithTrailingWhitespace
         };
+
+        RemoveTrailingWhitespaceTranslatorLog.Removed(Logger, command.FilePath, linesWithTrailingWhitespace.Count);
 
         return GenericResult<MutationResult<TrailingWhitespaceData>>.Success(
             new MutationResult<TrailingWhitespaceData>(

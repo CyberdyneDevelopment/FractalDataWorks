@@ -7,6 +7,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Navigation.Commands;
 using Fdw.Roslyn.Commands.Navigation.Results;
 using Microsoft.CodeAnalysis;
@@ -35,24 +36,35 @@ public sealed class FindOverridesTranslator : RoslynCommandTranslatorBase<FindOv
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        FindOverridesTranslatorLog.Finding(Logger, command.FilePath, command.Line, command.Column);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            FindOverridesTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<QueryResult<IReadOnlyList<OverrideInfo>>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            FindOverridesTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<IReadOnlyList<OverrideInfo>>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            FindOverridesTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<QueryResult<IReadOnlyList<OverrideInfo>>>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
@@ -60,8 +72,11 @@ public sealed class FindOverridesTranslator : RoslynCommandTranslatorBase<FindOv
                   ?? semanticModel.GetDeclaredSymbol(token.Parent!, cancellationToken);
 
         if (symbol is not IMethodSymbol and not IPropertySymbol and not IEventSymbol)
+        {
+            FindOverridesTranslatorLog.SymbolMustBeMethodPropertyOrEvent(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<QueryResult<IReadOnlyList<OverrideInfo>>>.Failure(
                 RoslynResultCodes.ByName("SymbolMustBeMethodPropertyOrEvent"));
+        }
 
         var overrides = new List<OverrideInfo>();
 
@@ -88,6 +103,8 @@ public sealed class FindOverridesTranslator : RoslynCommandTranslatorBase<FindOv
         var result = new QueryResult<IReadOnlyList<OverrideInfo>>(
             $"Found {overrides.Count} override(s) for '{symbol.Name}'",
             overrides);
+
+        FindOverridesTranslatorLog.Found(Logger, symbol.Name, overrides.Count);
 
         return GenericResult<QueryResult<IReadOnlyList<OverrideInfo>>>.Success(result);
     }

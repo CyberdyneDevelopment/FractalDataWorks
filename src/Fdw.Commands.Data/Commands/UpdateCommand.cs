@@ -3,7 +3,9 @@ using Fdw.Collections;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Abstractions;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Logging;
 using Fdw.Data.Abstractions;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data;
 
@@ -44,6 +46,7 @@ public sealed class UpdateCommand<T> : DataCommandBase<int, T>, IFilterableComma
     public UpdateCommand(T data)
         : base("Update", data)
     {
+        UpdateCommandLog.CommandCreated(NullLogger<UpdateCommand<T>>.Instance, typeof(T).Name);
     }
 
     /// <summary>

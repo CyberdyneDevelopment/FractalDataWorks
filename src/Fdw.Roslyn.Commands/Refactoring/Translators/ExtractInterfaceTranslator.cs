@@ -8,6 +8,7 @@ using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Analysis.Helpers;
+using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Refactoring.Commands;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -37,24 +38,35 @@ public sealed class ExtractInterfaceTranslator : RoslynCommandTranslatorBase<Ext
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        ExtractInterfaceTranslatorLog.Extracting(Logger, command.FilePath, command.Line, command.Column);
+
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
+        {
+            ExtractInterfaceTranslatorLog.DocumentNotFound(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
+        }
 
         var document = solution.GetDocument(documentId);
         if (document is null)
+        {
+            ExtractInterfaceTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
+        }
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
         if (semanticModel is null || syntaxRoot is null)
+        {
+            ExtractInterfaceTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
+        }
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
@@ -65,13 +77,19 @@ public sealed class ExtractInterfaceTranslator : RoslynCommandTranslatorBase<Ext
             .FirstOrDefault();
 
         if (typeDecl is null)
+        {
+            ExtractInterfaceTranslatorLog.NoTypeDeclarationFoundAtPosition(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("NoTypeDeclarationFoundAtPosition"));
+        }
 
         var symbol = semanticModel.GetDeclaredSymbol(typeDecl, cancellationToken);
         if (symbol is not INamedTypeSymbol typeSymbol)
+        {
+            ExtractInterfaceTranslatorLog.FailedToGetTypeSymbol(Logger, command.FilePath, command.Line, command.Column);
             return GenericResult<MutationResult>.Failure(
                 RoslynResultCodes.ByName("FailedToGetTypeSymbol"));
+        }
 
         var typeName = typeSymbol.Name;
         var interfaceName = command.InterfaceName ?? $"I{typeName}";
@@ -138,6 +156,8 @@ public sealed class ExtractInterfaceTranslator : RoslynCommandTranslatorBase<Ext
                 document.Project.AssemblyName, document.Project.AssemblyName,
                 NamespaceLayout.RelativePosition(document.Project, document.FilePath))
         };
+
+        ExtractInterfaceTranslatorLog.Extracted(Logger, interfaceName, typeName, interfaceMembers.Count);
 
         return GenericResult<MutationResult>.Success(
             new MutationResult(

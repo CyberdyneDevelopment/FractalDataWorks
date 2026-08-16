@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using Fdw.Commands.Data.Abstractions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data.Abstractions;
 
@@ -35,6 +37,19 @@ public sealed class HttpConnectionCommand : IConnectionCommand
         string? body = null,
         IReadOnlyDictionary<string, string>? headers = null)
     {
+        if (method is null)
+        {
+            // Why: reported defect (see logging-pass report) — this constructor throws instead of
+            // returning IGenericResult. Logged here per scope; the throw below is left in place.
+            HttpConnectionCommandLog.HttpMethodMissing(NullLogger<HttpConnectionCommand>.Instance);
+        }
+
+        if (relativePath is null)
+        {
+            // Why: same defect class as above — logged, throw left in place.
+            HttpConnectionCommandLog.RelativePathMissing(NullLogger<HttpConnectionCommand>.Instance);
+        }
+
         Method = method ?? throw new ArgumentNullException(nameof(method));
         RelativePath = relativePath ?? throw new ArgumentNullException(nameof(relativePath));
         QueryParameters = queryParameters ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -42,6 +57,8 @@ public sealed class HttpConnectionCommand : IConnectionCommand
         Headers = headers ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         CommandId = Guid.NewGuid();
         CreatedAt = DateTime.UtcNow;
+
+        HttpConnectionCommandLog.CommandCreated(NullLogger<HttpConnectionCommand>.Instance, Method.Method, RelativePath);
     }
 
     /// <summary>

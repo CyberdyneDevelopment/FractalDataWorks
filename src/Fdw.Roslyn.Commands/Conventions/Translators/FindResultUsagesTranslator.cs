@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Conventions.Commands;
 using Fdw.Roslyn.Commands.Conventions.Results;
+using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -36,6 +37,8 @@ public sealed class FindResultUsagesTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
+        FindResultUsagesTranslatorLog.Scanning(Logger, command.ProjectFilter ?? "(all)");
+
         var resultUsages = new List<ResultUsageInfo>();
 
         foreach (var project in solution.Projects)
@@ -103,6 +106,8 @@ public sealed class FindResultUsagesTranslator
         var result = new QueryResult<ResultUsagesData>(
             $"Found {resultUsages.Count} methods returning IGenericResult",
             data);
+
+        FindResultUsagesTranslatorLog.Found(Logger, resultUsages.Count);
 
         return GenericResult<QueryResult<ResultUsagesData>>.Success(result);
     }
