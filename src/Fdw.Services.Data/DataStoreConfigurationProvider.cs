@@ -95,6 +95,8 @@ public class DataStoreConfigurationProvider : DefaultConfigurationProvider<DataS
                 dataStoreName, pathName,
                 new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
 
+        RegisterContainerKeyProviders(services, dataStoreName, pathName);
+
         // Why (FDW-403 slice 2): DataPathPolicy and FileTypeHandlerOverride are child tables of
         // data.DataPath using a physical FK (DataPathRowId → DataPath.RowId). Registering their
         // providers here makes them available for cascade load in FileSystemDataStoreConfigProvider
@@ -227,4 +229,46 @@ public class DataStoreConfigurationProvider : DefaultConfigurationProvider<DataS
         DataStoreConfigurationProviderLog.DataStoreListComposed(_logger, composed.Count);
         return GenericResult<IReadOnlyList<DataStoreConfiguration>>.Success(composed);
     }
+
+    /// <summary>
+    /// Registers the write providers for a container's key metadata.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="dataStoreName">The owning data store name.</param>
+    /// <param name="pathName">The owning path name.</param>
+    /// <remarks>
+    /// Extracted only because RegisterDomainConfiguration crossed the FDW006 line limit with these
+    /// two added. They belong with the DataPath/DataContainer/DataContainerField registrations it
+    /// still holds, and this method is called from there.
+    /// </remarks>
+    private static void RegisterContainerKeyProviders(
+        IServiceCollection services,
+        string dataStoreName,
+        string pathName)
+    {
+        // Why keys sit here with DataPath, DataContainer and DataContainerField rather than with
+        // connections: a container's keys are the same kind of child of the same node, and the
+        // connections collection owns transports, not the data schema.
+        //
+        // Why they were missing: the cascade resolves a child by finding the ConfigurationCommands
+        // option that claims its type. Nothing claimed a container key, so saving a container that
+        // declared one returned NoChildCommandForType and data.DataContainerKey stayed empty in
+        // every database. The commands now exist; these providers make a key addressable on its own.
+        services.TryAddSingleton<DefaultConfigurationProvider<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>(sp =>
+            new DefaultConfigurationProvider<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>(
+                sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>()
+                    ?? NullLogger<DefaultConfigurationProvider<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>.Instance,
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                dataStoreName, pathName,
+                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+
+        services.TryAddSingleton<DefaultConfigurationProvider<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>(sp =>
+            new DefaultConfigurationProvider<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>(
+                sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>()
+                    ?? NullLogger<DefaultConfigurationProvider<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>.Instance,
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                dataStoreName, pathName,
+                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+    }
+
 }
