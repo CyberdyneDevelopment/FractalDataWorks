@@ -183,15 +183,11 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
             ?? NullLogger<ConnectionConfigurationProvider>.Instance,
             nameof(ConnectionConfigurationProvider));
 
-        // Why GetService rather than GetRequiredService: DefaultDataGatewayServiceType registers the
-        // Lazy<ICacheInvalidator?> wrapper, and a host that never registers that domain legitimately has
-        // no invalidator — the provider reads _invalidator?.Value and treats null as "nothing to evict".
-        // Resolving it here rather than hand-building the wrapper keeps one construction site.
         builder.Services.TryAddSingleton<ConnectionConfigurationProvider>(sp =>
             new ConnectionConfigurationProvider(
                 sp.GetService<ILogger<ConnectionConfigurationProvider>>()!,
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: sp.GetService<Lazy<ICacheInvalidator?>>()));
+                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
 
         builder.Services.TryAddSingleton<DefaultConfigurationProvider<ConnectionConfiguration, ConnectionConfigurationCommand>>(
             sp => sp.GetRequiredService<ConnectionConfigurationProvider>());
@@ -218,51 +214,5 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
 
         // Why: IServiceConnectionProvider serves framework-internal connections such as ConfigurationDb.
         builder.Services.TryAddSingleton<IServiceConnectionProvider, DefaultServiceConnectionProvider>();
-
-        RegisterContainerKeyProviders(builder);
-    }
-
-    /// <summary>
-    /// Registers the write providers for a DataContainer's key metadata — <c>data.DataContainerKey</c>
-    /// and <c>data.DataContainerKeyField</c>.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Why the connections collection owns a data-schema registration: a DataStore is predicated on a
-    /// Connection rather than a peer of one. <c>data.DataStore.ConnectionRowId</c> is NOT NULL with an FK
-    /// to <c>conn.Connection(RowId)</c>, and a DataStore owns no transport of its own — it names a
-    /// connection, inherits that connection's transport, and takes its builder from it. Connections are
-    /// what make the DataStore provider necessary, so the registration belongs to the collection that
-    /// knows that, and it runs here ahead of the option cycle like every other domain registration.
-    /// </para>
-    /// <para>
-    /// Why these two and not the whole node tree: DataPath, DataContainer and DataContainerField already
-    /// have providers. Keys did not, because no <c>ConfigurationCommands</c> option claimed them — so a
-    /// container saved with a key hit <c>NoChildCommandForType</c> and <c>data.DataContainerKey</c> stayed
-    /// empty. The commands now exist; these providers make a key addressable on its own, without
-    /// resaving its container.
-    /// </para>
-    /// </remarks>
-    private static void RegisterContainerKeyProviders(IHostApplicationBuilder builder)
-    {
-        // Why literal: these are plain DefaultConfigurationProvider<,> instances rather than
-        // domain-specific subclasses, so there is no per-domain constructor default to fall back on.
-        // Both tables live in the data schema alongside the rest of the node tree.
-        const string dataStoreName = "ConfigurationDb";
-        const string pathName = "data";
-
-        builder.Services.TryAddSingleton<DefaultConfigurationProvider<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>(sp =>
-            new DefaultConfigurationProvider<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>(
-                sp.GetService<ILogger<DefaultConfigurationProvider<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                dataStoreName, pathName,
-                sp.GetService<Lazy<ICacheInvalidator?>>()));
-
-        builder.Services.TryAddSingleton<DefaultConfigurationProvider<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>(sp =>
-            new DefaultConfigurationProvider<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>(
-                sp.GetService<ILogger<DefaultConfigurationProvider<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                dataStoreName, pathName,
-                sp.GetService<Lazy<ICacheInvalidator?>>()));
     }
 }
