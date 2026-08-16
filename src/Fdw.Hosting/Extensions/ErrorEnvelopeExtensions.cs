@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Fdw.Hosting.Extensions;
 
@@ -78,9 +79,27 @@ public static class ErrorEnvelopeExtensions
         IEnumerable<string> messages,
         CancellationToken ct)
     {
+        // Why RFC 7807 and not the {errorCode, messages[]} this used to emit: it was the fifth error
+        // shape on one surface, and the last one left. ResultHttpStatusMapper, FastEndpoints'
+        // validation failures and the CRUD not-found branch all speak ProblemDetails now, so a caller
+        // could not parse failures uniformly while this helper kept answering in its own dialect.
+        //
+        // The vocabulary survives as extensions: errorCode is still there under `code`, and the
+        // messages array is preserved rather than flattened, because callers pass more than one.
+        var problem = new ProblemDetails
+        {
+            Status = statusCode,
+            Title = errorCode,
+            Detail = string.Join(" ", messages),
+            Instance = context.Request.Path.HasValue ? context.Request.Path.Value : null,
+        };
+
+        problem.Extensions["code"] = errorCode;
+        problem.Extensions["messages"] = messages.ToArray();
+        problem.Extensions["referenceId"] = context.TraceIdentifier;
+
         context.Response.StatusCode = statusCode;
-        context.Response.ContentType = "application/json";
-        return context.Response.WriteAsJsonAsync(
-            new { errorCode, messages = messages.ToArray() }, ct);
+        context.Response.ContentType = "application/problem+json";
+        return context.Response.WriteAsJsonAsync(problem, ct);
     }
 }
