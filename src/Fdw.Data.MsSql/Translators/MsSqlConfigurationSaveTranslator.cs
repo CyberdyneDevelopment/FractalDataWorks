@@ -388,6 +388,19 @@ COMMIT";
                 ? fkColName[..^"RowId".Length] + "Id"
                 : fkColName;
 
+            // Why this is checked and not assumed: the subquery below resolves the parent RowId from
+            // the parent's logical Id, and that Id arrives as a parameter bound from the record. If the
+            // record carries no such property there is nothing to bind, and the emitted SQL referenced
+            // a variable that was never declared — SQL Server rejected the whole statement with error
+            // 137 rather than the one column.
+            //
+            // data.DataSetKeyField reaches this with DataSetFieldRowId: a key can name a field the
+            // dataset has not declared, so there is no field Id to resolve from. Skipping the
+            // resolution leaves the column out of the insert entirely, and it is nullable precisely
+            // because "no field yet" is a real state.
+            if (!mapperPropertySet.Contains(logicalIdParam))
+                continue;
+
             result.Add(new ForeignKeyResolution(
                 fkColName,
                 // Why (Stage 3): the owning-schema name is the tree-navigation parent path's name.
