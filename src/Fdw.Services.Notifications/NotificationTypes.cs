@@ -13,6 +13,16 @@ using System;
 using System.Linq;
 using Fdw.Results;
 using Microsoft.Extensions.Hosting;
+using Fdw.Data.Abstractions;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Notifications.Commands;
+using Fdw.Services.Notifications.Configuration;
+using Fdw.Services.Notifications.Services;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using System.Collections.Generic;
 
 namespace Fdw.Services.Notifications;
 
@@ -70,6 +80,32 @@ public partial class NotificationTypes
             var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
                 return registered;
+            // Notification configuration, registered once for the domain here rather
+            // than by every caller that needs it.
+
+            // Why: per-user notification toggles are plain data in ConfigurationDb (notify schema),
+            // read/written via the standard DataGateway — this replaces the no-op echo endpoints.
+            builder.Services.TryAddScoped<IUserNotificationPreferenceService, SqlUserNotificationPreferenceService>();
+
+            builder.Services.TryAddSingleton<NotificationConfigurationProvider>(sp =>
+                new NotificationConfigurationProvider(
+                    sp.GetService<ILogger<NotificationConfigurationProvider>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+            builder.Services.TryAddSingleton<DefaultConfigurationProvider<NotificationConfiguration, NotificationConfigurationCommand>>(
+                sp => sp.GetRequiredService<NotificationConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<NotificationConfiguration>>(
+                sp => sp.GetRequiredService<NotificationConfigurationProvider>());
+
+            // Why literal "ConfigurationDb"/"notify": this child rule provider is a plain
+            // DefaultConfigurationProvider<,> instance (not a domain-specific subclass), so there is no
+            // per-domain constructor default to fall back on — this is the domain's own default location.
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<NotificationRuleConfiguration>>(sp =>
+                new DefaultConfigurationProvider<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    "ConfigurationDb", "notify",
+                    new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
 
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));

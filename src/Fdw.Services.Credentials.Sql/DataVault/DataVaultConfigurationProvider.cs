@@ -21,26 +21,6 @@ namespace Fdw.Services.DataVault;
 /// </summary>
 public class DataVaultConfigurationProvider : DefaultConfigurationProvider<DataVaultConfiguration, DataVaultConfigurationCommand>
 {
-    /// <summary>
-    /// Registers the DataVaultConfigurationProvider with DI, targeting this domain's own default
-    /// location. To override, call <c>SetConfiguration</c> on the resolved singleton.
-    /// </summary>
-    public static void RegisterDomainConfiguration(IServiceCollection services)
-    {
-        services.TryAddSingleton<DataVaultConfigurationProvider>(sp =>
-            new DataVaultConfigurationProvider(
-                sp.GetService<ILogger<DataVaultConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
-        // Why: Consumers inject DefaultConfigurationProvider<TConfig, TCommand> (the base) —
-        // forward to the concrete subclass so injection by base type succeeds.
-        services.TryAddSingleton<DefaultConfigurationProvider<DataVaultConfiguration, DataVaultConfigurationCommand>>(
-            sp => sp.GetRequiredService<DataVaultConfigurationProvider>());
-        // Why: Generated Initialize() links IServiceConfigurationProvider<T> as the parent on the
-        // domain provider (DataVaultProvider); this forward lets that lookup succeed.
-        services.TryAddSingleton<IServiceConfigurationProvider<DataVaultConfiguration>>(
-            sp => sp.GetRequiredService<DataVaultConfigurationProvider>());
-    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DataVaultConfigurationProvider"/> class.

@@ -58,7 +58,6 @@ public sealed class SyntheticSecretManagerType
             // Why: this registers the shared header provider for the whole SecretManager domain — and
             // with it ISecretManagerProvider, which AegisInjector takes as a constructor dependency.
             // TryAddSingleton inside makes it idempotent; every option calls it, first registration wins.
-            SecretManagerConfigurationProvider.RegisterDomainConfiguration(builder.Services);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 

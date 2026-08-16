@@ -19,22 +19,6 @@ namespace Fdw.Services.Etl;
 /// </summary>
 public class EtlPipelineConfigurationProvider : DefaultConfigurationProvider<EtlPipelineConfiguration, EtlPipelineConfigurationCommand>
 {
-    /// <summary>
-    /// Registers the EtlPipelineConfigurationProvider with DI, targeting this domain's own default
-    /// location. To override, call <c>SetConfiguration</c> on the resolved singleton.
-    /// </summary>
-    public static void RegisterDomainConfiguration(IServiceCollection services)
-    {
-        services.TryAddSingleton<EtlPipelineConfigurationProvider>(sp =>
-            new EtlPipelineConfigurationProvider(
-                sp.GetService<ILogger<EtlPipelineConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
-        services.TryAddSingleton<DefaultConfigurationProvider<EtlPipelineConfiguration, EtlPipelineConfigurationCommand>>(
-            sp => sp.GetRequiredService<EtlPipelineConfigurationProvider>());
-        services.TryAddSingleton<IServiceConfigurationProvider<EtlPipelineConfiguration>>(
-            sp => sp.GetRequiredService<EtlPipelineConfigurationProvider>());
-    }
 
     /// <summary>Initializes a new instance of the <see cref="EtlPipelineConfigurationProvider"/> class.</summary>
     public EtlPipelineConfigurationProvider(

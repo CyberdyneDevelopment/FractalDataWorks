@@ -129,7 +129,6 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             // Why: register the ETL-kind header provider (idempotent TryAdd) that EtlPipelineTypes' generated
             // provider resolves as IServiceConfigurationProvider<EtlPipelineConfiguration> — the domain,
             // not the app, registers what it depends on.
-            EtlPipelineConfigurationProvider.RegisterDomainConfiguration(builder.Services);
 
             // Why: ETL is a KIND the general Pipeline header consumes. Register the general header provider
             // (idempotent TryAdd) here too so the "Etl" typed-provider attachment in RegisterFactory never

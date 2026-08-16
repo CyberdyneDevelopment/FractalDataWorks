@@ -13,6 +13,9 @@ using Fdw.Services.SecretManagers.EnvironmentVariable.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Fdw.Services.SecretManagers.Commands;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.Services.Connections.FileSystem.Tests.Integration;
 
@@ -65,7 +68,29 @@ public sealed class FileSystemConnectionGatewayFixture : IDisposable
         // SecretManagerConfigurationProvider". FDW's own tests cannot reference reference-servicetypes to
         // get it back: that package depends on FDW, so the dependency only runs one way.
         // TryAddSingleton inside makes this idempotent if an option is ever present again.
-        SecretManagerConfigurationProvider.RegisterDomainConfiguration(services);
+
+        services.TryAddSingleton<SecretManagerConfigurationProvider>(sp =>
+            new SecretManagerConfigurationProvider(
+                sp.GetService<ILogger<SecretManagerConfigurationProvider>>()!,
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+        // Why: Consumers inject DefaultConfigurationProvider<TConfig, TCommand> (the new base) —
+        // forward to the concrete subclass.
+        services.TryAddSingleton<DefaultConfigurationProvider<SecretManagerConfiguration, SecretManagerConfigurationCommand>>(
+            sp => sp.GetRequiredService<SecretManagerConfigurationProvider>());
+        // Why: Generated Initialize() links IServiceConfigurationProvider<T> as the parent on the
+        // domain provider (SecretManagerProvider); this forward lets that lookup succeed.
+        services.TryAddSingleton<IServiceConfigurationProvider<SecretManagerConfiguration>>(
+            sp => sp.GetRequiredService<SecretManagerConfigurationProvider>());
+        // Why: publishes the domain's own provider interface. The generated Register only registers the
+        // provider under IFdwServiceProvider<,>, which no factory may take by constructor (FDW045).
+        // Consumers — the connection factories above all — depend on ISecretManagerProvider instead, and
+        // this forward hands them the SAME instance, so its factory registrations and cache are shared.
+        // The cast is deliberate and fail-loud: the generator constructs DefaultSecretManagerProvider,
+        // and if anything ever replaces that registration with a type that is not the domain provider,
+        // the composition root must break loudly rather than resolve a second, empty provider.
+        services.TryAddSingleton<ISecretManagerProvider>(
+            sp => (ISecretManagerProvider)sp.GetRequiredService<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>());
 
         // Why: the typed BODY provider, also lost with the option. The header provider composes an
         // aggregate by dispatching on the ServiceOptionType discriminator to a typed provider; with none

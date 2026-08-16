@@ -32,35 +32,6 @@ namespace Fdw.Services.SecretManagers;
 /// </summary>
 public class SecretManagerConfigurationProvider : DefaultConfigurationProvider<SecretManagerConfiguration, SecretManagerConfigurationCommand>
 {
-    /// <summary>
-    /// Registers the SecretManagerConfigurationProvider with DI, targeting this domain's own default
-    /// location. To override, call <c>SetConfiguration</c> on the resolved singleton.
-    /// </summary>
-    public static void RegisterDomainConfiguration(IServiceCollection services)
-    {
-        services.TryAddSingleton<SecretManagerConfigurationProvider>(sp =>
-            new SecretManagerConfigurationProvider(
-                sp.GetService<ILogger<SecretManagerConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
-        // Why: Consumers inject DefaultConfigurationProvider<TConfig, TCommand> (the new base) —
-        // forward to the concrete subclass.
-        services.TryAddSingleton<DefaultConfigurationProvider<SecretManagerConfiguration, SecretManagerConfigurationCommand>>(
-            sp => sp.GetRequiredService<SecretManagerConfigurationProvider>());
-        // Why: Generated Initialize() links IServiceConfigurationProvider<T> as the parent on the
-        // domain provider (SecretManagerProvider); this forward lets that lookup succeed.
-        services.TryAddSingleton<IServiceConfigurationProvider<SecretManagerConfiguration>>(
-            sp => sp.GetRequiredService<SecretManagerConfigurationProvider>());
-        // Why: publishes the domain's own provider interface. The generated Register only registers the
-        // provider under IFdwServiceProvider<,>, which no factory may take by constructor (FDW045).
-        // Consumers — the connection factories above all — depend on ISecretManagerProvider instead, and
-        // this forward hands them the SAME instance, so its factory registrations and cache are shared.
-        // The cast is deliberate and fail-loud: the generator constructs DefaultSecretManagerProvider,
-        // and if anything ever replaces that registration with a type that is not the domain provider,
-        // the composition root must break loudly rather than resolve a second, empty provider.
-        services.TryAddSingleton<ISecretManagerProvider>(
-            sp => (ISecretManagerProvider)sp.GetRequiredService<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>());
-    }
 
     // Why: tracks the concrete typed-body CLR type for each discriminator. Endpoints
     // deserialize the incoming JSON Configuration body into the correct strongly-typed

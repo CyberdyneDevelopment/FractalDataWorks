@@ -12,6 +12,10 @@ using System;
 using System.Linq;
 using Fdw.Results;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Fdw.Services.Configuration;
+using Fdw.Configuration;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.DataVault;
 
@@ -65,6 +69,24 @@ public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
             var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
                 return registered;
+
+            // The configuration provider for this domain, registered once here rather than by every
+            // caller that happens to need it.
+            builder.Services.TryAddSingleton<DataVaultConfigurationProvider>(sp =>
+                new DataVaultConfigurationProvider(
+                    sp.GetService<ILogger<DataVaultConfigurationProvider>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+
+            // Why: consumers inject DefaultConfigurationProvider<TConfig, TCommand> — forward to the
+            // concrete subclass so injection by base type succeeds.
+            builder.Services.TryAddSingleton<DefaultConfigurationProvider<DataVaultConfiguration, DataVaultConfigurationCommand>>(
+                sp => sp.GetRequiredService<DataVaultConfigurationProvider>());
+
+            // Why: generated Initialize() links IServiceConfigurationProvider<T> as the parent on the
+            // domain provider; this forward lets that lookup succeed.
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<DataVaultConfiguration>>(
+                sp => sp.GetRequiredService<DataVaultConfigurationProvider>());
 
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));

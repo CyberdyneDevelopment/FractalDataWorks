@@ -17,6 +17,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Results;
 using Microsoft.Extensions.Hosting;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Etl.Commands;
+using Microsoft.Extensions.Options;
+using System.Collections.Generic;
 
 namespace Fdw.Services.Etl;
 
@@ -130,6 +135,18 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
             var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
                 return registered;
+            // EtlPipeline configuration, registered once for the domain here rather
+            // than by every caller that needs it.
+
+            builder.Services.TryAddSingleton<EtlPipelineConfigurationProvider>(sp =>
+                new EtlPipelineConfigurationProvider(
+                    sp.GetService<ILogger<EtlPipelineConfigurationProvider>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+            builder.Services.TryAddSingleton<DefaultConfigurationProvider<EtlPipelineConfiguration, EtlPipelineConfigurationCommand>>(
+                sp => sp.GetRequiredService<EtlPipelineConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<EtlPipelineConfiguration>>(
+                sp => sp.GetRequiredService<EtlPipelineConfigurationProvider>());
 
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
