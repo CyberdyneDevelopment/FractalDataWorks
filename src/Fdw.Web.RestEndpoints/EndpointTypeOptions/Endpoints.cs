@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Builder;
 using Fdw.Results;
 using FastEndpoints;
 using FastEndpoints.Swagger;
+using System.Linq;
 
 namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
 
@@ -152,6 +153,25 @@ public partial class Endpoints : ServiceTypeCollectionBase<IEndpointTypeCollecti
                 // Filter is not used: it narrows what discovery found, and there is no discovery.
                 o.DisableAutoDiscovery = true;
                 o.SourceGeneratorDiscoveredTypes.AddRange(DeclaredEndpoints.Types);
+
+                // Validators travel the same road. FastEndpoints reads them out of this same list, and
+                // with discovery off nothing else puts them there — so every RuleFor in the codebase was
+                // inert. That is why endpoints returned 201 for an empty body: the validator existed,
+                // was never seen, and the handler ran anyway.
+                //
+                // Why the assemblies of declared endpoints and not a global scan: this stays bounded by
+                // what an option actually declared. An assembly nobody registered an endpoint from is
+                // not searched, so DisableAutoDiscovery still means what it says — nothing arrives that
+                // was not asked for.
+                foreach (var validatorType in DeclaredEndpoints.Types
+                    .Select(t => t.Assembly)
+                    .Distinct()
+                    .SelectMany(assembly => assembly.GetTypes())
+                    .Where(t => t is { IsAbstract: false, IsInterface: false }
+                        && typeof(FastEndpoints.IValidator).IsAssignableFrom(t)))
+                {
+                    o.SourceGeneratorDiscoveredTypes.Add(validatorType);
+                }
             });
 
             // Why the accessor is registered HERE and not in the host: it exists for
