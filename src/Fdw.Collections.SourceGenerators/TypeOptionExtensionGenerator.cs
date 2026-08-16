@@ -143,8 +143,12 @@ public class TypeOptionExtensionGenerator : IIncrementalGenerator
         // Extract constructors
         var constructors = ExtractConstructors(classSymbol);
 
-        // Generate stable ID from the option name (not the full type name)
-        var generatedId = GenerateIdFromName(optionName);
+        // Why the CLR full name and not the option name: the runtime derives an unassigned Id the
+        // same way, from GetType().FullName, and the two must agree or every generated
+        // collection.ById(GeneratedId) lookup misses and returns the NotFound sentinel — silently,
+        // because ById does not throw. Hashing the name alone also collides: "Query" is the name of
+        // MsSqlQueryTranslator, PostgreSqlQueryTranslator, SqliteQueryTranslator and QueryCommand.
+        var generatedId = GenerateIdFromName(GetClrFullName(classSymbol));
 
         // Skip extension generation for Guid-based collections
         // Guid-based collections (like DataStoreTypes) use computed Guid IDs,
@@ -298,6 +302,30 @@ public class TypeOptionExtensionGenerator : IIncrementalGenerator
     private static string EscapeString(string s)
     {
         return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    }
+
+    /// <summary>
+    /// Builds the name <see cref="System.Type.FullName"/> would report for this symbol.
+    /// </summary>
+    /// <param name="symbol">The option type.</param>
+    /// <returns>Namespace-qualified name, nested types joined with '+'.</returns>
+    /// <remarks>
+    /// Not ToDisplayString: the fully-qualified format prefixes "global::" and joins nested types
+    /// with '.', where the runtime uses '+'. Either difference changes the hash and breaks the
+    /// agreement this exists to keep. Generic types are already rejected before this is reached,
+    /// so no arity suffix or type-argument list has to be reproduced.
+    /// </remarks>
+    private static string GetClrFullName(INamedTypeSymbol symbol)
+    {
+        var name = symbol.MetadataName;
+
+        for (var outer = symbol.ContainingType; outer != null; outer = outer.ContainingType)
+        {
+            name = outer.MetadataName + "+" + name;
+        }
+
+        var ns = symbol.ContainingNamespace;
+        return ns == null || ns.IsGlobalNamespace ? name : ns.ToDisplayString() + "." + name;
     }
 
     private static int GenerateIdFromName(string name)

@@ -154,6 +154,7 @@ public abstract class TypeOptionBase<TBase> : TypeOptionBase<int, TBase>
     /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
     protected TypeOptionBase(int id, string name) : base(id, name)
     {
+        _id = id;
     }
 
     /// <summary>
@@ -165,6 +166,7 @@ public abstract class TypeOptionBase<TBase> : TypeOptionBase<int, TBase>
     /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
     protected TypeOptionBase(int id, string name, string? category) : base(id, name, category)
     {
+        _id = id;
     }
 
     /// <summary>
@@ -180,6 +182,7 @@ public abstract class TypeOptionBase<TBase> : TypeOptionBase<int, TBase>
     protected TypeOptionBase(int id, string name, string configurationKey, string displayName, string description, string? category)
         : base(id, name, configurationKey, displayName, description, category)
     {
+        _id = id;
     }
 
     /// <summary>
@@ -193,9 +196,29 @@ public abstract class TypeOptionBase<TBase> : TypeOptionBase<int, TBase>
     /// stored row that referenced the old one. That makes an option's name part of its contract
     /// once anything persists it.
     /// </remarks>
-    protected TypeOptionBase(string name) : base(GenerateIdFromName(name), name)
+    protected TypeOptionBase(string name) : base(0, name)
     {
+        _id = null;
     }
+
+    private readonly int? _id;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Null means no id was given, so one is derived from the option's fully qualified type name.
+    ///
+    /// Why the FQN and not the name: this used to hash the name, and names repeat. "Query" is the
+    /// name of MsSqlQueryTranslator, PostgreSqlQueryTranslator, SqliteQueryTranslator and
+    /// QueryCommand — four types, one number. Eight names in this codebase are shared that way.
+    ///
+    /// Why nullable and not a zero test: zero is a real id. The collections' Empty/NotFound sentinel
+    /// holds it, and a zero test would renumber the one option whose id is load-bearing.
+    ///
+    /// Why an override and not the base initializer: the concrete type is not available there —
+    /// "this" is illegal in an initializer and TBase is the family base, the same for every option
+    /// in it. GetType() here returns the option itself.
+    /// </remarks>
+    public override int Id => _id ?? GenerateIdFromName(GetType().FullName ?? GetType().Name);
 
     /// <summary>
     /// Derives a stable identifier from an option's name using FNV-1a.
