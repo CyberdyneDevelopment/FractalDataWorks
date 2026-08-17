@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Conventions;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.Abstractions.Mappers.PocoMappers;
@@ -179,6 +180,11 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         return GenericResult<Dictionary<string, MaterializedSource>>.Success(map);
     }
 
+    // Why the override: pulling one federated source is a straight-line sequence of independent
+    // guards — filter translation, container, connection, record capability — each failing loud on its
+    // own condition. Splitting it would scatter one source's addressing across helpers without removing
+    // a single branch, and the branches are the point.
+    [ConventionOverride(MaxCyclomaticComplexity = 20)]
     private static async Task<IGenericResult<MaterializedSource>> PullSource(
         DataSetExecutionContext ctx,
         DataSetSourceConfiguration sourceConfig,
@@ -188,13 +194,9 @@ public sealed class FederatedDataSetType : DataSetTypeBase
     {
         var sourceName = sourceConfig.SourceName;
 
-        // Why: addressing (connection + container) comes exclusively from sourceConfig — commands are
-        // address-free shapes (filter/ordering/paging only).
-        var connectionName = sourceConfig.ConnectionName;
-        if (string.IsNullOrEmpty(connectionName))
-            return GenericResult<MaterializedSource>.Failure(
-                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, "(unset)", "ConnectionName is required for DataSet source queries"));
-
+        // Why: addressing comes from the container the source names — commands are address-free shapes
+        // (filter/ordering/paging only). Nothing here reads a connection off the source; see the same
+        // resolution in SimpleDataSetType.
         IFilterExpression? translatedFilter = null;
         if (sourceFilters.TryGetValue(sourceName, out var rawFilter) && rawFilter is not null)
         {
@@ -216,17 +218,25 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         if (!containerResult.IsSuccess || containerResult.Value is null)
             return GenericResult<MaterializedSource>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, sourceName));
 
-        var connectionResult = await ctx.ConnectionProvider.Get<IDataConnection>(connectionName, ct).ConfigureAwait(false);
+        // Why the connection is walked off the container: a DataStore owns its connection and the
+        // container reaches it through Parent.Store, so the container already carries the answer.
+        var connectionId = containerResult.Value.Parent?.Store?.ConnectionId ?? Guid.Empty;
+        if (connectionId == Guid.Empty)
+            return GenericResult<MaterializedSource>.Failure(
+                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName,
+                    "the container's DataStore carries no ConnectionId"));
+
+        var connectionResult = await ctx.ConnectionProvider.Get(connectionId, ct).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value is null)
             return GenericResult<MaterializedSource>.Failure(
-                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, connectionName, connectionResult.CurrentMessage ?? "Unknown error"));
+                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, connectionResult.CurrentMessage ?? "Unknown error"));
 
         // Why: a federated in-memory join pulls each source as DataRecord through the record-source
         // capability. A connection that does not advertise it cannot be federated — fail loud (NO
         // FALLBACKS); never degrade to a materializing path (that would silently change the contract).
         if (connectionResult.Value is not IRecordSourceConnection recordConnection)
             return GenericResult<MaterializedSource>.Failure(
-                DataGatewayLogger.FederatedSourceNotRecordCapable(ctx.Logger, ctx.Config.Name, sourceName, connectionName));
+                DataGatewayLogger.FederatedSourceNotRecordCapable(ctx.Logger, ctx.Config.Name, sourceName, sourceConfig.DataStoreName));
 
         DataGatewayLogger.ExecutingSourceQuery(ctx.Logger, sourceName, containerName);
         var sourceQuery = new QueryCommand<DataRecord> { Filter = translatedFilter };

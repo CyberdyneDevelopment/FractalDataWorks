@@ -232,14 +232,10 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         DataSetSourceConfiguration sourceConfig,
         CancellationToken ct)
     {
-        // Why: addressing (connection + container) comes exclusively from sourceConfig — commands are
-        // address-free shapes (filter/ordering/paging only).
-        var sourceConnectionName = sourceConfig.ConnectionName;
-        if (string.IsNullOrEmpty(sourceConnectionName))
-            return GenericResult<T>.Failure(
-                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, "(unset)", "ConnectionName is required for DataSet source queries"));
-
-        DataGatewayLogger.ExecuteSourceQueryEntering(ctx.Logger, sourceConfig.SourceName, sourceConnectionName);
+        // Why: addressing comes from the container the source names — commands are address-free shapes
+        // (filter/ordering/paging only). The source names a DataStore, path and container; the container
+        // it resolves to knows the rest, so nothing here reads a connection off the source.
+        DataGatewayLogger.ExecuteSourceQueryEntering(ctx.Logger, sourceConfig.SourceName, sourceConfig.DataStoreName);
 
         var containerName = GetContainerName(sourceConfig);
         if (string.IsNullOrEmpty(containerName))
@@ -251,17 +247,30 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         if (!containerResult.IsSuccess || containerResult.Value == null)
             return GenericResult<T>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, sourceConfig.SourceName));
 
-        var connectionResult = await ctx.ConnectionProvider.Get<IDataConnection>(sourceConnectionName, ct).ConfigureAwait(false);
+        // Why the connection is walked off the container and not read from the source: a DataStore owns
+        // its connection (data.DataStore.ConnectionRowId), and the container reaches it through
+        // Parent.Store, so the container ALREADY carries the answer. Requiring the source to repeat it
+        // as a name made a second source of truth that had to be kept in step by hand — and when it was
+        // simply absent, as it is for any source composed from a request DTO, extraction failed with
+        // "ConnectionName is required" against a datastore that knew its connection perfectly well.
+        // This is the same resolution DataGatewayService already performs for a container command.
+        var connectionId = containerResult.Value.Parent?.Store?.ConnectionId ?? Guid.Empty;
+        if (connectionId == Guid.Empty)
+            return GenericResult<T>.Failure(
+                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName,
+                    "the container's DataStore carries no ConnectionId"));
+
+        var connectionResult = await ctx.ConnectionProvider.Get(connectionId, ct).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value == null)
             return GenericResult<T>.Failure(
-                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConnectionName, connectionResult.CurrentMessage ?? "Unknown error"));
+                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, connectionResult.CurrentMessage ?? "Unknown error"));
 
         var result = await connectionResult.Value.Execute<T>(command, containerResult.Value, ct).ConfigureAwait(false);
 
         if (result.IsSuccess)
             DataGatewayLogger.SourceQueryCompleted(ctx.Logger, sourceConfig.SourceName, 0);
         else
-            DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConnectionName, result.CurrentMessage ?? "Source query failed");
+            DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, result.CurrentMessage ?? "Source query failed");
 
         return result.IsFailure ? result : GenericResult<T>.Success(result.Value!);
     }
