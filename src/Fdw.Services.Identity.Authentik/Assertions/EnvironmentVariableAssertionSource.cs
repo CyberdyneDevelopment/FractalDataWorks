@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Identity.Authentik.Assertions;
 
 /// <summary>
-/// Reads a federated assertion from an environment variable. This is how GitLab CI delivers a job's
+/// Reads a federated assertion from an environment variable. This is how a CI CI delivers a job's
 /// <c>id_tokens</c>, which is the motivating case for federated identity.
 /// </summary>
 [TypeOption(typeof(FederatedAssertionSources), "EnvironmentVariable")]

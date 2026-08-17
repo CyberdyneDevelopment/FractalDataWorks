@@ -6,7 +6,7 @@ namespace Fdw.Services.SecretManagers.HashiCorpVault.Auth;
 
 /// <summary>
 /// Authenticates with Vault's JWT method — presenting an assertion an external issuer already minted
-/// for this workload (a GitLab CI job token, a projected service-account token).
+/// for this workload (a CI job's OIDC token, a projected service-account token).
 /// </summary>
 /// <remarks>
 /// The only method here with no static secret at rest, and the one to prefer wherever the workload

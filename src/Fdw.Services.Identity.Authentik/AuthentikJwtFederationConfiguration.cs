@@ -15,7 +15,7 @@ namespace Fdw.Services.Identity.Authentik;
 /// <remarks>
 /// <para>
 /// <b>No static secret exists anywhere in this mechanism.</b> The assertion is minted per workload
-/// (GitLab CI's per-job <c>id_tokens</c> being the motivating case), expires in minutes, and is bound
+/// (a CI system's per-job OIDC tokens being the motivating case), expires in minutes, and is bound
 /// to the workload's identity by the issuing system itself. This is the mechanism to prefer wherever
 /// the workload already has a trustworthy issuer.
 /// </para>

@@ -135,19 +135,19 @@ It does **not** achieve zero-secret-at-rest. Only JWT federation does.
 ### `AuthentikJwtFederation` — federated JWT assertion (RFC 7523)
 
 Authentik is configured to trust an external OIDC issuer's signing keys directly. The workload
-presents a token that issuer already minted for it — GitLab CI's per-job `id_tokens` being the
+presents a token that issuer already minted for it — a CI system's per-job OIDC tokens being the
 motivating case — and exchanges it for an Authentik token.
 
 There is **no static secret anywhere**: the assertion is minted per job, expires in minutes, and is
 bound to the job's identity by the CI system itself. This is the mechanism to prefer wherever the
 workload already has a trustworthy issuer.
 
-Its precondition is exactly that: something must already be minting per-workload assertions. GitLab
-CI jobs have one. A long-running service on VM 104 does not, which is why both options exist rather
+Its precondition is exactly that: something must already be minting per-workload assertions. A CI
+job under a system that issues per-job OIDC tokens has one. A long-running service on VM 104 does not, which is why both options exist rather
 than one.
 
 `IFederatedAssertionSource` abstracts where the incoming assertion is read from (an environment
-variable for GitLab CI, a projected file for a Kubernetes-style service-account token) so that
+variable for a CI job, a projected file for a Kubernetes-style service-account token) so that
 adding a new assertion carrier does not touch the exchange logic.
 
 ---
