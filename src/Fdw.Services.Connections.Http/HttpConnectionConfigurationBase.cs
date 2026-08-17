@@ -137,6 +137,25 @@ public abstract class HttpConnectionConfigurationBase : IConnectionConfiguration
     public IDictionary<string, string?> AdditionalProperties { get; set; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Gets or sets request headers sent with every request this connection makes.
+    /// </summary>
+    /// <remarks>
+    /// Populated by the gateway cascade from <c>conn.HttpConnectionHeader</c>, the same KVP mechanism
+    /// <see cref="AdditionalProperties"/> uses. [NotMapped] because the values live in the child table,
+    /// not columns on this row.
+    /// <para>
+    /// Why this exists: the factory sets Accept and a User-Agent when it builds the client, and those
+    /// were the only headers a connection could ever send. Real APIs disagree about what they will
+    /// accept — ESPN's site API answers 200 for one User-Agent and 403 for another — so the value has
+    /// to belong to the connection, not to the framework. A header configured here overrides the
+    /// factory's, which makes User-Agent settable without special-casing it.
+    /// </para>
+    /// </remarks>
+    [NotMapped]
+    [Fdw.Data.ConfigurationChildTable("HttpConnectionHeader")]
+    public IDictionary<string, string?> Headers { get; set; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Gets or sets SOAP-specific settings.
     /// </summary>
     public HttpSoapSettings? Soap { get; set; }

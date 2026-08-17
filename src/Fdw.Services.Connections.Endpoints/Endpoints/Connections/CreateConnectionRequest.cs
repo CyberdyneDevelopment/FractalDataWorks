@@ -50,6 +50,13 @@ public class CreateConnectionRequest : ResourceCreateRequest
     /// <summary>Request timeout in seconds. Defaults to 30.</summary>
     public int? TimeoutSeconds { get; set; }
 
+    /// <summary>Request headers sent with every request an HTTP connection makes.</summary>
+    /// <remarks>
+    /// A header named here overrides the one the factory would otherwise send, which is how a
+    /// connection sets its own User-Agent — some hosts answer 200 for one value and 403 for another.
+    /// </remarks>
+    public IDictionary<string, string?>? Headers { get; set; }
+
     /// <summary>Security type: None, BasicAuth, ApiKey, WsSecurity, etc.</summary>
     public string? SecurityType { get; set; }
 

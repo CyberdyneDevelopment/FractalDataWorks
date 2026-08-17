@@ -43,6 +43,12 @@ public class UpdateConnectionRequest : ResourceUpdateRequest
     /// <summary>Gets or sets the timeout in seconds (Http connections). Null means no change.</summary>
     public int? TimeoutSeconds { get; set; }
 
+    /// <summary>
+    /// Gets or sets request headers to set on this Http connection. Null means no change; a supplied
+    /// set is merged into the existing headers rather than replacing them.
+    /// </summary>
+    public IDictionary<string, string?>? Headers { get; set; }
+
     /// <summary>Gets or sets the security type discriminator (Http connections). Null means no change.</summary>
     public string? SecurityType { get; set; }
 
