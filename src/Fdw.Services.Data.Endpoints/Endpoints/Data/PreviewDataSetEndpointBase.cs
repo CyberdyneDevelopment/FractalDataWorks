@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Data;
+using Fdw.Data.DataContainers.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data;
@@ -123,13 +124,13 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpoint<PreviewDataSe
 
         // Why: Addressing moved off IDataCommand onto DataStoreTarget. Path and ContainerName
         // are passed separately so the MsSql translator can qualify the table name as schema.table.
-        // Why: the framework's generic row shape -- see PostQueryDataSetEndpointBase.
-        var previewCommand = new QueryCommand<Dictionary<string, object?>>
+        // Why: the framework's row shape -- see PostQueryDataSetEndpointBase.
+        var previewCommand = new QueryCommand<IDataRow>
         {
             Paging = new PagingExpression { Skip = 0, Take = maxRows + 1 }
         };
         var previewResult = await DataGateway
-            .Execute<System.Collections.Generic.IEnumerable<Dictionary<string, object?>>>(
+            .Execute<System.Collections.Generic.IEnumerable<IDataRow>>(
                 previewCommand,
                 new DataStoreTarget(source.DataStoreName, source.PathValue, source.ContainerName),
                 ct)
@@ -147,7 +148,7 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpoint<PreviewDataSe
         var rows = allRows
             .Take(maxRows)
             .Select(r => (IReadOnlyDictionary<string, object?>)
-                new Dictionary<string, object?>(r, System.StringComparer.Ordinal))
+                new Dictionary<string, object?>(r.AsDictionary(), System.StringComparer.Ordinal))
             .ToList();
 
         return (rows, hasMore);

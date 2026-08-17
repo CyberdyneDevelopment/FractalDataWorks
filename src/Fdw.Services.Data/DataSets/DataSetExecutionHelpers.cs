@@ -157,6 +157,12 @@ internal static class DataSetExecutionHelpers
     // (column-keyed). An unmapped POCO fails loud — no reflection fallback.
     internal static IGenericResult<Dictionary<string, object?>> ObjectToDictionary(object obj)
     {
+        // Why first: IDataRow is the row shape the query path produces, so this is the common case,
+        // and it already knows how to present itself as name→value without a mapper.
+        if (obj is IDataRow row)
+            return GenericResult<Dictionary<string, object?>>.Success(
+                new Dictionary<string, object?>(row.AsDictionary(), StringComparer.OrdinalIgnoreCase));
+
         if (obj is Dictionary<string, object?> dict)
             return GenericResult<Dictionary<string, object?>>.Success(
                 new Dictionary<string, object?>(dict, StringComparer.OrdinalIgnoreCase));
@@ -169,6 +175,31 @@ internal static class DataSetExecutionHelpers
 
         return GenericResult<Dictionary<string, object?>>.Success(
             new Dictionary<string, object?>(mapper.MapToParameters(obj), StringComparer.OrdinalIgnoreCase));
+    }
+
+    // Why one schema for the whole set rather than one per row: every row of a result set has the same
+    // columns, and DataRow's value array is positional against its schema. Keys are read off the first
+    // row and each subsequent row is projected through those keys in order, so a row that happens to be
+    // missing a key contributes a null in that position instead of shifting every later value left.
+    internal static List<IDataRow> DictionariesToRows(List<Dictionary<string, object?>> dictionaries)
+    {
+        var rows = new List<IDataRow>(dictionaries.Count);
+        if (dictionaries.Count == 0)
+            return rows;
+
+        var schema = CreateSchemaFromDictionary(dictionaries[0]);
+        var keys = dictionaries[0].Keys.ToArray();
+
+        foreach (var dict in dictionaries)
+        {
+            var values = new object?[keys.Length];
+            for (var i = 0; i < keys.Length; i++)
+                values[i] = dict.TryGetValue(keys[i], out var v) ? v : null;
+
+            rows.Add(new DataRow(schema, values));
+        }
+
+        return rows;
     }
 
     internal static DataSchema CreateSchemaFromDictionary(Dictionary<string, object?> dict)
@@ -193,6 +224,13 @@ internal static class DataSetExecutionHelpers
             return GenericResult<T>.Failure(DataGatewayLogger.CalculatedResultConversionFailed(ctx.Logger, targetType.Name));
 
         var itemType = targetType.GetGenericArguments()[0];
+
+        // Why: IDataRow is the framework's row — schema-backed, ordinal-addressable, and the shape
+        // ICalculationPipeline already consumes. Rows arriving here have been flattened to dictionaries
+        // by the calculated-field pass, so they are rebuilt onto one shared schema derived from the
+        // first row; an empty result needs no schema and yields an empty list.
+        if (itemType == typeof(IDataRow) || itemType == typeof(DataRow))
+            return GenericResult<T>.Success((T)(object)DictionariesToRows(dictionaries));
 
         if (itemType == typeof(Dictionary<string, object?>) || itemType == typeof(IDictionary<string, object?>))
             return GenericResult<T>.Success((T)(object)dictionaries);

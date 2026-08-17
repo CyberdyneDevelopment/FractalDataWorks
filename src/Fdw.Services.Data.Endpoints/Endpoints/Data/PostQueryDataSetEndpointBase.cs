@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Commands.Data;
 using Fdw.Data;
+using Fdw.Data.DataContainers.Abstractions;
 using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Data;
@@ -145,18 +146,18 @@ public abstract class PostQueryDataSetEndpointBase : Endpoint<PostQueryDataSetRe
         // are passed separately so the translator can qualify the table name correctly.
         // No fallback: if DataStoreName is missing the query will fail loud rather than silently
         // routing to the wrong connection.
-        // Why: Dictionary<string, object?> is the framework's generic row -- a dataset's columns are
-        // known only at runtime, and this is the shape the connections materialize and
-        // DataSetExecutionHelpers converts without a mapper. ExpandoObject is not a supported row
-        // shape: it reaches ConvertToPocos, finds no generated mapper, and the rows are lost.
-        var command = new QueryCommand<Dictionary<string, object?>>
+        // Why: IDataRow is the framework's row -- a dataset's columns are known only at runtime, so the
+        // row carries its own schema rather than a compile-time type, and it is the shape the
+        // calculation pipeline already consumes. It needs no generated mapper, which is what made
+        // ExpandoObject unusable here: that reached ConvertToPocos, found none, and lost every row.
+        var command = new QueryCommand<IDataRow>
         {
             Paging = new PagingExpression { Skip = skip, Take = take + 1 },
             Filter = BuildFilter(appliedFilters)
         };
 
         var queryResult = await _dataGateway
-            .Execute<IEnumerable<Dictionary<string, object?>>>(
+            .Execute<IEnumerable<IDataRow>>(
                 command,
                 new DataStoreTarget(primarySource.DataStoreName, primarySource.PathValue, primarySource.ContainerName),
                 ct)
@@ -170,13 +171,13 @@ public abstract class PostQueryDataSetEndpointBase : Endpoint<PostQueryDataSetRe
             return;
         }
 
-        var allRows = (queryResult.Value ?? Enumerable.Empty<Dictionary<string, object?>>()).ToList();
+        var allRows = (queryResult.Value ?? Enumerable.Empty<IDataRow>()).ToList();
         var hasMore = allRows.Count > take;
 
         var rows = allRows
             .Take(take)
             .Select(r => (IReadOnlyDictionary<string, object?>)
-                new Dictionary<string, object?>(r, StringComparer.Ordinal))
+                new Dictionary<string, object?>(r.AsDictionary(), StringComparer.Ordinal))
             .ToList();
 
         DataSetEndpointLog.PostQueryCompleted(Logger, req.DataSetName, rows.Count, hasMore);
