@@ -10,7 +10,7 @@ public class DataContainerAbstractionsTests
     [Trait("Category", "DataIntegrity")]
     public void CanLoadAssembly()
     {
-        var assembly = typeof(IDataContainer).Assembly;
+        var assembly = typeof(IDataRow).Assembly;
         assembly.ShouldNotBeNull();
         assembly.GetName().Name.ShouldBe("Fdw.Data.DataContainers.Abstractions");
     }

@@ -31,10 +31,6 @@ using Fdw.Services.Data.Caching;
 using Fdw.Services.Data.Execution;
 using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Results;
-// Why: Both Fdw.Data.Abstractions and Fdw.Data.DataContainers.Abstractions
-// define IDataContainer with different contracts. The IDataNode tree version (Data.Abstractions) is the
-// canonical source for container resolution (Phase 7). Alias resolves the ambiguity.
-using IDataNodeContainer = Fdw.Data.Abstractions.IDataContainer;
 
 namespace Fdw.Services.Data;
 
@@ -472,27 +468,27 @@ public sealed class DataGatewayService : IDataGateway
     // the provider's own result — which, after the addressed-lookup logging added to
     // ConfigurationGatewayDataStoreProvider.Get(store, path, container, ct), already names the missing
     // store/path/container — straight to the caller.
-    private async Task<IGenericResult<IDataNodeContainer>> ResolveContainerResult(DataStoreTarget target, CancellationToken ct)
+    private async Task<IGenericResult<IDataContainer>> ResolveContainerResult(DataStoreTarget target, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(target.Container))
-            return GenericResult<IDataNodeContainer>.Failure(DataGatewayLogger.ContainerNotFound(_logger, target.Container));
+            return GenericResult<IDataContainer>.Failure(DataGatewayLogger.ContainerNotFound(_logger, target.Container));
 
         if (string.IsNullOrWhiteSpace(target.DataStore))
-            return GenericResult<IDataNodeContainer>.Failure(DataServiceResultCodes.ByName("DataStoreNameRequired"));
+            return GenericResult<IDataContainer>.Failure(DataServiceResultCodes.ByName("DataStoreNameRequired"));
 
         if (_dataStoreProvider is null)
-            return GenericResult<IDataNodeContainer>.Failure(DataGatewayLogger.DataStoreProviderUnavailable(_logger));
+            return GenericResult<IDataContainer>.Failure(DataGatewayLogger.DataStoreProviderUnavailable(_logger));
 
         var containerResult = await _dataStoreProvider
             .Get(target.DataStore, target.Path ?? string.Empty, target.Container, ct)
             .ConfigureAwait(false);
 
         if (!containerResult.IsSuccess)
-            return containerResult.ToNewResult<IDataNodeContainer>();
+            return containerResult.ToNewResult<IDataContainer>();
         if (containerResult.Value is null)
-            return GenericResult<IDataNodeContainer>.Failure(DataGatewayLogger.ContainerNotFound(_logger, target.Container));
+            return GenericResult<IDataContainer>.Failure(DataGatewayLogger.ContainerNotFound(_logger, target.Container));
 
-        return GenericResult<IDataNodeContainer>.Success(containerResult.Value);
+        return GenericResult<IDataContainer>.Success(containerResult.Value);
     }
 
 }
