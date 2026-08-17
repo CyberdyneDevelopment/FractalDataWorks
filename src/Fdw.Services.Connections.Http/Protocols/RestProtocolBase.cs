@@ -153,22 +153,10 @@ public abstract class RestProtocolBase : HttpProtocolBase
         // consults the RecordSourceTypes TypeCollection so any registered format is handled.
         if (IsRowCollectionType(resultType) && HasRowReaderForFormat(container))
         {
-            var rowResult = ExtractRowsFromContent(content, container);
-            if (!rowResult.IsSuccess)
-                return rowResult;
-
-            // Why: Mirror the ExpandoObject conversion in HttpProtocolBase.ProcessResponse.
-            // ExtractRowsFromContent always produces List<Dictionary<string,object?>>; when
-            // the caller requests IEnumerable<ExpandoObject>, convert so ConvertResult<T> succeeds.
-            if (resultType.IsGenericType &&
-                resultType.GetGenericArguments()[0] == typeof(System.Dynamic.ExpandoObject) &&
-                rowResult.Value is List<Dictionary<string, object?>> dicts)
-            {
-                var expandos = ConvertDictionariesToExpandoObjects(dicts);
-                return GenericResult<object?>.Success(expandos);
-            }
-
-            return rowResult;
+            // Why: ExtractRowsFromContent produces List<Dictionary<string,object?>>, which IS the
+            // framework's generic row shape — the same one every other connection returns. Nothing
+            // converts it further.
+            return ExtractRowsFromContent(content, container);
         }
 
         // Extract pagination info if available

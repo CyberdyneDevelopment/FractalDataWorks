@@ -143,24 +143,10 @@ public abstract class HttpProtocolBase : TypeOptionBase<int, HttpProtocolBase>, 
         // source is registered for this format, so we fall through to ExtractResult.
         if (IsRowCollectionType(resultType) && HasRowReaderForFormat(container))
         {
-            var rowResult = ExtractRowsFromContent(content, container);
-            if (!rowResult.IsSuccess)
-                return rowResult;
-
-            // Why: ExtractRowsFromContent always produces List<Dictionary<string,object?>>.
-            // When the caller requests IEnumerable<ExpandoObject> (DataSet dynamic rows), each
-            // dictionary must be converted to an ExpandoObject so ConvertResult<T> can cast it.
-            // The conversion is here (not in ConvertResult<T>) because resultType is available at
-            // this seam and ConvertResult<T> only has a closed T at compile time.
-            if (resultType.IsGenericType &&
-                resultType.GetGenericArguments()[0] == typeof(System.Dynamic.ExpandoObject) &&
-                rowResult.Value is List<Dictionary<string, object?>> dicts)
-            {
-                var expandos = ConvertDictionariesToExpandoObjects(dicts);
-                return GenericResult<object?>.Success(expandos);
-            }
-
-            return rowResult;
+            // Why: ExtractRowsFromContent produces List<Dictionary<string,object?>>, which IS the
+            // framework's generic row shape — the same one the SQL connections materialize and
+            // DataSetExecutionHelpers converts without a mapper. Nothing converts it further.
+            return ExtractRowsFromContent(content, container);
         }
 
         // Delegate to virtual method for protocol-specific extraction
@@ -428,11 +414,10 @@ public abstract class HttpProtocolBase : TypeOptionBase<int, HttpProtocolBase>, 
             return false;
 
         var elementType = resultType.GetGenericArguments()[0];
-        // Why: Dictionary<string,?> / IDictionary<string,?> are the typed row representation.
-        // ExpandoObject and object (dynamic) are the dynamic row representations used by DataSet
-        // queries that do not have a compile-time schema. All three yield flat name→value rows
-        // that JsonStreamRowSource produces as Dictionary<string, object?>, so the same row-extraction
-        // path is correct for all of them.
+        // Why: Dictionary<string,?> / IDictionary<string,?> are the generic row representation, and
+        // object (dynamic) is the untyped one used by DataSet queries with no compile-time schema.
+        // Both yield flat name→value rows that JsonStreamRowSource produces as
+        // Dictionary<string, object?>, so the same row-extraction path is correct for both.
         return IsDictionaryRowType(elementType) || IsDynamicRowType(elementType);
     }
 
@@ -449,43 +434,12 @@ public abstract class HttpProtocolBase : TypeOptionBase<int, HttpProtocolBase>, 
         return t.GetGenericArguments()[0] == typeof(string);
     }
 
-    // Why: ExpandoObject and object (System.Object) are the dynamic/untyped row element types.
-    // DataSet queries with no compile-time schema use IEnumerable<ExpandoObject> or IEnumerable<object>.
-    // Both are valid row-collection element types for ExtractRowsFromContent; the caller (ConvertResult<T>)
-    // handles the List<Dictionary<string,object?>> → T cast downstream.
+    // Why: object (System.Object) is the untyped row element type — a DataSet query with no
+    // compile-time schema uses IEnumerable<object>, and the generic row itself is covered by
+    // IsDictionaryRowType. The caller (ConvertResult<T>) handles the
+    // List<Dictionary<string,object?>> → T cast downstream.
     private static bool IsDynamicRowType(Type t)
-        => t == typeof(System.Dynamic.ExpandoObject) || t == typeof(object);
-
-    /// <summary>
-    /// Converts a list of string-keyed dictionaries to <see cref="System.Dynamic.ExpandoObject"/> instances.
-    /// </summary>
-    /// <remarks>
-    /// <see cref="ExtractRowsFromContent(string,IStorageContainer)"/> always produces
-    /// <c>List&lt;Dictionary&lt;string, object?&gt;&gt;</c>. When the caller requests
-    /// <c>IEnumerable&lt;ExpandoObject&gt;</c> (DataSet dynamic queries), each dictionary is
-    /// projected into an <see cref="System.Dynamic.ExpandoObject"/> so that
-    /// <c>ConvertResult&lt;T&gt;</c> in <c>HttpConnection</c> can cast the result without
-    /// reflection gymnastics. <c>IDictionary&lt;string, object?&gt;</c> is the explicit interface
-    /// on <see cref="System.Dynamic.ExpandoObject"/> used for property assignment.
-    /// </remarks>
-    /// <param name="rows">The source dictionaries to convert.</param>
-    /// <returns>A list of <see cref="System.Dynamic.ExpandoObject"/> with the same key/value pairs.</returns>
-    // Why: protected (not private) so derived classes in other assemblies (e.g. RestProtocolBase)
-    // can call this helper when they override ProcessResponse and need the same ExpandoObject conversion.
-    protected static IReadOnlyList<System.Dynamic.ExpandoObject> ConvertDictionariesToExpandoObjects(
-        IReadOnlyList<Dictionary<string, object?>> rows)
-    {
-        var result = new List<System.Dynamic.ExpandoObject>(rows.Count);
-        foreach (var dict in rows)
-        {
-            var expando = new System.Dynamic.ExpandoObject();
-            var expandoDict = (IDictionary<string, object?>)expando;
-            foreach (var kv in dict)
-                expandoDict[kv.Key] = kv.Value;
-            result.Add(expando);
-        }
-        return result;
-    }
+        => t == typeof(object);
 
     #endregion
 }

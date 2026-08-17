@@ -35,7 +35,7 @@ namespace Fdw.Services.Data;
 /// Each source is pulled as <c>IRecordSource&lt;DataRecord&gt;</c> through the
 /// <see cref="IRecordSourceConnection"/> capability — the join keys and merges over typed
 /// <see cref="DataRecord"/> cells (<c>record["field"]</c>), never <c>dynamic</c>, an
-/// <c>ExpandoObject</c>, or a dictionary round-trip. A source whose connection does not advertise the
+/// or a dictionary round-trip. A source whose connection does not advertise the
 /// record-source capability FAILS LOUD (NO FALLBACKS) rather than degrading to a materializing path.
 /// </para>
 /// </remarks>

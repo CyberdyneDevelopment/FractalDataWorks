@@ -235,9 +235,31 @@ internal static class DataSetQueryHelper
     /// denormalizing it from the resolved source dataset is a separate mechanism (not yet built); no
     /// fallback value is fabricated here.
     /// </remarks>
-    internal static List<DataSetSourceConfiguration> MapSources(IList<CreateDataSetSourceRequest> sources) =>
-        sources.Select(s => new DataSetSourceConfiguration
+    /// <param name="sources">The composed source requests.</param>
+    /// <param name="existing">
+    /// The sources already persisted under this dataset, so a source that is being edited keeps the
+    /// identity it already has. Empty on create.
+    /// </param>
+    internal static List<DataSetSourceConfiguration> MapSources(
+        IList<CreateDataSetSourceRequest> sources,
+        IEnumerable<DataSetSourceConfiguration> existing)
+    {
+        // Why: version-on-write is keyed on the row's durable Id — the save retires
+        // "WHERE Id=@LogicalId AND IsCurrent=1" and then inserts. An update re-composes this collection
+        // from the request, so without linking each source back to the row it already is, the save minted
+        // a new Id, retired nothing, and collided with the still-current row on
+        // UX_DataSetSource_DataSetId_SourceName_Current. Matched on SourceName because that is the column
+        // that index is built on; Name is NOT a column on data.DataSetSource, so it cannot carry identity.
+        var priorIds = existing
+            .Where(e => !string.IsNullOrEmpty(e.SourceName))
+            .GroupBy(e => e.SourceName, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First().Id, StringComparer.Ordinal);
+
+        return sources.Select(s => new DataSetSourceConfiguration
         {
+            // A source the dataset already has keeps its Id; a genuinely new one is left unset and the
+            // save cascade mints it, which is the one place a configuration id is created.
+            Id = priorIds.TryGetValue(s.SourceName, out var priorId) ? priorId : default,
             Name = s.SourceName,
             SourceName = s.SourceName,
             DataStoreName = s.DataStoreName,
@@ -257,6 +279,7 @@ internal static class DataSetQueryHelper
             FilePath = s.FilePath,
             FileFormat = s.FileFormat
         }).ToList();
+    }
 
     /// <summary>Maps join requests onto the (currently non-persisted) join configuration list.</summary>
     internal static List<JoinConfiguration> MapJoins(IList<DataSetJoinPayload> joins) =>

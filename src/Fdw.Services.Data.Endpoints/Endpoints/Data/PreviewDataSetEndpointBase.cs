@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -124,12 +123,13 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpoint<PreviewDataSe
 
         // Why: Addressing moved off IDataCommand onto DataStoreTarget. Path and ContainerName
         // are passed separately so the MsSql translator can qualify the table name as schema.table.
-        var previewCommand = new QueryCommand<ExpandoObject>
+        // Why: the framework's generic row shape -- see PostQueryDataSetEndpointBase.
+        var previewCommand = new QueryCommand<Dictionary<string, object?>>
         {
             Paging = new PagingExpression { Skip = 0, Take = maxRows + 1 }
         };
         var previewResult = await DataGateway
-            .Execute<System.Collections.Generic.IEnumerable<ExpandoObject>>(
+            .Execute<System.Collections.Generic.IEnumerable<Dictionary<string, object?>>>(
                 previewCommand,
                 new DataStoreTarget(source.DataStoreName, source.PathValue, source.ContainerName),
                 ct)
@@ -147,11 +147,7 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpoint<PreviewDataSe
         var rows = allRows
             .Take(maxRows)
             .Select(r => (IReadOnlyDictionary<string, object?>)
-                ((System.Collections.Generic.IDictionary<string, object?>)(object)r)
-                .ToDictionary(
-                    kvp => kvp.Key,
-                    kvp => kvp.Value,
-                    System.StringComparer.Ordinal))
+                new Dictionary<string, object?>(r, System.StringComparer.Ordinal))
             .ToList();
 
         return (rows, hasMore);

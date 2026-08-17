@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -146,14 +145,18 @@ public abstract class PostQueryDataSetEndpointBase : Endpoint<PostQueryDataSetRe
         // are passed separately so the translator can qualify the table name correctly.
         // No fallback: if DataStoreName is missing the query will fail loud rather than silently
         // routing to the wrong connection.
-        var command = new QueryCommand<ExpandoObject>
+        // Why: Dictionary<string, object?> is the framework's generic row -- a dataset's columns are
+        // known only at runtime, and this is the shape the connections materialize and
+        // DataSetExecutionHelpers converts without a mapper. ExpandoObject is not a supported row
+        // shape: it reaches ConvertToPocos, finds no generated mapper, and the rows are lost.
+        var command = new QueryCommand<Dictionary<string, object?>>
         {
             Paging = new PagingExpression { Skip = skip, Take = take + 1 },
             Filter = BuildFilter(appliedFilters)
         };
 
         var queryResult = await _dataGateway
-            .Execute<IEnumerable<ExpandoObject>>(
+            .Execute<IEnumerable<Dictionary<string, object?>>>(
                 command,
                 new DataStoreTarget(primarySource.DataStoreName, primarySource.PathValue, primarySource.ContainerName),
                 ct)
@@ -167,17 +170,13 @@ public abstract class PostQueryDataSetEndpointBase : Endpoint<PostQueryDataSetRe
             return;
         }
 
-        var allRows = (queryResult.Value ?? Enumerable.Empty<ExpandoObject>()).ToList();
+        var allRows = (queryResult.Value ?? Enumerable.Empty<Dictionary<string, object?>>()).ToList();
         var hasMore = allRows.Count > take;
 
         var rows = allRows
             .Take(take)
             .Select(r => (IReadOnlyDictionary<string, object?>)
-                ((IDictionary<string, object?>)(object)r)
-                .ToDictionary(
-                    kvp => kvp.Key,
-                    kvp => kvp.Value,
-                    StringComparer.Ordinal))
+                new Dictionary<string, object?>(r, StringComparer.Ordinal))
             .ToList();
 
         DataSetEndpointLog.PostQueryCompleted(Logger, req.DataSetName, rows.Count, hasMore);

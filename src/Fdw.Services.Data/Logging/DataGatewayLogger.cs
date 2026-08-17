@@ -218,7 +218,7 @@ public static partial class DataGatewayLogger
     [MessageLogging(
         EventId = 91004,
         Level = LogLevel.Error,
-        Message = "Cannot convert calculated results to type {typeName}. For DataSets with calculated fields, query as IEnumerable<dynamic> or IEnumerable<ExpandoObject>")]
+        Message = "Cannot convert calculated results to type {typeName}. For DataSets with calculated fields, query as IEnumerable<Dictionary<string, object?>> or IEnumerable<object>")]
     public static partial IGenericMessage CalculatedResultConversionFailed(
         ILogger logger,
         string typeName);

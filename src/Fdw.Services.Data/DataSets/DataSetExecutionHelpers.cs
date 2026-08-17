@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Linq;
 using Fdw.Data;
 using Fdw.Data.Abstractions.Mappers.PocoMappers;
@@ -154,17 +153,13 @@ internal static class DataSetExecutionHelpers
         return enrichedResults;
     }
 
-    // Why: dictionary/ExpandoObject rows copy directly; a POCO projects through its generated mapper
+    // Why: a generic dictionary row copies directly; a POCO projects through its generated mapper
     // (column-keyed). An unmapped POCO fails loud — no reflection fallback.
     internal static IGenericResult<Dictionary<string, object?>> ObjectToDictionary(object obj)
     {
         if (obj is Dictionary<string, object?> dict)
             return GenericResult<Dictionary<string, object?>>.Success(
                 new Dictionary<string, object?>(dict, StringComparer.OrdinalIgnoreCase));
-
-        if (obj is ExpandoObject expando)
-            return GenericResult<Dictionary<string, object?>>.Success(
-                new Dictionary<string, object?>((IDictionary<string, object?>)expando, StringComparer.OrdinalIgnoreCase));
 
         var mapper = PocoMapperCollection.ByName(obj.GetType().Name);
         if (mapper == PocoMapperCollection.NotFound)

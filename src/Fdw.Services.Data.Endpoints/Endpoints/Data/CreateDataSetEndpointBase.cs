@@ -108,7 +108,8 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpoint<CreateDataS
             TransformExpression = request.TransformExpression,
             SourceDataSetName = request.SourceDataSetName,
             Fields = DataSetQueryHelper.MapFields(request.Fields),
-            Sources = DataSetQueryHelper.MapSources(request.Sources),
+            // Nothing exists yet on create, so no source has a prior identity to keep.
+            Sources = DataSetQueryHelper.MapSources(request.Sources, []),
             Joins = DataSetQueryHelper.MapJoins(request.Joins),
             Caching = DataSetQueryHelper.MapCaching(request.Caching),
             // Why: validated above (each function name resolves against AggregationFunctions; every

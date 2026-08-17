@@ -1050,35 +1050,9 @@ public class DefaultConfigurationProvider<TConfig, TCommand> : IServiceConfigura
                 continue;
             }
             if (descriptors[c].GetCollection(owner) is not System.Collections.IEnumerable items) continue;
-
-            // Why: version-on-write is keyed on the child's DURABLE Id — its translator emits
-            // "UPDATE SET IsCurrent=0 WHERE Id=@LogicalId AND IsCurrent=1" before the INSERT. An update
-            // that re-composes its child collection from a request DTO (the shape every update endpoint
-            // uses) hands us children with no Id, so minting one here made that UPDATE match nothing and
-            // the INSERT collide with the still-current prior row on the child's natural-key unique index
-            // (e.g. UX_DataSetSource_DataSetId_SourceName_Current). Carrying the prior Id forward is what
-            // makes the child version rather than duplicate — the same identity continuity the typed-body
-            // path already has, where the body row keeps one Id across every parent version.
-            var priorIdsResult = await ResolveExistingChildIds(descriptors[c], fkName, fkValue, ct).ConfigureAwait(false);
-            if (!priorIdsResult.IsSuccess) return priorIdsResult;
-            var priorIds = priorIdsResult.Value!;
-
             foreach (var item in items)
             {
                 if (item is not IGenericConfiguration childCfg) continue;
-
-                // Why: matched on Name because that IS the child's natural key within its owner — the
-                // column each child table's filtered unique index is built on. Only an unidentified child
-                // is matched (a caller that sent an Id means that row and is left alone), and a child with
-                // no Name is left unmatched rather than guessed at, so types that do not populate Name are
-                // no worse off than before. No fallback: an unmatched child is genuinely new and mints in
-                // SaveOneChild, which is the one place a configuration id is created.
-                if (childCfg.Id == Guid.Empty
-                    && !string.IsNullOrEmpty(childCfg.Name)
-                    && priorIds.TryGetValue(childCfg.Name, out var priorId))
-                {
-                    childCfg.Id = priorId;
-                }
 
                 // Link the child row to its parent via the logical FK, set by column name through the
                 // child's generated mapper — reflection-free; translator resolves the physical RowId FK
@@ -1102,69 +1076,6 @@ public class DefaultConfigurationProvider<TConfig, TCommand> : IServiceConfigura
         }
 
         return GenericResult.Success();
-    }
-
-    // Why: the CURRENT child rows of this owner, keyed by natural key, so a re-composed child collection
-    // versions its existing rows instead of colliding with them. Scoped by the child's LOGICAL owner FK —
-    // not the physical {Owner}RowId the read cascade joins on — because by the time this runs the owner's
-    // new version row is already current and the rows we need still point at the previous one. IsCurrent
-    // is the right predicate for exactly the same reason: it selects the rows the child's own filtered
-    // unique index would collide with, which is the set whose identity must carry forward.
-    private async Task<IGenericResult<Dictionary<string, Guid>>> ResolveExistingChildIds(
-        IChildCascadeDescriptor descriptor,
-        string fkName,
-        Guid fkValue,
-        CancellationToken ct)
-    {
-        var empty = new Dictionary<string, Guid>(StringComparer.Ordinal);
-
-        // An unregistered child command means the child cannot be addressed at all; SaveOneChild fails
-        // loud on the same condition a moment later, so say nothing about it here.
-        var command = ConfigurationCommands.All().FirstOrDefault(c => c.ConfigType == descriptor.ChildType);
-        if (command is null || fkValue == Guid.Empty)
-            return GenericResult<Dictionary<string, Guid>>.Success(empty);
-
-        // Why the same guard the read cascade applies, on the LOGICAL fk this time: an [NotMapped],
-        // app-filled typed list (BatchCopyPipelineConfiguration.Transforms is the standing example) gets a
-        // descriptor whose owner FK names a table it does not actually hang off, and a child table is not
-        // required to be temporal just because its parent is. Querying either column would raise SQL 207
-        // and — since this method fails the save on a read error — turn a working cascade into a broken
-        // one. Skipping leaves those children exactly as they were before this resolution existed.
-        if (ChildContainerLacksColumn(command.ContainerName, fkName)
-            || ChildContainerLacksColumn(command.ContainerName, "IsCurrent")
-            || ChildContainerLacksColumn(command.ContainerName, "IsDeleted"))
-        {
-            return GenericResult<Dictionary<string, Guid>>.Success(empty);
-        }
-
-        var query = new QueryCommandBuilder<object>(DataStoreName, PathName, command.ContainerName)
-            .Where(fkName, fkValue)
-            .Where("IsCurrent", true)
-            .Where("IsDeleted", false)
-            .Build().Command;
-
-        var rows = await _gateway.Value.Execute(
-            query,
-            new DataStoreTarget(DataStoreName, PathName, command.ContainerName),
-            descriptor.ChildType,
-            ct).ConfigureAwait(false);
-
-        // Why propagate rather than continue with an empty map: continuing would mint fresh ids for
-        // children that already exist, which is precisely the duplicate-key corruption this resolution
-        // exists to prevent. A read failure here must stop the save, not degrade it (NO FALLBACKS).
-        if (!rows.IsSuccess)
-            return rows.ToNewResult<Dictionary<string, Guid>>();
-
-        if (rows.Value is null)
-            return GenericResult<Dictionary<string, Guid>>.Success(empty);
-
-        foreach (var row in rows.Value)
-        {
-            if (row is IGenericConfiguration existing && !string.IsNullOrEmpty(existing.Name))
-                empty[existing.Name] = existing.Id;
-        }
-
-        return GenericResult<Dictionary<string, Guid>>.Success(empty);
     }
 
     private static string StripConfigurationSuffix(string typeName) =>

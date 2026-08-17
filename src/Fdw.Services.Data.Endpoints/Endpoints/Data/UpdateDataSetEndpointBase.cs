@@ -135,7 +135,7 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpoint<UpdateDataS
         // dataset silently lost every composed field/source/join/caching/aggregate the moment it was
         // edited. Full replacement mirrors the version-on-write semantics Create already uses.
         existing.Fields = DataSetQueryHelper.MapFields(request.Fields);
-        existing.Sources = DataSetQueryHelper.MapSources(request.Sources);
+        existing.Sources = DataSetQueryHelper.MapSources(request.Sources, existing.Sources);
         existing.Joins = DataSetQueryHelper.MapJoins(request.Joins);
         existing.Caching = DataSetQueryHelper.MapCaching(request.Caching);
         existing.Aggregates = DataSetQueryHelper.MapAggregates(request.Aggregates);

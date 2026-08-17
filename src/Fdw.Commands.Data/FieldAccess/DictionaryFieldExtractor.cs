@@ -4,7 +4,7 @@ using Fdw.Commands.Data.Abstractions.FieldAccess;
 namespace Fdw.Commands.Data.FieldAccess;
 
 /// <summary>
-/// Extracts field values from dictionary-based records (ExpandoObject, IDictionary).
+/// Extracts field values from dictionary-based records (IDictionary).
 /// </summary>
 public sealed class DictionaryFieldExtractor : IFieldValueExtractor
 {
