@@ -177,30 +177,10 @@ internal static class DataSetExecutionHelpers
             new Dictionary<string, object?>(mapper.MapToParameters(obj), StringComparer.OrdinalIgnoreCase));
     }
 
-    // Why one schema for the whole set rather than one per row: every row of a result set has the same
-    // columns, and DataRow's value array is positional against its schema. Keys are read off the first
-    // row and each subsequent row is projected through those keys in order, so a row that happens to be
-    // missing a key contributes a null in that position instead of shifting every later value left.
-    internal static List<IDataRow> DictionariesToRows(List<Dictionary<string, object?>> dictionaries)
-    {
-        var rows = new List<IDataRow>(dictionaries.Count);
-        if (dictionaries.Count == 0)
-            return rows;
-
-        var schema = CreateSchemaFromDictionary(dictionaries[0]);
-        var keys = dictionaries[0].Keys.ToArray();
-
-        foreach (var dict in dictionaries)
-        {
-            var values = new object?[keys.Length];
-            for (var i = 0; i < keys.Length; i++)
-                values[i] = dict.TryGetValue(keys[i], out var v) ? v : null;
-
-            rows.Add(new DataRow(schema, values));
-        }
-
-        return rows;
-    }
+    // Why this delegates rather than building rows here: DataRow.FromDictionaries lives beside the type
+    // it builds and is the same construction the HTTP connection uses, so the two cannot drift.
+    internal static IReadOnlyList<IDataRow> DictionariesToRows(List<Dictionary<string, object?>> dictionaries)
+        => DataRow.FromDictionaries(dictionaries.ConvertAll(d => (IDictionary<string, object?>)d));
 
     internal static DataSchema CreateSchemaFromDictionary(Dictionary<string, object?> dict)
     {

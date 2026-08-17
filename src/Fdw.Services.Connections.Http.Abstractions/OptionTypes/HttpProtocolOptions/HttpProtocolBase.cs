@@ -434,12 +434,18 @@ public abstract class HttpProtocolBase : TypeOptionBase<int, HttpProtocolBase>, 
         return t.GetGenericArguments()[0] == typeof(string);
     }
 
-    // Why: object (System.Object) is the untyped row element type — a DataSet query with no
-    // compile-time schema uses IEnumerable<object>, and the generic row itself is covered by
-    // IsDictionaryRowType. The caller (ConvertResult<T>) handles the
-    // List<Dictionary<string,object?>> → T cast downstream.
+    // Why these three: IDataRow is the framework's row and what a DataSet query asks for; object is
+    // the untyped element type; the generic dictionary row is covered by IsDictionaryRowType. All are
+    // satisfied by the same extraction, which produces List<Dictionary<string,object?>> — the caller
+    // (ConvertResult<T>) converts that to the requested shape.
+    //
+    // IDataRow MUST be listed here. It is an interface, so a resultType that reaches the plain
+    // deserializer instead of this branch fails with "The JSON value could not be converted to
+    // IEnumerable<IDataRow>" on a response that arrived perfectly intact with status 200.
     private static bool IsDynamicRowType(Type t)
-        => t == typeof(object);
+        => t.Equals(typeof(object))
+        || t.Equals(typeof(global::Fdw.Data.DataContainers.Abstractions.IDataRow))
+        || t.Equals(typeof(global::Fdw.Data.DataContainers.Abstractions.DataRow));
 
     #endregion
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fdw.Data.Abstractions;
 
 namespace Fdw.Data.DataContainers.Abstractions;
@@ -248,6 +249,40 @@ public class DataRow : IDataRow
         }
 
         return new DataRow(schema, values);
+    }
+
+    /// <summary>
+    /// Builds rows for a whole result set from dictionaries, all sharing one schema derived from the
+    /// first. Returns an empty list for an empty input — a result set with no rows has no schema to
+    /// derive and needs none.
+    /// </summary>
+    /// <remarks>
+    /// Why one schema for the set rather than one per row: every row of a result set has the same
+    /// columns, and a <see cref="DataRow"/> addresses its values positionally against its schema, so a
+    /// per-row schema is both wasted work and a chance for the two to disagree. Each row is projected
+    /// through the first row's field order, so a row that happens to be missing a key contributes a
+    /// null in that position instead of shifting every later value left.
+    /// <para>
+    /// Lives here, beside the type it builds, because both the dataset execution path and the HTTP
+    /// connection need it and neither can reference the other.
+    /// </para>
+    /// </remarks>
+    /// <param name="rows">The source dictionaries, one per row.</param>
+    /// <returns>One <see cref="IDataRow"/> per input dictionary.</returns>
+    public static IReadOnlyList<IDataRow> FromDictionaries(IReadOnlyList<IDictionary<string, object?>> rows)
+    {
+        if (rows.Count == 0)
+            return [];
+
+        var schema = DataSchema.FromFields(
+            rows[0].Select((kvp, index) =>
+                (ISchemaField)new SchemaField(kvp.Key, kvp.Value?.GetType() ?? typeof(object), index)).ToList());
+
+        var result = new List<IDataRow>(rows.Count);
+        foreach (var row in rows)
+            result.Add(FromDictionary(schema, row));
+
+        return result;
     }
 
     /// <summary>
