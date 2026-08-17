@@ -225,13 +225,23 @@ public sealed class CompoundDataSetType : DataSetTypeBase
         if (!containerResult.IsSuccess || containerResult.Value == null)
             return GenericResult<T>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, primarySource.SourceName));
 
-        // Resolve the connection for the primary source.
-        var connectionResult = await ctx.ConnectionProvider
-            .Get<IDataConnection>(primarySource.ConnectionName, ct)
-            .ConfigureAwait(false);
+        // Why the connection is walked off the container rather than read from the source: a DataStore
+        // owns its connection (data.DataStore.ConnectionRowId) and the container reaches it through
+        // Parent.Store, so the container resolved a line above ALREADY carries the answer. Reading a
+        // ConnectionName off the source made a second source of truth that had to be kept in step by
+        // hand, and any source composed from a request DTO leaves it empty. Simple and Federated
+        // resolve it this way too; this was the third strategy and it was missed, which is why a
+        // compound pushdown threw a NullReferenceException here instead of running.
+        var connectionId = containerResult.Value.Parent?.Store?.ConnectionId ?? Guid.Empty;
+        if (connectionId == Guid.Empty)
+            return GenericResult<T>.Failure(
+                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, primarySource.DataStoreName,
+                    "the container's DataStore carries no ConnectionId"));
+
+        var connectionResult = await ctx.ConnectionProvider.Get(connectionId, ct).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value == null)
             return GenericResult<T>.Failure(
-                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, primarySource.ConnectionName, connectionResult.CurrentMessage ?? "Unknown error"));
+                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, primarySource.DataStoreName, connectionResult.CurrentMessage ?? "Unknown error"));
 
         // Execute the pushed-down compound query through the single connection.
         var result = await connectionResult.Value.Execute<T>(sourceQuery, containerResult.Value, ct).ConfigureAwait(false);
