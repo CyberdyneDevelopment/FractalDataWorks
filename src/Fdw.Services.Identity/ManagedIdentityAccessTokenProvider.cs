@@ -79,9 +79,23 @@ public sealed class ManagedIdentityAccessTokenProvider : IAccessTokenProvider
             async ct =>
             {
                 var service = await _identities.Get(_configurationName, ct).ConfigureAwait(false);
-                return service.IsSuccess && service.Value is { } identity
-                    ? await identity.Acquire(_request, ct).ConfigureAwait(false)
-                    : GenericResult<IssuedIdentityToken>.Failure(IdentityLog.ConfigurationNotFound(_logger, _configurationName));
+
+                // Why the failure is propagated rather than relabelled: Get fails for reasons that are
+                // not absence — a typed body that did not load, a factory that rejected the mechanism —
+                // and each carries the reason that says which. Reporting them all as "no identity named
+                // X exists" sends the reader to look for a missing row when the row is there.
+                if (service.IsFailure)
+                {
+                    return service.ToNewResult<IssuedIdentityToken>();
+                }
+
+                if (service.Value is not { } identity)
+                {
+                    return GenericResult<IssuedIdentityToken>.Failure(
+                        IdentityLog.ConfigurationNotFound(_logger, _configurationName));
+                }
+
+                return await identity.Acquire(_request, ct).ConfigureAwait(false);
             },
             cancellationToken).ConfigureAwait(false);
 
