@@ -1,12 +1,16 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using Fdw.Collections;
 using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Identity;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Identity.Abstractions;
 using Fdw.Services.Identity.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -46,8 +50,30 @@ public sealed class AuthentikJwtFederationIdentityType
 
             IdentityHttpClient.Register(builder.Services);
 
+            // The typed body provider, so the header provider can compose the aggregate.
+
+            builder.Services.TryAddSingleton(sp => new AuthentikJwtFederationConfigurationProvider(
+
+                sp.GetService<ILogger<AuthentikJwtFederationConfigurationProvider>>()!,
+
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+
+                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+
+
             IdentityLog.MechanismRegistered(log, Name);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+
+        AppendInitialization((host, loggerFactory) =>
+        {
+            // The header provider dispatches on ServiceOptionType to the typed provider registered for
+            // it. Without this hand-over the header loads and Configuration stays null.
+            var services = host.Services;
+            services.GetRequiredService<IdentityServiceConfigurationProvider>()
+                .Register(Name, services.GetRequiredService<AuthentikJwtFederationConfigurationProvider>());
+
+            return GenericResult<IHost>.Success(host);
         });
     }
 }

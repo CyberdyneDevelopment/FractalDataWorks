@@ -5,6 +5,8 @@ using Fdw.Collections;
 using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Identity;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Identity.Abstractions;
 using Fdw.Services.Identity.Logging;
 using Fdw.Services.SecretManagers;
@@ -56,10 +58,36 @@ public sealed class ClientCredentialsIdentityType
             builder.Services.TryAddScoped(sp => new Lazy<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>(
                 sp.GetRequiredService<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>));
 
+            // The typed body provider, so the header provider can compose the aggregate. Registration
+            // only makes it resolvable; Initialization is where it is handed over, because the header
+            // provider has to exist first.
+            builder.Services.TryAddSingleton(sp => new ClientCredentialsConfigurationProvider(
+                sp.GetService<ILogger<ClientCredentialsConfigurationProvider>>()!,
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+
             IdentityHttpClient.Register(builder.Services);
 
             IdentityLog.MechanismRegistered(log, Name);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+
+        AppendInitialization((host, loggerFactory) =>
+        {
+            // Why here and not in Register: the header provider composes the aggregate by dispatching
+            // on ServiceOptionType to whichever typed provider was registered for it. Without this the
+            // header loads and Configuration stays null, which the factory reports as "typed
+            // configuration body did not load" — several layers from the missing hand-over.
+            var services = host.Services;
+            services.GetRequiredService<IdentityServiceConfigurationProvider>()
+                .Register(Name, services.GetRequiredService<ClientCredentialsConfigurationProvider>());
+
+            IdentityLog.MechanismRegistered(
+                loggerFactory?.CreateLogger<ClientCredentialsIdentityType>()
+                    ?? NullLogger<ClientCredentialsIdentityType>.Instance,
+                Name);
+
+            return GenericResult<IHost>.Success(host);
         });
     }
 }

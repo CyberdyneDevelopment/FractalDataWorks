@@ -5,6 +5,8 @@ using Fdw.Collections;
 using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Identity;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Identity.Abstractions;
 using Fdw.Services.Identity.Logging;
 using Fdw.Services.SecretManagers;
@@ -58,8 +60,30 @@ public sealed class AuthentikClientCredentialsIdentityType
 
             IdentityHttpClient.Register(builder.Services);
 
+            // The typed body provider, so the header provider can compose the aggregate.
+
+            builder.Services.TryAddSingleton(sp => new AuthentikClientCredentialsConfigurationProvider(
+
+                sp.GetService<ILogger<AuthentikClientCredentialsConfigurationProvider>>()!,
+
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+
+                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+
+
             IdentityLog.MechanismRegistered(log, Name);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+
+        AppendInitialization((host, loggerFactory) =>
+        {
+            // The header provider dispatches on ServiceOptionType to the typed provider registered for
+            // it. Without this hand-over the header loads and Configuration stays null.
+            var services = host.Services;
+            services.GetRequiredService<IdentityServiceConfigurationProvider>()
+                .Register(Name, services.GetRequiredService<AuthentikClientCredentialsConfigurationProvider>());
+
+            return GenericResult<IHost>.Success(host);
         });
     }
 }
