@@ -271,43 +271,23 @@ public partial class Endpoints : ServiceTypeCollectionBase<IEndpointTypeCollecti
     /// </summary>
     /// <param name="config">The FastEndpoints configuration being built.</param>
     /// <remarks>
-    /// Why this is a method a host calls rather than something this collection applies itself: the
-    /// collection's own Initialize phase runs at PlatformServices.Initialize, which is before
-    /// authentication is in the pipeline, so every host replaces that phase and calls
-    /// UseFastEndpoints later at the point its pipeline is actually ready. A convention set in the
-    /// collection's own call would therefore never run in any host. One definition, applied by each
-    /// host where it belongs, is the shape that survives that constraint.
-    ///
-    /// <para><b>RoutePrefix.</b> An endpoint writes its route WITHOUT the version prefix and the
-    /// prefix is added here, so a service's surface is versioned in one place. Leaving it to each
-    /// host is what let reference-api serve under api/v1 while the ETL server and the scheduler
-    /// served bare — and callers of those services, having no way to ask, encoded a guess: both the
-    /// scheduler's dispatch client and reference-api's own proxy appended api/v1 to the ETL server's
-    /// base address and got 404 on every call.</para>
-    ///
-    /// <para><b>RoleClaimType.</b> Authorization reads roles from the "roles" claim. A host that
-    /// leaves this at the framework default sends every role-gated endpoint down the deny path while
-    /// the token in hand carries the role.</para>
-    ///
-    /// <para><b>Errors.</b> RFC 7807 problem details, so failures come back in a shape HTTP clients,
-    /// OpenAPI generators and agents already parse rather than a bespoke envelope per service.</para>
-    ///
-    /// A host adds its own settings after calling this; nothing here forbids overriding a value it
-    /// has a specific reason to differ on. Callers should not have to guess, which is the whole point.
+    /// A host calls this from its own <c>UseFastEndpoints</c> rather than the collection applying it,
+    /// because that call has to run after authentication is in the pipeline and only the host knows
+    /// where that is. A host may override any of these afterwards.
     /// </remarks>
     public static void ApplyEndpointConventions(Config config)
     {
         ArgumentNullException.ThrowIfNull(config);
 
         config.Endpoints.RoutePrefix = RoutePrefix;
+        // Why: authorization reads roles from "roles". At the framework default every role-gated
+        // endpoint denies while the token in hand carries the role.
         config.Security.RoleClaimType = "roles";
         config.Errors.UseProblemDetails();
     }
 
     /// <summary>Gets the version prefix every FDW service surface is served under.</summary>
-    /// <remarks>
-    /// Exposed so a caller building a URL to a peer reads the prefix rather than hardcoding it.
-    /// </remarks>
+    /// <remarks>Read this rather than hardcoding the prefix when building a URL to a peer.</remarks>
     public static string RoutePrefix => "api/v1";
 
     private static void InitializeOpenApiProcessors(IHost host, ILoggerFactory? loggerFactory)
