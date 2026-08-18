@@ -46,6 +46,12 @@ public class DataflowApiClient : ApiClientBase
     /// <param name="targetName">The name of the target.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the impact analysis results.</returns>
+    // Why POST with a body rather than the path form this used to send: the endpoint is
+    // POST /dataflow/impact taking an ImpactAnalysisRequest. The GET path variant it called
+    // (dataflow/impact/{type}/{name}) is served by nothing, so impact analysis always 404'd.
     public virtual Task<IGenericResult<ImpactAnalysisPayload>> AnalyzeImpact(string targetType, string targetName, CancellationToken ct = default)
-        => Get<ImpactAnalysisPayload>($"dataflow/impact/{Uri.EscapeDataString(targetType)}/{Uri.EscapeDataString(targetName)}", ct);
+        => Post<ImpactAnalysisRequestPayload, ImpactAnalysisPayload>(
+            "dataflow/impact",
+            new ImpactAnalysisRequestPayload { TargetType = targetType, TargetName = targetName },
+            ct);
 }
