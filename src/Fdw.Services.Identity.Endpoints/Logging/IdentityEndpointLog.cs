@@ -61,4 +61,20 @@ public static partial class IdentityEndpointLog
     /// <returns>The structured message.</returns>
     [MessageLogging(EventId = 21000, Level = LogLevel.Warning, Message = "Identity verification request is missing '{property}'")]
     public static partial IGenericMessage VerifyRequestIncomplete(ILogger logger, string property);
+
+    /// <summary>Logs that a create request omitted a value the identity cannot be built without.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="name">The identity being created.</param>
+    /// <param name="property">The property that was not supplied.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 21001, Level = LogLevel.Warning, Message = "Create request for identity '{name}' is missing '{property}'")]
+    public static partial IGenericMessage CreateRequestIncomplete(ILogger logger, string name, string property);
+
+    /// <summary>Logs that an identity was created.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="name">The identity created.</param>
+    /// <param name="mechanism">The mechanism backing it.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 11004, Level = LogLevel.Information, Message = "Identity '{name}' created, backed by '{mechanism}'")]
+    public static partial IGenericMessage IdentityCreated(ILogger logger, string name, string mechanism);
 }
