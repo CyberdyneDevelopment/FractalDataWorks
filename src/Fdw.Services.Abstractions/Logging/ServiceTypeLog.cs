@@ -826,21 +826,6 @@ public static partial class ServiceTypeLog
         int optionCount);
 
     /// <summary>
-    /// Logs that an option phase is about to run the framework-supplied body.
-    /// </summary>
-    [MessageLogging(
-        EventId = 11057,
-        Level = LogLevel.Information,
-        Message = "[{optionName}] {phase} (option #{ordinal} in {collectionName}) running the DEFAULT implementation — see {documentation}")]
-    public static partial IGenericMessage OptionPhaseDefault(
-        ILogger logger,
-        string optionName,
-        string phase,
-        int ordinal,
-        string collectionName,
-        string documentation);
-
-    /// <summary>
     /// Logs that an option phase is about to run a body the option or host supplied.
     /// </summary>
     [MessageLogging(
