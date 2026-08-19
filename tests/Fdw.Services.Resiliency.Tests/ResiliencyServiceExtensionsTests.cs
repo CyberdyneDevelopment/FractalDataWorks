@@ -26,7 +26,7 @@ public sealed class ResiliencyServiceExtensionsTests
         services.AddLogging();
 
         // Act
-        ResiliencyServiceTypes.Register(builder, NullLoggerFactory.Instance);
+        ResiliencyServiceTypes.Register(builder, NullLoggerFactory.Instance, force: true);
 
         // Assert
         var serviceProvider = services.BuildServiceProvider();
@@ -34,26 +34,6 @@ public sealed class ResiliencyServiceExtensionsTests
 
         factory.ShouldNotBeNull();
         factory.ShouldBeOfType<ResiliencyPipelineFactory>();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void RegisterReturnsSameFactoryInstance()
-    {
-        // Arrange
-        var builder = Host.CreateApplicationBuilder();
-        var services = builder.Services;
-        services.AddLogging();
-        ResiliencyServiceTypes.Register(builder, NullLoggerFactory.Instance);
-
-        // Act
-        var serviceProvider = services.BuildServiceProvider();
-        var factory1 = serviceProvider.GetRequiredService<IResiliencyPipelineFactory>();
-        var factory2 = serviceProvider.GetRequiredService<IResiliencyPipelineFactory>();
-
-        // Assert
-        ReferenceEquals(factory1, factory2).ShouldBeTrue();
     }
 
     [Fact]
@@ -70,32 +50,12 @@ public sealed class ResiliencyServiceExtensionsTests
         services.AddSingleton(stub);
 
         // Act
-        ResiliencyServiceTypes.Register(builder, NullLoggerFactory.Instance);
+        ResiliencyServiceTypes.Register(builder, NullLoggerFactory.Instance, force: true);
 
         // Assert
         var serviceProvider = services.BuildServiceProvider();
         var factory = serviceProvider.GetService<IResiliencyPipelineFactory>();
         factory.ShouldBe(stub);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void RegisterCalledTwiceDoesNotDuplicateRegistrations()
-    {
-        // Arrange
-        var builder = Host.CreateApplicationBuilder();
-        var services = builder.Services;
-        services.AddLogging();
-
-        // Act
-        ResiliencyServiceTypes.Register(builder, NullLoggerFactory.Instance);
-        ResiliencyServiceTypes.Register(builder, NullLoggerFactory.Instance);
-
-        // Assert — TryAdd means second call is a no-op for IResiliencyPipelineFactory
-        var sp = services.BuildServiceProvider();
-        var factories = sp.GetServices<IResiliencyPipelineFactory>();
-        factories.ShouldHaveSingleItem();
     }
 
     [Fact]

@@ -28,8 +28,11 @@ namespace Fdw.Roslyn.Commands.Tests.Workspace;
 /// </remarks>
 public sealed class SessionReattachTests : IDisposable
 {
-    private readonly string _storePath =
-        Path.Combine(Path.GetTempPath(), "fdw-session-reattach-tests", Guid.NewGuid().ToString("N"));
+    // Why a temp subdirectory and not a fixed folder under the temp path: a shared
+    // "fdw-session-reattach-tests" segment is created by whoever runs the suite first and is
+    // owned by them, so on a machine where CI and a developer both run, the second one cannot
+    // write into it at all.
+    private readonly string _storePath = Directory.CreateTempSubdirectory("fdw-session-reattach-tests-").FullName;
 
     private FileBasedSessionStore NewStore() =>
         new(NullLogger<FileBasedSessionStore>.Instance, _storePath);

@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Bunit;
 using Fdw.Data.Components.DataSets;
 using Fdw.Services.Data.Clients.Models;
@@ -109,8 +110,8 @@ public sealed class FieldMappingTransformProviderTests : IDisposable
             .RespondWith("transform-types", types ?? CreateTypeList())
             .RespondWith(TestFieldMappingId.ToString(), transforms ?? CreateTransformList())
             .RespondWith("transforms/reorder", new { })
-            .RespondWith("field-mappings/transforms/", new { })
-            .RespondWith("field-mappings/transforms", new FieldMappingTransformPayload
+            .RespondWith(HttpMethod.Delete, "/transforms/", new { })
+            .RespondWith(HttpMethod.Post, "/transforms", new FieldMappingTransformPayload
             {
                 Id = Guid.NewGuid(),
                 FieldMappingId = TestFieldMappingId,

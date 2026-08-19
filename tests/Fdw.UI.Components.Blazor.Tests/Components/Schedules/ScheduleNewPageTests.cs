@@ -57,7 +57,7 @@ public sealed class ScheduleNewPageTests : IDisposable
         var options = cut.FindAll("option").Select(o => o.GetAttribute("value")).ToList();
         options.ShouldContain("Cron");
         options.ShouldContain("Interval");
-        options.ShouldContain("OneTime");
+        options.ShouldContain("Once");
         options.ShouldContain("Event");
     }
 
@@ -102,13 +102,13 @@ public sealed class ScheduleNewPageTests : IDisposable
     }
 
     [Fact]
-    public void SelectingOneTimeShowsDateAndTimeFields()
+    public void SelectingOnceShowsDateAndTimeFields()
     {
         SeedPipelines();
         var cut = RenderWith(new ScheduleContext());
         var typeSelect = cut.FindAll("select")
-            .First(s => s.QuerySelectorAll("option").Any(o => o.GetAttribute("value") == "OneTime"));
-        typeSelect.Change("OneTime");
+            .First(s => s.QuerySelectorAll("option").Any(o => o.GetAttribute("value") == "Once"));
+        typeSelect.Change("Once");
         cut.Markup.ShouldContain("Execution Date");
         cut.Markup.ShouldContain("Execution Time");
     }

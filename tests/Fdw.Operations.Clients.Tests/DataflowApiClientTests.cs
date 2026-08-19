@@ -105,8 +105,8 @@ public sealed class DataflowApiClientTests
         var result = await sut.AnalyzeImpact("Connection", "MyConn", TestContext.Current.CancellationToken);
 
         handler.LastRequest.ShouldNotBeNull();
-        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/dataflow/impact/Connection/MyConn");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Get);
+        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/dataflow/impact");
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Post);
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value!.TargetType.ShouldBe("Connection");
@@ -118,7 +118,7 @@ public sealed class DataflowApiClientTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Api")]
-    public async Task AnalyzeImpactEscapesParameters()
+    public async Task AnalyzeImpactCarriesTheTargetInTheBody()
     {
         var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
         {
@@ -129,6 +129,11 @@ public sealed class DataflowApiClientTests
         await sut.AnalyzeImpact("Data Store", "My Conn", TestContext.Current.CancellationToken);
 
         handler.LastRequest.ShouldNotBeNull();
-        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/dataflow/impact/Data%20Store/My%20Conn");
+        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/dataflow/impact");
+        // Why the values are asserted unescaped: they travel in the body now, so a target with a
+        // space is carried as written rather than percent-encoded into a path segment.
+        var body = await handler.LastRequest.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        body.ShouldContain("Data Store");
+        body.ShouldContain("My Conn");
     }
 }
