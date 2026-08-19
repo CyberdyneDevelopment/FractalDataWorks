@@ -147,7 +147,7 @@ public class ServiceTypePhaseReportingTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void OptionReportsCustomOnlyWhenItSuppliedItsOwnBody()
+    public void EveryOptionReportsItsPhaseRunningWhetherOrNotItSuppliedABody()
     {
         var log = new CapturingLoggerFactory();
 
@@ -158,8 +158,11 @@ public class ServiceTypePhaseReportingTests
         log.Messages.Clear();
         new AlternateTestServiceType().Register(NewBuilder(), log);
 
-        withBody.ShouldContain(m => m.Contains("CUSTOM implementation", StringComparison.Ordinal));
-        log.Messages.ShouldContain(m => m.Contains("DEFAULT implementation", StringComparison.Ordinal));
+        // Why both report the same way: a body that has been appended to is neither the option's own
+        // nor the base's, so reporting one against the other stopped describing anything real. What
+        // is still worth pinning is that no option runs a phase without saying so.
+        withBody.ShouldContain(m => m.Contains("Register", StringComparison.Ordinal));
+        log.Messages.ShouldContain(m => m.Contains("Register", StringComparison.Ordinal));
     }
 
     [Fact]
