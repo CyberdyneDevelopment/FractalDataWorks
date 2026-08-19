@@ -19,7 +19,6 @@
     <ProjectReference Include="..\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
     <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    <ProjectReference Include="..\Fdw.Hosting\Fdw.Hosting.csproj" />
     <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
   </ItemGroup>
 

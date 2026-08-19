@@ -44,7 +44,6 @@
     <ProjectReference Include="..\Fdw.Configuration.SourceGenerators\Fdw.Configuration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\Fdw.Hosting.Abstractions\Fdw.Hosting.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Services.Authorization.Abstractions\Fdw.Services.Authorization.Abstractions.csproj" />
-    <ProjectReference Include="..\Fdw.Hosting\Fdw.Hosting.csproj" />
     <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Validation.FastEndpoints\Fdw.Validation.FastEndpoints.csproj" />
     <ProjectReference Include="..\Fdw.Services.Pipelines.Abstractions\Fdw.Services.Pipelines.Abstractions.csproj" />
