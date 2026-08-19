@@ -140,13 +140,19 @@ public class ServiceTypePhaseFuncTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void SettingAPhaseToNullThrows()
+    public void SettingAPhaseToNullIsRefusedWithoutThrowing()
     {
         var serviceType = new TestServiceType();
 
-        Should.Throw<ArgumentNullException>(() => serviceType.Configuration(null!));
-        Should.Throw<ArgumentNullException>(() => serviceType.Registration(null!));
-        Should.Throw<ArgumentNullException>(() => serviceType.Initialization(null!));
+        // A null body is reported through MessageLogging and the existing body is left alone, rather
+        // than throwing — a phase setter is called from a constructor, where an exception takes the
+        // whole option out instead of naming the one body that was wrong.
+        Should.NotThrow(() => serviceType.Configuration(null!));
+        Should.NotThrow(() => serviceType.Registration(null!));
+        Should.NotThrow(() => serviceType.Initialization(null!));
+
+        serviceType.Configure(NewBuilder()).IsSuccess.ShouldBeTrue();
+        serviceType.Register(NewBuilder(), loggerFactory: null).IsSuccess.ShouldBeTrue();
     }
 
     [Fact]
@@ -211,16 +217,16 @@ public class ServiceTypePhaseFuncTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void PrependedBaseWiringStillRunsWhenTheOptionSetsItsOwnRegistrationBody()
+    public void SettingARegistrationBodyReplacesWhateverWasChained()
     {
-        // Registration(...) REPLACES, so a base calling it in its constructor is silently clobbered
-        // by the derived constructor running after. PrependRegistration chains instead, so the base's
-        // wiring runs first and the option cannot drop it.
+        // The three setters say what they do: Registration replaces, PrependRegistration runs before
+        // what is already there, AppendRegistration runs after. An option whose constructor calls
+        // Registration is choosing to replace, so the base's prepended body goes with it.
         var option = new OptionThatSetsItsOwnRegistration();
 
         option.Register(NewBuilder(), loggerFactory: null);
 
-        option.BaseRegisterCount.ShouldBe(1);
+        option.BaseRegisterCount.ShouldBe(0);
         option.OwnRegisterCount.ShouldBe(1);
     }
 }
