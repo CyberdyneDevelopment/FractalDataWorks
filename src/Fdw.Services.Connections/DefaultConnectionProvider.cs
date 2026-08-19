@@ -235,7 +235,12 @@ public sealed class DefaultConnectionProvider
 
         ConnectionProviderLogger.ComposedHeaderCreating(_logger, header.Name, serviceOptionType, header.Configuration.GetType().Name);
 
-        var result = await connectionFactory.Create(header.Configuration, cancellationToken).ConfigureAwait(false);
+        // Why the header and not header.Configuration: a factory needs the connection's NAME, and the
+        // name is on the header — the typed body's table has no Name column. Every connection factory
+        // unwraps a composed header to (typed body, header.Name) and treats a bare typed body as
+        // nameless. Handing over the body alone therefore produced a connection that could not say what
+        // it was, which stayed invisible only while the name had a fallback to substitute.
+        var result = await connectionFactory.Create(header, cancellationToken).ConfigureAwait(false);
 
         if (result.IsSuccess)
             ConnectionProviderLogger.ComposedHeaderCreated(_logger, header.Name, serviceOptionType);
