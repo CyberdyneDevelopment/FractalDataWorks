@@ -106,6 +106,11 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
             options.RequireHttpsMetadata = string.Equals(
                 new Uri(authority).Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal);
 
+            // Why mapping is off: with it on, the handler renames the token's claims to the WS-* URIs,
+            // so the sub this framework reads by name arrives under a different type and the principal
+            // it builds carries no name. Everything downstream reads the claims by their real names.
+            options.MapInboundClaims = false;
+
             options.TokenValidationParameters.ValidateIssuer = true;
             options.TokenValidationParameters.ValidIssuer = authority;
             options.TokenValidationParameters.ValidateAudience = true;
