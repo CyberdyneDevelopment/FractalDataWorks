@@ -58,6 +58,51 @@ internal static class RazorAttributeValue
     }
 
     /// <summary>
+    /// Finds the index of the double quote that closes the attribute value beginning at
+    /// <paramref name="start"/>.
+    /// </summary>
+    /// <param name="text">The full document text.</param>
+    /// <param name="start">Index of the first character after the opening quote.</param>
+    /// <returns>The index of the closing quote, or the end of the line when the value is unterminated.</returns>
+    /// <remarks>
+    /// Scanning to the next double quote is not enough on its own: a Razor expression inside the value
+    /// carries its own string literals, and stopping at the first of those ends the value mid-expression.
+    /// Each expression is therefore stepped over whole.
+    /// </remarks>
+    public static int FindValueEnd(string text, int start)
+    {
+        var i = start;
+
+        while (i < text.Length)
+        {
+            var c = text[i];
+
+            if (c == '"' || c == '\n')
+                return i;
+
+            if (c == '@')
+            {
+                var expressionEnd = FindExpressionEnd(text, i);
+                i = expressionEnd > i ? expressionEnd : i + 1;
+                continue;
+            }
+
+            i++;
+        }
+
+        return text.Length;
+    }
+
+    /// <summary>
+    /// Returns the index one past the closing quote of the C# string literal starting at
+    /// <paramref name="quote"/>.
+    /// </summary>
+    /// <param name="text">The full document text.</param>
+    /// <param name="quote">Index of the literal's opening quote.</param>
+    /// <returns>The index one past the closing quote.</returns>
+    internal static int FindStringLiteralEnd(string text, int quote) => SkipStringLiteral(text, quote);
+
+    /// <summary>
     /// Finds the index one past the end of the Razor expression starting at <paramref name="start"/>.
     /// </summary>
     private static int FindExpressionEnd(string text, int start)

@@ -168,4 +168,60 @@ public class RawSvgMarkupAnalyzerTests : RazorMarkupAnalyzerTestBase<RawSvgMarku
     {
         await VerifyRazorIn("Fdw.Services.Connections", "<svg></svg>");
     }
+
+    /// <summary>
+    /// A canvas that handles pointer input is being drawn on, not stamped. There is no glyph for a
+    /// shared icon component to render, so the rule has nothing to ask for.
+    /// </summary>
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Analyzer")]
+    public async Task SvgHandlingPointerInput_ReportsNothing()
+    {
+        await VerifyRazor(
+            """
+            <svg class="canvas" @onmousedown="OnCanvasMouseDown" @onwheel="OnCanvasWheel">
+                <path d="M 40 0 L 0 0 0 40" />
+            </svg>
+            """);
+    }
+
+    /// <summary>
+    /// Contents built from data are the same case reached the other way: the shape is not fixed, so it
+    /// cannot be defined once and named.
+    /// </summary>
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Analyzer")]
+    public async Task SvgGeneratingItsContents_ReportsNothing()
+    {
+        await VerifyRazor(
+            """
+            <svg class="graph">
+                @foreach (var node in Nodes)
+                {
+                    <circle r="4" />
+                }
+            </svg>
+            """);
+    }
+
+    /// <summary>
+    /// The exemption must not swallow a pasted glyph that merely sits near generated markup.
+    /// </summary>
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Analyzer")]
+    public async Task StaticGlyphBeforeGeneratedRegion_StillReports()
+    {
+        await VerifyRazor(
+            """
+            <svg viewBox="0 0 24 24"><path d="M0 0 L24 24" /></svg>
+            @foreach (var item in Items)
+            {
+                <span>@item</span>
+            }
+            """,
+            RazorDiagnostic(RuleId, 1, 1, NeedleLength));
+    }
 }

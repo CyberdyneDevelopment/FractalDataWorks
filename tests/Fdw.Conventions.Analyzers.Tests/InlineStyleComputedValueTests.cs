@@ -4,19 +4,18 @@ using Xunit;
 namespace Fdw.Conventions.Analyzers.Tests;
 
 /// <summary>
-/// Covers where FDW046 stops: a style the markup computes from data is not reported, because no CSS
-/// class could carry it. A style that picks between written-out literals still is, because those
-/// alternatives are already two classes and a conditional.
+/// Covers where FDW046 stops for want of a readable value: a style the markup computes from data is not
+/// reported, because no CSS class could carry it. A style that picks between written-out literals is
+/// read through those literals, so each alternative is judged as the declaration list it is.
 /// </summary>
 /// <remarks>
-/// The cases here are the shapes that actually occur in the UI packages — a percentage from a ratio,
-/// a depth in pixels, grid coordinates behind a helper method, and the status-colour ternaries that
-/// look computed but are not.
+/// The cases here are the shapes that actually occur in the UI packages — a percentage from a ratio, a
+/// depth in pixels, grid coordinates behind a helper method, and the status-colour ternaries that look
+/// computed but are not.
 /// </remarks>
 public class InlineStyleComputedValueTests : RazorMarkupAnalyzerTestBase<InlineStyleAttributeAnalyzer>
 {
     private const string RuleId = InlineStyleAttributeAnalyzer.DiagnosticId;
-    private const int NeedleLength = 7;
 
     /// <summary>
     /// A width taken from a ratio has no fixed set of values, so there is no class to move it to.
@@ -58,30 +57,43 @@ public class InlineStyleComputedValueTests : RazorMarkupAnalyzerTestBase<InlineS
     }
 
     /// <summary>
-    /// The case the exemption must NOT swallow. Both branches are written out, so they are two classes
-    /// and a conditional on the class attribute — exactly what the rule asks for.
+    /// Both branches name a theme token, so both are already the host's to decide — the ternary changes
+    /// which token applies, not who owns its value.
     /// </summary>
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Analyzer")]
-    public async Task TernaryBetweenLiterals_StillReports()
+    public async Task TernaryBetweenTokenLiterals_ReportsNothing()
     {
         await VerifyRazor(
-            "<div style=\"@(ok ? \"color:var(--success);\" : \"color:var(--signal);\")\"></div>",
-            RazorDiagnostic(RuleId, 1, 6, NeedleLength));
+            "<div style=\"@(ok ? \"color:var(--success);\" : \"color:var(--signal);\")\"></div>");
     }
 
     /// <summary>
-    /// A ternary choosing between two fixed layouts is the same case, at greater length.
+    /// A ternary choosing between two fixed layouts is the component arranging itself, either way.
     /// </summary>
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Analyzer")]
-    public async Task TernaryBetweenLayoutLiterals_StillReports()
+    public async Task TernaryBetweenLayoutLiterals_ReportsNothing()
     {
         await VerifyRazor(
-            "<div style=\"@(Compact ? \"display:flex;gap:10px;\" : \"grid-template-columns:repeat(3,1fr);\")\"></div>",
-            RazorDiagnostic(RuleId, 1, 6, NeedleLength));
+            "<div style=\"@(Compact ? \"display:flex;gap:10px;\" : \"grid-template-columns:repeat(3,1fr);\")\"></div>");
+    }
+
+    /// <summary>
+    /// The case the expression handling must NOT swallow. Both branches fix a theme-owned property to a
+    /// literal, so both are styling the host cannot reach, and each is reported where it is written.
+    /// </summary>
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Analyzer")]
+    public async Task TernaryBetweenHardcodedLiterals_ReportsBoth()
+    {
+        await VerifyRazor(
+            "<div style=\"@(ok ? \"color:red;\" : \"color:blue;\")\"></div>",
+            RazorDiagnostic(RuleId, 1, 21, 9).WithArguments("color:red"),
+            RazorDiagnostic(RuleId, 1, 36, 10).WithArguments("color:blue"));
     }
 
     /// <summary>
@@ -94,7 +106,7 @@ public class InlineStyleComputedValueTests : RazorMarkupAnalyzerTestBase<InlineS
     {
         await VerifyRazor(
             "<div style=\"color:red\"></div>",
-            RazorDiagnostic(RuleId, 1, 6, NeedleLength));
+            RazorDiagnostic(RuleId, 1, 13, 9).WithArguments("color:red"));
     }
 
     /// <summary>
@@ -107,10 +119,12 @@ public class InlineStyleComputedValueTests : RazorMarkupAnalyzerTestBase<InlineS
     [Trait("Category", "Analyzer")]
     public async Task ExpressionContainingQuotes_DoesNotDesynchroniseTheScan()
     {
-        // One reported style (the ternary) and one exempt (the interpolation), on the same line.
+        // Two reported declarations (the ternary's branches) and one exempt style (the interpolation),
+        // on the same line.
         await VerifyRazor(
-            "<div style=\"@(ok ? \"a:b;\" : \"c:d;\")\"><b style=\"@($\"left:{x}px\")\"></b></div>",
-            RazorDiagnostic(RuleId, 1, 6, NeedleLength));
+            "<div style=\"@(ok ? \"color:red;\" : \"color:blue;\")\"><b style=\"@($\"left:{x}px\")\"></b></div>",
+            RazorDiagnostic(RuleId, 1, 21, 9).WithArguments("color:red"),
+            RazorDiagnostic(RuleId, 1, 36, 10).WithArguments("color:blue"));
     }
 
     /// <summary>
@@ -123,6 +137,6 @@ public class InlineStyleComputedValueTests : RazorMarkupAnalyzerTestBase<InlineS
     {
         await VerifyRazor(
             "<div style=\"@($\"width:{w}px\")\"></div>\n<div style=\"color:red\"></div>",
-            RazorDiagnostic(RuleId, 2, 6, NeedleLength));
+            RazorDiagnostic(RuleId, 2, 13, 9).WithArguments("color:red"));
     }
 }

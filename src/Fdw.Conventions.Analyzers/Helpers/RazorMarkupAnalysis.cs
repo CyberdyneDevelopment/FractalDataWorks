@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
@@ -71,16 +72,16 @@ internal static class RazorMarkupAnalysis
     /// When <see langword="true"/> the needle opens an element and only matches where the tag name ends
     /// there, so <c>&lt;svg</c> does not also match the component <c>&lt;SvgGauge&gt;</c>.
     /// </param>
-    /// <param name="skipDataDrivenValues">
-    /// When set, an occurrence whose attribute value is computed from data is not reported. Only the
-    /// attribute rules pass this: an element name has no value to judge.
+    /// <param name="skipDrawnElements">
+    /// When <see langword="true"/> an svg element the component draws — one handling pointer input or
+    /// generating its own contents — is not reported. Only the icon rule passes this.
     /// </param>
     internal static void ReportMarkupOccurrences(
         AdditionalFileAnalysisContext context,
         string needle,
         DiagnosticDescriptor rule,
         bool wholeElementName = false,
-        bool skipDataDrivenValues = false)
+        bool skipDrawnElements = false)
     {
         // Why: additional files carry every non-compiled item the project feeds the compiler, not just
         // .razor — filter on the extension rather than assuming the item order or count.
@@ -110,10 +111,7 @@ internal static class RazorMarkupAnalysis
                 if (wholeElementName && ContinuesTagName(lineText, column + needle.Length))
                     continue;
 
-                // Why the whole document and not lineText: an expression value may run past the end of
-                // the line, and the reader has to balance delimiters across it to find where it ends.
-                if (skipDataDrivenValues
-                    && RazorAttributeValue.IsDataDriven(document, line.Start + column + needle.Length))
+                if (skipDrawnElements && RazorSvgElement.IsDrawn(document, line.Start + column))
                     continue;
 
                 context.ReportDiagnostic(Diagnostic.Create(
@@ -124,6 +122,77 @@ internal static class RazorMarkupAnalysis
                         new LinePositionSpan(
                             new LinePosition(line.LineNumber, column),
                             new LinePosition(line.LineNumber, column + needle.Length)))));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reports <paramref name="rule"/> at every declaration of a markup style attribute that sets a
+    /// theme-owned property to a value the host cannot override.
+    /// </summary>
+    /// <param name="context">The additional file analysis context.</param>
+    /// <param name="needle">The attribute opening text to search for, matched case-insensitively.</param>
+    /// <param name="rule">The descriptor to report, whose message takes the declaration as its argument.</param>
+    /// <remarks>
+    /// The diagnostic lands on the declaration, not on the attribute, because the declaration is the unit
+    /// that gets fixed: a style attribute routinely mixes the component's own geometry — which stays —
+    /// with one hardcoded colour or size that has to move.
+    /// </remarks>
+    internal static void ReportThemeOwnedStyleDeclarations(
+        AdditionalFileAnalysisContext context,
+        string needle,
+        DiagnosticDescriptor rule)
+    {
+        if (!context.AdditionalFile.Path.EndsWith(RazorExtension, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var text = context.AdditionalFile.GetText(context.CancellationToken);
+        if (text is null)
+            return;
+
+        var document = text.ToString();
+        var scanner = new RazorMarkupScanner(document);
+        var declarations = new List<CssDeclarationSpan>();
+
+        foreach (var line in text.Lines)
+        {
+            var lineText = text.ToString(line.Span);
+
+            for (var column = lineText.IndexOf(needle, StringComparison.OrdinalIgnoreCase);
+                 column >= 0;
+                 column = lineText.IndexOf(needle, column + 1, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!scanner.IsMarkup(line.Start + column))
+                    continue;
+
+                var valueStart = line.Start + column + needle.Length;
+
+                // Why the whole document and not lineText: an expression value may run past the end of
+                // the line, and the reader has to balance delimiters across it to find where it ends.
+                if (RazorAttributeValue.IsDataDriven(document, valueStart))
+                    continue;
+
+                declarations.Clear();
+                CssStyleValue.Collect(document, valueStart, declarations);
+
+                foreach (var declaration in declarations)
+                {
+                    if (!ThemeOwnedCssProperties.IsThemeOwned(declaration.Property))
+                        continue;
+
+                    if (ThemeOwnedCssProperties.IsHostOverridable(declaration.Value))
+                        continue;
+
+                    context.ReportDiagnostic(Diagnostic.Create(
+                        rule,
+                        Location.Create(
+                            context.AdditionalFile.Path,
+                            new TextSpan(declaration.Start, declaration.Length),
+                            new LinePositionSpan(
+                                text.Lines.GetLinePosition(declaration.Start),
+                                text.Lines.GetLinePosition(declaration.Start + declaration.Length))),
+                        declaration.Text));
+                }
             }
         }
     }

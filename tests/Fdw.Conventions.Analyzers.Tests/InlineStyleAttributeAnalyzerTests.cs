@@ -4,12 +4,20 @@ using Xunit;
 namespace Fdw.Conventions.Analyzers.Tests;
 
 /// <summary>
-/// Tests for <see cref="InlineStyleAttributeAnalyzer"/> (FDW046).
+/// Tests for <see cref="InlineStyleAttributeAnalyzer"/> (FDW046) — the scan itself: which documents and
+/// assemblies it reads, and which regions of a .razor file count as markup. Where the rule draws its
+/// line between a declaration that must move and one that may stay is covered by
+/// <see cref="InlineStyleThemeOwnershipTests"/>.
 /// </summary>
+/// <remarks>
+/// <c>color:red</c> is the canonical violation used throughout: a theme-owned property fixed to a
+/// literal, which is what the rule reports.
+/// </remarks>
 public class InlineStyleAttributeAnalyzerTests : RazorMarkupAnalyzerTestBase<InlineStyleAttributeAnalyzer>
 {
     private const string RuleId = InlineStyleAttributeAnalyzer.DiagnosticId;
-    private const int NeedleLength = 7;
+    private const string Declaration = "color:red";
+    private const int DeclarationLength = 9;
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -18,7 +26,7 @@ public class InlineStyleAttributeAnalyzerTests : RazorMarkupAnalyzerTestBase<Inl
     {
         await VerifyRazor(
             "<div style=\"color:red\">Hello</div>",
-            RazorDiagnostic(RuleId, 1, 6, NeedleLength));
+            RazorDiagnostic(RuleId, 1, 13, DeclarationLength).WithArguments(Declaration));
     }
 
     [Fact]
@@ -35,9 +43,9 @@ public class InlineStyleAttributeAnalyzerTests : RazorMarkupAnalyzerTestBase<Inl
     public async Task TwoInlineStylesOnOneLine_ReportsBoth()
     {
         await VerifyRazor(
-            "<div style=\"a\"><span style=\"b\"></span></div>",
-            RazorDiagnostic(RuleId, 1, 6, NeedleLength),
-            RazorDiagnostic(RuleId, 1, 22, NeedleLength));
+            "<div style=\"color:red\"><span style=\"color:blue\"></span></div>",
+            RazorDiagnostic(RuleId, 1, 13, DeclarationLength).WithArguments(Declaration),
+            RazorDiagnostic(RuleId, 1, 37, 10).WithArguments("color:blue"));
     }
 
     [Fact]
@@ -50,20 +58,21 @@ public class InlineStyleAttributeAnalyzerTests : RazorMarkupAnalyzerTestBase<Inl
             @page "/demo"
 
             <section>
-                <p style="margin:0">Body</p>
+                <p style="color:red">Body</p>
             </section>
             """,
-            RazorDiagnostic(RuleId, 4, 8, NeedleLength));
+            RazorDiagnostic(RuleId, 4, 15, DeclarationLength).WithArguments(Declaration));
     }
 
+    /// <summary>
+    /// A bare expression value states no declaration the reader can see, so there is nothing to judge.
+    /// </summary>
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Analyzer")]
-    public async Task DynamicStyleValue_ReportsDiagnostic()
+    public async Task BareExpressionValue_ReportsNothing()
     {
-        await VerifyRazor(
-            "<div style=\"@ComputedStyle\">Hello</div>",
-            RazorDiagnostic(RuleId, 1, 6, NeedleLength));
+        await VerifyRazor("<div style=\"@ComputedStyle\">Hello</div>");
     }
 
     [Fact]
@@ -97,7 +106,7 @@ public class InlineStyleAttributeAnalyzerTests : RazorMarkupAnalyzerTestBase<Inl
                 };
             }
             """,
-            RazorDiagnostic(RuleId, 4, 14, NeedleLength));
+            RazorDiagnostic(RuleId, 4, 21, DeclarationLength).WithArguments(Declaration));
     }
 
     [Fact]
@@ -129,7 +138,7 @@ public class InlineStyleAttributeAnalyzerTests : RazorMarkupAnalyzerTestBase<Inl
     {
         await VerifyRazor(
             "<div STYLE=\"color:red\"></div>",
-            RazorDiagnostic(RuleId, 1, 6, NeedleLength));
+            RazorDiagnostic(RuleId, 1, 13, DeclarationLength).WithArguments(Declaration));
     }
 
     [Fact]
@@ -150,7 +159,7 @@ public class InlineStyleAttributeAnalyzerTests : RazorMarkupAnalyzerTestBase<Inl
         await VerifyRazorIn(
             InScopeComponentsAssembly,
             "<div style=\"color:red\"></div>",
-            RazorDiagnostic(RuleId, 1, 6, NeedleLength));
+            RazorDiagnostic(RuleId, 1, 13, DeclarationLength).WithArguments(Declaration));
     }
 
     [Fact]

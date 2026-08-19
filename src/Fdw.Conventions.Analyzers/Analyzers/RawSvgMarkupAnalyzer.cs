@@ -6,11 +6,17 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Fdw.Conventions.Analyzers;
 
 /// <summary>
-/// Analyzer that reports raw <c>&lt;svg&gt;</c> elements in .razor markup. Icons come from the shared icon
-/// component so a glyph is defined once; pasted svg paths duplicate it per page and drift. Applies to
-/// Fdw.UI.Pages and the domain <c>*.Components</c> packages; Fdw.UI.Rendering.Blazor is exempt.
+/// Analyzer that reports raw <c>&lt;svg&gt;</c> icon glyphs in .razor markup. Icons come from the shared
+/// icon component so a glyph is defined once; pasted svg paths duplicate it per page and drift. Applies
+/// to Fdw.UI.Pages and the domain <c>*.Components</c> packages; Fdw.UI.Rendering.Blazor is exempt.
 /// </summary>
 /// <remarks>
+/// <para>
+/// A drawing surface is not an icon and is not reported. The advice this rule gives presumes a glyph —
+/// a fixed shape, nameable, the same at every site — and a canvas that handles pointer input or builds
+/// its geometry from data has none, so no icon component could render it. <see cref="RazorSvgElement"/>
+/// draws the line.
+/// </para>
 /// The .razor document is analyzed as an additional file — raw text — so the diagnostic carries an
 /// external file location. <c>#pragma warning disable</c> inside the .razor therefore cannot suppress it;
 /// only NoWarn, .editorconfig, or the descriptor severity apply.
@@ -67,5 +73,5 @@ public sealed class RawSvgMarkupAnalyzer : DiagnosticAnalyzer
     }
 
     private static void Analyze(AdditionalFileAnalysisContext context) =>
-        RazorMarkupAnalysis.ReportMarkupOccurrences(context, Needle, Rule, wholeElementName: true);
+        RazorMarkupAnalysis.ReportMarkupOccurrences(context, Needle, Rule, wholeElementName: true, skipDrawnElements: true);
 }
