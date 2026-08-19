@@ -108,7 +108,7 @@ public sealed class FieldMappingTransformProviderTests : IDisposable
     {
         return new MockHttpHandler()
             .RespondWith("transform-types", types ?? CreateTypeList())
-            .RespondWith(TestFieldMappingId.ToString(), transforms ?? CreateTransformList())
+            .RespondWith(HttpMethod.Get, TestFieldMappingId.ToString(), transforms ?? CreateTransformList())
             .RespondWith("transforms/reorder", new { })
             .RespondWith(HttpMethod.Delete, "/transforms/", new { })
             .RespondWith(HttpMethod.Post, "/transforms", new FieldMappingTransformPayload
@@ -316,8 +316,8 @@ public sealed class FieldMappingTransformProviderTests : IDisposable
         var transforms = CreateTransformList(2);
         var handler = new MockHttpHandler()
             .RespondWith("transform-types", CreateTypeList())
-            .RespondWith(TestFieldMappingId.ToString(), transforms)
-            .RespondError("field-mappings/transforms/" + transforms[0].Id);
+            .RespondWith(HttpMethod.Get, TestFieldMappingId.ToString(), transforms)
+            .RespondError(HttpMethod.Delete, "/transforms/" + transforms[0].Id);
 
         var component = RenderWithHandler(handler);
 
