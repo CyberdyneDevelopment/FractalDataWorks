@@ -26,9 +26,9 @@
     <!-- Blazor-ApexCharts: MIT license. Chart renderer for Fdw.UI.Charts.Blazor. -->
     <PackageVersion Include="Blazor-ApexCharts" Version="6.1.0" />
     <!-- Radzen.Blazor: MIT license. Second chart renderer (RadzenChart) for Fdw.UI.Charts.Blazor. -->
-    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.18.0" />
-    <PackageVersion Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.18.0" />
-    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.18.0" />
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.19.2" />
+    <PackageVersion Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.19.2" />
+    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.19.2" />
     <PackageVersion Include="Radzen.Blazor" Version="11.0.4" />
     <!-- Z.Blazor.Diagrams: MIT license. Interactive node-editor canvas renderer for Fdw.UI.Canvas.Blazor. -->
     <PackageVersion Include="Z.Blazor.Diagrams" Version="3.0.4.1" />
@@ -122,7 +122,7 @@
     <PackageVersion Include="System.Data.SqlClient" Version="4.9.0" />
     <PackageVersion Include="System.Net.Http.Json" Version="10.0.0" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="10.0.10" />
-    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.18.0" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.19.2" />
     <PackageVersion Include="System.Linq.Expressions" Version="4.3.0" />
     <PackageVersion Include="System.Reflection.Emit" Version="4.7.0" />
     <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />

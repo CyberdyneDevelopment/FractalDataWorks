@@ -78,6 +78,17 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     // register it after this point in the registration chain).
                     new Lazy<IOrgAccessProvider>(() => sp.GetRequiredService<IOrgAccessProvider>())));
 
+            // Why singleton alongside the user-keyed resolver rather than inside it: this answers
+            // "what does holding these roles grant", which has no user in it. An authentication service
+            // that establishes a principal from an external issuer resolves its declared roles through
+            // this, and lands on the same authz.RolePermission expansion the user path uses.
+            builder.Services.TryAddSingleton<IRolePermissionResolver>(sp =>
+                new RolePermissionResolver(
+                    sp.GetRequiredService<IServiceConfigurationProvider<RoleConfiguration>>(),
+                    sp.GetRequiredService<IServiceConfigurationProvider<PermissionConfiguration>>(),
+                    sp.GetRequiredService<IServiceConfigurationProvider<RolePermissionConfiguration>>(),
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<RolePermissionResolver>()));
+
             // Why: DefaultAuthorizationService reads from dual-source providers (system ctrl + user cfg).
             builder.Services.TryAddSingleton<IFrameworkAuthorizationService, DefaultAuthorizationService>();
 

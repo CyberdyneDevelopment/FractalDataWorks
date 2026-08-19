@@ -1,15 +1,21 @@
 using System.Collections.Generic;
-using Fdw.Collections;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
 
 namespace Fdw.Services.Authentication.Abstractions;
 
 /// <summary>
-/// Interface for authentication service type definitions.
-/// Provides authentication-specific metadata on top of the base service type.
+/// Interface for authentication service type definitions — the options of
+/// <c>AuthenticationServiceTypes</c>, each one a mechanism by which this host validates an inbound
+/// token. Provides authentication-specific metadata on top of the base service type.
 /// </summary>
-public interface IAuthenticationServiceType : ITypeOption<int, IAuthenticationServiceType>, IServiceType
+/// <remarks>
+/// The key type is the one <see cref="IServiceType"/> already carries. An earlier declaration also
+/// listed <c>ITypeOption&lt;int, IAuthenticationServiceType&gt;</c>, which asks for an <c>int Id</c>
+/// beside the <c>Guid Id</c> every service type option derives from its name — a pair no option can
+/// satisfy, and the reason this interface had no implementers.
+/// </remarks>
+public interface IAuthenticationServiceType : IServiceType
 {
     /// <summary>
     /// Gets the authentication protocols supported by this provider.

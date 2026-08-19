@@ -196,4 +196,24 @@ public static partial class AuthorizationLog
     [MessageLogging(EventId = 11011, Level = LogLevel.Trace,
         Message = "Selected {count} roles for user '{userId}' from {total} in catalog after assignment filter")]
     public static partial IGenericMessage UserRolesSelected(ILogger logger, int count, string userId, int total);
+
+    /// <summary>Logs when role expansion was asked for with no role names.</summary>
+    [MessageLogging(EventId = 71005, Level = LogLevel.Error,
+        Message = "Role permission expansion requires at least one role name")]
+    public static partial IGenericMessage RoleExpansionNamesRequired(ILogger logger);
+
+    /// <summary>Logs when a declared role name matches no row in the role catalogue.</summary>
+    [MessageLogging(EventId = 71006, Level = LogLevel.Error,
+        Message = "Role '{roleName}' does not exist in the role catalogue — the declaration names a row that is not there")]
+    public static partial IGenericMessage RoleNameUnknown(ILogger logger, string roleName);
+
+    /// <summary>Logs when a role/permission junction row points at a permission that is not in the catalogue.</summary>
+    [MessageLogging(EventId = 71007, Level = LogLevel.Error,
+        Message = "Role '{roleName}' grants permission id '{permissionId}', which is not in the permission catalogue")]
+    public static partial IGenericMessage RolePermissionUnresolved(ILogger logger, string roleName, string permissionId);
+
+    /// <summary>Logs the outcome of expanding role names to permissions.</summary>
+    [MessageLogging(EventId = 11012, Level = LogLevel.Debug,
+        Message = "Expanded {roleCount} role(s) to {permissionCount} permission(s): {roleNames}")]
+    public static partial IGenericMessage RolePermissionsExpanded(ILogger logger, int roleCount, int permissionCount, string roleNames);
 }
