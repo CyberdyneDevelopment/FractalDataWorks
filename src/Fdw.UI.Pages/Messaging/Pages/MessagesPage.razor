@@ -66,7 +66,7 @@
                         @foreach (var message in FilteredMessages(ctx.Messages))
                         {
                             <div class="a u-pointer" @onclick="@(() => OpenMessage(message))">
-                                <span class="d @GetSeverityDotClass(message.Severity)"></span>
+                                <span class="d @GetSeverityTone(message.Severity).DotClass"></span>
                                 <div style="flex:1;min-width:0;">
                                     <p class="t @(message.IsUnread ? "" : "mut")">@message.Subject</p>
                                     <p class="ts">@message.MessageType · @FormatTimestamp(message.CreatedAt)</p>
@@ -131,13 +131,13 @@
         Navigation.NavigateTo($"/messages/{message.Id}");
     }
 
-    private static string GetSeverityDotClass(string severity) => severity switch
+    private static StatusColorBase GetSeverityTone(string severity) => severity switch
     {
-        "Critical" => "dot-red",
-        "High" => "dot-amber",
-        "Normal" => "dot-glacier",
-        "Low" => "dot-violet",
-        _ => "dot-glacier"
+        "Critical" => StatusColors.Red,
+        "High" => StatusColors.Yellow,
+        "Normal" => StatusColors.Blue,
+        "Low" => StatusColors.Violet,
+        _ => StatusColors.Blue
     };
 
     private static MarkupString GetSeverityIconMarkup(string severity) => severity switch

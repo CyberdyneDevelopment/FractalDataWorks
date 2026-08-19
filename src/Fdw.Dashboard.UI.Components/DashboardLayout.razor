@@ -105,7 +105,7 @@
                         @foreach (var activity in OperationsContext.Activities)
                         {
                             <div class="a">
-                                <span class="d @GetStatusColor(activity.Severity)"></span>
+                                <span class="d @GetStatusTone(activity.Severity).DotClass"></span>
                                 <div>
                                     <p class="t">@activity.Title</p>
                                     <p class="ts">@activity.Timestamp.ToString("t")</p>
@@ -133,11 +133,13 @@
 
     [CascadingParameter(Name = "BlazorTheme")] private IBlazorTheme? Theme { get; set; }
 
-    private string GetStatusColor(string status) => status switch
+    // Why this returns a tone and not a class: which tone a severity takes is this dashboard's
+    // knowledge, but what that tone looks like is the theme's, and it lives on the StatusColors option.
+    private static StatusColorBase GetStatusTone(string status) => status switch
     {
-        "success" => "dot-green",
-        "error" => "dot-red",
-        "warning" => "dot-amber",
-        _ => "dot-glacier"
+        "success" => StatusColors.Green,
+        "error" => StatusColors.Red,
+        "warning" => StatusColors.Yellow,
+        _ => StatusColors.Blue
     };
 }

@@ -356,10 +356,4 @@
         }
     }
 
-    private string GetRolePillClass(string role) => role switch
-    {
-        "Admin" => "inline-flex items-center rounded-md bg-red-50 dark:bg-red-900/20 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400 ring-1 ring-inset ring-red-600/10",
-        "Operator" => "inline-flex items-center rounded-md bg-[var(--primary)]/10 px-2 py-1 text-xs font-medium text-[var(--primary)] ring-1 ring-inset ring-[var(--ring)]",
-        _ => "inline-flex items-center rounded-md bg-gray-50 dark:bg-gray-700/50 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 ring-1 ring-inset ring-gray-500/10"
-    };
 }

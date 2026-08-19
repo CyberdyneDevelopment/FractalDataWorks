@@ -1357,15 +1357,6 @@
         return _edgeUpdates.TryGetValue(key, out var update) ? update.RecordsFlowed : 0;
     }
 
-    private static string GetTestStatusBorderColor(string? status) => status switch
-    {
-        "Running" => "#f59e0b",
-        "Complete" => "#22c55e",
-        "Failed" => "#ef4444",
-        "Cancelled" => "#6b7280",
-        _ => "#475569"
-    };
-
     // Why Running takes the success tone and Complete the running one: that is what this panel has
     // always drawn, and the pass that introduced Badge changed no colour anywhere. It disagrees with
     // every other execution view in the console and is the next thing to settle.
@@ -1479,15 +1470,6 @@
 
     // Why: Node accent colors aligned to the console design palette
     // (glacier/green/signal/violet) so the canvas matches the Reference Console.
-    private string GetTaskColor(string category) => category switch
-    {
-        "Source" => "#56b070",      // success green
-        "Transform" => "#79a8cc",   // glacier
-        "Destination" => "#e05c4a", // signal red
-        "Diagnostics" => "#787e89", // n-400
-        _ => "#9b8cd6"              // violet
-    };
-
     // Why: Collapsed SqlQuery/HttpSource/FileSource into a single "Source" entry. The connection
     // selected on the task now drives which query fields appear in the properties panel via
     // IConnectionType.DataQueryType.ConfigurationFields — no need for separate palette entries
