@@ -3,7 +3,7 @@ using Fdw.MessageLogging;
 using Fdw.Messages;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.Hosting.Middleware;
+namespace Fdw.WebMcp.Hosting;
 
 /// <summary>
 /// Structured logging for WebMCP PAT authentication middleware.

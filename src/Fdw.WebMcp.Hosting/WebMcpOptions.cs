@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Fdw.Hosting.WebMcp;
+namespace Fdw.WebMcp.Hosting;
 
 /// <summary>
 /// Configuration options for WebMCP tool exposure and agent key authentication.

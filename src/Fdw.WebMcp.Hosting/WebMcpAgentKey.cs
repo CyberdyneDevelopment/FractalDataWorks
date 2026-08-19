@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Fdw.Hosting.WebMcp;
+namespace Fdw.WebMcp.Hosting;
 
 /// <summary>
 /// Represents an API key that authorizes an AI agent to act on behalf of a user.

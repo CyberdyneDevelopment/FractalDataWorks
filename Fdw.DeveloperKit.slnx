@@ -302,7 +302,6 @@
     <Project Path="src/Fdw.Services.Messaging/Fdw.Services.Messaging.csproj" />
     <Project Path="src/Fdw.Services.Multitenancy.Components/Fdw.Services.Multitenancy.Components.csproj" />
     <Project Path="src/Fdw.Services.Multitenancy.Endpoints/Fdw.Services.Multitenancy.Endpoints.csproj" />
-    <Project Path="src/Fdw.Services.Multitenancy.Sql/Fdw.Services.Multitenancy.Sql.csproj" />
     <Project Path="src/Fdw.Services.Multitenancy/Fdw.Services.Multitenancy.csproj" />
     <Project Path="src/Fdw.Services.Notifications.Components/Fdw.Services.Notifications.Components.csproj" />
     <Project Path="src/Fdw.Services.Notifications.Endpoints/Fdw.Services.Notifications.Endpoints.csproj" />
@@ -381,6 +380,7 @@
     <Project Path="src/Fdw.Web.Http.Authentication/Fdw.Web.Http.Authentication.csproj" />
     <Project Path="src/Fdw.Web.Search.Clients.Models/Fdw.Web.Search.Clients.Models.csproj" />
     <Project Path="src/Fdw.Web.Search.Endpoints/Fdw.Web.Search.Endpoints.csproj" />
+    <Project Path="src/Fdw.WebMcp.Hosting/Fdw.WebMcp.Hosting.csproj" />
   </Folder>
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
   <!-- src/Analyzers - Framework-wide code style analyzers and code fixes               -->

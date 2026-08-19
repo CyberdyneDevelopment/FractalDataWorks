@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Fdw.Hosting.Middleware;
+using Fdw.WebMcp.Hosting;
 using Microsoft.AspNetCore.Builder;
 
-namespace Fdw.Hosting.Extensions;
+namespace Fdw.WebMcp.Hosting;
 
 /// <summary>
 /// Extension methods for registering the WebMCP PAT authentication middleware.

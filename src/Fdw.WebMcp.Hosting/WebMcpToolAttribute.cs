@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Fdw.Hosting.WebMcp;
+namespace Fdw.WebMcp.Hosting;
 
 /// <summary>
 /// Marks a FastEndpoints endpoint for WebMCP tool registration.

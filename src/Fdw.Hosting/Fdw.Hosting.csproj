@@ -25,7 +25,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    <ProjectReference Include="..\Fdw.Services.Multitenancy.Sql\Fdw.Services.Multitenancy.Sql.csproj" />
     <ProjectReference Include="..\Fdw.Services.Notifications\Fdw.Services.Notifications.csproj" />
     <ProjectReference Include="..\Fdw.Services.Workflows\Fdw.Services.Workflows.csproj" />
     <ProjectReference Include="..\Fdw.SignalR\Fdw.SignalR.csproj" />

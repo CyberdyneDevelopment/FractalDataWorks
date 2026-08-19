@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
-namespace Fdw.Hosting.WebMcp;
+namespace Fdw.WebMcp.Hosting;
 
 /// <summary>
 /// Internal carrier for assemblies passed to <c>AddWebMcp</c>,

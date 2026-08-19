@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Fdw.Hosting.Middleware;
+namespace Fdw.WebMcp.Hosting;
 
 /// <summary>
 /// Middleware that intercepts <c>Authorization: Bearer fdx_*</c> headers and validates them

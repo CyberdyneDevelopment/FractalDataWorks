@@ -3,7 +3,7 @@ using Fdw.MessageLogging;
 using Fdw.Messages;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.Hosting.WebMcp;
+namespace Fdw.WebMcp.Hosting;
 
 /// <summary>
 /// MessageLogging for WebMCP tool discovery and serving operations.

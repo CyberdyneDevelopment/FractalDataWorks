@@ -1,13 +1,13 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-using Fdw.Hosting.WebMcp;
+using Fdw.WebMcp.Hosting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.Hosting.Extensions;
+namespace Fdw.WebMcp.Hosting;
 
 /// <summary>
 /// Hosting extensions for WebMCP — the W3C browser standard that exposes structured tools

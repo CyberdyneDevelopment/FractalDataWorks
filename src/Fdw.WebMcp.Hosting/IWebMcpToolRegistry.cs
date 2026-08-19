@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Fdw.Hosting.WebMcp;
+namespace Fdw.WebMcp.Hosting;
 
 /// <summary>
 /// Provides access to the set of WebMCP tools discovered from decorated endpoints.

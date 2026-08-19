@@ -56,10 +56,6 @@ public abstract class AdminEndpointBase<TResponse> : EndpointWithoutRequest<TRes
         AllowAnonymous();
 #else
         Policies(AdminPolicy);
-        // Why: PermissionClaimsPreProcessor checks the baked perm claims in the JWT before
-        // executing the handler. Because the base class owns the Policies(...) call, it also
-        // owns registering the pre-processor so every admin endpoint gets it automatically.
-        Definition.PreProcessors(Order.Before, new PermissionClaimsPreProcessor());
 #endif
 
         if (!string.IsNullOrEmpty(RateLimitPolicy))
@@ -144,8 +140,6 @@ public abstract class AdminEndpointBase<TRequest, TResponse> : Endpoint<TRequest
         AllowAnonymous();
 #else
         Policies(AdminPolicy);
-        // Why: see AdminEndpointBase<TResponse>.Configure() — same rationale.
-        Definition.PreProcessors(Order.Before, new PermissionClaimsPreProcessor());
 #endif
 
         if (!string.IsNullOrEmpty(RateLimitPolicy))

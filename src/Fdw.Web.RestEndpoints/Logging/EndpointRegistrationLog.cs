@@ -144,4 +144,36 @@ public static partial class EndpointRegistrationLog
         Level = LogLevel.Debug,
         Message = "Endpoint group {group} contributed {contributed} endpoint type(s); {runningTotal} declared so far")]
     public static partial IGenericMessage EndpointGroupContributed(ILogger logger, string group, int contributed, int runningTotal);
+
+    /// <summary>Logs each middleware this collection adds to the request pipeline, in the order it adds it.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="ordinal">The position of this call within the sequence.</param>
+    /// <param name="middleware">The middleware being added.</param>
+    /// <param name="reason">Why it sits at this position.</param>
+    [MessageLogging(EventId = 11027, Level = LogLevel.Debug,
+        Message = "Request pipeline [{ordinal}]: {middleware} — {reason}")]
+    public static partial IGenericMessage PipelineMiddlewareAdded(ILogger logger, int ordinal, string middleware, string reason);
+
+    /// <summary>Logs the composed request pipeline once the collection has added every part of it.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="sequence">The middleware added, in order.</param>
+    [MessageLogging(EventId = 31020, Level = LogLevel.Information,
+        Message = "Request pipeline composed by the Endpoints collection: {sequence}")]
+    public static partial IGenericMessage PipelineComposed(ILogger logger, string sequence);
+
+    /// <summary>Logs the endpoint conventions applied to the FastEndpoints configuration.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="ordinal">The position of this setting within the conventions.</param>
+    /// <param name="setting">The configuration property being set.</param>
+    /// <param name="value">The value it is set to.</param>
+    /// <param name="reason">Why it is set to that.</param>
+    [MessageLogging(EventId = 11028, Level = LogLevel.Debug,
+        Message = "Endpoint convention [{ordinal}]: {setting} = {value} — {reason}")]
+    public static partial IGenericMessage EndpointConventionApplied(ILogger logger, int ordinal, string setting, string value, string reason);
+
+    /// <summary>Logs the single global attachment of the permission pre-processor.</summary>
+    /// <param name="logger">The logger.</param>
+    [MessageLogging(EventId = 11029, Level = LogLevel.Debug,
+        Message = "PermissionClaimsPreProcessor attached globally — every endpoint's Policies(resource:action) is checked, however the endpoint was declared")]
+    public static partial IGenericMessage PermissionPreProcessorAttached(ILogger logger);
 }

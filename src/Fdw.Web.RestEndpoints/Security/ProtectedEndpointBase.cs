@@ -55,10 +55,6 @@ public abstract class ProtectedEndpointBase<TResponse> : EndpointWithoutRequest<
         AllowAnonymous();
 #else
         Policies(ReadPolicy);
-        // Why: PermissionClaimsPreProcessor checks the baked perm claims in the JWT before
-        // executing the handler. Registered here at the base class so every protected endpoint
-        // gets perm-claims authorization automatically without any per-endpoint call.
-        Definition.PreProcessors(Order.Before, new PermissionClaimsPreProcessor());
 #endif
 
         if (!string.IsNullOrEmpty(EndpointSummary) || !string.IsNullOrEmpty(EndpointDescription))
@@ -137,10 +133,6 @@ public abstract class ProtectedEndpointBase<TRequest, TResponse> : Endpoint<TReq
         AllowAnonymous();
 #else
         Policies(ReadPolicy);
-        // Why: PermissionClaimsPreProcessor checks the baked perm claims in the JWT before
-        // executing the handler. Registered here at the base class so every protected endpoint
-        // gets perm-claims authorization automatically without any per-endpoint call.
-        Definition.PreProcessors(Order.Before, new PermissionClaimsPreProcessor());
 #endif
 
         if (!string.IsNullOrEmpty(EndpointSummary) || !string.IsNullOrEmpty(EndpointDescription))

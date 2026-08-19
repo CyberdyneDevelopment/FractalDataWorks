@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Fdw.Hosting.WebMcp;
+using Fdw.WebMcp.Hosting;
 using Shouldly;
 using Xunit;
 
