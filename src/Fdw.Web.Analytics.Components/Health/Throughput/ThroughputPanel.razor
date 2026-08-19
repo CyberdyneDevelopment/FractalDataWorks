@@ -16,7 +16,7 @@
         <div class="hl">Latency (ms)</div>
         <div style="display:flex;align-items:flex-end;gap:8px;">
             <span class="hv">@Context.AvgLatencyMs.ToString("F0")<small>avg</small></span>
-            <span class="mono" style="font-size:13px;font-weight:600;color:var(--amber-400);margin-left:8px;">@Context.P95LatencyMs.ToString("F0")<small style="color:var(--n-500);font-weight:400;margin-left:3px;">p95</small></span>
+            <span class="mono u-fs-13 u-fw-600" style="color:var(--amber-400);margin-left:8px;">@Context.P95LatencyMs.ToString("F0")<small class="u-fw-400" style="color:var(--n-500);margin-left:3px;">p95</small></span>
         </div>
         @if (Context.HistoryDataPoints.Count >= 2)
         {
@@ -28,7 +28,7 @@
         }
         @if (!string.IsNullOrEmpty(Context.LatencyTrend.Name) && !string.Equals(Context.LatencyTrend.Name, "Flat", StringComparison.OrdinalIgnoreCase))
         {
-            <div class="mono" style="font-size:10px;margin-top:4px;color:@(string.Equals(Context.LatencyTrend.Name, "Up", StringComparison.OrdinalIgnoreCase) ? "var(--signal)" : "var(--success)");">
+            <div class="mono u-fs-10" style="margin-top:4px;color:@(string.Equals(Context.LatencyTrend.Name, "Up", StringComparison.OrdinalIgnoreCase) ? "var(--signal)" : "var(--success)");">
                 @(string.Equals(Context.LatencyTrend.Name, "Up", StringComparison.OrdinalIgnoreCase) ? "▲" : "▼") @Math.Abs(Context.LatencyChangePercent).ToString("F1")%
             </div>
         }

@@ -67,7 +67,7 @@
                     @foreach (var kvp in ctx.ServiceThroughput)
                     {
                         <div class="u-mb-14">
-                            <div class="mono" style="font-size:11px;letter-spacing:0.06em;color:var(--n-400);margin-bottom:8px;">@kvp.Key</div>
+                            <div class="mono u-fs-11 u-ls-06" style="color:var(--n-400);margin-bottom:8px;">@kvp.Key</div>
                             <ThroughputPanel Context="@CreateThroughputContext(kvp.Value)" />
                         </div>
                     }

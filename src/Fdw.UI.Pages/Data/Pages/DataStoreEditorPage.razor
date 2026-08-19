@@ -171,7 +171,7 @@
                                     {
                                         var idx = i;
                                         var path = ctx.Paths[idx];
-                                        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--s2);border-radius:8px;">
+                                        <div class="u-r-8" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--s2);">
                                             <div>
                                                 <div class="pn mono">@path.Name</div>
                                                 <div class="pk">@path.PhysicalPath</div>
@@ -305,7 +305,7 @@
                                 {
                                     <div class="card">
                                         <div class="card-b" style="text-align:center;padding:40px 20px;">
-                                            <div style="font-size:34px;color:var(--success);">&#x2713;</div>
+                                            <div class="u-fs-34" style="color:var(--success);">&#x2713;</div>
                                             <p style="color:var(--n-200);margin:8px 0 0;">Connection created successfully.</p>
                                         </div>
                                     </div>
@@ -432,8 +432,8 @@
                                                                     <div class="frow">
                                                                         <label>Password</label>
                                                                         <div style="display:flex;align-items:center;gap:8px;">
-                                                                            <input class="fin mono" style="flex:1;opacity:.6;" value="@connCtx.StoredSecretKeyName" disabled />
-                                                                            <span class="mono" style="color:var(--success);font-size:12px;white-space:nowrap;">&#x2713; stored</span>
+                                                                            <input class="fin mono u-op-60" style="flex:1;" value="@connCtx.StoredSecretKeyName" disabled />
+                                                                            <span class="mono u-fs-12" style="color:var(--success);white-space:nowrap;">&#x2713; stored</span>
                                                                         </div>
                                                                         <p class="hint">Stored in <span class="mono">@connCtx.SelectedSecretManagerName</span> as <span class="mono">@connCtx.StoredSecretKeyName</span></p>
                                                                     </div>
@@ -478,7 +478,7 @@
                                             <div style="display:flex;align-items:center;gap:10px;">
                                                 <button type="button" class="sw swbtn @(connCtx.ConnectionConfig.Encrypt ? "on" : null)"
                                                         @onclick="() => connCtx.ConnectionConfig.Encrypt = !connCtx.ConnectionConfig.Encrypt"></button>
-                                                <span style="font-size:13px;color:var(--n-300);">Encrypt the connection with TLS/SSL</span>
+                                                <span class="u-fs-13" style="color:var(--n-300);">Encrypt the connection with TLS/SSL</span>
                                             </div>
                                         </div>
                                         <div class="frow full">
@@ -486,7 +486,7 @@
                                             <div style="display:flex;align-items:center;gap:10px;">
                                                 <button type="button" class="sw swbtn @(connCtx.ConnectionConfig.TrustServerCertificate ? "on" : null)"
                                                         @onclick="() => connCtx.ConnectionConfig.TrustServerCertificate = !connCtx.ConnectionConfig.TrustServerCertificate"></button>
-                                                <span style="font-size:13px;color:var(--n-300);">Skip certificate validation (not recommended in production)</span>
+                                                <span class="u-fs-13" style="color:var(--n-300);">Skip certificate validation (not recommended in production)</span>
                                             </div>
                                         </div>
                                     }
@@ -512,8 +512,8 @@
                                         @if (connCtx.IsLoading)
                                         {
                                             <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
-                                                <div class="spin" style="width:18px;height:18px;border-width:2px;"></div>
-                                                <span class="mono" style="color:var(--n-400);font-size:12px;">Testing connection...</span>
+                                                <div class="spin u-bw-2" style="width:18px;height:18px;"></div>
+                                                <span class="mono u-fs-12" style="color:var(--n-400);">Testing connection...</span>
                                             </div>
                                         }
                                         else if (connCtx.TestResult is not null)

@@ -115,11 +115,11 @@ else
 
 @if (_deleteTarget != null)
 {
-    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:50;">
+    <div class="u-bg-scrim-60" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:50;">
         <div class="card" style="width:384px;">
             <div class="card-h"><h3>Confirm Delete</h3></div>
             <div class="card-b">
-                <p style="color:var(--n-400);font-size:13px;margin:0 0 20px;">Are you sure you want to delete connection <span class="mono u-fg-signal">@_deleteTarget</span>? This action cannot be undone.</p>
+                <p class="u-fs-13" style="color:var(--n-400);margin:0 0 20px;">Are you sure you want to delete connection <span class="mono u-fg-signal">@_deleteTarget</span>? This action cannot be undone.</p>
                 <div class="actions u-jc-end">
                     <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancel</button>
                     <button class="btn btn-danger btn-sm" @onclick="ExecuteDelete">Delete</button>

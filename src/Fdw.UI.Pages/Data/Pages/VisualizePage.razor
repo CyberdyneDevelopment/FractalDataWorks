@@ -78,7 +78,7 @@
                         if (role == ChartEncodingRoles.NotFound) continue;
                         var currentBinding = ctx.EncodingBindings.TryGetValue(roleName, out var bound) ? bound : string.Empty;
                         <div style="display:flex;align-items:center;gap:8px;">
-                            <span style="min-width:80px;font-size:12px;color:#94a3b8;">@role.DisplayName</span>
+                            <span class="u-fs-12 u-fg-slate" style="min-width:80px;">@role.DisplayName</span>
                             <select class="fin"
                                     style="width:220px;"
                                     value="@currentBinding"

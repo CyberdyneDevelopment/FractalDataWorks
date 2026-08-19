@@ -34,20 +34,20 @@
                             <nav>
                                 @foreach (var category in ctx.Types)
                                 {
-                                    <button class="nav-item @(string.Equals(_selectedCategory, category.Category, StringComparison.Ordinal) ? "active" : "")"
-                                            style="width:100%;text-align:left;background:transparent;border:0;cursor:pointer;flex-direction:column;align-items:flex-start;gap:2px;"
+                                    <button class="nav-item @(string.Equals(_selectedCategory, category.Category, StringComparison.Ordinal) ? "active" : "") u-bg-transparent u-b-0"
+                                            style="width:100%;text-align:left;cursor:pointer;flex-direction:column;align-items:flex-start;gap:2px;"
                                             @onclick="() => SelectCategory(category, ctx, page)">
                                         <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
                                             <span>@category.Category</span>
                                             <span class="tpill">@category.TypeName</span>
                                         </div>
-                                        <div class="mono" style="font-size:10px;color:var(--n-500);">@category.Name</div>
+                                        <div class="mono u-fs-10" style="color:var(--n-500);">@category.Name</div>
                                     </button>
                                 }
                             </nav>
                             @if (ctx.Types.Count == 0)
                             {
-                                <div style="padding:16px;text-align:center;color:var(--n-500);font-size:13px;">No configuration types found</div>
+                                <div class="u-fs-13" style="padding:16px;text-align:center;color:var(--n-500);">No configuration types found</div>
                             }
                         </div>
                     </div>
@@ -57,7 +57,7 @@
                         @if (string.IsNullOrEmpty(_selectedCategory))
                         {
                             <EmptyState SquarePadding="true" Class="u-fg-n500">
-                                <p style="font-size:13px;">Select a category to view and manage configuration instances.</p>
+                                <p class="u-fs-13">Select a category to view and manage configuration instances.</p>
                             </EmptyState>
                         }
                         else
@@ -82,7 +82,7 @@
                                         }
                                         else if (ctx.Instances.Count == 0)
                                         {
-                                            <div style="padding:32px;text-align:center;color:var(--n-500);font-size:13px;">No instances configured.</div>
+                                            <div class="u-fs-13" style="padding:32px;text-align:center;color:var(--n-500);">No instances configured.</div>
                                         }
                                         else
                                         {
@@ -92,7 +92,7 @@
                                                     <div class="a" style="justify-content:space-between;align-items:center;cursor:pointer;"
                                                          @onclick="() => SelectInstance(inst.Name, ctx)">
                                                         <div style="display:flex;align-items:center;gap:12px;">
-                                                            <span class="nm" style="color:var(--n-100);font-weight:500;">@inst.Name</span>
+                                                            <span class="nm u-fw-500" style="color:var(--n-100);">@inst.Name</span>
                                                             <span class="badge b-ok"><span class="bd"></span>Active</span>
                                                         </div>
                                                         <div style="display:flex;align-items:center;gap:8px;">

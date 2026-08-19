@@ -24,13 +24,23 @@
 
    Why the scale is these values and no others:
    it is the measured tail of the inline styles in the .razor corpus, not a
-   general-purpose scale. A utility exists only where one declaration, with a
-   single-token value, was the entire style attribute at four or more sites.
-     spacing   0 · 4 · 6 · 8 · 12 · 14 · 16 px
-     font-size 9 · 10 · 12 px
-     colour    the six theme tokens actually used
-   Multi-value shorthands (padding:0 10px 12px, padding:48px 20px) are recurring
-   component shapes, not primitives, and are deliberately absent.
+   general-purpose scale. Two passes put it here, on two different tests.
+     The spacing and layout utilities came first, from whole style attributes
+     that were a single declaration with a single-token value at four or more
+     sites -- a de-duplication test, so one-offs were left alone.
+     The type, border and background utilities below came from FDW046, which
+     reports a theme-owned property fixed to a literal. That is not a matter of
+     how many sites share it: one inline font-size:34px is styling no host
+     stylesheet can reach, exactly as forty inline font-size:12px are. So every
+     declaration the rule reports is declared here, however rare, and the file
+     is now the inventory of every fixed type/border/background value the
+     packages use.
+   What the inventory turned out to be is itself the finding -- a type scale
+   nobody had declared (9 · 9.5 · 10 · 11 · 12 · 13 · 15 · 16 · 18 · 32 · 34 px),
+   seven letter-spacings, and nine corner radii. Shrinking those is a design
+   decision and a separate change; naming them is what makes it possible.
+   Multi-value shorthands are still absent except where FDW046 named one
+   (border-radius:3px 3px 0 0): a recurring component shape is not a primitive.
 
    Colour utilities forward the same var(--token) the inline style named. The
    token contract is the host theme's, exactly as before — no fallback value is
@@ -80,3 +90,78 @@
 .u-pointer { cursor: pointer            !important; }
 .u-flex-1  { flex: 1                    !important; }
 .u-jc-end  { justify-content: flex-end  !important; }
+
+/* ── font-size ── */
+.u-fs-9-5 { font-size: 9.5px    !important; }
+.u-fs-11  { font-size: 11px     !important; }
+.u-fs-13  { font-size: 13px     !important; }
+.u-fs-15  { font-size: 15px     !important; }
+.u-fs-16  { font-size: 16px     !important; }
+.u-fs-18  { font-size: 18px     !important; }
+.u-fs-32  { font-size: 32px     !important; }
+.u-fs-34  { font-size: 34px     !important; }
+
+/* ── font-weight ── */
+.u-fw-400 { font-weight: 400    !important; }
+.u-fw-500 { font-weight: 500    !important; }
+.u-fw-600 { font-weight: 600    !important; }
+.u-fw-700 { font-weight: 700    !important; }
+
+/* ── line-height ── */
+.u-lh-14 { line-height: 1.4     !important; }
+
+/* ── letter-spacing ── */
+.u-ls-0      { letter-spacing: 0       !important; }
+.u-ls-05     { letter-spacing: .05em   !important; }
+.u-ls-06     { letter-spacing: 0.06em  !important; }
+.u-ls-08     { letter-spacing: 0.08em  !important; }
+.u-ls-10     { letter-spacing: 0.1em   !important; }
+.u-ls-12     { letter-spacing: 0.12em  !important; }
+.u-ls-normal { letter-spacing: normal  !important; }
+
+/* ── text ──
+   u-upper and u-ls-05 travel together as the eyebrow label; where the whole
+   treatment is wanted the .ey class already names it. */
+.u-upper   { text-transform: uppercase   !important; }
+.u-tt-none { text-transform: none        !important; }
+.u-td-none { text-decoration: none       !important; }
+
+/* ── colour ──
+   A literal, not a token: no theme custom property resolves to this value, and
+   inventing one would change what renders. */
+.u-fg-slate { color: #94a3b8 !important; }
+
+/* ── border-radius ──
+   u-r-t3 is the throughput bar's top-only radius -- a component shape, kept
+   because FDW046 named it and the declaration has nowhere else to go. */
+.u-r-0  { border-radius: 0            !important; }
+.u-r-2  { border-radius: 2px          !important; }
+.u-r-4  { border-radius: 4px          !important; }
+.u-r-6  { border-radius: 6px          !important; }
+.u-r-8  { border-radius: 8px          !important; }
+.u-r-9  { border-radius: 9px          !important; }
+.u-r-14 { border-radius: 14px         !important; }
+.u-r-99 { border-radius: 99px         !important; }
+.u-r-t3 { border-radius: 3px 3px 0 0  !important; }
+
+/* ── border ── */
+.u-b-0     { border: 0                     !important; }
+.u-b-slate { border: 1px solid #374151     !important; }
+.u-bw-2    { border-width: 2px             !important; }
+
+/* ── background ──
+   The scrim and ink fills are overlay washes; canvas is the drawing surface a
+   graph paints on. Literal values for the same reason as u-fg-slate. */
+.u-bg-transparent { background: transparent          !important; }
+.u-bg-none        { background: none                 !important; }
+.u-bg-canvas      { background: #08090b              !important; }
+.u-bg-scrim-60    { background: rgba(0,0,0,0.6)      !important; }
+.u-bg-scrim-80    { background: rgba(0,0,0,0.8)      !important; }
+.u-bg-ink-50      { background: rgba(8,9,11,0.5)     !important; }
+.u-bg-ink-60      { background: rgba(8,9,11,0.6)     !important; }
+
+/* ── opacity ── */
+.u-op-0  { opacity: 0   !important; }
+.u-op-10 { opacity: 0.1 !important; }
+.u-op-40 { opacity: 0.4 !important; }
+.u-op-60 { opacity: 0.6 !important; }

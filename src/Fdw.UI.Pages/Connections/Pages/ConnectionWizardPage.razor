@@ -49,13 +49,13 @@
                                 @* Connection Name (readonly in edit mode) *@
                                 <div class="frow">
                                     <label>Connection Name</label>
-                                    <input class="finput mono" style="opacity:0.6;" value="@ctx.Model.Name" disabled />
+                                    <input class="finput mono u-op-60" value="@ctx.Model.Name" disabled />
                                 </div>
 
                                 @* Connection Type (readonly in edit mode) *@
                                 <div class="frow">
                                     <label>Connection Type</label>
-                                    <input class="finput mono" style="opacity:0.6;" value="@ctx.Model.ServiceType" disabled />
+                                    <input class="finput mono u-op-60" value="@ctx.Model.ServiceType" disabled />
                                 </div>
 
                                 @* Server Details *@
@@ -113,22 +113,22 @@
                             <div style="margin-top:16px;border-top:1px solid var(--hair);">
                                 <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--hair);">
                                     <div>
-                                        <p style="font-size:13px;color:var(--n-200);margin:0;">Encrypt</p>
-                                        <p style="font-size:11px;color:var(--n-500);margin:2px 0 0;">Encrypt the connection with TLS/SSL</p>
+                                        <p class="u-fs-13" style="color:var(--n-200);margin:0;">Encrypt</p>
+                                        <p class="u-fs-11" style="color:var(--n-500);margin:2px 0 0;">Encrypt the connection with TLS/SSL</p>
                                     </div>
                                     <span class="sw @(ctx.Model.Encrypt ? "on" : "") u-pointer" @onclick="() => ctx.Model.Encrypt = !ctx.Model.Encrypt"></span>
                                 </div>
                                 <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--hair);">
                                     <div>
-                                        <p style="font-size:13px;color:var(--n-200);margin:0;">Trust Server Certificate</p>
-                                        <p style="font-size:11px;color:var(--n-500);margin:2px 0 0;">Skip certificate validation (not recommended in production)</p>
+                                        <p class="u-fs-13" style="color:var(--n-200);margin:0;">Trust Server Certificate</p>
+                                        <p class="u-fs-11" style="color:var(--n-500);margin:2px 0 0;">Skip certificate validation (not recommended in production)</p>
                                     </div>
                                     <span class="sw @(ctx.Model.TrustServerCertificate ? "on" : "") u-pointer" @onclick="() => ctx.Model.TrustServerCertificate = !ctx.Model.TrustServerCertificate"></span>
                                 </div>
                                 <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;">
                                     <div>
-                                        <p style="font-size:13px;color:var(--n-200);margin:0;">Active</p>
-                                        <p style="font-size:11px;color:var(--n-500);margin:2px 0 0;">Connection is available for use</p>
+                                        <p class="u-fs-13" style="color:var(--n-200);margin:0;">Active</p>
+                                        <p class="u-fs-11" style="color:var(--n-500);margin:2px 0 0;">Connection is available for use</p>
                                     </div>
                                     <span class="sw @(ctx.IsActive ? "on" : "") u-pointer" @onclick="() => ctx.OnActiveChanged(!ctx.IsActive)"></span>
                                 </div>
@@ -193,7 +193,7 @@ else
                 {
                     <div class="card">
                         <EmptyState InCard="false" SquarePadding="true">
-                            <div style="font-size:32px;color:var(--success);margin-bottom:14px;">✓</div>
+                            <div class="u-fs-32" style="color:var(--success);margin-bottom:14px;">✓</div>
                             <p style="color:var(--n-200);margin:0 0 16px;">Connection created successfully.</p>
                             <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/connections")'>Back to Connections</button>
                         </EmptyState>
@@ -342,8 +342,8 @@ else
                                                             <div class="frow">
                                                                 <label>Password</label>
                                                                 <div style="display:flex;align-items:center;gap:10px;">
-                                                                    <input class="finput mono" style="flex:1;opacity:0.6;" value="@ctx.StoredSecretKeyName" disabled />
-                                                                    <span class="mono" style="font-size:11px;color:var(--success);white-space:nowrap;">✓ stored</span>
+                                                                    <input class="finput mono u-op-60" style="flex:1;" value="@ctx.StoredSecretKeyName" disabled />
+                                                                    <span class="mono u-fs-11" style="color:var(--success);white-space:nowrap;">✓ stored</span>
                                                                 </div>
                                                                 <p class="hint">Stored in <span class="u-fg-n300">@ctx.SelectedSecretManagerName</span> as <span class="u-fg-n300">@ctx.StoredSecretKeyName</span></p>
                                                             </div>
@@ -387,15 +387,15 @@ else
                                 <div style="border-top:1px solid var(--hair);margin-top:8px;">
                                     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--hair);">
                                         <div>
-                                            <p style="font-size:13px;color:var(--n-200);margin:0;">Encrypt</p>
-                                            <p style="font-size:11px;color:var(--n-500);margin:2px 0 0;">Encrypt the connection with TLS/SSL</p>
+                                            <p class="u-fs-13" style="color:var(--n-200);margin:0;">Encrypt</p>
+                                            <p class="u-fs-11" style="color:var(--n-500);margin:2px 0 0;">Encrypt the connection with TLS/SSL</p>
                                         </div>
                                         <span class="sw @(ctx.ConnectionConfig.Encrypt ? "on" : "") u-pointer" @onclick="() => ctx.ConnectionConfig.Encrypt = !ctx.ConnectionConfig.Encrypt"></span>
                                     </div>
                                     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;">
                                         <div>
-                                            <p style="font-size:13px;color:var(--n-200);margin:0;">Trust Server Certificate</p>
-                                            <p style="font-size:11px;color:var(--n-500);margin:2px 0 0;">Skip certificate validation (not recommended in production)</p>
+                                            <p class="u-fs-13" style="color:var(--n-200);margin:0;">Trust Server Certificate</p>
+                                            <p class="u-fs-11" style="color:var(--n-500);margin:2px 0 0;">Skip certificate validation (not recommended in production)</p>
                                         </div>
                                         <span class="sw @(ctx.ConnectionConfig.TrustServerCertificate ? "on" : "") u-pointer" @onclick="() => ctx.ConnectionConfig.TrustServerCertificate = !ctx.ConnectionConfig.TrustServerCertificate"></span>
                                     </div>
@@ -405,7 +405,7 @@ else
                             @* -- Step 1: Test -- *@
                             else if (ctx.Step == 1)
                             {
-                                <div class="term" style="min-height:0;font-size:11px;margin-bottom:16px;"><span class="mut">NAME ............. </span><span class="gl">@ctx.ConnectionConfig.Name</span>
+                                <div class="term u-fs-11" style="min-height:0;margin-bottom:16px;"><span class="mut">NAME ............. </span><span class="gl">@ctx.ConnectionConfig.Name</span>
 <span class="mut">TYPE ............. </span><span class="gl">@ctx.ConnectionConfig.ServiceType</span>
 @if (IsHttpType(ctx.ConnectionConfig.ServiceType))
 {
@@ -421,7 +421,7 @@ else
 
                                 @if (ctx.IsLoading)
                                 {
-                                    <div class="mono" style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--n-400);margin-bottom:16px;">
+                                    <div class="mono u-fs-13" style="display:flex;align-items:center;gap:10px;color:var(--n-400);margin-bottom:16px;">
                                         <span class="badge b-run"><span class="bd"></span>Testing connection...</span>
                                     </div>
                                 }
@@ -447,7 +447,7 @@ else
                                     </div>
                                 }
 
-                                <div class="term" style="min-height:0;font-size:11px;"><span class="mut">NAME ............. </span><span class="gl">@ctx.ConnectionConfig.Name</span>
+                                <div class="term u-fs-11" style="min-height:0;"><span class="mut">NAME ............. </span><span class="gl">@ctx.ConnectionConfig.Name</span>
 <span class="mut">TYPE ............. </span><span class="gl">@ctx.ConnectionConfig.ServiceType</span>
 @if (IsHttpType(ctx.ConnectionConfig.ServiceType))
 {

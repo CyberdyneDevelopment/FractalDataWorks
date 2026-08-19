@@ -17,7 +17,7 @@
    not at save time. *@
 
 <div class="frow u-mb-8">
-    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Source Name</label>
+    <label class="u-fs-10 u-upper u-ls-05" style="color:var(--n-400);">Source Name</label>
     <input class="finput mono @(string.IsNullOrWhiteSpace(_sourceName) && _validationTriggered ? "input-error" : string.Empty) u-fs-10"
            value="@_sourceName"
            @onchange="OnSourceNameChanged"
@@ -26,14 +26,14 @@
 </div>
 
 <div class="frow u-mb-8">
-    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Source Container</label>
+    <label class="u-fs-10 u-upper u-ls-05" style="color:var(--n-400);">Source Container</label>
     @if (IsLoadingDataStores)
     {
-        <div class="mono" style="font-size:10px;color:var(--n-500);font-style:italic;">Loading data stores…</div>
+        <div class="mono u-fs-10 u-italic" style="color:var(--n-500);">Loading data stores…</div>
     }
     else if (DataStoreRoots is null || DataStoreRoots.Count == 0)
     {
-        <div class="mono" style="font-size:10px;color:var(--n-500);font-style:italic;">No data stores available</div>
+        <div class="mono u-fs-10 u-italic" style="color:var(--n-500);">No data stores available</div>
     }
     else
     {
@@ -50,7 +50,7 @@
 </div>
 
 <div class="frow u-mb-8">
-    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Connection Name</label>
+    <label class="u-fs-10 u-upper u-ls-05" style="color:var(--n-400);">Connection Name</label>
     <input class="finput mono @(string.IsNullOrWhiteSpace(_connectionName) && _validationTriggered ? "input-error" : string.Empty) u-fs-10"
            value="@_connectionName"
            @onchange="OnConnectionNameChanged"
@@ -60,7 +60,7 @@
 
 @if (!string.IsNullOrEmpty(_errorMessage))
 {
-    <div class="mono" style="font-size:10px;color:var(--signal);margin-top:4px;">@_errorMessage</div>
+    <div class="mono u-fs-10" style="color:var(--signal);margin-top:4px;">@_errorMessage</div>
 }
 
 @code {

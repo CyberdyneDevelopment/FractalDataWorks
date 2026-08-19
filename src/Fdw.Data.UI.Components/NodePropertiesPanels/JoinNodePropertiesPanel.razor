@@ -12,10 +12,10 @@
    context-aware without coupling to the designer's private Node class. *@
 
 <div class="frow u-mb-8">
-    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Left Source</label>
+    <label class="u-fs-10 u-upper u-ls-05" style="color:var(--n-400);">Left Source</label>
     @if (AvailableSourceNames.Count == 0)
     {
-        <div class="mono" style="font-size:10px;color:var(--n-500);font-style:italic;">No source nodes in graph</div>
+        <div class="mono u-fs-10 u-italic" style="color:var(--n-500);">No source nodes in graph</div>
     }
     else
     {
@@ -30,7 +30,7 @@
 </div>
 
 <div class="frow u-mb-8">
-    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Left Field</label>
+    <label class="u-fs-10 u-upper u-ls-05" style="color:var(--n-400);">Left Field</label>
     <input class="finput mono @(string.IsNullOrWhiteSpace(_leftField) && _validationTriggered ? "input-error" : string.Empty) u-fs-10"
            value="@_leftField"
            @onchange="OnLeftFieldChanged"
@@ -39,10 +39,10 @@
 </div>
 
 <div class="frow u-mb-8">
-    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Right Source</label>
+    <label class="u-fs-10 u-upper u-ls-05" style="color:var(--n-400);">Right Source</label>
     @if (AvailableSourceNames.Count == 0)
     {
-        <div class="mono" style="font-size:10px;color:var(--n-500);font-style:italic;">No source nodes in graph</div>
+        <div class="mono u-fs-10 u-italic" style="color:var(--n-500);">No source nodes in graph</div>
     }
     else
     {
@@ -57,7 +57,7 @@
 </div>
 
 <div class="frow u-mb-8">
-    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Right Field</label>
+    <label class="u-fs-10 u-upper u-ls-05" style="color:var(--n-400);">Right Field</label>
     <input class="finput mono @(string.IsNullOrWhiteSpace(_rightField) && _validationTriggered ? "input-error" : string.Empty) u-fs-10"
            value="@_rightField"
            @onchange="OnRightFieldChanged"
@@ -66,7 +66,7 @@
 </div>
 
 <div class="frow u-mb-8">
-    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Join Type</label>
+    <label class="u-fs-10 u-upper u-ls-05" style="color:var(--n-400);">Join Type</label>
     <select class="finput mono u-fs-10" value="@_joinType" @onchange="OnJoinTypeChanged">
         <option value="Inner">Inner</option>
         <option value="Left">Left</option>
@@ -77,17 +77,17 @@
 </div>
 
 <div class="frow u-mb-8">
-    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Description</label>
-    <textarea class="finput mono"
+    <label class="u-fs-10 u-upper u-ls-05" style="color:var(--n-400);">Description</label>
+    <textarea class="finput mono u-fs-10"
               value="@_description"
               @onchange="OnDescriptionChanged"
               rows="2"
-              style="resize:vertical;font-size:10px;"></textarea>
+              style="resize:vertical;"></textarea>
 </div>
 
 @if (!string.IsNullOrEmpty(_errorMessage))
 {
-    <div class="mono" style="font-size:10px;color:var(--signal);margin-top:4px;">@_errorMessage</div>
+    <div class="mono u-fs-10" style="color:var(--signal);margin-top:4px;">@_errorMessage</div>
 }
 
 @code {

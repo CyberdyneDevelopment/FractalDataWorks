@@ -17,10 +17,10 @@
 
 @* ── Group-By Fields ─────────────────────────────────────────────────────────────── *@
 <div class="frow u-mb-8">
-    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Group-By Fields</label>
+    <label class="u-fs-10 u-upper u-ls-05" style="color:var(--n-400);">Group-By Fields</label>
     @if (AvailableFields.Count == 0)
     {
-        <div class="mono" style="font-size:10px;color:var(--n-500);font-style:italic;">No fields available — add a Source node first</div>
+        <div class="mono u-fs-10 u-italic" style="color:var(--n-500);">No fields available — add a Source node first</div>
     }
     else
     {
@@ -28,7 +28,7 @@
             @foreach (var field in AvailableFields)
             {
                 var isChecked = _groupByFields.Contains(field, StringComparer.Ordinal);
-                <label style="font-size:10px;display:flex;align-items:center;gap:4px;cursor:pointer;">
+                <label class="u-fs-10" style="display:flex;align-items:center;gap:4px;cursor:pointer;">
                     <input type="checkbox" checked="@isChecked" @onchange="() => ToggleGroupByField(field)" />
                     <span class="mono">@field</span>
                 </label>
@@ -37,29 +37,29 @@
     }
     @if (_groupByFields.Count == 0 && _validationTriggered)
     {
-        <div class="mono" style="font-size:9px;color:var(--signal);">At least one group-by field is required</div>
+        <div class="mono u-fs-9" style="color:var(--signal);">At least one group-by field is required</div>
     }
 </div>
 
 @* ── Measures ─────────────────────────────────────────────────────────────────────── *@
 <div class="frow u-mb-8">
-    <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Measures</label>
+    <label class="u-fs-10 u-upper u-ls-05" style="color:var(--n-400);">Measures</label>
     @if (_measures.Count == 0 && _validationTriggered)
     {
-        <div class="mono" style="font-size:9px;color:var(--signal);">At least one measure is required</div>
+        <div class="mono u-fs-9" style="color:var(--signal);">At least one measure is required</div>
     }
     @for (var i = 0; i < _measures.Count; i++)
     {
         var idx = i;
         var measure = _measures[idx];
-        <div style="border:1px solid #374151;border-radius:4px;padding:6px;margin-bottom:4px;">
+        <div class="u-b-slate u-r-4" style="padding:6px;margin-bottom:4px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-                <span class="mono" style="font-size:9px;color:var(--n-500);">MEASURE @(idx + 1)</span>
-                <button class="btn btn-danger btn-sm" style="font-size:9px;padding:1px 6px;"
+                <span class="mono u-fs-9" style="color:var(--n-500);">MEASURE @(idx + 1)</span>
+                <button class="btn btn-danger btn-sm u-fs-9" style="padding:1px 6px;"
                         @onclick="() => RemoveMeasure(idx)">×</button>
             </div>
             <div class="frow u-mb-4">
-                <label style="font-size:9px;color:var(--n-500);">Source Field</label>
+                <label class="u-fs-9" style="color:var(--n-500);">Source Field</label>
                 @if (AvailableFields.Count > 0)
                 {
                     <select class="finput mono u-fs-9"
@@ -81,7 +81,7 @@
                 }
             </div>
             <div class="frow u-mb-4">
-                <label style="font-size:9px;color:var(--n-500);">Function</label>
+                <label class="u-fs-9" style="color:var(--n-500);">Function</label>
                 @* Why: options come from AvailableAggregationFunctions parameter, populated by the host
                    from the canonical AggregationFunctions TypeCollection via the API, so this panel
                    stays in sync with what the server can execute without any hardcoded list here. *@
@@ -96,7 +96,7 @@
                 </select>
             </div>
             <div class="frow">
-                <label style="font-size:9px;color:var(--n-500);">Output Name</label>
+                <label class="u-fs-9" style="color:var(--n-500);">Output Name</label>
                 <input class="finput mono u-fs-9"
                        value="@measure.OutputName"
                        @onchange="e => OnMeasureOutputNameChanged(idx, e)"
@@ -104,13 +104,13 @@
             </div>
         </div>
     }
-    <button class="btn btn-secondary btn-sm" style="width:100%;font-size:9px;margin-top:2px;"
+    <button class="btn btn-secondary btn-sm u-fs-9" style="width:100%;margin-top:2px;"
             @onclick="AddMeasure">+ Add Measure</button>
 </div>
 
 @if (!string.IsNullOrEmpty(_errorMessage))
 {
-    <div class="mono" style="font-size:10px;color:var(--signal);margin-top:4px;">@_errorMessage</div>
+    <div class="mono u-fs-10" style="color:var(--signal);margin-top:4px;">@_errorMessage</div>
 }
 
 @code {

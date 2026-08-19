@@ -163,8 +163,8 @@
                                 @if (wizCtx.IsContainerBusy)
                                 {
                                     <div style="display:flex;align-items:center;gap:10px;">
-                                        <div class="spin" style="width:16px;height:16px;border-width:2px;"></div>
-                                        <span class="mono" style="font-size:12px;color:var(--glacier);">Loading containers...</span>
+                                        <div class="spin u-bw-2" style="width:16px;height:16px;"></div>
+                                        <span class="mono u-fs-12" style="color:var(--glacier);">Loading containers...</span>
                                     </div>
                                 }
 
@@ -228,10 +228,10 @@
                                                         <Icon Name="Key" />
                                                     </button>
                                                     <button class="btn btn-ghost btn-sm" @onclick="() => field.IsRequired = !field.IsRequired" title="Required">
-                                                        <span class="mono" style="font-size:10px;font-weight:600;color:@(field.IsRequired ? "var(--amber)" : "var(--n-600)");">REQ</span>
+                                                        <span class="mono u-fs-10 u-fw-600" style="color:@(field.IsRequired ? "var(--amber)" : "var(--n-600)");">REQ</span>
                                                     </button>
                                                     <button class="btn btn-ghost btn-sm" @onclick="() => field.IsCalculated = !field.IsCalculated" title="Calculated">
-                                                        <span class="mono" style="font-size:10px;font-weight:600;color:@(field.IsCalculated ? "var(--glacier)" : "var(--n-600)");">CALC</span>
+                                                        <span class="mono u-fs-10 u-fw-600" style="color:@(field.IsCalculated ? "var(--glacier)" : "var(--n-600)");">CALC</span>
                                                     </button>
                                                 </div>
                                             </td>
@@ -305,8 +305,8 @@
                                 @if (wizCtx.IsContainerBusy)
                                 {
                                     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
-                                        <div class="spin" style="width:14px;height:14px;border-width:2px;"></div>
-                                        <span class="mono" style="font-size:12px;color:var(--glacier);">Loading containers...</span>
+                                        <div class="spin u-bw-2" style="width:14px;height:14px;"></div>
+                                        <span class="mono u-fs-12" style="color:var(--glacier);">Loading containers...</span>
                                     </div>
                                 }
                             </div>
@@ -350,7 +350,7 @@
                                 <div class="frow full">
                                     <div style="display:flex;align-items:center;gap:10px;">
                                         <button type="button" class="sw swbtn @(_model.Caching.Enabled ? "on" : null)" @onclick="() => _model.Caching.Enabled = !_model.Caching.Enabled"></button>
-                                        <span style="font-size:13px;color:var(--n-300);">Activate temporal buffer</span>
+                                        <span class="u-fs-13" style="color:var(--n-300);">Activate temporal buffer</span>
                                     </div>
                                 </div>
                                 <div class="frow">
@@ -373,7 +373,7 @@
                                     {
                                         var joinIndex = ji;
                                         var join = _model.Joins[joinIndex];
-                                        <div style="border:1px solid var(--n-700);border-radius:6px;padding:10px;margin-top:10px;">
+                                        <div class="u-r-6" style="border:1px solid var(--n-700);padding:10px;margin-top:10px;">
                                             @* Header row: LeftSource + RightSource + Remove *@
                                             <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px;">
                                                 <select class="fin"
@@ -413,7 +413,7 @@
                                                         }
                                                     }
                                                 </select>
-                                                <span style="font-size:12px;color:var(--n-400);padding:0 4px;">=</span>
+                                                <span class="u-fs-12" style="color:var(--n-400);padding:0 4px;">=</span>
                                                 <select class="fin"
                                                         value="@join.RightField"
                                                         @onchange="e => join.RightField = e.Value is string rf ? rf : string.Empty">
@@ -431,16 +431,16 @@
                                             @* No fields alert *@
                                             @if (!string.IsNullOrEmpty(join.LeftSource) && (!_joinStepFieldsBySource.ContainsKey(join.LeftSource) || _joinStepFieldsBySource[join.LeftSource].Count == 0))
                                             {
-                                                <div class="alert alert-warn" style="margin-top:6px;font-size:12px;">No fields available for '@join.LeftSource'. Ensure the source's DataStore and container are configured.</div>
+                                                <div class="alert alert-warn u-fs-12" style="margin-top:6px;">No fields available for '@join.LeftSource'. Ensure the source's DataStore and container are configured.</div>
                                             }
                                             @if (!string.IsNullOrEmpty(join.RightSource) && (!_joinStepFieldsBySource.ContainsKey(join.RightSource) || _joinStepFieldsBySource[join.RightSource].Count == 0))
                                             {
-                                                <div class="alert alert-warn" style="margin-top:6px;font-size:12px;">No fields available for '@join.RightSource'. Ensure the source's DataStore and container are configured.</div>
+                                                <div class="alert alert-warn u-fs-12" style="margin-top:6px;">No fields available for '@join.RightSource'. Ensure the source's DataStore and container are configured.</div>
                                             }
 
                                             @* JoinType row *@
                                             <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-                                                <label style="font-size:12px;color:var(--n-400);white-space:nowrap;">Join type</label>
+                                                <label class="u-fs-12" style="color:var(--n-400);white-space:nowrap;">Join type</label>
                                                 <select class="fin" style="max-width:160px;"
                                                         value="@join.JoinType"
                                                         @onchange="e => join.JoinType = e.Value is string jt ? jt : string.Empty">

@@ -73,9 +73,9 @@
         {
             <div class="card">
                 <div class="card-b" style="padding:40px 20px;text-align:center;">
-                    <Icon Name="BookOpen" Style="width:40px;height:40px;margin:0 auto 16px;color:var(--n-500);opacity:0.4;" />
+                    <Icon Class="u-op-40" Name="BookOpen" Style="width:40px;height:40px;margin:0 auto 16px;color:var(--n-500);" />
                     <p style="color:var(--n-400);margin:0;">No glossary terms defined</p>
-                    <p style="color:var(--n-600);font-size:12px;margin:4px 0 0;">Add terms to build a shared vocabulary for your data</p>
+                    <p class="u-fs-12" style="color:var(--n-600);margin:4px 0 0;">Add terms to build a shared vocabulary for your data</p>
                 </div>
             </div>
         }
@@ -87,8 +87,8 @@
                     <div class="card">
                         <div class="card-b" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
                             <div>
-                                <h3 style="margin:0;font-size:15px;font-weight:500;color:var(--n-100);">@term.Term</h3>
-                                <p style="margin:6px 0 0;color:var(--n-400);font-size:13px;">@term.Definition</p>
+                                <h3 class="u-fs-15 u-fw-500" style="margin:0;color:var(--n-100);">@term.Term</h3>
+                                <p class="u-fs-13" style="margin:6px 0 0;color:var(--n-400);">@term.Definition</p>
                             </div>
                             <button class="btn btn-danger btn-sm"
                                     @onclick="async () => await ctx.OnDelete(term.Id)"

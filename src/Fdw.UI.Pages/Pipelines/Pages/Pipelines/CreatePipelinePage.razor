@@ -43,7 +43,7 @@
             {
                 <div class="card">
                     <EmptyState InCard="false" SquarePadding="true">
-                        <div style="font-size:32px;color:var(--success);margin-bottom:14px;">✓</div>
+                        <div class="u-fs-32" style="color:var(--success);margin-bottom:14px;">✓</div>
                         <p style="color:var(--n-200);margin:0 0 16px;">Pipeline '@ctx.Name' created successfully.</p>
                         <button class="btn btn-primary" @onclick='() => Nav.NavigateTo($"/pipelines/builder/{ctx.CreatedPipelineId}")'>
                             Continue to Builder
@@ -190,7 +190,7 @@
                         @* -- Step 4: Review & Create -- *@
                         else if (ctx.Step == 4)
                         {
-                            <div class="term" style="min-height:0;font-size:11px;"><span class="mut">ENGINE ........... </span><span class="gl">@ctx.SelectedEngineTypeName</span>
+                            <div class="term u-fs-11" style="min-height:0;"><span class="mut">ENGINE ........... </span><span class="gl">@ctx.SelectedEngineTypeName</span>
 <span class="mut">NAME ............. </span><span class="gl">@ctx.Name</span>
 <span class="mut">SOURCE ........... </span><span class="gl">@ctx.Source.Kind.Name: @ctx.Source.Name</span>
 <span class="mut">DESTINATION ...... </span><span class="gl">@ctx.Destination.Kind.Name: @ctx.Destination.Name</span></div>

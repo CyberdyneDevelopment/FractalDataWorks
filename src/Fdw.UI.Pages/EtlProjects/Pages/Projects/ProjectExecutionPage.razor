@@ -15,7 +15,7 @@
             </button>
         </div>
         <h1>Execution Monitor</h1>
-        <span class="mono" style="font-size:11px;color:var(--n-500);">@ExecutionId</span>
+        <span class="mono u-fs-11" style="color:var(--n-500);">@ExecutionId</span>
         <div class="actions u-ml-auto">
             <Badge Variant="GetStatusVariant(_overallStatus)">@(_overallStatus ?? "Loading...")</Badge>
             <button class="btn btn-ghost btn-sm u-fg-signal"
@@ -48,7 +48,7 @@
         <!-- Right: Lineage view placeholder (reuses Lineage.razor if embedded) -->
         <div class="card" style="display:flex;flex-direction:column;overflow:hidden;">
             <div class="card-h"><h3>Lineage Overlay</h3></div>
-            <div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--n-500);font-size:13px;">
+            <div class="u-fs-13" style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--n-500);">
                 <div style="text-align:center;">
                     <p>Lineage graph available at <a href="/lineage" style="color:var(--amber);">/lineage</a></p>
                 </div>

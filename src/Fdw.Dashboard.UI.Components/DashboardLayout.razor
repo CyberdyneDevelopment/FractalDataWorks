@@ -71,8 +71,8 @@
                         {
                             var pct = (double)point.ExecutionCount / maxExec * 100;
                             var hasErrors = point.ErrorCount > 0;
-                            <div title="@point.Timestamp.ToString("MMM d HH:mm") — @point.ExecutionCount exec@(hasErrors ? $" ({point.ErrorCount} err)" : "")"
-                                 style="flex:1;border-radius:3px 3px 0 0;height:@(pct)%;min-height:2px;background:@(hasErrors ? "var(--signal)" : "var(--glacier)");">
+                            <div class="u-r-t3" title="@point.Timestamp.ToString("MMM d HH:mm") — @point.ExecutionCount exec@(hasErrors ? $" ({point.ErrorCount} err)" : "")"
+                                 style="flex:1;height:@(pct)%;min-height:2px;background:@(hasErrors ? "var(--signal)" : "var(--glacier)");">
                             </div>
                         }
                     </div>
@@ -83,7 +83,7 @@
                 }
                 else
                 {
-                    <div class="chartwrap" style="display:flex;align-items:center;justify-content:center;color:var(--n-500);font-size:13px;">
+                    <div class="chartwrap u-fs-13" style="display:flex;align-items:center;justify-content:center;color:var(--n-500);">
                         <div style="text-align:center;">
                             <p>No throughput data available</p>
                             <p class="hint">Data appears after pipeline executions</p>
@@ -115,7 +115,7 @@
                     }
                     else
                     {
-                        <p style="color:var(--n-500);font-size:12px;font-style:italic;">No recent activity detected.</p>
+                        <p class="u-fs-12 u-italic" style="color:var(--n-500);">No recent activity detected.</p>
                     }
                 </div>
             </div>

@@ -4,11 +4,11 @@
    Bottom: Inspector content (populated when a node or edge is clicked).
    Collapsible via _isPanelOpen state owned by Builder.razor. *@
 
-<div class="card" style="display:flex;flex-direction:column;height:100%;font-size:12px;border-radius:0;">
+<div class="card u-fs-12 u-r-0" style="display:flex;flex-direction:column;height:100%;">
     <!-- Execution status header -->
     <div class="card-h" style="padding:12px 14px;border-bottom:1px solid var(--hair);">
         <div style="display:flex;align-items:center;gap:8px;">
-            <span class="mono" style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--glacier);">Test Run</span>
+            <span class="mono u-fs-10 u-ls-12 u-upper" style="color:var(--glacier);">Test Run</span>
             @if (!string.IsNullOrEmpty(ExecutionStatus))
             {
                 <Badge Variant="GetStatusVariant(ExecutionStatus)">@ExecutionStatus.ToUpperInvariant()</Badge>
@@ -60,10 +60,10 @@
     </div>
 
     <!-- Log tail -->
-    <div class="term" style="flex:1;overflow-y:auto;font-size:10px;min-height:80px;max-height:192px;border-radius:0;padding:10px 14px;">
+    <div class="term u-fs-10 u-r-0" style="flex:1;overflow-y:auto;min-height:80px;max-height:192px;padding:10px 14px;">
         @if (LogLines.Count == 0)
         {
-            <div class="mut" style="text-align:center;margin-top:8px;font-style:italic;">Waiting for log output...</div>
+            <div class="mut u-italic" style="text-align:center;margin-top:8px;">Waiting for log output...</div>
         }
         else
         {

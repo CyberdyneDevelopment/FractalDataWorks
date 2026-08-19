@@ -19,7 +19,7 @@
         <div class="actions">
             @if (!string.IsNullOrEmpty(_statusMessage))
             {
-                <span class="mono" style="font-size:11px;color:@(_statusMessage is "Saved" or "Compiled" ? "var(--success)" : "var(--signal)");">@_statusMessage</span>
+                <span class="mono u-fs-11" style="color:@(_statusMessage is "Saved" or "Compiled" ? "var(--success)" : "var(--signal)");">@_statusMessage</span>
             }
             <button class="btn btn-secondary btn-sm" @onclick="() => CompileGraph(ctx)" disabled="@(_isSaving || _isCompiling)">
                 <Icon Name="Run" />
@@ -39,7 +39,7 @@
             <div class="card-b" style="padding:8px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;">
                 @foreach (var op in _ops)
                 {
-                    <button class="chip mono" style="text-align:left;width:100%;border:0;" @onclick="() => AddNode(op)">
+                    <button class="chip mono u-b-0" style="text-align:left;width:100%;" @onclick="() => AddNode(op)">
                         &gt; @op.ToUpper()
                     </button>
                 }
@@ -47,8 +47,8 @@
         </div>
 
         @* Canvas *@
-        <div class="graph" style="flex:1;position:relative;background:#08090b;overflow:hidden;">
-            <div style="position:absolute;inset:0;opacity:0.1;pointer-events:none;background-image:radial-gradient(var(--glacier) 0.5px, transparent 0.5px);background-size:20px 20px;"></div>
+        <div class="graph u-bg-canvas" style="flex:1;position:relative;overflow:hidden;">
+            <div class="u-op-10" style="position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(var(--glacier) 0.5px, transparent 0.5px);background-size:20px 20px;"></div>
 
             <svg class="w-full h-full" style="width:100%;height:100%;cursor:crosshair;" @onmousemove="OnMouseMove" @onmouseup="OnMouseUp">
                 <g transform="translate(@_panX, @_panY) scale(@_zoom)">
@@ -100,10 +100,10 @@
                  {
                      case "Source":
                          <div class="frow u-mb-8">
-                             <label style="font-size:10px;color:var(--n-400);text-transform:uppercase;letter-spacing:.05em;">Source Container</label>
+                             <label class="u-fs-10 u-upper u-ls-05" style="color:var(--n-400);">Source Container</label>
                              @if (_loadingSourceRoots)
                              {
-                                 <div class="mono" style="font-size:10px;color:var(--n-500);font-style:italic;">Loading data stores…</div>
+                                 <div class="mono u-fs-10 u-italic" style="color:var(--n-500);">Loading data stores…</div>
                              }
                              else
                              {
@@ -154,9 +154,9 @@
                              <label>Formula Body</label>
                              <textarea value="@GetConfigString(_selected, "FormulaBody", string.Empty)"
                                        @onchange="OnFormulaBodyChanged"
-                                       class="finput mono" rows="4"
+                                       class="finput mono u-fs-10" rows="4"
                                        placeholder="[Field1] + [Field2]"
-                                       style="resize:vertical;font-size:10px;"></textarea>
+                                       style="resize:vertical;"></textarea>
                          </div>
                          break;
                  }
@@ -164,7 +164,7 @@
              }
              else
              {
-                 <div class="mono" style="font-size:10px;color:var(--n-600);font-style:italic;">NO_SELECTION_ACTIVE</div>
+                 <div class="mono u-fs-10 u-italic" style="color:var(--n-600);">NO_SELECTION_ACTIVE</div>
              }
              </div>
         </div>

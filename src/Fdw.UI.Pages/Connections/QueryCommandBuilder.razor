@@ -43,8 +43,8 @@
             <label>Fields</label>
             @if (AvailableFields.Count > 0)
             {
-                <div style="background:var(--s2);border-radius:8px;padding:10px;max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
-                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--n-400);cursor:pointer;text-transform:none;letter-spacing:0;font-family:var(--font);">
+                <div class="u-r-8" style="background:var(--s2);padding:10px;max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+                    <label class="u-fs-12 u-tt-none u-ls-0" style="display:flex;align-items:center;gap:8px;color:var(--n-400);cursor:pointer;font-family:var(--font);">
                         <input type="checkbox"
                                checked="@IsAllFieldsSelected()"
                                @onchange="ToggleAllFields" />
@@ -53,7 +53,7 @@
                     @foreach (var field in AvailableFields)
                     {
                         var f = field;
-                        <label class="mono" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--n-200);cursor:pointer;text-transform:none;letter-spacing:0;">
+                        <label class="mono u-fs-12 u-tt-none u-ls-0" style="display:flex;align-items:center;gap:8px;color:var(--n-200);cursor:pointer;">
                             <input type="checkbox"
                                    checked="@IsFieldSelected(f)"
                                    @onchange="() => ToggleField(f)" />
@@ -89,7 +89,7 @@
                 <div style="display:flex;gap:6px;align-items:center;">
                     @if (idx > 0)
                     {
-                        <span class="mono" style="font-size:10px;color:var(--n-500);width:28px;text-align:center;">AND</span>
+                        <span class="mono u-fs-10" style="color:var(--n-500);width:28px;text-align:center;">AND</span>
                     }
                     else
                     {

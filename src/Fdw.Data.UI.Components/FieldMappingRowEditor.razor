@@ -22,7 +22,7 @@
                     class="btn btn-ghost btn-sm @(IsExpanded ? "on" : null)"
                     title="@(IsExpanded ? "Collapse transform chain" : "Expand transform chain")"
                     @onclick="() => OnToggleExpand?.Invoke(Mapping.DataSetFieldName)">
-                <span class="mono" style="font-size:10px;font-weight:600;">TRANSFORMS</span>
+                <span class="mono u-fs-10 u-fw-600">TRANSFORMS</span>
             </button>
         </div>
     </td>
@@ -31,7 +31,7 @@
 {
     <tr>
         <td colspan="3" class="u-p-0">
-            <div class="card" style="margin:8px 0;background:var(--s2);border-radius:6px;">
+            <div class="card u-r-6" style="margin:8px 0;background:var(--s2);">
                 <div class="card-b" style="padding:12px;">
                     <FieldMappingTransformProvider FieldMappingId="@Mapping.Id" FieldMappingName="@Mapping.DataSetFieldName">
                         <ChildContent Context="ctx">
@@ -42,17 +42,17 @@
 
                             @if (ctx.IsLoading)
                             {
-                                <p class="mono" style="font-size:11px;color:var(--n-500);margin:0;">Loading transforms…</p>
+                                <p class="mono u-fs-11" style="color:var(--n-500);margin:0;">Loading transforms…</p>
                             }
                             else
                             {
                                 @if (ctx.Transforms.Count == 0)
                                 {
-                                    <p style="color:var(--n-400);margin:0 0 8px;font-size:12px;">No transforms configured.</p>
+                                    <p class="u-fs-12" style="color:var(--n-400);margin:0 0 8px;">No transforms configured.</p>
                                 }
                                 else
                                 {
-                                    <ol class="mono" style="font-size:12px;margin:0 0 8px;padding-left:18px;">
+                                    <ol class="mono u-fs-12" style="margin:0 0 8px;padding-left:18px;">
                                         @foreach (var t in ctx.Transforms.OrderBy(t => t.Ordinal))
                                         {
                                             <li style="display:flex;align-items:center;gap:8px;padding:2px 0;">

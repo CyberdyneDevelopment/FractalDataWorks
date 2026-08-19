@@ -5,10 +5,10 @@
 @using System.Text.Json
 @using Fdw.Services.Etl.Abstractions.Execution
 
-<div style="display:flex;flex-direction:column;height:100%;font-size:12px;">
+<div class="u-fs-12" style="display:flex;flex-direction:column;height:100%;">
     <!-- Header -->
     <div class="card-h" style="padding:10px 14px;border-bottom:1px solid var(--hair);">
-        <span class="mono" style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--glacier);">
+        <span class="mono u-fs-10 u-ls-12 u-upper" style="color:var(--glacier);">
             Inspector — @(_isEdge ? "Edge" : "Task")
         </span>
         @if (OnClose.HasDelegate)
@@ -24,8 +24,8 @@
         @* Eviction amber alert — shown when the sample ring buffer has been capped at least once. *@
         @if (_showEvictionAlert)
         {
-            <div style="border-radius:8px;background:var(--amber-dim);padding:10px 12px;color:var(--amber-400);line-height:1.4;">
-                <div style="font-weight:600;margin-bottom:4px;">Inspector buffer cap reached</div>
+            <div class="u-r-8 u-lh-14" style="background:var(--amber-dim);padding:10px 12px;color:var(--amber-400);">
+                <div class="u-fw-600" style="margin-bottom:4px;">Inspector buffer cap reached</div>
                 <div>
                     Older samples have been discarded (@_samplesDiscarded discarded). If you need
                     deeper inspection, the server administrator can raise
@@ -44,7 +44,7 @@
         @if (!_isEdge && TaskState != null)
         {
             <div>
-                <div class="mono" style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--n-500);margin-bottom:6px;">Counters</div>
+                <div class="mono u-fs-10 u-ls-10 u-upper" style="color:var(--n-500);margin-bottom:6px;">Counters</div>
                 <div class="mono" style="display:grid;grid-template-columns:1fr 1fr;column-gap:16px;row-gap:4px;">
                     <span class="u-fg-n400">Records In</span>
                     <span class="u-fg-success">@TaskState.RecordsIn.ToString("N0")</span>
@@ -60,7 +60,7 @@
         else if (_isEdge && EdgeState != null)
         {
             <div>
-                <div class="mono" style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--n-500);margin-bottom:6px;">Counters</div>
+                <div class="mono u-fs-10 u-ls-10 u-upper" style="color:var(--n-500);margin-bottom:6px;">Counters</div>
                 <div class="mono" style="display:grid;grid-template-columns:1fr 1fr;column-gap:16px;row-gap:4px;">
                     <span class="u-fg-n400">Records Flowed</span>
                     <span class="u-fg-glacier">@EdgeState.RecordsFlowed.ToString("N0")</span>
@@ -71,7 +71,7 @@
         }
         else
         {
-            <div style="color:var(--n-500);font-style:italic;text-align:center;padding:16px 0;">
+            <div class="u-italic" style="color:var(--n-500);text-align:center;padding:16px 0;">
                 No inspector data. Click a node or edge during a test run.
             </div>
         }
@@ -80,7 +80,7 @@
         @if (_columns.Count > 0 && _sampleRows.Count > 0)
         {
             <div>
-                <div class="mono" style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--n-500);margin-bottom:6px;">
+                <div class="mono u-fs-10 u-ls-10 u-upper" style="color:var(--n-500);margin-bottom:6px;">
                     Sample Records (@_sampleCount)
                 </div>
                 <div style="overflow-x:auto;">
@@ -113,7 +113,7 @@
         }
         else if (_sampleCount == 0 && (TaskState != null || EdgeState != null))
         {
-            <div style="color:var(--n-500);font-style:italic;text-align:center;padding:8px 0;">No sample records buffered yet.</div>
+            <div class="u-italic" style="color:var(--n-500);text-align:center;padding:8px 0;">No sample records buffered yet.</div>
         }
     </div>
 </div>

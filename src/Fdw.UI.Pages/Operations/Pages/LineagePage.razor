@@ -49,14 +49,14 @@
 
                     @if (lineageCtx.IsLoading || dataflowCtx.IsLoading)
                     {
-                        <div style="position:absolute;inset:0;top:48px;display:flex;align-items:center;justify-content:center;background:rgba(8,9,11,0.5);z-index:20;">
+                        <div class="u-bg-ink-50" style="position:absolute;inset:0;top:48px;display:flex;align-items:center;justify-content:center;z-index:20;">
                             <span class="mono u-fg-n400">Loading lineage&hellip;</span>
                         </div>
                     }
 
                     <!-- Canvas -->
                     <div style="flex:1;position:relative;">
-                        <svg class="w-full h-full" style="width:100%;height:100%;background:#08090b;"
+                        <svg class="w-full h-full u-bg-canvas" style="width:100%;height:100%;"
                              @onmousedown="OnCanvasMouseDown"
                              @onmousemove="OnCanvasMouseMove"
                              @onmouseup="OnCanvasMouseUp"
@@ -210,18 +210,18 @@
                                                 @foreach (var f in _fieldDrillIn)
                                                 {
                                                     <div class="finput" style="padding:8px 10px;">
-                                                        <div class="mono" style="font-size:12px;color:var(--glacier-soft);font-weight:600;">@f.FieldName</div>
+                                                        <div class="mono u-fs-12 u-fw-600" style="color:var(--glacier-soft);">@f.FieldName</div>
                                                         @if (f.Sources.Count > 0)
                                                         {
-                                                            <div class="mono" style="margin-top:4px;font-size:10px;color:var(--n-400);">← sources: @string.Join(", ", f.Sources)</div>
+                                                            <div class="mono u-fs-10" style="margin-top:4px;color:var(--n-400);">← sources: @string.Join(", ", f.Sources)</div>
                                                         }
                                                         else
                                                         {
-                                                            <div class="mono" style="margin-top:4px;font-size:10px;color:var(--n-600);font-style:italic;">no source mappings recorded</div>
+                                                            <div class="mono u-fs-10 u-italic" style="margin-top:4px;color:var(--n-600);">no source mappings recorded</div>
                                                         }
                                                         @if (f.Consumers.Count > 0)
                                                         {
-                                                            <div class="mono" style="margin-top:4px;font-size:10px;color:var(--n-400);">→ used by: @string.Join(", ", f.Consumers)</div>
+                                                            <div class="mono u-fs-10" style="margin-top:4px;color:var(--n-400);">→ used by: @string.Join(", ", f.Consumers)</div>
                                                         }
                                                     </div>
                                                 }
@@ -253,11 +253,11 @@
                         <div class="card-b" style="padding:13px 16px;">
                             <div class="lbl" style="margin-bottom:9px;">Legend</div>
                             <div class="legend" style="flex-wrap:wrap;gap:14px;">
-                                <span><i style="border-radius:0;background:var(--n-300);"></i>Connection</span>
+                                <span><i class="u-r-0" style="background:var(--n-300);"></i>Connection</span>
                                 <span><i style="background:var(--glacier);"></i>DataStore</span>
                                 <span><i style="background:var(--signal);"></i>Pipeline</span>
                                 <span><i style="background:var(--glacier-soft);"></i>DataSet</span>
-                                <span><i style="border-radius:99px;background:var(--amber);"></i>Calculation</span>
+                                <span><i class="u-r-99" style="background:var(--amber);"></i>Calculation</span>
                                 <span><i style="background:var(--violet);"></i>Transformation</span>
                             </div>
                         </div>

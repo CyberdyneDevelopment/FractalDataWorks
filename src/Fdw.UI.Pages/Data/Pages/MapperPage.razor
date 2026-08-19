@@ -116,10 +116,10 @@
                             <div class="pick">
                                 @foreach (var mapping in ctx.Mappings)
                                 {
-                                    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s2);border-radius:8px;">
-                                        <span class="mono" style="flex:1;color:var(--glacier-soft);font-size:12px;overflow:hidden;text-overflow:ellipsis;">@mapping.SourceField</span>
+                                    <div class="u-r-8" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s2);">
+                                        <span class="mono u-fs-12" style="flex:1;color:var(--glacier-soft);overflow:hidden;text-overflow:ellipsis;">@mapping.SourceField</span>
                                         <Icon Name="ArrowRightAlt" Style="width:15px;height:15px;color:var(--n-500);flex-shrink:0;" />
-                                        <span class="mono" style="flex:1;color:var(--success);font-size:12px;text-align:right;overflow:hidden;text-overflow:ellipsis;">@mapping.TargetField</span>
+                                        <span class="mono u-fs-12" style="flex:1;color:var(--success);text-align:right;overflow:hidden;text-overflow:ellipsis;">@mapping.TargetField</span>
                                     </div>
                                 }
                             </div>

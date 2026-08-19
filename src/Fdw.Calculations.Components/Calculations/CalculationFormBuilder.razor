@@ -13,7 +13,7 @@
 @if (Context is null)
 {
     <div class="card b-fail" style="padding:12px 16px;">
-        <span class="mono" style="font-size:12px;color:var(--signal);">CalculationFormBuilder: Context is required.</span>
+        <span class="mono u-fs-12" style="color:var(--signal);">CalculationFormBuilder: Context is required.</span>
     </div>
 }
 else
@@ -66,8 +66,8 @@ else
             @* Formula textarea — two-way bound to Formula *@
             <div class="frow">
                 <label>Expression</label>
-                <textarea class="finput mono"
-                          style="height:160px;resize:vertical;font-family:var(--font-mono,monospace);font-size:13px;"
+                <textarea class="finput mono u-fs-13"
+                          style="height:160px;resize:vertical;font-family:var(--font-mono,monospace);"
                           placeholder="Enter formula expression…"
                           value="@Formula"
                           @onchange="FormulaTextChanged" />
@@ -82,7 +82,7 @@ else
                 </button>
                 @if (Context.IsLoading)
                 {
-                    <span class="mono" style="font-size:12px;color:var(--n-500);">Validating…</span>
+                    <span class="mono u-fs-12" style="color:var(--n-500);">Validating…</span>
                 }
             </div>
 
@@ -90,7 +90,7 @@ else
             @if (Context.ErrorMessage is not null)
             {
                 <div class="card b-fail" style="margin-top:12px;padding:12px 16px;">
-                    <span class="mono" style="font-size:12px;color:var(--signal);">@Context.ErrorMessage</span>
+                    <span class="mono u-fs-12" style="color:var(--signal);">@Context.ErrorMessage</span>
                 </div>
             }
 
@@ -105,7 +105,7 @@ else
                             <span class="badge b-ok"><span class="bd"></span>Valid</span>
                             @if (!string.IsNullOrEmpty(preview.InferredResultType))
                             {
-                                <span class="mono" style="font-size:12px;color:var(--n-400);">Inferred type: @preview.InferredResultType</span>
+                                <span class="mono u-fs-12" style="color:var(--n-400);">Inferred type: @preview.InferredResultType</span>
                             }
                         </div>
                         @if (preview.ReferencedFields.Any())
@@ -114,7 +114,7 @@ else
                                 <span class="mut u-fs-12">Referenced fields: </span>
                                 @foreach (var field in preview.ReferencedFields)
                                 {
-                                    <span class="mono badge b-idle" style="margin-left:4px;font-size:11px;">@field</span>
+                                    <span class="mono badge b-idle u-fs-11" style="margin-left:4px;">@field</span>
                                 }
                             </div>
                         }
@@ -129,13 +129,13 @@ else
                             <ul style="margin:0;padding:0 0 0 16px;">
                                 @foreach (var err in preview.Errors)
                                 {
-                                    <li class="mono" style="font-size:12px;color:var(--signal);margin-bottom:2px;">@err</li>
+                                    <li class="mono u-fs-12" style="color:var(--signal);margin-bottom:2px;">@err</li>
                                 }
                             </ul>
                         }
                         else if (!string.IsNullOrEmpty(preview.Error))
                         {
-                            <span class="mono" style="font-size:12px;color:var(--signal);">@preview.Error</span>
+                            <span class="mono u-fs-12" style="color:var(--signal);">@preview.Error</span>
                         }
                     }
                 </div>

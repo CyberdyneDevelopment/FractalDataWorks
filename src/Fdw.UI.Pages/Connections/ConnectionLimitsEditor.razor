@@ -45,7 +45,7 @@
 
         @if (Limits.Count == 0)
         {
-            <p style="color:var(--n-500);font-size:13px;text-align:center;padding:18px 0;margin:0;">
+            <p class="u-fs-13" style="color:var(--n-500);text-align:center;padding:18px 0;margin:0;">
                 No limits configured. Add a limit above to protect this connection.
             </p>
         }
@@ -67,7 +67,7 @@
                                 <h3>@displayLabel</h3>
                                 @if (!string.IsNullOrEmpty(displayDesc))
                                 {
-                                    <p style="font-size:11px;color:var(--n-500);margin:4px 0 0;">@displayDesc</p>
+                                    <p class="u-fs-11" style="color:var(--n-500);margin:4px 0 0;">@displayDesc</p>
                                 }
                             </div>
                             <button class="btn btn-danger btn-sm"

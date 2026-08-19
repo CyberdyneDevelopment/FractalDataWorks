@@ -87,7 +87,7 @@
                                         <td colspan="7" style="padding:0 12px 12px;background:var(--surface-2,var(--n-950));">
                                             <div style="display:flex;gap:24px;flex-wrap:wrap;padding-top:10px;">
                                                 <div style="flex:1;min-width:200px;">
-                                                    <p class="mut" style="font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Lists used as recipients</p>
+                                                    <p class="mut u-fs-11 u-upper u-ls-05" style="margin-bottom:6px;">Lists used as recipients</p>
                                                     @if (ctx.Lists.Count == 0)
                                                     {
                                                         <p class="mut u-fs-12">No lists loaded — <button class="btn btn-ghost btn-sm" @onclick="() => ctx.OnLoadLists()">load lists</button></p>
@@ -97,13 +97,13 @@
                                                         <ul style="list-style:none;padding:0;margin:0;">
                                                             @foreach (var list in ctx.Lists)
                                                             {
-                                                                <li style="font-size:12px;padding:2px 0;" class="mut">@list.Name (@list.MemberCount members)</li>
+                                                                <li style="padding:2px 0;" class="mut u-fs-12">@list.Name (@list.MemberCount members)</li>
                                                             }
                                                         </ul>
                                                     }
                                                 </div>
                                                 <div style="flex:1;min-width:200px;">
-                                                    <p class="mut" style="font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Rule details</p>
+                                                    <p class="mut u-fs-11 u-upper u-ls-05" style="margin-bottom:6px;">Rule details</p>
                                                     <div class="mono u-fs-12">
                                                         <div>ID: @rule.Id.ToString("D")</div>
                                                         <div>Service: @rule.NotificationServiceType / @rule.NotificationServiceName</div>

@@ -31,10 +31,10 @@
             <div style="max-width:680px;display:flex;flex-direction:column;gap:14px;">
                 <div class="card"><div class="card-b">
                     <h3 style="margin:0 0 8px;">Action #@ctx.CurrentAction.AgentActionId — @ctx.CurrentAction.Status</h3>
-                    <p style="font-size:13px;color:var(--n-400);">This action has already been reviewed.</p>
+                    <p class="u-fs-13" style="color:var(--n-400);">This action has already been reviewed.</p>
                     @if (ctx.CurrentAction.ReviewedAt.HasValue)
                     {
-                        <p class="mono" style="font-size:11px;color:var(--n-500);">@ctx.CurrentAction.Status by @ctx.CurrentAction.ReviewedBy at @ctx.CurrentAction.ReviewedAt.Value.ToString("yyyy-MM-dd HH:mm")</p>
+                        <p class="mono u-fs-11" style="color:var(--n-500);">@ctx.CurrentAction.Status by @ctx.CurrentAction.ReviewedBy at @ctx.CurrentAction.ReviewedAt.Value.ToString("yyyy-MM-dd HH:mm")</p>
                     }
                 </div></div>
                 <button class="btn btn-secondary" @onclick='() => Nav.NavigateTo("/agent-actions")'>Back to Queue</button>
@@ -46,14 +46,14 @@
                 <div class="card-b" style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:18px;">
                     <div>
                         <div class="ey" style="color:var(--warn);margin-bottom:6px;">Agent Review Mode</div>
-                        <p style="font-size:13px;color:var(--n-300);">
-                            <span style="color:var(--warn);font-weight:500;">@ctx.CurrentAction.AgentLabel</span>
+                        <p class="u-fs-13" style="color:var(--n-300);">
+                            <span class="u-fw-500" style="color:var(--warn);">@ctx.CurrentAction.AgentLabel</span>
                             requested
                             <span class="tpill">@ctx.CurrentAction.Method @ctx.CurrentAction.Route</span>
                         </p>
                         @if (!string.IsNullOrEmpty(_reviewError))
                         {
-                            <div class="mono" style="color:var(--signal);font-size:11px;margin-top:8px;">@_reviewError</div>
+                            <div class="mono u-fs-11" style="color:var(--signal);margin-top:8px;">@_reviewError</div>
                         }
                     </div>
                     <div class="actions">

@@ -26,7 +26,7 @@
             @if (ctx.ErrorMessage is not null)
             {
                 <div class="card b-fail" style="margin-bottom:14px;padding:14px 16px;">
-                    <span class="mono" style="font-size:12px;color:var(--signal);">@ctx.ErrorMessage</span>
+                    <span class="mono u-fs-12" style="color:var(--signal);">@ctx.ErrorMessage</span>
                 </div>
             }
 
@@ -56,7 +56,7 @@
                                 {
                                     <tr>
                                         <td>
-                                            <button class="cellpad nm" style="background:none;border:0;cursor:pointer;text-align:left;font-family:inherit;"
+                                            <button class="cellpad nm u-bg-none u-b-0" style="cursor:pointer;text-align:left;font-family:inherit;"
                                                     @onclick='() => Nav.NavigateTo($"/orchestration/edit/{node.Id}")'>
                                                 @node.Name
                                             </button>

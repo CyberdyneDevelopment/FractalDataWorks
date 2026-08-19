@@ -25,8 +25,8 @@
                                 <input type="text"
                                        value="@ctx.SearchString"
                                        @oninput="e => ctx.OnSearchChanged(e.Value?.ToString() ?? string.Empty)"
-                                       class="finput"
-                                       style="background:transparent;padding:0;flex:1;"
+                                       class="finput u-bg-transparent"
+                                       style="padding:0;flex:1;"
                                        placeholder="Search users..." />
                             </div>
                         </div>
@@ -177,7 +177,7 @@
                                 <div class="frow u-mb-16">
                                     <label>Status</label>
                                     <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-                                        <input type="checkbox" @bind="_formIsActive" style="position:absolute;opacity:0;" />
+                                        <input class="u-op-0" type="checkbox" @bind="_formIsActive" style="position:absolute;" />
                                         <span class="@(_formIsActive ? "sw on" : "sw")"></span>
                                         <span class="mut">Active</span>
                                     </label>

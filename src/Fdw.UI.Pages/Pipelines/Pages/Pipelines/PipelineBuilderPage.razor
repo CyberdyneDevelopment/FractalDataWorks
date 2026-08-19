@@ -57,13 +57,13 @@
             <button class="btn btn-ghost btn-sm" @onclick="ZoomOut">
                 <Icon Name="ZoomOut" />
             </button>
-            <span class="mono" style="font-size:11px;width:48px;text-align:center;color:var(--n-400);">@(Math.Round(_zoom * 100))%</span>
+            <span class="mono u-fs-11" style="width:48px;text-align:center;color:var(--n-400);">@(Math.Round(_zoom * 100))%</span>
             <button class="btn btn-ghost btn-sm" @onclick="ZoomIn">
                 <Icon Name="ZoomIn" />
             </button>
             @if (!string.IsNullOrEmpty(_validationError))
             {
-                <span class="mono" style="color:var(--signal);font-size:11px;">@_validationError</span>
+                <span class="mono u-fs-11" style="color:var(--signal);">@_validationError</span>
             }
 
             @* Test-mode toolbar — shown when a test run is active *@
@@ -152,15 +152,15 @@
                 @foreach (var category in _taskCategories)
                 {
                     <div style="margin-bottom:10px;">
-                        <div class="mono" style="font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--n-500);margin-bottom:6px;">@category.Name</div>
+                        <div class="mono u-fs-9-5 u-ls-12 u-upper" style="color:var(--n-500);margin-bottom:6px;">@category.Name</div>
                         @foreach (var task in category.Tasks)
                         {
                             <div class="palitem"
                                  style="flex-direction:column;align-items:flex-start;gap:2px;margin-bottom:4px;"
                                  draggable="true"
                                  @ondragstart="() => _draggedTaskType = task.Name">
-                                <div class="mono" style="font-size:12px;color:var(--n-100);">@task.DisplayName</div>
-                                <div class="mono" style="font-size:9px;color:var(--n-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;">@task.Description</div>
+                                <div class="mono u-fs-12" style="color:var(--n-100);">@task.DisplayName</div>
+                                <div class="mono u-fs-9" style="color:var(--n-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;">@task.Description</div>
                             </div>
                         }
                     </div>
@@ -169,7 +169,7 @@
         </div>
 
         <!-- Canvas — rendered by CanvasHost using the projected PipelineCanvasModel -->
-        <div class="canvas" style="flex:1;position:relative;overflow:hidden;border-radius:14px;"
+        <div class="canvas u-r-14" style="flex:1;position:relative;overflow:hidden;"
              @ondragover:preventDefault
              @ondrop="OnCanvasDrop">
             @if (_builderProvider.CanvasModel is not null)
@@ -183,7 +183,7 @@
             {
                 <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
                     <div style="text-align:center;color:var(--n-500);">
-                        <p class="mono" style="font-size:13px;">Drag tasks from the palette to build your pipeline</p>
+                        <p class="mono u-fs-13">Drag tasks from the palette to build your pipeline</p>
                     </div>
                 </div>
             }
@@ -363,7 +363,7 @@
                                         <label>@field.Label</label>
                                         @if (string.Equals(field.InputKind, ConfigurationFieldKinds.Textarea, StringComparison.Ordinal))
                                         {
-                                            <textarea class="finput mono" style="height:80px;font-size:12px;"
+                                            <textarea class="finput mono u-fs-12" style="height:80px;"
                                                       placeholder="@field.Placeholder"
                                                       value="@_selectedTask.GetTransformValue(field.Key)"
                                                       @oninput="@(e => _selectedTask.SetTransformValue(field.Key, e.Value?.ToString() ?? string.Empty))"></textarea>
@@ -420,7 +420,7 @@
                                 <label>@field.Label</label>
                                 @if (string.Equals(field.InputKind, TransformFieldKinds.Textarea, StringComparison.Ordinal))
                                 {
-                                    <textarea class="finput mono" style="height:80px;font-size:12px;"
+                                    <textarea class="finput mono u-fs-12" style="height:80px;"
                                               placeholder="@field.Placeholder"
                                               value="@_selectedTask.GetTransformValue(field.Key)"
                                               @oninput="@(e => _selectedTask.SetTransformValue(field.Key, e.Value?.ToString() ?? string.Empty))"></textarea>
@@ -445,7 +445,7 @@
             }
             else
             {
-                <div style="font-size:13px;color:var(--n-500);font-style:italic;text-align:center;margin-top:40px;">
+                <div class="u-fs-13 u-italic" style="color:var(--n-500);text-align:center;margin-top:40px;">
                     Select a node to edit its properties.
                 </div>
             }
@@ -454,7 +454,7 @@
             {
                 <div class="frow" style="margin-top:24px;margin-bottom:0;">
                     <label>Pipeline Description</label>
-                    <textarea class="finput" style="height:80px;font-size:12px;" @bind="_pipelineDescription"></textarea>
+                    <textarea class="finput u-fs-12" style="height:80px;" @bind="_pipelineDescription"></textarea>
                 </div>
             }
             </div>

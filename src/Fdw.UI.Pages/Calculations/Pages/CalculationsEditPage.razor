@@ -18,7 +18,7 @@
             @if (ctx.ErrorMessage is not null)
             {
                 <div class="card b-fail" style="margin-bottom:14px;padding:14px 16px;">
-                    <span class="mono" style="font-size:12px;color:var(--signal);">@ctx.ErrorMessage</span>
+                    <span class="mono u-fs-12" style="color:var(--signal);">@ctx.ErrorMessage</span>
                 </div>
             }
 
@@ -53,7 +53,7 @@
                             <input type="text" class="finput mono"
                                    style="background:var(--s2);color:var(--n-400);cursor:not-allowed;"
                                    value="@_targetDataSet" readonly />
-                            <p class="hint" style="margin:4px 0 0 0;font-size:11px;">Target DataSet cannot be changed after creation.</p>
+                            <p class="hint u-fs-11" style="margin:4px 0 0 0;">Target DataSet cannot be changed after creation.</p>
                         </div>
 
                         <div class="frow">
@@ -73,7 +73,7 @@
 
                         <label style="display:flex;align-items:center;gap:11px;cursor:pointer;margin-top:6px;">
                             <input type="checkbox" @bind="_isEnabled" />
-                            <span style="font-size:13px;color:var(--n-200);">Enabled</span>
+                            <span class="u-fs-13" style="color:var(--n-200);">Enabled</span>
                         </label>
                     </div>
                 </section>
@@ -88,7 +88,7 @@
                 @if (!string.IsNullOrEmpty(_validationError))
                 {
                     <div class="card b-fail" style="margin-bottom:14px;padding:12px 16px;">
-                        <span class="mono" style="font-size:12px;color:var(--signal);">@_validationError</span>
+                        <span class="mono u-fs-12" style="color:var(--signal);">@_validationError</span>
                     </div>
                 }
 

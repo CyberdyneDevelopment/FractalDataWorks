@@ -30,7 +30,7 @@ else
                     {
                         var pct = barRange > 0 ? (val - barMin) / barRange * 100 : 50;
                         var height = Math.Max(4, pct);
-                        <div style="flex:1;background:var(--glacier-dim);border-radius:2px;height: @($"{height:F0}")%"></div>
+                        <div class="u-r-2" style="flex:1;background:var(--glacier-dim);height: @($"{height:F0}")%"></div>
                     }
                 </div>
 

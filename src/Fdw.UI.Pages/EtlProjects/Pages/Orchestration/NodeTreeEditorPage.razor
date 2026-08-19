@@ -24,7 +24,7 @@
             @if (ctx.ErrorMessage is not null)
             {
                 <div class="card b-fail" style="margin-bottom:14px;padding:14px 16px;">
-                    <span class="mono" style="font-size:12px;color:var(--signal);">@ctx.ErrorMessage</span>
+                    <span class="mono u-fs-12" style="color:var(--signal);">@ctx.ErrorMessage</span>
                 </div>
             }
 
@@ -52,7 +52,7 @@
 
                         <label style="display:flex;align-items:center;gap:11px;cursor:pointer;margin-bottom:16px;">
                             <input type="checkbox" id="enabled" @bind="_isEnabled" />
-                            <span style="font-size:13px;color:var(--n-200);">Enabled for execution</span>
+                            <span class="u-fs-13" style="color:var(--n-200);">Enabled for execution</span>
                         </label>
 
                         <div class="frow u-mb-0">
@@ -100,19 +100,19 @@
                                 <input type="checkbox" id="approvalRequired"
                                        checked="@(_requireApprovalToRun == true)"
                                        @oninput="e => _requireApprovalToRun = (bool?)e.Value" />
-                                <span style="font-size:13px;color:var(--n-200);">Require approval to run</span>
+                                <span class="u-fs-13" style="color:var(--n-200);">Require approval to run</span>
                             </label>
                             <label style="display:flex;align-items:center;gap:11px;cursor:pointer;">
                                 <input type="checkbox" id="allowCrossTenant"
                                        checked="@(_allowCrossTenant == true)"
                                        @oninput="e => _allowCrossTenant = (bool?)e.Value" />
-                                <span style="font-size:13px;color:var(--n-200);">Allow cross-tenant pipelines</span>
+                                <span class="u-fs-13" style="color:var(--n-200);">Allow cross-tenant pipelines</span>
                             </label>
                             <label style="display:flex;align-items:center;gap:11px;cursor:pointer;">
                                 <input type="checkbox" id="allowResume"
                                        checked="@(_allowResume == true)"
                                        @oninput="e => _allowResume = (bool?)e.Value" />
-                                <span style="font-size:13px;color:var(--n-200);">Allow resume from checkpoint</span>
+                                <span class="u-fs-13" style="color:var(--n-200);">Allow resume from checkpoint</span>
                             </label>
                         </div>
                     </div>
