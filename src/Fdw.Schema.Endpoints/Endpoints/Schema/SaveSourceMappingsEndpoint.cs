@@ -16,6 +16,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Schema.Clients.Models;
 using Fdw.Web.RestEndpoints.Logging;
 
+using Microsoft.AspNetCore.Http;
+
 namespace Fdw.Schema.Endpoints;
 
 /// <summary>
@@ -90,15 +92,41 @@ public abstract class SaveSourceMappingsEndpoint : Endpoint<SaveSourceMappingsRe
             return;
         }
 
-        await SoftDeleteExistingMappings(source.Id, ct).ConfigureAwait(false);
+        var retired = await SoftDeleteExistingMappings(source.Id, ct).ConfigureAwait(false);
+        if (retired.IsFailure)
+        {
+            await SendSaveFailure(retired, ct).ConfigureAwait(false);
+            return;
+        }
 
         var createdMappings = await InsertNewMappings(source.Id, source.SourceName, req.Mappings, ct).ConfigureAwait(false);
+        if (createdMappings.IsFailure)
+        {
+            await SendSaveFailure(createdMappings, ct).ConfigureAwait(false);
+            return;
+        }
 
-        await Send.OkAsync(createdMappings.ToList(), ct).ConfigureAwait(false);
+        await Send.OkAsync((createdMappings.Value ?? []).ToList(), ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Answers a failed save with the reason rather than an empty success.</summary>
+    /// <param name="result">The failed result the gateway returned.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    private Task SendSaveFailure(IGenericResult result, CancellationToken ct)
+    {
+        HttpContext.Response.StatusCode = 500;
+        HttpContext.Response.ContentType = "application/json";
+        return HttpContext.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
+        {
+            Status = 500,
+            Title = "Field mappings were not saved",
+            Detail = result.CurrentMessage,
+            Instance = HttpContext.Request.Path.HasValue ? HttpContext.Request.Path.Value : null,
+        }, ct);
     }
 
     /// <summary>Soft-deletes all active mappings for the specified source by setting IsDeleted and clearing IsCurrent.</summary>
-    protected virtual async Task SoftDeleteExistingMappings(Guid sourceId, CancellationToken ct)
+    protected virtual async Task<IGenericResult> SoftDeleteExistingMappings(Guid sourceId, CancellationToken ct)
     {
         var existingCommand = new QueryCommand<FieldMappingDbRecord>
         {
@@ -129,9 +157,9 @@ public abstract class SaveSourceMappingsEndpoint : Endpoint<SaveSourceMappingsRe
         // Why: DataStoreName and PathName come from the provider to avoid hardcoding "ConfigurationDb"/"data".
         var fieldMappingTarget = new DataStoreTarget(_dataSetProvider.DataStoreName, _dataSetProvider.PathName, "DataSetFieldMapping");
         var existingResult = await _dataGateway.Execute<IEnumerable<FieldMappingDbRecord>>(existingCommand, fieldMappingTarget, ct).ConfigureAwait(false);
-        if (!existingResult.IsSuccess)
+        if (existingResult.IsFailure)
         {
-            return;
+            return existingResult;
         }
 
         var existingMappings = existingResult.Value?.ToList() ?? [];
@@ -154,12 +182,20 @@ public abstract class SaveSourceMappingsEndpoint : Endpoint<SaveSourceMappingsRe
                 }
             };
 
-            _ = await _dataGateway.Execute<int>(updateCommand, fieldMappingTarget, ct).ConfigureAwait(false);
+            // Why the result is read: discarding it left a mapping current that the save believed
+            // it had retired, so the insert that followed collided with a row nobody thought existed.
+            var retire = await _dataGateway.Execute<int>(updateCommand, fieldMappingTarget, ct).ConfigureAwait(false);
+            if (retire.IsFailure)
+            {
+                return retire;
+            }
         }
+
+        return GenericResult.Success();
     }
 
     /// <summary>Inserts new field mapping records and returns the created response DTOs.</summary>
-    protected virtual async Task<IReadOnlyList<FieldMappingResponsePayload>> InsertNewMappings(
+    protected virtual async Task<IGenericResult<IReadOnlyList<FieldMappingResponsePayload>>> InsertNewMappings(
         Guid sourceId,
         string sourceName,
         IList<FieldMappingInputPayload> mappings,
@@ -186,20 +222,27 @@ public abstract class SaveSourceMappingsEndpoint : Endpoint<SaveSourceMappingsRe
 
             var fieldMappingTarget = new DataStoreTarget(_dataSetProvider.DataStoreName, _dataSetProvider.PathName, "DataSetFieldMapping");
             var insertResult = await _dataGateway.Execute<int>(insertCommand, fieldMappingTarget, ct).ConfigureAwait(false);
-            if (insertResult.IsSuccess)
+
+            // Why a failed row ends the save: skipping it returned the mappings that happened to
+            // land, and when none did the caller got 200 and an empty list — a save that saved
+            // nothing, reported as success. The gateway already says what went wrong; this passes
+            // it back rather than dropping it.
+            if (insertResult.IsFailure)
             {
-                created.Add(new FieldMappingResponsePayload
-                {
-                    Id = newMapping.Id,
-                    DataSetSourceId = sourceId,
-                    SourceName = sourceName,
-                    LogicalFieldName = newMapping.LogicalFieldName,
-                    PhysicalFieldName = newMapping.PhysicalFieldName,
-                    TransformExpression = newMapping.TransformExpression
-                });
+                return insertResult.ToNewResult<IReadOnlyList<FieldMappingResponsePayload>>();
             }
+
+            created.Add(new FieldMappingResponsePayload
+            {
+                Id = newMapping.Id,
+                DataSetSourceId = sourceId,
+                SourceName = sourceName,
+                LogicalFieldName = newMapping.LogicalFieldName,
+                PhysicalFieldName = newMapping.PhysicalFieldName,
+                TransformExpression = newMapping.TransformExpression
+            });
         }
 
-        return created;
+        return GenericResult<IReadOnlyList<FieldMappingResponsePayload>>.Success(created);
     }
 }
