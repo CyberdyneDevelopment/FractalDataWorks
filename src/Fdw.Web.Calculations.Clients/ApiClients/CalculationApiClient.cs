@@ -35,6 +35,12 @@ public class CalculationApiClient : ApiClientBase, ICalculationApiClient
     public virtual Task<IGenericResult<CalculationTypesResponse>> GetCalculationTypes(CancellationToken ct = default)
         => Get<CalculationTypesResponse>("calculations/types", ct);
 
+    /// <summary>Gets the period comparison types a calculation can be evaluated across.</summary>
+    /// <param name="ct">A token to cancel the request.</param>
+    /// <returns>A result containing the available period comparison types.</returns>
+    public virtual Task<IGenericResult<PeriodComparisonTypesResponse>> GetPeriodComparisonTypes(CancellationToken ct = default)
+        => Get<PeriodComparisonTypesResponse>("calculations/period-comparisons", ct);
+
     /// <summary>
     /// Executes a calculation.
     /// </summary>

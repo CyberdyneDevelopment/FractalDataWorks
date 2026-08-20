@@ -41,6 +41,13 @@ public class ConnectionApiClient : ApiClientBase
     public virtual Task<IGenericResult<IReadOnlyList<ConnectionTypePayload>>> GetConnectionTypes(CancellationToken ct = default)
         => GetList<ConnectionTypePayload>("connections/types", ct);
 
+    /// <summary>Gets the connections declared for a particular connection type.</summary>
+    /// <param name="connectionType">The connection type to list connections for.</param>
+    /// <param name="ct">A token to cancel the request.</param>
+    /// <returns>A result containing the connections of that type.</returns>
+    public virtual Task<IGenericResult<IReadOnlyList<ConnectionByTypePayload>>> GetConnectionsByType(string connectionType, CancellationToken ct = default)
+        => GetList<ConnectionByTypePayload>($"connections/by-type/{Uri.EscapeDataString(connectionType)}", ct);
+
     /// <summary>
     /// Gets a specific connection by name.
     /// </summary>

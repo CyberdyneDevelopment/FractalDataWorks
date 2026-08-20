@@ -20,6 +20,11 @@ public interface ICalculationApiClient
     /// </summary>
     Task<IGenericResult<CalculationTypesResponse>> GetCalculationTypes(CancellationToken ct = default);
 
+    /// <summary>Gets the period comparison types a calculation can be evaluated across.</summary>
+    /// <param name="ct">A token to cancel the request.</param>
+    /// <returns>A result containing the available period comparison types.</returns>
+    Task<IGenericResult<PeriodComparisonTypesResponse>> GetPeriodComparisonTypes(CancellationToken ct = default);
+
     /// <summary>
     /// Executes a calculation with the specified input values.
     /// </summary>
