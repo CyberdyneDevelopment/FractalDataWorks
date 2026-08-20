@@ -189,7 +189,9 @@ public static partial class ServiceLogger
     /// <summary>
     /// Logs when service is created successfully.
     /// </summary>
-    [MessageLogging(EventId = 11029, Level = LogLevel.Information, Message = "Service created: '{name}' (type: {serviceOptionType})")]
+    // Why Debug, not Information: service construction is per-call plumbing, not an operator event —
+    // it fired 6x per health-check cycle (~2,600/day on an idle host) and drowned the Information tier.
+    [MessageLogging(EventId = 11029, Level = LogLevel.Debug, Message = "Service created: '{name}' (type: {serviceOptionType})")]
     public static partial IGenericMessage ServiceCreated(ILogger logger, string name, string serviceOptionType);
 
     /// <summary>
@@ -303,10 +305,11 @@ public static partial class ServiceLogger
     public static partial IGenericMessage ProviderFactoryRegistryDrained(ILogger logger, string providerType, int count, string serviceOptionTypes);
 
     /// <summary>
-    /// Logs that a provider is ready to serve. Information: the milestone a reader scanning at
-    /// default verbosity needs to confirm the domain came up with the members it expected.
+    /// Logs that a provider is ready to serve.
     /// </summary>
-    [MessageLogging(EventId = 11037, Level = LogLevel.Information, Message = "{providerType} ready: {count} service option(s) creatable — [{serviceOptionTypes}]")]
+    // Why Debug, not Information: provider readiness is recomputed per scope, not once at startup —
+    // an operator has no action to take on it. See ServiceCreated above.
+    [MessageLogging(EventId = 11037, Level = LogLevel.Debug, Message = "{providerType} ready: {count} service option(s) creatable — [{serviceOptionTypes}]")]
     public static partial IGenericMessage ProviderReady(ILogger logger, string providerType, int count, string serviceOptionTypes);
 
     /// <summary>

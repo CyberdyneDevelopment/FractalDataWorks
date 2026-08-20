@@ -24,7 +24,7 @@ public static partial class ConnectionEndpointLog
     public static partial IGenericMessage CapabilitiesResolved(ILogger logger, string connectionTypeName);
 
     /// <summary>Logs when an in-memory connection configuration test is starting.</summary>
-    [MessageLogging(EventId = 11001, Level = LogLevel.Information, Message = "Testing in-memory connection config for '{connectionName}'")]
+    [MessageLogging(EventId = 11001, Level = LogLevel.Trace, Message = "Testing in-memory connection config for '{connectionName}'")]
     public static partial IGenericMessage TestingConnectionConfig(ILogger logger, string connectionName);
 
     /// <summary>Logs when an in-memory connection configuration test succeeded.</summary>

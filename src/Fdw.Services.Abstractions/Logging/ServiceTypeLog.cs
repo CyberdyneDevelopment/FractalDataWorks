@@ -206,7 +206,7 @@ public static partial class ServiceTypeLog
     /// </summary>
     [MessageLogging(
         EventId = 11025,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "[{collectionName}] Registering '{serviceTypeName}' factory with {providerTypeName}")]
     public static partial IGenericMessage RegisteringFactory(
         ILogger logger,

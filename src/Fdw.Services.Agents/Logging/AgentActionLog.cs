@@ -18,7 +18,7 @@ public static partial class AgentActionLog
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>Logs the start of listing agent actions.</summary>
-    [MessageLogging(EventId = 11000, Level = LogLevel.Information,
+    [MessageLogging(EventId = 11000, Level = LogLevel.Trace,
         Message = "Listing agent actions with status filter '{status}'")]
     public static partial IGenericMessage ListingAgentActions(ILogger logger, string status);
 
@@ -37,7 +37,7 @@ public static partial class AgentActionLog
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>Logs the start of fetching a single agent action.</summary>
-    [MessageLogging(EventId = 11002, Level = LogLevel.Information,
+    [MessageLogging(EventId = 11002, Level = LogLevel.Trace,
         Message = "Fetching agent action {actionId}")]
     public static partial IGenericMessage FetchingAgentAction(ILogger logger, int actionId);
 
@@ -61,7 +61,7 @@ public static partial class AgentActionLog
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>Logs the start of a review operation.</summary>
-    [MessageLogging(EventId = 11004, Level = LogLevel.Information,
+    [MessageLogging(EventId = 11004, Level = LogLevel.Trace,
         Message = "Reviewing agent action {actionId} with status '{newStatus}'")]
     public static partial IGenericMessage ReviewingAgentAction(ILogger logger, int actionId, string newStatus);
 

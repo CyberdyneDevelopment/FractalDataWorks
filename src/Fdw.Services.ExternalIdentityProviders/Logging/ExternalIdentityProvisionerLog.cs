@@ -105,7 +105,7 @@ public static partial class ExternalIdentityProvisionerLog
     /// <summary>Logs that a provisioner binding resolved to a named provisioner.</summary>
     [MessageLogging(
         EventId = 11006,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "Resolved provisioner binding: tenantId={tenantId} providerName='{providerName}' -> provisionerName='{provisionerName}'.")]
     public static partial IGenericMessage BindingResolved(ILogger logger, string tenantId, string providerName, string provisionerName);
 

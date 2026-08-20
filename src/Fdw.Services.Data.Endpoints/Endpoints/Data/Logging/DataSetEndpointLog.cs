@@ -35,7 +35,7 @@ public static partial class DataSetEndpointLog
     // Create (4410-4413)
 
     /// <summary>Logs the start of data set creation.</summary>
-    [MessageLogging(EventId = 11003, Level = LogLevel.Information, Message = "Creating data set '{name}'")]
+    [MessageLogging(EventId = 11003, Level = LogLevel.Trace, Message = "Creating data set '{name}'")]
     public static partial IGenericMessage CreatingDataSet(ILogger logger, string name);
 
     /// <summary>Logs successful data set creation.</summary>
@@ -53,7 +53,7 @@ public static partial class DataSetEndpointLog
     // Update (4415-4417)
 
     /// <summary>Logs the start of data set update.</summary>
-    [MessageLogging(EventId = 11005, Level = LogLevel.Information, Message = "Updating data set '{name}'")]
+    [MessageLogging(EventId = 11005, Level = LogLevel.Trace, Message = "Updating data set '{name}'")]
     public static partial IGenericMessage UpdatingDataSet(ILogger logger, string name);
 
     /// <summary>Logs successful data set update.</summary>
@@ -67,7 +67,7 @@ public static partial class DataSetEndpointLog
     // Delete (4420-4422)
 
     /// <summary>Logs the start of data set deletion.</summary>
-    [MessageLogging(EventId = 11007, Level = LogLevel.Information, Message = "Deleting data set '{name}'")]
+    [MessageLogging(EventId = 11007, Level = LogLevel.Trace, Message = "Deleting data set '{name}'")]
     public static partial IGenericMessage DeletingDataSet(ILogger logger, string name);
 
     /// <summary>Logs successful data set deletion.</summary>

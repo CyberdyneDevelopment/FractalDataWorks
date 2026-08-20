@@ -245,6 +245,8 @@ public static partial class SqliteConnectionLog
     /// <summary>
     /// Logs when a health probe (SELECT 1) succeeds.
     /// </summary>
-    [MessageLogging(EventId = 9759, Level = LogLevel.Information, Message = "Health probe succeeded for connection '{connectionName}'")]
+    // Why Debug, not Information: a successful periodic probe is steady-state noise — it fired every
+    // 5m15s forever. The probe FAILURE record keeps its own higher level.
+    [MessageLogging(EventId = 9759, Level = LogLevel.Debug, Message = "Health probe succeeded for connection '{connectionName}'")]
     public static partial IGenericMessage ProbeSucceeded(ILogger logger, string connectionName);
 }

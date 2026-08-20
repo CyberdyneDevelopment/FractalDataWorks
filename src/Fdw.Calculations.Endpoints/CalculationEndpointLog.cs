@@ -36,7 +36,7 @@ public static partial class CalculationEndpointLog
     // Execute operations (1535-1539)
 
     /// <summary>Logs that a calculation is being executed.</summary>
-    [MessageLogging(EventId = 11004, Level = LogLevel.Information, Message = "Executing calculation '{calculationType}' on data set '{dataSetName}'")]
+    [MessageLogging(EventId = 11004, Level = LogLevel.Trace, Message = "Executing calculation '{calculationType}' on data set '{dataSetName}'")]
     public static partial IGenericMessage ExecutingCalculation(ILogger logger, string dataSetName, string calculationType);
 
     /// <summary>Logs that a calculation was executed successfully with duration.</summary>

@@ -17,7 +17,7 @@ public static partial class PredicatePushdownLog
     public static partial IGenericMessage NoFilterProvided(ILogger logger);
 
     /// <summary>Logs the start of filter decomposition across sources.</summary>
-    [MessageLogging(EventId = 11001, Level = LogLevel.Information,
+    [MessageLogging(EventId = 11001, Level = LogLevel.Trace,
         Message = "Decomposing filter for DataSet '{dataSetName}' across {sourceCount} sources")]
     public static partial IGenericMessage DecomposingFilter(ILogger logger, string dataSetName, int sourceCount);
 

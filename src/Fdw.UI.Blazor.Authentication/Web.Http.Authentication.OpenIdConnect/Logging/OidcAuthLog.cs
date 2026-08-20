@@ -35,11 +35,11 @@ public static partial class OidcAuthLog
         string providerName);
 
     /// <summary>
-    /// Logged at Information level when redirecting to the provider's password recovery flow.
+    /// Logged at Trace level when redirecting to the provider's password recovery flow.
     /// </summary>
     [MessageLogging(
         EventId = 11002,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "Redirecting to '{providerName}' password recovery at '{recoveryUrl}'")]
     public static partial IGenericMessage RedirectingToRecovery(
         ILogger logger,

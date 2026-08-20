@@ -20,7 +20,7 @@ public static partial class SchemaEndpointLog
     /// <summary>Logs that schema discovery is starting for a connection.</summary>
     [MessageLogging(
         EventId = 11011,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "Discovering schema for connection '{connectionName}'")]
     public static partial IGenericMessage DiscoveringSchema(
         ILogger logger,
@@ -59,7 +59,7 @@ public static partial class SchemaEndpointLog
     /// <summary>Logs that schema import is starting for a connection.</summary>
     [MessageLogging(
         EventId = 11015,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "Importing schema from connection '{connectionName}' to DataStore '{dataStoreName}'")]
     public static partial IGenericMessage ImportingSchema(
         ILogger logger,
@@ -80,7 +80,7 @@ public static partial class SchemaEndpointLog
     /// <summary>Logs that schema sync is starting for a connection.</summary>
     [MessageLogging(
         EventId = 11017,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "Syncing schema for connection '{connectionName}'")]
     public static partial IGenericMessage SyncingSchema(
         ILogger logger,

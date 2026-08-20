@@ -85,7 +85,7 @@ public static partial class EndpointLog
     /// <summary>Logs that a get operation is starting for a specific resource.</summary>
     [MessageLogging(
         EventId = 11002,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "Getting {resourceName} '{name}'")]
     public static partial IGenericMessage GettingResource(
         ILogger logger,
@@ -105,7 +105,7 @@ public static partial class EndpointLog
     /// <summary>Logs that a list operation is starting for the specified resource type.</summary>
     [MessageLogging(
         EventId = 11000,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "Listing {resourceName}")]
     public static partial IGenericMessage ListingResources(
         ILogger logger,
@@ -165,7 +165,7 @@ public static partial class EndpointLog
     /// <summary>Logs that an update operation is starting for an existing resource.</summary>
     [MessageLogging(
         EventId = 11005,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "Updating {resourceName} '{name}'")]
     public static partial IGenericMessage UpdatingResource(
         ILogger logger,

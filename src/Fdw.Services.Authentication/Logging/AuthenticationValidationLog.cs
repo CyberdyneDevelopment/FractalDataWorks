@@ -87,7 +87,7 @@ public static partial class AuthenticationValidationLog
     public static partial IGenericMessage SchemeRegistered(ILogger logger, string serviceName, string mechanism, string schemeName, string issuer);
 
     /// <summary>Logs the routing registration once every mechanism has contributed its schemes.</summary>
-    [MessageLogging(EventId = 31101, Level = LogLevel.Information,
+    [MessageLogging(EventId = 31101, Level = LogLevel.Trace,
         Message = "Routing {bindingCount} trusted issuer(s) through the '{selectorScheme}' policy scheme")]
     public static partial IGenericMessage RoutingRegistered(ILogger logger, int bindingCount, string selectorScheme);
 

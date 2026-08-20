@@ -210,7 +210,7 @@ public static partial class SchemaDiscoveryLog
     /// <summary>
     /// Logs when an existing DataStore is found during persistence.
     /// </summary>
-    [MessageLogging(EventId = 11251, Level = LogLevel.Information, Message = "Existing DataStore '{dataStoreName}' found (Id={dataStoreId}), updating configuration")]
+    [MessageLogging(EventId = 11251, Level = LogLevel.Trace, Message = "Existing DataStore '{dataStoreName}' found (Id={dataStoreId}), updating configuration")]
     public static partial IGenericMessage ExistingDataStoreFound(ILogger logger, string dataStoreName, System.Guid dataStoreId);
 
     /// <summary>

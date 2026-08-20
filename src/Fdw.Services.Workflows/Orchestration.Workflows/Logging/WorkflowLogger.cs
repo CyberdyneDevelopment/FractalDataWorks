@@ -168,7 +168,7 @@ public static partial class WorkflowLogger
     /// <summary>Logs when a notification step is being executed.</summary>
     [MessageLogging(
         EventId = 11008,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "Notification step {stepId}: Would send notification")]
     public static partial IGenericMessage ExecutingNotificationStep(
         ILogger logger,
@@ -177,7 +177,7 @@ public static partial class WorkflowLogger
     /// <summary>Logs when a custom step is being executed.</summary>
     [MessageLogging(
         EventId = 11009,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "Custom step {stepId}: Would execute custom handler")]
     public static partial IGenericMessage ExecutingCustomStep(
         ILogger logger,

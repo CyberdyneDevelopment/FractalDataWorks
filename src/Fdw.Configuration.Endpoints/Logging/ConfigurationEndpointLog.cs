@@ -13,7 +13,7 @@ namespace Fdw.Configuration.Endpoints.Logging;
 public static partial class ConfigurationEndpointLog
 {
     /// <summary>Logs listing configuration instances with the specified filter.</summary>
-    [MessageLogging(EventId = 11000, Level = LogLevel.Information,
+    [MessageLogging(EventId = 11000, Level = LogLevel.Trace,
         Message = "Listing configuration instances with filter '{filter}'")]
     public static partial IGenericMessage ListingInstances(ILogger logger, string filter);
 
@@ -28,7 +28,7 @@ public static partial class ConfigurationEndpointLog
     public static partial IGenericMessage TableQueryFailed(ILogger logger, Exception ex, string tableName, string operation);
 
     /// <summary>Logs getting a configuration instance by name and category.</summary>
-    [MessageLogging(EventId = 11002, Level = LogLevel.Information,
+    [MessageLogging(EventId = 11002, Level = LogLevel.Trace,
         Message = "Getting configuration instance '{name}' in category '{category}'")]
     public static partial IGenericMessage GettingInstance(ILogger logger, string category, string name);
 

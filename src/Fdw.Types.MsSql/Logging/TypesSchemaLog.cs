@@ -27,7 +27,7 @@ public static partial class TypesSchemaLog
     /// </summary>
     [MessageLogging(
         EventId = 11000,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "Initializing types schema using connection string '{connectionStringName}'")]
     public static partial IGenericMessage InitializingWithConnectionString(
         ILogger logger,
@@ -38,7 +38,7 @@ public static partial class TypesSchemaLog
     /// </summary>
     [MessageLogging(
         EventId = 11001,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "Initializing types schema")]
     public static partial IGenericMessage Initializing(
         ILogger logger);

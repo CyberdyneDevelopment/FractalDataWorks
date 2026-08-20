@@ -69,12 +69,12 @@ public static partial class CommandHandlerLog
         Message = "Command '{commandName}' failed [{code}]: {detail}")]
     public static partial IGenericMessage CommandFailed(ILogger logger, string commandName, string? code, string? detail);
 
-    /// <summary>Information: the handler is committing pending in-memory changes to disk.</summary>
+    /// <summary>Trace: the handler is committing pending in-memory changes to disk.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="pending">How many documents differ from the baseline before the write.</param>
     /// <param name="deleteRemovedFiles">Whether removed documents will be deleted from disk.</param>
     /// <returns>The structured message.</returns>
-    [MessageLogging(EventId = 12504, Level = LogLevel.Information,
+    [MessageLogging(EventId = 12504, Level = LogLevel.Trace,
         Message = "Applying workspace changes: {pending} pending document(s), deleteRemovedFiles={deleteRemovedFiles}")]
     public static partial IGenericMessage ApplyingWorkspaceChanges(ILogger logger, int pending, bool deleteRemovedFiles);
 
@@ -86,7 +86,7 @@ public static partial class CommandHandlerLog
         Message = "Wrote {written} file(s) to disk")]
     public static partial IGenericMessage WorkspaceChangesWritten(ILogger logger, int written);
 
-    /// <summary>Information: there was nothing pending, so nothing was written.</summary>
+    /// <summary>Trace: there was nothing pending, so nothing was written.</summary>
     /// <param name="logger">The logger.</param>
     /// <returns>The structured message.</returns>
     /// <remarks>
@@ -95,7 +95,7 @@ public static partial class CommandHandlerLog
     /// Both produce a success result and the same "Wrote 0 file(s)" summary, so the log line is the only
     /// thing that tells them apart.
     /// </remarks>
-    [MessageLogging(EventId = 12506, Level = LogLevel.Information,
+    [MessageLogging(EventId = 12506, Level = LogLevel.Trace,
         Message = "No pending changes — nothing to write")]
     public static partial IGenericMessage NothingPendingToWrite(ILogger logger);
 

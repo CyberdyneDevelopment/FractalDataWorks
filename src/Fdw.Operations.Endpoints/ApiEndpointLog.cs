@@ -17,7 +17,7 @@ public static partial class ApiEndpointLog
     /// <summary>Logs that a lineage graph build is starting for a specific entity.</summary>
     [MessageLogging(
         EventId = 11011,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "Building lineage graph for {entityType} '{entityName}'")]
     public static partial IGenericMessage BuildingLineageGraph(
         ILogger logger,
@@ -47,7 +47,7 @@ public static partial class ApiEndpointLog
     /// <summary>Logs that a field-level lineage build is starting for a specific field.</summary>
     [MessageLogging(
         EventId = 11013,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "Building field lineage for {entityType} '{entityName}' field '{fieldName}'")]
     public static partial IGenericMessage BuildingFieldLineage(
         ILogger logger,

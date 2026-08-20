@@ -219,6 +219,8 @@ public static partial class FileSystemConnectionLog
     /// <param name="connectionName">The name of the FileSystem connection.</param>
     /// <param name="root">The configured root directory that was verified to exist.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 11011, Level = LogLevel.Information, Message = "FileSystem connection '{connectionName}': health probe succeeded, root '{root}' exists")]
+    // Why Debug, not Information: a successful periodic probe is steady-state noise — it fired every
+    // 5m15s forever. The probe FAILURE record keeps its own higher level.
+    [MessageLogging(EventId = 11011, Level = LogLevel.Debug, Message = "FileSystem connection '{connectionName}': health probe succeeded, root '{root}' exists")]
     public static partial IGenericMessage ProbeSucceeded(ILogger logger, string connectionName, string root);
 }

@@ -487,7 +487,7 @@ public static partial class DataGatewayLogger
     /// </summary>
     [MessageLogging(
         EventId = 11039,
-        Level = LogLevel.Information,
+        Level = LogLevel.Trace,
         Message = "Executing distributed dataset '{dataSetName}' across {sourceCount} sources")]
     public static partial IGenericMessage ExecutingDistributedDataSetInternal(
         ILogger logger,

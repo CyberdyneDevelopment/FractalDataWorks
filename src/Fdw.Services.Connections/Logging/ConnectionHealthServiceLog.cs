@@ -17,7 +17,9 @@ public static partial class ConnectionHealthServiceLog
     public static partial IGenericMessage RecordingHealthCheck(ILogger logger, string connectionName, Guid connectionId, bool isHealthy);
 
     /// <summary>Logs that a health check record was persisted successfully, for a Healthy result.</summary>
-    [MessageLogging(EventId = 12101, Level = LogLevel.Information, Message = "Health check recorded for connection '{connectionName}': healthy={isHealthy}, responseTimeMs={responseTimeMs}")]
+    // Why Debug, not Information: a routine health check that SUCCEEDED is only interesting in aggregate.
+    // The unhealthy path has its own Error declaration below; state TRANSITIONS stay Information.
+    [MessageLogging(EventId = 12101, Level = LogLevel.Debug, Message = "Health check recorded for connection '{connectionName}': healthy={isHealthy}, responseTimeMs={responseTimeMs}")]
     public static partial IGenericMessage HealthCheckRecorded(ILogger logger, string connectionName, bool isHealthy, int? responseTimeMs);
 
     /// <summary>Logs that a health check record was persisted successfully, for an Unhealthy result.</summary>
