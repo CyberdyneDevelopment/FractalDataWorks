@@ -79,6 +79,6 @@ public static partial class ConnectionHealthMonitorWorkerLog
     // tick at Error produced thousands of identical LoadConnectionsFailed pairs a day, burying real
     // errors. Fail-loud is for defects; this is neither transient nor a defect, so the worker states the
     // condition once and stops rather than restating it forever.
-    [MessageLogging(EventId = 12214, Level = LogLevel.Trace, Message = "No connection container in this host's configuration store — connection health monitoring idle")]
+    [MessageLogging(EventId = 12214, Level = LogLevel.Information, Message = "No connection container in this host's configuration store — connection health monitoring idle")]
     public static partial IGenericMessage MonitoringIdleNoConnectionContainer(ILogger logger);
 }

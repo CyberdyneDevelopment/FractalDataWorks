@@ -86,7 +86,7 @@ public static partial class CommandHandlerLog
         Message = "Wrote {written} file(s) to disk")]
     public static partial IGenericMessage WorkspaceChangesWritten(ILogger logger, int written);
 
-    /// <summary>Trace: there was nothing pending, so nothing was written.</summary>
+    /// <summary>Debug: there was nothing pending, so nothing was written.</summary>
     /// <param name="logger">The logger.</param>
     /// <returns>The structured message.</returns>
     /// <remarks>
@@ -95,7 +95,9 @@ public static partial class CommandHandlerLog
     /// Both produce a success result and the same "Wrote 0 file(s)" summary, so the log line is the only
     /// thing that tells them apart.
     /// </remarks>
-    [MessageLogging(EventId = 12506, Level = LogLevel.Trace,
+    // Why Debug, not Trace: its remarks below make this the only record distinguishing a correct no-op
+    // from the silent data loss its Critical twin reports. Trace never prints, which would erase that.
+    [MessageLogging(EventId = 12506, Level = LogLevel.Debug,
         Message = "No pending changes — nothing to write")]
     public static partial IGenericMessage NothingPendingToWrite(ILogger logger);
 
