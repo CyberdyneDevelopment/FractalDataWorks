@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Schema.Clients.Models;
 using Fdw.Web.RestEndpoints.Logging;
 
+using Fdw.Data.DataSets;
 using Microsoft.AspNetCore.Http;
 
 namespace Fdw.Schema.Endpoints;
@@ -92,21 +93,43 @@ public abstract class SaveSourceMappingsEndpoint : Endpoint<SaveSourceMappingsRe
             return;
         }
 
-        var retired = await SoftDeleteExistingMappings(source.Id, ct).ConfigureAwait(false);
-        if (retired.IsFailure)
+        // Why the whole set is assigned and the data set saved, rather than the rows being written
+        // here: a mapping is a child of its source, and the provider's save is what cascades an
+        // aggregate's children — including the row key that ties a child to its parent. Writing the
+        // rows directly had no way to supply that key, so every insert was refused.
+        //
+        // Assigning the collection is what makes this a replacement: mappings left out are retired
+        // by the same cascade that inserts the new ones, so there is no separate delete step.
+        source.Mappings = req.Mappings
+            .Select((m, i) => new DataSetFieldMappingConfiguration
+            {
+                // Why: default id means insert, and these are the mappings as the caller now states
+                // them — an existing one keeps its identity through the cascade's own matching.
+                Id = default,
+                DataSetSourceId = source.Id,
+                LogicalFieldName = m.LogicalFieldName,
+                PhysicalFieldName = m.PhysicalFieldName,
+                TransformExpression = m.TransformExpression,
+                Ordinal = i,
+            })
+            .ToList();
+
+        var saveResult = await _dataSetProvider.Save(dsResult.Value, ct).ConfigureAwait(false);
+        if (saveResult.IsFailure)
         {
-            await SendSaveFailure(retired, ct).ConfigureAwait(false);
+            await SendSaveFailure(saveResult, ct).ConfigureAwait(false);
             return;
         }
 
-        var createdMappings = await InsertNewMappings(source.Id, source.SourceName, req.Mappings, ct).ConfigureAwait(false);
-        if (createdMappings.IsFailure)
+        await Send.OkAsync(source.Mappings.Select(m => new FieldMappingResponsePayload
         {
-            await SendSaveFailure(createdMappings, ct).ConfigureAwait(false);
-            return;
-        }
-
-        await Send.OkAsync((createdMappings.Value ?? []).ToList(), ct).ConfigureAwait(false);
+            Id = m.Id,
+            DataSetSourceId = source.Id,
+            SourceName = source.SourceName,
+            LogicalFieldName = m.LogicalFieldName,
+            PhysicalFieldName = m.PhysicalFieldName,
+            TransformExpression = m.TransformExpression,
+        }).ToList(), ct).ConfigureAwait(false);
     }
 
     /// <summary>Answers a failed save with the reason rather than an empty success.</summary>

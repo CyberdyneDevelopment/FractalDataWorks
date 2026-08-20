@@ -178,6 +178,21 @@ public sealed partial class DataSetSourceConfiguration : IGenericConfiguration
     [NotMapped]
     public IReadOnlyDictionary<string, string> FieldMappings { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Gets or sets the field mappings this source owns.
+    /// </summary>
+    /// <remarks>
+    /// Why this exists beside <see cref="FieldMappings"/>: that one is the logical→physical lookup
+    /// the query path reads and is computed, not stored. This is the stored collection, and being a
+    /// List of a mapped configuration is what makes it a child of the aggregate — so saving the
+    /// data set writes its mappings and the cascade fills in the row key that ties them to this
+    /// source. Written any other way the insert has no parent key to supply and the column refuses
+    /// it, which is what "field mappings could not be saved" meant.
+    /// </remarks>
+#pragma warning disable MA0016 // Prefer collection abstraction - required for IOptions binding
+    public List<DataSetFieldMappingConfiguration> Mappings { get; set; } = [];
+#pragma warning restore MA0016
+
     // ============================================================================
     // Audit
     // ============================================================================
