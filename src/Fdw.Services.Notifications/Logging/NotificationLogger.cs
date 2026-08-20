@@ -147,51 +147,9 @@ public static partial class NotificationLogger
         Exception exception,
         string error);
 
-    // ========================================
-    // Teams Operations (7541-7560)
-    // ========================================
 
-    /// <summary>
-    /// Logs when sending Teams webhook notification.
-    /// </summary>
-    [MessageLogging(
-        EventId = 11007,
-        Level = LogLevel.Debug,
-        Message = "Sending Teams notification to webhook")]
-    public static partial IGenericMessage SendingTeamsNotification(ILogger logger);
 
-    /// <summary>
-    /// Logs when Teams notification is sent.
-    /// </summary>
-    [MessageLogging(
-        EventId = 11008,
-        Level = LogLevel.Debug,
-        Message = "Teams notification sent successfully")]
-    public static partial IGenericMessage TeamsSent(ILogger logger);
 
-    /// <summary>
-    /// Logs when Teams webhook call fails.
-    /// </summary>
-    [MessageLogging(
-        EventId = 71003,
-        Level = LogLevel.Error,
-        Message = "Teams webhook call failed: {error}")]
-    public static partial IGenericMessage TeamsWebhookFailed(
-        ILogger logger,
-        Exception exception,
-        string error);
-
-    /// <summary>
-    /// Logs when Teams webhook returns non-success status.
-    /// </summary>
-    [MessageLogging(
-        EventId = 71004,
-        Level = LogLevel.Warning,
-        Message = "Teams webhook returned status {statusCode}: {response}")]
-    public static partial IGenericMessage TeamsWebhookNonSuccess(
-        ILogger logger,
-        int statusCode,
-        string response);
 
     // ========================================
     // Webhook Operations (7561-7580)
@@ -299,14 +257,4 @@ public static partial class NotificationLogger
         ILogger logger,
         string reason);
 
-    /// <summary>
-    /// Logs when Teams configuration is not valid.
-    /// </summary>
-    [MessageLogging(
-        EventId = 61001,
-        Level = LogLevel.Warning,
-        Message = "Teams configuration is not valid: {reason}")]
-    public static partial IGenericMessage InvalidTeamsConfiguration(
-        ILogger logger,
-        string reason);
 }
