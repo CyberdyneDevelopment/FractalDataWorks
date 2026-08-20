@@ -34,7 +34,7 @@ public abstract class UpdateSecretManagerEndpointBase : Endpoint<UpdateSecretMan
     /// <inheritdoc/>
     public override void Configure()
     {
-        Put("/secret-managers/{Name}");
+        Patch("/secret-managers/{Name}");
         Policies("secretmanagers:delete");
         Summary(s =>
         {

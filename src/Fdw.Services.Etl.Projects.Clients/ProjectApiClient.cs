@@ -47,7 +47,7 @@ public class ProjectApiClient : ApiClientBase, IProjectApiClient
         Guid projectId,
         ProjectConfiguration request,
         CancellationToken cancellationToken = default)
-        => Put<ProjectConfiguration, ProjectConfiguration>($"projects/{projectId}", request, cancellationToken);
+        => Patch<ProjectConfiguration, ProjectConfiguration>($"projects/{projectId}", request, cancellationToken);
 
     /// <inheritdoc/>
     public virtual Task<IGenericResult> DeleteProject(

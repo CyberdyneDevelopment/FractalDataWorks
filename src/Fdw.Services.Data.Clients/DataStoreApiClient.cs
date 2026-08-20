@@ -59,7 +59,7 @@ public class DataStoreApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the updated DataStore details.</returns>
     public virtual Task<IGenericResult<DataStoreDetailPayload>> UpdateDataStore(string name, UpdateDataStoreWithPathsRequest request, CancellationToken ct = default)
-        => Put<UpdateDataStoreWithPathsRequest, DataStoreDetailPayload>($"datastores/{name}", request, ct);
+        => Patch<UpdateDataStoreWithPathsRequest, DataStoreDetailPayload>($"datastores/{name}", request, ct);
 
     /// <summary>
     /// Deletes a DataStore.

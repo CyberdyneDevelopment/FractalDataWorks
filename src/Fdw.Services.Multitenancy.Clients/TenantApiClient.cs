@@ -56,7 +56,7 @@ public sealed class TenantApiClient : ApiClientBase
     /// </summary>
     /// <returns>A result containing the updated tenant detail.</returns>
     public Task<IGenericResult<TenantDetailPayload>> UpdateTenant(Guid tenantId, UpdateTenantRequest request, CancellationToken ct = default)
-        => Put<UpdateTenantRequest, TenantDetailPayload>($"tenants/{tenantId}", request, ct);
+        => Patch<UpdateTenantRequest, TenantDetailPayload>($"tenants/{tenantId}", request, ct);
 
     /// <summary>
     /// Switches the current user's active tenant.
@@ -71,5 +71,5 @@ public sealed class TenantApiClient : ApiClientBase
     /// </summary>
     /// <returns>A result containing the confirmed default tenant identifier.</returns>
     public Task<IGenericResult<SetDefaultTenantResponse>> SetDefaultTenant(Guid tenantId, CancellationToken ct = default)
-        => Put<object, SetDefaultTenantResponse>($"tenants/{tenantId}/default", new object(), ct);
+        => Post<object, SetDefaultTenantResponse>($"tenants/{tenantId}/default", new object(), ct);
 }

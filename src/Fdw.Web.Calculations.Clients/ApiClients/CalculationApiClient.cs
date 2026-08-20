@@ -78,7 +78,7 @@ public class CalculationApiClient : ApiClientBase, ICalculationApiClient
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the updated calculation details.</returns>
     public virtual Task<IGenericResult<CalculationDetailPayload>> UpdateCalculation(Guid id, UpdateCalculationDefinitionRequest request, CancellationToken ct = default)
-        => Put<UpdateCalculationDefinitionRequest, CalculationDetailPayload>($"calculation-entities/{id}", request, ct);
+        => Patch<UpdateCalculationDefinitionRequest, CalculationDetailPayload>($"calculation-entities/{id}", request, ct);
 
     /// <summary>
     /// Deletes a calculation definition.
@@ -180,5 +180,5 @@ public class CalculationApiClient : ApiClientBase, ICalculationApiClient
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the updated calculation entity detail.</returns>
     public virtual Task<IGenericResult<CalculationEntityDetailModel>> UpdateCalculationEntity(Guid id, UpdateCalculationEntityModel request, CancellationToken ct = default)
-        => Put<UpdateCalculationEntityModel, CalculationEntityDetailModel>($"calculation-entities/{id}", request, ct);
+        => Patch<UpdateCalculationEntityModel, CalculationEntityDetailModel>($"calculation-entities/{id}", request, ct);
 }

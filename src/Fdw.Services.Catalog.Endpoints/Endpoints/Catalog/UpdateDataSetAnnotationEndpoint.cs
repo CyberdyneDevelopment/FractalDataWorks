@@ -28,7 +28,7 @@ public abstract class UpdateDataSetAnnotationEndpoint : Endpoint<DataSetAnnotati
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
     {
-        Put("/catalog/datasets/{DataSetName}/annotation");
+        Patch("/catalog/datasets/{DataSetName}/annotation");
 #if DEVELOP
         AllowAnonymous();
 #else

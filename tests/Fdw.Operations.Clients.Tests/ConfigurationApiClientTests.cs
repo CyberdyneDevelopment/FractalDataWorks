@@ -294,7 +294,7 @@ public sealed class ConfigurationApiClientTests
 
         handler.LastRequest.ShouldNotBeNull();
         handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/configuration/instances/Connection/MyConn");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Put);
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Patch);
         result.IsSuccess.ShouldBeTrue();
     }
 

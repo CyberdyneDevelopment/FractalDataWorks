@@ -32,7 +32,7 @@ public abstract class UpdateEscalationPolicyEndpointBase : Endpoint<UpdateEscala
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
     {
-        Put("/escalation/policies/{Id}");
+        Patch("/escalation/policies/{Id}");
         Policies("datasets:write");
         Summary(s => s.Summary = "Update an escalation policy");
         ConfigureEndpoint();

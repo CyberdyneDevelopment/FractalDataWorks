@@ -190,7 +190,7 @@ public sealed class UserApiClientTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Api")]
-    public async Task UpdateUserSendsPutRequestWithNameInPath()
+    public async Task UpdateUserSendsPatchRequestWithNameInPath()
     {
         var expected = new UserDetailPayload { Id = TestUserId, Username = TestUsername, Email = "new@email.com", IsActive = true };
         var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
@@ -204,7 +204,7 @@ public sealed class UserApiClientTests
 
         handler.LastRequest.ShouldNotBeNull();
         handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe($"/users/{TestUsername}");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Put);
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Patch);
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value!.Email.ShouldBe("new@email.com");

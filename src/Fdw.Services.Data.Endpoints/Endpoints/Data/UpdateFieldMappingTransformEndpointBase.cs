@@ -54,13 +54,6 @@ public abstract class UpdateFieldMappingTransformEndpointBase
     protected override string Route => "/field-mappings/{FieldMappingId}/transforms/{TransformId}";
 
     /// <inheritdoc />
-    /// <remarks>
-    /// PATCH rather than the base's PUT default: this changes a transform in place and the request
-    /// names only what is being changed, which is what the verb seam on the base exists for.
-    /// </remarks>
-    protected override HttpVerb UpdateVerb => HttpVerb.PATCH;
-
-    /// <inheritdoc />
     protected override string EndpointSummary => "Update a field mapping transform";
 
     /// <inheritdoc />

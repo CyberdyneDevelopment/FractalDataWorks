@@ -47,7 +47,7 @@ public abstract class UpdateUserEndpointBase<TRequest> : Endpoint<TRequest>
     {
         // Why: callers identify users by name in the URL; binding {Name} as string avoids the
         // Guid binder rejecting "/users/admin" with HTTP 400 before any auth/handler runs.
-        Put("/users/{Name}");
+        Patch("/users/{Name}");
         Policies(WritePolicy);
         ConfigureEndpoint();
     }

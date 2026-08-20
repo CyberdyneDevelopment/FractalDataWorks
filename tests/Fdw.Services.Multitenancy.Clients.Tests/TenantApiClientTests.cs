@@ -215,7 +215,7 @@ public sealed class TenantApiClientTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Api")]
-    public async Task UpdateTenantSendsPutRequestWithIdInPath()
+    public async Task UpdateTenantSendsPatchRequestWithIdInPath()
     {
         var expected = new TenantDetailPayload { Id = TestTenantId, Name = "Updated Tenant", Slug = "acme", IsActive = true };
         var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
@@ -229,7 +229,7 @@ public sealed class TenantApiClientTests
 
         handler.LastRequest.ShouldNotBeNull();
         handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe($"/tenants/{TestTenantId}");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Put);
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Patch);
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value!.Name.ShouldBe("Updated Tenant");

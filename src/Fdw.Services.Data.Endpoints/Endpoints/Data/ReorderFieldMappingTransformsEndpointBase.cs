@@ -60,7 +60,7 @@ public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<Reord
     /// <inheritdoc/>
     public override void Configure()
     {
-        Put("/field-mappings/{FieldMappingId}/transforms/reorder");
+        Post("/field-mappings/{FieldMappingId}/transforms/reorder");
 #if DEVELOP
         AllowAnonymous();
 #else

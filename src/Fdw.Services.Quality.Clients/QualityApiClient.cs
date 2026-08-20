@@ -56,7 +56,7 @@ public sealed class QualityApiClient : ApiClientBase
     /// </summary>
     /// <returns>A result containing the updated quality rule detail.</returns>
     public Task<IGenericResult<QualityRuleDetailPayload>> UpdateRule(Guid id, UpdateQualityRulePayload request, CancellationToken ct = default)
-        => Put<UpdateQualityRulePayload, QualityRuleDetailPayload>($"quality/rules/{id}", request, ct);
+        => Patch<UpdateQualityRulePayload, QualityRuleDetailPayload>($"quality/rules/{id}", request, ct);
 
     /// <summary>
     /// Deletes a quality rule.

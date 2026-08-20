@@ -42,7 +42,7 @@ public abstract class MarkAllReadEndpointBase : EndpointWithoutRequest
     /// <inheritdoc/>
     public override void Configure()
     {
-        Put("/messages/mark-all-read");
+        Post("/messages/mark-all-read");
         Policies("messages:read");
         Summary(s => s.Summary = "Mark all messages as read");
         ConfigureEndpoint();

@@ -43,9 +43,9 @@ public abstract class ApproveAccessRequestEndpointBase : Endpoint<ReviewAccessRe
     /// <inheritdoc/>
     public override void Configure()
     {
-        // Why: approving is an action, not idempotent state replacement — POST is the
-        // canonical verb; PUT kept for backwards compatibility.
-        Verbs(Http.POST, Http.PUT);
+        // Why: approving is an action rather than a change to a resource's fields, so it is a
+        // POST. The PUT that sat beside it for backwards compatibility is gone with the rest.
+        Verbs(Http.POST);
         Routes("/access-requests/{Id}/approve");
         Policies("access-requests:manage");
         Summary(s => s.Summary = "Approve an access request");

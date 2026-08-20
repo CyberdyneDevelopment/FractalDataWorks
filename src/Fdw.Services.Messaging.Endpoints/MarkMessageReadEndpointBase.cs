@@ -41,7 +41,7 @@ public abstract class MarkMessageReadEndpointBase : Endpoint<MessageIdRequest>
     /// <inheritdoc/>
     public override void Configure()
     {
-        Put("/messages/{Id}/read");
+        Post("/messages/{Id}/read");
         Policies("messages:read");
         Summary(s => s.Summary = "Mark a message as read");
         ConfigureEndpoint();

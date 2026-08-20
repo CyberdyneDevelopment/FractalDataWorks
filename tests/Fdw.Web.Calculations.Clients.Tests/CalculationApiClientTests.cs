@@ -271,7 +271,7 @@ public sealed class CalculationApiClientTests
 
         handler.LastRequest.ShouldNotBeNull();
         handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe($"/calculation-entities/{id}");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Put);
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Patch);
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value!.Name.ShouldBe("Updated");

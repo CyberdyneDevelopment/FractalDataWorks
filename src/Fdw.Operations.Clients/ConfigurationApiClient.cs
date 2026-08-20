@@ -103,7 +103,7 @@ public class ConfigurationApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the updated instance detail.</returns>
     public virtual Task<IGenericResult<ConfigurationInstanceDetailPayload>> UpdateInstance(string category, string name, UpdateConfigurationInstanceRequest request, CancellationToken ct = default)
-        => Put<UpdateConfigurationInstanceRequest, ConfigurationInstanceDetailPayload>($"configuration/instances/{Uri.EscapeDataString(category)}/{Uri.EscapeDataString(name)}", request, ct);
+        => Patch<UpdateConfigurationInstanceRequest, ConfigurationInstanceDetailPayload>($"configuration/instances/{Uri.EscapeDataString(category)}/{Uri.EscapeDataString(name)}", request, ct);
 
     /// <summary>
     /// Deletes a configuration instance.

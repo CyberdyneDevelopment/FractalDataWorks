@@ -46,10 +46,14 @@ public abstract class CrudUpdateEndpoint<TUpdateRequest, TDetail> : Endpoint<TUp
     protected virtual string Route => $"/{ResourceName}/{{Name}}";
 
     /// <summary>
-    /// Gets the HTTP method for updates. Defaults to PUT.
-    /// Override to use PATCH for partial updates.
+    /// Gets the HTTP method for updates.
     /// </summary>
-    protected virtual HttpVerb UpdateVerb => HttpVerb.PUT;
+    /// <remarks>
+    /// PATCH, because an update here names what is changing rather than replacing a resource
+    /// whole — this surface has no PUT. An endpoint that performs a named action rather than
+    /// changing fields is a POST and does not derive from this base at all.
+    /// </remarks>
+    protected virtual HttpVerb UpdateVerb => HttpVerb.PATCH;
 
     /// <summary>
     /// Gets the endpoint summary for OpenAPI documentation.
@@ -102,6 +106,23 @@ public abstract class CrudUpdateEndpoint<TUpdateRequest, TDetail> : Endpoint<TUp
         try
         {
             var resourceName = GetResourceIdentifier(req);
+
+            // Why this is a 400 and not the 404 the lookup would otherwise produce: an identifier
+            // that names nothing means none arrived, and answering "not found" sends the next
+            // person to the database instead of to the route that failed to bind.
+            if (CrudResourceIdentifier.NamesNothing(resourceName))
+            {
+                HttpContext.Response.StatusCode = 400;
+                HttpContext.Response.ContentType = "application/json";
+                await HttpContext.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                {
+                    Status = 400,
+                    Title = "Missing identifier",
+                    Detail = $"No {ResourceName} identifier was supplied.",
+                    Instance = HttpContext.Request.Path.HasValue ? HttpContext.Request.Path.Value : null,
+                }, ct).ConfigureAwait(false);
+                return;
+            }
             OnBeforeUpdate(resourceName);
 
             // Find existing resource

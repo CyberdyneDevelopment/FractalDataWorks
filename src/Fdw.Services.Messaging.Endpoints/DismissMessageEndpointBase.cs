@@ -41,7 +41,7 @@ public abstract class DismissMessageEndpointBase : Endpoint<MessageIdRequest>
     /// <inheritdoc/>
     public override void Configure()
     {
-        Put("/messages/{Id}/dismiss");
+        Post("/messages/{Id}/dismiss");
         Policies("messages:read");
         Summary(s => s.Summary = "Dismiss a message");
         ConfigureEndpoint();

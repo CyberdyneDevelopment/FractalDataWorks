@@ -48,6 +48,6 @@ public class SettingsApiClient : ApiClientBase
     /// <param name="ct">The cancellation token.</param>
     /// <returns>A result containing the updated server setting.</returns>
     public virtual Task<IGenericResult<ServerSettingResponse>> Update(string settingName, UpdateServerSettingPayload request, CancellationToken ct = default)
-        => Put<UpdateServerSettingPayload, ServerSettingResponse>(
+        => Patch<UpdateServerSettingPayload, ServerSettingResponse>(
             $"settings/server/{Uri.EscapeDataString(settingName)}", request, ct);
 }

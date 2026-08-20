@@ -53,7 +53,7 @@ public class ScheduleHttpClient : ApiClientBase, IScheduleClient, IResourceQuery
     public Task<IGenericResult> UpdateSchedule(
         string name, UpdateScheduleClientRequest request, CancellationToken cancellationToken = default)
     {
-        return Put<UpdateScheduleClientRequest>($"schedules/{name}", request, cancellationToken);
+        return Patch<UpdateScheduleClientRequest>($"schedules/{name}", request, cancellationToken);
     }
 
     /// <inheritdoc />

@@ -42,7 +42,7 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
     /// <inheritdoc/>
     public override void Configure()
     {
-        Put("/users/me/preferences");
+        Patch("/users/me/preferences");
         Summary(s =>
         {
             s.Summary = "Update user preferences";

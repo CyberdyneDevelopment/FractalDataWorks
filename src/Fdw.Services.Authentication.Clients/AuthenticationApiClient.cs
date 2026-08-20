@@ -131,7 +131,7 @@ public sealed class AuthenticationApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result indicating whether the update succeeded.</returns>
     public Task<IGenericResult> UpdatePreferences(UpdatePreferencesRequest request, CancellationToken ct = default)
-        => Put(request: request, path: "users/me/preferences", ct: ct);
+        => Patch(request: request, path: "users/me/preferences", ct: ct);
 
     // ── Password ────────────────────────────────────────────────────────
 

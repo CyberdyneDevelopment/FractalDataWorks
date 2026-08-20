@@ -26,7 +26,7 @@ public abstract class UpdateQualityRuleEndpoint : Endpoint<UpdateQualityRuleRequ
     public override void Configure()
     {
         // Why: the client (QualityApiClient.UpdateRule) PUTs here; there was previously no server route (404).
-        Put("/quality/rules/{Id}");
+        Patch("/quality/rules/{Id}");
 #if DEVELOP
         AllowAnonymous();
 #else

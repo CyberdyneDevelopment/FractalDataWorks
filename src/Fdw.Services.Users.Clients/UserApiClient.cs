@@ -56,7 +56,7 @@ public class UserApiClient : ApiClientBase
     /// <returns>A result containing the updated user detail.</returns>
     // Why: server route is PUT /users/{Name} (string), not /users/{Guid}. Callers must pass the username.
     public virtual Task<IGenericResult<UserDetailPayload>> UpdateUser(string name, UpdateUserPayload request, CancellationToken ct = default)
-        => Put<UpdateUserPayload, UserDetailPayload>($"users/{name}", request, ct);
+        => Patch<UpdateUserPayload, UserDetailPayload>($"users/{name}", request, ct);
 
     /// <summary>
     /// Deletes a specific user.

@@ -66,7 +66,7 @@ public class SecretManagerApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the updated secret manager details.</returns>
     public virtual Task<IGenericResult<SecretManagerDetailPayload>> UpdateSecretManager(string name, UpdateSecretManagerPayload request, CancellationToken ct = default)
-        => Put<UpdateSecretManagerPayload, SecretManagerDetailPayload>($"secret-managers/{name}", request, ct);
+        => Patch<UpdateSecretManagerPayload, SecretManagerDetailPayload>($"secret-managers/{name}", request, ct);
 
     /// <summary>
     /// Deletes a secret manager configuration.

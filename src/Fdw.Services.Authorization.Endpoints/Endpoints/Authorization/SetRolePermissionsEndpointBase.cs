@@ -71,7 +71,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/roles/{Name}/permissions");
+        Patch("/roles/{Name}/permissions");
         Policies(WritePolicy);
         ConfigureEndpoint();
     }

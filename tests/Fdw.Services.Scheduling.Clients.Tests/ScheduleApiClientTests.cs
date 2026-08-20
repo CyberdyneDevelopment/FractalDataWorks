@@ -158,7 +158,7 @@ public sealed class ScheduleHttpClientTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Scheduling")]
-    public async Task UpdateScheduleSendsPutRequestWithNameInPath()
+    public async Task UpdateScheduleSendsPatchRequestWithNameInPath()
     {
         var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK));
         var sut = CreateClient(handler);
@@ -168,7 +168,7 @@ public sealed class ScheduleHttpClientTests
 
         handler.LastRequest.ShouldNotBeNull();
         handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/schedules/daily-etl");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Put);
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Patch);
         result.IsSuccess.ShouldBeTrue();
     }
 

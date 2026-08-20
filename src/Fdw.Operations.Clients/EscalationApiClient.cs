@@ -57,7 +57,7 @@ public class EscalationApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the updated escalation policy.</returns>
     public Task<IGenericResult<EscalationPolicyPayload>> UpdatePolicy(Guid id, UpdateEscalationPolicyPayload request, CancellationToken ct = default)
-        => Put<UpdateEscalationPolicyPayload, EscalationPolicyPayload>($"escalation/policies/{id}", request, ct);
+        => Patch<UpdateEscalationPolicyPayload, EscalationPolicyPayload>($"escalation/policies/{id}", request, ct);
 
     /// <summary>
     /// Deletes an escalation policy.

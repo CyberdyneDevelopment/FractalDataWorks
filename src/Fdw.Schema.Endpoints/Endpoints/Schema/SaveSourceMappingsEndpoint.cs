@@ -50,7 +50,7 @@ public abstract class SaveSourceMappingsEndpoint : Endpoint<SaveSourceMappingsRe
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
     {
-        Put("/datasets/{Name}/sources/{SourceName}/mappings");
+        Patch("/datasets/{Name}/sources/{SourceName}/mappings");
 #if DEVELOP
         AllowAnonymous();
 #else

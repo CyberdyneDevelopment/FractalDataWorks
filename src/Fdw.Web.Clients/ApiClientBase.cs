@@ -427,6 +427,43 @@ public abstract class ApiClientBase
     }
 
     /// <summary>
+    /// Performs a PATCH request with a request body, returning success/failure without a response body.
+    /// </summary>
+    protected async Task<IGenericResult> Patch<TRequest>(string path, TRequest request, CancellationToken ct = default)
+    {
+        ClientLog.SendingRequest(Logger, "PATCH", RequestUri(path));
+        try
+        {
+            var response = await HttpClient.PatchAsync(path, JsonContent.Create(request), ct).ConfigureAwait(false);
+            ClientLog.ResponseReceived(Logger, "PATCH", RequestUri(path), (int)response.StatusCode);
+
+            if (response.IsSuccessStatusCode)
+            {
+                ClientLog.RequestCompleted(Logger, "PATCH", RequestUri(path));
+                return GenericResult.Success();
+            }
+
+            return GenericResult.Failure(
+                await NonSuccessDetail("PATCH", path, response, ct).ConfigureAwait(false));
+        }
+        catch (HttpRequestException ex)
+        {
+            return GenericResult.Failure(
+                ClientLog.HttpRequestFailed(Logger, ex, "PATCH", RequestUri(path), ex.Message));
+        }
+        catch (JsonException ex)
+        {
+            return GenericResult.Failure(
+                ClientLog.DeserializationFailed(Logger, ex, "PATCH", RequestUri(path), ex.Message));
+        }
+        catch (Exception ex)
+        {
+            return GenericResult.Failure(
+                ClientLog.UnexpectedError(Logger, ex, "PATCH", RequestUri(path), ex.Message));
+        }
+    }
+
+    /// <summary>
     /// Performs a PATCH request with a request body and deserializes the response.
     /// </summary>
     protected async Task<IGenericResult<TResponse>> Patch<TRequest, TResponse>(string path, TRequest request, CancellationToken ct = default)

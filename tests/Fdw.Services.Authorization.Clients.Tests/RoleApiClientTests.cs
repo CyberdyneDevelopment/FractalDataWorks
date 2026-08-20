@@ -149,7 +149,7 @@ public sealed class RoleApiClientTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public async Task UpdateRoleSendsPutRequestWithNameInPath()
+    public async Task UpdateRoleSendsPatchRequestWithNameInPath()
     {
         var expected = new RoleDetailPayload { Id = Guid.NewGuid(), Name = "Editor", DisplayName = "Updated Editor" };
         var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
@@ -163,7 +163,7 @@ public sealed class RoleApiClientTests
 
         handler.LastRequest.ShouldNotBeNull();
         handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/roles/Editor");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Put);
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Patch);
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value!.DisplayName.ShouldBe("Updated Editor");
@@ -373,7 +373,7 @@ public sealed class RoleApiClientTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public async Task SetRolePermissionsSendsPutRequestWithNameInPath()
+    public async Task SetRolePermissionsSendsPatchRequestWithNameInPath()
     {
         var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK));
         var sut = CreateClient(handler);
@@ -383,7 +383,7 @@ public sealed class RoleApiClientTests
 
         handler.LastRequest.ShouldNotBeNull();
         handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/roles/Admin/permissions");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Put);
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Patch);
         result.IsSuccess.ShouldBeTrue();
     }
 

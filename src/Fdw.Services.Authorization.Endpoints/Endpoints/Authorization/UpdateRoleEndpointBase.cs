@@ -46,7 +46,7 @@ public abstract class UpdateRoleEndpointBase : Endpoint<UpdateRoleRequest>
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/roles/{Name}");
+        Patch("/roles/{Name}");
         Policies(WritePolicy);
         ConfigureEndpoint();
     }

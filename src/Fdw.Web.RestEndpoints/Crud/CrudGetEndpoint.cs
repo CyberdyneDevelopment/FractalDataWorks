@@ -142,6 +142,23 @@ public abstract class CrudGetEndpoint<TRequest, TDetail> : Endpoint<TRequest, TD
             }
 
             var resourceName = GetResourceIdentifier(req);
+
+            // Why this is a 400 and not the 404 the lookup would otherwise produce: an identifier
+            // that names nothing means none arrived, and answering "not found" sends the next
+            // person to the database instead of to the route that failed to bind.
+            if (CrudResourceIdentifier.NamesNothing(resourceName))
+            {
+                HttpContext.Response.StatusCode = 400;
+                HttpContext.Response.ContentType = "application/json";
+                await HttpContext.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                {
+                    Status = 400,
+                    Title = "Missing identifier",
+                    Detail = $"No {ResourceName} identifier was supplied.",
+                    Instance = HttpContext.Request.Path.HasValue ? HttpContext.Request.Path.Value : null,
+                }, ct).ConfigureAwait(false);
+                return;
+            }
             OnBeforeGet(resourceName);
 
             var result = await FindByIdentifier(req, ct).ConfigureAwait(false);

@@ -24,7 +24,7 @@ public abstract class UpdateGlossaryTermEndpoint : Endpoint<GlossaryTermResponse
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
     {
-        Put("/catalog/glossary/{Id}");
+        Patch("/catalog/glossary/{Id}");
 #if DEVELOP
         AllowAnonymous();
 #else

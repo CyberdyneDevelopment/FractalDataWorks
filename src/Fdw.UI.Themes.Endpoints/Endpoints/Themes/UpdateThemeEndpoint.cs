@@ -27,7 +27,7 @@ public abstract class UpdateThemeEndpoint<TRequest, TDetail> : Endpoint<TRequest
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
     {
-        Put($"/{ResourceName}/{{Name}}");
+        Patch($"/{ResourceName}/{{Name}}");
 #if DEVELOP
         AllowAnonymous();
 #else

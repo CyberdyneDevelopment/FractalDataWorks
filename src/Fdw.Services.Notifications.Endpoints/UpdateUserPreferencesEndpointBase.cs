@@ -23,7 +23,7 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
     /// <inheritdoc/>
     public override void Configure()
     {
-        Put("/users/{UserId}/notification-preferences");
+        Patch("/users/{UserId}/notification-preferences");
 #if DEVELOP
         AllowAnonymous();
 #else

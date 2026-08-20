@@ -29,7 +29,7 @@ public abstract class UpsertSessionStateEndpointBase : Endpoint<UpsertSessionSta
     /// <inheritdoc/>
     public override void Configure()
     {
-        Put("/session-state/{Key}");
+        Patch("/session-state/{Key}");
         Policies("authenticated");
         Summary(s => s.Summary = "Upsert session state value");
         ConfigureEndpoint();

@@ -91,7 +91,7 @@ public sealed class SchemaApiClient : ApiClientBase, ISchemaProvider
     public Task<IGenericResult<List<FieldMappingResponsePayload>>> SaveSourceMappings(
         SaveSourceMappingsPayload request,
         CancellationToken ct = default)
-        => Put<SaveSourceMappingsPayload, List<FieldMappingResponsePayload>>(
+        => Patch<SaveSourceMappingsPayload, List<FieldMappingResponsePayload>>(
             $"datasets/{Uri.EscapeDataString(request.DataSetName)}/sources/{Uri.EscapeDataString(request.SourceName)}/mappings",
             request,
             ct);

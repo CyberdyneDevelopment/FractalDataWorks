@@ -47,7 +47,7 @@ public class PipelineHttpClient : ApiClientBase, IPipelineClient, IResourceQuery
     public Task<IGenericResult<PipelineDetailResponse>> UpdatePipeline(
         string name, UpdatePipelineClientRequest request, CancellationToken cancellationToken = default)
     {
-        return Put<UpdatePipelineClientRequest, PipelineDetailResponse>($"pipelines/{name}", request, cancellationToken);
+        return Patch<UpdatePipelineClientRequest, PipelineDetailResponse>($"pipelines/{name}", request, cancellationToken);
     }
 
     /// <inheritdoc />

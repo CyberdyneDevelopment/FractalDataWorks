@@ -129,7 +129,7 @@ public sealed class CatalogApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the updated glossary term.</returns>
     public Task<IGenericResult<GlossaryTermPayload>> UpdateTerm(Guid id, UpdateGlossaryTermRequest request, CancellationToken ct = default)
-        => Put<UpdateGlossaryTermRequest, GlossaryTermPayload>($"catalog/glossary/{id}", request, ct);
+        => Patch<UpdateGlossaryTermRequest, GlossaryTermPayload>($"catalog/glossary/{id}", request, ct);
 
     /// <summary>
     /// Deletes a glossary term.

@@ -48,7 +48,7 @@ public class RoleApiClient : ApiClientBase
     /// </summary>
     /// <returns>A result containing the updated role detail.</returns>
     public virtual Task<IGenericResult<RoleDetailPayload>> UpdateRole(string name, UpdateRolePayload request, CancellationToken ct = default)
-        => Put<UpdateRolePayload, RoleDetailPayload>($"roles/{name}", request, ct);
+        => Patch<UpdateRolePayload, RoleDetailPayload>($"roles/{name}", request, ct);
 
     /// <summary>
     /// Deletes a specific role.
@@ -83,7 +83,7 @@ public class RoleApiClient : ApiClientBase
     /// </summary>
     /// <returns>A result indicating whether the permission update succeeded.</returns>
     public virtual Task<IGenericResult> SetRolePermissions(string name, SetRolePermissionsPayload request, CancellationToken ct = default)
-        => Put($"roles/{name}/permissions", request, ct);
+        => Patch($"roles/{name}/permissions", request, ct);
 
     /// <summary>
     /// Assigns a role to a user.

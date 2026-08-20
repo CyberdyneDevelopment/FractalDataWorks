@@ -53,7 +53,7 @@ public class NodeApiClient : ApiClientBase, INodeApiClient
         Guid nodeId,
         OrchestrationNodeConfiguration request,
         CancellationToken cancellationToken = default)
-        => Put<OrchestrationNodeConfiguration, OrchestrationNodeConfiguration>($"nodes/{nodeId}", request, cancellationToken);
+        => Patch<OrchestrationNodeConfiguration, OrchestrationNodeConfiguration>($"nodes/{nodeId}", request, cancellationToken);
 
     /// <inheritdoc/>
     public virtual Task<IGenericResult> DeleteNode(

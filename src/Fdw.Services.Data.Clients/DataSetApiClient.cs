@@ -59,7 +59,7 @@ public class DataSetApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the updated DataSet details.</returns>
     public virtual Task<IGenericResult<DataSetDetailPayload>> UpdateDataSet(string name, UpdateDataSetPayload request, CancellationToken ct = default)
-        => Put<UpdateDataSetPayload, DataSetDetailPayload>($"datasets/{name}", request, ct);
+        => Patch<UpdateDataSetPayload, DataSetDetailPayload>($"datasets/{name}", request, ct);
 
     /// <summary>
     /// Deletes a DataSet.
@@ -133,7 +133,7 @@ public class DataSetApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result indicating whether the reorder succeeded.</returns>
     public virtual Task<IGenericResult> ReorderTransforms(Guid fieldMappingId, ReorderTransformsRequest request, CancellationToken ct = default)
-        => Put<ReorderTransformsRequest>($"field-mappings/{fieldMappingId}/transforms/reorder", request, ct);
+        => Post<ReorderTransformsRequest>($"field-mappings/{fieldMappingId}/transforms/reorder", request, ct);
 
     /// <summary>
     /// Gets all available transform types.

@@ -66,7 +66,7 @@ public class ThemeApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the updated theme configuration.</returns>
     public virtual Task<IGenericResult<ThemeConfiguration>> UpdateTheme(string name, UpdateThemeRequest request, CancellationToken ct = default)
-        => Put<UpdateThemeRequest, ThemeConfiguration>($"themes/{name}", request, ct);
+        => Patch<UpdateThemeRequest, ThemeConfiguration>($"themes/{name}", request, ct);
 
     /// <summary>
     /// Deletes a theme.

@@ -100,7 +100,7 @@ public sealed class NotificationSettingsPageContentTests : IDisposable
         var cut = _ctx.Render<NotificationSettingsPage>();
         cut.WaitForAssertion(() => cut.FindAll("button").Any(b => b.TextContent.Contains("Save", StringComparison.Ordinal)).ShouldBeTrue());
         cut.FindAll("button").First(b => b.TextContent.Contains("Save", StringComparison.Ordinal)).Click();
-        cut.WaitForAssertion(() => handler.Requests.Any(r => r.Method == HttpMethod.Put).ShouldBeTrue());
+        cut.WaitForAssertion(() => handler.Requests.Any(r => r.Method == HttpMethod.Patch).ShouldBeTrue());
     }
 
     [Fact]

@@ -50,7 +50,7 @@ public class NotificationPreferencesApiClient : ApiClientBase
             UserId = userId,
             Preferences = preferences
         };
-        return Put<UpdateNotificationPreferencesRequest, IReadOnlyList<NotificationPreferencePayload>>(
+        return Patch<UpdateNotificationPreferencesRequest, IReadOnlyList<NotificationPreferencePayload>>(
             $"users/{userId:D}/notification-preferences", request, ct);
     }
 }

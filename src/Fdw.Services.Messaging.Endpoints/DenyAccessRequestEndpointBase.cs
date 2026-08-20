@@ -43,9 +43,9 @@ public abstract class DenyAccessRequestEndpointBase : Endpoint<ReviewAccessReque
     /// <inheritdoc/>
     public override void Configure()
     {
-        // Why: denying is an action, not idempotent state replacement — POST is the
-        // canonical verb; PUT kept for backwards compatibility.
-        Verbs(Http.POST, Http.PUT);
+        // Why: denying is an action rather than a change to a resource's fields, so it is a
+        // POST. The PUT that sat beside it for backwards compatibility is gone with the rest.
+        Verbs(Http.POST);
         Routes("/access-requests/{Id}/deny");
         Policies("access-requests:manage");
         Summary(s => s.Summary = "Deny an access request");

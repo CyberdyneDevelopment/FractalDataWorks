@@ -76,7 +76,7 @@ public class NotificationApiClient : ApiClientBase
     /// <returns>A result containing the updated list of notification preferences.</returns>
     public virtual Task<IGenericResult<IReadOnlyList<UserNotificationPreferenceResponse>>> SavePreferences(
         Guid userId, UpdateUserPreferencesPayload request, CancellationToken ct = default)
-        => Put<UpdateUserPreferencesPayload, IReadOnlyList<UserNotificationPreferenceResponse>>(
+        => Patch<UpdateUserPreferencesPayload, IReadOnlyList<UserNotificationPreferenceResponse>>(
             string.Format(CultureInfo.InvariantCulture, "users/{0}/notification-preferences",
                 userId.ToString("D", CultureInfo.InvariantCulture)), request, ct);
 }

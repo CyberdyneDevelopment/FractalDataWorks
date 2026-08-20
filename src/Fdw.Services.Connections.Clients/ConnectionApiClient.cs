@@ -112,7 +112,7 @@ public class ConnectionApiClient : ApiClientBase
     /// each type PUTs its own route with the correct typed body — the same pattern as CreateConnection.
     /// </remarks>
     public virtual Task<IGenericResult<ConnectionDetailResponse>> UpdateConnection(string name, UpdateConnectionClientRequest request, CancellationToken ct = default)
-        => Put<UpdateConnectionClientRequest, ConnectionDetailResponse>($"{ResolveUpdateRoute(request.ServiceType)}/{name}", request, ct);
+        => Patch<UpdateConnectionClientRequest, ConnectionDetailResponse>($"{ResolveUpdateRoute(request.ServiceType)}/{name}", request, ct);
 
     /// <summary>
     /// Resolves the per-type update route for the given service type. Unknown / database types

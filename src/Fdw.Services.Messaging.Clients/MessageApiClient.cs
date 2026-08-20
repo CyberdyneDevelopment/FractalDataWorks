@@ -81,25 +81,25 @@ public class MessageApiClient
         return response?.Count ?? 0;
     }
 
-    // Why: the server routes these state changes as PUT (DismissMessageEndpointBase et al.);
-    // the client previously POSTed (405) and used "messages/read-all" instead of the server's
-    // "messages/mark-all-read" (404). Align verb + path to the server contract.
+    // Why POST: each of these performs a named action on a message rather than changing its
+    // fields, and this surface has no PUT. The path matters as much as the verb — an earlier
+    // version called "messages/read-all" against a server serving "messages/mark-all-read".
 
     /// <summary>Marks a single message as read.</summary>
     public virtual Task MarkRead(Guid id, CancellationToken cancellationToken = default)
-        => _httpClient.PutAsync($"messages/{id}/read", null, cancellationToken);
+        => _httpClient.PostAsync($"messages/{id}/read", null, cancellationToken);
 
     /// <summary>Marks all of the current user's messages as read.</summary>
     public virtual Task MarkAllRead(CancellationToken cancellationToken = default)
-        => _httpClient.PutAsync("messages/mark-all-read", null, cancellationToken);
+        => _httpClient.PostAsync("messages/mark-all-read", null, cancellationToken);
 
     /// <summary>Dismisses a single message.</summary>
     public virtual Task Dismiss(Guid id, CancellationToken cancellationToken = default)
-        => _httpClient.PutAsync($"messages/{id}/dismiss", null, cancellationToken);
+        => _httpClient.PostAsync($"messages/{id}/dismiss", null, cancellationToken);
 
     /// <summary>Archives a single message.</summary>
     public virtual Task Archive(Guid id, CancellationToken cancellationToken = default)
-        => _httpClient.PutAsync($"messages/{id}/archive", null, cancellationToken);
+        => _httpClient.PostAsync($"messages/{id}/archive", null, cancellationToken);
 
     /// <summary>Gets the current user's access requests.</summary>
     /// <returns>The access requests.</returns>
