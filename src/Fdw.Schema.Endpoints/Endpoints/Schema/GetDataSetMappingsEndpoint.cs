@@ -16,6 +16,8 @@ using Fdw.Operations.Endpoints;
 using Fdw.Schema.Clients.Models;
 using Fdw.Web.RestEndpoints.Logging;
 
+using Fdw.Data.DataSets.Abstractions;
+
 namespace Fdw.Schema.Endpoints;
 
 /// <summary>
@@ -112,9 +114,9 @@ public abstract class GetDataSetMappingsEndpoint : Endpoint<GetMappingsRequest, 
     }
 
     /// <summary>Gets all source records for the specified data set.</summary>
-    protected virtual async Task<IList<DataSetSourcePayload>> GetSources(Guid dataSetId, CancellationToken ct)
+    protected virtual async Task<IList<DataSetSourceConfiguration>> GetSources(Guid dataSetId, CancellationToken ct)
     {
-        var command = new QueryCommand<DataSetSourcePayload>
+        var command = new QueryCommand<DataSetSourceConfiguration>
         {
             Filter = new FilterExpression
             {
@@ -127,7 +129,7 @@ public abstract class GetDataSetMappingsEndpoint : Endpoint<GetMappingsRequest, 
             }
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<DataSetSourcePayload>>(
+        var result = await _dataGateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
             command, new DataStoreTarget("ConfigurationDb", "data", "DataSetSource"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
