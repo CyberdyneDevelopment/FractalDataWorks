@@ -1,3 +1,4 @@
+using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Data.Clients.Models;
 using System;
 using System.Reflection;
@@ -11,7 +12,7 @@ using Fdw.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Pipelines;
-// DataSetRecord and DataSetSourcePayload now in this namespace
+// DataSetRecord and DataSetSourceConfiguration now in this namespace
 // ApiEndpointLog now in this namespace
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -111,10 +112,10 @@ public abstract class GetDataSetLineageEndpoint : Endpoint<DataSetLineageRequest
     }
 
     /// <summary>Retrieves all sources for a DataSet, ordered by priority.</summary>
-    protected virtual async Task<IReadOnlyList<DataSetSourcePayload>> GetSources(Guid dataSetId, CancellationToken ct)
+    protected virtual async Task<IReadOnlyList<DataSetSourceConfiguration>> GetSources(Guid dataSetId, CancellationToken ct)
     {
         // Why: Addressing moved off IDataCommand onto DataStoreTarget.
-        var command = new QueryCommand<DataSetSourcePayload>
+        var command = new QueryCommand<DataSetSourceConfiguration>
         {
             Filter = new FilterExpression
             {
@@ -131,13 +132,13 @@ public abstract class GetDataSetLineageEndpoint : Endpoint<DataSetLineageRequest
             }
         };
 
-        var result = await _configurationGateway.Execute<IEnumerable<DataSetSourcePayload>>(
+        var result = await _configurationGateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
             command, new DataStoreTarget("ConfigurationDb", "data", "DataSetSource"), ct).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
     }
 
     /// <summary>Builds upstream source DTOs from source records, classifying source types by their physical location.</summary>
-    protected virtual IReadOnlyList<LineageSourceResponse> BuildUpstreamSources(IReadOnlyList<DataSetSourcePayload> sources)
+    protected virtual IReadOnlyList<LineageSourceResponse> BuildUpstreamSources(IReadOnlyList<DataSetSourceConfiguration> sources)
     {
         return sources.Select(s =>
         {
@@ -175,7 +176,7 @@ public abstract class GetDataSetLineageEndpoint : Endpoint<DataSetLineageRequest
     }
 
     /// <summary>Builds field-level lineage by loading field mappings for each source.</summary>
-    protected virtual async Task<IReadOnlyList<FieldLineageResponse>> BuildFieldLineage(IReadOnlyList<DataSetSourcePayload> sources, CancellationToken ct)
+    protected virtual async Task<IReadOnlyList<FieldLineageResponse>> BuildFieldLineage(IReadOnlyList<DataSetSourceConfiguration> sources, CancellationToken ct)
     {
         var fieldLineage = new List<FieldLineageResponse>();
 
