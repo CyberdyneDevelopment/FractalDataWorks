@@ -180,7 +180,7 @@ public sealed class ConnectionHealthMonitorWorkerTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public async Task ExecuteWhenConnectionPathNotRegisteredLogsIdleAtTrace()
+    public async Task ExecuteWhenConnectionPathNotRegisteredLogsIdleAtInformation()
     {
         var (worker, logger, _) = CreateWorker(PathNotRegistered());
 
@@ -188,7 +188,7 @@ public sealed class ConnectionHealthMonitorWorkerTests
         await worker.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         logger.Entries.ShouldContain(entry =>
-            entry.EventId == MonitoringIdleEventId && entry.Level == LogLevel.Trace);
+            entry.EventId == MonitoringIdleEventId && entry.Level == LogLevel.Information);
         logger.Entries.ShouldNotContain(entry => entry.Level >= LogLevel.Error);
     }
 
