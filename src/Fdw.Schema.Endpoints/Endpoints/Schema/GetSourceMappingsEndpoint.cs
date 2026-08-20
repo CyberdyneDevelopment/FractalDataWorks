@@ -62,30 +62,52 @@ public abstract class GetSourceMappingsEndpoint : Endpoint<GetSourceMappingsRequ
     {
         EndpointLog.GettingResource(_logger, "source mappings", req.Name);
 
-        var dataSet = await FindDataSet(req.Name, ct).ConfigureAwait(false);
-        if (dataSet == null)
+        // Why each read is checked before its result is inspected: a read that failed and a name
+        // that does not exist both arrived here as null, so a broken query answered 404 "this data
+        // set does not exist". They are different answers and the caller needs to tell them apart.
+        var dataSetResult = await FindDataSet(req.Name, ct).ConfigureAwait(false);
+        if (!dataSetResult.IsSuccess)
+        {
+            await SendReadFailure("data set", dataSetResult.CurrentMessage, ct).ConfigureAwait(false);
+            return;
+        }
+
+        if (dataSetResult.Value is not { } dataSet)
         {
             EndpointLog.ResourceNotFound(_logger, "DataSet", req.Name);
             await Send.NotFoundAsync(ct).ConfigureAwait(false);
             return;
         }
 
-        var source = await FindSource(dataSet.Id, req.SourceName, ct).ConfigureAwait(false);
-        if (source == null)
+        var sourceResult = await FindSource(dataSet.Id, req.SourceName, ct).ConfigureAwait(false);
+        if (!sourceResult.IsSuccess)
+        {
+            await SendReadFailure("data set source", sourceResult.CurrentMessage, ct).ConfigureAwait(false);
+            return;
+        }
+
+        if (sourceResult.Value is not { } source)
         {
             EndpointLog.ResourceNotFound(_logger, "DataSet source", req.SourceName);
             await Send.NotFoundAsync(ct).ConfigureAwait(false);
             return;
         }
 
-        var mappings = await GetMappingsForSource(source.Id, ct).ConfigureAwait(false);
+        var mappingsResult = await GetMappingsForSource(source.Id, ct).ConfigureAwait(false);
+        if (!mappingsResult.IsSuccess)
+        {
+            await SendReadFailure("field mappings", mappingsResult.CurrentMessage, ct).ConfigureAwait(false);
+            return;
+        }
+
+        var mappings = mappingsResult.Value ?? [];
 
         var response = mappings.Select(m => MapToResponse(m, source.SourceName)).ToList();
         await Send.OkAsync(response, ct).ConfigureAwait(false);
     }
 
     /// <summary>Finds a data set record by name.</summary>
-    protected virtual async Task<DataSetRecord?> FindDataSet(string name, CancellationToken ct)
+    protected virtual async Task<IGenericResult<DataSetRecord?>> FindDataSet(string name, CancellationToken ct)
     {
         var command = new QueryCommand<DataSetRecord>
         {
@@ -104,14 +126,14 @@ public abstract class GetSourceMappingsEndpoint : Endpoint<GetSourceMappingsRequ
             command, new DataStoreTarget("ConfigurationDb", "data", "DataSet"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
-            return null;
+            return result.ToNewResult<DataSetRecord?>();
         }
 
-        return result.Value?.FirstOrDefault();
+        return GenericResult<DataSetRecord?>.Success(result.Value?.FirstOrDefault());
     }
 
     /// <summary>Finds a source record by data set identifier and source name.</summary>
-    protected virtual async Task<DataSetSourceConfiguration?> FindSource(Guid dataSetId, string sourceName, CancellationToken ct)
+    protected virtual async Task<IGenericResult<DataSetSourceConfiguration?>> FindSource(Guid dataSetId, string sourceName, CancellationToken ct)
     {
         var command = new QueryCommand<DataSetSourceConfiguration>
         {
@@ -143,14 +165,14 @@ public abstract class GetSourceMappingsEndpoint : Endpoint<GetSourceMappingsRequ
             command, new DataStoreTarget("ConfigurationDb", "data", "DataSetSource"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
-            return null;
+            return result.ToNewResult<DataSetRecord?>();
         }
 
-        return result.Value?.FirstOrDefault();
+        return GenericResult<DataSetRecord?>.Success(result.Value?.FirstOrDefault());
     }
 
     /// <summary>Gets all active (non-deleted) field mapping records for the specified source.</summary>
-    protected virtual async Task<IList<FieldMappingDbRecord>> GetMappingsForSource(Guid sourceId, CancellationToken ct)
+    protected virtual async Task<IGenericResult<IList<FieldMappingDbRecord>>> GetMappingsForSource(Guid sourceId, CancellationToken ct)
     {
         var command = new QueryCommand<FieldMappingDbRecord>
         {
@@ -182,10 +204,10 @@ public abstract class GetSourceMappingsEndpoint : Endpoint<GetSourceMappingsRequ
             command, new DataStoreTarget("ConfigurationDb", "data", "DataSetFieldMapping"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
-            return [];
+            return result.ToNewResult<IList<FieldMappingDbRecord>>();
         }
 
-        return result.Value?.ToList() ?? [];
+        return GenericResult<IList<FieldMappingDbRecord>>.Success(result.Value?.ToList() ?? []);
     }
 
     /// <summary>Maps a field mapping database record to a response DTO.</summary>
@@ -201,4 +223,19 @@ public abstract class GetSourceMappingsEndpoint : Endpoint<GetSourceMappingsRequ
             TransformExpression = record.TransformExpression
         };
     }
+
+    // Why a 500 rather than an empty list: the read did not happen, so nothing is known about what
+    // it would have returned. Answering [] claims the data set has no mappings, which is a different
+    // and possibly false statement.
+    private Task SendReadFailure(string what, string? reason, CancellationToken ct)
+    {
+        HttpContext.Response.StatusCode = 500;
+        HttpContext.Response.ContentType = "application/json";
+        return HttpContext.Response.WriteAsJsonAsync(new
+        {
+            errorCode = "ReadFailed",
+            messages = new[] { $"Reading {what} failed: {reason ?? "no reason given"}" }
+        }, ct);
+    }
+
 }
