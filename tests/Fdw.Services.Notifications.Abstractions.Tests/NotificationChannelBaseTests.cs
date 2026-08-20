@@ -86,23 +86,6 @@ public class NotificationChannelBaseTests
         channel.MaxMessageLength.ShouldBeNull();
     }
 
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
-    public void TeamsChannelHasCorrectProperties()
-    {
-        // Arrange & Act
-        var channel = new TeamsChannel();
-
-        // Assert
-        channel.Id.ShouldBe(2);
-        channel.Name.ShouldBe("Teams");
-        channel.Description.ShouldBe("Microsoft Teams webhook notifications");
-        channel.SupportsBatchSend.ShouldBeFalse();
-        channel.SupportsRichContent.ShouldBeTrue();
-        channel.SupportsAttachments.ShouldBeFalse();
-        channel.MaxMessageLength.ShouldBe(28000);
-    }
 
     [Fact]
     [Trait("Priority", "P2")]

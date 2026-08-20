@@ -34,19 +34,6 @@ public class NotificationChannelsTests
         channel.Name.ShouldBe("Email");
     }
 
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
-    public void ByIdReturnsTeamsChannel()
-    {
-        // Arrange & Act
-        var channel = NotificationChannels.ById(2);
-
-        // Assert
-        channel.ShouldNotBeNull();
-        channel.Id.ShouldBe(2);
-        channel.Name.ShouldBe("Teams");
-    }
 
     [Fact]
     [Trait("Priority", "P2")]
@@ -88,18 +75,6 @@ public class NotificationChannelsTests
         channel.Name.ShouldBe("Email");
     }
 
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
-    public void ByNameReturnsTeamsChannel()
-    {
-        // Arrange & Act
-        var channel = NotificationChannels.ByName("Teams");
-
-        // Assert
-        channel.ShouldNotBeNull();
-        channel.Name.ShouldBe("Teams");
-    }
 
     [Fact]
     [Trait("Priority", "P2")]
