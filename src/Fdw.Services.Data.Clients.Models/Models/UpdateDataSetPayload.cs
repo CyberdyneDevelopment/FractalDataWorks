@@ -19,13 +19,13 @@ public sealed class UpdateDataSetPayload
     /// <summary>Gets or sets the record type name.</summary>
     public string? RecordTypeName { get; set; }
     /// <summary>Gets or sets the updated fields.</summary>
-    public IReadOnlyList<CreateDataSetFieldRequest> Fields { get; set; } = Array.Empty<CreateDataSetFieldRequest>();
+    public IReadOnlyList<CreateDataSetFieldRequest>? Fields { get; set; }
     /// <summary>Gets or sets the updated sources.</summary>
-    public IReadOnlyList<CreateDataSetSourcePayload> Sources { get; set; } = Array.Empty<CreateDataSetSourcePayload>();
+    public IReadOnlyList<CreateDataSetSourcePayload>? Sources { get; set; }
     /// <summary>Gets or sets the updated joins.</summary>
-    public IReadOnlyList<DataSetJoinPayload> Joins { get; set; } = Array.Empty<DataSetJoinPayload>();
+    public IReadOnlyList<DataSetJoinPayload>? Joins { get; set; }
     /// <summary>Gets or sets the updated caching configuration.</summary>
     public DataSetCachingPayload Caching { get; set; } = new();
     /// <summary>Gets or sets the stored filter conditions applied when querying this DataSet.</summary>
-    public IReadOnlyList<DataSetFilterConditionPayload> Filters { get; set; } = Array.Empty<DataSetFilterConditionPayload>();
+    public IReadOnlyList<DataSetFilterConditionPayload>? Filters { get; set; }
 }

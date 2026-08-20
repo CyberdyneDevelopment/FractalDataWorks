@@ -25,10 +25,10 @@ public class UpdateDataSetRequest
     public string RecordTypeName { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the key field names.</summary>
-    public IList<string> KeyFields { get; set; } = [];
+    public IList<string>? KeyFields { get; set; }
 
     /// <summary>Gets or sets the stored filter conditions applied when querying this DataSet.</summary>
-    public IList<DataSetFilterConditionPayload> Filters { get; set; } = [];
+    public IList<DataSetFilterConditionPayload>? Filters { get; set; }
 
     /// <summary>
     /// Gets or sets the dataset discriminator. Bound from the wizard's <c>serviceOptionType</c> field.
@@ -50,16 +50,16 @@ public class UpdateDataSetRequest
     public string? SourceDataSetName { get; set; }
 
     /// <summary>Gets or sets the composed fields for this data set.</summary>
-    public IList<CreateDataSetFieldRequest> Fields { get; set; } = [];
+    public IList<CreateDataSetFieldRequest>? Fields { get; set; }
 
     /// <summary>Gets or sets the composed sources for this data set.</summary>
-    public IList<CreateDataSetSourceRequest> Sources { get; set; } = [];
+    public IList<CreateDataSetSourceRequest>? Sources { get; set; }
 
     /// <summary>Gets or sets the joins between sources.</summary>
-    public IList<DataSetJoinPayload> Joins { get; set; } = [];
+    public IList<DataSetJoinPayload>? Joins { get; set; }
 
     /// <summary>Gets or sets the aggregate measure definitions for this data set.</summary>
-    public IList<CreateDataSetAggregateRequest> Aggregates { get; set; } = [];
+    public IList<CreateDataSetAggregateRequest>? Aggregates { get; set; }
 
     /// <summary>Gets or sets the caching configuration.</summary>
     public DataSetCachingPayload? Caching { get; set; }

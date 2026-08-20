@@ -101,7 +101,7 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpoint<UpdateDataS
             mergedServiceOptionType, mergedFederationStrategy, request.Name, Logger);
         if (federationValidation.IsFailure) return federationValidation.ToNewResult<DataSetDetailResponse>();
 
-        var aggregatesValidation = DataSetQueryHelper.ValidateAggregates(request.Aggregates, request.Name, Logger);
+        var aggregatesValidation = ValidateRequestedAggregates(request);
         if (aggregatesValidation.IsFailure) return aggregatesValidation.ToNewResult<DataSetDetailResponse>();
 
         // Merge updates
@@ -113,32 +113,7 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpoint<UpdateDataS
         existing.FederationStrategy = mergedFederationStrategy;
         existing.TransformExpression = request.TransformExpression ?? existing.TransformExpression;
         existing.SourceDataSetName = request.SourceDataSetName ?? existing.SourceDataSetName;
-        existing.KeyFields = request.KeyFields
-            .Select((name, i) => new DataSetKeyFieldConfiguration
-            {
-                KeyName = name,
-                KeyType = "Surrogate",
-                Ordinal = i
-            })
-            .ToList();
-        existing.Filters = request.Filters
-            .Select((f, i) => new DataSetFilterConditionConfiguration
-            {
-                FieldName = f.FieldName,
-                Operator = f.Operator,
-                Value = f.Value,
-                DataType = f.DataType,
-                Ordinal = i
-            })
-            .ToList();
-        // Why: Fields/Sources/Joins/Caching/Aggregates were previously dropped on update — the saved
-        // dataset silently lost every composed field/source/join/caching/aggregate the moment it was
-        // edited. Full replacement mirrors the version-on-write semantics Create already uses.
-        existing.Fields = DataSetQueryHelper.MapFields(request.Fields);
-        existing.Sources = DataSetQueryHelper.MapSources(request.Sources, existing.Sources);
-        existing.Joins = DataSetQueryHelper.MapJoins(request.Joins);
-        existing.Caching = DataSetQueryHelper.MapCaching(request.Caching);
-        existing.Aggregates = DataSetQueryHelper.MapAggregates(request.Aggregates);
+        ApplyRequestedChildren(existing, request);
 
         var saveResult = await _dataSetProvider.Save(existing, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
@@ -150,4 +125,73 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpoint<UpdateDataS
         DataSetEndpointLog.DataSetUpdated(Logger, request.Name);
         return GenericResult<DataSetDetailResponse>.Success(DataSetQueryHelper.MapToDetail(existing));
     }
+
+    // Why: an omitted aggregates collection is not an empty one — there is nothing to validate when
+    // the caller never mentioned it, and ValidateAggregates takes a non-nullable list.
+    private IGenericResult<bool> ValidateRequestedAggregates(UpdateDataSetRequest request)
+        => request.Aggregates is null
+            ? GenericResult<bool>.Success(true)
+            : DataSetQueryHelper.ValidateAggregates(request.Aggregates, request.Name, Logger);
+
+    // Why: separated from SaveUpdatedDataSet purely to keep that method under the FDW007
+    // cyclomatic-complexity threshold — these seven presence checks are one cohesive step.
+    private static void ApplyRequestedChildren(DataSetConfiguration existing, UpdateDataSetRequest request)
+    {
+            // Why: PATCH semantics — an absent collection means "leave it as it is", not "delete it".
+            // Every one of these is nullable so those two cases stay distinguishable. Defaulting them to
+            // [] made omitting "sources" identical to sending "sources": [], so a caller editing only a
+            // description silently destroyed every source binding the dataset had. To clear a collection,
+            // send an explicit empty array.
+            if (request.KeyFields is not null)
+            {
+                existing.KeyFields = request.KeyFields
+                    .Select((name, i) => new DataSetKeyFieldConfiguration
+                    {
+                        KeyName = name,
+                        KeyType = "Surrogate",
+                        Ordinal = i
+                    })
+                    .ToList();
+            }
+
+            if (request.Filters is not null)
+            {
+                existing.Filters = request.Filters
+                    .Select((f, i) => new DataSetFilterConditionConfiguration
+                    {
+                        FieldName = f.FieldName,
+                        Operator = f.Operator,
+                        Value = f.Value,
+                        DataType = f.DataType,
+                        Ordinal = i
+                    })
+                    .ToList();
+            }
+
+            if (request.Fields is not null)
+            {
+                existing.Fields = DataSetQueryHelper.MapFields(request.Fields);
+            }
+
+            if (request.Sources is not null)
+            {
+                existing.Sources = DataSetQueryHelper.MapSources(request.Sources, existing.Sources);
+            }
+
+            if (request.Joins is not null)
+            {
+                existing.Joins = DataSetQueryHelper.MapJoins(request.Joins);
+            }
+
+            if (request.Caching is not null)
+            {
+                existing.Caching = DataSetQueryHelper.MapCaching(request.Caching);
+            }
+
+            if (request.Aggregates is not null)
+            {
+                existing.Aggregates = DataSetQueryHelper.MapAggregates(request.Aggregates);
+            }
+    }
+
 }
