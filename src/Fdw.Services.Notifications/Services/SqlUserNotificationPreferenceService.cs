@@ -221,5 +221,5 @@ public sealed class SqlUserNotificationPreferenceService : IUserNotificationPref
             .ToList();
     }
 
-    private static string Key(string notificationType, string channel) => $"{notificationType} {channel}";
+    private static string Key(string notificationType, string channel) => $"{notificationType}\0{channel}";
 }
