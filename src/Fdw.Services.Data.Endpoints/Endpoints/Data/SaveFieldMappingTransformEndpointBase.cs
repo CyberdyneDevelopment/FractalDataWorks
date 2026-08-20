@@ -62,8 +62,15 @@ public abstract class SaveFieldMappingTransformEndpointBase : CrudCreateEndpoint
     /// <summary>Gets the connection name for configuration database queries.</summary>
     protected virtual string ConfigurationConnectionName => _dataSetProvider.DataStoreName;
 
-    /// <summary>Gets the path name for configuration database queries.</summary>
-    protected virtual string ConfigurationPathName => _dataSetProvider.PathName;
+    /// <summary>
+    /// Gets the configuration path that holds the transform containers.
+    /// </summary>
+    // Why not the dataset provider's PathName: these containers are declared in ConfigurationDb's
+    // "transform" path, not "data". Borrowing the dataset path made every addressed lookup fail with
+    // "DataContainer 'FieldMappingTransform' not found in path 'data'", which surfaced as a 404 on
+    // every transform route. The container names beside this are literals for the same reason — the
+    // endpoint names the location it targets rather than inheriting one that happens to differ.
+    protected virtual string TransformPathName => "transform";
 
     /// <summary>Gets the container name for FieldMappingTransform queries.</summary>
     protected virtual string TransformContainerName => "FieldMappingTransform";
@@ -111,7 +118,7 @@ public abstract class SaveFieldMappingTransformEndpointBase : CrudCreateEndpoint
         var saveResult = await DataGateway
             .Execute<int>(
                 new ConfigurationSaveCommand<FieldMappingTransformConfiguration>(config),
-                new DataStoreTarget(ConfigurationConnectionName, ConfigurationPathName, TransformContainerName),
+                new DataStoreTarget(ConfigurationConnectionName, TransformPathName, TransformContainerName),
                 ct)
             .ConfigureAwait(false);
         if (saveResult.IsFailure)
@@ -136,7 +143,7 @@ public abstract class SaveFieldMappingTransformEndpointBase : CrudCreateEndpoint
             var paramResult = await DataGateway
                 .Execute<int>(
                     new ConfigurationSaveCommand<FieldMappingTransformParameterConfiguration>(paramConfig),
-                    new DataStoreTarget(ConfigurationConnectionName, ConfigurationPathName, TransformParameterContainerName),
+                    new DataStoreTarget(ConfigurationConnectionName, TransformPathName, TransformParameterContainerName),
                     ct)
                 .ConfigureAwait(false);
             if (paramResult.IsFailure)

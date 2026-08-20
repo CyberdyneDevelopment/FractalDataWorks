@@ -63,8 +63,12 @@ public abstract class UpdateFieldMappingTransformEndpointBase
     /// <summary>Gets the connection name for configuration database queries.</summary>
     protected virtual string ConfigurationConnectionName => _dataSetProvider.DataStoreName;
 
-    /// <summary>Gets the path name for configuration database queries.</summary>
-    protected virtual string ConfigurationPathName => _dataSetProvider.PathName;
+    /// <summary>Gets the configuration path that holds the transform containers.</summary>
+    // Why not the dataset provider's PathName: these containers are declared in ConfigurationDb's
+    // "transform" path, not "data". Borrowing the dataset path made every addressed lookup fail with
+    // "DataContainer 'FieldMappingTransform' not found in path 'data'", which surfaced as a 404 on
+    // every transform route.
+    protected virtual string TransformPathName => "transform";
 
     /// <summary>Gets the container name for FieldMappingTransform queries.</summary>
     protected virtual string TransformContainerName => "FieldMappingTransform";
@@ -120,7 +124,7 @@ public abstract class UpdateFieldMappingTransformEndpointBase
         var saveResult = await DataGateway
             .Execute<int>(
                 new ConfigurationSaveCommand<FieldMappingTransformConfiguration>(config),
-                new DataStoreTarget(ConfigurationConnectionName, ConfigurationPathName, TransformContainerName),
+                new DataStoreTarget(ConfigurationConnectionName, TransformPathName, TransformContainerName),
                 ct)
             .ConfigureAwait(false);
 
@@ -157,7 +161,7 @@ public abstract class UpdateFieldMappingTransformEndpointBase
         UpdateFieldMappingTransformRequest request,
         CancellationToken ct)
     {
-        var target = new DataStoreTarget(ConfigurationConnectionName, ConfigurationPathName, TransformParameterContainerName);
+        var target = new DataStoreTarget(ConfigurationConnectionName, TransformPathName, TransformParameterContainerName);
 
         var existingResult = await DataGateway
             .Execute<IEnumerable<FieldMappingTransformParameterConfiguration>>(
@@ -236,7 +240,7 @@ public abstract class UpdateFieldMappingTransformEndpointBase
                 {
                     Filter = DataSetQueryHelper.ActiveFilterFor(nameof(FieldMappingTransformConfiguration.Id), transformId)
                 },
-                new DataStoreTarget(ConfigurationConnectionName, ConfigurationPathName, TransformContainerName),
+                new DataStoreTarget(ConfigurationConnectionName, TransformPathName, TransformContainerName),
                 ct)
             .ConfigureAwait(false);
 
