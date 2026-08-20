@@ -106,9 +106,15 @@ public abstract class SaveFieldMappingTransformEndpointBase : CrudCreateEndpoint
 
         var config = new FieldMappingTransformConfiguration
         {
-            // Why: Id = default (Guid.Empty) signals INSERT with a new UUIDv7.
-            // The provider/gateway mints the ID; no Guid.NewGuid() here.
-            Id = default,
+            // Why minted here: the UUIDv7 is assigned by DefaultConfigurationProvider, on the
+            // Save/cascade path. A child record written straight through IDataGateway with
+            // ConfigurationSaveCommand never reaches that code, so Id = default was not "signals
+            // INSERT" — it persisted literally. Every row in transform.FieldMappingTransform carried
+            // 00000000-0000-0000-0000-000000000000, which left the transform with no logical
+            // identity: it could be created and listed but never addressed, so update and delete
+            // answered "no identifier supplied". Minting at the point of creation is the same thing
+            // AddDataStoreContainerEndpointBase does for the same reason.
+            Id = Guid.CreateVersion7(),
             DataSetFieldMappingId = request.FieldMappingId,
             TransformType = request.TransformType,
             Ordinal = request.Ordinal
@@ -133,8 +139,10 @@ public abstract class SaveFieldMappingTransformEndpointBase : CrudCreateEndpoint
         {
             var paramConfig = new FieldMappingTransformParameterConfiguration
             {
-                // Why: Id = default signals INSERT with a new UUIDv7 from the gateway.
-                Id = default,
+                // Why minted here: same as the transform above. This one also fed
+                // FieldMappingTransformId = config.Id, so while the transform's own Id stayed empty
+                // every parameter was parented to the all-zero GUID as well.
+                Id = Guid.CreateVersion7(),
                 FieldMappingTransformId = config.Id,
                 Name = param.Name,
                 Value = param.Value
