@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+using Fdw.Results;
 using Fdw.Services.Data.Clients.Models;
 using System;
 using System.Collections.Generic;
@@ -165,10 +167,10 @@ public abstract class GetSourceMappingsEndpoint : Endpoint<GetSourceMappingsRequ
             command, new DataStoreTarget("ConfigurationDb", "data", "DataSetSource"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
-            return result.ToNewResult<DataSetRecord?>();
+            return result.ToNewResult<DataSetSourceConfiguration?>();
         }
 
-        return GenericResult<DataSetRecord?>.Success(result.Value?.FirstOrDefault());
+        return GenericResult<DataSetSourceConfiguration?>.Success(result.Value?.FirstOrDefault());
     }
 
     /// <summary>Gets all active (non-deleted) field mapping records for the specified source.</summary>
