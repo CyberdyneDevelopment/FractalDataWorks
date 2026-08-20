@@ -20,22 +20,29 @@ public abstract class NotificationTypeBase<TService, TFactory, TConfiguration>
     where TFactory : INotificationFactory<TService, TConfiguration>
     where TConfiguration : NotificationConfiguration
 {
+    private readonly string _channelName;
+
     /// <summary>
     /// Gets the notification channel this type handles.
     /// </summary>
-    public INotificationChannel Channel { get; }
+    // Why this resolves on read rather than in the constructor: a notification type is CONSTRUCTED by
+    // the registration initializer, and reading a TypeCollection closes it. A channel shipping in the
+    // same package as its type would still be mid-registration at that moment, so resolving here would
+    // close NotificationChannels against the very channel the package installs. Reading on access is
+    // what lets a channel live outside the assembly that declares the collection.
+    public INotificationChannel Channel => NotificationChannels.ByName(_channelName);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationTypeBase{TService, TFactory, TConfiguration}"/> class.
     /// </summary>
     /// <param name="name">The name of this notification type.</param>
-    /// <param name="channel">The notification channel.</param>
+    /// <param name="channelName">The name of the notification channel.</param>
     /// <param name="displayName">The display name for UI.</param>
     /// <param name="description">Description of the notification type.</param>
     /// <param name="defaultContainerName">The default container name for this notification type.</param>
     protected NotificationTypeBase(
         string name,
-        INotificationChannel channel,
+        string channelName,
         string displayName,
         string description,
         string defaultContainerName = "")
@@ -49,7 +56,7 @@ public abstract class NotificationTypeBase<TService, TFactory, TConfiguration>
             defaultPathName: "notify",
             defaultContainerName: defaultContainerName)
     {
-        Channel = channel;
+        _channelName = channelName;
     }
 
 }
