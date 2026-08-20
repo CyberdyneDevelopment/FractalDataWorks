@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Services.Connections.Validation;
 using Fdw.Results;
 using Fdw.Services.Connections;
 using Fdw.Services.Data.Abstractions;
@@ -79,6 +81,12 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpoint<
 
         var updated = UpdateConfiguration(existingConfig, request, resolvedConnectionId);
 
+        // Why the paths are applied here and not left to UpdateConfiguration: every store type
+        // implements that method for its own typed body, and the paths a store exposes are the same
+        // shape whichever type it is. Applying them once keeps a new store type from having to
+        // remember, which is how they came to be dropped in the first place.
+        ApplyPaths(updated, request);
+
         var saveResult = await _dataStoreProvider.Save(updated, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
@@ -90,6 +98,35 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpoint<
 
     /// <summary>Applies the update request to the existing configuration. Override for type-specific fields.</summary>
     protected abstract TConfig UpdateConfiguration(TConfig existing, UpdateDataStoreRequest request, Guid? resolvedConnectionId);
+
+    /// <summary>Replaces the store's paths with the ones the request carries.</summary>
+    /// <param name="target">The configuration about to be saved.</param>
+    /// <param name="request">The update being applied.</param>
+    /// <remarks>
+    /// Null means the caller said nothing about paths and the store keeps the ones it has; an empty
+    /// list means the caller said it has none. The provider's Save cascades the result either way,
+    /// so a path removed from the list is removed from the store.
+    /// </remarks>
+    protected static void ApplyPaths(TConfig target, UpdateDataStoreRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (request.Paths is null)
+        {
+            return;
+        }
+
+        target.Paths = request.Paths
+            .Select(p => new DataPathConfiguration
+            {
+                Name = p.Name,
+                PathValue = p.PhysicalPath,
+                Description = p.Description,
+                DataStoreId = target.Id,
+            })
+            .ToList();
+    }
 
     /// <summary>Maps the saved configuration to a detail DTO. Override for type-specific fields.</summary>
     protected abstract DataStoreDetailResponse MapToDetail(TConfig savedConfig, UpdateDataStoreRequest request);

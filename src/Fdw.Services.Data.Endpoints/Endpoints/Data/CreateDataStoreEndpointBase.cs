@@ -1,4 +1,8 @@
 using System;
+using System.Linq;
+using System.Collections.Generic;
+using Fdw.Services.Connections.Validation;
+using Fdw.Services.Data.Clients.Models;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -59,6 +63,10 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpoint<
         var connection = connectionResult.Value;
         var config = CreateConfiguration(request, connection.Id);
 
+        // Why here rather than in CreateConfiguration: each store type implements that for its own
+        // typed body, and a store's paths are the same shape whichever type it is.
+        ApplyPaths(config, request.Paths);
+
         // Why: a DataStore's transport IS its connection's transport — never a client-supplied StoreType.
         // The connection already carries ServiceOptionType (e.g. "MsSql", "Http", "FileSystem") which
         // is the authoritative transport identifier. Copying it here ensures ServiceOptionType is always
@@ -90,6 +98,29 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpoint<
 
     /// <summary>Builds a concrete data store configuration from the create request. Override for type-specific fields.</summary>
     protected abstract TConfig CreateConfiguration(CreateDataStoreRequest request, Guid connectionId);
+
+    /// <summary>Puts the requested paths on the configuration before it is saved.</summary>
+    /// <param name="target">The configuration about to be saved.</param>
+    /// <param name="paths">The paths the caller asked for, if any.</param>
+    protected static void ApplyPaths(TConfig target, IList<DataPathRequest>? paths)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+
+        if (paths is null || paths.Count == 0)
+        {
+            return;
+        }
+
+        target.Paths = paths
+            .Select(p => new DataPathConfiguration
+            {
+                Name = p.Name,
+                PathValue = p.PhysicalPath,
+                Description = p.Description,
+                DataStoreId = target.Id,
+            })
+            .ToList();
+    }
 
     /// <summary>Maps the saved configuration to a detail DTO. Override for type-specific fields.</summary>
     protected abstract DataStoreDetailResponse MapToDetail(TConfig savedConfig, CreateDataStoreRequest request);

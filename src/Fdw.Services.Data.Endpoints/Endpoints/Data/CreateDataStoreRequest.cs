@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using Fdw.Services.Data.Clients.Models;
+
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
@@ -26,4 +29,13 @@ public class CreateDataStoreRequest
 
     /// <summary>Gets or sets whether this data store is active.</summary>
     public bool IsActive { get; set; }
+
+    /// <summary>Gets or sets the paths the new store exposes.</summary>
+    /// <remarks>
+    /// The provider's Save cascades an aggregate's children, so paths supplied here are written with
+    /// the store rather than needing a second call per path. The client has sent these since it was
+    /// written; the request it binds to had nowhere to put them, so a store created with paths came
+    /// back with none and nothing said so.
+    /// </remarks>
+    public IList<DataPathRequest>? Paths { get; set; }
 }

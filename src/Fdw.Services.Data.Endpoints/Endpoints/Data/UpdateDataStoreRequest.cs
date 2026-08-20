@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using Fdw.Services.Data.Clients.Models;
+
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
@@ -29,4 +32,17 @@ public class UpdateDataStoreRequest
 
     /// <summary>Gets or sets the updated active state. Null means keep existing.</summary>
     public bool? IsActive { get; set; }
+
+    /// <summary>Gets or sets the paths this store exposes, replacing the ones it has.</summary>
+    /// <remarks>
+    /// Why the whole collection rather than a delta: the provider's Save cascades an aggregate's
+    /// children, so what is sent is what the store ends up with. A caller sending a shorter list
+    /// means those paths are gone, which is the same shape the dataset update already uses for its
+    /// fields and sources.
+    ///
+    /// Null is distinct from empty here: null leaves the existing paths alone, empty removes them.
+    /// The client has sent these since it was written; the request it binds to had nowhere to put
+    /// them, so they were dropped before reaching the provider.
+    /// </remarks>
+    public IList<DataPathRequest>? Paths { get; set; }
 }
