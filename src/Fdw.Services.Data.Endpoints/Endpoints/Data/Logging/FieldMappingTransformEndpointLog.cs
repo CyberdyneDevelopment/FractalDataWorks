@@ -83,4 +83,16 @@ public static partial class FieldMappingTransformEndpointLog
     /// <summary>Logs that a transform was not found.</summary>
     [MessageLogging(EventId = 31004, Level = LogLevel.Warning, Message = "Transform '{transformId}' not found")]
     public static partial IGenericMessage TransformNotFound(ILogger logger, Guid transformId);
+
+    /// <summary>Logs that a transform is about to be updated.</summary>
+    [MessageLogging(EventId = 11025, Level = LogLevel.Trace, Message = "Updating transform '{transformId}'")]
+    public static partial IGenericMessage UpdatingTransform(ILogger logger, Guid transformId);
+
+    /// <summary>Logs that a transform was updated.</summary>
+    [MessageLogging(EventId = 11026, Level = LogLevel.Information, Message = "Updated transform '{transformId}' to type '{transformType}'")]
+    public static partial IGenericMessage UpdatedTransform(ILogger logger, Guid transformId, string transformType);
+
+    /// <summary>Logs that updating a transform failed.</summary>
+    [MessageLogging(EventId = 71008, Level = LogLevel.Warning, Message = "Failed to update transform '{transformId}'")]
+    public static partial IGenericMessage UpdateTransformFailed(ILogger logger, Guid transformId);
 }
