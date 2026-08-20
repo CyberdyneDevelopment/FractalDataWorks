@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -117,13 +118,23 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpoint<
             return;
         }
 
+        // Why the existing id is carried over: the gateway reads Id = default as "insert", and a
+        // path the store already has under that name is still current — so rebuilding every path as
+        // a new record makes the cascade insert a duplicate and the unique index on
+        // (DataStoreId, Name, IsCurrent) refuses it. Matching by name is what makes this an update
+        // of the paths that stayed and an insert of only the ones that are new.
+        var byName = target.Paths?.ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase)
+            ?? new Dictionary<string, DataPathConfiguration>(StringComparer.OrdinalIgnoreCase);
+
         target.Paths = request.Paths
             .Select(p => new DataPathConfiguration
             {
+                Id = byName.TryGetValue(p.Name, out var existing) ? existing.Id : default,
                 Name = p.Name,
                 PathValue = p.PhysicalPath,
                 Description = p.Description,
                 DataStoreId = target.Id,
+                Containers = byName.TryGetValue(p.Name, out var kept) ? kept.Containers : [],
             })
             .ToList();
     }
