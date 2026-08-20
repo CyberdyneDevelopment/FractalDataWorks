@@ -151,9 +151,6 @@
   <Folder Name="/src/Services/Notifications/">
     <Project Path="src/Fdw.Services.Notifications.Abstractions/Fdw.Services.Notifications.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Notifications/Fdw.Services.Notifications.csproj" />
-    <Project Path="src/Fdw.Services.Notifications.Email/Fdw.Services.Notifications.Email.csproj" />
-    <Project Path="src/Fdw.Services.Notifications.Webhook/Fdw.Services.Notifications.Webhook.csproj" />
-    <Project Path="src/Fdw.Services.Notifications.Console/Fdw.Services.Notifications.Console.csproj" />
   </Folder>
 
   <Folder Name="/src/Services/Pipelines/">
