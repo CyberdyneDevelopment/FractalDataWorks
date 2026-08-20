@@ -102,19 +102,18 @@ public class DataSetApiClient : ApiClientBase
         => Post<SaveFieldMappingTransformRequest, FieldMappingTransformPayload>($"field-mappings/{request.FieldMappingId}/transforms", request, ct);
 
     /// <summary>
-    /// Updates an existing field mapping transform.
+    /// Changes a transform already in a field mapping's chain.
     /// </summary>
-    /// <param name="transformId">The transform identifier.</param>
-    /// <param name="request">The save transform request.</param>
+    /// <param name="fieldMappingId">The field mapping whose chain the transform belongs to.</param>
+    /// <param name="transformId">The transform being changed.</param>
+    /// <param name="request">The change to apply.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the updated transform.</returns>
-    // Why this one is left pointing at nothing: there is no update endpoint for a transform. The
-    // server exposes create (POST), delete and reorder on /field-mappings/{FieldMappingId}/transforms
-    // and no PUT for a single transform, so no path correction makes this reach a handler. Nothing
-    // calls it. Deleting it or adding the endpoint is a decision, and guessing a route would just
-    // move the 404 somewhere less obvious.
-    public virtual Task<IGenericResult<FieldMappingTransformPayload>> UpdateTransform(Guid transformId, SaveFieldMappingTransformRequest request, CancellationToken ct = default)
-        => Put<SaveFieldMappingTransformRequest, FieldMappingTransformPayload>($"datasets/field-mappings/transforms/{transformId}", request, ct);
+    // This used to post to datasets/field-mappings/transforms/{id}, which no endpoint served, and
+    // carried a note saying so — the update endpoint did not exist and guessing a route would only
+    // move the 404 somewhere less obvious. It exists now, addressed the way delete already was.
+    public virtual Task<IGenericResult<FieldMappingTransformPayload>> UpdateTransform(Guid fieldMappingId, Guid transformId, UpdateFieldMappingTransformRequest request, CancellationToken ct = default)
+        => Patch<UpdateFieldMappingTransformRequest, FieldMappingTransformPayload>($"field-mappings/{fieldMappingId}/transforms/{transformId}", request, ct);
 
     /// <summary>
     /// Deletes a field mapping transform.

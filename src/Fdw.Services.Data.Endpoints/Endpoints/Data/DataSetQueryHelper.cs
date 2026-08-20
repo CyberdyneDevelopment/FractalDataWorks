@@ -23,6 +23,23 @@ internal static class DataSetQueryHelper
         ?? throw new InvalidOperationException("FilterOperators.Equal not found");
 
     /// <summary>Builds filter for active rows (IsCurrent=true AND IsDeleted=false).</summary>
+    // Why a property name is passed rather than another named helper per column: the callers that
+    // need this are looking up one row by an id that differs per container — the transform's own id
+    // in one case, its parent's in another — and the shape of the filter is identical either way.
+    internal static FilterExpression ActiveFilterFor(string propertyName, object value) => new()
+    {
+        Root = new FilterGroup
+        {
+            Operator = LogicalOperator.And,
+            Nodes =
+            [
+                new FilterCondition { PropertyName = nameof(DataSetConfiguration.IsCurrent), Operator = EqualOperator, Value = true },
+                new FilterCondition { PropertyName = nameof(DataSetConfiguration.IsDeleted), Operator = EqualOperator, Value = false },
+                new FilterCondition { PropertyName = propertyName, Operator = EqualOperator, Value = value }
+            ]
+        }
+    };
+
     internal static FilterExpression ActiveFilter() => new()
     {
         Root = new FilterGroup
