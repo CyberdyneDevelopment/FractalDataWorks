@@ -12,11 +12,28 @@ namespace Fdw.Data.DataSets;
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "DataSet",
     ServiceType = "DataSetFieldMapping")]
-public sealed partial class DataSetFieldMappingConfiguration
+public sealed partial class DataSetFieldMappingConfiguration : IGenericConfiguration
 {
 
     /// <summary>Gets or sets the durable logical identity for this field mapping.</summary>
     public Guid Id { get; set; }
+
+    /// <inheritdoc/>
+    public string SectionName => "DataSetFieldMappings";
+
+    /// <inheritdoc/>
+    public string ServiceType => "DataSet";
+
+    /// <inheritdoc/>
+    public string? ServiceOptionType => null;
+
+    /// <summary>Gets or sets the name this mapping is known by within its source.</summary>
+    /// <remarks>
+    /// A mapping is identified by the field it fills, so the name is the logical field name. The
+    /// interface requires one because every configuration the cascade writes is addressable; this
+    /// is not a second identifier.
+    /// </remarks>
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the parent DataSet source logical identifier (FK to data.DataSetSource.Id).</summary>
     public Guid DataSetSourceId { get; set; }

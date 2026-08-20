@@ -107,6 +107,8 @@ public abstract class SaveSourceMappingsEndpoint : Endpoint<SaveSourceMappingsRe
                 // them — an existing one keeps its identity through the cascade's own matching.
                 Id = default,
                 DataSetSourceId = source.Id,
+                // The field it fills is what identifies it within the source.
+                Name = m.LogicalFieldName,
                 LogicalFieldName = m.LogicalFieldName,
                 PhysicalFieldName = m.PhysicalFieldName,
                 TransformExpression = m.TransformExpression,
