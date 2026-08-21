@@ -7,8 +7,9 @@ using VerifyCS = Microsoft.CodeAnalysis.CSharp.Testing.CSharpAnalyzerVerifier<
 namespace Fdw.ServiceTypes.Analyzers.Tests;
 
 /// <summary>
-/// Tests for <see cref="PhaseFuncCompositionAnalyzer"/> (FDW049) — where the line falls between a class
-/// setting the phase func it owns and one composing onto a body somebody else holds.
+/// Tests for <see cref="PhaseFuncCompositionAnalyzer"/> — STC001, where the line falls between a class
+/// setting the phase func it owns and one composing onto a body somebody else holds; and STC002, which
+/// keeps everything between ServiceTypeBase and the declared service type out of the phase entirely.
 /// </summary>
 public class PhaseFuncCompositionAnalyzerTests
 {
@@ -84,7 +85,7 @@ public class PhaseFuncCompositionAnalyzerTests
 
         await VerifyCS.VerifyAnalyzerAsync(
             test,
-            VerifyCS.Diagnostic("FDW049").WithLocation(0).WithArguments("AppendRegistration", "Registration"));
+            VerifyCS.Diagnostic("STC001").WithLocation(0).WithArguments("AppendRegistration", "Registration"));
     }
 
     [Fact]
@@ -113,7 +114,7 @@ public class PhaseFuncCompositionAnalyzerTests
 
         await VerifyCS.VerifyAnalyzerAsync(
             test,
-            VerifyCS.Diagnostic("FDW049").WithLocation(0).WithArguments("PrependRegistration", "Registration"));
+            VerifyCS.Diagnostic("STC001").WithLocation(0).WithArguments("PrependRegistration", "Registration"));
     }
 
     [Fact]
@@ -143,8 +144,8 @@ public class PhaseFuncCompositionAnalyzerTests
 
         await VerifyCS.VerifyAnalyzerAsync(
             test,
-            VerifyCS.Diagnostic("FDW049").WithLocation(0).WithArguments("AppendConfiguration", "Configuration"),
-            VerifyCS.Diagnostic("FDW049").WithLocation(1).WithArguments("PrependInitialization", "Initialization"));
+            VerifyCS.Diagnostic("STC001").WithLocation(0).WithArguments("AppendConfiguration", "Configuration"),
+            VerifyCS.Diagnostic("STC001").WithLocation(1).WithArguments("PrependInitialization", "Initialization"));
     }
 
     [Fact]
@@ -171,7 +172,7 @@ public class PhaseFuncCompositionAnalyzerTests
 
         await VerifyCS.VerifyAnalyzerAsync(
             test,
-            VerifyCS.Diagnostic("FDW049").WithLocation(0).WithArguments("AppendRegistration", "Registration"));
+            VerifyCS.Diagnostic("STC001").WithLocation(0).WithArguments("AppendRegistration", "Registration"));
     }
 
     [Fact]
@@ -222,6 +223,93 @@ public class PhaseFuncCompositionAnalyzerTests
                     public static void Customise(SomeoneElsesOption option)
                     {
                         option.AppendRegistration(value => value);
+                    }
+                }
+            }
+            """;
+
+        await VerifyCS.VerifyAnalyzerAsync(test);
+    }
+
+    // Why an intermediate base is the case this rule exists for: it is where the hazard originates, and it
+    // carries no attribute, so nothing keyed off the declaration can see it.
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Analyzer")]
+    public async Task Registration_FromAnIntermediateBaseClass_ReportsDiagnostic()
+    {
+        var test = Fixture + """
+            namespace TestNamespace
+            {
+                using Fdw.Services.Abstractions;
+
+                public abstract class ConnectionTypeBase : ServiceTypeBase
+                {
+                    protected ConnectionTypeBase()
+                    {
+                        {|#0:Registration|}(value => value);
+                    }
+                }
+            }
+            """;
+
+        await VerifyCS.VerifyAnalyzerAsync(
+            test,
+            VerifyCS.Diagnostic("STC002").WithLocation(0).WithArguments("Registration"));
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Analyzer")]
+    public async Task PrependRegistration_FromAnIntermediateBaseClass_ReportsComposition()
+    {
+        var test = Fixture + """
+            namespace TestNamespace
+            {
+                using Fdw.Services.Abstractions;
+
+                public abstract class ConnectionTypeBase : ServiceTypeBase
+                {
+                    protected ConnectionTypeBase()
+                    {
+                        {|#0:PrependRegistration|}(value => value);
+                    }
+                }
+            }
+            """;
+
+        await VerifyCS.VerifyAnalyzerAsync(
+            test,
+            VerifyCS.Diagnostic("STC001").WithLocation(0).WithArguments("PrependRegistration", "Registration"));
+    }
+
+    // Why a plain type option is untouched: the phases are optional there, so a TypeOptionBase-derived
+    // class setting one is not evidence of anything.
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Analyzer")]
+    public async Task AppendRegistration_OnATypeOptionBase_ReportsNothing()
+    {
+        var test = """
+            using System;
+
+            namespace Fdw.Collections
+            {
+                public abstract class TypeOptionBase
+                {
+                    public void AppendRegistration(Func<int, int> method) { }
+                }
+            }
+
+            namespace TestNamespace
+            {
+                using Fdw.Collections;
+
+                public sealed class ActiveStatus : TypeOptionBase
+                {
+                    public ActiveStatus()
+                    {
+                        AppendRegistration(value => value);
                     }
                 }
             }
