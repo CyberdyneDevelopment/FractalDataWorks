@@ -15,16 +15,17 @@ public sealed class TypeLookupAttribute : Attribute
     /// Initializes a new instance of the <see cref="TypeLookupAttribute"/> class.
     /// </summary>
     /// <param name="methodName">Required method name for the lookup (e.g. "Name", "Id", "Category").</param>
-    /// <param name="returnsList">If true, returns IReadOnlyList of matching items; if false, returns single item (default).</param>
     /// <param name="returnType">The return type for this specific lookup method.</param>
+    /// <param name="isUnique">True (the default) when at most one option can carry a given value for this
+    /// property, so the lookup returns that option; false when several can, so it returns all of them.</param>
     public TypeLookupAttribute(
         string methodName,
-        bool returnsList = false,
-        Type? returnType = null)
+        Type? returnType = null,
+        bool isUnique = true)
     {
         MethodName = methodName ?? throw new ArgumentNullException(nameof(methodName));
-        ReturnsList = returnsList;
         ReturnType = returnType;
+        IsUnique = isUnique;
     }
 
     /// <summary>
@@ -33,9 +34,17 @@ public sealed class TypeLookupAttribute : Attribute
     public string MethodName { get; }
 
     /// <summary>
-    /// Gets whether to return a list of items instead of a single item.
+    /// Gets whether a value for this property identifies at most one option.
     /// </summary>
-    public bool ReturnsList { get; }
+    /// <remarks>
+    /// Why the default is true: uniqueness is the promise the collection ENFORCES, so it is the loud
+    /// option rather than the permissive one. Two options arriving with the same value for a unique
+    /// property is a registration error that throws and names both; the same collision under a
+    /// non-unique lookup is a two-element list that nobody inspects and every caller silently reads the
+    /// first of. Defaulting to true also matches what every lookup already did before this parameter was
+    /// read by anything, so declaring nothing keeps the behaviour a caller already has.
+    /// </remarks>
+    public bool IsUnique { get; }
 
     /// <summary>
     /// Gets the return type for this specific lookup method.
