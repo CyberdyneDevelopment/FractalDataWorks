@@ -87,7 +87,48 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
         {
             var log = loggerFactory?.CreateLogger<ConnectionTypes>() ?? NullLogger<ConnectionTypes>.Instance;
 
-            RegisterDomainProvider(builder, loggerFactory);
+            // Why the collection registers the parent provider and does it before the options run:
+            // the owner of a registration is the type that knows the thing exists. This collection
+            // ships beside ConnectionConfigurationProvider, so it knows; a connection-kind option knows
+            // only itself and registers its own component INTO this provider, so the provider has to
+            // exist first. It used to exist because all six option types called a static on the provider
+            // and leaned on TryAdd to make six calls behave like one.
+            ConnectionProviderLogger.DomainConfigurationRegistering(
+                loggerFactory?.CreateLogger<ConnectionConfigurationProvider>()
+                ?? NullLogger<ConnectionConfigurationProvider>.Instance,
+                nameof(ConnectionConfigurationProvider));
+
+            builder.Services.TryAddSingleton<ConnectionConfigurationProvider>(sp =>
+                new ConnectionConfigurationProvider(
+                    sp.GetService<ILogger<ConnectionConfigurationProvider>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+
+            builder.Services.TryAddSingleton<DefaultConfigurationProvider<ConnectionConfiguration, ConnectionConfigurationCommand>>(
+                sp => sp.GetRequiredService<ConnectionConfigurationProvider>());
+
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ConnectionConfiguration>>(
+                sp => sp.GetRequiredService<ConnectionConfigurationProvider>());
+
+            // Why one health checkable for the domain rather than one per connection: conn.Connection
+            // rows are runtime data enumerated at check time, never per-row DI registrations.
+            builder.Services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IHealthCheckable, ConnectionsHealthCheckable>());
+
+            // Why Scoped: ConnectionHealthService depends on the Scoped IDataGateway, and a Singleton
+            // would pin the first-resolved scope's gateway forever.
+            builder.Services.TryAddScoped<IConnectionHealthService, ConnectionHealthService>();
+
+            builder.Services.AddHostedService<ConnectionHealthMonitorWorker>();
+
+            // Why an alias and why Scoped: DefaultConnectionProvider implements both interfaces, and
+            // IConnectionProvider is generated Scoped, so a Singleton alias over it would be a captive
+            // dependency that throws under ValidateScopes.
+            builder.Services.TryAddScoped<IDataConnectionProvider>(sp =>
+                (IDataConnectionProvider)sp.GetRequiredService<IConnectionProvider>());
+
+            // Why: IServiceConnectionProvider serves framework-internal connections such as ConfigurationDb.
+            builder.Services.TryAddSingleton<IServiceConnectionProvider, DefaultServiceConnectionProvider>();
 
             // Why the result is read: this replacement calls the func it captured, and discarding
             // what that returned meant an option that failed to register was followed by this body
@@ -161,58 +202,5 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
-    }
-
-    /// <summary>Registers the connections domain provider and the services that hang off it.</summary>
-    /// <param name="builder">The host builder.</param>
-    /// <param name="loggerFactory">The logger factory, if the host supplied one.</param>
-    /// <remarks>
-    /// Why the collection owns this and not the provider: the owner of a registration is the type that
-    /// knows the thing exists. This collection ships beside ConnectionConfigurationProvider, so it knows.
-    /// A connection-kind option knows only itself, and registers its own component into this provider.
-    /// </remarks>
-    private static void RegisterDomainProvider(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory)
-    {
-        // Why the parent is registered here and before the options run: the collection knows this
-        // type exists — it ships in the same package — and the options do not know about each other.
-        // A connection-kind option registers its own component INTO this provider, so the provider
-        // has to exist first. It used to exist because all six option types called a static on the
-        // provider and leaned on TryAdd to make six calls behave like one.
-        ConnectionProviderLogger.DomainConfigurationRegistering(
-            loggerFactory?.CreateLogger<ConnectionConfigurationProvider>()
-            ?? NullLogger<ConnectionConfigurationProvider>.Instance,
-            nameof(ConnectionConfigurationProvider));
-
-        builder.Services.TryAddSingleton<ConnectionConfigurationProvider>(sp =>
-            new ConnectionConfigurationProvider(
-                sp.GetService<ILogger<ConnectionConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
-
-        builder.Services.TryAddSingleton<DefaultConfigurationProvider<ConnectionConfiguration, ConnectionConfigurationCommand>>(
-            sp => sp.GetRequiredService<ConnectionConfigurationProvider>());
-
-        builder.Services.TryAddSingleton<IServiceConfigurationProvider<ConnectionConfiguration>>(
-            sp => sp.GetRequiredService<ConnectionConfigurationProvider>());
-
-        // Why one health checkable for the domain rather than one per connection: conn.Connection
-        // rows are runtime data enumerated at check time, never per-row DI registrations.
-        builder.Services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IHealthCheckable, ConnectionsHealthCheckable>());
-
-        // Why Scoped: ConnectionHealthService depends on the Scoped IDataGateway, and a Singleton
-        // would pin the first-resolved scope's gateway forever.
-        builder.Services.TryAddScoped<IConnectionHealthService, ConnectionHealthService>();
-
-        builder.Services.AddHostedService<ConnectionHealthMonitorWorker>();
-
-        // Why an alias and why Scoped: DefaultConnectionProvider implements both interfaces, and
-        // IConnectionProvider is generated Scoped, so a Singleton alias over it would be a captive
-        // dependency that throws under ValidateScopes.
-        builder.Services.TryAddScoped<IDataConnectionProvider>(sp =>
-            (IDataConnectionProvider)sp.GetRequiredService<IConnectionProvider>());
-
-        // Why: IServiceConnectionProvider serves framework-internal connections such as ConfigurationDb.
-        builder.Services.TryAddSingleton<IServiceConnectionProvider, DefaultServiceConnectionProvider>();
     }
 }

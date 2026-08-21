@@ -18,3 +18,4 @@ TC003 | Usage | Error | MissingTypeOptionAnalyzer - TBase in base class doesn't 
 SVCTYPE001 | ServiceTypes | Warning | TypeLookupNamingConflictAnalyzer - TypeLookup generates method that conflicts with collection member
 FDW044 | Usage | Error | ServiceProviderInjectionAnalyzer - service-option service injects another service-option service directly instead of its IFdwServiceProvider<TService, TConfiguration>
 FDW045 | Usage | Error | FactoryProviderInjectionAnalyzer - service factory injects an IFdwServiceProvider or IServiceScopeFactory through its constructor instead of receiving resolved values from its owning provider
+FDW049 | Design | Error | PhaseFuncCompositionAnalyzer - [TypeOption]/[TypeCollection] class composes onto a phase body it already owns via Append*/Prepend* instead of setting its own func with Configuration/Registration/Initialization
