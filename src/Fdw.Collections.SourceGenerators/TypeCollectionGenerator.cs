@@ -280,6 +280,13 @@ public class TypeCollectionGenerator : IIncrementalGenerator
                 string.Equals(prop.PropertyName, "Name", StringComparison.Ordinal))
                 continue;
 
+            // Why a non-unique property is not checked: TC008 exists to catch a collision on a value
+            // that is supposed to identify one option. A lookup declared non-unique is saying several
+            // options SHOULD share a value, so reporting that as an error would make the declaration
+            // impossible to act on — the duplicate is the feature.
+            if (!prop.IsUnique)
+                continue;
+
             // Group options by their extracted value for this property
             var valueGroups = options
                 .Select(o => (Option: o, Value: o.LookupProperties
