@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Configuration;
@@ -97,18 +98,46 @@ public interface IServiceType : IServiceType<Guid>, IServiceTypeRegistration
 
     /// <summary>Sets this option's Register body.</summary>
     /// <param name="method">The replacement delegate.</param>
-    void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method);
+    /// <param name="filePath">Compiler-supplied path of the file this call is written in; do not pass it.</param>
+    /// <param name="lineNumber">Compiler-supplied line this call is written on; do not pass it.</param>
+    /// <param name="memberName">Compiler-supplied name of the member this call is written in; do not pass it.</param>
+    void Registration(
+        Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method,
+        [CallerFilePath] string filePath = "",
+        [CallerLineNumber] int lineNumber = 0,
+        [CallerMemberName] string memberName = "");
 
     /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
     /// <remarks>Prefer this to <see cref="Registration"/>, which discards what is already there.</remarks>
     /// <param name="method">The body to run after.</param>
-    void AppendRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method);
+    /// <param name="filePath">Compiler-supplied path of the file this call is written in; do not pass it.</param>
+    /// <param name="lineNumber">Compiler-supplied line this call is written on; do not pass it.</param>
+    /// <param name="memberName">Compiler-supplied name of the member this call is written in; do not pass it.</param>
+    void AppendRegistration(
+        Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method,
+        [CallerFilePath] string filePath = "",
+        [CallerLineNumber] int lineNumber = 0,
+        [CallerMemberName] string memberName = "");
 
     /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
     /// <param name="method">The body to run first.</param>
-    void PrependRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method);
+    /// <param name="filePath">Compiler-supplied path of the file this call is written in; do not pass it.</param>
+    /// <param name="lineNumber">Compiler-supplied line this call is written on; do not pass it.</param>
+    /// <param name="memberName">Compiler-supplied name of the member this call is written in; do not pass it.</param>
+    void PrependRegistration(
+        Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method,
+        [CallerFilePath] string filePath = "",
+        [CallerLineNumber] int lineNumber = 0,
+        [CallerMemberName] string memberName = "");
 
     /// <summary>Sets this option's Initialize body.</summary>
     /// <param name="method">The replacement delegate.</param>
-    void Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method);
+    /// <param name="filePath">Compiler-supplied path of the file this call is written in; do not pass it.</param>
+    /// <param name="lineNumber">Compiler-supplied line this call is written on; do not pass it.</param>
+    /// <param name="memberName">Compiler-supplied name of the member this call is written in; do not pass it.</param>
+    void Initialization(
+        Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method,
+        [CallerFilePath] string filePath = "",
+        [CallerLineNumber] int lineNumber = 0,
+        [CallerMemberName] string memberName = "");
 }

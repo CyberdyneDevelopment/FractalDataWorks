@@ -841,6 +841,45 @@ public static partial class ServiceTypeLog
         string documentation);
 
     /// <summary>
+    /// Logs that one segment of a phase body is about to run, naming its position in the order and the
+    /// call site that installed it.
+    /// </summary>
+    /// <remarks>
+    /// Why it shares 11058's number: this is that message at segment granularity — a supplied body is
+    /// about to run — and a result code's number carries the meaning, not the identity of one call site.
+    /// Why the origin travels with it: a composed phase is assembled from several places, so "the Register
+    /// phase failed" names a body without naming which contributor supplied it. The file and line are
+    /// captured where the Append or Prepend was written, which is the only point that still knows.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 11058,
+        Level = LogLevel.Information,
+        Message = "[{optionName}] {phase} segment #{position} of {segmentCount} running — installed by {origin}")]
+    public static partial IGenericMessage PhaseSegmentRunning(
+        ILogger logger,
+        string optionName,
+        string phase,
+        int position,
+        int segmentCount,
+        string origin);
+
+    /// <summary>
+    /// Logs that one segment of a phase body completed, so a phase assembled from several contributors
+    /// shows which of them actually ran.
+    /// </summary>
+    [MessageLogging(
+        EventId = 11059,
+        Level = LogLevel.Information,
+        Message = "[{optionName}] {phase} segment #{position} of {segmentCount} completed — installed by {origin}")]
+    public static partial IGenericMessage PhaseSegmentSucceeded(
+        ILogger logger,
+        string optionName,
+        string phase,
+        int position,
+        int segmentCount,
+        string origin);
+
+    /// <summary>
     /// Logs that an option phase completed.
     /// </summary>
     [MessageLogging(

@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Collections.Attributes;
@@ -132,6 +133,374 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// <summary>Gets or sets a value indicating whether Initialize is switched off.</summary>
     public bool SkipInitialization { get; set; }
 
+
+    /// <summary>
+    /// Sets the body this service type runs during Configure — the phase that binds settings from configuration, before any service is registered.
+    /// </summary>
+    /// <remarks>
+    /// This is the call a <c>[ServiceTypeOption]</c> or <c>[ServiceTypeCollection]</c> class makes, and
+    /// the only one it should need. A phase holds one body and the class declaring the phase owns that
+    /// body outright, so setting it states what this service type contributes rather than overwriting
+    /// somebody's work. Reach for <see cref="AppendConfiguration"/> or <see cref="PrependConfiguration"/> only from
+    /// OUTSIDE the declaring class, to customise a service type this code did not author — used from
+    /// inside it, they are STC001.
+    /// </remarks>
+    /// <param name="method">The body this phase runs.</param>
+    public void Configuration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Configure", nameof(method));
+            return;
+        }
+
+        ConfigurationMethod = method;
+    }
+
+    /// <summary>
+    /// Runs <paramref name="method"/> after the body already installed, for adding to a service type
+    /// declared somewhere else.
+    /// </summary>
+    /// <remarks>
+    /// Use this from OUTSIDE the declaring class — a host or package extending a service type it did not
+    /// author, which cannot edit that type's own body and must not silently drop it. Inside the class that
+    /// declares the phase it is an error (STC001): the class owns its phase, so it says what it contributes
+    /// with <see cref="Configuration"/>, and where it genuinely needs another func to run too, it captures that
+    /// func in a local and calls it at the point in the body where it belongs — visible, ordered, and
+    /// debuggable, rather than nested behind a call that reads as though nothing else is there.
+    /// </remarks>
+    /// <param name="method">The body to run after the one already installed.</param>
+    public void AppendConfiguration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Configure", nameof(method));
+            return;
+        }
+
+        var existing = ConfigurationMethod;
+        ConfigurationMethod = (builder) =>
+        {
+            var result = existing(builder);
+            return result.IsFailure ? result : method(builder);
+        };
+    }
+
+    /// <summary>
+    /// Runs <paramref name="method"/> before the body already installed, for adding to a service type
+    /// declared somewhere else.
+    /// </summary>
+    /// <remarks>
+    /// The ordering counterpart to <see cref="AppendConfiguration"/>, and governed by the same rule: use it from
+    /// OUTSIDE the declaring class, where the added wiring has to be in place before that type's own body
+    /// runs. Inside the class that declares the phase it is an error (STC001), and from a base class in the
+    /// middle of the chain it is STC002 — a base prepending here leaves every derived type unable to set its
+    /// own body without silently discarding this one. Wiring that every option of a domain needs belongs in
+    /// the collection's Register, where the option set is already in hand.
+    /// </remarks>
+    /// <param name="method">The body to run before the one already installed.</param>
+    public void PrependConfiguration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Configure", nameof(method));
+            return;
+        }
+
+        var existing = ConfigurationMethod;
+        ConfigurationMethod = (builder) =>
+        {
+            var result = method(builder);
+            return result.IsFailure ? result : existing(builder);
+        };
+    }
+
+    /// <summary>
+    /// Sets the body this service type runs during Register — the phase that puts services into the container, before the host is built.
+    /// </summary>
+    /// <remarks>
+    /// This is the call a <c>[ServiceTypeOption]</c> or <c>[ServiceTypeCollection]</c> class makes, and
+    /// the only one it should need. A phase holds one body and the class declaring the phase owns that
+    /// body outright, so setting it states what this service type contributes rather than overwriting
+    /// somebody's work. Reach for <see cref="AppendRegistration"/> or <see cref="PrependRegistration"/> only from
+    /// OUTSIDE the declaring class, to customise a service type this code did not author — used from
+    /// inside it, they are STC001.
+    /// </remarks>
+    /// <param name="method">The body this phase runs.</param>
+    /// <param name="filePath">Compiler-supplied path of the file this call is written in; do not pass it.</param>
+    /// <param name="lineNumber">Compiler-supplied line this call is written on; do not pass it.</param>
+    /// <param name="memberName">Compiler-supplied name of the member this call is written in; do not pass it.</param>
+    public void Registration(
+        Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method,
+        [CallerFilePath] string filePath = "",
+        [CallerLineNumber] int lineNumber = 0,
+        [CallerMemberName] string memberName = "")
+    {
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Register", nameof(method));
+            return;
+        }
+
+        // Why setting resets the count: this is the service type stating what it contributes, so whatever
+        // was installed before is gone and the body being set is the phase's first and only segment.
+        _registrationSegments = 1;
+        var origin = Origin(filePath, lineNumber, memberName);
+        RegistrationMethod = (builder, loggerFactory) =>
+            RunRegistrationSegment(builder, loggerFactory, method, origin);
+    }
+
+    /// <summary>
+    /// Runs <paramref name="method"/> after the body already installed, for adding to a service type
+    /// declared somewhere else.
+    /// </summary>
+    /// <remarks>
+    /// Use this from OUTSIDE the declaring class — a host or package extending a service type it did not
+    /// author, which cannot edit that type's own body and must not silently drop it. Inside the class that
+    /// declares the phase it is an error (STC001): the class owns its phase, so it says what it contributes
+    /// with <see cref="Registration"/>, and where it genuinely needs another func to run too, it captures that
+    /// func in a local and calls it at the point in the body where it belongs — visible, ordered, and
+    /// debuggable, rather than nested behind a call that reads as though nothing else is there.
+    /// </remarks>
+    /// <param name="method">The body to run after the one already installed.</param>
+    /// <param name="filePath">Compiler-supplied path of the file this call is written in; do not pass it.</param>
+    /// <param name="lineNumber">Compiler-supplied line this call is written on; do not pass it.</param>
+    /// <param name="memberName">Compiler-supplied name of the member this call is written in; do not pass it.</param>
+    public void AppendRegistration(
+        Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method,
+        [CallerFilePath] string filePath = "",
+        [CallerLineNumber] int lineNumber = 0,
+        [CallerMemberName] string memberName = "")
+    {
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Register", nameof(method));
+            return;
+        }
+
+        _registrationSegments++;
+        var origin = Origin(filePath, lineNumber, memberName);
+        var existing = RegistrationMethod;
+        RegistrationMethod = (builder, loggerFactory) =>
+        {
+            var result = existing(builder, loggerFactory);
+            return result.IsFailure ? result : RunRegistrationSegment(builder, loggerFactory, method, origin);
+        };
+    }
+
+    /// <summary>
+    /// Runs <paramref name="method"/> before the body already installed, for adding to a service type
+    /// declared somewhere else.
+    /// </summary>
+    /// <remarks>
+    /// The ordering counterpart to <see cref="AppendRegistration"/>, and governed by the same rule: use it from
+    /// OUTSIDE the declaring class, where the added wiring has to be in place before that type's own body
+    /// runs. Inside the class that declares the phase it is an error (STC001), and from a base class in the
+    /// middle of the chain it is STC002 — a base prepending here leaves every derived type unable to set its
+    /// own body without silently discarding this one. Wiring that every option of a domain needs belongs in
+    /// the collection's Register, where the option set is already in hand.
+    /// </remarks>
+    /// <param name="method">The body to run before the one already installed.</param>
+    /// <param name="filePath">Compiler-supplied path of the file this call is written in; do not pass it.</param>
+    /// <param name="lineNumber">Compiler-supplied line this call is written on; do not pass it.</param>
+    /// <param name="memberName">Compiler-supplied name of the member this call is written in; do not pass it.</param>
+    public void PrependRegistration(
+        Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method,
+        [CallerFilePath] string filePath = "",
+        [CallerLineNumber] int lineNumber = 0,
+        [CallerMemberName] string memberName = "")
+    {
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Register", nameof(method));
+            return;
+        }
+
+        _registrationSegments++;
+        var origin = Origin(filePath, lineNumber, memberName);
+        var existing = RegistrationMethod;
+        RegistrationMethod = (builder, loggerFactory) =>
+        {
+            var result = RunRegistrationSegment(builder, loggerFactory, method, origin);
+            return result.IsFailure ? result : existing(builder, loggerFactory);
+        };
+    }
+
+    /// <summary>
+    /// Sets the body this service type runs during Initialize — the phase that runs against the built host, where the container can be resolved from.
+    /// </summary>
+    /// <remarks>
+    /// This is the call a <c>[ServiceTypeOption]</c> or <c>[ServiceTypeCollection]</c> class makes, and
+    /// the only one it should need. A phase holds one body and the class declaring the phase owns that
+    /// body outright, so setting it states what this service type contributes rather than overwriting
+    /// somebody's work. Reach for <see cref="AppendInitialization"/> or <see cref="PrependInitialization"/> only from
+    /// OUTSIDE the declaring class, to customise a service type this code did not author — used from
+    /// inside it, they are STC001.
+    /// </remarks>
+    /// <param name="method">The body this phase runs.</param>
+    /// <param name="filePath">Compiler-supplied path of the file this call is written in; do not pass it.</param>
+    /// <param name="lineNumber">Compiler-supplied line this call is written on; do not pass it.</param>
+    /// <param name="memberName">Compiler-supplied name of the member this call is written in; do not pass it.</param>
+    public void Initialization(
+        Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method,
+        [CallerFilePath] string filePath = "",
+        [CallerLineNumber] int lineNumber = 0,
+        [CallerMemberName] string memberName = "")
+    {
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Initialize", nameof(method));
+            return;
+        }
+
+        // Why setting resets the count: this is the service type stating what it contributes, so whatever
+        // was installed before is gone and the body being set is the phase's first and only segment.
+        _initializationSegments = 1;
+        var origin = Origin(filePath, lineNumber, memberName);
+        InitializationMethod = (host, loggerFactory) =>
+            RunInitializationSegment(host, loggerFactory, method, origin);
+    }
+
+    /// <summary>
+    /// Runs <paramref name="method"/> after the body already installed, for adding to a service type
+    /// declared somewhere else.
+    /// </summary>
+    /// <remarks>
+    /// Use this from OUTSIDE the declaring class — a host or package extending a service type it did not
+    /// author, which cannot edit that type's own body and must not silently drop it. Inside the class that
+    /// declares the phase it is an error (STC001): the class owns its phase, so it says what it contributes
+    /// with <see cref="Initialization"/>, and where it genuinely needs another func to run too, it captures that
+    /// func in a local and calls it at the point in the body where it belongs — visible, ordered, and
+    /// debuggable, rather than nested behind a call that reads as though nothing else is there.
+    /// </remarks>
+    /// <param name="method">The body to run after the one already installed.</param>
+    /// <param name="filePath">Compiler-supplied path of the file this call is written in; do not pass it.</param>
+    /// <param name="lineNumber">Compiler-supplied line this call is written on; do not pass it.</param>
+    /// <param name="memberName">Compiler-supplied name of the member this call is written in; do not pass it.</param>
+    public void AppendInitialization(
+        Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method,
+        [CallerFilePath] string filePath = "",
+        [CallerLineNumber] int lineNumber = 0,
+        [CallerMemberName] string memberName = "")
+    {
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Initialize", nameof(method));
+            return;
+        }
+
+        _initializationSegments++;
+        var origin = Origin(filePath, lineNumber, memberName);
+        var existing = InitializationMethod;
+        InitializationMethod = (host, loggerFactory) =>
+        {
+            var result = existing(host, loggerFactory);
+            return result.IsFailure ? result : RunInitializationSegment(host, loggerFactory, method, origin);
+        };
+    }
+
+    /// <summary>
+    /// Runs <paramref name="method"/> before the body already installed, for adding to a service type
+    /// declared somewhere else.
+    /// </summary>
+    /// <remarks>
+    /// The ordering counterpart to <see cref="AppendInitialization"/>, and governed by the same rule: use it from
+    /// OUTSIDE the declaring class, where the added wiring has to be in place before that type's own body
+    /// runs. Inside the class that declares the phase it is an error (STC001), and from a base class in the
+    /// middle of the chain it is STC002 — a base prepending here leaves every derived type unable to set its
+    /// own body without silently discarding this one. Wiring that every option of a domain needs belongs in
+    /// the collection's Register, where the option set is already in hand.
+    /// </remarks>
+    /// <param name="method">The body to run before the one already installed.</param>
+    /// <param name="filePath">Compiler-supplied path of the file this call is written in; do not pass it.</param>
+    /// <param name="lineNumber">Compiler-supplied line this call is written on; do not pass it.</param>
+    /// <param name="memberName">Compiler-supplied name of the member this call is written in; do not pass it.</param>
+    public void PrependInitialization(
+        Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method,
+        [CallerFilePath] string filePath = "",
+        [CallerLineNumber] int lineNumber = 0,
+        [CallerMemberName] string memberName = "")
+    {
+        if (method is null)
+        {
+            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Initialize", nameof(method));
+            return;
+        }
+
+        _initializationSegments++;
+        var origin = Origin(filePath, lineNumber, memberName);
+        var existing = InitializationMethod;
+        InitializationMethod = (host, loggerFactory) =>
+        {
+            var result = RunInitializationSegment(host, loggerFactory, method, origin);
+            return result.IsFailure ? result : existing(host, loggerFactory);
+        };
+    }
+
+
+    // ── Segment bookkeeping ─────────────────────────────────────────────────────────────────────
+    // Why a phase counts its segments: a phase assembled from more than one contributor reports "Register
+    // failed" without saying whose body failed, and the funcs are closures, so a stack trace names the
+    // lambda and not the place it was written. The count and the run position give the failure a position
+    // in the order, and the origin captured at the call site gives it the file and line of the Append or
+    // Prepend that put it there — the one point that still knows.
+
+    private int _registrationSegments = 1;
+    private int _initializationSegments = 1;
+    private int _registrationRunPosition;
+    private int _initializationRunPosition;
+
+    /// <summary>Names the call site that installed a phase segment.</summary>
+    private static string Origin(string filePath, int lineNumber, string memberName) =>
+        $"{memberName} at {System.IO.Path.GetFileName(filePath)}:{lineNumber}";
+
+    private IGenericResult<IHostApplicationBuilder> RunRegistrationSegment(
+        IHostApplicationBuilder builder,
+        ILoggerFactory? loggerFactory,
+        Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> segment,
+        string origin)
+    {
+        var logger = loggerFactory?.CreateLogger(GetType().FullName ?? Name) ?? (ILogger)NullLogger.Instance;
+        var position = ++_registrationRunPosition;
+
+        ServiceTypeLog.PhaseSegmentRunning(logger, Name, "Register", position, _registrationSegments, origin);
+        var result = segment(builder, loggerFactory);
+
+        if (result.IsSuccess)
+            ServiceTypeLog.PhaseSegmentSucceeded(logger, Name, "Register", position, _registrationSegments, origin);
+
+        return result;
+    }
+
+    private IGenericResult<IHost> RunInitializationSegment(
+        IHost host,
+        ILoggerFactory? loggerFactory,
+        Func<IHost, ILoggerFactory?, IGenericResult<IHost>> segment,
+        string origin)
+    {
+        var logger = loggerFactory?.CreateLogger(GetType().FullName ?? Name) ?? (ILogger)NullLogger.Instance;
+        var position = ++_initializationRunPosition;
+
+        ServiceTypeLog.PhaseSegmentRunning(logger, Name, "Initialize", position, _initializationSegments, origin);
+        var result = segment(host, loggerFactory);
+
+        if (result.IsSuccess)
+            ServiceTypeLog.PhaseSegmentSucceeded(logger, Name, "Initialize", position, _initializationSegments, origin);
+
+        return result;
+    }
+
+    // ── The bodies themselves ───────────────────────────────────────────────────────────────────
+    // Why they sit below the setters: the setters are the surface a service type writes against, and
+    // these are where what it wrote ends up. Reading the file in that order matches the order the
+    // question is usually asked in - what do I call, and then what does it hold.
+    //
+    // Each defaults to a body that does nothing but succeed, so a service type that has nothing to say
+    // in a phase says nothing, and the phase still reports that it ran. An option that never set a body
+    // is otherwise indistinguishable, from outside, from one whose body ran and did nothing - which is
+    // the first fact worth having when a service fails to resolve later, and the hardest to recover
+    // after the fact.
+
     /// <summary>Gets this option's Configure body.</summary>
     protected Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> ConfigurationMethod { get; private set; }
         = static builder => GenericResult<IHostApplicationBuilder>.Success(builder);
@@ -151,181 +520,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// </remarks>
     protected Func<IHost, ILoggerFactory?, IGenericResult<IHost>> InitializationMethod { get; private set; }
         = static (host, loggerFactory) => GenericResult<IHost>.Success(host);
-
-    // ── Which body is installed ─────────────────────────────────────────────────────────────────
-    // Set by the gerund setters, read by the invokers, so each phase can say at Info whether the
-    // do-nothing default above or a body this option supplied is the one about to run.
-    //
-    // Why it is worth saying: an option that never sets a phase body is indistinguishable, from
-    // outside, from one whose body ran and did nothing. When a service fails to resolve later, that
-    // is the first fact worth having and the hardest to recover after the fact.
-
-
-
-    /// <summary>Sets this option's Configure body.</summary>
-    /// <param name="method">The replacement delegate.</param>
-    public void Configuration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
-    {
-        if (method is null)
-        {
-            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Configure", nameof(method));
-            return;
-        }
-
-        ConfigurationMethod = method;
-    }
-
-    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
-    /// <remarks>
-    /// Prefer this to <see cref="Configuration"/>. Replacing discards the base's own body along with
-    /// anything another contributor added, and nothing reports that it happened — the option simply
-    /// stops doing part of its job. Appending cannot lose work, so the guarantee does not rest on a
-    /// caller remembering to capture what was there first.
-    /// </remarks>
-    /// <param name="method">The body to run after.</param>
-    public void AppendConfiguration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
-    {
-        if (method is null)
-        {
-            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Configure", nameof(method));
-            return;
-        }
-
-        var existing = ConfigurationMethod;
-        ConfigurationMethod = (builder) =>
-        {
-            var result = existing(builder);
-            return result.IsFailure ? result : method(builder);
-        };
-    }
-
-    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
-    /// <param name="method">The body to run first.</param>
-    public void PrependConfiguration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
-    {
-        if (method is null)
-        {
-            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Configure", nameof(method));
-            return;
-        }
-
-        var existing = ConfigurationMethod;
-        ConfigurationMethod = (builder) =>
-        {
-            var result = method(builder);
-            return result.IsFailure ? result : existing(builder);
-        };
-    }
-
-    /// <summary>Sets this option's Register body.</summary>
-    /// <param name="method">The replacement delegate.</param>
-    public void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
-    {
-        if (method is null)
-        {
-            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Register", nameof(method));
-            return;
-        }
-
-        RegistrationMethod = method;
-    }
-
-    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
-    /// <remarks>
-    /// Prefer this to <see cref="Registration"/>. Replacing discards the base's own body along with
-    /// anything another contributor added, and nothing reports that it happened — the option simply
-    /// stops doing part of its job. Appending cannot lose work, so the guarantee does not rest on a
-    /// caller remembering to capture what was there first.
-    /// </remarks>
-    /// <param name="method">The body to run after.</param>
-    public void AppendRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
-    {
-        if (method is null)
-        {
-            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Register", nameof(method));
-            return;
-        }
-
-        var existing = RegistrationMethod;
-        RegistrationMethod = (builder, loggerFactory) =>
-        {
-            var result = existing(builder, loggerFactory);
-            return result.IsFailure ? result : method(builder, loggerFactory);
-        };
-    }
-
-    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
-    /// <param name="method">The body to run first.</param>
-    public void PrependRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
-    {
-        if (method is null)
-        {
-            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Register", nameof(method));
-            return;
-        }
-
-        var existing = RegistrationMethod;
-        RegistrationMethod = (builder, loggerFactory) =>
-        {
-            var result = method(builder, loggerFactory);
-            return result.IsFailure ? result : existing(builder, loggerFactory);
-        };
-    }
-
-    /// <summary>Sets this option's Initialize body.</summary>
-    /// <param name="method">The replacement delegate.</param>
-    public void Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
-    {
-        if (method is null)
-        {
-            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Initialize", nameof(method));
-            return;
-        }
-
-        InitializationMethod = method;
-    }
-
-    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
-    /// <remarks>
-    /// Prefer this to <see cref="Initialization"/>. Replacing discards the base's own body along with
-    /// anything another contributor added, and nothing reports that it happened — the option simply
-    /// stops doing part of its job. Appending cannot lose work, so the guarantee does not rest on a
-    /// caller remembering to capture what was there first.
-    /// </remarks>
-    /// <param name="method">The body to run after.</param>
-    public void AppendInitialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
-    {
-        if (method is null)
-        {
-            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Initialize", nameof(method));
-            return;
-        }
-
-        var existing = InitializationMethod;
-        InitializationMethod = (host, loggerFactory) =>
-        {
-            var result = existing(host, loggerFactory);
-            return result.IsFailure ? result : method(host, loggerFactory);
-        };
-    }
-
-    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
-    /// <param name="method">The body to run first.</param>
-    public void PrependInitialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
-    {
-        if (method is null)
-        {
-            ServiceTypeLog.PhaseBodyNull(NullLogger.Instance, Name, "Initialize", nameof(method));
-            return;
-        }
-
-        var existing = InitializationMethod;
-        InitializationMethod = (host, loggerFactory) =>
-        {
-            var result = method(host, loggerFactory);
-            return result.IsFailure ? result : existing(host, loggerFactory);
-        };
-    }
 
     // Why none of these is virtual: an override is invisible to the chain, which invokes the func a
     // level holds. The reason one used to be needed — a base contributing wiring that a derived
@@ -376,6 +570,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
+        _registrationRunPosition = 0;
         var result = RunPhase(loggerFactory, "Register", ServiceTypePhaseSequence.Register,
             () => RegistrationMethod(builder, loggerFactory));
         // Why the latch is only set on success: this flag is what makes the phase run-once, and the
@@ -404,6 +599,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return GenericResult<IHost>.Success(host);
         }
 
+        _initializationRunPosition = 0;
         var result = RunPhase(loggerFactory, "Initialize", ServiceTypePhaseSequence.Initialize,
             () => InitializationMethod(host, loggerFactory));
         // Why the latch is only set on success: this flag is what makes the phase run-once, and the
