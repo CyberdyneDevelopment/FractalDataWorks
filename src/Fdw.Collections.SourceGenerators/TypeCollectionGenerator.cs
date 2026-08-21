@@ -414,6 +414,25 @@ public class TypeCollectionGenerator : IIncrementalGenerator
         bodySb.AppendLine("                _frozen = true;");
         bodySb.AppendLine("                var items = _pendingRegistrations.ToArray();");
         bodySb.AppendLine();
+
+        // Why the collision is detected here rather than left to the dictionary build: ToImmutableDictionary
+        // and ToFrozenDictionary do throw on a duplicate key, but an ArgumentException that names neither
+        // the collection, the property, the colliding value nor the two options is unactionable — and the
+        // collision it reports is almost always cross-assembly, so the reader has no compile error to
+        // navigate from either. This runs once, at freeze, only for lookups that declared uniqueness.
+        foreach (var group in lookupGroups.Where(g => g.First().IsUnique))
+        {
+            var prop = group.First();
+            bodySb.AppendLine($"                var duplicate{group.Key} = items.GroupBy(x => x.{prop.PropertyName}).FirstOrDefault(g => g.Count() > 1);");
+            bodySb.AppendLine($"                if (duplicate{group.Key} != null)");
+            bodySb.AppendLine("                {");
+            bodySb.AppendLine($"                    var colliding{group.Key} = string.Join(\", \", duplicate{group.Key}.Select(x => x.GetType().FullName));");
+            bodySb.AppendLine($"                    throw new InvalidOperationException(");
+            bodySb.AppendLine($"                        $\"{collection.ClassName}.{group.Key} is declared unique, but {{colliding{group.Key}}} all report {prop.PropertyName} '{{duplicate{group.Key}.Key}}'. \" +");
+            bodySb.AppendLine($"                        \"Two options cannot answer one lookup: give them distinct values, or declare the lookup non-unique with [TypeLookup(\\\"{group.Key}\\\", isUnique: false)].\");");
+            bodySb.AppendLine("                }");
+        }
+        bodySb.AppendLine();
         bodySb.AppendLine("#if NETSTANDARD2_0");
         foreach (var group in lookupGroups)
         {
