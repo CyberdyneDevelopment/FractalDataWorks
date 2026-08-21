@@ -1,6 +1,8 @@
+using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Configuration;
 using Fdw.Results;
+using Fdw.ServiceTypes;
 using Fdw.ServiceTypes.Logging;
 using Fdw.Services.Abstractions.Health;
 using Fdw.Services.Abstractions;
@@ -141,6 +143,37 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
 
             ServiceTypeLog.DomainOptionsCollected(log, nameof(ConnectionTypes), declaredOptions.Length, optionNames);
+
+            // Why the collection registers every option's factory, and ConnectionTypeBase no longer does:
+            // DefaultConnectionProvider resolves a connection through its own factory registry, and the
+            // need is identical for every connection kind. The collection already holds the option set and
+            // each option already names its factory type, so this is one loop over what is in hand rather
+            // than the same line repeated in six option bodies, where one of them can silently omit it -
+            // which is what happened, and every connection create failed with "No factory registered".
+            foreach (var option in declaredOptions)
+            {
+                // Why this fails loud rather than skipping: Options is IServiceTypeRegistration[], which
+                // component and endpoint collections implement without ever naming a factory. A connection
+                // option that cannot name one leaves its kind uncreatable, and skipping it would surface
+                // much later as "No registered service type matches ServiceOptionType" on the first
+                // authenticated request, where it reads as a row-level-security failure instead.
+                if (option is not IServiceType serviceType)
+                    return GenericResult<IHostApplicationBuilder>.Failure(
+                        ServiceTypeLog.FactoryRegistrationFailed(
+                            log,
+                            option.Name,
+                            FormattableString.Invariant($"'{option.GetType().Name}' does not implement IServiceType, so it cannot name a factory type")));
+
+                // Why the type is read into a local before the closure: the func is deferred to the
+                // provider's constructor, and capturing the loop variable's member access would re-read it
+                // there rather than at the point the option was known.
+                var factoryType = serviceType.FactoryType;
+                DefaultConnectionProvider.Register(
+                    option.Name,
+                    sp => (IServiceFactory<IGenericConnection>)sp.GetRequiredService(factoryType));
+
+                ServiceTypeLog.FactoryRegistered(log, nameof(ConnectionTypes), option.Name, factoryType.Name);
+            }
             ServiceTypeLog.DomainProviderDeclared(log, nameof(ConnectionTypes), providerService);
 
             builder.Services.AddScoped<IConnectionProvider>(sp =>

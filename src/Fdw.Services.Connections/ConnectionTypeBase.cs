@@ -61,36 +61,12 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
                defaultPathName: "conn",
                defaultContainerName: defaultContainerName)
     {
-        // Why on the base rather than in each option's own body: DefaultConnectionProvider resolves
-        // connections through its own factory registry, filled once per scope from the funcs options
-        // register. No connection option registered one, so every create failed with "No factory
-        // registered for service option type 'MsSql'" and no connection could be opened at all. Every
-        // option needs exactly this and already names its factory as TFactory, so the base does it for
-        // all of them - an option cannot forget it, and there is nothing to duplicate six times.
-        //
-        // The func is deferred, running in the provider's constructor once the container exists, so it
-        // does not matter that the option's own body puts TFactory into DI after this.
-        PrependRegistration((builder, loggerFactory) =>
-        {
-            DefaultConnectionProvider.Register(
-                Name,
-                sp => (IServiceFactory<IGenericConnection>)sp.GetRequiredService<TFactory>()!);
-
-            // Why the BASE logs under its own type: this registration is the base's contribution on
-            // the option's behalf, and the derived option logs its own wiring separately. Reading
-            // base-then-derived in SourceContext order is what makes it visible that BOTH ran — the
-            // absence of this line is precisely the signature of a derived option having replaced
-            // the phase body and discarded what the base contributed.
-            ServiceLogger.FactoryRegistrationDeferred(
-                loggerFactory?.CreateLogger<ConnectionTypeBase<TService, TFactory, TConfiguration>>()
-                    ?? NullLogger<ConnectionTypeBase<TService, TFactory, TConfiguration>>.Instance,
-                nameof(ConnectionTypeBase<TService, TFactory, TConfiguration>),
-                Name,
-                typeof(TFactory).Name);
-
-            return GenericResult<IHostApplicationBuilder>.Success(builder);
-        });
-
+        // Why this constructor contributes nothing to a phase: a phase holds one body and the option
+        // that declares it owns that body outright. A base contributing here would force every derived
+        // option to compose defensively or silently discard what the base left (STC002). The factory
+        // registration this used to do is not an option's concern anyway - every connection kind needs
+        // it identically - so it belongs to the domain, and ConnectionTypes.Register does it once over
+        // the option set it already holds.
     }
 
     /// <summary>

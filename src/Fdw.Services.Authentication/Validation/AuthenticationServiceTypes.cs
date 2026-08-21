@@ -64,6 +64,52 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
                 return GenericResult<IHostApplicationBuilder>.Success(builder);
             }
 
+            // Why the collection registers the schemes and AuthenticationServiceTypeBase no longer does:
+            // reading the declared entries and turning each into a scheme is the same procedure for every
+            // mechanism - only RegisterScheme differs, and that is already a public abstract on the option.
+            // Run from the base it occupied each option's own phase body, so a derived option could not
+            // state its own registration without silently discarding it (STC002).
+            //
+            // Why AddAuthentication() is called even when a mechanism declares no entries: it is what
+            // brings the ASP.NET authentication services into the container, and the selector scheme below
+            // is added through the same builder.
+            var authenticationBuilder = builder.Services.AddAuthentication();
+
+            foreach (var option in Options)
+            {
+                // Why this fails loud: Options is IServiceTypeRegistration[], and an option in this
+                // collection that is not a mechanism cannot produce a scheme. Skipping it would leave the
+                // host trusting fewer issuers than it declared, which surfaces only as tokens being
+                // rejected at runtime with nothing naming the mechanism that never registered.
+                if (option is not AuthenticationServiceTypeBase mechanism)
+                    return GenericResult<IHostApplicationBuilder>.Failure(
+                        AuthenticationValidationLog.SectionUnreadable(log, option.Name));
+
+                // Why the read's own reason travels rather than a restatement: it names which entry and
+                // which field, and a caller told only "authentication configuration is invalid" has to go
+                // find that out again.
+                var declared = AuthenticationServiceConfiguration.Read(builder.Configuration, mechanism.Name, log);
+                if (declared.IsFailure)
+                    return declared.ToNewResult<IHostApplicationBuilder>();
+                if (declared.Value is not { } entries)
+                    return GenericResult<IHostApplicationBuilder>.Failure(
+                        AuthenticationValidationLog.SectionUnreadable(log, mechanism.Name));
+
+                foreach (var (header, section) in entries)
+                {
+                    var binding = mechanism.RegisterScheme(authenticationBuilder, header, section, loggerFactory);
+                    if (binding.IsFailure)
+                        return binding.ToNewResult<IHostApplicationBuilder>();
+                    if (binding.Value is not { } scheme)
+                        return GenericResult<IHostApplicationBuilder>.Failure(
+                            AuthenticationValidationLog.SchemeNotProduced(log, header.Name ?? section.Path, mechanism.Name));
+
+                    builder.Services.AddSingleton(scheme);
+                    AuthenticationValidationLog.SchemeRegistered(
+                        log, scheme.ServiceName, mechanism.Name, scheme.SchemeName, scheme.Issuer);
+                }
+            }
+
             // Why the descriptor scan: each option registered one binding per entry it read, and the
             // count is the only statement of how many issuers this host ended up trusting. Building a
             // second container to ask would be worse than counting descriptors.

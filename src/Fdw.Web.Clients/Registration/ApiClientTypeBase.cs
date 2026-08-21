@@ -35,17 +35,10 @@ public abstract class ApiClientTypeBase<TClient>
     protected ApiClientTypeBase(string name, string displayName)
         : base(name, "ApiClients", displayName, $"{displayName} HTTP client")
     {
-        // Why Prepend: every one of the ~35 concrete client types contributes its own Registration
-        // body, and the handler has to be in the container before any of them attaches it to a named
-        // client. Prepending puts this first and leaves everything already chained intact — the
-        // failure this replaces was a base-constructor Registration(...) being assigned over by the
-        // derived constructor that ran after it, so BearerTokenHandler was registered for no client
-        // at all and the host threw at first client construction.
-        PrependRegistration((builder, loggerFactory) =>
-        {
-            builder.Services.AddTransient<BearerTokenHandler>();
-            return GenericResult<IHostApplicationBuilder>.Success(builder);
-        });
+        // Why this constructor contributes nothing to a phase: a phase holds one body and the option
+        // that declares it owns it. BearerTokenHandler is needed by every client option and differs for
+        // none, so it belongs to the domain - ApiClientTypes.Register registers it once, before the
+        // options are collected.
 
     }
 

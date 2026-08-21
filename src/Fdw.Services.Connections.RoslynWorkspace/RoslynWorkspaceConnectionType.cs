@@ -74,7 +74,7 @@ public sealed class RoslynWorkspaceConnectionType
         // onto it. Replacing therefore silently discards the base's contribution — which is exactly
         // how every connection kind stopped being creatable while each option's own wiring kept
         // working and logging success. Appending composes onto what the base put there.
-        AppendRegistration((builder, loggerFactory) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.AddSingleton<IRoslynWorkspaceFactory, RoslynWorkspaceFactory>();
             // Why: a Roslyn workspace is opened from a solution path on disk and declares no authentication

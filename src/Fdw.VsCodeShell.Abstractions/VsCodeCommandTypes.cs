@@ -1,5 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
+using System;
 using Fdw.Collections;
+using Fdw.Results;
+using Fdw.ServiceTypes.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.VsCodeShell.Abstractions;
 
 namespace Fdw.VsCodeShell;
@@ -27,4 +34,42 @@ namespace Fdw.VsCodeShell;
     typeof(VsCodeCommandTypes),
     ServiceCategory = "VsCodeCommand")]
 public partial class VsCodeCommandTypes
-    : ServiceTypeCollectionBase<VsCodeCommandTypeBase<IVsCodeCommandHandler>, IVsCodeCommandType> { }
+    : ServiceTypeCollectionBase<VsCodeCommandTypeBase<IVsCodeCommandHandler>, IVsCodeCommandType>
+{
+    /// <summary>Sets this collection's Register body: the option collect, then one keyed handler per command.</summary>
+    /// <remarks>
+    /// Why the collection registers the handlers and VsCodeCommandTypeBase no longer does: every command
+    /// registers against the same IVsCodeCommandHandler service type keyed by its own CommandId, so the
+    /// act is identical for all of them and differs only by two values the option already exposes -
+    /// CommandId and HandlerType. Done from the base it occupied each option's own phase body, leaving a
+    /// derived command unable to state its own registration without silently discarding it (STC002).
+    /// </remarks>
+    static VsCodeCommandTypes()
+    {
+        var collectOptions = RegisterFunc;
+
+        Registration((builder, loggerFactory) =>
+        {
+            var collected = collectOptions(builder, loggerFactory);
+            if (collected.IsFailure)
+                return collected;
+
+            foreach (var option in Options)
+            {
+                // Why this fails loud: Options is IServiceTypeRegistration[], and an entry that is not a
+                // command cannot name the id the shell resolves by. Skipping it would leave that command
+                // unroutable, surfacing only when VS Code sends the id and nothing answers.
+                if (option is not IVsCodeCommandType command)
+                    return GenericResult<IHostApplicationBuilder>.Failure(
+                        ServiceTypeLog.FactoryRegistrationFailed(
+                            loggerFactory?.CreateLogger<VsCodeCommandTypes>() ?? NullLogger<VsCodeCommandTypes>.Instance,
+                            option.Name,
+                            FormattableString.Invariant($"'{option.GetType().Name}' does not implement IVsCodeCommandType, so it cannot name a command id")));
+
+                builder.Services.AddKeyedSingleton(typeof(IVsCodeCommandHandler), command.CommandId, command.HandlerType);
+            }
+
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+    }
+}

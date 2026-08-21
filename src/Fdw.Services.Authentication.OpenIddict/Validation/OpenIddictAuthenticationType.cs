@@ -48,7 +48,7 @@ public sealed class OpenIddictAuthenticationType : AuthenticationServiceTypeBase
                "OpenIddict",
                "Validates bearer tokens issued by this deployment's own OpenIddict authority")
     {
-        AppendInitialization((host, loggerFactory) =>
+        Initialization((host, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<OpenIddictAuthenticationType>()
                 ?? NullLogger<OpenIddictAuthenticationType>.Instance;

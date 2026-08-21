@@ -60,13 +60,10 @@ public abstract class VsCodeCommandTypeBase<THandler>
         ContextKind = contextKind;
         Webview = webview;
 
-        // Why keyed on CommandId: the shell resolves a handler by the id VS Code sends, and every
-        // command in the collection registers against the same IVsCodeCommandHandler service type.
-        Registration((builder, loggerFactory) =>
-        {
-            builder.Services.AddKeyedSingleton<IVsCodeCommandHandler, THandler>(CommandId);
-            return GenericResult<IHostApplicationBuilder>.Success(builder);
-        });
+        // Why this constructor contributes nothing to a phase: a phase holds one body and the option
+        // that declares it owns it. Every command registers against the same IVsCodeCommandHandler keyed
+        // by its own CommandId, differing only by CommandId and HandlerType - both already exposed here -
+        // so the act belongs to the domain. VsCodeCommandTypes.Register does it once over the option set.
     }
 
     /// <inheritdoc />

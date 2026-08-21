@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Abstractions;
 using Fdw.Collections;
+using Fdw.Web.Http.Authentication;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Fdw.Web.Clients.Abstractions.Registration;
 
@@ -26,4 +28,27 @@ namespace Fdw.Web.Clients.Abstractions.Registration;
     typeof(ApiClientTypes),
     ServiceCategory = "ApiClient")]
 public partial class ApiClientTypes
-    : ServiceTypeCollectionBase<ApiClientTypeBase<IGenericService>, IApiClientType> { }
+    : ServiceTypeCollectionBase<ApiClientTypeBase<IGenericService>, IApiClientType>
+{
+    /// <summary>Sets this collection's Register body: the handler every client needs, then the option collect.</summary>
+    /// <remarks>
+    /// Why the handler is registered here and not on ApiClientTypeBase: every one of the client options
+    /// needs BearerTokenHandler and none of them needs a different one, so it belongs to the domain rather
+    /// than to any option. Registering it from the base meant reaching into each option's own phase body -
+    /// first by assigning it, which the derived constructor then assigned over so the handler was
+    /// registered for no client at all and the host threw at first client construction, and then by
+    /// prepending, which left every option unable to set its own body without silently discarding this.
+    /// The collection has no such conflict: it owns its own phase and runs before the options are collected.
+    /// </remarks>
+    static ApiClientTypes()
+    {
+        var collectOptions = RegisterFunc;
+
+        Registration((builder, loggerFactory) =>
+        {
+            builder.Services.AddTransient<BearerTokenHandler>();
+
+            return collectOptions(builder, loggerFactory);
+        });
+    }
+}

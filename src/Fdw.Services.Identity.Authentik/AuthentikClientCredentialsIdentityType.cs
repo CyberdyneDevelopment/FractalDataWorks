@@ -37,7 +37,7 @@ public sealed class AuthentikClientCredentialsIdentityType
         // factory registration that way, and six connection kinds silently stopped being creatable when
         // their options used Registration (af522f014). This base prepends nothing today, so either is
         // correct right now; Append stays correct if that ever changes.
-        AppendRegistration((builder, loggerFactory) =>
+        Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<AuthentikClientCredentialsIdentityType>()
                 ?? NullLogger<AuthentikClientCredentialsIdentityType>.Instance;
@@ -75,7 +75,7 @@ public sealed class AuthentikClientCredentialsIdentityType
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
-        AppendInitialization((host, loggerFactory) =>
+        Initialization((host, loggerFactory) =>
         {
             // The header provider dispatches on ServiceOptionType to the typed provider registered for
             // it. Without this hand-over the header loads and Configuration stays null.

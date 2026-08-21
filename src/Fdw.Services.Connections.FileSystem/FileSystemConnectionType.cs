@@ -73,7 +73,7 @@ public sealed class FileSystemConnectionType
         // onto it. Replacing therefore silently discards the base's contribution — which is exactly
         // how every connection kind stopped being creatable while each option's own wiring kept
         // working and logging success. Appending composes onto what the base put there.
-        AppendRegistration((builder, loggerFactory) =>
+        Registration((builder, loggerFactory) =>
         {
             builder.Services.AddSingleton<IFileSystemConnectionFactory, FileSystemConnectionFactory>();
             // Why (FDW-403 slice 2 follow-up): mirror Http/MsSql — register a typed

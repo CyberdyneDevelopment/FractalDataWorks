@@ -54,42 +54,11 @@ public abstract class AuthenticationServiceTypeBase
                defaultPathName: "auth",
                defaultContainerName: "Authentication")
     {
-        Registration((builder, loggerFactory) =>
-        {
-            var log = loggerFactory?.CreateLogger<AuthenticationServiceTypes>()
-                ?? NullLogger<AuthenticationServiceTypes>.Instance;
-
-            var declared = AuthenticationServiceConfiguration.Read(builder.Configuration, Name, log);
-            // Why the read's own reason travels rather than a restatement: it names which entry and
-            // which field, and a caller told only "authentication configuration is invalid" has to go
-            // find that out again.
-            if (declared.IsFailure)
-                return declared.ToNewResult<IHostApplicationBuilder>();
-            if (declared.Value is not { } entries)
-                return GenericResult<IHostApplicationBuilder>.Failure(
-                    AuthenticationValidationLog.SectionUnreadable(log, Name));
-
-            // Why called even with no entries: it is what brings the ASP.NET authentication services
-            // into the container, and the collection's own Register adds the selector scheme through
-            // the same builder.
-            var authenticationBuilder = builder.Services.AddAuthentication();
-
-            foreach (var (header, section) in entries)
-            {
-                var binding = RegisterScheme(authenticationBuilder, header, section, loggerFactory);
-                if (binding.IsFailure)
-                    return binding.ToNewResult<IHostApplicationBuilder>();
-                if (binding.Value is not { } registered)
-                    return GenericResult<IHostApplicationBuilder>.Failure(
-                        AuthenticationValidationLog.SchemeNotProduced(log, header.Name ?? section.Path, Name));
-
-                builder.Services.AddSingleton(registered);
-                AuthenticationValidationLog.SchemeRegistered(
-                    log, registered.ServiceName, Name, registered.SchemeName, registered.Issuer);
-            }
-
-            return GenericResult<IHostApplicationBuilder>.Success(builder);
-        });
+        // Why this constructor contributes nothing to a phase: a phase holds one body and the option
+        // that declares it owns it. Reading the declared entries and turning each into a scheme is the
+        // same procedure for every mechanism - only RegisterScheme differs, and that is a public abstract
+        // here - so it belongs to the domain. AuthenticationServiceTypes.Register does it once, over the
+        // option set, calling each mechanism's RegisterScheme.
     }
 
     /// <inheritdoc />

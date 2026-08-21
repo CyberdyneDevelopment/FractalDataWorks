@@ -37,7 +37,7 @@ public sealed class ClientCredentialsIdentityType
         // factory registration that way, and six connection kinds silently stopped being creatable when
         // their options used Registration (af522f014). This base prepends nothing today, so either is
         // correct right now; Append stays correct if that ever changes.
-        AppendRegistration((builder, loggerFactory) =>
+        Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<ClientCredentialsIdentityType>()
                 ?? NullLogger<ClientCredentialsIdentityType>.Instance;
@@ -72,7 +72,7 @@ public sealed class ClientCredentialsIdentityType
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
-        AppendInitialization((host, loggerFactory) =>
+        Initialization((host, loggerFactory) =>
         {
             // Why here and not in Register: the header provider composes the aggregate by dispatching
             // on ServiceOptionType to whichever typed provider was registered for it. Without this the
