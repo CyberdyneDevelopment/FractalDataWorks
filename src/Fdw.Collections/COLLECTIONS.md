@@ -85,7 +85,7 @@ never needs the domain package. Twenty-seven of twenty-nine already satisfy this
 | change | breaks | safe? |
 |---|---|---|
 | rename a **service type** option's `Name` | its Guid Id; persisted configuration rows | **no** |
-| rename a **plain** option's type or namespace | its int Id; persisted values | **no** |
+| rename a **plain** option's type or namespace | its int Id, which nothing reads from storage | yes |
 | move any option to a different **project**, same namespace | nothing — FQN and Id unchanged | yes |
 | move a **plain** option to a different assembly | its registration path, not its Id | only via an entry point that scans it |
 | move a **service type** option to a different assembly | nothing, if the package references the registration generator | yes |
@@ -180,8 +180,14 @@ Eight names in this codebase are shared that way.
 
 **Requirements that follow:**
 
-- **Renaming a plain option's type or namespace changes its Id.** If that Id is persisted, the stored
-  value stops resolving. Moving the *project* is safe; renaming the *namespace* is not.
+- **Renaming a plain option's type or namespace changes its Id.** Moving the *project* never does.
+- **That costs nothing.** Option Ids are not persisted: a configuration row stores a NAME —
+  `ConnectionConfiguration.ServiceType` and `.ServiceOptionType` are both `string` — and the provider
+  dispatches on that string. An Id is an in-memory lookup key, recomputed every run.
+  Even when Ids do get persisted, the databases are rebuilt from an idempotent seed, so a changed Id
+  costs a reseed rather than a migration. **Namespace moves and type renames are ordinary work.** Use
+  `MoveNamespace` and `MoveTypesToNamespace` where they are the right tool; the Id column in their
+  reports is information, not a blocker.
 - **Renaming a service type option's `Name` changes its Id.** Moving it between assemblies or
   namespaces does not. A rename orphans persisted configuration rows.
 - **An explicitly supplied Id always wins** (`_id ??`). Nullable rather than a zero test, because
