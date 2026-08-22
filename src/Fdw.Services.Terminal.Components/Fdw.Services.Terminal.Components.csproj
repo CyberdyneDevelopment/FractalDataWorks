@@ -24,7 +24,7 @@
     <ProjectReference Include="..\Fdw.UI.Themes.Abstractions\Fdw.UI.Themes.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.UI.Themes.Clients\Fdw.UI.Themes.Clients.csproj" />
     <ProjectReference Include="..\Fdw.Messages\Fdw.Messages.csproj" />
-    <ProjectReference Include="..\Fdw.Services.Terminal\Fdw.Services.Terminal.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Terminal.Abstractions\Fdw.Services.Terminal.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -216,12 +216,10 @@
     <Project Path="src/Fdw.Commands.Data/Fdw.Commands.Data.csproj" />
     <Project Path="src/Fdw.Configuration.Components/Fdw.Configuration.Components.csproj" />
     <Project Path="src/Fdw.Configuration.Endpoints/Fdw.Configuration.Endpoints.csproj" />
-    <Project Path="src/Fdw.Connections.MsSql/Fdw.Connections.MsSql.csproj" />
-    <Project Path="src/Fdw.Connections.PostgreSql/Fdw.Connections.PostgreSql.csproj" />
-    <Project Path="src/Fdw.Connections/Fdw.Connections.csproj" />
     <Project Path="src/Fdw.Conventions.Analyzers/Fdw.Conventions.Analyzers.csproj" />
     <Project Path="src/Fdw.Conventions.CodeFixes/Fdw.Conventions.CodeFixes.csproj" />
     <Project Path="src/Fdw.Conventions.FileSplitter/Fdw.Conventions.FileSplitter.csproj" />
+    <Project Path="src/Fdw.Dashboard.UI.Components/Fdw.Dashboard.UI.Components.csproj" />
     <Project Path="src/Fdw.Data.Configuration/Fdw.Data.Configuration.csproj" />
     <Project Path="src/Fdw.Data.DataNodes/Fdw.Data.DataNodes.csproj" />
     <Project Path="src/Fdw.Data.DataPaths/Fdw.Data.DataPaths.csproj" />
@@ -332,7 +330,6 @@
     <Project Path="src/Fdw.Services.Settings/Fdw.Services.Settings.csproj" />
     <Project Path="src/Fdw.Services.Terminal.Abstractions/Fdw.Services.Terminal.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Terminal.Components/Fdw.Services.Terminal.Components.csproj" />
-    <Project Path="src/Fdw.Services.Terminal/Fdw.Services.Terminal.csproj" />
     <Project Path="src/Fdw.Services.TokenManagers.Abstractions/Fdw.Services.TokenManagers.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.TokenManagers/Fdw.Services.TokenManagers.csproj" />
     <Project Path="src/Fdw.Services.Users.Abstractions/Fdw.Services.Users.Abstractions.csproj" />
@@ -348,7 +345,6 @@
     <Project Path="src/Fdw.UI.Canvas.Blazor/Fdw.UI.Canvas.Blazor.csproj" />
     <Project Path="src/Fdw.UI.Charts.Blazor/Fdw.UI.Charts.Blazor.csproj" />
     <Project Path="src/Fdw.UI.CommandBuilders.Abstractions/Fdw.UI.CommandBuilders.Abstractions.csproj" />
-    <Project Path="src/Fdw.UI.Components.Blazor.MsSql/Fdw.UI.Components.Blazor.MsSql.csproj" />
     <Project Path="src/Fdw.UI.Lineage.Clients.Abstractions/Fdw.UI.Lineage.Clients.Abstractions.csproj" />
     <Project Path="src/Fdw.UI.Pages/Fdw.UI.Pages.csproj" />
     <Project Path="src/Fdw.UI.Pipelines.Clients.Models/Fdw.UI.Pipelines.Clients.Models.csproj" />
@@ -420,7 +416,6 @@
   <Folder Name="/src/Orchestration/">
     <Project Path="src/Fdw.Orchestration.Abstractions/Fdw.Orchestration.Abstractions.csproj" />
     <Project Path="src/Fdw.Orchestration.Pipelines/Fdw.Orchestration.Pipelines.csproj" />
-    <Project Path="src/Fdw.Orchestration.Workflows/Fdw.Orchestration.Workflows.csproj" />
   </Folder>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
@@ -443,7 +438,6 @@
     <Project Path="src/Fdw.UI.Rendering.Spectre/Fdw.UI.Rendering.Spectre.csproj" />
     <Project Path="src/Fdw.UI.Themes/Fdw.UI.Themes.csproj" />
     <Project Path="src/Fdw.UI.Web.Abstractions/Fdw.UI.Web.Abstractions.csproj" />
-    <Project Path="src/Fdw.Dashboard.UI.Components/Fdw.Dashboard.UI.Components.csproj" />
     <Project Path="src/Fdw.Data.Components/Fdw.Data.Components.csproj" />
     <Project Path="src/Fdw.Operations.Components/Fdw.Operations.Components.csproj" />
     <Project Path="src/Fdw.Schema.Components/Fdw.Schema.Components.csproj" />
