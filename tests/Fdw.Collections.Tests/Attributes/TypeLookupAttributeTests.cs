@@ -12,19 +12,19 @@ public class TypeLookupAttributeTests
         var attribute = new TypeLookupAttribute("TestMethod");
 
         attribute.MethodName.ShouldBe("TestMethod");
-        attribute.ReturnsList.ShouldBeFalse();
+        attribute.IsUnique.ShouldBeTrue();
         attribute.ReturnType.ShouldBeNull();
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void Constructor_WithReturnsList_SetsProperty()
+    public void Constructor_WithIsUniqueFalse_SetsProperty()
     {
-        var attribute = new TypeLookupAttribute("TestMethod", returnsList: true);
+        var attribute = new TypeLookupAttribute("TestMethod", isUnique: false);
 
         attribute.MethodName.ShouldBe("TestMethod");
-        attribute.ReturnsList.ShouldBeTrue();
+        attribute.IsUnique.ShouldBeFalse();
     }
 
     [Fact]
@@ -43,10 +43,10 @@ public class TypeLookupAttributeTests
     [Trait("Category", "CoreFramework")]
     public void Constructor_WithAllParameters_SetsAllProperties()
     {
-        var attribute = new TypeLookupAttribute("TestMethod", returnsList: true, returnType: typeof(int));
+        var attribute = new TypeLookupAttribute("TestMethod", returnType: typeof(int), isUnique: false);
 
         attribute.MethodName.ShouldBe("TestMethod");
-        attribute.ReturnsList.ShouldBeTrue();
+        attribute.IsUnique.ShouldBeFalse();
         attribute.ReturnType.ShouldBe(typeof(int));
     }
 
@@ -86,12 +86,12 @@ public class TypeLookupAttributeTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void Constructor_WithReturnsListFalse_ExplicitlySetsFalse()
+    public void Constructor_WithIsUniqueTrue_ExplicitlySetsTrue()
     {
-        var attribute = new TypeLookupAttribute("TestMethod", returnsList: false);
+        var attribute = new TypeLookupAttribute("TestMethod", isUnique: true);
 
         attribute.MethodName.ShouldBe("TestMethod");
-        attribute.ReturnsList.ShouldBeFalse();
+        attribute.IsUnique.ShouldBeTrue();
     }
 
     [Fact]
@@ -112,11 +112,11 @@ public class TypeLookupAttributeTests
     {
         var attribute = new TypeLookupAttribute(
             methodName: "TestMethod",
-            returnsList: false,
-            returnType: null);
+            returnType: null,
+            isUnique: true);
 
         attribute.MethodName.ShouldBe("TestMethod");
-        attribute.ReturnsList.ShouldBeFalse();
+        attribute.IsUnique.ShouldBeTrue();
         attribute.ReturnType.ShouldBeNull();
     }
 }
