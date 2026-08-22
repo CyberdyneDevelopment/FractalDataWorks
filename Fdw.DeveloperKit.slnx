@@ -270,10 +270,12 @@
     <Project Path="src/Fdw.Services.Connections.Sqlite/Fdw.Services.Connections.Sqlite.csproj" />
     <Project Path="src/Fdw.Services.Credentials.Abstractions/Fdw.Services.Credentials.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Credentials.Sql/Fdw.Services.Credentials.Sql.csproj" />
+    <Project Path="src/Fdw.Services.Credentials/Fdw.Services.Credentials.csproj" />
     <Project Path="src/Fdw.Services.Data.Clients.Models/Fdw.Services.Data.Clients.Models.csproj" />
     <Project Path="src/Fdw.Services.Data.Endpoints/Fdw.Services.Data.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Data.SignalR/Fdw.Services.Data.SignalR.csproj" />
     <Project Path="src/Fdw.Services.DataVault.Abstractions/Fdw.Services.DataVault.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.DataVault/Fdw.Services.DataVault.csproj" />
     <Project Path="src/Fdw.Services.Etl.Abstractions/Fdw.Services.Etl.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Etl.JobTriggerSources/Fdw.Services.Etl.JobTriggerSources.csproj" />
     <Project Path="src/Fdw.Services.Etl.Projects.UI.Components/Fdw.Services.Etl.Projects.UI.Components.csproj" />
