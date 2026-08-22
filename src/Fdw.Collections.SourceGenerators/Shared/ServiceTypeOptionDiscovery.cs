@@ -264,7 +264,7 @@ internal static class ServiceTypeOptionDiscovery
                 return ImmutableArray<LookupPropertyModel>.Empty;
 
             // First, discover all lookup property definitions from the inheritance chain
-            var propertyDefs = new List<(string PropertyName, string PropertyType, string MethodName)>();
+            var propertyDefs = new List<(string PropertyName, string PropertyType, string MethodName, bool IsUnique)>();
             var currentType = typeSymbol;
 
             while (currentType != null)
@@ -281,10 +281,18 @@ internal static class ServiceTypeOptionDiscovery
                         {
                             var methodName = attr.ConstructorArguments[0].Value?.ToString() ?? "";
 
+                            // Why index 2 with an absent-means-true guard: isUnique is the third constructor
+                            // parameter and is optional. Roslyn supplies defaults for omitted optional
+                            // arguments, but an attribute compiled against an older version of this type
+                            // supplies fewer, and reading a missing argument as false would silently turn
+                            // an enforced uniqueness promise into a list nobody checks.
+                            var isUnique = attr.ConstructorArguments.Length <= 2
+                                || attr.ConstructorArguments[2].Value is not bool u || u;
+
                             if (!propertyDefs.Any(r => string.Equals(r.PropertyName, property.Name, StringComparison.Ordinal) &&
                                                        string.Equals(r.MethodName, methodName, StringComparison.Ordinal)))
                             {
-                                propertyDefs.Add((property.Name, property.Type.ToDisplayString(), methodName));
+                                propertyDefs.Add((property.Name, property.Type.ToDisplayString(), methodName, isUnique));
                             }
                         }
                     }
@@ -315,7 +323,8 @@ internal static class ServiceTypeOptionDiscovery
                     PropertyName: def.PropertyName,
                     PropertyType: def.PropertyType,
                     MethodName: def.MethodName,
-                    ExtractedValue: extractedValue
+                    ExtractedValue: extractedValue,
+                    IsUnique: def.IsUnique
                 ));
             }
 

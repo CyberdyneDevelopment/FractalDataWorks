@@ -7,5 +7,6 @@ internal readonly record struct LookupPropertyModel(
     string PropertyName,
     string PropertyType,
     string MethodName,
-    string? ExtractedValue // The literal value extracted from constructor, null if not extractable
+    string? ExtractedValue, // The literal value extracted from constructor, null if not extractable
+    bool IsUnique // True when a value identifies at most one option, so the lookup returns one rather than all
 );

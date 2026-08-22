@@ -280,6 +280,13 @@ public class TypeCollectionGenerator : IIncrementalGenerator
                 string.Equals(prop.PropertyName, "Name", StringComparison.Ordinal))
                 continue;
 
+            // Why a non-unique property is not checked: TC008 exists to catch a collision on a value
+            // that is supposed to identify one option. A lookup declared non-unique is saying several
+            // options SHOULD share a value, so reporting that as an error would make the declaration
+            // impossible to act on — the duplicate is the feature.
+            if (!prop.IsUnique)
+                continue;
+
             // Group options by their extracted value for this property
             var valueGroups = options
                 .Select(o => (Option: o, Value: o.LookupProperties
@@ -305,7 +312,7 @@ public class TypeCollectionGenerator : IIncrementalGenerator
     }
 
 #pragma warning disable MA0051 // Source generator emits complete TypeCollection class — splitting scatters the template
-    [ConventionOverride(MaxCyclomaticComplexity = 34, MaxMethodLines = 351)]  // Code generation template for TypeCollection — sequential string building
+    [ConventionOverride(MaxCyclomaticComplexity = 40, MaxMethodLines = 351)]  // Code generation template for TypeCollection — sequential string building
     private static string GenerateCode(
         TypeCollectionModel collection,
         ImmutableArray<TypeOptionModel> options,
@@ -365,10 +372,16 @@ public class TypeCollectionGenerator : IIncrementalGenerator
         {
             var prop = group.First();
             var fieldName = $"_{CodeGeneration.ToCamelCase(group.Key)}";
+            // Why the value type follows IsUnique: a unique lookup maps a value to THE option, a
+            // non-unique one maps it to every option that carries it. Both are dictionaries; only the
+            // value side differs, so the lookup stays one hash probe either way.
+            var valueType = prop.IsUnique
+                ? collection.InterfaceTypeName
+                : $"IReadOnlyList<{collection.InterfaceTypeName}>";
             bodySb.AppendLine("#if NETSTANDARD2_0");
-            bodySb.AppendLine($"        private static ImmutableDictionary<{prop.PropertyType}, {collection.InterfaceTypeName}>? {fieldName};");
+            bodySb.AppendLine($"        private static ImmutableDictionary<{prop.PropertyType}, {valueType}>? {fieldName};");
             bodySb.AppendLine("#else");
-            bodySb.AppendLine($"        private static FrozenDictionary<{prop.PropertyType}, {collection.InterfaceTypeName}>? {fieldName};");
+            bodySb.AppendLine($"        private static FrozenDictionary<{prop.PropertyType}, {valueType}>? {fieldName};");
             bodySb.AppendLine("#endif");
         }
         bodySb.AppendLine();
@@ -401,19 +414,50 @@ public class TypeCollectionGenerator : IIncrementalGenerator
         bodySb.AppendLine("                _frozen = true;");
         bodySb.AppendLine("                var items = _pendingRegistrations.ToArray();");
         bodySb.AppendLine();
+
+        // Why the collision is detected here rather than left to the dictionary build: ToImmutableDictionary
+        // and ToFrozenDictionary do throw on a duplicate key, but an ArgumentException that names neither
+        // the collection, the property, the colliding value nor the two options is unactionable — and the
+        // collision it reports is almost always cross-assembly, so the reader has no compile error to
+        // navigate from either. This runs once, at freeze, only for lookups that declared uniqueness.
+        foreach (var group in lookupGroups.Where(g => g.First().IsUnique))
+        {
+            var prop = group.First();
+            bodySb.AppendLine($"                var duplicate{group.Key} = items.GroupBy(x => x.{prop.PropertyName}).FirstOrDefault(g => g.Count() > 1);");
+            bodySb.AppendLine($"                if (duplicate{group.Key} != null)");
+            bodySb.AppendLine("                {");
+            bodySb.AppendLine($"                    var colliding{group.Key} = string.Join(\", \", duplicate{group.Key}.Select(x => x.GetType().FullName));");
+            bodySb.AppendLine($"                    throw new InvalidOperationException(");
+            bodySb.AppendLine($"                        $\"{collection.ClassName}.{group.Key} is declared unique, but {{colliding{group.Key}}} all report {prop.PropertyName} '{{duplicate{group.Key}.Key}}'. \" +");
+            bodySb.AppendLine($"                        \"Two options cannot answer one lookup: give them distinct values, or declare the lookup non-unique with [TypeLookup(\\\"{group.Key}\\\", isUnique: false)].\");");
+            bodySb.AppendLine("                }");
+        }
+        bodySb.AppendLine();
         bodySb.AppendLine("#if NETSTANDARD2_0");
         foreach (var group in lookupGroups)
         {
             var prop = group.First();
             var fieldName = $"_{CodeGeneration.ToCamelCase(group.Key)}";
-            bodySb.AppendLine($"                {fieldName} = items.ToImmutableDictionary(x => x.{prop.PropertyName});");
+            // Why a unique lookup keeps the plain dictionary build: ToImmutableDictionary throws on a duplicate
+            // key, which is exactly the contract IsUnique declares. The throw is caught below and
+            // re-raised with the option names, because the framework exception names neither.
+            if (prop.IsUnique)
+                bodySb.AppendLine($"                {fieldName} = items.ToImmutableDictionary(x => x.{prop.PropertyName});");
+            else
+                bodySb.AppendLine($"                {fieldName} = items.GroupBy(x => x.{prop.PropertyName}).ToImmutableDictionary(g => g.Key, g => (IReadOnlyList<{collection.InterfaceTypeName}>)g.ToArray());");
         }
         bodySb.AppendLine("#else");
         foreach (var group in lookupGroups)
         {
             var prop = group.First();
             var fieldName = $"_{CodeGeneration.ToCamelCase(group.Key)}";
-            bodySb.AppendLine($"                {fieldName} = items.ToFrozenDictionary(x => x.{prop.PropertyName});");
+            // Why a unique lookup keeps the plain dictionary build: ToFrozenDictionary throws on a duplicate
+            // key, which is exactly the contract IsUnique declares. The throw is caught below and
+            // re-raised with the option names, because the framework exception names neither.
+            if (prop.IsUnique)
+                bodySb.AppendLine($"                {fieldName} = items.ToFrozenDictionary(x => x.{prop.PropertyName});");
+            else
+                bodySb.AppendLine($"                {fieldName} = items.GroupBy(x => x.{prop.PropertyName}).ToFrozenDictionary(g => g.Key, g => (IReadOnlyList<{collection.InterfaceTypeName}>)g.ToArray());");
         }
         bodySb.AppendLine("#endif");
         bodySb.AppendLine("                // Set _all last — it's the sentinel for the lock-free fast path.");
@@ -453,13 +497,27 @@ public class TypeCollectionGenerator : IIncrementalGenerator
             var prop = group.First();
             var fieldName = $"_{CodeGeneration.ToCamelCase(group.Key)}";
 
-            bodySb.AppendLine($"        /// <summary>Looks up a type option by {prop.PropertyName}. Returns NotFound if not found.</summary>");
+            // Why the shape follows IsUnique: a unique lookup answers with THE option and NotFound when
+            // there is none; a non-unique one answers with every match and an empty list when there are
+            // none. Returning NotFound from a list-valued lookup would make "no match" and "one match"
+            // the same shape to a caller that iterates.
+            var returns = prop.IsUnique
+                ? collection.InterfaceTypeName
+                : $"IReadOnlyList<{collection.InterfaceTypeName}>";
+            var miss = prop.IsUnique
+                ? "NotFound"
+                : $"System.Array.Empty<{collection.InterfaceTypeName}>()";
+            var summary = prop.IsUnique
+                ? $"Looks up the type option whose {prop.PropertyName} is the given value. Returns NotFound if there is none."
+                : $"Looks up every type option whose {prop.PropertyName} is the given value. Returns an empty list if there are none.";
+
+            bodySb.AppendLine($"        /// <summary>{summary}</summary>");
             bodySb.AppendLine($"        /// <remarks>Auto-generated by <c>TypeCollectionGenerator</c>. To override, define a static method");
             bodySb.AppendLine($"        /// with this exact signature in the partial class — the generator will detect it and skip generation.</remarks>");
-            bodySb.AppendLine($"        public static {collection.InterfaceTypeName} {group.Key}({prop.PropertyType} value)");
+            bodySb.AppendLine($"        public static {returns} {group.Key}({prop.PropertyType} value)");
             bodySb.AppendLine("        {");
             bodySb.AppendLine("            EnsureFrozen();");
-            bodySb.AppendLine($"            return {fieldName}!.TryGetValue(value, out var result) ? result : NotFound;");
+            bodySb.AppendLine($"            return {fieldName}!.TryGetValue(value, out var result) ? result : {miss};");
             bodySb.AppendLine("        }");
             bodySb.AppendLine();
         }
