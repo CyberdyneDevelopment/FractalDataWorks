@@ -22,7 +22,7 @@
          in BatchCopyPipeline.LoadToConnection (connection type invisible above the connection layer). -->
     <ProjectReference Include="..\Fdw.Services.Connections.Http.Abstractions\Fdw.Services.Connections.Http.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
-    <ProjectReference Include="..\Fdw.Commands.Data.Extensions\Fdw.Commands.Data.Extensions.csproj" />
+    <ProjectReference Include="..\Fdw.Commands.Data.Fluency\Fdw.Commands.Data.Fluency.csproj" />
     <ProjectReference Include="..\Fdw.Operations.Abstractions\Fdw.Operations.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Services.Pipelines\Fdw.Services.Pipelines.csproj" />

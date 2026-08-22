@@ -65,7 +65,6 @@
   <Folder Name="/src/Commands/">
     <Project Path="src/Fdw.Commands.Abstractions/Fdw.Commands.Abstractions.csproj" />
     <Project Path="src/Fdw.Commands.Data.Abstractions/Fdw.Commands.Data.Abstractions.csproj" />
-    <Project Path="src/Fdw.Commands.Data.Extensions/Fdw.Commands.Data.Extensions.csproj" />
     <Project Path="src/Fdw.Commands.Development.Abstractions/Fdw.Commands.Development.Abstractions.csproj" />
     <Project Path="src/Fdw.Roslyn.Commands.Abstractions/Fdw.Roslyn.Commands.Abstractions.csproj" />
     <Project Path="src/Fdw.Roslyn.Commands/Fdw.Roslyn.Commands.csproj" />
@@ -213,6 +212,7 @@
     <Project Path="src/Fdw.Calculations.Components/Fdw.Calculations.Components.csproj" />
     <Project Path="src/Fdw.Calculations.Endpoints/Fdw.Calculations.Endpoints.csproj" />
     <Project Path="src/Fdw.Collections/Fdw.Collections.csproj" />
+    <Project Path="src/Fdw.Commands.Data.Fluency/Fdw.Commands.Data.Fluency.csproj" />
     <Project Path="src/Fdw.Commands.Data/Fdw.Commands.Data.csproj" />
     <Project Path="src/Fdw.Configuration.Components/Fdw.Configuration.Components.csproj" />
     <Project Path="src/Fdw.Configuration.Endpoints/Fdw.Configuration.Endpoints.csproj" />
@@ -523,6 +523,14 @@
     <Project Path="tests/Fdw.CodeBuilder.Abstractions.Tests/Fdw.CodeBuilder.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Commands.Abstractions.Tests/Fdw.Commands.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Commands.Data.Abstractions.Tests/Fdw.Commands.Data.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Commands.Data.Fluency.Tests/Fdw.Commands.Data.Fluency.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
     <Project Path="tests/Fdw.Configuration.SourceGenerators.Tests/Fdw.Configuration.SourceGenerators.Tests.csproj" />
     <Project Path="tests/Fdw.ContractParity.Tests/Fdw.ContractParity.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />
@@ -951,7 +959,6 @@
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
   <Folder Name="/tests/Commands/">
     <Project Path="tests/Fdw.Commands.Data.Tests/Fdw.Commands.Data.Tests.csproj" />
-    <Project Path="tests/Fdw.Commands.Data.Extensions.Tests/Fdw.Commands.Data.Extensions.Tests.csproj" />
   </Folder>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->

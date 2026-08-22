@@ -11,7 +11,7 @@
     <ProjectReference Include="..\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
     <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Services.Multitenancy.Abstractions\Fdw.Services.Multitenancy.Abstractions.csproj" />
-    <ProjectReference Include="..\Fdw.Commands.Data.Extensions\Fdw.Commands.Data.Extensions.csproj" />
+    <ProjectReference Include="..\Fdw.Commands.Data.Fluency\Fdw.Commands.Data.Fluency.csproj" />
     <ProjectReference Include="..\Fdw.Services.Execution.Abstractions\Fdw.Services.Execution.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Validation\Fdw.Validation.csproj" />
     <ProjectReference Include="..\Fdw.Services.Users.Abstractions\Fdw.Services.Users.Abstractions.csproj" />

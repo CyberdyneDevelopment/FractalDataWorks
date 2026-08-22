@@ -32,7 +32,7 @@
          DataSet field gateway. Services.Pipelines does not reference Services.Data elsewhere;
          this single reference allows provider injection without a direct gateway call. -->
     <ProjectReference Include="..\Fdw.Services.Data\Fdw.Services.Data.csproj" />
-    <ProjectReference Include="..\Fdw.Commands.Data.Extensions\Fdw.Commands.Data.Extensions.csproj" />
+    <ProjectReference Include="..\Fdw.Commands.Data.Fluency\Fdw.Commands.Data.Fluency.csproj" />
     <ProjectReference Include="..\Fdw.Validation\Fdw.Validation.csproj" />
   </ItemGroup>
 

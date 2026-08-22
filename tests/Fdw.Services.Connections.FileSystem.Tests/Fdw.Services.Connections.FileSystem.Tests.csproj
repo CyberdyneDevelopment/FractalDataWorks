@@ -28,7 +28,7 @@
     <ProjectReference Include="..\..\src\Fdw.Services.SecretManagers.EnvironmentVariable\Fdw.Services.SecretManagers.EnvironmentVariable.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Data\Fdw.Services.Data.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
-    <ProjectReference Include="..\..\src\Fdw.Commands.Data.Extensions\Fdw.Commands.Data.Extensions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Commands.Data.Fluency\Fdw.Commands.Data.Fluency.csproj" />
     <ProjectReference Include="..\Fdw.Services.SecretManagers.TestDouble\Fdw.Services.SecretManagers.TestDouble.csproj" />
   </ItemGroup>
   <PropertyGroup>

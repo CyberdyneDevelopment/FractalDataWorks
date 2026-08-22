@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Fdw.Commands.Data.Extensions\Fdw.Commands.Data.Extensions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Commands.Data.Fluency\Fdw.Commands.Data.Fluency.csproj" />
   </ItemGroup>
 
 </Project>

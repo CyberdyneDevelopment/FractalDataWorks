@@ -22,7 +22,7 @@
     <ProjectReference Include="..\Fdw.Services.Configuration.Abstractions\Fdw.Services.Configuration.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Commands.Data.Abstractions\Fdw.Commands.Data.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
-    <ProjectReference Include="..\Fdw.Commands.Data.Extensions\Fdw.Commands.Data.Extensions.csproj" />
+    <ProjectReference Include="..\Fdw.Commands.Data.Fluency\Fdw.Commands.Data.Fluency.csproj" />
   </ItemGroup>
 
   <ItemGroup>

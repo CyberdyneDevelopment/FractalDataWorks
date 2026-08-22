@@ -34,7 +34,7 @@
     <ProjectReference Include="..\Fdw.Web.Analytics.Clients.Abstractions\Fdw.Web.Analytics.Clients.Abstractions.csproj" />
     <!-- Why: QueryCommandBuilder.WithCaching() is used in BuildFullGraph to add CachePolicy metadata
          to lineage graph queries. Commands.Data.Extensions provides the fluent builder API. -->
-    <ProjectReference Include="..\Fdw.Commands.Data.Extensions\Fdw.Commands.Data.Extensions.csproj" />
+    <ProjectReference Include="..\Fdw.Commands.Data.Fluency\Fdw.Commands.Data.Fluency.csproj" />
     <ProjectReference Include="..\Fdw.Services.Etl.Abstractions\Fdw.Services.Etl.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Services.Pipelines\Fdw.Services.Pipelines.csproj" />
     <ProjectReference Include="..\Fdw.Services.Etl\Fdw.Services.Etl.csproj" />

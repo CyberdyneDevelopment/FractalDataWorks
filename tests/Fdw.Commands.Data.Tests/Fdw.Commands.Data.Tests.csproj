@@ -16,7 +16,7 @@
   </ItemGroup>
   <ItemGroup><!-- Test packages are managed centrally in Directory.Packages.props -->
   
-    <ProjectReference Include="..\..\src\Fdw.Commands.Data.Extensions\Fdw.Commands.Data.Extensions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Commands.Data.Fluency\Fdw.Commands.Data.Fluency.csproj" />
   
     <ProjectReference Include="..\..\src\Fdw.Messages\Fdw.Messages.csproj" />
   </ItemGroup>
