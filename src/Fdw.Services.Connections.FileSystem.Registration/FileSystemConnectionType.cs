@@ -20,7 +20,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
-namespace Fdw.Services.Connections.FileSystem;
+namespace Fdw.Services.Connections.FileSystem.Registration;
 
 /// <summary>
 /// Connection type definition for FileSystem connections.

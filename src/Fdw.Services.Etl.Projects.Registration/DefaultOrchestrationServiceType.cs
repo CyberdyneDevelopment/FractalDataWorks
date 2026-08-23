@@ -17,7 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
-namespace Fdw.Services.Etl.Projects;
+namespace Fdw.Services.Etl.Projects.Registration;
 
 /// <summary>
 /// The orchestration member of the pipeline-service domain: policy, validation, the node provider

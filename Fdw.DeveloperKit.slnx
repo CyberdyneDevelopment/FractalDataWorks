@@ -256,9 +256,11 @@
     <Project Path="src/Fdw.Services.Configuration.Abstractions/Fdw.Services.Configuration.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Connections.Endpoints/Fdw.Services.Connections.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Connections.FileSystem.Abstractions/Fdw.Services.Connections.FileSystem.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Connections.FileSystem.Registration/Fdw.Services.Connections.FileSystem.Registration.csproj" />
     <Project Path="src/Fdw.Services.Connections.FileSystem/Fdw.Services.Connections.FileSystem.csproj" />
     <Project Path="src/Fdw.Services.Connections.PostgreSql/Fdw.Services.Connections.PostgreSql.csproj" />
     <Project Path="src/Fdw.Services.Connections.RoslynWorkspace.Abstractions/Fdw.Services.Connections.RoslynWorkspace.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Connections.RoslynWorkspace.Registration/Fdw.Services.Connections.RoslynWorkspace.Registration.csproj" />
     <Project Path="src/Fdw.Services.Connections.RoslynWorkspace/Fdw.Services.Connections.RoslynWorkspace.csproj" />
     <Project Path="src/Fdw.Services.Connections.Sqlite/Fdw.Services.Connections.Sqlite.csproj" />
     <Project Path="src/Fdw.Services.Credentials.Abstractions/Fdw.Services.Credentials.Abstractions.csproj" />
@@ -271,6 +273,7 @@
     <Project Path="src/Fdw.Services.DataVault/Fdw.Services.DataVault.csproj" />
     <Project Path="src/Fdw.Services.Etl.Abstractions/Fdw.Services.Etl.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Etl.JobTriggerSources/Fdw.Services.Etl.JobTriggerSources.csproj" />
+    <Project Path="src/Fdw.Services.Etl.Projects.Registration/Fdw.Services.Etl.Projects.Registration.csproj" />
     <Project Path="src/Fdw.Services.Etl.Projects.UI.Components/Fdw.Services.Etl.Projects.UI.Components.csproj" />
     <Project Path="src/Fdw.Services.Etl.Projects/Fdw.Services.Etl.Projects.csproj" />
     <Project Path="src/Fdw.Services.Etl/Fdw.Services.Etl.csproj" />

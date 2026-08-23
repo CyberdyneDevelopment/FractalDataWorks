@@ -4,6 +4,7 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Web.Http.Abstractions.Security;
 using Shouldly;
 using Xunit;
+using Fdw.Services.Connections.FileSystem.Registration;
 
 namespace Fdw.Services.Connections.FileSystem.Tests;
 
