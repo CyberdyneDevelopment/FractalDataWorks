@@ -177,11 +177,6 @@
     <Project Path="src/Fdw.Services.Transformations.Abstractions/Fdw.Services.Transformations.Abstractions.csproj" />
   </Folder>
 
-  <Folder Name="/src/Services/Workflows/">
-    <Project Path="src/Fdw.Services.Workflows.Abstractions/Fdw.Services.Workflows.Abstractions.csproj" />
-    <Project Path="src/Fdw.Services.Workflows/Fdw.Services.Workflows.csproj" />
-  </Folder>
-
   <Folder Name="/src/Services/Multitenancy/">
     <Project Path="src/Fdw.Services.Multitenancy.Abstractions/Fdw.Services.Multitenancy.Abstractions.csproj" />
   </Folder>
