@@ -315,6 +315,7 @@
     <Project Path="src/Fdw.Services.SecretManagers.Components/Fdw.Services.SecretManagers.Components.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.Endpoints/Fdw.Services.SecretManagers.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.EnvironmentVariable/Fdw.Services.SecretManagers.EnvironmentVariable.csproj" />
+    <Project Path="src/Fdw.Services.SecretManagers.HashiCorpVault.Registration/Fdw.Services.SecretManagers.HashiCorpVault.Registration.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.HashiCorpVault/Fdw.Services.SecretManagers.HashiCorpVault.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.MsSql/Fdw.Services.SecretManagers.MsSql.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.Sqlite/Fdw.Services.SecretManagers.Sqlite.csproj" />

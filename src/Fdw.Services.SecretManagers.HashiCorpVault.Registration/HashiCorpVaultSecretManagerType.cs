@@ -13,7 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Fdw.Services.SecretManagers.HashiCorpVault;
+namespace Fdw.Services.SecretManagers.HashiCorpVault.Registration;
 
 /// <summary>
 /// The HashiCorp Vault secret manager — reads stored secrets from the KV engine, or has Vault issue
