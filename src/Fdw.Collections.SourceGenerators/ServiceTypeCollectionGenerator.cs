@@ -678,33 +678,6 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         return sb.ToString();
     }
 
-    // Emits this collection's phase-2 entry point, which adds the domain provider to DI and then runs
-    // the base's Register — the option collect, its logging and its run-order numbering.
-    //
-    // Why it shadows the inherited static rather than replacing RegisterFunc: the provider registration
-    // is invariant. An application may legitimately replace the option collect, and when it does the
-    // provider must still be registered; a body swapped in via Registration(...) would take the provider
-    // with it. Shadowing puts the invariant wiring OUTSIDE the swappable body, which is the same reason
-    // ServiceTypeBase makes its option-level invokers virtual.
-    //
-    // Why `new` is safe here: every caller names the collection concretely — `ConnectionTypes.Register(...)`,
-    // or a method group bound into ServiceTypeCollectionDescriptor — so the call binds to this method at
-    // compile time. Nothing dispatches these phases through the base type.
-    private static void AppendProviderRegisterOverride(StringBuilder bodySb, ServiceTypeCollectionModel collection)
-    {
-        bodySb.AppendLine("        /// <summary>Phase 2 — registers this domain's provider, then collects the options.</summary>");
-        bodySb.AppendLine("        /// <param name=\"builder\">The host application builder.</param>");
-        bodySb.AppendLine("        /// <param name=\"loggerFactory\">The host's logger factory, when one is available.</param>");
-        bodySb.AppendLine("        /// <returns>The builder on success; a failure carrying the reason otherwise.</returns>");
-        bodySb.AppendLine("        public static new Fdw.Results.IGenericResult<IHostApplicationBuilder> Register(");
-        bodySb.AppendLine("            IHostApplicationBuilder builder,");
-        bodySb.AppendLine("            ILoggerFactory? loggerFactory = null)");
-        bodySb.AppendLine("        {");
-        AppendScopedProviderRegistration(bodySb, collection, "AddScoped");
-        bodySb.AppendLine($"            return ServiceTypeCollectionBase<{collection.BaseTypeName}, {collection.InterfaceTypeName}>.Register(builder, loggerFactory);");
-        bodySb.AppendLine("        }");
-        bodySb.AppendLine();
-    }
 
     // Why: extracted from GenerateCode so that method stays within the FDW006 executable-line budget.
     // Emits the scoped-provider resolver lambda (shared by the Register and Configure emission paths).
