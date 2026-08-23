@@ -25,7 +25,7 @@ namespace Fdw.Data.Components.DataStores;
 /// — the same two-tier shape <c>ConfiguredDataStoreProvider.Get(CancellationToken)</c> already composes by
 /// calling back into <c>Get(name)</c> per shallow header.
 /// </summary>
-public sealed class ClientsDataStoreConfigurationProvider : IServiceConfigurationProvider<DataStoreConfiguration>
+public sealed class ClientsDataStoreConfigurationProvider : IServiceConfigurationProvider<DataStoreConfiguration>, IServiceConfigurationProvider
 {
     private readonly ILogger<ClientsDataStoreConfigurationProvider> _logger;
     private readonly DataStoreApiClient _apiClient;
@@ -229,7 +229,7 @@ public sealed class ClientsDataStoreConfigurationProvider : IServiceConfiguratio
     // Why explicit: only a parent provider calls these, and it holds this provider as the non-generic
     // IServiceConfigurationProvider. Delegating keeps one implementation of each operation.
 
-    async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.GetUntyped(Guid id, CancellationToken ct)
+    async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
     {
         var result = await Get(id, ct).ConfigureAwait(false);
         return result.IsSuccess
@@ -237,7 +237,7 @@ public sealed class ClientsDataStoreConfigurationProvider : IServiceConfiguratio
             : result.ToNewResult<IGenericConfiguration>();
     }
 
-    async Task<IGenericResult> IServiceConfigurationProvider.SaveUntyped(IGenericConfiguration record, CancellationToken ct)
+    async Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
     {
         if (record is not DataStoreConfiguration typed)
         {
@@ -249,6 +249,4 @@ public sealed class ClientsDataStoreConfigurationProvider : IServiceConfiguratio
         return await Save(typed, ct).ConfigureAwait(false);
     }
 
-    Task<IGenericResult> IServiceConfigurationProvider.DeleteUntyped(Guid id, CancellationToken ct)
-        => Delete(id, ct);
 }

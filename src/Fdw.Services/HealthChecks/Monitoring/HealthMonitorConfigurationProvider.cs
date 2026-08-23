@@ -28,7 +28,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// SOURCE differs. Reads fail loud on a missing row; writes fail loud (host configuration is not
 /// mutable at runtime — silently accepting a Save would hide that nothing persisted). NO FALLBACKS.
 /// </remarks>
-public sealed class HealthMonitorConfigurationProvider : IServiceConfigurationProvider<HealthMonitorConfiguration>
+public sealed class HealthMonitorConfigurationProvider : IServiceConfigurationProvider<HealthMonitorConfiguration>, IServiceConfigurationProvider
 {
     private readonly IOptionsMonitor<List<HealthMonitorConfiguration>> _options;
     private readonly ILogger _logger;
@@ -88,7 +88,7 @@ public sealed class HealthMonitorConfigurationProvider : IServiceConfigurationPr
     // Why explicit: only a parent provider calls these, and it holds this provider as the non-generic
     // IServiceConfigurationProvider. Delegating keeps one implementation of each operation.
 
-    async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.GetUntyped(Guid id, CancellationToken ct)
+    async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
     {
         var result = await Get(id, ct).ConfigureAwait(false);
         return result.IsSuccess
@@ -96,7 +96,7 @@ public sealed class HealthMonitorConfigurationProvider : IServiceConfigurationPr
             : result.ToNewResult<IGenericConfiguration>();
     }
 
-    async Task<IGenericResult> IServiceConfigurationProvider.SaveUntyped(IGenericConfiguration record, CancellationToken ct)
+    async Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
     {
         if (record is not HealthMonitorConfiguration typed)
         {
@@ -108,6 +108,4 @@ public sealed class HealthMonitorConfigurationProvider : IServiceConfigurationPr
         return await Save(typed, ct).ConfigureAwait(false);
     }
 
-    Task<IGenericResult> IServiceConfigurationProvider.DeleteUntyped(Guid id, CancellationToken ct)
-        => Delete(id, ct);
 }

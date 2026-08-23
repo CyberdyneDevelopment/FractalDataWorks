@@ -146,7 +146,7 @@ public class ServiceProviderLifetimeTests
     /// <summary>
     /// Simple test configuration provider for testing.
     /// </summary>
-    public class TestServiceConfigurationProvider : IServiceConfigurationProvider<TestServiceConfiguration>
+    public class TestServiceConfigurationProvider : IServiceConfigurationProvider<TestServiceConfiguration>, IServiceConfigurationProvider
     {
         private readonly List<TestServiceConfiguration> _configs;
 
@@ -190,7 +190,7 @@ public class ServiceProviderLifetimeTests
         public bool IsSystemProtected(string name) => false;
     
         // Type-erased surface — delegates to the typed members.
-        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.GetUntyped(Guid id, CancellationToken ct)
+        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
         {
             var result = await Get(id, ct).ConfigureAwait(false);
             return result.IsSuccess
@@ -198,13 +198,11 @@ public class ServiceProviderLifetimeTests
                 : result.ToNewResult<IGenericConfiguration>();
         }
 
-        async Task<IGenericResult> IServiceConfigurationProvider.SaveUntyped(IGenericConfiguration record, CancellationToken ct)
+        async Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
             => record is TestServiceConfiguration typed
                 ? await Save(typed, ct).ConfigureAwait(false)
                 : GenericResult.Failure(ServicesResultCodes.ByName("ServiceCastFailed"));
 
-        Task<IGenericResult> IServiceConfigurationProvider.DeleteUntyped(Guid id, CancellationToken ct)
-            => Delete(id, ct);
 }
 
     /// <summary>
@@ -212,7 +210,7 @@ public class ServiceProviderLifetimeTests
     /// </summary>
     // Why: DefaultServiceProvider.Get(name/id) now requires a parent provider for O(1)
     // name-to-type resolution. Tests with multiple type registrations need an aggregate.
-    public class AggregateConfigProvider : IServiceConfigurationProvider<TestServiceConfiguration>
+    public class AggregateConfigProvider : IServiceConfigurationProvider<TestServiceConfiguration>, IServiceConfigurationProvider
     {
         private readonly IServiceConfigurationProvider<TestServiceConfiguration>[] _providers;
 
@@ -266,7 +264,7 @@ public class ServiceProviderLifetimeTests
         public bool IsSystemProtected(string name) => false;
     
         // Type-erased surface — delegates to the typed members.
-        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.GetUntyped(Guid id, CancellationToken ct)
+        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
         {
             var result = await Get(id, ct).ConfigureAwait(false);
             return result.IsSuccess
@@ -274,13 +272,11 @@ public class ServiceProviderLifetimeTests
                 : result.ToNewResult<IGenericConfiguration>();
         }
 
-        async Task<IGenericResult> IServiceConfigurationProvider.SaveUntyped(IGenericConfiguration record, CancellationToken ct)
+        async Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
             => record is TestServiceConfiguration typed
                 ? await Save(typed, ct).ConfigureAwait(false)
                 : GenericResult.Failure(ServicesResultCodes.ByName("ServiceCastFailed"));
 
-        Task<IGenericResult> IServiceConfigurationProvider.DeleteUntyped(Guid id, CancellationToken ct)
-            => Delete(id, ct);
 }
 
     #endregion

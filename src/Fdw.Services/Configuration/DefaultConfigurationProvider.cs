@@ -26,7 +26,8 @@ namespace Fdw.Services.Configuration;
 /// </summary>
 /// <typeparam name="TConfig">The configuration POCO type.</typeparam>
 /// <typeparam name="TCommand">The configuration command TypeOption for this domain.</typeparam>
-public class DefaultConfigurationProvider<TConfig, TCommand> : IServiceConfigurationProvider<TConfig>
+public class DefaultConfigurationProvider<TConfig, TCommand>
+    : IServiceConfigurationProvider<TConfig>, IServiceConfigurationProvider
     where TConfig : class, IGenericConfiguration
     where TCommand : ConfigurationCommandBase<TConfig>
 {
@@ -119,7 +120,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand> : IServiceConfigura
     // ever reads, saves or deletes through them. These three delegate to the typed members, so the
     // widening happens here instead of in a per-registration forwarding adapter.
 
-    async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.GetUntyped(Guid id, CancellationToken ct)
+    async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
     {
         var result = await Get(id, ct).ConfigureAwait(false);
         return result.IsSuccess
@@ -127,7 +128,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand> : IServiceConfigura
             : result.ToNewResult<IGenericConfiguration>();
     }
 
-    async Task<IGenericResult> IServiceConfigurationProvider.SaveUntyped(IGenericConfiguration record, CancellationToken ct)
+    async Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
     {
         if (record is not TConfig typed)
         {
@@ -138,9 +139,6 @@ public class DefaultConfigurationProvider<TConfig, TCommand> : IServiceConfigura
 
         return await Save(typed, ct).ConfigureAwait(false);
     }
-
-    Task<IGenericResult> IServiceConfigurationProvider.DeleteUntyped(Guid id, CancellationToken ct)
-        => Delete(id, ct);
 
     // Why: TCommand is a [TypeOption] in ConfigurationCommands — the source generator registers it
     // at static-ctor time and it's guaranteed present by the time this lambda runs.
@@ -373,7 +371,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand> : IServiceConfigura
         // projected). The typed provider's GetHeaderById JOINs the typed body to the parent table on the
         // FK from metadata and filters by the parent's durable Id; the RowId↔RowId match is resolved
         // inside the join, so no RowId ever has to be materialized on the header object.
-        var typedResult = await typedProvider.GetUntyped(header.Id, ct).ConfigureAwait(false);
+        var typedResult = await typedProvider.Get(header.Id, ct).ConfigureAwait(false);
         if (!typedResult.IsSuccess)
             return GenericResult<TConfig>.Failure(
                 DefaultConfigurationProviderLog.TypedBodyLoadFailed(
@@ -1000,7 +998,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand> : IServiceConfigura
             if (!string.IsNullOrEmpty(owner.ServiceOptionType)
                 && TypedProviders.TryGetValue(owner.ServiceOptionType, out var typedProvider))
             {
-                var delegated = await typedProvider.SaveUntyped(typedBody, ct).ConfigureAwait(false);
+                var delegated = await typedProvider.Save(typedBody, ct).ConfigureAwait(false);
                 if (!delegated.IsSuccess) return delegated;
             }
             else
@@ -1178,7 +1176,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand> : IServiceConfigura
         // Get(Guid) as the PARENT's id.
         if (!string.IsNullOrEmpty(owner.ServiceOptionType)
             && TypedProviders.TryGetValue(owner.ServiceOptionType, out var typedProvider))
-            return await typedProvider.DeleteUntyped(owner.Id, ct).ConfigureAwait(false);
+            return await typedProvider.Delete(owner.Id, ct).ConfigureAwait(false);
 
         // No registered provider: this owner is a leaf, or a nested body the recursion already
         // materialized — the same distinction the save cascade makes at the same point.

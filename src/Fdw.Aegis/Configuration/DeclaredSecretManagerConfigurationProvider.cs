@@ -28,7 +28,8 @@ namespace Fdw.Aegis.Configuration;
 /// a caller reaching Save/Delete has mistaken this for a mutable store and must be told.
 /// </para>
 /// </remarks>
-public sealed class DeclaredSecretManagerConfigurationProvider : IServiceConfigurationProvider<SecretManagerConfiguration>
+public sealed class DeclaredSecretManagerConfigurationProvider
+    : IServiceConfigurationProvider<SecretManagerConfiguration>, IServiceConfigurationProvider
 {
     private readonly IReadOnlyList<SecretManagerConfiguration> _declared;
 
@@ -76,8 +77,10 @@ public sealed class DeclaredSecretManagerConfigurationProvider : IServiceConfigu
         => Task.FromResult<IGenericResult<IReadOnlyList<SecretManagerConfiguration>>>(
             GenericResult<IReadOnlyList<SecretManagerConfiguration>>.Success(_declared));
 
-    /// <inheritdoc />
-    public async Task<IGenericResult<IGenericConfiguration>> GetUntyped(Guid id, CancellationToken ct = default)
+    // Why explicit: the erased Get(Guid) differs from the typed one only by return type, which a
+    // class cannot declare twice. Explicit implementation keeps both, and keeps the erased surface
+    // off the public API where only the registry uses it.
+    async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
     {
         var result = await Get(id, ct).ConfigureAwait(false);
         return result.IsSuccess && result.Value is not null
@@ -92,12 +95,11 @@ public sealed class DeclaredSecretManagerConfigurationProvider : IServiceConfigu
                 AegisResultCodes.ByName("SecretResolutionFailed"),
                 ResultDetails.Create("Operation", nameof(Save))));
 
-    /// <inheritdoc />
-    public Task<IGenericResult> SaveUntyped(IGenericConfiguration record, CancellationToken ct = default)
+    Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
         => Task.FromResult<IGenericResult>(
             GenericResult.Failure(
                 AegisResultCodes.ByName("SecretResolutionFailed"),
-                ResultDetails.Create("Operation", nameof(SaveUntyped))));
+                ResultDetails.Create("Operation", nameof(IServiceConfigurationProvider.Save))));
 
     /// <inheritdoc />
     public Task<IGenericResult> Delete(Guid id, CancellationToken ct = default)
@@ -112,11 +114,4 @@ public sealed class DeclaredSecretManagerConfigurationProvider : IServiceConfigu
             GenericResult.Failure(
                 AegisResultCodes.ByName("SecretResolutionFailed"),
                 ResultDetails.Create("Operation", nameof(Delete))));
-
-    /// <inheritdoc />
-    public Task<IGenericResult> DeleteUntyped(Guid id, CancellationToken ct = default)
-        => Task.FromResult<IGenericResult>(
-            GenericResult.Failure(
-                AegisResultCodes.ByName("SecretResolutionFailed"),
-                ResultDetails.Create("Operation", nameof(DeleteUntyped))));
 }

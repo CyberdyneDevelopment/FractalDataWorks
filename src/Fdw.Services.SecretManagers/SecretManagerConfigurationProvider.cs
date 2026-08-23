@@ -76,7 +76,12 @@ public class SecretManagerConfigurationProvider : DefaultConfigurationProvider<S
     // (GetTypedConfigType, used by endpoints) and a reflection-free ctor (Save's default body). The actual
     // typed-provider registration + read composition lives in the base; this only adds the two
     // domain-specific captures and then delegates. Constraint adds new() for the factory capture.
-    public void Register<TDerived>(string serviceOptionType, IServiceConfigurationProvider<TDerived> provider)
+    //
+    // Why the parameter is the erased provider while TDerived stays explicit: the registry stores typed
+    // bodies erased, and IServiceConfigurationProvider{TDerived} does not imply that view -- the two
+    // interfaces are separate, so a provider held only by its typed interface cannot be registered.
+    // TDerived is what this method captures, not what it forwards, so it is named rather than inferred.
+    public void Register<TDerived>(string serviceOptionType, IServiceConfigurationProvider provider)
         where TDerived : class, ISecretManagerConfiguration, new()
     {
         base.Register(serviceOptionType, provider);

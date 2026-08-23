@@ -27,9 +27,6 @@ public abstract class CreateIdentityEndpointBase<TConfig, TRequest>
     /// <summary>Gets the provider that reads and writes identity configuration.</summary>
     protected abstract IServiceConfigurationProvider<IdentityServiceConfiguration> Identities { get; }
 
-    /// <summary>Gets the writer that persists the aggregate.</summary>
-    protected abstract IServiceConfigurationWriter<IdentityServiceConfiguration> Writer { get; }
-
     /// <inheritdoc />
     protected override string ResourceName => "identities";
 
@@ -81,7 +78,7 @@ public abstract class CreateIdentityEndpointBase<TConfig, TRequest>
 
         // One save for the whole aggregate: the provider writes the header, then dispatches on
         // ServiceOptionType so the registered typed provider writes the body.
-        var saved = await Writer.Save(identity, ct).ConfigureAwait(false);
+        var saved = await Identities.Save(identity, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             return saved.ToNewResult<IdentityDetailResponse>();

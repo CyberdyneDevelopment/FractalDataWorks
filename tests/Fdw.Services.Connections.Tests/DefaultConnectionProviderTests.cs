@@ -91,7 +91,7 @@ public class DefaultConnectionProviderTests
     /// <summary>
     /// Simple test configuration provider for testing.
     /// </summary>
-    private class TestConnectionConfigurationProvider : IServiceConfigurationProvider<ConnectionConfiguration>
+    private class TestConnectionConfigurationProvider : IServiceConfigurationProvider<ConnectionConfiguration>, IServiceConfigurationProvider
     {
         private readonly List<ConnectionConfiguration> _configs;
 
@@ -143,7 +143,7 @@ public class DefaultConnectionProviderTests
         public bool IsSystemProtected(string name) => false;
     
         // Type-erased surface — delegates to the typed members.
-        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.GetUntyped(Guid id, CancellationToken ct)
+        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
         {
             var result = await Get(id, ct).ConfigureAwait(false);
             return result.IsSuccess
@@ -151,13 +151,11 @@ public class DefaultConnectionProviderTests
                 : result.ToNewResult<IGenericConfiguration>();
         }
 
-        async Task<IGenericResult> IServiceConfigurationProvider.SaveUntyped(IGenericConfiguration record, CancellationToken ct)
+        async Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
             => record is ConnectionConfiguration typed
                 ? await Save(typed, ct).ConfigureAwait(false)
                 : GenericResult.Failure(ServicesResultCodes.ByName("ServiceCastFailed"));
 
-        Task<IGenericResult> IServiceConfigurationProvider.DeleteUntyped(Guid id, CancellationToken ct)
-            => Delete(id, ct);
 }
 
     [Fact]
