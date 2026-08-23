@@ -852,8 +852,6 @@
       <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
-    <Project Path="tests/Fdw.Services.Workflows.Abstractions.Tests/Fdw.Services.Workflows.Abstractions.Tests.csproj" />
-    <Project Path="tests/Fdw.Services.Workflows.Tests/Fdw.Services.Workflows.Tests.csproj" />
     <Project Path="tests/Fdw.ServiceTypes.CodeFixes.Tests/Fdw.ServiceTypes.CodeFixes.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />
       <BuildType Solution="Develop-Local|*" Project="Debug" />
