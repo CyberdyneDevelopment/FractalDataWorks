@@ -283,9 +283,9 @@
     <Project Path="src/Fdw.Services.ExternalIdentityProviders.Oidc/Fdw.Services.ExternalIdentityProviders.Oidc.csproj" />
     <Project Path="src/Fdw.Services.ExternalIdentityProviders/Fdw.Services.ExternalIdentityProviders.csproj" />
     <Project Path="src/Fdw.Services.Identity.Abstractions/Fdw.Services.Identity.Abstractions.csproj" />
-    <Project Path="src/Fdw.Services.Identity.Authentik/Fdw.Services.Identity.Authentik.csproj" />
     <Project Path="src/Fdw.Services.Identity.ClientCredentials/Fdw.Services.Identity.ClientCredentials.csproj" />
     <Project Path="src/Fdw.Services.Identity.Endpoints/Fdw.Services.Identity.Endpoints.csproj" />
+    <Project Path="src/Fdw.Services.Identity.JwtAssertion/Fdw.Services.Identity.JwtAssertion.csproj" />
     <Project Path="src/Fdw.Services.Identity/Fdw.Services.Identity.csproj" />
     <Project Path="src/Fdw.Services.Messaging.Abstractions/Fdw.Services.Messaging.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Messaging.Components/Fdw.Services.Messaging.Components.csproj" />

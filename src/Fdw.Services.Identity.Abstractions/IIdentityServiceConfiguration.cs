@@ -3,9 +3,9 @@ using Fdw.Configuration;
 namespace Fdw.Services.Identity.Abstractions;
 
 /// <summary>
-/// Marker interface for typed identity-service body configurations (e.g. an Authentik
-/// client-credentials body carrying issuer/client id/secret reference, or a federated-JWT body
-/// carrying issuer and assertion source).
+/// Marker interface for typed identity-service body configurations (e.g. a client-credentials body
+/// carrying issuer/client id/secret reference, or a JWT-assertion body carrying issuer and
+/// assertion source).
 /// </summary>
 /// <remarks>
 /// Each typed body implements this interface directly rather than inheriting a concrete header

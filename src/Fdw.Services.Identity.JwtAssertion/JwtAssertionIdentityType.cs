@@ -15,20 +15,20 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Fdw.Services.Identity.Authentik;
+namespace Fdw.Services.Identity.JwtAssertion;
 
 /// <summary>
-/// The Authentik federated-JWT identity mechanism — exchanging an assertion an external OIDC issuer
+/// The JWT-assertion identity mechanism — exchanging an assertion an external OIDC issuer
 /// already minted for this workload, with no static secret anywhere.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(IdentityServiceTypes), "AuthentikJwtFederation")]
-public sealed class AuthentikJwtFederationIdentityType
+[ServiceTypeOption(typeof(IdentityServiceTypes), "JwtAssertion")]
+public sealed class JwtAssertionIdentityType
     : IdentityServiceTypeBase<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>>
 {
-    /// <summary>Initializes a new instance of the <see cref="AuthentikJwtFederationIdentityType"/> class.</summary>
-    public AuthentikJwtFederationIdentityType()
-        : base("AuthentikJwtFederation", defaultContainerName: "AuthentikJwtFederationIdentity")
+    /// <summary>Initializes a new instance of the <see cref="JwtAssertionIdentityType"/> class.</summary>
+    public JwtAssertionIdentityType()
+        : base("JwtAssertion", defaultContainerName: "JwtAssertionIdentity")
     {
         // Why Append and not Registration: Registration ASSIGNS, discarding whatever body was already
         // installed — including a segment a base constructor prepended. ConnectionTypeBase prepends its
@@ -37,14 +37,14 @@ public sealed class AuthentikJwtFederationIdentityType
         // correct right now; Append stays correct if that ever changes.
         Registration((builder, loggerFactory) =>
         {
-            var log = loggerFactory?.CreateLogger<AuthentikJwtFederationIdentityType>()
-                ?? NullLogger<AuthentikJwtFederationIdentityType>.Instance;
+            var log = loggerFactory?.CreateLogger<JwtAssertionIdentityType>()
+                ?? NullLogger<JwtAssertionIdentityType>.Instance;
 
             // Why the option registers its own factory: see ClientCredentialsIdentityType —
             // an option that skips this resolves to "No registered service type matches
             // ServiceOptionType" at the first request.
             DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>
-                .Register(Name, sp => new AuthentikJwtFederationIdentityFactory(
+                .Register(Name, sp => new JwtAssertionIdentityFactory(
                     sp.GetService<ILoggerFactory>(),
                     sp.GetRequiredService<IHttpClientFactory>().CreateClient(IdentityHttpClient.Name)));
 
@@ -52,9 +52,9 @@ public sealed class AuthentikJwtFederationIdentityType
 
             // The typed body provider, so the header provider can compose the aggregate.
 
-            builder.Services.TryAddSingleton(sp => new AuthentikJwtFederationConfigurationProvider(
+            builder.Services.TryAddSingleton(sp => new JwtAssertionConfigurationProvider(
 
-                sp.GetService<ILogger<AuthentikJwtFederationConfigurationProvider>>()!,
+                sp.GetService<ILogger<JwtAssertionConfigurationProvider>>()!,
 
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
 
@@ -71,7 +71,7 @@ public sealed class AuthentikJwtFederationIdentityType
             // it. Without this hand-over the header loads and Configuration stays null.
             var services = host.Services;
             services.GetRequiredService<IdentityServiceConfigurationProvider>()
-                .Register(Name, services.GetRequiredService<AuthentikJwtFederationConfigurationProvider>());
+                .Register(Name, services.GetRequiredService<JwtAssertionConfigurationProvider>());
 
             return GenericResult<IHost>.Success(host);
         });

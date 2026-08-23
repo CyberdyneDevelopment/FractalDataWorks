@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Collections.Attributes;
 
-namespace Fdw.Services.Identity.Authentik.Assertions;
+namespace Fdw.Services.Identity.JwtAssertion.Assertions;
 
 /// <summary>
 /// The ways a federated assertion can reach this process.

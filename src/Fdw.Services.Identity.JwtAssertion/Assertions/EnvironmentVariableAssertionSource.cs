@@ -4,7 +4,7 @@ using Fdw.Results;
 using Fdw.Services.Identity.Logging;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.Services.Identity.Authentik.Assertions;
+namespace Fdw.Services.Identity.JwtAssertion.Assertions;
 
 /// <summary>
 /// Reads a federated assertion from an environment variable. This is how a CI CI delivers a job's

@@ -3,12 +3,12 @@ using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
 using Fdw.Services.Identity.Abstractions;
-using Fdw.Services.Identity.Authentik.Assertions;
+using Fdw.Services.Identity.JwtAssertion.Assertions;
 
-namespace Fdw.Services.Identity.Authentik;
+namespace Fdw.Services.Identity.JwtAssertion;
 
 /// <summary>
-/// Typed configuration body for the Authentik federated-JWT mechanism — Authentik trusts an external
+/// Typed configuration body for the JWT-assertion mechanism — the authorization server trusts an external
 /// OIDC issuer's signing keys directly, and this workload exchanges an assertion that issuer already
 /// minted for it.
 /// </summary>
@@ -33,17 +33,17 @@ namespace Fdw.Services.Identity.Authentik;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
-[ManagedConfiguration(ServiceCategory = "Identity", ServiceType = "AuthentikJwtFederation")]
-public partial class AuthentikJwtFederationConfiguration : IIdentityServiceConfiguration
+[ManagedConfiguration(ServiceCategory = "Identity", ServiceType = "JwtAssertion")]
+public partial class JwtAssertionConfiguration : IIdentityServiceConfiguration
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="AuthentikJwtFederationConfiguration"/> class.
+    /// Initializes a new instance of the <see cref="JwtAssertionConfiguration"/> class.
     /// </summary>
-    public AuthentikJwtFederationConfiguration()
+    public JwtAssertionConfiguration()
     {
         ServiceType = "Identity";
         SectionName = "Identities";
-        ServiceOptionType = "AuthentikJwtFederation";
+        ServiceOptionType = "JwtAssertion";
     }
 
     /// <summary>Gets or sets the durable logical identity across versions. No default — the database assigns identity.</summary>
@@ -58,16 +58,16 @@ public partial class AuthentikJwtFederationConfiguration : IIdentityServiceConfi
     /// <summary>Gets or sets the service-type domain — always <c>"Identity"</c>.</summary>
     public string ServiceType { get; set; }
 
-    /// <summary>Gets or sets the TypeOption discriminator — always <c>"AuthentikJwtFederation"</c>.</summary>
+    /// <summary>Gets or sets the TypeOption discriminator — always <c>"JwtAssertion"</c>.</summary>
     public string? ServiceOptionType { get; set; }
 
-    /// <summary>Gets or sets the Authentik issuer URL.</summary>
+    /// <summary>Gets or sets the issuer URL.</summary>
     public string? Issuer { get; set; }
 
     /// <summary>Gets or sets the absolute token endpoint URL this mechanism posts to.</summary>
     public string? TokenEndpoint { get; set; }
 
-    /// <summary>Gets or sets the OAuth2 client id of the Authentik provider backing this identity.</summary>
+    /// <summary>Gets or sets the OAuth2 client id of the authorization server backing this identity.</summary>
     public string? ClientId { get; set; }
 
     /// <summary>

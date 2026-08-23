@@ -4,9 +4,10 @@ FDW-integrated services authenticate to each other, and to external systems, by 
 short-lived token they obtained by proving their own identity — not by presenting a static shared
 secret that was copied into both ends.
 
-`Fdw.Services.Identity` is the domain that obtains those tokens. Authentik is its first
-implementation; the abstraction is vendor-neutral and a second provider is a new package with a new
-`[ServiceTypeOption]`, nothing more.
+`Fdw.Services.Identity` is the domain that obtains those tokens. Its options are named for the
+**mechanism** by which a service proves itself, not for the authorization server that happens to be
+answering: both shipped mechanisms are standard OAuth2 grants and work against any server that
+implements them. A third mechanism is a new package with a new `[ServiceTypeOption]`, nothing more.
 
 ---
 
@@ -96,25 +97,34 @@ Fdw.Services.Identity                (net10.0)
 ├── ManagedIdentityAccessTokenProvider   → IAccessTokenProvider  (the outbound seam)
 └── Logging/IdentityLog              [MessageLoggingTypeCode("IDENTITY")]
 
-Fdw.Services.Identity.Authentik      (net10.0)
-├── AuthentikClientCredentialsConfiguration   typed body
-├── AuthentikJwtFederationConfiguration       typed body
-├── AuthentikClientCredentialsIdentityType    [ServiceTypeOption(…, "AuthentikClientCredentials")]
-├── AuthentikJwtFederationIdentityType        [ServiceTypeOption(…, "AuthentikJwtFederation")]
-├── AuthentikIdentityService                  shared RFC 6749 §4.4 / RFC 7523 token-endpoint client
-└── Assertions/                               IFederatedAssertionSource + env/file sources
+Fdw.Services.Identity.ClientCredentials  (net10.0)
+├── ClientCredentialsConfiguration        typed body (sec.ClientCredentialsIdentity)
+├── ClientCredentialsIdentityType         [ServiceTypeOption(…, "ClientCredentials")]
+├── ClientCredentialsIdentityFactory
+└── ClientCredentialsIdentityService      RFC 6749 §4.4 token-endpoint client
+
+Fdw.Services.Identity.JwtAssertion       (net10.0)
+├── JwtAssertionConfiguration             typed body (sec.JwtAssertionIdentity)
+├── JwtAssertionIdentityType              [ServiceTypeOption(…, "JwtAssertion")]
+├── JwtAssertionIdentityFactory
+├── JwtAssertionIdentityService           RFC 7523 token-endpoint client
+└── Assertions/                           IFederatedAssertionSource + env/file sources
 ```
 
-Two options ship together deliberately. One option proves nothing about an abstraction — the second
-is what demonstrates the shape holds for a mechanism with a genuinely different credential model.
+One package per mechanism, because that is the unit a host opts into: referencing the package is
+what registers the option, so a service that only ever presents a client secret does not carry the
+assertion-reading machinery it will never use.
+
+Two options ship deliberately. One option proves nothing about an abstraction — the second is what
+demonstrates the shape holds for a mechanism with a genuinely different credential model.
 
 ---
 
-## 3. The two Authentik mechanisms
+## 3. The two mechanisms
 
-### `AuthentikClientCredentials` — OAuth2 client credentials (RFC 6749 §4.4)
+### `ClientCredentials` — OAuth2 client credentials (RFC 6749 §4.4)
 
-An Authentik **Service Account** plus an **Application/Provider** pair. FDW posts
+A service account at the authorization server, plus a registered client. FDW posts
 `grant_type=client_credentials` with its client id and secret, and receives a short-lived access
 token scoped to the configured audience.
 
@@ -130,13 +140,13 @@ from "shared with the peer service" to "shared with the identity provider", read
 - revocation is central and immediate at the IdP rather than requiring a redeploy of both ends;
 - every issuance is logged centrally and attributable to a named service account.
 
-It does **not** achieve zero-secret-at-rest. Only JWT federation does.
+It does **not** achieve zero-secret-at-rest. Only `JwtAssertion` does.
 
-### `AuthentikJwtFederation` — federated JWT assertion (RFC 7523)
+### `JwtAssertion` — signed client assertion (RFC 7523)
 
-Authentik is configured to trust an external OIDC issuer's signing keys directly. The workload
-presents a token that issuer already minted for it — a CI system's per-job OIDC tokens being the
-motivating case — and exchanges it for an Authentik token.
+The authorization server is configured to trust an external OIDC issuer's signing keys directly. The
+workload presents a token that issuer already minted for it — a CI system's per-job OIDC tokens
+being the motivating case — and exchanges it for an access token.
 
 There is **no static secret anywhere**: the assertion is minted per job, expires in minutes, and is
 bound to the job's identity by the CI system itself. This is the mechanism to prefer wherever the
@@ -195,7 +205,7 @@ watching.
 ## 6. What this does not do
 
 - It does not make the receiving side accept anything. A service that should accept
-  Authentik-issued tokens must register that issuer as an additional JWT bearer issuer alongside its
-  own OpenIddict one. That is host configuration, not this domain.
+  externally-issued tokens must register that issuer as an additional JWT bearer issuer alongside
+  its own OpenIddict one. That is host configuration, not this domain.
 - It does not mint tokens. FDW is the client here; the identity provider is the authority.
 - It does not replace user-token forwarding, per §4.

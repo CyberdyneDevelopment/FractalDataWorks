@@ -30,10 +30,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>Fdw.Services.Identity.Authentik</RootNamespace>
-    <PackageId>Fdw.Services.Identity.Authentik</PackageId>
-    <Title>Fdw Managed Identity — Authentik</Title>
-    <Description>Authentik implementations of the FDW managed identity domain: OAuth2 client credentials for long-running services, and federated JWT exchange for workloads whose issuer already mints per-job assertions.</Description>
+    <RootNamespace>Fdw.Services.Identity.JwtAssertion</RootNamespace>
+    <PackageId>Fdw.Services.Identity.JwtAssertion</PackageId>
+    <Title>Fdw Managed Identity — JWT Assertion</Title>
+    <Description>The JWT-assertion managed identity mechanism (RFC 7523): a workload proves its identity with a signed client assertion minted by an external OIDC issuer, read from a file or an environment variable.</Description>
     <IsPackable>true</IsPackable>
   </PropertyGroup>
 

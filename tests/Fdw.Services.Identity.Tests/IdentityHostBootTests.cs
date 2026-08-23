@@ -6,7 +6,7 @@ using Fdw.Services.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Identity;
 using Fdw.Services.Identity.Abstractions;
-using Fdw.Services.Identity.Authentik;
+using Fdw.Services.Identity.JwtAssertion;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -53,7 +53,7 @@ public sealed class IdentityHostBootTests
 
     [Theory]
     [InlineData("ClientCredentials")]
-    [InlineData("AuthentikJwtFederation")]
+    [InlineData("JwtAssertion")]
     public void EachMechanismRegistersItsFactoryWithTheDomainProvider(string mechanism)
     {
         // This is the assertion that proves the option attached AND its Register body ran: the

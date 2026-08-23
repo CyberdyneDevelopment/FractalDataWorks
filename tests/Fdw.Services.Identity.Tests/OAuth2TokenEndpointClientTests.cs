@@ -5,7 +5,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Services.Identity.Abstractions;
-using Fdw.Services.Identity.Authentik;
+using Fdw.Services.Identity.JwtAssertion;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Identity.Tests;

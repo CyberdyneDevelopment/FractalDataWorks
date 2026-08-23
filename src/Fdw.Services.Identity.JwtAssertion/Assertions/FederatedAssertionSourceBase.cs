@@ -2,7 +2,7 @@ using Fdw.Collections;
 using Fdw.Results;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.Services.Identity.Authentik.Assertions;
+namespace Fdw.Services.Identity.JwtAssertion.Assertions;
 
 /// <summary>
 /// Base class for federated assertion sources. The behavior — actually reading the assertion — lives

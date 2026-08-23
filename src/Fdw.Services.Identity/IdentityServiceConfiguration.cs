@@ -63,7 +63,7 @@ public partial class IdentityServiceConfiguration : IGenericConfiguration, IServ
 
     /// <summary>
     /// Gets or sets the TypeOption discriminator. <see cref="IdentityServiceTypes"/> uses this value
-    /// to select the mechanism (e.g. <c>"ClientCredentials"</c>, <c>"AuthentikJwtFederation"</c>).
+    /// to select the mechanism (e.g. <c>"ClientCredentials"</c>, <c>"JwtAssertion"</c>).
     /// </summary>
     [ValuesFrom(typeof(IdentityServiceTypes))]
     public string? ServiceOptionType { get; set; }

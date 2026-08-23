@@ -5,7 +5,7 @@ using Fdw.Results;
 using Fdw.Services.Identity.Logging;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.Services.Identity.Authentik.Assertions;
+namespace Fdw.Services.Identity.JwtAssertion.Assertions;
 
 /// <summary>
 /// Reads a federated assertion from a file — the shape a projected service-account token takes, where

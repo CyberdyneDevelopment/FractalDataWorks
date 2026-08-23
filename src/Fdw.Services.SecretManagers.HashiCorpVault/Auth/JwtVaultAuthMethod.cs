@@ -11,7 +11,7 @@ namespace Fdw.Services.SecretManagers.HashiCorpVault.Auth;
 /// <remarks>
 /// The only method here with no static secret at rest, and the one to prefer wherever the workload
 /// already has a trustworthy issuer. It is the same trust model the managed identity domain's
-/// federated mechanism uses, pointed at Vault instead of Authentik.
+/// <c>JwtAssertion</c> mechanism uses, pointed at Vault instead of an OIDC authorization server.
 /// </remarks>
 [TypeOption(typeof(VaultAuthMethods), "Jwt")]
 public sealed class JwtVaultAuthMethod : VaultAuthMethodBase

@@ -5,14 +5,14 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Identity.Abstractions;
 using Fdw.Services.Identity.Logging;
-using Fdw.Services.Identity.Authentik.Assertions;
+using Fdw.Services.Identity.JwtAssertion.Assertions;
 using Microsoft.Extensions.Logging;
 
-namespace Fdw.Services.Identity.Authentik;
+namespace Fdw.Services.Identity.JwtAssertion;
 
 /// <summary>
-/// Proves this workload's identity to Authentik by presenting an assertion an external OIDC issuer
-/// already minted for it (RFC 7523 client assertion), which Authentik validates against that
+/// Proves this workload's identity by presenting an assertion an external OIDC issuer
+/// already minted for it (RFC 7523 client assertion), which the authorization server validates against that
 /// issuer's published keys.
 /// </summary>
 /// <remarks>
@@ -20,23 +20,23 @@ namespace Fdw.Services.Identity.Authentik;
 /// because the platform that mints it rotates it in place — holding one would pin the first
 /// assertion and start failing silently once it expired.
 /// </remarks>
-public sealed class AuthentikJwtFederationIdentityService
-    : IdentityServiceBase<AuthentikJwtFederationConfiguration, AuthentikJwtFederationIdentityService>
+public sealed class JwtAssertionIdentityService
+    : IdentityServiceBase<JwtAssertionConfiguration, JwtAssertionIdentityService>
 {
     private const string JwtBearerAssertionType = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
 
     private readonly OAuth2TokenEndpointClient _tokenEndpoint;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AuthentikJwtFederationIdentityService"/> class.
+    /// Initializes a new instance of the <see cref="JwtAssertionIdentityService"/> class.
     /// </summary>
     /// <param name="logger">The logger for this service.</param>
     /// <param name="configuration">The typed configuration body for this identity.</param>
     /// <param name="tokenEndpoint">The shared token-endpoint client.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="tokenEndpoint"/> is null.</exception>
-    public AuthentikJwtFederationIdentityService(
-        ILogger<AuthentikJwtFederationIdentityService>? logger,
-        AuthentikJwtFederationConfiguration configuration,
+    public JwtAssertionIdentityService(
+        ILogger<JwtAssertionIdentityService>? logger,
+        JwtAssertionConfiguration configuration,
         OAuth2TokenEndpointClient tokenEndpoint)
         : base(logger, configuration)
     {
@@ -64,7 +64,7 @@ public sealed class AuthentikJwtFederationIdentityService
         if (Configuration.AssertionLocation is not { Length: > 0 } assertionLocation)
             return GenericResult<IssuedIdentityToken>.Failure(IdentityLog.ConfigurationValueMissing(Logger, Name, nameof(Configuration.AssertionLocation)));
 
-        IdentityLog.AcquiringToken(Logger, Name, "AuthentikJwtFederation", request.Audience);
+        IdentityLog.AcquiringToken(Logger, Name, "JwtAssertion", request.Audience);
 
         // Why ByName and not a switch: the carriers are a TypeCollection precisely so a consumer can
         // add one in its own assembly. A switch here would close a set that is deliberately open.
