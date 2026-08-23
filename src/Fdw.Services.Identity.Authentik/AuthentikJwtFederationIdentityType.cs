@@ -40,7 +40,7 @@ public sealed class AuthentikJwtFederationIdentityType
             var log = loggerFactory?.CreateLogger<AuthentikJwtFederationIdentityType>()
                 ?? NullLogger<AuthentikJwtFederationIdentityType>.Instance;
 
-            // Why the option registers its own factory: see AuthentikClientCredentialsIdentityType —
+            // Why the option registers its own factory: see ClientCredentialsIdentityType —
             // an option that skips this resolves to "No registered service type matches
             // ServiceOptionType" at the first request.
             DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>

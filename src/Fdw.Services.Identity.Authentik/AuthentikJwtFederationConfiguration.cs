@@ -22,7 +22,7 @@ namespace Fdw.Services.Identity.Authentik;
 /// <para>
 /// Its precondition is exactly that: something must already be minting per-workload assertions. A
 /// long-running service with no such issuer cannot use this and wants
-/// <see cref="AuthentikClientCredentialsConfiguration"/> instead.
+/// <c>ClientCredentialsConfiguration</c> instead.
 /// </para>
 /// <para>
 /// <see cref="AssertionSource"/> names <em>how</em> the incoming assertion is read (a

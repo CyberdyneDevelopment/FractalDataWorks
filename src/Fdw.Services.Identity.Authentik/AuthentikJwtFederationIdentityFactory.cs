@@ -18,7 +18,7 @@ namespace Fdw.Services.Identity.Authentik;
 /// <remarks>
 /// Takes no secret manager: this mechanism has no secret to resolve, which is the whole point of it.
 /// It also takes no identity provider, for the re-entrancy reason described on
-/// <see cref="AuthentikClientCredentialsIdentityFactory"/>.
+/// <c>ClientCredentialsIdentityFactory</c>.
 /// </remarks>
 internal sealed class AuthentikJwtFederationIdentityFactory
     : IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>

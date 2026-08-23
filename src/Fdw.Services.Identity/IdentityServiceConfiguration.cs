@@ -20,7 +20,7 @@ namespace Fdw.Services.Identity;
 /// <para>
 /// After loading a header row, <c>IdentityServiceConfigurationProvider</c> dispatches to the typed
 /// body provider and sets <see cref="Configuration"/>. Callers read typed fields by casting, e.g.
-/// <c>(header.Configuration as AuthentikClientCredentialsConfiguration)</c>.
+/// <c>(header.Configuration as ClientCredentialsConfiguration)</c>.
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
@@ -63,7 +63,7 @@ public partial class IdentityServiceConfiguration : IGenericConfiguration, IServ
 
     /// <summary>
     /// Gets or sets the TypeOption discriminator. <see cref="IdentityServiceTypes"/> uses this value
-    /// to select the mechanism (e.g. <c>"AuthentikClientCredentials"</c>, <c>"AuthentikJwtFederation"</c>).
+    /// to select the mechanism (e.g. <c>"ClientCredentials"</c>, <c>"AuthentikJwtFederation"</c>).
     /// </summary>
     [ValuesFrom(typeof(IdentityServiceTypes))]
     public string? ServiceOptionType { get; set; }
