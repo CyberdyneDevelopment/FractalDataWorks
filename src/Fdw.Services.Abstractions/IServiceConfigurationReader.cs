@@ -12,9 +12,6 @@ namespace Fdw.Services.Abstractions;
 /// Provides Get overloads for name, id, and all-items queries.
 /// </summary>
 /// <typeparam name="TConfig">The configuration type.</typeparam>
-// Why: T is invariant — Task{TResult} is invariant in TResult; covariance on an async-returning
-// interface is impossible in C#. Use ConfigurationReaderAdapter{TBase,TDerived} at the storage
-// layer when polymorphic registration needs base-typed slots.
 public interface IServiceConfigurationReader<TConfig>
     where TConfig : class, IGenericConfiguration
 {

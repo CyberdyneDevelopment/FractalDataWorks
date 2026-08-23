@@ -367,7 +367,6 @@
     <Project Path="src/Fdw.Web.Analytics.Components/Fdw.Web.Analytics.Components.csproj" />
     <Project Path="src/Fdw.Web.Api/Fdw.Web.Api.csproj" />
     <Project Path="src/Fdw.Web.Calculations.Clients.Abstractions/Fdw.Web.Calculations.Clients.Abstractions.csproj" />
-    <Project Path="src/Fdw.Web.Clients.Wasm/Fdw.Web.Clients.Wasm.csproj" />
     <Project Path="src/Fdw.Web.Clients/Fdw.Web.Clients.csproj" />
     <Project Path="src/Fdw.Web.Endpoints/Fdw.Web.Endpoints.csproj" />
     <Project Path="src/Fdw.Web.Http.Authentication.Blazor/Fdw.Web.Http.Authentication.Blazor.csproj" />
