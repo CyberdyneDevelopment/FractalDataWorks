@@ -334,7 +334,6 @@
     <Project Path="src/Fdw.Services.Users.Abstractions/Fdw.Services.Users.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Users.Endpoints/Fdw.Services.Users.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Users/Fdw.Services.Users.csproj" />
-    <Project Path="src/Fdw.Services.Versions/Fdw.Services.Versions.csproj" />
     <Project Path="src/Fdw.SignalR/Fdw.SignalR.csproj" />
     <Project Path="src/Fdw.StateCollections.Abstractions/Fdw.StateCollections.Abstractions.csproj" />
     <Project Path="src/Fdw.StateCollections/Fdw.StateCollections.csproj" />
