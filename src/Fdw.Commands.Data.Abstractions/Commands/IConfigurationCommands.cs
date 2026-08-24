@@ -2,7 +2,7 @@ using System;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Configuration;
 
-namespace Fdw.Services.Configuration;
+namespace Fdw.Commands.Data.Abstractions;
 
 /// <summary>
 /// Non-generic marker interface for configuration command type collections.

@@ -1,6 +1,8 @@
 using Fdw.Collections;
 using Fdw.Collections.Attributes;
 
+using Fdw.Commands.Data.Abstractions;
+
 namespace Fdw.Services.Configuration;
 
 /// <summary>

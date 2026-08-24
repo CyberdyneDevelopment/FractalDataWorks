@@ -253,7 +253,6 @@
     <Project Path="src/Fdw.Services.Catalog.Clients.Models/Fdw.Services.Catalog.Clients.Models.csproj" />
     <Project Path="src/Fdw.Services.Catalog.Components/Fdw.Services.Catalog.Components.csproj" />
     <Project Path="src/Fdw.Services.Catalog.Endpoints/Fdw.Services.Catalog.Endpoints.csproj" />
-    <Project Path="src/Fdw.Services.Configuration.Abstractions/Fdw.Services.Configuration.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Connections.Endpoints/Fdw.Services.Connections.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Connections.FileSystem.Abstractions/Fdw.Services.Connections.FileSystem.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Connections.FileSystem.Registration/Fdw.Services.Connections.FileSystem.Registration.csproj" />
