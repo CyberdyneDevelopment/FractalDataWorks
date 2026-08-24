@@ -1,0 +1,298 @@
+# Publishes the Fdw.* packages to nuget.org using Trusted Publishing (OIDC), so no long-lived
+# API key is stored anywhere.
+#
+# Why the push happens here rather than alongside the rest of the build: nuget.org's Trusted
+# Publishing accepts tokens from a fixed set of hosted issuers, matching each token's `iss` claim
+# against a compiled-in constant and fetching signing keys from that issuer's discovery document.
+# A self-managed CI host presents its own issuer, so its tokens are rejected during signature
+# validation — before any policy lookup — and no policy field or pipeline setting changes that.
+# GitHub Actions is a supported issuer and this repository already mirrors the source, so the
+# release push runs from here.
+#
+# A long-lived API key is not the alternative: nuget.org caps new keys at 30 days from
+# 2026-08-17 and expires all existing keys on 2026-11-01.
+#
+# Requires a Trusted Publishing policy on nuget.org (Account -> Trusted Publishing) owned by the
+# `aicolab` account, naming this repository owner, this repository, and this workflow's FILE NAME
+# (`publish-nuget.yml`, no path). Renaming this file invalidates the policy.
+#
+# The unlist job below (workflow_dispatch, unlist_version input) lives in THIS file rather than a
+# separate one specifically so it reuses the same already-authorized Trusted Publishing policy --
+# a policy is scoped to (repo owner, repo, workflow FILE NAME), so a new file would need its own
+# nuget.org account-side policy entry added by hand before NuGet/login@v1 would work for it at
+# all. Dispatch against whichever branch actually has the version you need to unlist.
+name: Publish to NuGet.org
+
+on:
+  push:
+    branches:
+      - main
+      - prerelease
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Pack and validate without pushing/unlisting'
+        type: boolean
+        default: false
+      force:
+        description: 'Publish even if this version already exists on nuget.org (ignored when unlist_version is set)'
+        type: boolean
+        default: false
+      unlist_version:
+        description: 'If set (e.g. 1.0.0-rc.7), UNLIST this exact version for every Fdw.* package instead of publishing. Leave empty for a normal publish run.'
+        type: string
+        default: ''
+
+concurrency:
+  # One publish at a time. nuget.org rejects a re-push of an existing version, so overlapping
+  # runs on the same version would race and one would fail on packages the other already pushed.
+  group: publish-nuget-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # required: lets the job mint the OIDC token nuget.org exchanges for a key
+
+jobs:
+  # Decides whether there is anything to publish, WITHOUT building. The mirror is force-pushed as
+  # a whole subtree, so this workflow fires on every sync — a README edit, a pipeline tweak, a
+  # comment change. What makes a run meaningful is not which files moved but whether the version
+  # number is one nuget.org has never seen, since that is the only thing that can actually be
+  # published: nuget.org rejects a re-push and versions are immutable once live. Gating on the
+  # version rather than on paths means no list of "safe" file globs has to be kept correct, and a
+  # source change that forgets to bump the version is skipped for the same reason a docs change
+  # is — there is no new version to publish.
+  check:
+    name: Check version is publishable
+    # Skipped for an unlist dispatch -- publishability of the CURRENT tree's version has nothing
+    # to do with unlisting a (usually older, already-shipped) version. `publish` below depends on
+    # this job, and GitHub skips a job whose dependency was skipped, so publish naturally sits out
+    # an unlist run too without needing its own extra guard.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.unlist_version == '' }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      should-publish: ${{ steps.exists.outputs.should-publish }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Why the version is read rather than computed: the package number is hand-set in
+      # Directory.Build.props (VersionPrefix + VersionSuffix) and deliberately not derived from
+      # git tags, so it is identical wherever it is built.
+      - name: Resolve version
+        id: version
+        run: |
+          set -euo pipefail
+          PREFIX=$(grep -oPm1 '(?<=<VersionPrefix>)[^<]+' Directory.Build.props)
+          SUFFIX=$(grep -oPm1 '(?<=<VersionSuffix>)[^<]+' Directory.Build.props || true)
+          if [ -n "$SUFFIX" ]; then VERSION="${PREFIX}-${SUFFIX}"; else VERSION="${PREFIX}"; fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version in this tree: $VERSION"
+
+      # Why a stable branch must not carry a prerelease suffix, and vice versa: `main` is the
+      # stable channel. Publishing 1.0.0-rc.1 from it would put a prerelease on the stable line,
+      # and nuget.org can never take it back — versions are immutable and only unlistable.
+      - name: Check version matches the branch channel
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ "${{ github.ref_name }}" = "main" ] && [[ "$VERSION" == *-* ]]; then
+            echo "FAIL: branch 'main' is the stable channel but the version is '$VERSION'."
+            echo "Clear <VersionSuffix> in Directory.Build.props before publishing from main."
+            exit 1
+          fi
+          if [ "${{ github.ref_name }}" = "prerelease" ] && [[ "$VERSION" != *-* ]]; then
+            echo "FAIL: branch 'prerelease' expects a prerelease version but got '$VERSION'."
+            echo "Set <VersionSuffix> in Directory.Build.props before publishing from prerelease."
+            exit 1
+          fi
+          echo "Version '$VERSION' matches branch '${{ github.ref_name }}'."
+
+      # Fdw.Abstractions is the probe: it is packable, its id is not overridden, and every release
+      # contains it, so its presence at a given version stands for the whole set. A 404 from the
+      # flat container means the id has never been published at all, which is the first-release
+      # case and must proceed.
+      - name: Is this version already on nuget.org?
+        id: exists
+        env:
+          PROBE_PACKAGE: fdw.abstractions
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ "${{ inputs.force }}" = "true" ]; then
+            echo "should-publish=true" >> "$GITHUB_OUTPUT"
+            echo "force requested - publishing $VERSION regardless of what is already live."
+            exit 0
+          fi
+          CODE=$(curl -sS -o /tmp/versions.json -w '%{http_code}' \
+            "https://api.nuget.org/v3-flatcontainer/${PROBE_PACKAGE}/index.json" || echo 000)
+          if [ "$CODE" = "404" ]; then
+            echo "should-publish=true" >> "$GITHUB_OUTPUT"
+            echo "${PROBE_PACKAGE} is not on nuget.org yet - this is the first publish."
+            exit 0
+          fi
+          if [ "$CODE" != "200" ]; then
+            echo "FAIL: nuget.org returned HTTP $CODE querying ${PROBE_PACKAGE}."
+            echo "Refusing to guess whether $VERSION is already live."
+            exit 1
+          fi
+          if python3 -c "import json,sys; sys.exit(0 if '$VERSION'.lower() in [v.lower() for v in json.load(open('/tmp/versions.json'))['versions']] else 1)"; then
+            echo "should-publish=false" >> "$GITHUB_OUTPUT"
+            echo "$VERSION is already on nuget.org - nothing to publish."
+            echo "Bump VersionPrefix/VersionSuffix in Directory.Build.props to cut a new release."
+          else
+            echo "should-publish=true" >> "$GITHUB_OUTPUT"
+            echo "$VERSION is new - publishing."
+          fi
+
+  publish:
+    name: Pack and publish
+    needs: check
+    if: needs.check.outputs.should-publish == 'true'
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: 'true'
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+      DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore Fdw.DeveloperKit.slnx
+
+      - name: Build
+        run: dotnet build Fdw.DeveloperKit.slnx -c Release --no-restore
+
+      - name: Pack
+        run: dotnet pack Fdw.DeveloperKit.slnx -c Release --no-build -o artifacts
+
+      - name: List packages
+        run: |
+          set -euo pipefail
+          ls -1 artifacts/*.nupkg | sed 's/^/  /'
+          echo "total: $(ls -1 artifacts/*.nupkg | wc -l) packages"
+
+      # Exchanges the OIDC token for a nuget.org API key valid for 1 hour. The key is masked in
+      # logs by the action and never leaves the runner.
+      - name: NuGet login (OIDC to short-lived key)
+        id: login
+        if: ${{ !inputs.dry_run }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      # --skip-duplicate: a version already on nuget.org is a no-op rather than a hard failure, so
+      # a re-run after a partial push finishes the remaining packages instead of dying on the
+      # first one that already landed. The .snupkg symbol packages are pushed automatically
+      # alongside their .nupkg.
+      - name: Push to nuget.org
+        if: ${{ !inputs.dry_run }}
+        run: |
+          dotnet nuget push "artifacts/*.nupkg" \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+            --skip-duplicate
+
+      - name: Dry run summary
+        if: ${{ inputs.dry_run }}
+        run: echo "Dry run - packed ${{ needs.check.outputs.version }} but did not push."
+
+  unlist:
+    name: Unlist ${{ inputs.unlist_version }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.unlist_version != '' }}
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: 'true'
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+      DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # Packs the CURRENTLY CHECKED OUT tree purely to discover the real set of package IDs
+      # (PackageId can differ from a project's file name, so this is the same source of truth
+      # `publish` itself uses) -- the version being unlisted always comes from the workflow
+      # input, never from this pack, since a package ID does not change between versions and the
+      # version being unlisted is very often not whatever happens to be checked out right now.
+      - name: Restore, build, pack (to discover package IDs only)
+        run: |
+          dotnet restore Fdw.DeveloperKit.slnx
+          dotnet build Fdw.DeveloperKit.slnx -c Release --no-restore
+          dotnet pack Fdw.DeveloperKit.slnx -c Release --no-build -o artifacts
+
+      - name: Resolve package ID list from packed artifacts
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re, glob
+          ids = sorted({
+              m.group(1)
+              for f in glob.glob("artifacts/*.nupkg")
+              for m in [re.match(r"^(.+?)\.(\d+\.\d+\.\d+.*)$", f.split("/")[-1][:-len(".nupkg")])]
+              if m
+          })
+          print(f"Discovered {len(ids)} package IDs")
+          open("package-ids.txt", "w").write("\n".join(ids) + "\n")
+          PY
+          cat package-ids.txt
+
+      - name: NuGet login (OIDC to short-lived key)
+        id: login
+        if: ${{ !inputs.dry_run }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      # nuget.org's delete API unlists rather than deletes: the package stays resolvable for
+      # anything already pinned to this exact version, it just stops appearing in search/browse
+      # and stops being offered to a version-range restore. Not fatal per-package: a package that
+      # was never actually published at this version (e.g. added to the solution after this
+      # version was cut) 404s, which --non-interactive surfaces as a normal command failure --
+      # continue past it and report at the end rather than aborting the whole run on the first
+      # one that was never live at this version.
+      - name: Unlist each discovered package at the given version
+        run: |
+          set -uo pipefail
+          VERSION="${{ inputs.unlist_version }}"
+          FAILED=""
+          while IFS= read -r id; do
+            [ -z "$id" ] && continue
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "DRY RUN: would unlist $id $VERSION"
+              continue
+            fi
+            echo "Unlisting $id $VERSION ..."
+            if dotnet nuget delete "$id" "$VERSION" \
+                --source https://api.nuget.org/v3/index.json \
+                --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+                --non-interactive; then
+              echo "  OK"
+            else
+              echo "  FAILED (may never have been published at this version -- not necessarily an error)"
+              FAILED="$FAILED $id"
+            fi
+          done < package-ids.txt
+          if [ -n "$FAILED" ]; then
+            echo "Packages that did not unlist (see log above for why):$FAILED"
+          fi
