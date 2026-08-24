@@ -854,14 +854,6 @@
       <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
-    <Project Path="tests/Fdw.ServiceTypes.CodeFixes.Tests/Fdw.ServiceTypes.CodeFixes.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
-      <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
-      <BuildType Solution="Test|*" Project="Debug" />
-    </Project>
     <Project Path="tests/Fdw.SignalR.Tests/Fdw.SignalR.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />
       <BuildType Solution="Develop-Local|*" Project="Debug" />
