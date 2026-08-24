@@ -67,7 +67,7 @@ public sealed class SyntheticSecretManagerType
         {
             var services = host.Services;
             services
-                .GetRequiredService<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>()
+                .GetRequiredService<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>()
                 .Register(Name, services.GetRequiredService<ISyntheticSecretManagerFactory>());
 
             return GenericResult<IHost>.Success(host);

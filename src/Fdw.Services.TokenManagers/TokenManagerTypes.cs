@@ -31,7 +31,7 @@ namespace Fdw.Services.TokenManagers;
     ServiceInterface = typeof(ITokenManager),
     ConfigurationType = typeof(TokenManagerConfiguration),
     ProviderType = typeof(DefaultServiceProvider<ITokenManager, TokenManagerConfiguration, ITokenManagerFactory<ITokenManager, TokenManagerConfiguration>, IServiceConfigurationProvider<TokenManagerConfiguration>>),
-    ProviderInterface = typeof(IFdwServiceProvider<ITokenManager, TokenManagerConfiguration>),
+    ProviderInterface = typeof(IPlatformServiceProvider<ITokenManager, TokenManagerConfiguration>),
     ServiceCategory = "TokenManager")]
 public partial class TokenManagerTypes : ServiceTypeCollectionBase<
     TokenManagerTypeBase<ITokenManager, TokenManagerConfiguration, ITokenManagerFactory<ITokenManager, TokenManagerConfiguration>>,
@@ -55,7 +55,7 @@ public partial class TokenManagerTypes : ServiceTypeCollectionBase<
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IFdwServiceProvider<ITokenManager, TokenManagerConfiguration>).ToString();
+        var providerService = typeof(IPlatformServiceProvider<ITokenManager, TokenManagerConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -74,7 +74,7 @@ public partial class TokenManagerTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(TokenManagerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(TokenManagerTypes), providerService);
 
-            builder.Services.AddScoped<IFdwServiceProvider<ITokenManager, TokenManagerConfiguration>>(sp =>
+            builder.Services.AddScoped<IPlatformServiceProvider<ITokenManager, TokenManagerConfiguration>>(sp =>
             {
                 var provider = new DefaultServiceProvider<ITokenManager, TokenManagerConfiguration, ITokenManagerFactory<ITokenManager, TokenManagerConfiguration>, IServiceConfigurationProvider<TokenManagerConfiguration>>(
                     sp,

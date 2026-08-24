@@ -10,7 +10,7 @@ namespace Fdw.ServiceTypes.Analyzers.Tests;
 public class FactoryProviderInjectionAnalyzerTests
 {
     // Why: minimal stand-ins for Fdw.Abstractions.IServiceFactory,
-    // Fdw.ServiceTypes.IFdwServiceProvider<...>, System.Lazy<T>, and IServiceScopeFactory — the test
+    // Fdw.ServiceTypes.IPlatformServiceProvider<...>, System.Lazy<T>, and IServiceScopeFactory — the test
     // project references only the analyzer assembly, so each source declares the shapes the analyzer's
     // metadata-name lookups need. System.Lazy<T> is redeclared in a test namespace so its metadata name
     // resolves to System.Lazy`1 as the analyzer expects (the real corelib type is also present, but the
@@ -31,11 +31,11 @@ public class FactoryProviderInjectionAnalyzerTests
         {
             using Fdw.Abstractions;
 
-            public interface IFdwServiceProvider<TService> where TService : IGenericService
+            public interface IPlatformServiceProvider<TService> where TService : IGenericService
             {
             }
 
-            public interface IFdwServiceProvider<TService, TConfiguration> : IFdwServiceProvider<TService>
+            public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformServiceProvider<TService>
                 where TService : IGenericService
             {
             }
@@ -72,7 +72,7 @@ public class FactoryProviderInjectionAnalyzerTests
 
                 public class SqlConnectionFactory : IServiceFactory
                 {
-                    public SqlConnectionFactory(IFdwServiceProvider<ISecretManager> {|#0:provider|})
+                    public SqlConnectionFactory(IPlatformServiceProvider<ISecretManager> {|#0:provider|})
                     {
                     }
                 }
@@ -81,7 +81,7 @@ public class FactoryProviderInjectionAnalyzerTests
 
         var expected = VerifyCS.Diagnostic("FDW045")
             .WithLocation(0)
-            .WithArguments("SqlConnectionFactory", "IFdwServiceProvider");
+            .WithArguments("SqlConnectionFactory", "IPlatformServiceProvider");
 
         await VerifyCS.VerifyAnalyzerAsync(test, expected);
     }
@@ -127,7 +127,7 @@ public class FactoryProviderInjectionAnalyzerTests
 
                 public class SqlConnectionFactory : IServiceFactory
                 {
-                    public SqlConnectionFactory(Lazy<IFdwServiceProvider<ISecretManager>> provider)
+                    public SqlConnectionFactory(Lazy<IPlatformServiceProvider<ISecretManager>> provider)
                     {
                     }
                 }
@@ -172,7 +172,7 @@ public class FactoryProviderInjectionAnalyzerTests
 
                 public class SomeService
                 {
-                    public SomeService(IFdwServiceProvider<ISecretManager> provider)
+                    public SomeService(IPlatformServiceProvider<ISecretManager> provider)
                     {
                     }
                 }

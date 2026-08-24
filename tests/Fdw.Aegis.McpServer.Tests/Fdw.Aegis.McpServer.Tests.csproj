@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+    <ProjectReference Include="..\..\src\Fdw.Configuration.SourceGenerators\Fdw.Configuration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,9 +20,7 @@
     <ProjectReference Include="..\..\src\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\..\src\Fdw.Services.Connections.Http\Fdw.Services.Connections.Http.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Data\Fdw.Services.Data.csproj" />
-    <ProjectReference Include="..\..\src\Fdw.Services.Connections.FileSystem\Fdw.Services.Connections.FileSystem.csproj" />
     <ProjectReference Include="..\Fdw.Services.SecretManagers.TestDouble\Fdw.Services.SecretManagers.TestDouble.csproj" />
-    <ProjectReference Include="..\..\src\Fdw.Services.Connections.FileSystem.Registration\Fdw.Services.Connections.FileSystem.Registration.csproj" />
   </ItemGroup>
 
   <ItemGroup>

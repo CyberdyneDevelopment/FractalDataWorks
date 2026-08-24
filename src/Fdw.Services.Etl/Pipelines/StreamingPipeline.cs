@@ -33,7 +33,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
     private readonly ILogger<StreamingPipeline> _logger;
     private readonly IDataGateway? _dataGateway;
     private readonly object? _calculationEngine;
-    private readonly IFdwServiceProvider<IGenericConnection, IGenericConfiguration>? _connectionProvider;
+    private readonly IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>? _connectionProvider;
     private readonly IPipelineTestController? _testController;
     private readonly IPipelineExecutionInspector? _inspector;
     private readonly IPipelineStatusBroadcaster? _broadcaster;
@@ -47,7 +47,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
         ILogger<StreamingPipeline> logger,
         IDataGateway? dataGateway = null,
         object? calculationEngine = null,
-        IFdwServiceProvider<IGenericConnection, IGenericConfiguration>? connectionProvider = null,
+        IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>? connectionProvider = null,
         IPipelineTestController? testController = null,
         IPipelineExecutionInspector? inspector = null,
         IPipelineStatusBroadcaster? broadcaster = null)

@@ -34,7 +34,7 @@ public sealed class NoneSqliteAuthentication : SqliteAuthenticationConfiguration
     // Password= keyword.
     public override Task<IGenericResult<string?>> ResolvePassword(
         IReadOnlyDictionary<string, string?> values,
-        IFdwServiceProvider<ISecretManager> secretManagerProvider,
+        IPlatformServiceProvider<ISecretManager> secretManagerProvider,
         CancellationToken cancellationToken = default)
         => Task.FromResult(GenericResult<string?>.Success(null));
 }

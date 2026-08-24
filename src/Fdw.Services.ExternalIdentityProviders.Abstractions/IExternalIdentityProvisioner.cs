@@ -11,7 +11,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Abstractions;
 /// Just-in-time provisioning mechanism consulted by the external-identity issuance path when an
 /// externally-validated identity has no existing <c>auth.ExternalIdentity</c> link to a FDW user.
 /// A <see cref="IExternalIdentityProvisioner"/> is a <see cref="IServiceOption"/> resolved through
-/// <c>ExternalIdentityProvisionerTypes</c>' <c>IFdwServiceProvider&lt;IExternalIdentityProvisioner,
+/// <c>ExternalIdentityProvisionerTypes</c>' <c>IPlatformServiceProvider&lt;IExternalIdentityProvisioner,
 /// ExternalIdentityProvisionerConfiguration&gt;</c> — selected per (tenant, external provider) by
 /// <c>ExternalIdentityProvisionerBindingConfigurationProvider.ResolveProvisionerName</c>. Default is
 /// OFF: with no matching binding row, the issuance path behaves exactly as it did before this

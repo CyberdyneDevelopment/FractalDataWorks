@@ -32,7 +32,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
     ServiceInterface = typeof(IExternalIdentityProvider),
     ConfigurationType = typeof(ExternalIdentityProviderConfiguration),
     ProviderType = typeof(DefaultServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration, IExternalIdentityProviderFactory<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>, IServiceConfigurationProvider<ExternalIdentityProviderConfiguration>>),
-    ProviderInterface = typeof(IFdwServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>),
+    ProviderInterface = typeof(IPlatformServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>),
     ServiceCategory = "ExternalIdentityProvider")]
 public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
     ExternalIdentityProviderTypeBase<IExternalIdentityProvider, ExternalIdentityProviderConfiguration, IExternalIdentityProviderFactory<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>>,
@@ -56,7 +56,7 @@ public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IFdwServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>).ToString();
+        var providerService = typeof(IPlatformServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -75,7 +75,7 @@ public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(ExternalIdentityProviderTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(ExternalIdentityProviderTypes), providerService);
 
-            builder.Services.AddScoped<IFdwServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>>(sp =>
+            builder.Services.AddScoped<IPlatformServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>>(sp =>
             {
                 var provider = new DefaultServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration, IExternalIdentityProviderFactory<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>, IServiceConfigurationProvider<ExternalIdentityProviderConfiguration>>(
                     sp,

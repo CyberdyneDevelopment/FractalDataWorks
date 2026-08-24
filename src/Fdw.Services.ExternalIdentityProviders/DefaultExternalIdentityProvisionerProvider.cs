@@ -15,7 +15,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// <remarks>
 /// <para>
 /// This exists to keep provisioner factories PURE. A factory that ctor-injected
-/// <c>IFdwServiceProvider&lt;IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration&gt;</c>
+/// <c>IPlatformServiceProvider&lt;IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration&gt;</c>
 /// was resolved from inside that provider's own generated scoped resolver lambda, so resolving it
 /// re-entered the lambda — whose cache entry is not published yet — and recursed without bound. MEDI's
 /// StackGuard migrates that recursion onto fresh stacks instead of throwing, so the host hung SILENTLY

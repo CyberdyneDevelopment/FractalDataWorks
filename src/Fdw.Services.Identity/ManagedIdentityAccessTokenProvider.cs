@@ -37,7 +37,7 @@ namespace Fdw.Services.Identity;
 /// </remarks>
 public sealed class ManagedIdentityAccessTokenProvider : IAccessTokenProvider
 {
-    private readonly IFdwServiceProvider<IIdentityService, IdentityServiceConfiguration> _identities;
+    private readonly IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration> _identities;
     private readonly IIdentityTokenCache _cache;
     private readonly ILogger<ManagedIdentityAccessTokenProvider> _logger;
     private readonly string _configurationName;
@@ -54,7 +54,7 @@ public sealed class ManagedIdentityAccessTokenProvider : IAccessTokenProvider
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="identities"/>, <paramref name="cache"/>, or <paramref name="request"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="configurationName"/> is null, empty, or whitespace.</exception>
     public ManagedIdentityAccessTokenProvider(
-        IFdwServiceProvider<IIdentityService, IdentityServiceConfiguration> identities,
+        IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration> identities,
         IIdentityTokenCache cache,
         string configurationName,
         IdentityTokenRequest request,

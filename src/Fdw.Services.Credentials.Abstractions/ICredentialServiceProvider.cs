@@ -11,7 +11,7 @@ namespace Fdw.Services.Credentials.Abstractions;
 // Why: credential service providers provide SERVICES, not configurations — configuration comes
 // from the credential domain's configuration provider. Consumers resolve a credential service by
 // name (the connections→secret-managers pattern), then execute vault commands through it.
-public interface ICredentialServiceProvider : IFdwServiceProvider<ICredentialService>
+public interface ICredentialServiceProvider : IPlatformServiceProvider<ICredentialService>
 {
     /// <summary>
     /// Gets a credential service matching the supplied typed request (Id and/or Name).

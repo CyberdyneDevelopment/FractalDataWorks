@@ -21,7 +21,7 @@ public sealed class ExternalIdentityProviderResolverTests
     private static ExternalIdentityProviderConfiguration Header(string name)
         => new() { Id = Guid.NewGuid(), Name = name };
 
-    private static Mock<IFdwServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>> ServiceProvider()
+    private static Mock<IPlatformServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>> ServiceProvider()
         => new();
 
     // Why: the resolver depends on the concrete configuration provider (its Get(ct) is virtual). Mock it
@@ -33,7 +33,7 @@ public sealed class ExternalIdentityProviderResolverTests
             "ConfigurationDb", "auth", new Lazy<ICacheInvalidator?>(() => null));
 
     private static ExternalIdentityProviderResolver Resolver(
-        Mock<IFdwServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>> serviceProvider,
+        Mock<IPlatformServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>> serviceProvider,
         Mock<ExternalIdentityProviderConfigurationProvider> configProvider)
         => new(serviceProvider.Object, configProvider.Object, NullLogger<ExternalIdentityProviderResolver>.Instance);
 

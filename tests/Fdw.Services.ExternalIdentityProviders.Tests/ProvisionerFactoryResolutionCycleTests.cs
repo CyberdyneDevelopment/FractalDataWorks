@@ -35,7 +35,7 @@ public sealed class ProvisionerFactoryResolutionCycleTests
 {
     // Why: the exact provider service type whose realization the factory must NOT re-enter.
     private static readonly Type ProviderServiceType =
-        typeof(IFdwServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>);
+        typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>);
 
     [Fact]
     [Trait("Priority", "P0")]
@@ -106,7 +106,7 @@ public sealed class ProvisionerFactoryResolutionCycleTests
     }
 
     // Why: generalises the guard to the whole assembly so a NEW option cannot reintroduce the same
-    // cycle. Any constructor parameter typed as a bare IFdwServiceProvider<,> on a factory is the
+    // cycle. Any constructor parameter typed as a bare IPlatformServiceProvider<,> on a factory is the
     // root risk signature; Lazy<>/Func<> wrapped dependencies are safe because they defer resolution.
     [Fact]
     [Trait("Priority", "P0")]
@@ -125,13 +125,13 @@ public sealed class ProvisionerFactoryResolutionCycleTests
             .SelectMany(t => t.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
                 .SelectMany(c => c.GetParameters())
                 .Where(p => p.ParameterType.IsGenericType
-                            && p.ParameterType.GetGenericTypeDefinition() == typeof(IFdwServiceProvider<,>))
+                            && p.ParameterType.GetGenericTypeDefinition() == typeof(IPlatformServiceProvider<,>))
                 .Select(p => $"{t.Name}({p.ParameterType.Name} {p.Name})"))
             .ToList();
 
         // Assert
         offenders.ShouldBeEmpty(
-            "a factory taking IFdwServiceProvider<,> directly re-enters that provider's generated scoped "
+            "a factory taking IPlatformServiceProvider<,> directly re-enters that provider's generated scoped "
             + "resolver lambda when the option's RegisterFactory resolves it, causing an unbounded, silent "
             + "recursion. Wrap the dependency in Lazy<T>. Offenders: " + string.Join(", ", offenders));
     }

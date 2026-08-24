@@ -30,7 +30,7 @@ namespace Fdw.Services.Scheduling;
     ServiceInterface = typeof(IFrameworkSchedulingService),
     ConfigurationType = typeof(SchedulerConfiguration),
     ProviderType = typeof(DefaultServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration, ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>, IServiceConfigurationProvider<SchedulerConfiguration>>),
-    ProviderInterface = typeof(IFdwServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration>),
+    ProviderInterface = typeof(IPlatformServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration>),
     ServiceCategory = "Scheduler")]
 public partial class SchedulerTypes : ServiceTypeCollectionBase<
     SchedulerTypeBase<IFrameworkSchedulingService, SchedulerConfiguration, ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>>,
@@ -54,7 +54,7 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IFdwServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration>).ToString();
+        var providerService = typeof(IPlatformServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -73,7 +73,7 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(SchedulerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(SchedulerTypes), providerService);
 
-            builder.Services.AddScoped<IFdwServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration>>(sp =>
+            builder.Services.AddScoped<IPlatformServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration>>(sp =>
             {
                 var provider = new DefaultServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration, ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>, IServiceConfigurationProvider<SchedulerConfiguration>>(
                     sp,

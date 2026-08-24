@@ -39,13 +39,13 @@ namespace Fdw.Services.SecretManagers;
     ServiceInterface = typeof(ISecretManager),
     ConfigurationType = typeof(SecretManagerConfiguration),
     ProviderType = typeof(DefaultSecretManagerProvider),
-    ProviderInterface = typeof(IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>),
+    ProviderInterface = typeof(IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>),
     ServiceCategory = "SecretManager",
     // Why there is no lifetime here any more: ProviderLifetime was removed from
     // ServiceTypeCollectionAttribute, and ServiceTypeCollectionGenerator now registers EVERY domain
     // provider AddScoped so factory lambdas may legally hold scoped dependencies. This domain
     // previously pinned Singleton so a Singleton connection factory could take
-    // IFdwServiceProvider<ISecretManager, SecretManagerConfiguration> as a plain constructor
+    // IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration> as a plain constructor
     // dependency; with the provider scoped, any Singleton consumer resolving it from the ROOT
     // container captures a scoped instance. Nothing in this domain is scoped, so the registration
     // itself is safe — the risk lives at the consumers, which is why secret resolution moved onto
@@ -73,7 +73,7 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>).ToString();
+        var providerService = typeof(IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -102,14 +102,14 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<SecretManagerConfiguration>>(
                 sp => sp.GetRequiredService<SecretManagerConfigurationProvider>());
             // Why: publishes the domain's own provider interface. The generated Register only registers the
-            // provider under IFdwServiceProvider<,>, which no factory may take by constructor (FDW045).
+            // provider under IPlatformServiceProvider<,>, which no factory may take by constructor (FDW045).
             // Consumers — the connection factories above all — depend on ISecretManagerProvider instead, and
             // this forward hands them the SAME instance, so its factory registrations and cache are shared.
             // The cast is deliberate and fail-loud: the generator constructs DefaultSecretManagerProvider,
             // and if anything ever replaces that registration with a type that is not the domain provider,
             // the composition root must break loudly rather than resolve a second, empty provider.
             builder.Services.TryAddSingleton<ISecretManagerProvider>(
-                sp => (ISecretManagerProvider)sp.GetRequiredService<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>());
+                sp => (ISecretManagerProvider)sp.GetRequiredService<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>());
 
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
@@ -117,7 +117,7 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(SecretManagerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(SecretManagerTypes), providerService);
 
-            builder.Services.AddScoped<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>(sp =>
+            builder.Services.AddScoped<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>(sp =>
             {
                 var provider = new DefaultSecretManagerProvider(
                     sp,

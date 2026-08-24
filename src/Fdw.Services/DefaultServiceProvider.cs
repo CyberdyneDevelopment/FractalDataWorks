@@ -20,7 +20,7 @@ namespace Fdw.Services;
 /// One configuration provider for the domain, per-type child providers for typed config.
 /// </summary>
 public class DefaultServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
-    : IFdwServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
+    : IPlatformServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
     where TService : IGenericService
     where TConfiguration : class, IGenericConfiguration
     where TFactory : IServiceFactory<TService>
@@ -343,15 +343,15 @@ public class DefaultServiceProvider<TService, TConfiguration, TFactory, TConfigu
     /// <inheritdoc />
     public virtual void Evict(Guid id) { }
 
-    // ── Generic casts (IFdwServiceProvider base) ────────────────────────────
+    // ── Generic casts (IPlatformServiceProvider base) ────────────────────────────
 
-    async Task<IGenericResult<T>> IFdwServiceProvider.Get<T>(string name, CancellationToken cancellationToken)
+    async Task<IGenericResult<T>> IPlatformServiceProvider.Get<T>(string name, CancellationToken cancellationToken)
         => Cast<T>(await Get(name, cancellationToken).ConfigureAwait(false));
 
-    async Task<IGenericResult<T>> IFdwServiceProvider.Get<T>(Guid id, CancellationToken cancellationToken)
+    async Task<IGenericResult<T>> IPlatformServiceProvider.Get<T>(Guid id, CancellationToken cancellationToken)
         => Cast<T>(await Get(id, cancellationToken).ConfigureAwait(false));
 
-    async Task<IGenericResult<IReadOnlyList<T>>> IFdwServiceProvider.Get<T>(CancellationToken cancellationToken)
+    async Task<IGenericResult<IReadOnlyList<T>>> IPlatformServiceProvider.Get<T>(CancellationToken cancellationToken)
     {
         var result = await Get(cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess) return result.ToNewResult<IReadOnlyList<T>>();
@@ -366,7 +366,7 @@ public class DefaultServiceProvider<TService, TConfiguration, TFactory, TConfigu
     /// <param name="result">The result produced by one of the Get overloads.</param>
     /// <returns>The narrowed result, or a structured cast failure.</returns>
     // Why: ONE cast mechanism for the whole provider family. The base needs it for its own
-    // IFdwServiceProvider.Get{T} implementations and derived providers need it for their domain
+    // IPlatformServiceProvider.Get{T} implementations and derived providers need it for their domain
     // interfaces (e.g. IDataConnectionProvider.Get{T}) — DefaultConnectionProvider used to carry a
     // byte-for-byte copy of this logic.
     protected IGenericResult<T> Cast<T>(IGenericResult<TService> result)

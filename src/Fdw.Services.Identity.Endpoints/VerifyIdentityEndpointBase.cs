@@ -36,7 +36,7 @@ namespace Fdw.Services.Identity.Endpoints;
 public abstract class VerifyIdentityEndpointBase : Endpoint<VerifyIdentityRequest, VerifyIdentityResponse>
 {
     /// <summary>Gets the provider identities are resolved through.</summary>
-    protected abstract IFdwServiceProvider<IIdentityService, IdentityServiceConfiguration> Identities { get; }
+    protected abstract IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration> Identities { get; }
 
     /// <summary>Gets the route this endpoint is served at.</summary>
     protected virtual string Route => "/identities/{Name}/verify";

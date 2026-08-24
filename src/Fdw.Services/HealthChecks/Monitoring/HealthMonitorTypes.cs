@@ -23,7 +23,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// <para>
 /// The health monitor is a full service domain: options ("Local" in this assembly, "HttpClient" in
 /// <c>Fdw.Web.Analytics.Clients</c>) register factories with the domain provider, and consumers depend
-/// on the provider (<see cref="IFdwServiceProvider{TService,TConfiguration}"/> of
+/// on the provider (<see cref="IPlatformServiceProvider{TService,TConfiguration}"/> of
 /// <see cref="IHealthMonitorService"/>/<see cref="HealthMonitorConfiguration"/>) — never on a direct
 /// <see cref="IHealthMonitorService"/> registration. Which implementation a host runs is that host's
 /// <c>HealthMonitors</c> appsettings row (<c>ServiceOptionType</c>), resolved at first use — not a
@@ -44,7 +44,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
     ConfigurationType = typeof(HealthMonitorConfiguration),
     // Why: the concrete domain provider + domain-named interface, exactly like ConnectionTypes
     // (DefaultConnectionProvider/IConnectionProvider) — consumers inject IHealthMonitorProvider,
-    // so the generated Register must bind THAT interface, not the generic IFdwServiceProvider<,>.
+    // so the generated Register must bind THAT interface, not the generic IPlatformServiceProvider<,>.
     ProviderType = typeof(DefaultHealthMonitorProvider),
     ProviderInterface = typeof(IHealthMonitorProvider),
     ServiceCategory = "HealthMonitor")]

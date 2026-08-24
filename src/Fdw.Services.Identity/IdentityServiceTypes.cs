@@ -33,7 +33,7 @@ namespace Fdw.Services.Identity;
     ServiceInterface = typeof(IIdentityService),
     ConfigurationType = typeof(IdentityServiceConfiguration),
     ProviderType = typeof(DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>),
-    ProviderInterface = typeof(IFdwServiceProvider<IIdentityService, IdentityServiceConfiguration>),
+    ProviderInterface = typeof(IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration>),
     ServiceCategory = "Identity")]
 public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
     IdentityServiceTypeBase<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>>,
@@ -57,7 +57,7 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
 
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below. Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IFdwServiceProvider<IIdentityService, IdentityServiceConfiguration>).ToString();
+        var providerService = typeof(IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -86,7 +86,7 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(IdentityServiceTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(IdentityServiceTypes), providerService);
 
-            builder.Services.AddScoped<IFdwServiceProvider<IIdentityService, IdentityServiceConfiguration>>(sp =>
+            builder.Services.AddScoped<IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration>>(sp =>
             {
                 var provider = new DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>(
                     sp,

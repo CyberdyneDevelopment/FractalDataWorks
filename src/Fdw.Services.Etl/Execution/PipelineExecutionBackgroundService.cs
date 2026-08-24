@@ -107,7 +107,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
 
             var executionTracker = scope.ServiceProvider.GetRequiredService<IExecutionTracker>();
             var pipelineProvider = scope.ServiceProvider
-                .GetRequiredService<IFdwServiceProvider<IEtlPipeline, PipelineConfiguration>>();
+                .GetRequiredService<IPlatformServiceProvider<IEtlPipeline, PipelineConfiguration>>();
             var dataGateway = scope.ServiceProvider.GetRequiredService<IDataGateway>();
             var broadcaster = scope.ServiceProvider.GetRequiredService<IPipelineStatusBroadcaster>();
 
@@ -231,7 +231,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
 
     private async Task RunPipeline(
         IExecutionTracker executionTracker,
-        IFdwServiceProvider<IEtlPipeline, PipelineConfiguration> pipelineProvider,
+        IPlatformServiceProvider<IEtlPipeline, PipelineConfiguration> pipelineProvider,
         IDataGateway dataGateway,
         IPipelineStatusBroadcaster broadcaster,
         PipelineExecutionRequest request,

@@ -12,7 +12,7 @@ namespace Fdw.ServiceTypes.Analyzers.Tests;
 public class ServiceProviderInjectionAnalyzerTests
 {
     // Why: stand-ins for the real Fdw.Services.Abstractions.IServiceOption /
-    // Fdw.ServiceTypes.IFdwServiceProvider<...> types — the test project references only the analyzer
+    // Fdw.ServiceTypes.IPlatformServiceProvider<...> types — the test project references only the analyzer
     // assembly, not the framework, so each test source declares minimal shapes that satisfy the
     // analyzer's semantic (AllInterfaces-based) checks.
     private const string CommonScaffolding = """
@@ -42,11 +42,11 @@ public class ServiceProviderInjectionAnalyzerTests
         {
             using Fdw.Abstractions;
 
-            public interface IFdwServiceProvider<TService> where TService : IGenericService
+            public interface IPlatformServiceProvider<TService> where TService : IGenericService
             {
             }
 
-            public interface IFdwServiceProvider<TService, TConfiguration> : IFdwServiceProvider<TService>
+            public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformServiceProvider<TService>
                 where TService : IGenericService
             {
             }
@@ -114,7 +114,7 @@ public class ServiceProviderInjectionAnalyzerTests
 
                 public class EtlPipeline : IEtlPipeline
                 {
-                    public EtlPipeline(IFdwServiceProvider<ISecretManager, SecretManagerConfiguration> secretManagerProvider)
+                    public EtlPipeline(IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration> secretManagerProvider)
                     {
                     }
                 }

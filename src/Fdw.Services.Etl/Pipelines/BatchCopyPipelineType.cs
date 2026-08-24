@@ -68,7 +68,7 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            var provider = services.GetRequiredService<IFdwServiceProvider<IEtlPipeline, PipelineConfiguration>>();
+            var provider = services.GetRequiredService<IPlatformServiceProvider<IEtlPipeline, PipelineConfiguration>>();
             var log = loggerFactory?.CreateLogger<BatchCopyPipelineType>() ?? NullLogger<BatchCopyPipelineType>.Instance;
 
             // Resolve factory from DI (registered in Phase 1)
@@ -97,7 +97,7 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
                 nameof(IBatchCopyPipelineFactory));
 
             // Why: Resolve from DI — provider was registered with Lazy<IConfigurationGateway> in the option's Register phase.
-            // Not registered with the runtime IFdwServiceProvider (which is typed to the ETL-kind
+            // Not registered with the runtime IPlatformServiceProvider (which is typed to the ETL-kind
             // EtlPipelineConfiguration, resolved from DI by the generated resolver) — the engine config is a
             // distinct typed body reached through the kind body's .Configuration, attached below.
             var configProvider = services.GetRequiredService<DefaultConfigurationProvider<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>>();
@@ -138,7 +138,7 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
 
             // Factory - DI handles all constructor dependencies
             // Why Scoped: the factory optionally consumes IDataGateway (scoped). EtlPipelineTypes'
-            // generated IFdwServiceProvider<IEtlPipeline, PipelineConfiguration> is itself Scoped and
+            // generated IPlatformServiceProvider<IEtlPipeline, PipelineConfiguration> is itself Scoped and
             // resolves this factory via RegisterFactory inside its own per-scope resolver, so a Scoped
             // factory here is lifetime-consistent, not a captive dependency.
             // Why: lambda registration so the cross-collection connection provider is injected as a Lazy —
@@ -148,8 +148,8 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
                 sp.GetRequiredService<ILogger<BatchCopyPipelineFactory>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetService<IDataGateway>(),
-                new Lazy<IFdwServiceProvider<IGenericConnection, IGenericConfiguration>>(
-                    () => sp.GetService<IFdwServiceProvider<IGenericConnection, IGenericConfiguration>>()!),
+                new Lazy<IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>>(
+                    () => sp.GetService<IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>>()!),
                 sp.GetService<IDataStoreProvider>()));
 
             // Why: Lazy<IConfigurationGateway> defers cfg resolution until first runtime query, avoiding

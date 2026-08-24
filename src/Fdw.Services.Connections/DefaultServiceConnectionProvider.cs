@@ -135,21 +135,21 @@ public sealed class DefaultServiceConnectionProvider : IServiceConnectionProvide
     }
 
     /// <inheritdoc />
-    async Task<IGenericResult<T>> IFdwServiceProvider.Get<T>(string name, CancellationToken cancellationToken)
+    async Task<IGenericResult<T>> IPlatformServiceProvider.Get<T>(string name, CancellationToken cancellationToken)
     {
         var result = await Get(name, cancellationToken).ConfigureAwait(false);
         return CastResult<T>(result);
     }
 
     /// <inheritdoc />
-    async Task<IGenericResult<T>> IFdwServiceProvider.Get<T>(Guid id, CancellationToken cancellationToken)
+    async Task<IGenericResult<T>> IPlatformServiceProvider.Get<T>(Guid id, CancellationToken cancellationToken)
     {
         var result = await Get(id, cancellationToken).ConfigureAwait(false);
         return CastResult<T>(result);
     }
 
     /// <inheritdoc />
-    async Task<IGenericResult<IReadOnlyList<T>>> IFdwServiceProvider.Get<T>(CancellationToken cancellationToken)
+    async Task<IGenericResult<IReadOnlyList<T>>> IPlatformServiceProvider.Get<T>(CancellationToken cancellationToken)
     {
         var result = await Get(cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess) return result.ToNewResult<IReadOnlyList<T>>();

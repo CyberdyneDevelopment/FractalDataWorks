@@ -25,7 +25,7 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
     // dependency only used at Create() time (passed to the pipeline); a direct provider param would let
     // the factory hold another collection's provider — the shape that risks resolver-lambda re-entrancy.
     // Lazy defers resolution past construction and is dereferenced only when a pipeline is built.
-    private readonly Lazy<IFdwServiceProvider<IGenericConnection, IGenericConfiguration>>? _connectionProvider;
+    private readonly Lazy<IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>>? _connectionProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StreamingPipelineFactory"/> class.
@@ -38,7 +38,7 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
         ILogger<StreamingPipelineFactory> logger,
         ILoggerFactory loggerFactory,
         IDataGateway? dataGateway = null,
-        Lazy<IFdwServiceProvider<IGenericConnection, IGenericConfiguration>>? connectionProvider = null)
+        Lazy<IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>>? connectionProvider = null)
     {
         _logger = logger;
         _loggerFactory = loggerFactory;

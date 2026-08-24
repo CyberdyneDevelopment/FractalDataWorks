@@ -92,7 +92,7 @@ public static class AegisHostRegistration
     /// <summary>
     /// Phase 1a (before Build): binds the one ServiceTypeCollection this ConfigurationDb-free host
     /// drives — <see cref="SecretManagerTypes"/>, which registers the
-    /// <c>IFdwServiceProvider&lt;ISecretManager, SecretManagerConfiguration&gt;</c> the
+    /// <c>IPlatformServiceProvider&lt;ISecretManager, SecretManagerConfiguration&gt;</c> the
     /// <see cref="AegisInjector"/> resolves secret managers through.
     /// </summary>
     public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
@@ -176,7 +176,7 @@ public static class AegisHostRegistration
 
         builder.Services.AddSingleton(Options.Create(new AegisCommandsOptions { Commands = [.. schema.Commands] }));
 
-        // Why: Scoped — IFdwServiceProvider<ISecretManager, SecretManagerConfiguration> (registered by
+        // Why: Scoped — IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration> (registered by
         // SecretManagerTypes.Register above) is itself Scoped by default, so AegisInjector (which takes
         // it as a constructor dependency) must be Scoped too. PreApprovedPolicyEvaluator and
         // HttpHeaderInjectionTarget have no scoped dependencies of their own but are registered Scoped
@@ -217,7 +217,7 @@ public static class AegisHostRegistration
         }
 
         var parentResult = services
-            .GetRequiredService<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>()
+            .GetRequiredService<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>()
             .Register(new DeclaredSecretManagerConfigurationProvider([.. schema.SecretManagers]));
 
         // Why this returns rather than throws: an exception decides for the host that the process

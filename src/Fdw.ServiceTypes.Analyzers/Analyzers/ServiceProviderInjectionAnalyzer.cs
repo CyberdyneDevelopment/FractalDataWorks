@@ -10,7 +10,7 @@ namespace Fdw.ServiceTypes.Analyzers;
 /// <c>IServiceOption</c>-derived interface — i.e. the <c>ServiceInterface</c> of a
 /// <c>[ServiceTypeCollection]</c>) never injects another such service directly through its
 /// constructor. It must instead depend on the other service's
-/// <c>IFdwServiceProvider&lt;TService, TConfiguration&gt;</c> and resolve the concrete instance by
+/// <c>IPlatformServiceProvider&lt;TService, TConfiguration&gt;</c> and resolve the concrete instance by
 /// name at call time.
 /// </summary>
 /// <remarks>
@@ -20,36 +20,36 @@ namespace Fdw.ServiceTypes.Analyzers;
 /// <c>AllInterfaces</c> flattens the entire interface graph). Each instance constructor parameter is
 /// then checked the same way; a parameter typed as an <c>IServiceOption</c>-derived interface (or as
 /// <c>IServiceOption</c> itself) is flagged UNLESS the parameter's type is one of the
-/// <c>IFdwServiceProvider</c> generic arities, which is the correct indirection shape.
+/// <c>IPlatformServiceProvider</c> generic arities, which is the correct indirection shape.
 /// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class ServiceProviderInjectionAnalyzer : DiagnosticAnalyzer
 {
     /// <summary>
     /// Diagnostic ID for a service-option service that injects another service-option service
-    /// directly instead of injecting its <c>IFdwServiceProvider&lt;TService, TConfiguration&gt;</c>.
+    /// directly instead of injecting its <c>IPlatformServiceProvider&lt;TService, TConfiguration&gt;</c>.
     /// </summary>
     public const string DirectServiceInjectionDiagnosticId = "FDW044";
 
     private const string ServiceOptionMetadataName = "Fdw.Services.Abstractions.IServiceOption";
     private const string ServiceOptionDependencyAttributeMetadataName = "Fdw.Services.Abstractions.ServiceOptionDependencyAttribute";
 
-    // Why: every declared arity of IFdwServiceProvider that shapes the correct indirection —
+    // Why: every declared arity of IPlatformServiceProvider that shapes the correct indirection —
     // the non-generic base (arity 0) never appears here because it does not implement
     // IServiceOption and therefore never reaches the exclusion check in the first place.
     private static readonly string[] ServiceProviderMetadataNames =
     [
-        "Fdw.ServiceTypes.IFdwServiceProvider`1",
-        "Fdw.ServiceTypes.IFdwServiceProvider`2",
-        "Fdw.ServiceTypes.IFdwServiceProvider`4",
+        "Fdw.ServiceTypes.IPlatformServiceProvider`1",
+        "Fdw.ServiceTypes.IPlatformServiceProvider`2",
+        "Fdw.ServiceTypes.IPlatformServiceProvider`4",
     ];
 
     private static readonly LocalizableString Title =
         "Service-option service must inject another service-option service through its provider";
     private static readonly LocalizableString MessageFormat =
-        "'{0}' is a service-option service but injects the service '{1}' directly. Inject IFdwServiceProvider<{1}, TConfiguration> and resolve it by name instead.";
+        "'{0}' is a service-option service but injects the service '{1}' directly. Inject IPlatformServiceProvider<{1}, TConfiguration> and resolve it by name instead.";
     private static readonly LocalizableString Description =
-        "A service-type-option service (a class implementing an IServiceOption-derived interface) must depend on another such service through its IFdwServiceProvider<TService, TConfiguration>, resolving the instance by name — never by injecting the service interface or implementation directly through the constructor.";
+        "A service-type-option service (a class implementing an IServiceOption-derived interface) must depend on another such service through its IPlatformServiceProvider<TService, TConfiguration>, resolving the instance by name — never by injecting the service interface or implementation directly through the constructor.";
 
     private const string Category = "Usage";
 

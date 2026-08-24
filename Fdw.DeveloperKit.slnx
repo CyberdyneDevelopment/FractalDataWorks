@@ -169,7 +169,6 @@
   <Folder Name="/src/Services/SecretManagers/">
     <Project Path="src/Fdw.Services.SecretManagers.Abstractions/Fdw.Services.SecretManagers.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers/Fdw.Services.SecretManagers.csproj" />
-    <Project Path="src/Fdw.Services.SecretManagers.AzureKeyVault/Fdw.Services.SecretManagers.AzureKeyVault.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.Clients/Fdw.Services.SecretManagers.Clients.csproj" />
   </Folder>
 
@@ -218,7 +217,6 @@
     <Project Path="src/Fdw.Data.Configuration/Fdw.Data.Configuration.csproj" />
     <Project Path="src/Fdw.Data.DataNodes/Fdw.Data.DataNodes.csproj" />
     <Project Path="src/Fdw.Data.DataPaths/Fdw.Data.DataPaths.csproj" />
-    <Project Path="src/Fdw.Data.FileSystem/Fdw.Data.FileSystem.csproj" />
     <Project Path="src/Fdw.Data.Http/Fdw.Data.Http.csproj" />
     <Project Path="src/Fdw.Data.MsSql/Fdw.Data.MsSql.csproj" />
     <Project Path="src/Fdw.Data.PostgreSql/Fdw.Data.PostgreSql.csproj" />
@@ -254,9 +252,6 @@
     <Project Path="src/Fdw.Services.Catalog.Components/Fdw.Services.Catalog.Components.csproj" />
     <Project Path="src/Fdw.Services.Catalog.Endpoints/Fdw.Services.Catalog.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Connections.Endpoints/Fdw.Services.Connections.Endpoints.csproj" />
-    <Project Path="src/Fdw.Services.Connections.FileSystem.Abstractions/Fdw.Services.Connections.FileSystem.Abstractions.csproj" />
-    <Project Path="src/Fdw.Services.Connections.FileSystem.Registration/Fdw.Services.Connections.FileSystem.Registration.csproj" />
-    <Project Path="src/Fdw.Services.Connections.FileSystem/Fdw.Services.Connections.FileSystem.csproj" />
     <Project Path="src/Fdw.Services.Connections.PostgreSql/Fdw.Services.Connections.PostgreSql.csproj" />
     <Project Path="src/Fdw.Services.Connections.RoslynWorkspace.Abstractions/Fdw.Services.Connections.RoslynWorkspace.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Connections.RoslynWorkspace.Registration/Fdw.Services.Connections.RoslynWorkspace.Registration.csproj" />
@@ -316,12 +311,6 @@
     <Project Path="src/Fdw.Services.Scheduling.Endpoints/Fdw.Services.Scheduling.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.Components/Fdw.Services.SecretManagers.Components.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.Endpoints/Fdw.Services.SecretManagers.Endpoints.csproj" />
-    <Project Path="src/Fdw.Services.SecretManagers.EnvironmentVariable/Fdw.Services.SecretManagers.EnvironmentVariable.csproj" />
-    <Project Path="src/Fdw.Services.SecretManagers.HashiCorpVault.Registration/Fdw.Services.SecretManagers.HashiCorpVault.Registration.csproj" />
-    <Project Path="src/Fdw.Services.SecretManagers.HashiCorpVault/Fdw.Services.SecretManagers.HashiCorpVault.csproj" />
-    <Project Path="src/Fdw.Services.SecretManagers.MsSql/Fdw.Services.SecretManagers.MsSql.csproj" />
-    <Project Path="src/Fdw.Services.SecretManagers.Sqlite/Fdw.Services.SecretManagers.Sqlite.csproj" />
-    <Project Path="src/Fdw.Services.SecretManagers.UserSecrets/Fdw.Services.SecretManagers.UserSecrets.csproj" />
     <Project Path="src/Fdw.Services.SessionState.Clients/Fdw.Services.SessionState.Clients.csproj" />
     <Project Path="src/Fdw.Services.Settings.Components/Fdw.Services.Settings.Components.csproj" />
     <Project Path="src/Fdw.Services.Settings.Endpoints/Fdw.Services.Settings.Endpoints.csproj" />
@@ -672,8 +661,6 @@
     <Project Path="tests/Fdw.Services.Catalog.Clients.Tests/Fdw.Services.Catalog.Clients.Tests.csproj" />
     <Project Path="tests/Fdw.Services.Connections.Abstractions.Tests/Fdw.Services.Connections.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Services.Connections.Clients.Tests/Fdw.Services.Connections.Clients.Tests.csproj" />
-    <Project Path="tests/Fdw.Services.Connections.FileSystem.Abstractions.Tests/Fdw.Services.Connections.FileSystem.Abstractions.Tests.csproj" />
-    <Project Path="tests/Fdw.Services.Connections.FileSystem.Tests/Fdw.Services.Connections.FileSystem.Tests.csproj" />
     <Project Path="tests/Fdw.Services.Connections.Http.Abstractions.Tests/Fdw.Services.Connections.Http.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Services.Connections.Limits.Tests/Fdw.Services.Connections.Limits.Tests.csproj" />
     <Project Path="tests/Fdw.Services.Connections.PostgreSql.Tests/Fdw.Services.Connections.PostgreSql.Tests.csproj">

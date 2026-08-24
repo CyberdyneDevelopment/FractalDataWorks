@@ -50,7 +50,7 @@ public sealed class DefaultSchedulerType
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            var provider = services.GetRequiredService<IFdwServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration>>();
+            var provider = services.GetRequiredService<IPlatformServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration>>();
             var log = loggerFactory?.CreateLogger<DefaultSchedulerType>()
                 ?? NullLogger<DefaultSchedulerType>.Instance;
 
@@ -95,7 +95,7 @@ public sealed class DefaultSchedulerType
         {
 
             // Why Scoped: the factory requires IDataGateway (scoped) via constructor injection.
-            // SchedulerTypes' generated IFdwServiceProvider<IFrameworkSchedulingService,
+            // SchedulerTypes' generated IPlatformServiceProvider<IFrameworkSchedulingService,
             // SchedulerConfiguration> is itself Scoped and resolves this factory via RegisterFactory
             // inside its own per-scope resolver, so a Scoped factory here is lifetime-consistent.
             builder.Services.TryAddScoped<ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>, DefaultSchedulingFactory>();

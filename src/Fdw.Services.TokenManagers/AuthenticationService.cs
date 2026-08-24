@@ -22,18 +22,18 @@ namespace Fdw.Services.TokenManagers;
 
 /// <summary>
 /// The generic, provider-agnostic authN service. Holds the active <see cref="ITokenManager"/> (resolved
-/// through <see cref="IFdwServiceProvider{TService, TConfiguration}"/> by configured name) plus the
+/// through <see cref="IPlatformServiceProvider{TService, TConfiguration}"/> by configured name) plus the
 /// credential vault (<see cref="IUserCredentialService"/>) and the secret manager provider a concrete
 /// token manager may need to resolve provider secrets. OpenIddict-free by design — this class knows
 /// nothing about any specific token provider.
 /// </summary>
 public sealed class AuthenticationService : IAuthenticationService
 {
-    private readonly IFdwServiceProvider<ITokenManager, TokenManagerConfiguration> _tokenManagerProvider;
+    private readonly IPlatformServiceProvider<ITokenManager, TokenManagerConfiguration> _tokenManagerProvider;
     private readonly TokenManagerConfigurationProvider _tokenManagerConfigurationProvider;
     private readonly IUserCredentialService _userCredentialService;
     private readonly UserConfigurationProvider _userConfigurationProvider;
-    private readonly IFdwServiceProvider<ISecretManager, SecretManagerConfiguration> _secretManagerProvider;
+    private readonly IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration> _secretManagerProvider;
     // Why: optional — a host that issues no agent keys need not register the edge. The agent_key
     // grant fails loud when it is absent rather than silently falling through to another verifier.
     private readonly IAgentKeyService? _agentKeyService;
@@ -44,7 +44,7 @@ public sealed class AuthenticationService : IAuthenticationService
     /// TokenManagers option's registration cascade.
     /// </summary>
     // Why: Scoped, NOT Singleton. This ctor-injects two ServiceTypeCollection providers
-    // (IFdwServiceProvider<ITokenManager,...> and IFdwServiceProvider<ISecretManager,...>), both
+    // (IPlatformServiceProvider<ITokenManager,...> and IPlatformServiceProvider<ISecretManager,...>), both
     // registered Scoped by the generator, plus IUserCredentialService. A Singleton capturing a Scoped
     // provider is a captive dependency (throws under ValidateScopes; pins one scope's providers for the
     // process lifetime). The only consumer, ConnectTokenEndpointBase, is a per-request endpoint, so
@@ -56,11 +56,11 @@ public sealed class AuthenticationService : IAuthenticationService
 
     /// <summary>Initializes a new instance of the <see cref="AuthenticationService"/> class.</summary>
     public AuthenticationService(
-        IFdwServiceProvider<ITokenManager, TokenManagerConfiguration> tokenManagerProvider,
+        IPlatformServiceProvider<ITokenManager, TokenManagerConfiguration> tokenManagerProvider,
         TokenManagerConfigurationProvider tokenManagerConfigurationProvider,
         IUserCredentialService userCredentialService,
         UserConfigurationProvider userConfigurationProvider,
-        IFdwServiceProvider<ISecretManager, SecretManagerConfiguration> secretManagerProvider,
+        IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration> secretManagerProvider,
         ILogger<AuthenticationService>? logger,
         IAgentKeyService? agentKeyService = null)
     {

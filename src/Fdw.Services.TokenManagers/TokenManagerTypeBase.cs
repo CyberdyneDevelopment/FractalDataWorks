@@ -15,7 +15,7 @@ namespace Fdw.Services.TokenManagers;
 /// Lives in the concrete <c>Fdw.Services.TokenManagers</c> package (net10.0), not
 /// <c>Fdw.Services.TokenManagers.Abstractions</c> (netstandard2.0) — the same placement as
 /// <c>SchedulerTypeBase</c>. This class closes <c>TProvider</c> to
-/// <c>IFdwServiceProvider&lt;ITokenManager, TokenManagerConfiguration&gt;</c>, and
+/// <c>IPlatformServiceProvider&lt;ITokenManager, TokenManagerConfiguration&gt;</c>, and
 /// <see cref="TokenManagerConfiguration"/> is only available from this package (its
 /// <c>[GenerateMapper]</c>/<c>[ManagedConfiguration]</c> source generators are net10.0-only), so the
 /// base class cannot live in Abstractions without breaking the package boundary.

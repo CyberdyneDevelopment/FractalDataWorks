@@ -8,6 +8,6 @@ namespace Fdw.Services.Connections.Abstractions;
 /// </summary>
 // Why: Connection providers provide CONNECTIONS, not configurations.
 // Configuration comes from ConnectionConfigurationProvider.
-public interface IConnectionProvider : IFdwServiceProvider<IGenericConnection>
+public interface IConnectionProvider : IPlatformServiceProvider<IGenericConnection>
 {
 }

@@ -32,7 +32,7 @@ internal sealed class ClientCredentialsIdentityFactory
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ClientCredentialsIdentityFactory> _logger;
     private readonly HttpClient _http;
-    private readonly Lazy<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>> _secretManagers;
+    private readonly Lazy<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>> _secretManagers;
 
     /// <summary>Initializes a new instance of the <see cref="ClientCredentialsIdentityFactory"/> class.</summary>
     /// <param name="loggerFactory">The logger factory for created services.</param>
@@ -42,7 +42,7 @@ internal sealed class ClientCredentialsIdentityFactory
     public ClientCredentialsIdentityFactory(
         ILoggerFactory? loggerFactory,
         HttpClient http,
-        Lazy<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>> secretManagers)
+        Lazy<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>> secretManagers)
     {
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<ClientCredentialsIdentityFactory>();

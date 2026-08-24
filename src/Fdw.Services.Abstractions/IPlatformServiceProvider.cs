@@ -13,7 +13,7 @@ namespace Fdw.ServiceTypes;
 /// Base interface for Fdw service providers.
 /// Use when you need to get any service without knowing the specific TService type.
 /// </summary>
-public interface IFdwServiceProvider
+public interface IPlatformServiceProvider
 {
     /// <summary>Gets a service instance by configuration name.</summary>
     Task<IGenericResult<T>> Get<T>(string name, CancellationToken cancellationToken = default) where T : IGenericService;
@@ -29,7 +29,7 @@ public interface IFdwServiceProvider
 /// Strongly-typed service provider interface.
 /// </summary>
 /// <typeparam name="TService">The type of service this provider manages.</typeparam>
-public interface IFdwServiceProvider<TService> : IFdwServiceProvider
+public interface IPlatformServiceProvider<TService> : IPlatformServiceProvider
     where TService : IGenericService
 {
     /// <summary>Gets a service instance by configuration name.</summary>
@@ -62,7 +62,7 @@ public interface IFdwServiceProvider<TService> : IFdwServiceProvider
 /// </summary>
 /// <typeparam name="TService">The type of service this provider manages.</typeparam>
 /// <typeparam name="TConfiguration">The configuration type for this service domain.</typeparam>
-public interface IFdwServiceProvider<TService, TConfiguration> : IFdwServiceProvider<TService>
+public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformServiceProvider<TService>
     where TService : IGenericService
     where TConfiguration : class, IGenericConfiguration
 {
@@ -106,8 +106,8 @@ public interface IFdwServiceProvider<TService, TConfiguration> : IFdwServiceProv
 /// <typeparam name="TConfiguration">The configuration type for this service domain.</typeparam>
 /// <typeparam name="TFactory">The factory type for creating service instances.</typeparam>
 /// <typeparam name="TConfigurationProvider">The configuration provider type.</typeparam>
-public interface IFdwServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
-    : IFdwServiceProvider<TService, TConfiguration>
+public interface IPlatformServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
+    : IPlatformServiceProvider<TService, TConfiguration>
     where TService : IGenericService
     where TConfiguration : class, IGenericConfiguration
     where TFactory : IServiceFactory<TService>

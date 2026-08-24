@@ -50,7 +50,7 @@ public sealed partial class ChainedProvisionerStepConfiguration : IGenericConfig
     /// <summary>
     /// Gets or sets the name of the sibling <c>sec.ExternalIdentityProvisioner</c> this step delegates
     /// <c>Provision</c> to. Resolved by name through the injected
-    /// <c>IFdwServiceProvider&lt;IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration&gt;</c>
+    /// <c>IPlatformServiceProvider&lt;IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration&gt;</c>
     /// at runtime — never a hard FK, never a switch.
     /// </summary>
     public string ProvisionerName { get; set; } = string.Empty;

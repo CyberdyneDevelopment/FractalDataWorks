@@ -64,6 +64,6 @@ public abstract class SqliteAuthenticationConfiguration
     /// </summary>
     public abstract Task<IGenericResult<string?>> ResolvePassword(
         IReadOnlyDictionary<string, string?> values,
-        IFdwServiceProvider<ISecretManager> secretManagerProvider,
+        IPlatformServiceProvider<ISecretManager> secretManagerProvider,
         CancellationToken cancellationToken = default);
 }

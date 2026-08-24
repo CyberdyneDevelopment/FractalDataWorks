@@ -16,7 +16,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// Lives in the concrete <c>Fdw.Services.ExternalIdentityProviders</c> package (net10.0), not
 /// <c>Fdw.Services.ExternalIdentityProviders.Abstractions</c> (netstandard2.0) — the same placement as
 /// <c>ExternalIdentityProviderTypeBase</c>. This class closes <c>TProvider</c> to
-/// <c>IFdwServiceProvider&lt;IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration&gt;</c>,
+/// <c>IPlatformServiceProvider&lt;IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration&gt;</c>,
 /// and <see cref="ExternalIdentityProvisionerConfiguration"/> is only available from this package (its
 /// <c>[GenerateMapper]</c>/<c>[ManagedConfiguration]</c> source generators are net10.0-only), so the
 /// base class cannot live in Abstractions without breaking the package boundary.

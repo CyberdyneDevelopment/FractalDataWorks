@@ -131,7 +131,7 @@ public sealed class DefaultConnectionProvider
     /// Gets a typed data connection by name.
     /// </summary>
     // Why: Explicit interface implementation used so the method constraint (T : IDataConnection) matches
-    // IDataConnectionProvider.Get<T> exactly without conflicting with IFdwServiceProvider.Get<T>
+    // IDataConnectionProvider.Get<T> exactly without conflicting with IPlatformServiceProvider.Get<T>
     // (T : IGenericService). Callers use IDataConnectionProvider directly.
     // Why: no separate resolution here — Get(name) IS the creation path. The old duplicate fast path
     // bypassed the staleness check, so Get<T> could hand out a connection Get(name) would reject.

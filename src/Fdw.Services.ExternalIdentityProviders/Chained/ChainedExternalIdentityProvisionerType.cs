@@ -39,7 +39,7 @@ public sealed class ChainedExternalIdentityProvisionerType
         Initialization((host, hostLoggerFactory) =>
         {
             var services = host.Services;
-            var provider = services.GetRequiredService<IFdwServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>();
+            var provider = services.GetRequiredService<IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>();
 
             var loggerFactory = services.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance;
             var logger = loggerFactory.CreateLogger<ChainedExternalIdentityProvisionerType>();

@@ -35,7 +35,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
     // a factory that ctor-injected this provider recursed forever during the provider's own
     // realization and hung the host silently (FDW-615).
     ProviderType = typeof(DefaultExternalIdentityProvisionerProvider),
-    ProviderInterface = typeof(IFdwServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>),
+    ProviderInterface = typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>),
     ServiceCategory = "ExternalIdentityProvisioner")]
 public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBase<
     ExternalIdentityProvisionerTypeBase<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>,
@@ -59,7 +59,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IFdwServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>).ToString();
+        var providerService = typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -78,7 +78,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
             ServiceTypeLog.DomainOptionsCollected(log, nameof(ExternalIdentityProvisionerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(ExternalIdentityProvisionerTypes), providerService);
 
-            builder.Services.AddScoped<IFdwServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>(sp =>
+            builder.Services.AddScoped<IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>(sp =>
             {
                 var provider = new DefaultExternalIdentityProvisionerProvider(
                     sp,

@@ -203,7 +203,7 @@ public class DefaultServiceProviderTests
         _provider.Register("TestType", _mockConfigProvider.Object);
         _provider.Register("TestType", mockFactory.Object);
 
-        var result = await ((IFdwServiceProvider)_provider).Get<TestService>("MyService", TestContext.Current.CancellationToken);
+        var result = await ((IPlatformServiceProvider)_provider).Get<TestService>("MyService", TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBe(testService);
@@ -229,7 +229,7 @@ public class DefaultServiceProviderTests
         _provider.Register("TestType", _mockFactory.Object);
 
         // Try to cast to a type it doesn't implement
-        var result = await ((IFdwServiceProvider)_provider).Get<TestService>("MyService", TestContext.Current.CancellationToken);
+        var result = await ((IPlatformServiceProvider)_provider).Get<TestService>("MyService", TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
     }
@@ -255,7 +255,7 @@ public class DefaultServiceProviderTests
         _provider.Register("TestType", _mockConfigProvider.Object);
         _provider.Register("TestType", mockFactory.Object);
 
-        var result = await ((IFdwServiceProvider)_provider).Get<TestService>(id, TestContext.Current.CancellationToken);
+        var result = await ((IPlatformServiceProvider)_provider).Get<TestService>(id, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBe(testService);
@@ -280,7 +280,7 @@ public class DefaultServiceProviderTests
         _provider.Register("TestType", _mockConfigProvider.Object);
         _provider.Register("TestType", _mockFactory.Object);
 
-        var result = await ((IFdwServiceProvider)_provider).Get<TestService>(id, TestContext.Current.CancellationToken);
+        var result = await ((IPlatformServiceProvider)_provider).Get<TestService>(id, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
     }

@@ -7,7 +7,7 @@ namespace Fdw.ServiceTypes.Analyzers;
 
 /// <summary>
 /// Analyzer that keeps service factories PURE: a class implementing
-/// <c>Fdw.Abstractions.IServiceFactory</c> must not take an <c>IFdwServiceProvider</c> or an
+/// <c>Fdw.Abstractions.IServiceFactory</c> must not take an <c>IPlatformServiceProvider</c> or an
 /// <c>IServiceScopeFactory</c> as a constructor parameter. The owning provider resolves what the
 /// service needs and hands the resolved value to a domain <c>Create</c> overload; a factory never
 /// resolves its own dependencies.
@@ -18,15 +18,15 @@ namespace Fdw.ServiceTypes.Analyzers;
 /// service during construction:
 /// </para>
 /// <list type="number">
-/// <item>A factory ctor-injecting its OWN collection's <c>IFdwServiceProvider</c> re-enters that
+/// <item>A factory ctor-injecting its OWN collection's <c>IPlatformServiceProvider</c> re-enters that
 /// provider's generated scoped resolver lambda during realization — unbounded recursion that MEDI's
 /// StackGuard turns into a SILENT hang (no exception, no log) until the host is killed (FDW-615, FDW-560).</item>
 /// <item>A singleton factory that cannot hold a scoped provider grabs one per-call via
-/// <c>IServiceScopeFactory.CreateScope().ServiceProvider.GetService&lt;IFdwServiceProvider&lt;...&gt;&gt;()</c>
+/// <c>IServiceScopeFactory.CreateScope().ServiceProvider.GetService&lt;IPlatformServiceProvider&lt;...&gt;&gt;()</c>
 /// and blocks on it — a raw-container service locator plus sync-over-async thread-pool-starvation freeze.</item>
 /// </list>
 /// <para>
-/// A dependency wrapped in <c>Lazy&lt;IFdwServiceProvider&lt;...&gt;&gt;</c> defers resolution past
+/// A dependency wrapped in <c>Lazy&lt;IPlatformServiceProvider&lt;...&gt;&gt;</c> defers resolution past
 /// construction and is NOT flagged — it cannot re-enter the resolver lambda. A direct (non-Lazy)
 /// provider parameter, or any <c>IServiceScopeFactory</c>, is flagged.
 /// </para>
@@ -44,12 +44,12 @@ public class FactoryProviderInjectionAnalyzer : DiagnosticAnalyzer
     private const string ScopeFactoryMetadataName = "Microsoft.Extensions.DependencyInjection.IServiceScopeFactory";
     private const string LazyMetadataName = "System.Lazy`1";
 
-    // Why: every declared arity of IFdwServiceProvider — a factory must not ctor-inject any of them.
+    // Why: every declared arity of IPlatformServiceProvider — a factory must not ctor-inject any of them.
     private static readonly string[] ServiceProviderMetadataNames =
     [
-        "Fdw.ServiceTypes.IFdwServiceProvider`1",
-        "Fdw.ServiceTypes.IFdwServiceProvider`2",
-        "Fdw.ServiceTypes.IFdwServiceProvider`4",
+        "Fdw.ServiceTypes.IPlatformServiceProvider`1",
+        "Fdw.ServiceTypes.IPlatformServiceProvider`2",
+        "Fdw.ServiceTypes.IPlatformServiceProvider`4",
     ];
 
     private static readonly LocalizableString Title =
@@ -57,7 +57,7 @@ public class FactoryProviderInjectionAnalyzer : DiagnosticAnalyzer
     private static readonly LocalizableString MessageFormat =
         "Factory '{0}' injects '{1}' through its constructor. Factories are pure — the owning provider resolves dependencies and passes them to a Create overload. Injecting a provider risks resolver-lambda re-entrancy (silent hang); an IServiceScopeFactory is a raw-container service locator. Remove it (wrap in Lazy<T> only if unavoidable).";
     private static readonly LocalizableString Description =
-        "A class implementing IServiceFactory must not take an IFdwServiceProvider or IServiceScopeFactory as a constructor parameter. The provider owns async resolution and hands resolved values to the factory's Create overload. A non-Lazy provider dependency re-enters that provider's scoped resolver lambda during realization (unbounded silent recursion); an IServiceScopeFactory is used to locate a provider from the raw container and block on it (sync-over-async).";
+        "A class implementing IServiceFactory must not take an IPlatformServiceProvider or IServiceScopeFactory as a constructor parameter. The provider owns async resolution and hands resolved values to the factory's Create overload. A non-Lazy provider dependency re-enters that provider's scoped resolver lambda during realization (unbounded silent recursion); an IServiceScopeFactory is used to locate a provider from the raw container and block on it (sync-over-async).";
 
     private const string Category = "Usage";
 

@@ -50,13 +50,13 @@ public sealed class ClientCredentialsIdentityType
                 .Register(Name, sp => new ClientCredentialsIdentityFactory(
                     sp.GetService<ILoggerFactory>(),
                     sp.GetRequiredService<IHttpClientFactory>().CreateClient(IdentityHttpClient.Name),
-                    sp.GetRequiredService<Lazy<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>>()));
+                    sp.GetRequiredService<Lazy<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>>()));
 
             // Why registered here: the factory takes the secret-manager provider as a Lazy so it is
             // resolved after the container is built, and nothing else in the graph registers that
             // closed Lazy.
-            builder.Services.TryAddScoped(sp => new Lazy<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>(
-                sp.GetRequiredService<IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>>));
+            builder.Services.TryAddScoped(sp => new Lazy<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>(
+                sp.GetRequiredService<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>));
 
             // The typed body provider, so the header provider can compose the aggregate. Registration
             // only makes it resolvable; Initialization is where it is handed over, because the header

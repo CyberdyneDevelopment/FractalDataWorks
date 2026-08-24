@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using Fdw.Aegis.Configuration;
 using Fdw.Services.SecretManagers.TestDouble;
-using Fdw.Services.Connections.FileSystem;
+using Fdw.Aegis.McpServer.Tests;
 
 namespace Fdw.Aegis.McpServer.Tests;
 
@@ -25,7 +25,7 @@ public sealed class SchemaLoadTests
               { "Name": "EnvSecrets", "ServiceOptionType": "Synthetic", "Configuration": { "Prefix": "FDW_SECRET_" } }
             ],
             "Connections": [
-              { "Name": "synthetic-echo", "ServiceOptionType": "FileSystem", "Configuration": { "Root": "config-data" } }
+              { "Name": "synthetic-echo", "ServiceOptionType": "MockConnection", "Configuration": { "Root": "config-data" } }
             ],
             "Commands": [
               {
@@ -68,7 +68,7 @@ public sealed class SchemaLoadTests
             // Why assert this too: the summary claims all THREE converters are covered, and the
             // connection body is the one that silently bound to null before the converters failed loud.
             schema.Connections.Count.ShouldBe(1);
-            schema.Connections[0].Configuration.ShouldBeOfType<FileSystemConnectionConfiguration>()
+            schema.Connections[0].Configuration.ShouldBeOfType<MockConnectionConfiguration>()
                 .Root.ShouldBe("config-data");
         }
         finally

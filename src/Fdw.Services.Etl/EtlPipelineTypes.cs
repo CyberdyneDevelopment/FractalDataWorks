@@ -50,7 +50,7 @@ namespace Fdw.Services.Etl;
     // (BatchCopy/Streaming) keep EtlPipelineConfiguration as their base config (positional arg above).
     ConfigurationType = typeof(PipelineConfiguration),
     ProviderType = typeof(DefaultServiceProvider<IEtlPipeline, PipelineConfiguration, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, IServiceConfigurationProvider<PipelineConfiguration>>),
-    ProviderInterface = typeof(IFdwServiceProvider<IEtlPipeline, PipelineConfiguration>),
+    ProviderInterface = typeof(IPlatformServiceProvider<IEtlPipeline, PipelineConfiguration>),
     ServiceCategory = "Pipeline")]
 public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
     EtlPipelineTypeBase<IEtlPipeline, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, EtlPipelineConfiguration>,
@@ -123,7 +123,7 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IFdwServiceProvider<IEtlPipeline, PipelineConfiguration>).ToString();
+        var providerService = typeof(IPlatformServiceProvider<IEtlPipeline, PipelineConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -154,7 +154,7 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(EtlPipelineTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(EtlPipelineTypes), providerService);
 
-            builder.Services.AddScoped<IFdwServiceProvider<IEtlPipeline, PipelineConfiguration>>(sp =>
+            builder.Services.AddScoped<IPlatformServiceProvider<IEtlPipeline, PipelineConfiguration>>(sp =>
             {
                 var provider = new DefaultServiceProvider<IEtlPipeline, PipelineConfiguration, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, IServiceConfigurationProvider<PipelineConfiguration>>(
                     sp,

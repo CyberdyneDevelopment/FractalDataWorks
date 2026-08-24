@@ -21,7 +21,7 @@ public interface IExternalIdentityProvisionerFactory
 /// </summary>
 /// <typeparam name="TService">The type of external identity provisioner this factory creates.</typeparam>
 /// <typeparam name="TConfiguration">The type of configuration this factory requires.</typeparam>
-// Why: TConfiguration is constrained to `class` because IFdwServiceProvider<TService, TConfiguration>
+// Why: TConfiguration is constrained to `class` because IPlatformServiceProvider<TService, TConfiguration>
 // requires a reference type, and the provider-supplied Create overload below names that interface.
 public interface IExternalIdentityProvisionerFactory<TService, TConfiguration> : IExternalIdentityProvisionerFactory, IServiceFactory<TService, TConfiguration>
     where TService : IExternalIdentityProvisioner
@@ -41,5 +41,5 @@ public interface IExternalIdentityProvisionerFactory<TService, TConfiguration> :
     // this provider re-entered the provider's own resolver lambda and recursed until the host was
     // killed (FDW-615). Passing it as a plain argument from the provider makes that impossible —
     // there is no container lookup involved at all.
-    IGenericResult<TService> Create(TConfiguration configuration, IFdwServiceProvider<TService, TConfiguration> provisionerProvider);
+    IGenericResult<TService> Create(TConfiguration configuration, IPlatformServiceProvider<TService, TConfiguration> provisionerProvider);
 }

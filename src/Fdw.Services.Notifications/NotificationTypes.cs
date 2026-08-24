@@ -43,7 +43,7 @@ namespace Fdw.Services.Notifications;
     ConfigurationInterface = typeof(NotificationConfiguration),
     ConfigurationType = typeof(NotificationConfiguration),
     ProviderType = typeof(DefaultServiceProvider<IGenericNotification, NotificationConfiguration, INotificationFactory<IGenericNotification, NotificationConfiguration>, IServiceConfigurationProvider<NotificationConfiguration>>),
-    ProviderInterface = typeof(IFdwServiceProvider<IGenericNotification, NotificationConfiguration>),
+    ProviderInterface = typeof(IPlatformServiceProvider<IGenericNotification, NotificationConfiguration>),
     ServiceCategory = "Notification")]
 public partial class NotificationTypes
     : ServiceTypeCollectionBase<
@@ -68,7 +68,7 @@ public partial class NotificationTypes
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IFdwServiceProvider<IGenericNotification, NotificationConfiguration>).ToString();
+        var providerService = typeof(IPlatformServiceProvider<IGenericNotification, NotificationConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -113,7 +113,7 @@ public partial class NotificationTypes
             ServiceTypeLog.DomainOptionsCollected(log, nameof(NotificationTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(NotificationTypes), providerService);
 
-            builder.Services.AddScoped<IFdwServiceProvider<IGenericNotification, NotificationConfiguration>>(sp =>
+            builder.Services.AddScoped<IPlatformServiceProvider<IGenericNotification, NotificationConfiguration>>(sp =>
             {
                 var provider = new DefaultServiceProvider<IGenericNotification, NotificationConfiguration, INotificationFactory<IGenericNotification, NotificationConfiguration>, IServiceConfigurationProvider<NotificationConfiguration>>(
                     sp,

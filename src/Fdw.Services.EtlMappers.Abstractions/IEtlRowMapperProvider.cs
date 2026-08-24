@@ -7,7 +7,7 @@ namespace Fdw.Services.EtlMappers.Abstractions;
 /// Acts as a factory registry for creating mapper instances.
 /// </summary>
 /// <remarks>
-/// Unlike IFdwServiceProvider, this provider creates mappers on-demand from configuration
+/// Unlike IPlatformServiceProvider, this provider creates mappers on-demand from configuration
 /// rather than looking them up by name/id. Mappers are lightweight utilities, not full services.
 /// </remarks>
 public interface IEtlRowMapperProvider

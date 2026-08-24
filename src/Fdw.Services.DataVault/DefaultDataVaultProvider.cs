@@ -53,7 +53,7 @@ public sealed class DefaultDataVaultProvider
     // during the phase-3 RegisterFactory hook (CredentialVaultType.RegisterFactory), which receives
     // the built IServiceProvider — exactly like RegisterParentProvider. They are immutable thereafter.
     private IDataConnectionProvider? _connectionProvider;
-    private IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>? _secretManagerProvider;
+    private IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>? _secretManagerProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultDataVaultProvider"/> class.
@@ -76,7 +76,7 @@ public sealed class DefaultDataVaultProvider
     /// <param name="secretManagerProvider">Resolves the secret manager that holds the pepper.</param>
     public void ConfigureResolution(
         IDataConnectionProvider connectionProvider,
-        IFdwServiceProvider<ISecretManager, SecretManagerConfiguration> secretManagerProvider)
+        IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration> secretManagerProvider)
     {
         _connectionProvider = connectionProvider ?? throw new ArgumentNullException(nameof(connectionProvider));
         _secretManagerProvider = secretManagerProvider ?? throw new ArgumentNullException(nameof(secretManagerProvider));

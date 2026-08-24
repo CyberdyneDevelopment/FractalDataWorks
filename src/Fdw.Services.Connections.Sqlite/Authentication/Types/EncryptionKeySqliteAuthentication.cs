@@ -54,7 +54,7 @@ public sealed class EncryptionKeySqliteAuthentication : SqliteAuthenticationConf
     // a missing manager name fails validation above.
     public override async Task<IGenericResult<string?>> ResolvePassword(
         IReadOnlyDictionary<string, string?> values,
-        IFdwServiceProvider<ISecretManager> secretManagerProvider,
+        IPlatformServiceProvider<ISecretManager> secretManagerProvider,
         CancellationToken cancellationToken = default)
     {
         var validation = Validate(values);

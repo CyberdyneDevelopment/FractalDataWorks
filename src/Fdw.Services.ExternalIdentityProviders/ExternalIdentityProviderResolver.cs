@@ -23,7 +23,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// </summary>
 public sealed class ExternalIdentityProviderResolver
 {
-    private readonly IFdwServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration> _provider;
+    private readonly IPlatformServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration> _provider;
     private readonly ExternalIdentityProviderConfigurationProvider _configurationProvider;
     private readonly ILogger<ExternalIdentityProviderResolver> _logger;
 
@@ -32,7 +32,7 @@ public sealed class ExternalIdentityProviderResolver
     /// any consumer's registration cascade (e.g. the OpenIddict token endpoint's own service type option).
     /// </summary>
     // Why: Scoped, NOT Singleton. This ctor-injects
-    // IFdwServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>, which the
+    // IPlatformServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>, which the
     // ServiceTypeCollection generator registers Scoped by default. A Singleton capturing a Scoped
     // provider is a captive dependency (throws under ValidateScopes, and pins one scope's provider for
     // the process lifetime). The only consumer, ConnectTokenEndpointBase, is a per-request endpoint, so
@@ -44,7 +44,7 @@ public sealed class ExternalIdentityProviderResolver
 
     /// <summary>Initializes a new instance of the <see cref="ExternalIdentityProviderResolver"/> class.</summary>
     public ExternalIdentityProviderResolver(
-        IFdwServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration> provider,
+        IPlatformServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration> provider,
         ExternalIdentityProviderConfigurationProvider configurationProvider,
         ILogger<ExternalIdentityProviderResolver>? logger)
     {

@@ -27,7 +27,7 @@ namespace Fdw.Operations.Tests.Execution;
 public sealed class ExecutionTrackingServiceNotificationTests
 {
     private readonly Mock<IDataGateway> _mockGateway;
-    private readonly Mock<IFdwServiceProvider<IGenericNotification, NotificationConfiguration>> _mockNotificationProvider;
+    private readonly Mock<IPlatformServiceProvider<IGenericNotification, NotificationConfiguration>> _mockNotificationProvider;
     private readonly Mock<IServiceConfigurationProvider<NotificationRuleConfiguration>> _mockRuleProvider;
     private readonly Mock<INotificationService> _mockNotificationSvc;
 
@@ -37,7 +37,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
     public ExecutionTrackingServiceNotificationTests()
     {
         _mockGateway = new Mock<IDataGateway>();
-        _mockNotificationProvider = new Mock<IFdwServiceProvider<IGenericNotification, NotificationConfiguration>>();
+        _mockNotificationProvider = new Mock<IPlatformServiceProvider<IGenericNotification, NotificationConfiguration>>();
         _mockRuleProvider = new Mock<IServiceConfigurationProvider<NotificationRuleConfiguration>>();
         _mockNotificationSvc = new Mock<INotificationService>();
     }
