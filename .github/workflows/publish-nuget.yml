@@ -42,6 +42,10 @@ on:
         description: 'If set (e.g. 1.0.0-rc.7), UNLIST this exact version for every Fdw.* package instead of publishing. Leave empty for a normal publish run.'
         type: string
         default: ''
+      package_ids:
+        description: 'Unlist only: comma or newline separated exact package IDs (e.g. after a partial run hit nuget.org''s delete-quota mid-way -- pass just the remaining ones). Leave empty to auto-discover every packable Fdw.* package via a fresh pack.'
+        type: string
+        default: ''
 
 concurrency:
   # One publish at a time. nuget.org rejects a re-push of an existing version, so overlapping
@@ -226,6 +230,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup .NET
+        if: ${{ inputs.package_ids == '' }}
         uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
@@ -235,16 +240,26 @@ jobs:
       # `publish` itself uses) -- the version being unlisted always comes from the workflow
       # input, never from this pack, since a package ID does not change between versions and the
       # version being unlisted is very often not whatever happens to be checked out right now.
+      # Skipped entirely when package_ids is given -- an explicit list needs no discovery, which
+      # also makes a retry-the-remainder run (see package_ids above) fast instead of paying for
+      # a full restore/build/pack again just to re-derive IDs already known from the first run.
       - name: Restore, build, pack (to discover package IDs only)
+        if: ${{ inputs.package_ids == '' }}
         run: |
           dotnet restore Fdw.DeveloperKit.slnx
           dotnet build Fdw.DeveloperKit.slnx -c Release --no-restore
           dotnet pack Fdw.DeveloperKit.slnx -c Release --no-build -o artifacts
 
-      - name: Resolve package ID list from packed artifacts
+      - name: Resolve package ID list
+        env:
+          PACKAGE_IDS: ${{ inputs.package_ids }}
         run: |
           set -euo pipefail
-          python3 - <<'PY'
+          if [ -n "$PACKAGE_IDS" ]; then
+            printf '%s' "$PACKAGE_IDS" | tr ',' '\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | grep -v '^$' > package-ids.txt
+            echo "Using $(wc -l < package-ids.txt) explicitly given package ID(s) -- no pack, no discovery."
+          else
+            python3 - <<'PY'
           import re, glob
           ids = sorted({
               m.group(1)
@@ -255,6 +270,7 @@ jobs:
           print(f"Discovered {len(ids)} package IDs")
           open("package-ids.txt", "w").write("\n".join(ids) + "\n")
           PY
+          fi
           cat package-ids.txt
 
       - name: NuGet login (OIDC to short-lived key)
@@ -266,16 +282,24 @@ jobs:
 
       # nuget.org's delete API unlists rather than deletes: the package stays resolvable for
       # anything already pinned to this exact version, it just stops appearing in search/browse
-      # and stops being offered to a version-range restore. Not fatal per-package: a package that
-      # was never actually published at this version (e.g. added to the solution after this
-      # version was cut) 404s, which --non-interactive surfaces as a normal command failure --
-      # continue past it and report at the end rather than aborting the whole run on the first
-      # one that was never live at this version.
+      # and stops being offered to a version-range restore.
+      #
+      # Two DIFFERENT failure shapes, told apart by grepping the actual command output (exit
+      # code alone can't distinguish them) -- confirmed both happen live, 2026-08-24:
+      #   - 404/Not Found: this package was never actually published at this version (e.g.
+      #     added to the solution after this version was cut). Not an error -- continue past it.
+      #   - anything else (403 Quota Exceeded was the real one hit: nuget.org caps delete calls
+      #     per some rolling window and 13 of 308 tripped it mid-run) IS a real failure. The run
+      #     must not report green when packages that should have been unlisted still are not --
+      #     collect these and exit 1 at the end so a red run actually means "go check nuget.org",
+      #     not silence. Re-dispatch with package_ids set to just the listed failures (see that
+      #     input above) once nuget.org's retry-after window has passed.
       - name: Unlist each discovered package at the given version
         run: |
           set -uo pipefail
           VERSION="${{ inputs.unlist_version }}"
-          FAILED=""
+          NEVER_PUBLISHED=""
+          REAL_FAILURES=""
           while IFS= read -r id; do
             [ -z "$id" ] && continue
             if [ "${{ inputs.dry_run }}" = "true" ]; then
@@ -283,16 +307,27 @@ jobs:
               continue
             fi
             echo "Unlisting $id $VERSION ..."
-            if dotnet nuget delete "$id" "$VERSION" \
+            OUTPUT=$(dotnet nuget delete "$id" "$VERSION" \
                 --source https://api.nuget.org/v3/index.json \
                 --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
-                --non-interactive; then
+                --non-interactive 2>&1)
+            CODE=$?
+            echo "$OUTPUT"
+            if [ $CODE -eq 0 ]; then
               echo "  OK"
+            elif echo "$OUTPUT" | grep -qi "404\|not found"; then
+              echo "  SKIPPED -- never published at this version"
+              NEVER_PUBLISHED="$NEVER_PUBLISHED $id"
             else
-              echo "  FAILED (may never have been published at this version -- not necessarily an error)"
-              FAILED="$FAILED $id"
+              echo "  REAL FAILURE"
+              REAL_FAILURES="$REAL_FAILURES $id"
             fi
           done < package-ids.txt
-          if [ -n "$FAILED" ]; then
-            echo "Packages that did not unlist (see log above for why):$FAILED"
+          echo ""
+          if [ -n "$NEVER_PUBLISHED" ]; then
+            echo "Never published at this version (skipped, not an error):$NEVER_PUBLISHED"
+          fi
+          if [ -n "$REAL_FAILURES" ]; then
+            echo "REAL FAILURES -- still listed, need a retry once any nuget.org quota/rate-limit clears:$REAL_FAILURES"
+            exit 1
           fi
