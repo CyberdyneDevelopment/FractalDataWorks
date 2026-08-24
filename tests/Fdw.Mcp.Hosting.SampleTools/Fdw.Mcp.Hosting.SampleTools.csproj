@@ -6,6 +6,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <IsPackable>false</IsPackable>
+    <!-- Why: a fixture, not a test project. It lives under tests/ because
+         Fdw.Mcp.Hosting.Tests consumes its sample tools, but it declares no tests -
+         and `dotnet test` exits non-zero on a test project with none. -->
+    <IsTestProject>false</IsTestProject>
   </PropertyGroup>
 
   <!-- Why: this project stands in for a real tool package. It deliberately does NOT reference

@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\src\Fdw.Services.Data\Fdw.Services.Data.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Connections.FileSystem\Fdw.Services.Connections.FileSystem.csproj" />
     <ProjectReference Include="..\Fdw.Services.SecretManagers.TestDouble\Fdw.Services.SecretManagers.TestDouble.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Connections.FileSystem.Registration\Fdw.Services.Connections.FileSystem.Registration.csproj" />
   </ItemGroup>
 
   <ItemGroup>
