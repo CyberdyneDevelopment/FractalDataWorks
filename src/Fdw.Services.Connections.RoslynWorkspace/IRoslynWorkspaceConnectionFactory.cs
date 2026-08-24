@@ -4,7 +4,7 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 
 /// <summary>
 /// Factory interface for creating <see cref="RoslynWorkspaceConnection"/> instances.
-/// Registered by <see cref="RoslynWorkspaceConnectionType"/> in Phase 1 of the
+/// Registered by <c>RoslynWorkspaceConnectionType</c> in Phase 1 of the
 /// ServiceTypeCollection three-phase lifecycle.
 /// </summary>
 /// <remarks>

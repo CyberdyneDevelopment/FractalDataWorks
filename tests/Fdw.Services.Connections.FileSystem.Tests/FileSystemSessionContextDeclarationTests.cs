@@ -2,6 +2,7 @@ using System.Linq;
 using Fdw.Services.Connections.Abstractions;
 using Shouldly;
 using Xunit;
+using Fdw.Services.Connections.FileSystem.Registration;
 
 namespace Fdw.Services.Connections.FileSystem.Tests;
 

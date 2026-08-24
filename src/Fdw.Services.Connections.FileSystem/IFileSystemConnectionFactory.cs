@@ -4,7 +4,7 @@ namespace Fdw.Services.Connections.FileSystem;
 
 /// <summary>
 /// Factory interface for creating <see cref="FileSystemConnection"/> instances.
-/// Registered by <see cref="FileSystemConnectionType"/> in Phase 1 of the
+/// Registered by <c>FileSystemConnectionType</c> in Phase 1 of the
 /// ServiceTypeCollection three-phase lifecycle.
 /// </summary>
 /// <remarks>

@@ -35,7 +35,7 @@ namespace Fdw.Services.SecretManagers.HashiCorpVault;
 /// than throwing (FDW-615).
 /// </para>
 /// </remarks>
-internal sealed class HashiCorpVaultSecretManagerFactory
+public sealed class HashiCorpVaultSecretManagerFactory
     : ISecretManagerServiceFactory<ISecretManager, SecretManagerConfiguration>
 {
     private readonly ILoggerFactory _loggerFactory;

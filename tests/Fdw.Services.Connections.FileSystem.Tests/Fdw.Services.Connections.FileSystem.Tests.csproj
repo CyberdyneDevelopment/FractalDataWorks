@@ -30,6 +30,7 @@
     <ProjectReference Include="..\..\src\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Commands.Data.Fluency\Fdw.Commands.Data.Fluency.csproj" />
     <ProjectReference Include="..\Fdw.Services.SecretManagers.TestDouble\Fdw.Services.SecretManagers.TestDouble.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Connections.FileSystem.Registration\Fdw.Services.Connections.FileSystem.Registration.csproj" />
   </ItemGroup>
   <PropertyGroup>
     <Include>[Fdw.Services.Connections.FileSystem]*</Include>

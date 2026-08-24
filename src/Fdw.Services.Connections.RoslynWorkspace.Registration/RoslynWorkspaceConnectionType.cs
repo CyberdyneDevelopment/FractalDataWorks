@@ -21,7 +21,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
-namespace Fdw.Services.Connections.RoslynWorkspace;
+namespace Fdw.Services.Connections.RoslynWorkspace.Registration;
 
 /// <summary>
 /// Connection type definition for RoslynWorkspace connections.
