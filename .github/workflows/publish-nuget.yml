@@ -15,6 +15,12 @@
 # Requires a Trusted Publishing policy on nuget.org (Account -> Trusted Publishing) owned by the
 # `aicolab` account, naming this repository owner, this repository, and this workflow's FILE NAME
 # (`publish-nuget.yml`, no path). Renaming this file invalidates the policy.
+#
+# The unlist job below (workflow_dispatch, unlist_version input) lives in THIS file rather than a
+# separate one specifically so it reuses the same already-authorized Trusted Publishing policy --
+# a policy is scoped to (repo owner, repo, workflow FILE NAME), so a new file would need its own
+# nuget.org account-side policy entry added by hand before NuGet/login@v1 would work for it at
+# all. Dispatch against whichever branch actually has the version you need to unlist.
 name: Publish to NuGet.org
 
 on:
@@ -25,13 +31,17 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Pack and validate without pushing to nuget.org'
+        description: 'Pack and validate without pushing/unlisting'
         type: boolean
         default: false
       force:
-        description: 'Publish even if this version already exists on nuget.org'
+        description: 'Publish even if this version already exists on nuget.org (ignored when unlist_version is set)'
         type: boolean
         default: false
+      unlist_version:
+        description: 'If set (e.g. 1.0.0-rc.7), UNLIST this exact version for every Fdw.* package instead of publishing. Leave empty for a normal publish run.'
+        type: string
+        default: ''
 
 concurrency:
   # One publish at a time. nuget.org rejects a re-push of an existing version, so overlapping
@@ -54,6 +64,11 @@ jobs:
   # is — there is no new version to publish.
   check:
     name: Check version is publishable
+    # Skipped for an unlist dispatch -- publishability of the CURRENT tree's version has nothing
+    # to do with unlisting a (usually older, already-shipped) version. `publish` below depends on
+    # this job, and GitHub skips a job whose dependency was skipped, so publish naturally sits out
+    # an unlist run too without needing its own extra guard.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.unlist_version == '' }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -196,3 +211,88 @@ jobs:
       - name: Dry run summary
         if: ${{ inputs.dry_run }}
         run: echo "Dry run - packed ${{ needs.check.outputs.version }} but did not push."
+
+  unlist:
+    name: Unlist ${{ inputs.unlist_version }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.unlist_version != '' }}
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: 'true'
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+      DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # Packs the CURRENTLY CHECKED OUT tree purely to discover the real set of package IDs
+      # (PackageId can differ from a project's file name, so this is the same source of truth
+      # `publish` itself uses) -- the version being unlisted always comes from the workflow
+      # input, never from this pack, since a package ID does not change between versions and the
+      # version being unlisted is very often not whatever happens to be checked out right now.
+      - name: Restore, build, pack (to discover package IDs only)
+        run: |
+          dotnet restore Fdw.DeveloperKit.slnx
+          dotnet build Fdw.DeveloperKit.slnx -c Release --no-restore
+          dotnet pack Fdw.DeveloperKit.slnx -c Release --no-build -o artifacts
+
+      - name: Resolve package ID list from packed artifacts
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re, glob
+          ids = sorted({
+              m.group(1)
+              for f in glob.glob("artifacts/*.nupkg")
+              for m in [re.match(r"^(.+?)\.(\d+\.\d+\.\d+.*)$", f.split("/")[-1][:-len(".nupkg")])]
+              if m
+          })
+          print(f"Discovered {len(ids)} package IDs")
+          open("package-ids.txt", "w").write("\n".join(ids) + "\n")
+          PY
+          cat package-ids.txt
+
+      - name: NuGet login (OIDC to short-lived key)
+        id: login
+        if: ${{ !inputs.dry_run }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      # nuget.org's delete API unlists rather than deletes: the package stays resolvable for
+      # anything already pinned to this exact version, it just stops appearing in search/browse
+      # and stops being offered to a version-range restore. Not fatal per-package: a package that
+      # was never actually published at this version (e.g. added to the solution after this
+      # version was cut) 404s, which --non-interactive surfaces as a normal command failure --
+      # continue past it and report at the end rather than aborting the whole run on the first
+      # one that was never live at this version.
+      - name: Unlist each discovered package at the given version
+        run: |
+          set -uo pipefail
+          VERSION="${{ inputs.unlist_version }}"
+          FAILED=""
+          while IFS= read -r id; do
+            [ -z "$id" ] && continue
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "DRY RUN: would unlist $id $VERSION"
+              continue
+            fi
+            echo "Unlisting $id $VERSION ..."
+            if dotnet nuget delete "$id" "$VERSION" \
+                --source https://api.nuget.org/v3/index.json \
+                --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+                --non-interactive; then
+              echo "  OK"
+            else
+              echo "  FAILED (may never have been published at this version -- not necessarily an error)"
+              FAILED="$FAILED $id"
+            fi
+          done < package-ids.txt
+          if [ -n "$FAILED" ]; then
+            echo "Packages that did not unlist (see log above for why):$FAILED"
+          fi
