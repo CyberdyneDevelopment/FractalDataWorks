@@ -15,6 +15,12 @@
 # Requires a Trusted Publishing policy on nuget.org (Account -> Trusted Publishing) owned by the
 # `aicolab` account, naming this repository owner, this repository, and this workflow's FILE NAME
 # (`publish-nuget.yml`, no path). Renaming this file invalidates the policy.
+#
+# The unlist job below (workflow_dispatch, unlist_version input) lives in THIS file rather than a
+# separate one specifically so it reuses the same already-authorized Trusted Publishing policy --
+# a policy is scoped to (repo owner, repo, workflow FILE NAME), so a new file would need its own
+# nuget.org account-side policy entry added by hand before NuGet/login@v1 would work for it at
+# all. Dispatch against whichever branch actually has the version you need to unlist.
 name: Publish to NuGet.org
 
 on:
@@ -25,13 +31,21 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Pack and validate without pushing to nuget.org'
+        description: 'Pack and validate without pushing/unlisting'
         type: boolean
         default: false
       force:
-        description: 'Publish even if this version already exists on nuget.org'
+        description: 'Publish even if this version already exists on nuget.org (ignored when unlist_version is set)'
         type: boolean
         default: false
+      unlist_version:
+        description: 'If set (e.g. 1.0.0-rc.7), UNLIST this exact version for every Fdw.* package instead of publishing. Leave empty for a normal publish run.'
+        type: string
+        default: ''
+      package_ids:
+        description: 'Unlist only: comma or newline separated exact package IDs (e.g. after a partial run hit nuget.org''s delete-quota mid-way -- pass just the remaining ones). Leave empty to auto-discover every packable Fdw.* package via a fresh pack.'
+        type: string
+        default: ''
 
 concurrency:
   # One publish at a time. nuget.org rejects a re-push of an existing version, so overlapping
@@ -54,6 +68,11 @@ jobs:
   # is — there is no new version to publish.
   check:
     name: Check version is publishable
+    # Skipped for an unlist dispatch -- publishability of the CURRENT tree's version has nothing
+    # to do with unlisting a (usually older, already-shipped) version. `publish` below depends on
+    # this job, and GitHub skips a job whose dependency was skipped, so publish naturally sits out
+    # an unlist run too without needing its own extra guard.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.unlist_version == '' }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -196,3 +215,119 @@ jobs:
       - name: Dry run summary
         if: ${{ inputs.dry_run }}
         run: echo "Dry run - packed ${{ needs.check.outputs.version }} but did not push."
+
+  unlist:
+    name: Unlist ${{ inputs.unlist_version }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.unlist_version != '' }}
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: 'true'
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+      DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        if: ${{ inputs.package_ids == '' }}
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # Packs the CURRENTLY CHECKED OUT tree purely to discover the real set of package IDs
+      # (PackageId can differ from a project's file name, so this is the same source of truth
+      # `publish` itself uses) -- the version being unlisted always comes from the workflow
+      # input, never from this pack, since a package ID does not change between versions and the
+      # version being unlisted is very often not whatever happens to be checked out right now.
+      # Skipped entirely when package_ids is given -- an explicit list needs no discovery, which
+      # also makes a retry-the-remainder run (see package_ids above) fast instead of paying for
+      # a full restore/build/pack again just to re-derive IDs already known from the first run.
+      - name: Restore, build, pack (to discover package IDs only)
+        if: ${{ inputs.package_ids == '' }}
+        run: |
+          dotnet restore Fdw.DeveloperKit.slnx
+          dotnet build Fdw.DeveloperKit.slnx -c Release --no-restore
+          dotnet pack Fdw.DeveloperKit.slnx -c Release --no-build -o artifacts
+
+      - name: Resolve package ID list
+        env:
+          PACKAGE_IDS: ${{ inputs.package_ids }}
+        run: |
+          set -euo pipefail
+          if [ -n "$PACKAGE_IDS" ]; then
+            printf '%s' "$PACKAGE_IDS" | tr ',' '\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | grep -v '^$' > package-ids.txt
+            echo "Using $(wc -l < package-ids.txt) explicitly given package ID(s) -- no pack, no discovery."
+          else
+            python3 - <<'PY'
+          import re, glob
+          ids = sorted({
+              m.group(1)
+              for f in glob.glob("artifacts/*.nupkg")
+              for m in [re.match(r"^(.+?)\.(\d+\.\d+\.\d+.*)$", f.split("/")[-1][:-len(".nupkg")])]
+              if m
+          })
+          print(f"Discovered {len(ids)} package IDs")
+          open("package-ids.txt", "w").write("\n".join(ids) + "\n")
+          PY
+          fi
+          cat package-ids.txt
+
+      - name: NuGet login (OIDC to short-lived key)
+        id: login
+        if: ${{ !inputs.dry_run }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      # nuget.org's delete API unlists rather than deletes: the package stays resolvable for
+      # anything already pinned to this exact version, it just stops appearing in search/browse
+      # and stops being offered to a version-range restore.
+      #
+      # Two DIFFERENT failure shapes, told apart by grepping the actual command output (exit
+      # code alone can't distinguish them) -- confirmed both happen live, 2026-08-24:
+      #   - 404/Not Found: this package was never actually published at this version (e.g.
+      #     added to the solution after this version was cut). Not an error -- continue past it.
+      #   - anything else (403 Quota Exceeded was the real one hit: nuget.org caps delete calls
+      #     per some rolling window and 13 of 308 tripped it mid-run) IS a real failure. The run
+      #     must not report green when packages that should have been unlisted still are not --
+      #     collect these and exit 1 at the end so a red run actually means "go check nuget.org",
+      #     not silence. Re-dispatch with package_ids set to just the listed failures (see that
+      #     input above) once nuget.org's retry-after window has passed.
+      - name: Unlist each discovered package at the given version
+        run: |
+          set -uo pipefail
+          VERSION="${{ inputs.unlist_version }}"
+          NEVER_PUBLISHED=""
+          REAL_FAILURES=""
+          while IFS= read -r id; do
+            [ -z "$id" ] && continue
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "DRY RUN: would unlist $id $VERSION"
+              continue
+            fi
+            echo "Unlisting $id $VERSION ..."
+            OUTPUT=$(dotnet nuget delete "$id" "$VERSION" \
+                --source https://api.nuget.org/v3/index.json \
+                --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+                --non-interactive 2>&1)
+            CODE=$?
+            echo "$OUTPUT"
+            if [ $CODE -eq 0 ]; then
+              echo "  OK"
+            elif echo "$OUTPUT" | grep -qi "404\|not found"; then
+              echo "  SKIPPED -- never published at this version"
+              NEVER_PUBLISHED="$NEVER_PUBLISHED $id"
+            else
+              echo "  REAL FAILURE"
+              REAL_FAILURES="$REAL_FAILURES $id"
+            fi
+          done < package-ids.txt
+          echo ""
+          if [ -n "$NEVER_PUBLISHED" ]; then
+            echo "Never published at this version (skipped, not an error):$NEVER_PUBLISHED"
+          fi
+          if [ -n "$REAL_FAILURES" ]; then
+            echo "REAL FAILURES -- still listed, need a retry once any nuget.org quota/rate-limit clears:$REAL_FAILURES"
+            exit 1
+          fi
