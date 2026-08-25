@@ -49,9 +49,8 @@ public sealed class ConditionalDivideFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -60,14 +59,14 @@ public sealed class ConditionalDivideFieldTransformer : FieldTransformerTypeBase
             return Task.FromResult(GenericResult<object?>.Success(null));
         }
 
-        if (!parameters.TryGetValue("divisorField", out var divisorField)
+        if (!context.Parameters.TryGetValue("divisorField", out var divisorField)
             || string.IsNullOrWhiteSpace(divisorField))
         {
             throw new InvalidOperationException(
                 "ConditionalDivide transform requires a 'divisorField' parameter.");
         }
 
-        if (!parameters.TryGetValue("default", out var defaultText)
+        if (!context.Parameters.TryGetValue("default", out var defaultText)
             || !decimal.TryParse(defaultText, NumberStyles.Any, CultureInfo.InvariantCulture, out var defaultValue))
         {
             throw new InvalidOperationException(

@@ -40,9 +40,8 @@ public sealed class AverageFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -51,7 +50,7 @@ public sealed class AverageFieldTransformer : FieldTransformerTypeBase
             return Task.FromResult(GenericResult<object?>.Success(null));
         }
 
-        if (!parameters.TryGetValue("field2", out var field2Name)
+        if (!context.Parameters.TryGetValue("field2", out var field2Name)
             || string.IsNullOrWhiteSpace(field2Name))
         {
             throw new InvalidOperationException(

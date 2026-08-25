@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Fdw.Services.Etl.Abstractions;
 
@@ -45,6 +46,17 @@ public class CreatePipelineFieldMappingRequest : IFieldMapping
     /// (e.g. "FromUnixMilliseconds"). Resolved against the DataTransformerTypes collection at runtime.
     /// </summary>
     public string? TransformExpression { get; set; }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Why this projects <see cref="TransformExpression"/>: the create request carries one transform
+    /// name and no parameter values, so a one-step chain is what it actually describes. It reports no
+    /// chain when no name was supplied rather than inventing one.
+    /// </remarks>
+    public IReadOnlyList<IFieldMappingTransform> Transforms =>
+        string.IsNullOrEmpty(TransformExpression)
+            ? []
+            : [new PipelineFieldMappingTransform(TransformExpression)];
 
     /// <summary>
     /// Gets or sets whether the source field is required (a missing required field reports an error).

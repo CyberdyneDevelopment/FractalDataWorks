@@ -131,10 +131,11 @@ public sealed class XPathDataSetSourceMapper : DataSetSourceMapperTypeBase
                         OperatingDate = DateOnly.FromDateTime(DateTime.UtcNow),
                         ExecutionTimestamp = DateTimeOffset.UtcNow,
                         CurrentRecord = record,
+                        Parameters = step.Parameters,
                         CancellationToken = cancellationToken
                     };
 
-                    var stepResult = await fieldTransformer.Execute(record[logicalName], step.Parameters, transformContext, cancellationToken).ConfigureAwait(false);
+                    var stepResult = await fieldTransformer.Transform(record[logicalName], transformContext, cancellationToken).ConfigureAwait(false);
                     if (!stepResult.IsSuccess)
                     {
                         return GenericResult<IReadOnlyList<Dictionary<string, object?>>>.Failure(

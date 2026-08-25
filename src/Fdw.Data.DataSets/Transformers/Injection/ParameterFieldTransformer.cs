@@ -39,13 +39,12 @@ public sealed class ParameterFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
-        if (!parameters.TryGetValue("name", out var name))
+        if (!context.Parameters.TryGetValue("name", out var name))
         {
             return Task.FromResult(GenericResult<object?>.Success(null));
         }

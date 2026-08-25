@@ -47,9 +47,8 @@ public sealed class SplitFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -60,12 +59,12 @@ public sealed class SplitFieldTransformer : FieldTransformerTypeBase
 
         var value = input.ToString() ?? string.Empty;
 
-        if (!parameters.TryGetValue("delimiter", out var delimiter))
+        if (!context.Parameters.TryGetValue("delimiter", out var delimiter))
         {
             return Task.FromResult(GenericResult<object?>.Success(value));
         }
 
-        if (!parameters.TryGetValue("index", out var indexStr)
+        if (!context.Parameters.TryGetValue("index", out var indexStr)
             || !int.TryParse(indexStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var index))
         {
             return Task.FromResult(GenericResult<object?>.Success(value));

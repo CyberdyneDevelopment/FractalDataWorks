@@ -39,9 +39,8 @@ public sealed class TimezoneFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -50,35 +49,13 @@ public sealed class TimezoneFieldTransformer : FieldTransformerTypeBase
             return Task.FromResult(GenericResult<object?>.Success(null));
         }
 
-        var timeZone = ResolveTimeZone(parameters);
+        var timeZone = ResolveTimeZone(context.Parameters);
 
         var converted = ConvertToTimeZone(input, timeZone);
         return Task.FromResult(GenericResult<object?>.Success(converted));
     }
 
-    /// <inheritdoc/>
-    public override Task<IGenericResult<IReadOnlyList<object?>>> ExecuteBatch(
-        IReadOnlyList<object?> inputs,
-        IReadOnlyDictionary<string, string> parameters,
-        FieldTransformContext context,
-        CancellationToken cancellationToken = default)
-    {
-        var timeZone = ResolveTimeZone(parameters);
-        var results = new List<object?>(inputs.Count);
 
-        foreach (var input in inputs)
-        {
-            if (input is null)
-            {
-                results.Add(null);
-                continue;
-            }
-
-            results.Add(ConvertToTimeZone(input, timeZone));
-        }
-
-        return Task.FromResult(GenericResult<IReadOnlyList<object?>>.Success(results));
-    }
 
     private static DateTimeOffset ConvertToTimeZone(object input, TimeZoneInfo timeZone)
     {

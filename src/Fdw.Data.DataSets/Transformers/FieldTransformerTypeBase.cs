@@ -13,8 +13,7 @@ namespace Fdw.Data.DataSets;
 /// Extends <see cref="DataTransformerTypeBase"/> with parameter definitions, single-value execution,
 /// and optional batch execution for transforms that don't reference other fields.
 /// </summary>
-public abstract class FieldTransformerTypeBase : DataTransformerTypeBase,
-    IDataTransformer<object?, object?>
+public abstract class FieldTransformerTypeBase : DataTransformerTypeBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="FieldTransformerTypeBase"/> class.
@@ -42,16 +41,8 @@ public abstract class FieldTransformerTypeBase : DataTransformerTypeBase,
 
     /// <summary>
     /// Gets the parameter definitions that this field transformer expects.
-    /// Parameter values are stored in transform.FieldMappingTransformParameter and passed
-    /// to <see cref="Execute"/> at runtime.
-    /// </summary>
-    /// <inheritdoc/>
-    public string TransformerName => Name;
-
-    /// <summary>
-    /// Gets the parameter definitions that this field transformer expects.
-    /// Parameter values are stored in transform.FieldMappingTransformParameter and passed
-    /// to <see cref="Execute"/> at runtime.
+    /// Parameter values are stored in transform.FieldMappingTransformParameter and reach the
+    /// transform through <see cref="FieldTransformContext.Parameters"/>.
     /// </summary>
     public IReadOnlyList<OperationParameterDefinition> ExpectedParameters { get; }
 
@@ -61,73 +52,31 @@ public abstract class FieldTransformerTypeBase : DataTransformerTypeBase,
     /// </summary>
     public bool SupportsBatching { get; }
 
+
     /// <summary>
-    /// Transforms a single field value via the <see cref="IDataTransformer{TResult, TInput}"/> seam.
+    /// Transforms one field value using the configuration and runtime state carried by the context.
     /// </summary>
     /// <remarks>
-    /// Why: this is the cross-assembly async seam; it is one delegating implementation in the base so
-    /// every concrete field transformer overrides only the single <see cref="Execute"/> method (no
-    /// duplicated Transform/Execute pair). It awaits the real <see cref="Execute"/> — no sync-over-async.
+    /// Why this is the only entry point: there used to be two - this one, and a parameterless
+    /// <c>Transform(value, cancellationToken)</c> that existed so a caller in a project which does
+    /// not reference this one could still invoke a transform through a lowest-common-denominator
+    /// interface. That shim had nowhere to carry parameters or the current record, so it invented an
+    /// empty parameter bag and an empty context on every call, and any transform reached through it
+    /// ran with none of its configuration: a two-label BoolToString returned the empty string for
+    /// every row rather than either label. Callers that built the context properly got correct
+    /// results, so the same transform behaved differently depending on which path invoked it. The
+    /// shim is gone and the caller that needed it now references this project, so there is one
+    /// calling convention and no way to express "run this unconfigured".
     /// </remarks>
     /// <param name="input">The field value to transform (may be null).</param>
+    /// <param name="context">
+    /// Configured parameters plus runtime state - the current record, operating date and execution
+    /// timestamp.
+    /// </param>
     /// <param name="cancellationToken">Token to observe for cancellation.</param>
     /// <returns>The transformed value wrapped in a result.</returns>
-    public Task<IGenericResult<object?>> Transform(
+    public abstract Task<IGenericResult<object?>> Transform(
         object? input,
-        CancellationToken cancellationToken = default)
-    {
-        // Why: single-expression passthrough to Execute — return the Task directly (no async state
-        // machine; AsyncFixer01). Execute carries the real (possibly I/O-bound) async work.
-        return Execute(
-            input,
-            new Dictionary<string, string>(StringComparer.Ordinal),
-            new FieldTransformContext { CancellationToken = cancellationToken },
-            cancellationToken);
-    }
-
-    /// <summary>
-    /// Execute a single-value field transform with parameters and context.
-    /// </summary>
-    /// <param name="input">The field value to transform (may be null).</param>
-    /// <param name="parameters">Parameter values from transform.FieldMappingTransformParameter.</param>
-    /// <param name="context">Runtime context including current record and operating date.</param>
-    /// <param name="cancellationToken">Token to observe for cancellation.</param>
-    /// <returns>The transformed value wrapped in a result.</returns>
-    public abstract Task<IGenericResult<object?>> Execute(
-        object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Execute a batch of field transforms for an entire column.
-    /// Default implementation iterates <see cref="Execute"/> per value.
-    /// TypeOptions that support batching should override for vectorized performance.
-    /// </summary>
-    /// <param name="inputs">All values for this field across the record set.</param>
-    /// <param name="parameters">Parameter values from transform.FieldMappingTransformParameter.</param>
-    /// <param name="context">Runtime context (CurrentRecord is not populated in batch mode).</param>
-    /// <param name="cancellationToken">Token to observe for cancellation.</param>
-    /// <returns>The transformed values wrapped in a result.</returns>
-    public virtual async Task<IGenericResult<IReadOnlyList<object?>>> ExecuteBatch(
-        IReadOnlyList<object?> inputs,
-        IReadOnlyDictionary<string, string> parameters,
-        FieldTransformContext context,
-        CancellationToken cancellationToken = default)
-    {
-        var results = new List<object?>(inputs.Count);
-        foreach (var input in inputs)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var result = await Execute(input, parameters, context, cancellationToken).ConfigureAwait(false);
-            if (!result.IsSuccess)
-            {
-                return result.ToNewResult<IReadOnlyList<object?>>();
-            }
-
-            results.Add(result.Value);
-        }
-
-        return GenericResult<IReadOnlyList<object?>>.Success(results);
-    }
 }

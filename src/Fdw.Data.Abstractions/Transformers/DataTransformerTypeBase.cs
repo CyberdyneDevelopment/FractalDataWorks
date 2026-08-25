@@ -31,4 +31,5 @@ public abstract class DataTransformerTypeBase : TypeOptionBase<int, DataTransfor
 
     /// <inheritdoc/>
     public bool SupportsStreaming { get; }
+
 }

@@ -56,9 +56,8 @@ public sealed class FallbackFromFieldFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -67,7 +66,7 @@ public sealed class FallbackFromFieldFieldTransformer : FieldTransformerTypeBase
             return Task.FromResult(GenericResult<object?>.Success(input));
         }
 
-        if (!parameters.TryGetValue("sourceField", out var sourceField) ||
+        if (!context.Parameters.TryGetValue("sourceField", out var sourceField) ||
             string.IsNullOrWhiteSpace(sourceField))
         {
             throw new InvalidOperationException("FallbackFromField requires a 'sourceField' parameter.");
@@ -78,7 +77,7 @@ public sealed class FallbackFromFieldFieldTransformer : FieldTransformerTypeBase
             return Task.FromResult(GenericResult<object?>.Success(null));
         }
 
-        var duration = ResolveDuration(parameters);
+        var duration = ResolveDuration(context.Parameters);
 
         return Task.FromResult<IGenericResult<object?>>(sourceValue switch
         {

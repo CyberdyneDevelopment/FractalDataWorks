@@ -40,9 +40,8 @@ public sealed class DivideFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -51,7 +50,7 @@ public sealed class DivideFieldTransformer : FieldTransformerTypeBase
             return Task.FromResult(GenericResult<object?>.Success(null));
         }
 
-        if (!parameters.TryGetValue("divisor", out var divisorText)
+        if (!context.Parameters.TryGetValue("divisor", out var divisorText)
             || !decimal.TryParse(divisorText, NumberStyles.Any, CultureInfo.InvariantCulture, out var divisor))
         {
             throw new InvalidOperationException(
@@ -67,46 +66,7 @@ public sealed class DivideFieldTransformer : FieldTransformerTypeBase
         return Task.FromResult(GenericResult<object?>.Success(value / divisor));
     }
 
-    /// <inheritdoc/>
-    public override Task<IGenericResult<IReadOnlyList<object?>>> ExecuteBatch(
-        IReadOnlyList<object?> inputs,
-        IReadOnlyDictionary<string, string> parameters,
-        FieldTransformContext context,
-        CancellationToken cancellationToken = default)
-    {
-        if (!parameters.TryGetValue("divisor", out var divisorText)
-            || !decimal.TryParse(divisorText, NumberStyles.Any, CultureInfo.InvariantCulture, out var divisor))
-        {
-            throw new InvalidOperationException(
-                "Divide transform requires a valid 'divisor' parameter.");
-        }
 
-        if (divisor == 0m)
-        {
-            var nullResults = new List<object?>(inputs.Count);
-            foreach (var _ in inputs)
-            {
-                nullResults.Add(null);
-            }
-
-            return Task.FromResult(GenericResult<IReadOnlyList<object?>>.Success(nullResults));
-        }
-
-        var results = new List<object?>(inputs.Count);
-        foreach (var input in inputs)
-        {
-            if (input is null)
-            {
-                results.Add(null);
-                continue;
-            }
-
-            var value = ConvertToDecimal(input);
-            results.Add(value / divisor);
-        }
-
-        return Task.FromResult(GenericResult<IReadOnlyList<object?>>.Success(results));
-    }
 
     private static decimal ConvertToDecimal(object input)
     {

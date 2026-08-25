@@ -42,9 +42,8 @@ public sealed class ParseDateOnlyFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -59,7 +58,7 @@ public sealed class ParseDateOnlyFieldTransformer : FieldTransformerTypeBase
                 $"ParseDateOnly expects a string input but received '{input.GetType().Name}'.");
         }
 
-        parameters.TryGetValue("format", out var format);
+        context.Parameters.TryGetValue("format", out var format);
 
         return Task.FromResult<IGenericResult<object?>>(
             TryParseDateOnly(s, format, out var result)
@@ -67,35 +66,7 @@ public sealed class ParseDateOnlyFieldTransformer : FieldTransformerTypeBase
                 : GenericResult<object?>.Success(null));
     }
 
-    /// <inheritdoc/>
-    public override Task<IGenericResult<IReadOnlyList<object?>>> ExecuteBatch(
-        IReadOnlyList<object?> inputs,
-        IReadOnlyDictionary<string, string> parameters,
-        FieldTransformContext context,
-        CancellationToken cancellationToken = default)
-    {
-        parameters.TryGetValue("format", out var format);
-        var results = new List<object?>(inputs.Count);
 
-        foreach (var input in inputs)
-        {
-            if (input is null)
-            {
-                results.Add(null);
-                continue;
-            }
-
-            if (input is not string s)
-            {
-                throw new InvalidOperationException(
-                    $"ParseDateOnly expects a string input but received '{input.GetType().Name}'.");
-            }
-
-            results.Add(TryParseDateOnly(s, format, out var parsed) ? parsed : null);
-        }
-
-        return Task.FromResult(GenericResult<IReadOnlyList<object?>>.Success(results));
-    }
 
     private static bool TryParseDateOnly(string value, string? format, out DateOnly result)
     {

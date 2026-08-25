@@ -91,7 +91,6 @@
     <Project Path="src/Fdw.Data.RowSources/Fdw.Data.RowSources.csproj" />
     <Project Path="src/Fdw.Data.Serialization/Fdw.Data.Serialization.csproj" />
     <Project Path="src/Fdw.Data.SourceGenerators/Fdw.Data.SourceGenerators.csproj" />
-    <Project Path="src/Fdw.Data.Transformers.Abstractions/Fdw.Data.Transformers.Abstractions.csproj" />
   </Folder>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->

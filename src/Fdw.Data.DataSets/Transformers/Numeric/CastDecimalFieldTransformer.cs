@@ -31,9 +31,8 @@ public sealed class CastDecimalFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -57,26 +56,4 @@ public sealed class CastDecimalFieldTransformer : FieldTransformerTypeBase
         });
     }
 
-    /// <inheritdoc/>
-    public override async Task<IGenericResult<IReadOnlyList<object?>>> ExecuteBatch(
-        IReadOnlyList<object?> inputs,
-        IReadOnlyDictionary<string, string> parameters,
-        FieldTransformContext context,
-        CancellationToken cancellationToken = default)
-    {
-        var results = new List<object?>(inputs.Count);
-        foreach (var input in inputs)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var result = await Execute(input, parameters, context, cancellationToken).ConfigureAwait(false);
-            if (!result.IsSuccess)
-            {
-                return result.ToNewResult<IReadOnlyList<object?>>();
-            }
-
-            results.Add(result.Value);
-        }
-
-        return GenericResult<IReadOnlyList<object?>>.Success(results);
-    }
 }

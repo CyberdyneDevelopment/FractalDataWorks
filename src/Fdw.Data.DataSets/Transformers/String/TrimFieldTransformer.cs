@@ -40,9 +40,8 @@ public sealed class TrimFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     // Why: string trimming is a pure CPU operation (no I/O); Task.FromResult is honest
     // sync-returning-Task — the contract is async so future I/O-backed transformers are first-class.
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -53,7 +52,7 @@ public sealed class TrimFieldTransformer : FieldTransformerTypeBase
 
         var value = input.ToString() ?? string.Empty;
 
-        if (parameters.TryGetValue("chars", out var chars) && !string.IsNullOrEmpty(chars))
+        if (context.Parameters.TryGetValue("chars", out var chars) && !string.IsNullOrEmpty(chars))
         {
             return Task.FromResult(GenericResult<object?>.Success((object?)value.Trim(chars.ToCharArray())));
         }

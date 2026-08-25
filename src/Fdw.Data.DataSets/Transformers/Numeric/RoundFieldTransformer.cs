@@ -40,9 +40,8 @@ public sealed class RoundFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -51,7 +50,7 @@ public sealed class RoundFieldTransformer : FieldTransformerTypeBase
             return Task.FromResult(GenericResult<object?>.Success(null));
         }
 
-        if (!parameters.TryGetValue("precision", out var precisionText)
+        if (!context.Parameters.TryGetValue("precision", out var precisionText)
             || !int.TryParse(precisionText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var precision))
         {
             throw new InvalidOperationException(
@@ -63,35 +62,7 @@ public sealed class RoundFieldTransformer : FieldTransformerTypeBase
         return Task.FromResult(GenericResult<object?>.Success(rounded));
     }
 
-    /// <inheritdoc/>
-    public override Task<IGenericResult<IReadOnlyList<object?>>> ExecuteBatch(
-        IReadOnlyList<object?> inputs,
-        IReadOnlyDictionary<string, string> parameters,
-        FieldTransformContext context,
-        CancellationToken cancellationToken = default)
-    {
-        if (!parameters.TryGetValue("precision", out var precisionText)
-            || !int.TryParse(precisionText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var precision))
-        {
-            throw new InvalidOperationException(
-                "Round transform requires a valid 'precision' parameter (integer).");
-        }
 
-        var results = new List<object?>(inputs.Count);
-        foreach (var input in inputs)
-        {
-            if (input is null)
-            {
-                results.Add(null);
-                continue;
-            }
-
-            var value = ConvertToDecimal(input);
-            results.Add(Math.Round(value, precision, MidpointRounding.AwayFromZero));
-        }
-
-        return Task.FromResult(GenericResult<IReadOnlyList<object?>>.Success(results));
-    }
 
     private static decimal ConvertToDecimal(object input)
     {

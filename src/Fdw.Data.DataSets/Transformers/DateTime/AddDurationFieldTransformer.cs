@@ -48,9 +48,8 @@ public sealed class AddDurationFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -59,7 +58,7 @@ public sealed class AddDurationFieldTransformer : FieldTransformerTypeBase
             return Task.FromResult(GenericResult<object?>.Success(null));
         }
 
-        var duration = ResolveDuration(parameters);
+        var duration = ResolveDuration(context.Parameters);
 
         return Task.FromResult<IGenericResult<object?>>(input switch
         {
@@ -70,42 +69,7 @@ public sealed class AddDurationFieldTransformer : FieldTransformerTypeBase
         });
     }
 
-    /// <inheritdoc/>
-    public override Task<IGenericResult<IReadOnlyList<object?>>> ExecuteBatch(
-        IReadOnlyList<object?> inputs,
-        IReadOnlyDictionary<string, string> parameters,
-        FieldTransformContext context,
-        CancellationToken cancellationToken = default)
-    {
-        var duration = ResolveDuration(parameters);
-        var results = new List<object?>(inputs.Count);
 
-        foreach (var input in inputs)
-        {
-            if (input is null)
-            {
-                results.Add(null);
-                continue;
-            }
-
-            switch (input)
-            {
-                case DateTimeOffset dto:
-                    results.Add(dto.Add(duration));
-                    break;
-
-                case DateTime dt:
-                    results.Add(dt.Add(duration));
-                    break;
-
-                default:
-                    throw new InvalidOperationException(
-                        $"AddDuration expects DateTime or DateTimeOffset but received '{input.GetType().Name}'.");
-            }
-        }
-
-        return Task.FromResult(GenericResult<IReadOnlyList<object?>>.Success(results));
-    }
 
     private static TimeSpan ResolveDuration(IReadOnlyDictionary<string, string> parameters)
     {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
@@ -82,4 +83,19 @@ public sealed partial class PipelineTransformFieldMappingConfiguration : IFieldM
     /// Gets or sets whether this mapping is enabled.
     /// </summary>
     public bool IsEnabled { get; set; } = true;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Why this projects <see cref="TransformExpression"/> instead of reading its own rows: a pipeline
+    /// field mapping stores ONE transform name and no parameter values, while a dataset field mapping
+    /// stores an ordered chain with parameters. This reports what is actually stored - a one-step chain
+    /// when a name is set, and no chain when it is not. It never invents parameters: a transform that
+    /// needs them and is reached from here is reported as an error rather than run unconfigured, which
+    /// is the behaviour this replaces. Giving pipeline mappings their own parameter rows is a schema
+    /// change and is filed separately.
+    /// </remarks>
+    public IReadOnlyList<IFieldMappingTransform> Transforms =>
+        string.IsNullOrEmpty(TransformExpression)
+            ? []
+            : [new FieldMappingTransform(TransformExpression, 0)];
 }

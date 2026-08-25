@@ -72,13 +72,12 @@ public sealed class CompositeDateTimeFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
-        var (dateFieldName, hourFieldName, timeZone) = ValidateRequiredParameters(parameters);
+        var (dateFieldName, hourFieldName, timeZone) = ValidateRequiredParameters(context.Parameters);
 
         if (!TryReadDate(context, dateFieldName, out var date))
         {
@@ -90,7 +89,7 @@ public sealed class CompositeDateTimeFieldTransformer : FieldTransformerTypeBase
             return Task.FromResult(GenericResult<object?>.Success(null));
         }
 
-        var additionalMinutes = CalculateIntervalMinutes(parameters, context);
+        var additionalMinutes = CalculateIntervalMinutes(context.Parameters, context);
         var dateTime = date.ToDateTime(new TimeOnly(hour, 0)).AddMinutes(additionalMinutes);
         var offset = timeZone.GetUtcOffset(dateTime);
         var result = new DateTimeOffset(dateTime, offset);

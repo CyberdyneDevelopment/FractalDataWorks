@@ -47,9 +47,8 @@ public sealed class NullToDefaultFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -61,8 +60,8 @@ public sealed class NullToDefaultFieldTransformer : FieldTransformerTypeBase
             return Task.FromResult(GenericResult<object?>.Success(input));
         }
 
-        if (!parameters.TryGetValue("defaultValue", out var defaultValue)
-            || !parameters.TryGetValue("type", out var type))
+        if (!context.Parameters.TryGetValue("defaultValue", out var defaultValue)
+            || !context.Parameters.TryGetValue("type", out var type))
         {
             return Task.FromResult(GenericResult<object?>.Success(null));
         }

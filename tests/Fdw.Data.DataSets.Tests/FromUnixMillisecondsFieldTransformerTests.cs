@@ -12,9 +12,6 @@ namespace Fdw.Data.DataSets.Tests;
 /// </summary>
 public sealed class FromUnixMillisecondsFieldTransformerTests
 {
-    private static readonly IReadOnlyDictionary<string, string> EmptyParameters =
-        new Dictionary<string, string>(StringComparer.Ordinal);
-
     private static readonly FieldTransformContext EmptyContext = new();
 
     [Fact]
@@ -27,7 +24,7 @@ public sealed class FromUnixMillisecondsFieldTransformerTests
         var expected = new DateTimeOffset(2023, 11, 14, 22, 13, 20, TimeSpan.Zero);
 
         // Act
-        var result = await transformer.Execute(1700000000000L, EmptyParameters, EmptyContext, TestContext.Current.CancellationToken);
+        var result = await transformer.Transform(1700000000000L, EmptyContext, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -45,7 +42,7 @@ public sealed class FromUnixMillisecondsFieldTransformerTests
         var expected = new DateTimeOffset(2023, 11, 14, 22, 13, 20, TimeSpan.Zero);
 
         // Act
-        var result = await transformer.Execute("1700000000000", EmptyParameters, EmptyContext, TestContext.Current.CancellationToken);
+        var result = await transformer.Transform("1700000000000", EmptyContext, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -61,7 +58,7 @@ public sealed class FromUnixMillisecondsFieldTransformerTests
         var transformer = new FromUnixMillisecondsFieldTransformer();
 
         // Act
-        var result = await transformer.Execute(null, EmptyParameters, EmptyContext, TestContext.Current.CancellationToken);
+        var result = await transformer.Transform(null, EmptyContext, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -77,7 +74,7 @@ public sealed class FromUnixMillisecondsFieldTransformerTests
         var transformer = new FromUnixMillisecondsFieldTransformer();
 
         // Act
-        var result = await transformer.Execute("not-a-number", EmptyParameters, EmptyContext, TestContext.Current.CancellationToken);
+        var result = await transformer.Transform("not-a-number", EmptyContext, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -93,7 +90,7 @@ public sealed class FromUnixMillisecondsFieldTransformerTests
         var transformer = new FromUnixMillisecondsFieldTransformer();
 
         // Act
-        var result = await transformer.Execute(true, EmptyParameters, EmptyContext, TestContext.Current.CancellationToken);
+        var result = await transformer.Transform(true, EmptyContext, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -109,7 +106,7 @@ public sealed class FromUnixMillisecondsFieldTransformerTests
         var transformer = new FromUnixMillisecondsFieldTransformer();
 
         // Act
-        var result = await transformer.Execute(0L, EmptyParameters, EmptyContext, TestContext.Current.CancellationToken);
+        var result = await transformer.Transform(0L, EmptyContext, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -126,7 +123,7 @@ public sealed class FromUnixMillisecondsFieldTransformerTests
         var transformer = new FromUnixMillisecondsFieldTransformer();
 
         // Act
-        var result = await transformer.Execute(1700000000.5, EmptyParameters, EmptyContext, TestContext.Current.CancellationToken);
+        var result = await transformer.Transform(1700000000.5, EmptyContext, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -151,14 +148,4 @@ public sealed class FromUnixMillisecondsFieldTransformerTests
         transformer.Category.ShouldBe("DateTime");
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public async System.Threading.Tasks.Task Transform_WithValidEpoch_ReturnsSuccess()
-    {
-        var transformer = new FromUnixMillisecondsFieldTransformer();
-        var result = await transformer.Transform(1700000000000L, TestContext.Current.CancellationToken);
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldBe(DateTimeOffset.FromUnixTimeMilliseconds(1700000000000L));
-    }
 }

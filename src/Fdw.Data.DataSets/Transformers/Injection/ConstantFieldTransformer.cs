@@ -38,13 +38,12 @@ public sealed class ConstantFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
-        parameters.TryGetValue("value", out var value);
+        context.Parameters.TryGetValue("value", out var value);
 
         return Task.FromResult(GenericResult<object?>.Success(value));
     }

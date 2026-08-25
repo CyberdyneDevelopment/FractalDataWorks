@@ -38,9 +38,8 @@ public sealed class TrimStartFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -51,7 +50,7 @@ public sealed class TrimStartFieldTransformer : FieldTransformerTypeBase
 
         var value = input.ToString() ?? string.Empty;
 
-        if (parameters.TryGetValue("chars", out var chars) && !string.IsNullOrEmpty(chars))
+        if (context.Parameters.TryGetValue("chars", out var chars) && !string.IsNullOrEmpty(chars))
         {
             return Task.FromResult(GenericResult<object?>.Success(value.TrimStart(chars.ToCharArray())));
         }

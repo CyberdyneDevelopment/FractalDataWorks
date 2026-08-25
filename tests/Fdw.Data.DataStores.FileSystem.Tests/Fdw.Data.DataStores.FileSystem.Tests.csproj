@@ -8,9 +8,6 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Fdw.Data.Transformers.Abstractions\Fdw.Data.Transformers.Abstractions.csproj" />
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <PropertyGroup>

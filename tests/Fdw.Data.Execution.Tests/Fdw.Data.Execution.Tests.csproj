@@ -16,7 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Fdw.Data.DataSets\Fdw.Data.DataSets.csproj" />
-    <ProjectReference Include="..\..\src\Fdw.Data.Transformers.Abstractions\Fdw.Data.Transformers.Abstractions.csproj" />
   </ItemGroup>
   <PropertyGroup>
     <Include>[Fdw.Data.DataSets]*;[Fdw.Data.Transformers.Abstractions]*</Include>

@@ -47,14 +47,13 @@ public sealed class BoolToStringFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
-        parameters.TryGetValue("trueLabel", out var trueLabel);
-        parameters.TryGetValue("falseLabel", out var falseLabel);
+        context.Parameters.TryGetValue("trueLabel", out var trueLabel);
+        context.Parameters.TryGetValue("falseLabel", out var falseLabel);
 
         trueLabel ??= string.Empty;
         falseLabel ??= string.Empty;

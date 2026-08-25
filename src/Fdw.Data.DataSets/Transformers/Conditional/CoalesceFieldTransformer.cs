@@ -39,9 +39,8 @@ public sealed class CoalesceFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -50,7 +49,7 @@ public sealed class CoalesceFieldTransformer : FieldTransformerTypeBase
             return Task.FromResult(GenericResult<object?>.Success(input));
         }
 
-        if (!parameters.TryGetValue("fallbackField", out var fallbackField))
+        if (!context.Parameters.TryGetValue("fallbackField", out var fallbackField))
         {
             return Task.FromResult(GenericResult<object?>.Success(null));
         }

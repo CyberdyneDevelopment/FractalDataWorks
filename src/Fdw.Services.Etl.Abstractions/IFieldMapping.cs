@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Fdw.Services.Etl.Abstractions;
 
 /// <summary>
@@ -19,6 +21,20 @@ public interface IFieldMapping
     /// Gets the optional transform expression.
     /// </summary>
     string? TransformExpression { get; }
+
+    /// <summary>
+    /// Gets the ordered chain of transforms to apply to this field, each with its configured
+    /// parameter values. Applied in ascending <see cref="IFieldMappingTransform.Ordinal"/>.
+    /// </summary>
+    /// <remarks>
+    /// Why a chain of steps with parameters rather than the single <see cref="TransformExpression"/>
+    /// string above: the stored configuration has always been a chain - transform.FieldMappingTransform
+    /// rows, each owning transform.FieldMappingTransformParameter rows - and the dataset source mappers
+    /// have always read it that way. This runtime shape could carry only a bare name, so a Map transform
+    /// could name a transform but never configure it, and every transform requiring a parameter ran
+    /// with none. Both readers now express the same thing the configuration stores.
+    /// </remarks>
+    IReadOnlyList<IFieldMappingTransform> Transforms { get; }
 
     /// <summary>
     /// Gets the default value if source is null.

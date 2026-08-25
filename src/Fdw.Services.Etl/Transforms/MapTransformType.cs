@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Fdw.Data.DataSets;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Configuration;
@@ -118,7 +119,7 @@ public sealed class MapTransformType : TransformTypeBase
 
             // Apply a named field transformer (e.g. "FromUnixMilliseconds" epoch-ms -> DateTimeOffset)
             // before the TargetType coercion — see ApplyNamedTransformer for why TargetType alone can't.
-            value = await ApplyNamedTransformer(mapping.TransformExpression, value, sourceField, input, context, cancellationToken).ConfigureAwait(false);
+            value = await ApplyTransformChain(mapping.Transforms, value, sourceField, input, context, cancellationToken).ConfigureAwait(false);
 
             // Apply type conversion if specified
             if (!string.IsNullOrEmpty(mapping.TargetType) && value != null)
@@ -162,7 +163,7 @@ public sealed class MapTransformType : TransformTypeBase
     }
 
     /// <summary>
-    /// Applies a named field transformer (a <see cref="DataTransformerTypes"/> option such as
+    /// Applies a field mapping's ordered transform chain (each step a <see cref="DataTransformerTypes"/> option such as
     /// "FromUnixMilliseconds") to a mapped value before TargetType coercion, returning the transformed
     /// value (or the original when no transformer is named / the value is null).
     /// </summary>
@@ -173,34 +174,78 @@ public sealed class MapTransformType : TransformTypeBase
     /// honours the otherwise-unread <c>TransformExpression</c> column so a Map field-mapping can name a
     /// transformer instead of producing garbage.
     /// </remarks>
-    private static async Task<object?> ApplyNamedTransformer(
-        string? transformExpression,
+    private static async Task<object?> ApplyTransformChain(
+        IReadOnlyList<IFieldMappingTransform> transforms,
         object? value,
         string sourceField,
         IDictionary<string, object?> input,
         ITransformContext context,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(transformExpression) || value == null)
+        if (value == null)
         {
             return value;
         }
 
-        if (DataTransformerTypes.ByName(transformExpression) is not IDataTransformer<object?, object?> transformer)
+        // Why the chain and not a single name: a field mapping's transforms are stored as ordered
+        // rows, each with its own parameters. Reading only the first name meant a Map transform could
+        // say WHICH transform to run but never WHAT to run it with.
+        foreach (var step in transforms.OrderBy(s => s.Ordinal))
         {
-            context.ReportError($"Field transformer '{transformExpression}' is not a registered DataTransformerType for field '{sourceField}'", input);
-            return value;
+            if (DataTransformerTypes.ByName(step.TransformType) is not FieldTransformerTypeBase transformer)
+            {
+                context.ReportError($"Field transformer '{step.TransformType}' is not a registered DataTransformerType for field '{sourceField}'", input);
+                return value;
+            }
+
+            // Why this is checked instead of letting the transform cope: the previous arrangement
+            // handed every transform an empty parameter bag, and each one quietly fell back to its
+            // own idea of a default - BoolToString returned the empty string for every row rather
+            // than either configured label. A missing required parameter is a configuration error,
+            // and naming it is the only way anyone finds out. It is reported against the field, so
+            // the message identifies the mapping to fix.
+            var missing = transformer.ExpectedParameters
+                .Where(definition => definition.IsRequired && !step.Parameters.ContainsKey(definition.Name))
+                .Select(definition => definition.Name)
+                .ToList();
+
+            if (missing.Count > 0)
+            {
+                context.ReportError(
+                    $"Field transformer '{step.TransformType}' for field '{sourceField}' is missing required parameter(s): {string.Join(", ", missing)}. Configure them on the field mapping's transform step.",
+                    input);
+                return value;
+            }
+
+            // Why the context is built here and passed whole: it carries both what the step was
+            // configured with and the record the step may read siblings from. This is the same
+            // context the dataset source mappers build - one calling convention, so a transform
+            // cannot behave differently depending on which reader invoked it.
+            var transformResult = await transformer.Transform(
+                value,
+                new FieldTransformContext
+                {
+                    OperatingDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                    ExecutionTimestamp = DateTimeOffset.UtcNow,
+                    CurrentRecord = new Dictionary<string, object?>(input, StringComparer.Ordinal),
+                    Parameters = step.Parameters,
+                    CancellationToken = cancellationToken,
+                },
+                cancellationToken).ConfigureAwait(false);
+
+            if (!transformResult.IsSuccess)
+            {
+                context.ReportError($"Field transformer '{step.TransformType}' failed for field '{sourceField}': {transformResult.Messages[0].Message}", input);
+                return value;
+            }
+
+            value = transformResult.Value;
+            if (value == null)
+            {
+                return value;
+            }
         }
 
-        // Why: field transformers expose the async Transform via the Data.Abstractions seam; await it
-        // directly so I/O-backed transformers run without blocking and cancellation propagates.
-        var transformResult = await transformer.Transform(value, cancellationToken).ConfigureAwait(false);
-        if (transformResult.IsSuccess)
-        {
-            return transformResult.Value;
-        }
-
-        context.ReportError($"Field transformer '{transformExpression}' failed for field '{sourceField}': {transformResult.Messages[0].Message}", input);
         return value;
     }
 

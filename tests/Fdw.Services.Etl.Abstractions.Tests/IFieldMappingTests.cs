@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Fdw.Services.Etl.Abstractions;
 
 namespace Fdw.Services.Etl.Abstractions.Tests;
@@ -225,5 +226,7 @@ public class IFieldMappingTests
         public string? TargetType { get; set; }
         public bool IsRequired { get; set; }
         public bool IsEnabled { get; set; }
+
+        public IReadOnlyList<IFieldMappingTransform> Transforms { get; set; } = [];
     }
 }

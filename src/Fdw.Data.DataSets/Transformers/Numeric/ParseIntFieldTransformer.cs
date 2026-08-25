@@ -40,9 +40,8 @@ public sealed class ParseIntFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -57,7 +56,7 @@ public sealed class ParseIntFieldTransformer : FieldTransformerTypeBase
             return Task.FromResult(GenericResult<object?>.Success(null));
         }
 
-        if (parameters.TryGetValue("trimChars", out var trimChars)
+        if (context.Parameters.TryGetValue("trimChars", out var trimChars)
             && !string.IsNullOrEmpty(trimChars))
         {
             text = text.Trim(trimChars.ToCharArray());
@@ -71,51 +70,5 @@ public sealed class ParseIntFieldTransformer : FieldTransformerTypeBase
         return Task.FromResult(GenericResult<object?>.Success(null));
     }
 
-    /// <inheritdoc/>
-    public override Task<IGenericResult<IReadOnlyList<object?>>> ExecuteBatch(
-        IReadOnlyList<object?> inputs,
-        IReadOnlyDictionary<string, string> parameters,
-        FieldTransformContext context,
-        CancellationToken cancellationToken = default)
-    {
-        char[]? trimArray = null;
-        if (parameters.TryGetValue("trimChars", out var trimChars)
-            && !string.IsNullOrEmpty(trimChars))
-        {
-            trimArray = trimChars.ToCharArray();
-        }
 
-        var results = new List<object?>(inputs.Count);
-        foreach (var input in inputs)
-        {
-            if (input is null)
-            {
-                results.Add(null);
-                continue;
-            }
-
-            var text = input.ToString();
-            if (text is null)
-            {
-                results.Add(null);
-                continue;
-            }
-
-            if (trimArray is not null)
-            {
-                text = text.Trim(trimArray);
-            }
-
-            if (int.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed))
-            {
-                results.Add(parsed);
-            }
-            else
-            {
-                results.Add(null);
-            }
-        }
-
-        return Task.FromResult(GenericResult<IReadOnlyList<object?>>.Success(results));
-    }
 }

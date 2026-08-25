@@ -43,9 +43,8 @@ public sealed class FromUnixMillisecondsFieldTransformer : FieldTransformerTypeB
     /// <inheritdoc/>
     // Why: epoch-ms -> DateTimeOffset is a pure CPU conversion (no I/O); Task.FromResult is honest
     // sync-returning-Task — the contract is async so future I/O-backed transformers are first-class.
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {

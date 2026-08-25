@@ -40,9 +40,8 @@ public sealed class ParseDecimalFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -58,7 +57,7 @@ public sealed class ParseDecimalFieldTransformer : FieldTransformerTypeBase
         }
 
         var culture = CultureInfo.InvariantCulture;
-        if (parameters.TryGetValue("culture", out var cultureName)
+        if (context.Parameters.TryGetValue("culture", out var cultureName)
             && !string.IsNullOrWhiteSpace(cultureName))
         {
             culture = CultureInfo.GetCultureInfo(cultureName);
@@ -72,40 +71,5 @@ public sealed class ParseDecimalFieldTransformer : FieldTransformerTypeBase
         return Task.FromResult(GenericResult<object?>.Success(null));
     }
 
-    /// <inheritdoc/>
-    public override Task<IGenericResult<IReadOnlyList<object?>>> ExecuteBatch(
-        IReadOnlyList<object?> inputs,
-        IReadOnlyDictionary<string, string> parameters,
-        FieldTransformContext context,
-        CancellationToken cancellationToken = default)
-    {
-        var culture = CultureInfo.InvariantCulture;
-        if (parameters.TryGetValue("culture", out var cultureName)
-            && !string.IsNullOrWhiteSpace(cultureName))
-        {
-            culture = CultureInfo.GetCultureInfo(cultureName);
-        }
 
-        var results = new List<object?>(inputs.Count);
-        foreach (var input in inputs)
-        {
-            if (input is null)
-            {
-                results.Add(null);
-                continue;
-            }
-
-            var text = input.ToString();
-            if (text is not null && decimal.TryParse(text, NumberStyles.Any, culture, out var parsed))
-            {
-                results.Add(parsed);
-            }
-            else
-            {
-                results.Add(null);
-            }
-        }
-
-        return Task.FromResult(GenericResult<IReadOnlyList<object?>>.Success(results));
-    }
 }

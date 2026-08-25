@@ -38,9 +38,8 @@ public sealed class StringToBoolFieldTransformer : FieldTransformerTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<object?>> Execute(
+    public override Task<IGenericResult<object?>> Transform(
         object? input,
-        IReadOnlyDictionary<string, string> parameters,
         FieldTransformContext context,
         CancellationToken cancellationToken = default)
     {
@@ -51,7 +50,7 @@ public sealed class StringToBoolFieldTransformer : FieldTransformerTypeBase
 
         var value = input.ToString() ?? string.Empty;
 
-        if (!parameters.TryGetValue("trueValue", out var trueValue))
+        if (!context.Parameters.TryGetValue("trueValue", out var trueValue))
         {
             return Task.FromResult(GenericResult<object?>.Success((object)false));
         }
