@@ -826,6 +826,37 @@ public static partial class ServiceTypeLog
         int optionCount);
 
     /// <summary>
+    /// Logs that a collection phase ran with nothing in the collection.
+    /// </summary>
+    /// <remarks>
+    /// Why this is separate from <see cref="CollectionPhaseSucceeded"/> and why it is a Warning: an
+    /// empty collection completes without error, so the success line reads
+    /// "completed successfully over 0 option(s)" and nothing distinguishes a working host from one
+    /// whose options never arrived. That line is the single hardest failure to spot in this system —
+    /// a missing package reference produces it, and the first symptom is a route that 404s or a token
+    /// nothing claims, far from the cause.
+    ///
+    /// An empty collection is not always wrong: a host that genuinely uses no external identity
+    /// provider registers none. So this is a Warning rather than a failure — it must be visible and
+    /// must not stop a boot that is deliberate.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 62010,
+        Level = LogLevel.Warning,
+        Message = "[{collectionName}] {phase} (collection #{sequence}) ran with NO options registered. "
+            + "Nothing joined this collection, so every lookup against it will miss. If that is not "
+            + "intended, the entry point is missing a reference to the package holding the "
+            + "[ServiceTypeOption] or [TypeOption] classes — a library never self-registers a plain "
+            + "[TypeOption]; the entry point's module initializer scans its referenced assemblies. "
+            + "Reference the implementation (or its .Registration package) from the entry point and "
+            + "the count here will be non-zero.")]
+    public static partial IGenericMessage CollectionPhaseNoOptions(
+        ILogger logger,
+        string collectionName,
+        string phase,
+        int sequence);
+
+    /// <summary>
     /// Logs that an option phase is about to run a body the option or host supplied.
     /// </summary>
     [MessageLogging(
