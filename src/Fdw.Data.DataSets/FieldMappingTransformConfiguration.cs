@@ -15,7 +15,7 @@ namespace Fdw.Data.DataSets;
 /// </para>
 /// <para>
 /// The <see cref="TransformType"/> must be a valid <see cref="Fdw.Data.Abstractions.TransformationTypes"/>
-/// name that descends from <see cref="FieldTransformationBase"/>. Parameters for the transform
+/// name that descends from <c>FieldTransformationBase</c>. Parameters for the transform
 /// are stored in a child <see cref="FieldMappingTransformParameterConfiguration"/> table.
 /// </para>
 /// </remarks>

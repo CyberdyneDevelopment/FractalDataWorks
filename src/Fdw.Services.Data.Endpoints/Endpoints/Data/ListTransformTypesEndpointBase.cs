@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets;
+using Fdw.Data.Transformations;
 using Fdw.Results;
 using Fdw.Services.Data.Clients.Models;
 using Fdw.Services.Data.Endpoints.Logging;

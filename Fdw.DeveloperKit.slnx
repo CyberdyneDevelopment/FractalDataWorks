@@ -227,6 +227,13 @@
     <Project Path="src/Fdw.Data.RowSources.FixedWidth.Abstractions/Fdw.Data.RowSources.FixedWidth.Abstractions.csproj" />
     <Project Path="src/Fdw.Data.RowSources.FixedWidth/Fdw.Data.RowSources.FixedWidth.csproj" />
     <Project Path="src/Fdw.Data.Sqlite/Fdw.Data.Sqlite.csproj" />
+    <Project Path="src/Fdw.Data.Transformations.Boolean/Fdw.Data.Transformations.Boolean.csproj" />
+    <Project Path="src/Fdw.Data.Transformations.Conditional/Fdw.Data.Transformations.Conditional.csproj" />
+    <Project Path="src/Fdw.Data.Transformations.DateTime/Fdw.Data.Transformations.DateTime.csproj" />
+    <Project Path="src/Fdw.Data.Transformations.Injection/Fdw.Data.Transformations.Injection.csproj" />
+    <Project Path="src/Fdw.Data.Transformations.Numeric/Fdw.Data.Transformations.Numeric.csproj" />
+    <Project Path="src/Fdw.Data.Transformations.Text/Fdw.Data.Transformations.Text.csproj" />
+    <Project Path="src/Fdw.Data.Transformations/Fdw.Data.Transformations.csproj" />
     <Project Path="src/Fdw.Data.UI.Components/Fdw.Data.UI.Components.csproj" />
     <Project Path="src/Fdw.Data.UI.Pages/Fdw.Data.UI.Pages.csproj" />
     <Project Path="src/Fdw.Data/Fdw.Data.csproj" />

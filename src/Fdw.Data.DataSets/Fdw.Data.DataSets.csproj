@@ -28,6 +28,13 @@
     <ProjectReference Include="..\Fdw.Configuration.SourceGenerators\Fdw.Configuration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\Fdw.Services.Calculations.Abstractions\Fdw.Services.Calculations.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Transformations\Fdw.Data.Transformations.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Transformations.Boolean\Fdw.Data.Transformations.Boolean.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Transformations.Conditional\Fdw.Data.Transformations.Conditional.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Transformations.DateTime\Fdw.Data.Transformations.DateTime.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Transformations.Injection\Fdw.Data.Transformations.Injection.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Transformations.Numeric\Fdw.Data.Transformations.Numeric.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Transformations.Text\Fdw.Data.Transformations.Text.csproj" />
   </ItemGroup>
 
   <ItemGroup>
