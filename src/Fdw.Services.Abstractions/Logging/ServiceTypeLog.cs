@@ -941,6 +941,34 @@ public static partial class ServiceTypeLog
         string implementation);
 
     /// <summary>
+    /// Logs the domain whose phase refused, at the point the platform stops running phases.
+    /// </summary>
+    /// <remarks>
+    /// Why this exists separately from the per-collection failure above: PlatformServices returns the
+    /// first failing entry's result and stops. The host then exits, and the only thing written was
+    /// whatever the failing domain logged for itself — nothing said which domain the platform was
+    /// running, how far through the order it had reached, or that the remaining domains never ran.
+    ///
+    /// The symptom this produced is a process that exits during startup with a message about one
+    /// service and no indication that a phase was in progress, which reads as a crash rather than a
+    /// deliberate fail-loud. A configuration row is deployable code here: a bad row stops the host,
+    /// and the operator needs to know which row.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 61012,
+        Level = LogLevel.Critical,
+        Message = "Platform {phase} STOPPED at domain '{categoryName}' (entry {position} of {total}); it returned a failure "
+            + "and no further domain ran. The host cannot start with a partially registered platform. "
+            + "The reason is in that domain's own failure result: {reason}")]
+    public static partial IGenericMessage PlatformPhaseStopped(
+        ILogger logger,
+        string phase,
+        string categoryName,
+        int position,
+        int total,
+        string reason);
+
+    /// <summary>
     /// Logs that an option phase threw. The exception is converted to a failure result after this is
     /// logged, so one throwing option cannot unwind a collect that is handling failures as values.
     /// </summary>

@@ -6,6 +6,8 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Fdw.ServiceTypes.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.ServiceTypes;
 
@@ -133,7 +135,19 @@ public static class PlatformServices
             // lock-at-collect guard nor the already-run skip fired — the exact silent no-op they exist for.
             var result = entry.Configure(builder, loggerFactory);
             if (result.IsFailure)
+            {
+                // Why logged here and not left to the domain: the domain reported its own reason, but
+                // nothing said the PLATFORM was mid-phase, which entry it stopped on, or that the
+                // remaining domains never ran. Without that the host exits looking like a crash.
+                ServiceTypeLog.PlatformPhaseStopped(
+                    loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance,
+                    "Configure",
+                    entry.CategoryName,
+                    _frozenOrder.IndexOf(entry) + 1,
+                    _frozenOrder.Length,
+                    result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
                 return result;
+            }
 
             builder = result.Value ?? builder;
         }
@@ -159,7 +173,19 @@ public static class PlatformServices
 
             var result = entry.Register(builder, loggerFactory);
             if (result.IsFailure)
+            {
+                // Why logged here and not left to the domain: the domain reported its own reason, but
+                // nothing said the PLATFORM was mid-phase, which entry it stopped on, or that the
+                // remaining domains never ran. Without that the host exits looking like a crash.
+                ServiceTypeLog.PlatformPhaseStopped(
+                    loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance,
+                    "Register",
+                    entry.CategoryName,
+                    _frozenOrder.IndexOf(entry) + 1,
+                    _frozenOrder.Length,
+                    result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
                 return result;
+            }
         }
 
         return GenericResult<IHostApplicationBuilder>.Success(builder);
@@ -183,7 +209,19 @@ public static class PlatformServices
 
             var result = entry.Initialize(host, loggerFactory);
             if (result.IsFailure)
+            {
+                // Why logged here and not left to the domain: the domain reported its own reason, but
+                // nothing said the PLATFORM was mid-phase, which entry it stopped on, or that the
+                // remaining domains never ran. Without that the host exits looking like a crash.
+                ServiceTypeLog.PlatformPhaseStopped(
+                    loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance,
+                    "Initialize",
+                    entry.CategoryName,
+                    _frozenOrder.IndexOf(entry) + 1,
+                    _frozenOrder.Length,
+                    result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
                 return result;
+            }
         }
 
         return GenericResult<IHost>.Success(host);
