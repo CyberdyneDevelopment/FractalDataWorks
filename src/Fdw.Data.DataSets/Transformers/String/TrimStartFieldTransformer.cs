@@ -12,8 +12,8 @@ namespace Fdw.Data.DataSets;
 /// <summary>
 /// Trims leading whitespace or specified characters from a string field value.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "TrimStart")]
-public sealed class TrimStartFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "TrimStart")]
+public sealed class TrimStartFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="TrimStartFieldTransformer"/> class.
@@ -40,7 +40,7 @@ public sealed class TrimStartFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

@@ -14,7 +14,7 @@ public sealed class FieldMappingTransformPayload
     /// <summary>Gets or sets the parent field mapping identifier.</summary>
     public Guid FieldMappingId { get; set; }
 
-    /// <summary>Gets or sets the transform type name from DataTransformerTypes.</summary>
+    /// <summary>Gets or sets the transform type name from TransformationTypes.</summary>
     public string TransformType { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the execution order within the transform chain.</summary>

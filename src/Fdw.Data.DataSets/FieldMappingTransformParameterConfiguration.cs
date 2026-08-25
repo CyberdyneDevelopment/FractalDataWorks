@@ -11,7 +11,7 @@ namespace Fdw.Data.DataSets;
 /// <para>
 /// FieldMappingTransformParameterConfiguration is a child of FieldMappingTransformConfiguration.
 /// Each transform step can have multiple parameters that control its behavior. Parameter names
-/// must match the <see cref="FieldTransformerTypeBase.ExpectedParameters"/> definitions on the
+/// must match the <see cref="FieldTransformationBase.ExpectedParameters"/> definitions on the
 /// parent transform's TypeOption.
 /// </para>
 /// </remarks>

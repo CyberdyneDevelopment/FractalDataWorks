@@ -14,8 +14,8 @@ namespace Fdw.Data.DataSets;
 /// When the input is null, reads a source field from the current record and adds a duration.
 /// When the input is not null, passes it through unchanged.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "FallbackFromField")]
-public sealed class FallbackFromFieldFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "FallbackFromField")]
+public sealed class FallbackFromFieldFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="FallbackFromFieldFieldTransformer"/> class.
@@ -58,7 +58,7 @@ public sealed class FallbackFromFieldFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is not null)

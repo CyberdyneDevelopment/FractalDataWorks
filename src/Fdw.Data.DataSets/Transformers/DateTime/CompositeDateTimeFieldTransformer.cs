@@ -14,8 +14,8 @@ namespace Fdw.Data.DataSets;
 /// Builds a <see cref="DateTimeOffset"/> from separate date, hour, and optional sub-hour interval
 /// fields in the current record. Input is ignored; this is an injection-style transform.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "CompositeDateTime")]
-public sealed class CompositeDateTimeFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "CompositeDateTime")]
+public sealed class CompositeDateTimeFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CompositeDateTimeFieldTransformer"/> class.
@@ -74,7 +74,7 @@ public sealed class CompositeDateTimeFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         var (dateFieldName, hourFieldName, timeZone) = ValidateRequiredParameters(context.Parameters);
@@ -128,7 +128,7 @@ public sealed class CompositeDateTimeFieldTransformer : FieldTransformerTypeBase
         return (dateFieldName, hourFieldName, zoneType.Resolve());
     }
 
-    private static bool TryReadDate(FieldTransformContext context, string dateFieldName, out DateOnly date)
+    private static bool TryReadDate(TransformationContext context, string dateFieldName, out DateOnly date)
     {
         date = default;
         if (!context.CurrentRecord.TryGetValue(dateFieldName, out var dateRaw) || dateRaw is null)
@@ -152,7 +152,7 @@ public sealed class CompositeDateTimeFieldTransformer : FieldTransformerTypeBase
         return false;
     }
 
-    private static bool TryReadHour(FieldTransformContext context, string hourFieldName, out int hour)
+    private static bool TryReadHour(TransformationContext context, string hourFieldName, out int hour)
     {
         hour = 0;
         if (!context.CurrentRecord.TryGetValue(hourFieldName, out var hourRaw) || hourRaw is null)
@@ -165,7 +165,7 @@ public sealed class CompositeDateTimeFieldTransformer : FieldTransformerTypeBase
 
     private static int CalculateIntervalMinutes(
         IReadOnlyDictionary<string, string> parameters,
-        FieldTransformContext context)
+        TransformationContext context)
     {
         parameters.TryGetValue("intervalField", out var intervalFieldName);
         parameters.TryGetValue("intervalMinutes", out var intervalMinutesStr);

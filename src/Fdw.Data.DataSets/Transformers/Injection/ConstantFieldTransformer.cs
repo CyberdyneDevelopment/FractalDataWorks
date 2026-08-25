@@ -12,8 +12,8 @@ namespace Fdw.Data.DataSets;
 /// <summary>
 /// Returns a literal constant value, ignoring the input.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "Constant")]
-public sealed class ConstantFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "Constant")]
+public sealed class ConstantFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ConstantFieldTransformer"/> class.
@@ -40,7 +40,7 @@ public sealed class ConstantFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         context.Parameters.TryGetValue("value", out var value);

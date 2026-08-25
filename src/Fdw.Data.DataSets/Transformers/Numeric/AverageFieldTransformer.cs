@@ -12,10 +12,10 @@ namespace Fdw.Data.DataSets;
 /// <summary>
 /// Computes the average of the input value and a second field value from the current record.
 /// Both values must be numeric (converted to decimal). Result is decimal.
-/// Does not support batching because it reads <see cref="FieldTransformContext.CurrentRecord"/>.
+/// Does not support batching because it reads <see cref="TransformationContext.CurrentRecord"/>.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "Average")]
-public sealed class AverageFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "Average")]
+public sealed class AverageFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="AverageFieldTransformer"/> class.
@@ -42,7 +42,7 @@ public sealed class AverageFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

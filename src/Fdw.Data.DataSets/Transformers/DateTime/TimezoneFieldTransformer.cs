@@ -13,8 +13,8 @@ namespace Fdw.Data.DataSets;
 /// <summary>
 /// Applies a named timezone offset to a DateTime, DateTimeOffset, or parseable string value.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "Timezone")]
-public sealed class TimezoneFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "Timezone")]
+public sealed class TimezoneFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="TimezoneFieldTransformer"/> class.
@@ -41,7 +41,7 @@ public sealed class TimezoneFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

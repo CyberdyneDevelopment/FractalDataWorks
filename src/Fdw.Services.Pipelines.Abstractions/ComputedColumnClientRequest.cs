@@ -12,6 +12,4 @@ public class ComputedColumnClientRequest
     /// <summary>Gets or sets the formula/expression text.</summary>
     public string Formula { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the formula language name, resolved against <c>FormulaLanguages</c>.</summary>
-    public string FormulaLanguage { get; set; } = string.Empty;
 }

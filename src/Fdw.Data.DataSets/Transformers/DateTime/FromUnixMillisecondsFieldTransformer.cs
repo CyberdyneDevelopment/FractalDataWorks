@@ -17,8 +17,8 @@ namespace Fdw.Data.DataSets;
 /// <see cref="DateTimeOffset.FromUnixTimeMilliseconds"/>.
 /// Fails with a non-success result if the input is null or not convertible to a <see langword="long"/>.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "FromUnixMilliseconds")]
-public sealed class FromUnixMillisecondsFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "FromUnixMilliseconds")]
+public sealed class FromUnixMillisecondsFieldTransformer : FieldTransformationBase
 {
     // Why: TypeOptions are singletons discovered by source generation — they have no DI-injected logger.
     // NullLogger allows MessageLogging methods to produce IGenericMessage instances whose Message property
@@ -45,7 +45,7 @@ public sealed class FromUnixMillisecondsFieldTransformer : FieldTransformerTypeB
     // sync-returning-Task — the contract is async so future I/O-backed transformers are first-class.
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

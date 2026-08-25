@@ -14,8 +14,8 @@ namespace Fdw.Data.DataSets;
 /// Parses a string input to int. Optionally trims specified characters before parsing.
 /// Returns null when the input cannot be parsed.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "ParseInt")]
-public sealed class ParseIntFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "ParseInt")]
+public sealed class ParseIntFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ParseIntFieldTransformer"/> class.
@@ -42,7 +42,7 @@ public sealed class ParseIntFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

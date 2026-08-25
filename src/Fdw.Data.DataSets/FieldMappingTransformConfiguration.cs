@@ -14,8 +14,8 @@ namespace Fdw.Data.DataSets;
 /// to the raw field value during ETL processing.
 /// </para>
 /// <para>
-/// The <see cref="TransformType"/> must be a valid <see cref="Fdw.Data.Abstractions.DataTransformerTypes"/>
-/// name that descends from <see cref="FieldTransformerTypeBase"/>. Parameters for the transform
+/// The <see cref="TransformType"/> must be a valid <see cref="Fdw.Data.Abstractions.TransformationTypes"/>
+/// name that descends from <see cref="FieldTransformationBase"/>. Parameters for the transform
 /// are stored in a child <see cref="FieldMappingTransformParameterConfiguration"/> table.
 /// </para>
 /// </remarks>
@@ -40,7 +40,7 @@ public sealed partial class FieldMappingTransformConfiguration
 
     /// <summary>
     /// Gets or sets the transform type name.
-    /// Must be a valid DataTransformerTypes name that descends from FieldTransformerTypeBase.
+    /// Must be a valid TransformationTypes name that descends from FieldTransformationBase.
     /// </summary>
     public string TransformType { get; set; } = string.Empty;
 

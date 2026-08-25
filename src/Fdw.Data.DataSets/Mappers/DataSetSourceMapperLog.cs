@@ -96,21 +96,21 @@ public static partial class DataSetSourceMapperLog
     // ========================================================================
 
     /// <summary>
-    /// Logs that a transform type was not found in DataTransformerTypes.
+    /// Logs that a transform type was not found in TransformationTypes.
     /// </summary>
     [MessageLogging(
         EventId = 31001,
         Level = LogLevel.Error,
-        Message = "Transform type '{transformType}' not found in DataTransformerTypes for field '{logicalFieldName}'")]
+        Message = "Transform type '{transformType}' not found in TransformationTypes for field '{logicalFieldName}'")]
     public static partial IGenericMessage TransformTypeNotFound(ILogger logger, string transformType, string logicalFieldName);
 
     /// <summary>
-    /// Logs that a transform type is not a FieldTransformerTypeBase.
+    /// Logs that a transform type is not a FieldTransformationBase.
     /// </summary>
     [MessageLogging(
         EventId = 41000,
         Level = LogLevel.Error,
-        Message = "Transform type '{transformType}' for field '{logicalFieldName}' is not a FieldTransformerTypeBase")]
+        Message = "Transform type '{transformType}' for field '{logicalFieldName}' is not a FieldTransformationBase")]
     public static partial IGenericMessage TransformTypeNotFieldTransformer(ILogger logger, string transformType, string logicalFieldName);
 
     /// <summary>

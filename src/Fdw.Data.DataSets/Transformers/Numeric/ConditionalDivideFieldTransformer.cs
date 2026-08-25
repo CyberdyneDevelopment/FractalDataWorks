@@ -13,10 +13,10 @@ namespace Fdw.Data.DataSets;
 /// <summary>
 /// Divides the input value by a field value from the current record.
 /// Returns a configurable default when the divisor is zero.
-/// Does not support batching because it reads <see cref="FieldTransformContext.CurrentRecord"/>.
+/// Does not support batching because it reads <see cref="TransformationContext.CurrentRecord"/>.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "ConditionalDivide")]
-public sealed class ConditionalDivideFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "ConditionalDivide")]
+public sealed class ConditionalDivideFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ConditionalDivideFieldTransformer"/> class.
@@ -51,7 +51,7 @@ public sealed class ConditionalDivideFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

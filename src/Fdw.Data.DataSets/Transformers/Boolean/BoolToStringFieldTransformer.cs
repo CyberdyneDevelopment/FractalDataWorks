@@ -13,8 +13,8 @@ namespace Fdw.Data.DataSets;
 /// <summary>
 /// Maps a boolean field value to one of two configured string labels.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "BoolToString")]
-public sealed class BoolToStringFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "BoolToString")]
+public sealed class BoolToStringFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="BoolToStringFieldTransformer"/> class.
@@ -49,7 +49,7 @@ public sealed class BoolToStringFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         context.Parameters.TryGetValue("trueLabel", out var trueLabel);

@@ -12,7 +12,7 @@ namespace Fdw.Data.DataSets.Tests;
 /// </summary>
 public sealed class FromUnixMillisecondsFieldTransformerTests
 {
-    private static readonly FieldTransformContext EmptyContext = new();
+    private static readonly TransformationContext EmptyContext = new();
 
     [Fact]
     [Trait("Priority", "P1")]

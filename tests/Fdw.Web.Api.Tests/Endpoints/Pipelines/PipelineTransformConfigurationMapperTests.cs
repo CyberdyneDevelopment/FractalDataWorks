@@ -205,7 +205,7 @@ public sealed class PipelineTransformConfigurationMapperTests
             OperationType = "Calculate",
             Calculation = new CalculationRequest
             {
-                ComputedColumns = [new ComputedColumnRequest { OutputField = "Double", Formula = "Age * 2", FormulaLanguage = "Builtin" }],
+                ComputedColumns = [new ComputedColumnRequest { OutputField = "Double", Formula = "Age * 2" }],
             }
         };
 
@@ -218,7 +218,6 @@ public sealed class PipelineTransformConfigurationMapperTests
         config.Calculations.Count.ShouldBe(1);
         config.Calculations[0].OutputField.ShouldBe("Double");
         config.Calculations[0].Expression.ShouldBe("Age * 2");
-        config.Calculations[0].FormulaLanguage.ShouldBe("Builtin");
     }
 
     [Fact]

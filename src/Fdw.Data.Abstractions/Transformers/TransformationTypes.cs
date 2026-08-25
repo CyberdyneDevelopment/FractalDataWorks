@@ -9,8 +9,8 @@ namespace Fdw.Data.Abstractions;
 /// Transformers apply ETL-style transformations to data (aggregation, filtering, calculations, etc.).
 /// </summary>
 [ExcludeFromCodeCoverage]
-[TypeCollection(typeof(DataTransformerTypeBase), typeof(IDataTransformerType), typeof(DataTransformerTypes), RestrictToCurrentCompilation = false)]
-public sealed partial class DataTransformerTypes : TypeCollectionBase<DataTransformerTypeBase, IDataTransformerType>
+[TypeCollection(typeof(TransformationTypeBase), typeof(ITransformationType), typeof(TransformationTypes), RestrictToCurrentCompilation = false)]
+public sealed partial class TransformationTypes : TypeCollectionBase<TransformationTypeBase, ITransformationType>
 {
     // TypeCollectionGenerator will generate all members
 }

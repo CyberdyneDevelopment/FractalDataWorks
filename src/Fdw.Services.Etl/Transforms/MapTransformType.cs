@@ -163,13 +163,13 @@ public sealed class MapTransformType : TransformTypeBase
     }
 
     /// <summary>
-    /// Applies a field mapping's ordered transform chain (each step a <see cref="DataTransformerTypes"/> option such as
+    /// Applies a field mapping's ordered transform chain (each step a <see cref="TransformationTypes"/> option such as
     /// "FromUnixMilliseconds") to a mapped value before TargetType coercion, returning the transformed
     /// value (or the original when no transformer is named / the value is null).
     /// </summary>
     /// <remarks>
     /// Why: TargetType's <c>ConvertValue</c> is a primitive cast switch (a long becomes .NET ticks, not
-    /// epoch-ms) and cannot express semantic conversions; the DataTransformerTypes collection
+    /// epoch-ms) and cannot express semantic conversions; the TransformationTypes collection
     /// (FromUnixMilliseconds, ParseDateTimeOffset, Timezone, ...) is the system mechanism for them. This
     /// honours the otherwise-unread <c>TransformExpression</c> column so a Map field-mapping can name a
     /// transformer instead of producing garbage.
@@ -192,7 +192,7 @@ public sealed class MapTransformType : TransformTypeBase
         // say WHICH transform to run but never WHAT to run it with.
         foreach (var step in transforms.OrderBy(s => s.Ordinal))
         {
-            if (DataTransformerTypes.ByName(step.TransformType) is not FieldTransformerTypeBase transformer)
+            if (TransformationTypes.ByName(step.TransformType) is not FieldTransformationBase transformer)
             {
                 context.ReportError($"Field transformer '{step.TransformType}' is not a registered DataTransformerType for field '{sourceField}'", input);
                 return value;
@@ -223,7 +223,7 @@ public sealed class MapTransformType : TransformTypeBase
             // cannot behave differently depending on which reader invoked it.
             var transformResult = await transformer.Transform(
                 value,
-                new FieldTransformContext
+                new TransformationContext
                 {
                     OperatingDate = DateOnly.FromDateTime(DateTime.UtcNow),
                     ExecutionTimestamp = DateTimeOffset.UtcNow,

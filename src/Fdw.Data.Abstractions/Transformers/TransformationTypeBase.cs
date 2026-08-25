@@ -6,10 +6,10 @@ namespace Fdw.Data.Abstractions;
 /// Base class for data transformer type definitions.
 /// Provides metadata about ETL transformers.
 /// </summary>
-public abstract class DataTransformerTypeBase : TypeOptionBase<int, DataTransformerTypeBase>, IDataTransformerType
+public abstract class TransformationTypeBase : TypeOptionBase<int, TransformationTypeBase>, ITransformationType
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="DataTransformerTypeBase"/> class.
+    /// Initializes a new instance of the <see cref="TransformationTypeBase"/> class.
     /// </summary>
     /// <param name="id">The unique identifier for this transformer type.</param>
     /// <param name="name">The name of this transformer type.</param>
@@ -17,7 +17,7 @@ public abstract class DataTransformerTypeBase : TypeOptionBase<int, DataTransfor
     /// <param name="description">The description of this transformer type.</param>
     /// <param name="supportsStreaming">Whether this transformer supports streaming.</param>
     /// <param name="category">The category for this transformer type (defaults to "Transformer").</param>
-    protected DataTransformerTypeBase(
+    protected TransformationTypeBase(
         int id,
         string name,
         string displayName,

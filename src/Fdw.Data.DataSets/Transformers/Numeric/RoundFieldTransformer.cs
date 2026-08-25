@@ -14,8 +14,8 @@ namespace Fdw.Data.DataSets;
 /// Rounds a decimal value to the specified number of decimal places
 /// using <see cref="MidpointRounding.AwayFromZero"/>.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "Round")]
-public sealed class RoundFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "Round")]
+public sealed class RoundFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RoundFieldTransformer"/> class.
@@ -42,7 +42,7 @@ public sealed class RoundFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

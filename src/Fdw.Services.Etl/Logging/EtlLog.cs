@@ -1030,17 +1030,6 @@ public static partial class EtlLog
         string function,
         string name);
 
-    /// <summary>
-    /// Logs when a non-Builtin formula language is recognized but no <c>IExpressionEvaluator</c> is
-    /// configured on the transform context.
-    /// </summary>
-    [MessageLogging(
-        EventId = 11051,
-        Level = LogLevel.Error,
-        Message = "Formula language '{language}' requires a calculation engine that is not configured")]
-    public static partial IGenericMessage FormulaEngineUnavailable(
-        ILogger logger,
-        string language);
 
     /// <summary>
     /// Logs when a transform option receives a configuration instance of the wrong concrete type.
@@ -1077,19 +1066,6 @@ public static partial class EtlLog
         string joinType,
         string name);
 
-    /// <summary>
-    /// Logs when a Calculate transform names a formula language that does not resolve against
-    /// <c>FormulaLanguages</c> (distinct from <see cref="FormulaEngineUnavailable"/>, which is a
-    /// recognized language with no configured evaluator).
-    /// </summary>
-    [MessageLogging(
-        EventId = 11055,
-        Level = LogLevel.Error,
-        Message = "Unknown formula language '{language}' on '{name}'")]
-    public static partial IGenericMessage UnknownFormulaLanguage(
-        ILogger logger,
-        string language,
-        string name);
 
     /// <summary>
     /// Logs when the per-record <c>Transform</c> is invoked on a set-based transform option

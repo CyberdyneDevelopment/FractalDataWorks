@@ -18,7 +18,4 @@ public class ComputedColumnRequest : ICalculationSpec
     [Required]
     public string Formula { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the formula language name, resolved against <c>FormulaLanguages</c>.</summary>
-    [Required]
-    public string FormulaLanguage { get; set; } = string.Empty;
 }

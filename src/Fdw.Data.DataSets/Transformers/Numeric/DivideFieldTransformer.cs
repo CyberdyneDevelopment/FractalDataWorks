@@ -14,8 +14,8 @@ namespace Fdw.Data.DataSets;
 /// Divides the input value by a fixed divisor parameter.
 /// Input must be numeric (converted to decimal). Returns null on divide by zero.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "Divide")]
-public sealed class DivideFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "Divide")]
+public sealed class DivideFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DivideFieldTransformer"/> class.
@@ -42,7 +42,7 @@ public sealed class DivideFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

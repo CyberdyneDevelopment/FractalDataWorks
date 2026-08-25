@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace Fdw.Services.Data.Clients.Models;
 
 /// <summary>
-/// Describes an available field transform type from the DataTransformerTypes TypeCollection.
+/// Describes an available field transform type from the TransformationTypes TypeCollection.
 /// </summary>
 public sealed class TransformTypePayload
 {

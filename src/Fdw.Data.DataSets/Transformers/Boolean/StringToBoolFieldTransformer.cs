@@ -12,8 +12,8 @@ namespace Fdw.Data.DataSets;
 /// <summary>
 /// Converts a string field value to a boolean by comparing against a configured true value.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "StringToBool")]
-public sealed class StringToBoolFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "StringToBool")]
+public sealed class StringToBoolFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="StringToBoolFieldTransformer"/> class.
@@ -40,7 +40,7 @@ public sealed class StringToBoolFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

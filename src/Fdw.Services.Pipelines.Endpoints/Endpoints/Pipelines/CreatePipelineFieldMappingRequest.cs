@@ -43,7 +43,7 @@ public class CreatePipelineFieldMappingRequest : IFieldMapping
 
     /// <summary>
     /// Gets or sets the optional named transform expression applied before TargetType coercion
-    /// (e.g. "FromUnixMilliseconds"). Resolved against the DataTransformerTypes collection at runtime.
+    /// (e.g. "FromUnixMilliseconds"). Resolved against the TransformationTypes collection at runtime.
     /// </summary>
     public string? TransformExpression { get; set; }
 

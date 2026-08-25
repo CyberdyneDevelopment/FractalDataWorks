@@ -7,13 +7,13 @@ namespace Fdw.Services.Etl.Abstractions;
 /// configured with.
 /// </summary>
 /// <remarks>
-/// Dispatch is by name through <c>DataTransformerTypes.ByName(TransformType)</c> — there is no
+/// Dispatch is by name through <c>TransformationTypes.ByName(TransformType)</c> — there is no
 /// switch over transform names anywhere, and adding a transform means adding a TypeOption.
 /// </remarks>
 public interface IFieldMappingTransform
 {
     /// <summary>
-    /// Gets the transform type name — must match a registered <c>DataTransformerTypes</c> option.
+    /// Gets the transform type name — must match a registered <c>TransformationTypes</c> option.
     /// </summary>
     string TransformType { get; }
 

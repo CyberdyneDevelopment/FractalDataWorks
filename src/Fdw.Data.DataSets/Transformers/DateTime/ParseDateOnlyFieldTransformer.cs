@@ -16,8 +16,8 @@ namespace Fdw.Data.DataSets;
 /// otherwise uses <see cref="DateOnly.TryParse(string, IFormatProvider, DateTimeStyles, out DateOnly)"/>.
 /// Returns null on parse failure.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "ParseDateOnly")]
-public sealed class ParseDateOnlyFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "ParseDateOnly")]
+public sealed class ParseDateOnlyFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ParseDateOnlyFieldTransformer"/> class.
@@ -44,7 +44,7 @@ public sealed class ParseDateOnlyFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

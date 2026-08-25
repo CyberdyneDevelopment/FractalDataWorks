@@ -11,10 +11,10 @@ namespace Fdw.Data.DataSets;
 
 /// <summary>
 /// When the input is null, returns a fallback field value from the current record.
-/// Does not support batching because it reads from <see cref="FieldTransformContext.CurrentRecord"/>.
+/// Does not support batching because it reads from <see cref="TransformationContext.CurrentRecord"/>.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "Coalesce")]
-public sealed class CoalesceFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "Coalesce")]
+public sealed class CoalesceFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CoalesceFieldTransformer"/> class.
@@ -41,7 +41,7 @@ public sealed class CoalesceFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is not null)

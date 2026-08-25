@@ -59,12 +59,6 @@ public sealed partial class PipelineTransformCalculationConfiguration : IGeneric
     public string Expression { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the formula language, resolved against <see cref="FormulaLanguages"/>.
-    /// </summary>
-    [ValuesFrom(typeof(FormulaLanguages))]
-    public string FormulaLanguage { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the execution order within the calculation.
     /// </summary>
     public int ExecutionOrder { get; set; }

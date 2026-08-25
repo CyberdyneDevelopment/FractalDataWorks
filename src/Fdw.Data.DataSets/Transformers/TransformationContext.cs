@@ -8,7 +8,7 @@ namespace Fdw.Data.DataSets;
 /// Runtime state available to all field transforms during execution.
 /// Provides access to the current record, operating date, and execution timestamp.
 /// </summary>
-public sealed class FieldTransformContext
+public sealed class TransformationContext
 {
     /// <summary>
     /// Gets the operating date for this transform execution.

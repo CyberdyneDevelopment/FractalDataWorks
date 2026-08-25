@@ -13,8 +13,8 @@ namespace Fdw.Data.DataSets;
 /// Casts a numeric input (double, float, int, long) to decimal.
 /// Returns null for null input. Throws for unsupported input types.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "CastDecimal")]
-public sealed class CastDecimalFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "CastDecimal")]
+public sealed class CastDecimalFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CastDecimalFieldTransformer"/> class.
@@ -33,7 +33,7 @@ public sealed class CastDecimalFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

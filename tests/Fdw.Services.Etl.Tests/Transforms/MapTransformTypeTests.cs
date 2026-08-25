@@ -537,7 +537,7 @@ public sealed class MapTransformTypeTests
     [Trait("Category", "Etl")]
     public async Task TransformReportsErrorWhenNamedTransformerIsNotRegistered()
     {
-        // Arrange — Fdw.Data.DataSets (which holds the concrete DataTransformerTypes options)
+        // Arrange — Fdw.Data.DataSets (which holds the concrete TransformationTypes options)
         // is not referenced by this test assembly, so any name is unregistered by construction.
         var input = new Dictionary<string, object?> { ["A"] = "raw" };
         var config = CreateConfig(CreateMapping("A", "B", transformExpression: "NotRegisteredTransformerXyz"));

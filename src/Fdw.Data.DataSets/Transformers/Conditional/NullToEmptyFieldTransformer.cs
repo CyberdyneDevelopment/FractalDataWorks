@@ -11,8 +11,8 @@ namespace Fdw.Data.DataSets;
 /// <summary>
 /// When the input is null, returns an empty string.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "NullToEmpty")]
-public sealed class NullToEmptyFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "NullToEmpty")]
+public sealed class NullToEmptyFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="NullToEmptyFieldTransformer"/> class.
@@ -31,7 +31,7 @@ public sealed class NullToEmptyFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

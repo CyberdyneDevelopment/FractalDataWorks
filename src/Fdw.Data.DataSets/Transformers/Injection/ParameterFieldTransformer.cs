@@ -13,8 +13,8 @@ namespace Fdw.Data.DataSets;
 /// Returns a named runtime value from the transform context, ignoring the input.
 /// Supports "operatingDate" and "now" parameter names.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "Parameter")]
-public sealed class ParameterFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "Parameter")]
+public sealed class ParameterFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ParameterFieldTransformer"/> class.
@@ -41,7 +41,7 @@ public sealed class ParameterFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (!context.Parameters.TryGetValue("name", out var name))

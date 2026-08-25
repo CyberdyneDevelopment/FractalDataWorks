@@ -12,8 +12,8 @@ namespace Fdw.Data.DataSets;
 /// <summary>
 /// Trims whitespace or specified characters from a string field value.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "Trim")]
-public sealed class TrimFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "Trim")]
+public sealed class TrimFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="TrimFieldTransformer"/> class.
@@ -42,7 +42,7 @@ public sealed class TrimFieldTransformer : FieldTransformerTypeBase
     // sync-returning-Task — the contract is async so future I/O-backed transformers are first-class.
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

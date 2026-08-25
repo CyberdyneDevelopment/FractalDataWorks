@@ -12,8 +12,8 @@ namespace Fdw.Data.DataSets;
 /// <summary>
 /// Converts a string field value to lowercase using invariant culture.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "ToLower")]
-public sealed class ToLowerFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "ToLower")]
+public sealed class ToLowerFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ToLowerFieldTransformer"/> class.
@@ -32,7 +32,7 @@ public sealed class ToLowerFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

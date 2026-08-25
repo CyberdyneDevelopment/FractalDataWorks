@@ -14,8 +14,8 @@ namespace Fdw.Data.DataSets;
 /// Parses a string input to decimal using the specified culture.
 /// Returns null when the input cannot be parsed.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "ParseDecimal")]
-public sealed class ParseDecimalFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "ParseDecimal")]
+public sealed class ParseDecimalFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ParseDecimalFieldTransformer"/> class.
@@ -42,7 +42,7 @@ public sealed class ParseDecimalFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

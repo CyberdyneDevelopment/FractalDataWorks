@@ -113,20 +113,20 @@ public sealed class XPathDataSetSourceMapper : DataSetSourceMapperTypeBase
                 // Apply transform chain (ascending ordinal order)
                 foreach (var step in mapping.Transforms.OrderBy(s => s.Ordinal))
                 {
-                    var typeOption = DataTransformerTypes.ByName(step.TransformType);
-                    if (typeOption == DataTransformerTypes.NotFound)
+                    var typeOption = TransformationTypes.ByName(step.TransformType);
+                    if (typeOption == TransformationTypes.NotFound)
                     {
                         return GenericResult<IReadOnlyList<Dictionary<string, object?>>>.Failure(
                             DataSetSourceMapperLog.TransformTypeNotFound(Logger, step.TransformType, logicalName));
                     }
 
-                    if (typeOption is not FieldTransformerTypeBase fieldTransformer)
+                    if (typeOption is not FieldTransformationBase fieldTransformer)
                     {
                         return GenericResult<IReadOnlyList<Dictionary<string, object?>>>.Failure(
                             DataSetSourceMapperLog.TransformTypeNotFieldTransformer(Logger, step.TransformType, logicalName));
                     }
 
-                    var transformContext = new FieldTransformContext
+                    var transformContext = new TransformationContext
                     {
                         OperatingDate = DateOnly.FromDateTime(DateTime.UtcNow),
                         ExecutionTimestamp = DateTimeOffset.UtcNow,

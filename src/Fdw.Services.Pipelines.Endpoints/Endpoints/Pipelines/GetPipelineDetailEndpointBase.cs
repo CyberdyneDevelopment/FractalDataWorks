@@ -234,7 +234,7 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
         {
             ComputedColumns = transform.Calculations
                 .OrderBy(c => c.ExecutionOrder)
-                .Select(c => new ComputedColumnDto { OutputField = c.OutputField, Formula = c.Expression, FormulaLanguage = c.FormulaLanguage })
+                .Select(c => new ComputedColumnDto { OutputField = c.OutputField, Formula = c.Expression })
                 .ToList(),
         };
     }

@@ -12,8 +12,8 @@ namespace Fdw.Data.DataSets;
 /// <summary>
 /// Converts a string field value to uppercase using invariant culture.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "ToUpper")]
-public sealed class ToUpperFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "ToUpper")]
+public sealed class ToUpperFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ToUpperFieldTransformer"/> class.
@@ -32,7 +32,7 @@ public sealed class ToUpperFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

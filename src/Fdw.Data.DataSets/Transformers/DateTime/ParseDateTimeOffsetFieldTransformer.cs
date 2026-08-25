@@ -14,8 +14,8 @@ namespace Fdw.Data.DataSets;
 /// Parses a string value to <see cref="DateTimeOffset"/> using <see cref="DateTimeStyles.AssumeUniversal"/>.
 /// Returns null on parse failure rather than an error.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "ParseDateTimeOffset")]
-public sealed class ParseDateTimeOffsetFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "ParseDateTimeOffset")]
+public sealed class ParseDateTimeOffsetFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ParseDateTimeOffsetFieldTransformer"/> class.
@@ -42,7 +42,7 @@ public sealed class ParseDateTimeOffsetFieldTransformer : FieldTransformerTypeBa
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

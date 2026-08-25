@@ -384,7 +384,7 @@ public static class TransformConfigPayloadSerializer
         for (var i = 0; i < calculation.ComputedColumns.Count; i++)
         {
             var column = calculation.ComputedColumns[i];
-            if (string.IsNullOrWhiteSpace(column.OutputField) || string.IsNullOrWhiteSpace(column.Formula) || string.IsNullOrWhiteSpace(column.FormulaLanguage))
+            if (string.IsNullOrWhiteSpace(column.OutputField) || string.IsNullOrWhiteSpace(column.Formula))
                 return GenericResult.Failure(TransformAuthoringLog.ComputedColumnIncomplete(log, context, i));
         }
 

@@ -14,8 +14,8 @@ namespace Fdw.Data.DataSets;
 /// Adds a fixed duration to a DateTime or DateTimeOffset value.
 /// The output type matches the input type.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "AddDuration")]
-public sealed class AddDurationFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "AddDuration")]
+public sealed class AddDurationFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="AddDurationFieldTransformer"/> class.
@@ -50,7 +50,7 @@ public sealed class AddDurationFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

@@ -13,7 +13,7 @@ namespace Fdw.Data.DataSets.Tests;
 /// </summary>
 public sealed class ConfiguredTransformTests
 {
-    private static FieldTransformContext ContextWith(params (string Key, string Value)[] parameters)
+    private static TransformationContext ContextWith(params (string Key, string Value)[] parameters)
     {
         var bag = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var (key, value) in parameters)
@@ -21,7 +21,7 @@ public sealed class ConfiguredTransformTests
             bag[key] = value;
         }
 
-        return new FieldTransformContext { Parameters = bag };
+        return new TransformationContext { Parameters = bag };
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public sealed class ConfiguredTransformTests
         // that if a path ever again reaches a transform unconfigured, the cost is written down.
         var result = await new BoolToStringFieldTransformer().Transform(
             true,
-            new FieldTransformContext(),
+            new TransformationContext(),
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();

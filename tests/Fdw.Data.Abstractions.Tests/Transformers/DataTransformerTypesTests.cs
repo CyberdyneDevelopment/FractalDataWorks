@@ -12,7 +12,7 @@ public sealed class DataTransformerTypesTests
     public void AllReturnsTransformerTypeCollection()
     {
         // Act
-        var all = DataTransformerTypes.All();
+        var all = TransformationTypes.All();
 
         // Assert
         all.ShouldNotBeNull();
@@ -24,13 +24,13 @@ public sealed class DataTransformerTypesTests
     public void ByIdReturnsCorrectTransformerType()
     {
         // Arrange
-        var all = DataTransformerTypes.All();
+        var all = TransformationTypes.All();
         if (all.Count == 0) return; // Skip if no transformer types registered
 
         var first = all.First();
 
         // Act
-        var result = DataTransformerTypes.ById(first.Id);
+        var result = TransformationTypes.ById(first.Id);
 
         // Assert
         result.ShouldNotBeNull();
@@ -43,10 +43,10 @@ public sealed class DataTransformerTypesTests
     public void ByIdReturnsNullForUnknownId()
     {
         // Act
-        var result = DataTransformerTypes.ById(99999);
+        var result = TransformationTypes.ById(99999);
 
         // Assert
-        result.ShouldBe(DataTransformerTypes.NotFound);
+        result.ShouldBe(TransformationTypes.NotFound);
     }
 
     [Fact]
@@ -55,15 +55,15 @@ public sealed class DataTransformerTypesTests
     public void ByNameIsCaseSensitive()
     {
         // Arrange
-        var all = DataTransformerTypes.All();
+        var all = TransformationTypes.All();
         if (all.Count == 0) return; // Skip if no transformer types registered
 
         var first = all.First();
 
         // Act & Assert
-        DataTransformerTypes.ByName(first.Name).ShouldNotBeNull();
-        DataTransformerTypes.ByName(first.Name.ToLowerInvariant()).ShouldBe(DataTransformerTypes.NotFound);
-        DataTransformerTypes.ByName(first.Name.ToUpperInvariant()).ShouldBe(DataTransformerTypes.NotFound);
+        TransformationTypes.ByName(first.Name).ShouldNotBeNull();
+        TransformationTypes.ByName(first.Name.ToLowerInvariant()).ShouldBe(TransformationTypes.NotFound);
+        TransformationTypes.ByName(first.Name.ToUpperInvariant()).ShouldBe(TransformationTypes.NotFound);
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public sealed class DataTransformerTypesTests
     public void NotFoundReturnsEmptyInstance()
     {
         // Act
-        var result = DataTransformerTypes.NotFound;
+        var result = TransformationTypes.NotFound;
 
         // Assert
         result.ShouldNotBeNull();
@@ -85,12 +85,12 @@ public sealed class DataTransformerTypesTests
     public void AllTransformerTypesImplementIDataTransformerType()
     {
         // Arrange
-        var all = DataTransformerTypes.All();
+        var all = TransformationTypes.All();
 
         // Act & Assert
         foreach (var transformerType in all)
         {
-            transformerType.ShouldBeAssignableTo<IDataTransformerType>();
+            transformerType.ShouldBeAssignableTo<ITransformationType>();
         }
     }
 
@@ -100,7 +100,7 @@ public sealed class DataTransformerTypesTests
     public void AllTransformerTypesHaveUniqueIds()
     {
         // Arrange
-        var all = DataTransformerTypes.All();
+        var all = TransformationTypes.All();
         if (all.Count == 0) return; // Skip if no transformer types registered
 
         // Act
@@ -116,7 +116,7 @@ public sealed class DataTransformerTypesTests
     public void AllTransformerTypesHaveUniqueNames()
     {
         // Arrange
-        var all = DataTransformerTypes.All();
+        var all = TransformationTypes.All();
         if (all.Count == 0) return; // Skip if no transformer types registered
 
         // Act
@@ -132,9 +132,9 @@ public sealed class DataTransformerTypesTests
     public void ByNameReturnsNotFoundForUnknownName()
     {
         // Act
-        var result = DataTransformerTypes.ByName("NonExistentTransformer");
+        var result = TransformationTypes.ByName("NonExistentTransformer");
 
         // Assert
-        result.ShouldBe(DataTransformerTypes.NotFound);
+        result.ShouldBe(TransformationTypes.NotFound);
     }
 }

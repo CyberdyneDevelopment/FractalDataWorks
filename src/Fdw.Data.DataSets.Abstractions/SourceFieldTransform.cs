@@ -7,12 +7,12 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// Carries the transform type name and its configured parameter values.
 /// </summary>
 /// <remarks>
-/// Execution is dispatched via <c>DataTransformerTypes.ByName(TransformType)</c> — no switch over type names.
+/// Execution is dispatched via <c>TransformationTypes.ByName(TransformType)</c> — no switch over type names.
 /// </remarks>
 public sealed class SourceFieldTransform
 {
     /// <summary>
-    /// Gets or sets the transform type name — must match a registered <c>DataTransformerTypes</c> option.
+    /// Gets or sets the transform type name — must match a registered <c>TransformationTypes</c> option.
     /// </summary>
     public string TransformType { get; init; } = string.Empty;
 

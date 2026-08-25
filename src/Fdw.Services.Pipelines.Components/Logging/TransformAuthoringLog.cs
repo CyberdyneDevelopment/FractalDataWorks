@@ -67,12 +67,12 @@ public static partial class TransformAuthoringLog
     [MessageLogging(EventId = 4578, Level = LogLevel.Warning, Message = "Calculation configuration is missing for '{context}' — ConfigPayload cannot be built/parsed")]
     public static partial IGenericMessage CalculationMissing(ILogger logger, string context);
 
-    /// <summary>Logs that a computed column is missing its OutputField/Formula/FormulaLanguage.</summary>
+    /// <summary>Logs that a computed column is missing its OutputField or Formula.</summary>
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="context">The transform node id (serialize) or operation type (deserialize) this failure occurred for.</param>
     /// <param name="index">The zero-based index of the incomplete computed column.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 4579, Level = LogLevel.Warning, Message = "Computed column {index} for '{context}' is missing OutputField/Formula/FormulaLanguage — ConfigPayload cannot be built/parsed")]
+    [MessageLogging(EventId = 4579, Level = LogLevel.Warning, Message = "Computed column {index} for '{context}' is missing OutputField or Formula — ConfigPayload cannot be built/parsed")]
     public static partial IGenericMessage ComputedColumnIncomplete(ILogger logger, string context, int index);
 
     /// <summary>Logs that a Lookup transform has no lookup configuration.</summary>

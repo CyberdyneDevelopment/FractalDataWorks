@@ -13,8 +13,8 @@ namespace Fdw.Data.DataSets;
 /// <summary>
 /// Splits a string field value by a delimiter and returns the element at a specified index.
 /// </summary>
-[TypeOption(typeof(DataTransformerTypes), "Split")]
-public sealed class SplitFieldTransformer : FieldTransformerTypeBase
+[TypeOption(typeof(TransformationTypes), "Split")]
+public sealed class SplitFieldTransformer : FieldTransformationBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SplitFieldTransformer"/> class.
@@ -49,7 +49,7 @@ public sealed class SplitFieldTransformer : FieldTransformerTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default)
     {
         if (input is null)

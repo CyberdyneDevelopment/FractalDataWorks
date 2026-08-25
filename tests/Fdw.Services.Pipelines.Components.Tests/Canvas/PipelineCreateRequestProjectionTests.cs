@@ -131,7 +131,7 @@ public sealed class PipelineCreateRequestProjectionTests
         var placeholder = new PipelineCanvasNode("t1", CanvasNodeTypes.ByName("Transform"), "Step", "Calculate", 0, 0, [], new Dictionary<string, string>());
         var calculation = new CalculationClientRequest
         {
-            ComputedColumns = [new ComputedColumnClientRequest { OutputField = "FullName", Formula = "FirstName + LastName", FormulaLanguage = "CSharp" }],
+            ComputedColumns = [new ComputedColumnClientRequest { OutputField = "FullName", Formula = "FirstName + LastName" }],
         };
         var payload = TransformConfigPayloadSerializer.ToConfigPayload("Calculate", placeholder, [], calculation: calculation).Value!;
 

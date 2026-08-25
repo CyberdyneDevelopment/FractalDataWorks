@@ -8,7 +8,7 @@ namespace Fdw.Data.Abstractions;
 /// <remarks>
 /// Transformer types apply ETL-style transformations (aggregation, filtering, calculations, etc.).
 /// </remarks>
-public interface IDataTransformerType : ITypeOption<int>
+public interface ITransformationType : ITypeOption<int>
 {
     /// <summary>
     /// Gets the configuration key for this transformer type value.

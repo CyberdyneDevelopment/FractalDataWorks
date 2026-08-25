@@ -20,10 +20,16 @@ namespace Fdw.Services.Etl.Transforms;
 /// </summary>
 /// <remarks>
 /// Why: reads the typed <see cref="PipelineTransformConfiguration.Calculations"/> cascade children
-/// (ordered by <c>ExecutionOrder</c>) instead of the deleted <c>ConfigurationJson</c> blob. A calc's
-/// <c>FormulaLanguage</c> is resolved against <see cref="FormulaLanguages"/>; non-Builtin languages
-/// require an <see cref="IExpressionEvaluator"/> on <see cref="ITransformContext.CalculationEngine"/>
-/// and fail loud when absent — no silent pass-through.
+/// (ordered by <c>ExecutionOrder</c>) instead of the deleted <c>ConfigurationJson</c> blob.
+/// <para>
+/// Expressions are evaluated by the one evaluator below. There used to be a <c>FormulaLanguage</c>
+/// on each calculation, resolved against a <c>FormulaLanguages</c> collection, choosing between this
+/// evaluator and an <c>IExpressionEvaluator</c> engine. The collection had exactly one option and the
+/// interface had no implementation anywhere, so the choice had one reachable outcome and the engine
+/// branch could never be taken — a selector, a lookup, a config column and two error paths, all to
+/// arrive where control already was. It is gone; adding a real second evaluator is the point at which
+/// a way to choose between them is worth building.
+/// </para>
 /// </remarks>
 [TypeOption(typeof(OptionTransformTypes), "Calculate")]
 public sealed class CalculateTransformType : TransformTypeBase
@@ -72,17 +78,9 @@ public sealed class CalculateTransformType : TransformTypeBase
 
         foreach (var calc in config.Calculations.OrderBy(c => c.ExecutionOrder))
         {
-            var languageResult = ResolveLanguage(calc.FormulaLanguage, config.Name, context.Logger, context.CalculationEngine);
-            if (!languageResult.IsSuccess)
-            {
-                return Task.FromResult(languageResult.ToNewResult<IDictionary<string, object?>>());
-            }
-
             try
             {
-                output[calc.OutputField] = languageResult.Value!.IsBuiltin
-                    ? EvaluateExpression(calc.Expression, output, context)
-                    : EvaluateWithEngine(calc.Expression, output, (IExpressionEvaluator)context.CalculationEngine!);
+                output[calc.OutputField] = EvaluateExpression(calc.Expression, output, context);
             }
             catch (Exception ex)
             {
@@ -117,15 +115,6 @@ public sealed class CalculateTransformType : TransformTypeBase
                 EtlLog.CalculationParamsMissing(context.Logger, config.Name));
         }
 
-        foreach (var calc in config.Calculations)
-        {
-            var languageResult = ResolveLanguage(calc.FormulaLanguage, config.Name, context.Logger, context.CalculationEngine);
-            if (!languageResult.IsSuccess)
-            {
-                return languageResult.ToNewResult<IEnumerable<IDictionary<string, object?>>>();
-            }
-        }
-
         var results = new List<IDictionary<string, object?>>();
         foreach (var input in inputs)
         {
@@ -156,14 +145,6 @@ public sealed class CalculateTransformType : TransformTypeBase
             return GenericResult.Failure(EtlLog.CalculationParamsMissing(logger, spec.Name));
         }
 
-        foreach (var calc in spec.ComputedColumns)
-        {
-            if (FormulaLanguages.ByName(calc.FormulaLanguage) == FormulaLanguages.NotFound)
-            {
-                return GenericResult.Failure(EtlLog.UnknownFormulaLanguage(logger, calc.FormulaLanguage, spec.Name));
-            }
-        }
-
         config.Calculations = spec.ComputedColumns
             .Select((calc, executionOrder) => new PipelineTransformCalculationConfiguration
             {
@@ -171,7 +152,6 @@ public sealed class CalculateTransformType : TransformTypeBase
                 Name = calc.OutputField,
                 OutputField = calc.OutputField,
                 Expression = calc.Formula,
-                FormulaLanguage = calc.FormulaLanguage,
                 ExecutionOrder = executionOrder
             })
             .ToList();
@@ -180,38 +160,6 @@ public sealed class CalculateTransformType : TransformTypeBase
         return GenericResult.Success();
     }
 
-    /// <summary>
-    /// Resolves a calculation's <c>FormulaLanguage</c> against <see cref="FormulaLanguages"/> and, for a
-    /// non-Builtin language, requires an <see cref="IExpressionEvaluator"/> engine — fails loud otherwise.
-    /// </summary>
-    private static IGenericResult<IFormulaLanguage> ResolveLanguage(
-        string languageName, string transformName, ILogger logger, object? calculationEngine)
-    {
-        var language = FormulaLanguages.ByName(languageName);
-        if (language == FormulaLanguages.NotFound)
-        {
-            return GenericResult<IFormulaLanguage>.Failure(EtlLog.UnknownFormulaLanguage(logger, languageName, transformName));
-        }
-
-        if (!language.IsBuiltin && calculationEngine is not IExpressionEvaluator)
-        {
-            return GenericResult<IFormulaLanguage>.Failure(EtlLog.FormulaEngineUnavailable(logger, languageName));
-        }
-
-        return GenericResult<IFormulaLanguage>.Success(language);
-    }
-
-    private static object? EvaluateWithEngine(string expression, Dictionary<string, object?> record, IExpressionEvaluator evaluator)
-    {
-        var variables = new Dictionary<string, object?>(record, StringComparer.OrdinalIgnoreCase);
-        var result = evaluator.Evaluate<object?>(expression, variables);
-        if (!result.IsSuccess)
-        {
-            throw new InvalidOperationException(result.CurrentMessage ?? "Expression evaluation failed");
-        }
-
-        return result.Value;
-    }
 
     /// <summary>
     /// Evaluates a simple expression against a record.

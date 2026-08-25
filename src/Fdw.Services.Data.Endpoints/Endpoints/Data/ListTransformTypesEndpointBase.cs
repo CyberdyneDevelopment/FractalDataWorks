@@ -12,8 +12,8 @@ using Fdw.Web.RestEndpoints.Crud;
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for listing available field transform types from the DataTransformerTypes TypeCollection.
-/// Enumerates all registered DataTransformerTypes, filters to FieldTransformerTypeBase instances,
+/// Generic base endpoint for listing available field transform types from the TransformationTypes TypeCollection.
+/// Enumerates all registered TransformationTypes, filters to FieldTransformationBase instances,
 /// and maps each to a TransformTypePayload including parameter definitions.
 /// </summary>
 public abstract class ListTransformTypesEndpointBase : CrudListEndpoint<TransformTypePayload>
@@ -29,7 +29,7 @@ public abstract class ListTransformTypesEndpointBase : CrudListEndpoint<Transfor
 
     /// <summary>Gets the OpenAPI description for this endpoint.</summary>
     protected override string EndpointDescription =>
-        "Returns a list of all available field transform types registered via the DataTransformerTypes TypeCollection.";
+        "Returns a list of all available field transform types registered via the TransformationTypes TypeCollection.";
 
     /// <summary>Loads all registered field transform types as DTOs.</summary>
     protected override Task<IGenericResult<List<TransformTypePayload>>> LoadItems(CancellationToken ct)
@@ -43,19 +43,19 @@ public abstract class ListTransformTypesEndpointBase : CrudListEndpoint<Transfor
     }
 
     /// <summary>
-    /// Enumerates all DataTransformerTypes, filters to FieldTransformerTypeBase instances,
+    /// Enumerates all TransformationTypes, filters to FieldTransformationBase instances,
     /// and maps each to a TransformTypePayload.
     /// </summary>
     protected virtual IReadOnlyList<TransformTypePayload> MapTransformTypes()
     {
-        return DataTransformerTypes.All()
-            .OfType<FieldTransformerTypeBase>()
+        return TransformationTypes.All()
+            .OfType<FieldTransformationBase>()
             .Select(MapToDto)
             .ToList();
     }
 
-    /// <summary>Maps a single FieldTransformerTypeBase to a TransformTypePayload.</summary>
-    protected virtual TransformTypePayload MapToDto(FieldTransformerTypeBase transformer)
+    /// <summary>Maps a single FieldTransformationBase to a TransformTypePayload.</summary>
+    protected virtual TransformTypePayload MapToDto(FieldTransformationBase transformer)
     {
         return new TransformTypePayload
         {

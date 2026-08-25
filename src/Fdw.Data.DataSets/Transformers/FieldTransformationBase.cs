@@ -9,14 +9,14 @@ using Fdw.Services.Calculations.Abstractions;
 namespace Fdw.Data.DataSets;
 
 /// <summary>
-/// Base class for field-level transform TypeOptions in the <see cref="DataTransformerTypes"/> collection.
-/// Extends <see cref="DataTransformerTypeBase"/> with parameter definitions, single-value execution,
+/// Base class for field-level transform TypeOptions in the <see cref="TransformationTypes"/> collection.
+/// Extends <see cref="TransformationTypeBase"/> with parameter definitions, single-value execution,
 /// and optional batch execution for transforms that don't reference other fields.
 /// </summary>
-public abstract class FieldTransformerTypeBase : DataTransformerTypeBase
+public abstract class FieldTransformationBase : TransformationTypeBase
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="FieldTransformerTypeBase"/> class.
+    /// Initializes a new instance of the <see cref="FieldTransformationBase"/> class.
     /// </summary>
     /// <param name="id">The unique identifier for this field transformer type.</param>
     /// <param name="name">The name of this field transformer type.</param>
@@ -25,7 +25,7 @@ public abstract class FieldTransformerTypeBase : DataTransformerTypeBase
     /// <param name="category">The category (String, DateTime, Numeric, Injection, Conditional, Boolean).</param>
     /// <param name="supportsBatching">Whether this transform can operate on columns rather than rows.</param>
     /// <param name="parameters">The parameter definitions this transform accepts.</param>
-    protected FieldTransformerTypeBase(
+    protected FieldTransformationBase(
         int id,
         string name,
         string displayName,
@@ -42,13 +42,13 @@ public abstract class FieldTransformerTypeBase : DataTransformerTypeBase
     /// <summary>
     /// Gets the parameter definitions that this field transformer expects.
     /// Parameter values are stored in transform.FieldMappingTransformParameter and reach the
-    /// transform through <see cref="FieldTransformContext.Parameters"/>.
+    /// transform through <see cref="TransformationContext.Parameters"/>.
     /// </summary>
     public IReadOnlyList<OperationParameterDefinition> ExpectedParameters { get; }
 
     /// <summary>
     /// Gets a value indicating whether this transform can operate on an entire column at once.
-    /// Transforms that reference <see cref="FieldTransformContext.CurrentRecord"/> must return false.
+    /// Transforms that reference <see cref="TransformationContext.CurrentRecord"/> must return false.
     /// </summary>
     public bool SupportsBatching { get; }
 
@@ -77,6 +77,6 @@ public abstract class FieldTransformerTypeBase : DataTransformerTypeBase
     /// <returns>The transformed value wrapped in a result.</returns>
     public abstract Task<IGenericResult<object?>> Transform(
         object? input,
-        FieldTransformContext context,
+        TransformationContext context,
         CancellationToken cancellationToken = default);
 }

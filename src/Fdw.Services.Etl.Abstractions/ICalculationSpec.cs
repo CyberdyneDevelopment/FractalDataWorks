@@ -11,6 +11,4 @@ public interface ICalculationSpec
     /// <summary>Gets the formula/expression text.</summary>
     string Formula { get; }
 
-    /// <summary>Gets the formula language name (resolved against <c>FormulaLanguages</c>).</summary>
-    string FormulaLanguage { get; }
 }

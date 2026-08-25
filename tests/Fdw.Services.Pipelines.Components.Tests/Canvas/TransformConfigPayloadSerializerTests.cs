@@ -253,7 +253,7 @@ public sealed class TransformConfigPayloadSerializerTests
         var node = BuildTransformPlaceholder("Calculate");
         var calculation = new CalculationClientRequest
         {
-            ComputedColumns = [new ComputedColumnClientRequest { OutputField = "FullName", Formula = "FirstName + LastName", FormulaLanguage = "CSharp" }],
+            ComputedColumns = [new ComputedColumnClientRequest { OutputField = "FullName", Formula = "FirstName + LastName" }],
         };
 
         var toResult = TransformConfigPayloadSerializer.ToConfigPayload("Calculate", node, [], calculation: calculation);
@@ -285,7 +285,7 @@ public sealed class TransformConfigPayloadSerializerTests
         var node = BuildTransformPlaceholder("Calculate");
         var calculation = new CalculationClientRequest
         {
-            ComputedColumns = [new ComputedColumnClientRequest { OutputField = "FullName", Formula = "", FormulaLanguage = "CSharp" }],
+            ComputedColumns = [new ComputedColumnClientRequest { OutputField = "FullName", Formula = "" }],
         };
 
         var result = TransformConfigPayloadSerializer.ToConfigPayload("Calculate", node, [], calculation: calculation);
