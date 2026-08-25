@@ -13,6 +13,26 @@ public sealed class WindowedCalculationConfigurationValidator : FdwConfiguration
     /// </summary>
     public WindowedCalculationConfigurationValidator()
     {
+        // Why these four are here rather than in a second validator: they used to live in a
+        // sibling WindowedCalculationConfigurationValidator that derived from AbstractValidator
+        // directly. Only FdwConfigurationValidator implements IValidateOptions<T>, so that
+        // sibling never ran at startup.
+        RuleFor(x => x.Name)
+            .NotEmpty()
+            .WithMessage("Name is required");
+
+        RuleFor(x => x.SectionName)
+            .NotEmpty()
+            .WithMessage("SectionName is required");
+
+        RuleFor(x => x.ServiceType)
+            .NotEmpty()
+            .WithMessage("ServiceType is required");
+
+        RuleFor(x => x.ServiceOptionType)
+            .NotEmpty()
+            .WithMessage("ServiceOptionType is required");
+
         RuleFor(x => x.TargetField)
             .NotEmpty()
             .WithMessage("TargetField is required");

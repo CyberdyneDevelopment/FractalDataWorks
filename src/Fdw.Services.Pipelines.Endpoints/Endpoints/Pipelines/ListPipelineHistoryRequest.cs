@@ -1,4 +1,4 @@
-using Fdw.Web.Endpoints.Shared;
+using Fdw.Web.Endpoints.Contracts;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 

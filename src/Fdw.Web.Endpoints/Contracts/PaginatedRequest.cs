@@ -1,4 +1,4 @@
-namespace Fdw.Web.Endpoints.Shared;
+namespace Fdw.Web.Endpoints.Contracts;
 
 /// <summary>
 /// Base request for paginated endpoints.

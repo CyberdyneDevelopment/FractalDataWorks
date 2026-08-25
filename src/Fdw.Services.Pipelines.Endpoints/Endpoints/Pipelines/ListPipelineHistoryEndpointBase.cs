@@ -8,7 +8,7 @@ using Fdw.Commands.Data;
 using Fdw.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Data.Abstractions;
-using Fdw.Web.Endpoints.Shared;
+using Fdw.Web.Endpoints.Contracts;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 

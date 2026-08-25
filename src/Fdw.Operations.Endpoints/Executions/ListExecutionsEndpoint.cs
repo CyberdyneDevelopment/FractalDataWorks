@@ -9,6 +9,7 @@ using Fdw.Operations.Abstractions.Execution;
 using Fdw.Operations.Abstractions.TypeCollections.Execution;
 using Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
 using Fdw.Web.Endpoints;
+using Fdw.Web.Endpoints.Contracts;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 

@@ -1,5 +1,6 @@
 using System;
 using Fdw.Web.Endpoints;
+using Fdw.Web.Endpoints.Contracts;
 
 namespace Fdw.Operations.Endpoints.Executions;
 
