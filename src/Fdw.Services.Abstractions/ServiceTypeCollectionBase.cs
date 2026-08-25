@@ -541,8 +541,18 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
             // Why only the success line is conditional: a failure has already been logged with the
             // option that caused it by the collect, or by the option's own runner. Logging it again here
             // would report one failure twice, at two altitudes, as if they were two events.
+            //
+            // Why an empty collection gets its own line: "completed successfully over 0 option(s)" is
+            // technically true and practically a lie — the phase ran and nothing joined. That reading
+            // is how a missing package reference stays invisible until a route 404s. Zero is reported
+            // as a Warning; a non-empty run keeps the Information success line.
             if (result.IsSuccess)
-                ServiceTypeLog.CollectionPhaseSucceeded(logger, CollectionName, phase, position, Options.Length);
+            {
+                if (Options.Length == 0)
+                    ServiceTypeLog.CollectionPhaseNoOptions(logger, CollectionName, phase, position);
+                else
+                    ServiceTypeLog.CollectionPhaseSucceeded(logger, CollectionName, phase, position, Options.Length);
+            }
 
             return result;
         }
