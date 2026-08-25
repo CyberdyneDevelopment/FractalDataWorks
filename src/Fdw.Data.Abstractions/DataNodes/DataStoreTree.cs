@@ -10,7 +10,7 @@ namespace Fdw.Data.Abstractions;
 /// <remarks>
 /// Why: replaces the <c>RefreshableDataStoreTree : IReadOnlyList&lt;IDataStore&gt;</c> shim. Callers
 /// resolve a store via <see cref="DataNodeTree{TRoot}.Node(string)"/> and then dot-walk
-/// <see cref="IDataStore.Paths"/> / <see cref="IDataPath.Containers"/> / fields.
+/// <see cref="IDataStore.Paths"/> / <see cref="IDataNodePath.Containers"/> / fields.
 /// </remarks>
 // Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Fdw.UI.Abstractions.Components;
 using Fdw.UI.Abstractions.Pages;
 using Fdw.UI.Abstractions.Rendering;
-using IPageAction = Fdw.UI.Abstractions.Rendering.IPageAction;
+using IPageActionType = Fdw.UI.Abstractions.Rendering.IPageActionType;
 using Fdw.UI.Components.Models;
 
 // Only import PageModes from UI.Components.Pages, not the whole namespace (to avoid PageAction conflict)
@@ -705,7 +705,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
         console.WriteLine();
     }
 
-    private static IPageAction PromptForPageAction(IPageModel page, SpectreRenderContext context)
+    private static IPageActionType PromptForPageAction(IPageModel page, SpectreRenderContext context)
     {
         var console = context.Console;
         var theme = context.Theme;

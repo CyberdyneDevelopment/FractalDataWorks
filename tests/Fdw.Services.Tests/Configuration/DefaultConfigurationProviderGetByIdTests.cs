@@ -192,11 +192,11 @@ public class DefaultConfigurationProviderGetByIdTests
         mockContainer.Setup(c => c.Nodes).Returns(new List<IDataNode> { mockLogicalField.Object });
         mockContainer.Setup(c => c.Description).Returns((string?)null);
 
-        // Build IDataPath with Container() lookup — returns IGenericResult<IDataContainer>.
+        // Build IDataNodePath with Container() lookup — returns IGenericResult<IDataContainer>.
         // Why: the typed-body parent lives in the SAME path as the child (e.g. sec.SecretManager and
         // sec.AzureKeyVaultSecretManager), so the path resolves BOTH the child and its parent. The FK
         // selector uses this to distinguish the parent FK from a cross-path data reference.
-        var mockPath = new Mock<IDataPath>();
+        var mockPath = new Mock<IDataNodePath>();
         mockPath.Setup(p => p.Name).Returns(pathName);
         mockPath.Setup(p => p.Containers).Returns(new List<IDataContainer> { mockContainer.Object, mockParentContainer.Object });
         mockPath.Setup(p => p.Container(It.Is<string>(n =>
@@ -210,16 +210,16 @@ public class DefaultConfigurationProviderGetByIdTests
             !string.Equals(n, parentName, StringComparison.Ordinal))))
             .Returns(GenericResult<IDataContainer>.Failure(new GenericMessage("container not found")));
 
-        // Build IDataStore with Path() lookup — returns IGenericResult<IDataPath>
+        // Build IDataStore with Path() lookup — returns IGenericResult<IDataNodePath>
         var mockStore = new Mock<IDataStore>();
         mockStore.Setup(s => s.Name).Returns(storeName);
-        mockStore.Setup(s => s.Paths).Returns(new List<IDataPath> { mockPath.Object });
+        mockStore.Setup(s => s.Paths).Returns(new List<IDataNodePath> { mockPath.Object });
         mockStore.Setup(s => s.Path(It.Is<string>(n =>
             string.Equals(n, pathName, StringComparison.Ordinal))))
-            .Returns(GenericResult<IDataPath>.Success(mockPath.Object));
+            .Returns(GenericResult<IDataNodePath>.Success(mockPath.Object));
         mockStore.Setup(s => s.Path(It.Is<string>(n =>
             !string.Equals(n, pathName, StringComparison.Ordinal))))
-            .Returns(GenericResult<IDataPath>.Failure(new GenericMessage("path not found")));
+            .Returns(GenericResult<IDataNodePath>.Failure(new GenericMessage("path not found")));
         mockStore.Setup(s => s.ConnectionId).Returns(Guid.NewGuid());
 
         IReadOnlyList<IDataStore> stores = new List<IDataStore> { mockStore.Object };

@@ -9,10 +9,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.Data.DataNodes;
 
 /// <summary>
-/// Runtime implementation of <see cref="IDataPath"/>.
+/// Runtime implementation of <see cref="IDataNodePath"/>.
 /// Eagerly constructed with a container list; <see cref="Container"/> does O(1) dictionary lookup by name.
 /// </summary>
-internal sealed class DataPath : IDataPath
+internal sealed class DataPath : IDataNodePath
 {
     private System.Collections.Generic.Dictionary<string, IDataContainer> _containerIndex;
     private bool _containersFinalized;

@@ -76,7 +76,7 @@ public sealed class CompileDocumentTranslator
             .Select(d =>
             {
                 var lineSpan = d.Location.GetLineSpan();
-                return new DiagnosticInfo
+                return new CompilationDiagnosticInfo
                 {
                     Id = d.Id,
                     Message = d.GetMessage(),

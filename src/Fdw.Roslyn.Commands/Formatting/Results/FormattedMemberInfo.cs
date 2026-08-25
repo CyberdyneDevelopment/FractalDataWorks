@@ -3,7 +3,7 @@ namespace Fdw.Roslyn.Commands.Formatting.Results;
 /// <summary>
 /// Information about a member.
 /// </summary>
-public sealed class MemberInfo
+public sealed class FormattedMemberInfo
 {
     /// <summary>
     /// Gets or sets the member name.

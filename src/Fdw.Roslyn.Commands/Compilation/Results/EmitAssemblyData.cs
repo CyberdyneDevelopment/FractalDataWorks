@@ -26,5 +26,5 @@ public sealed class EmitAssemblyData
     /// <summary>
     /// Gets or sets the list of errors (if any).
     /// </summary>
-    public IReadOnlyList<DiagnosticInfo>? Errors { get; init; }
+    public IReadOnlyList<CompilationDiagnosticInfo>? Errors { get; init; }
 }

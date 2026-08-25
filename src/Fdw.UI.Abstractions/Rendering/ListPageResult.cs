@@ -16,7 +16,7 @@ namespace Fdw.UI.Abstractions.Rendering;
 /// or the user went back) from "stay and re-render" (search or pagination changed the model in place).
 /// </para>
 /// <para>
-/// Why the <c>PageAction</c> alias: this namespace declares its own <c>IPageAction</c> (used by
+/// Why the <c>PageAction</c> alias: this namespace declares its own <c>IPageActionType</c> (used by
 /// <see cref="PageResult"/>, keyed by int), which would shadow a plain using-import of the Pages one.
 /// A list page's actions come from <c>IListPageModel.ListActions</c>, which are the Pages variant, so
 /// the alias binds it unambiguously.

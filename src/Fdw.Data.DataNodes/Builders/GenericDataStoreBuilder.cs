@@ -49,7 +49,7 @@ public sealed class GenericDataStoreBuilder : DataStoreBuilderBase
     /// <inheritdoc />
     protected override IDataContainer BuildContainer(
         DataContainerConfiguration containerCfg,
-        IDataPath parent,
+        IDataNodePath parent,
         IReadOnlyList<IDataField> fields,
         IReadOnlyList<IContainerKey> keys,
         IGenericResult<IReadOnlyList<ReferencingKeyBinding>> referencingKeys)

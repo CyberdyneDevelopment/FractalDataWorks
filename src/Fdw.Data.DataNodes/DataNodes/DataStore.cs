@@ -15,7 +15,7 @@ namespace Fdw.Services.Data.DataNodes;
 /// </summary>
 internal sealed class DataStore : IDataStore
 {
-    private Dictionary<string, IDataPath> _pathIndex;
+    private Dictionary<string, IDataNodePath> _pathIndex;
     private bool _pathsFinalized;
 
     // Why: the node holds a real ILogger so its navigation-miss log calls actually emit. Passing
@@ -30,7 +30,7 @@ internal sealed class DataStore : IDataStore
     public Guid ConnectionId { get; }
 
     /// <inheritdoc />
-    public IReadOnlyList<IDataPath> Paths { get; private set; }
+    public IReadOnlyList<IDataNodePath> Paths { get; private set; }
 
     /// <inheritdoc />
     public string? Description { get; }
@@ -48,7 +48,7 @@ internal sealed class DataStore : IDataStore
         return PathNotFoundResult<IDataNode>(name);
     }
 
-    internal DataStore(string name, Guid connectionId, IReadOnlyList<IDataPath> paths, string? description = null, ILogger? logger = null)
+    internal DataStore(string name, Guid connectionId, IReadOnlyList<IDataNodePath> paths, string? description = null, ILogger? logger = null)
     {
         Name = name;
         ConnectionId = connectionId;
@@ -64,11 +64,11 @@ internal sealed class DataStore : IDataStore
     // Why (chicken-and-egg fix, one level up from DataPath.SetContainers): a path needs its owning store
     // at construction, but the store's path index needs the paths — so the builder constructs the FINAL
     // store first (empty), builds every path under THIS store object, then calls SetPaths to wire the
-    // index. Without this both DataPath sites were built with `store: null!`, leaving IDataPath.Store —
+    // index. Without this both DataPath sites were built with `store: null!`, leaving IDataNodePath.Store —
     // declared NON-nullable, and enforced as such by DetachedDataPath — null on every runtime path, which
     // turned DataPath.ContainerNotFoundResult into a NullReferenceException instead of a failure result.
     // Set-once: finalized exactly once (a second call is a wiring defect — fail loud).
-    internal void SetPaths(IReadOnlyList<IDataPath> paths)
+    internal void SetPaths(IReadOnlyList<IDataNodePath> paths)
     {
         if (paths is null)
             throw new ArgumentNullException(nameof(paths));
@@ -80,9 +80,9 @@ internal sealed class DataStore : IDataStore
         _pathIndex = BuildIndex(paths);
     }
 
-    private static Dictionary<string, IDataPath> BuildIndex(IReadOnlyList<IDataPath> paths)
+    private static Dictionary<string, IDataNodePath> BuildIndex(IReadOnlyList<IDataNodePath> paths)
     {
-        var index = new Dictionary<string, IDataPath>(StringComparer.Ordinal);
+        var index = new Dictionary<string, IDataNodePath>(StringComparer.Ordinal);
         foreach (var p in paths)
         {
             index.TryAdd(p.Name, p);
@@ -92,12 +92,12 @@ internal sealed class DataStore : IDataStore
     }
 
     /// <inheritdoc />
-    public IGenericResult<IDataPath> Path(string name)
+    public IGenericResult<IDataNodePath> Path(string name)
     {
         if (_pathIndex.TryGetValue(name, out var path))
-            return GenericResult<IDataPath>.Success(path);
+            return GenericResult<IDataNodePath>.Success(path);
 
-        return PathNotFoundResult<IDataPath>(name);
+        return PathNotFoundResult<IDataNodePath>(name);
     }
 
     // Why: ONE construction point for "this store registers no such path", shared by Node and Path so the

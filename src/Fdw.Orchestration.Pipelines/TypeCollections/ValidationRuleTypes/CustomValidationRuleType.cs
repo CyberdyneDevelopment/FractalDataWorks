@@ -37,7 +37,7 @@ public sealed class CustomValidationRuleType : ValidationRuleTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<ValidationResult>> Validate(
+    public override Task<IGenericResult<ValidationRuleResult>> Validate(
         IReadOnlyDictionary<string, object?> record,
         IReadOnlyList<string> fields,
         IReadOnlyDictionary<string, object?> parameters,
@@ -45,32 +45,32 @@ public sealed class CustomValidationRuleType : ValidationRuleTypeBase
     {
         if (!parameters.TryGetValue("Validator", out var validatorObj))
         {
-            return Task.FromResult<IGenericResult<ValidationResult>>(
-                GenericResult<ValidationResult>.Failure(PipelineResultCodes.ByName("ValidatorParameterRequired")));
+            return Task.FromResult<IGenericResult<ValidationRuleResult>>(
+                GenericResult<ValidationRuleResult>.Failure(PipelineResultCodes.ByName("ValidatorParameterRequired")));
         }
 
         // Support different validator types
-        if (validatorObj is Func<IReadOnlyDictionary<string, object?>, ValidationResult> syncValidator)
+        if (validatorObj is Func<IReadOnlyDictionary<string, object?>, ValidationRuleResult> syncValidator)
         {
             var result = syncValidator(record);
-            return Task.FromResult<IGenericResult<ValidationResult>>(
-                GenericResult<ValidationResult>.Success(result));
+            return Task.FromResult<IGenericResult<ValidationRuleResult>>(
+                GenericResult<ValidationRuleResult>.Success(result));
         }
 
-        if (validatorObj is Func<IReadOnlyDictionary<string, object?>, Task<ValidationResult>> asyncValidator)
+        if (validatorObj is Func<IReadOnlyDictionary<string, object?>, Task<ValidationRuleResult>> asyncValidator)
         {
             return ExecuteAsyncValidator(asyncValidator, record);
         }
 
-        return Task.FromResult<IGenericResult<ValidationResult>>(
-            GenericResult<ValidationResult>.Failure(PipelineResultCodes.ByName("InvalidValidatorType")));
+        return Task.FromResult<IGenericResult<ValidationRuleResult>>(
+            GenericResult<ValidationRuleResult>.Failure(PipelineResultCodes.ByName("InvalidValidatorType")));
     }
 
-    private static async Task<IGenericResult<ValidationResult>> ExecuteAsyncValidator(
-        Func<IReadOnlyDictionary<string, object?>, Task<ValidationResult>> validator,
+    private static async Task<IGenericResult<ValidationRuleResult>> ExecuteAsyncValidator(
+        Func<IReadOnlyDictionary<string, object?>, Task<ValidationRuleResult>> validator,
         IReadOnlyDictionary<string, object?> record)
     {
         var result = await validator(record).ConfigureAwait(false);
-        return GenericResult<ValidationResult>.Success(result);
+        return GenericResult<ValidationRuleResult>.Success(result);
     }
 }

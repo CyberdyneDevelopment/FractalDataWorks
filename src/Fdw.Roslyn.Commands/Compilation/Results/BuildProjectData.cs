@@ -31,10 +31,10 @@ public sealed class BuildProjectData
     /// <summary>
     /// Gets or sets the list of errors.
     /// </summary>
-    public required IReadOnlyList<DiagnosticInfo> Errors { get; init; }
+    public required IReadOnlyList<CompilationDiagnosticInfo> Errors { get; init; }
 
     /// <summary>
     /// Gets or sets the list of warnings.
     /// </summary>
-    public required IReadOnlyList<DiagnosticInfo> Warnings { get; init; }
+    public required IReadOnlyList<CompilationDiagnosticInfo> Warnings { get; init; }
 }

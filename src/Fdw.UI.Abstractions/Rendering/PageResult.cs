@@ -10,7 +10,7 @@ public sealed class PageResult
 {
     private PageResult(
         bool success,
-        IPageAction action,
+        IPageActionType action,
         object? savedConfiguration,
         ValidationResult? validation,
         string? error)
@@ -30,7 +30,7 @@ public sealed class PageResult
     /// <summary>
     /// Gets the action taken by the user.
     /// </summary>
-    public IPageAction Action { get; }
+    public IPageActionType Action { get; }
 
     /// <summary>
     /// Gets the saved configuration if the user saved.

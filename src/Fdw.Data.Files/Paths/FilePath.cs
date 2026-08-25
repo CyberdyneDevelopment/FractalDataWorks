@@ -14,7 +14,7 @@ namespace Fdw.Data.Files.Paths;
 /// Format: /path/to/file.ext or /path/to/*.csv
 /// </summary>
 [ExcludeFromCodeCoverage] // Excluded: requires filesystem access
-public sealed class FilePath : PathBase, IDataPath<IStorageContainer>
+public sealed class FilePath : PathBase, IDataNodePath<IStorageContainer>
 {
     private readonly List<IStorageContainer> _containers;
 
@@ -59,8 +59,8 @@ public sealed class FilePath : PathBase, IDataPath<IStorageContainer>
     /// </summary>
     public string Extension => IsPattern ? string.Empty : Path.GetExtension(PathValue);
 
-    // IDataPath implementation — using fully qualified type to resolve ambiguity with
-    // Fdw.Data.Abstractions.IDataPath (Phase 1 DataNodes addition)
+    // IDataNodePath implementation — using fully qualified type to resolve ambiguity with
+    // Fdw.Data.Abstractions.IDataNodePath (Phase 1 DataNodes addition)
     string Fdw.Data.DataStores.Abstractions.IDataPath.Id => PathValue;
     string Fdw.Data.DataStores.Abstractions.IDataPath.Name => FileName;
     string Fdw.Data.DataStores.Abstractions.IDataPath.PathType => "FilePath";

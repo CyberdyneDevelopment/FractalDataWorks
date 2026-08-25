@@ -405,7 +405,7 @@ COMMIT";
                 fkColName,
                 // Why (Stage 3): the owning-schema name is the tree-navigation parent path's name.
                 // The container's physical IStorageContainer.Path is the typed address (DatabasePath/
-                // HttpPath/FilePath) and no longer exposes a schema-name string; Parent is the IDataPath
+                // HttpPath/FilePath) and no longer exposes a schema-name string; Parent is the IDataNodePath
                 // tree node whose Name is the schema. Migrated from the old container.Path.Name read.
                 referencedContainer.Parent.Name,
                 referencedContainer.Name,

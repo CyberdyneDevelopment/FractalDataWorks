@@ -16,13 +16,13 @@ namespace Fdw.Data.Abstractions;
 /// <see cref="Keys"/> and <see cref="ReferencingKeys"/> are present). There is no materialization step.
 /// <para>
 /// The tree-navigation parent of a container is its owning <see cref="Parent"/> (an
-/// <see cref="IDataPath"/>). The physical address is the distinct <see cref="IStorageContainer.Path"/>
+/// <see cref="IDataNodePath"/>). The physical address is the distinct <see cref="IStorageContainer.Path"/>
 /// (an <see cref="IPath"/> such as <c>DatabasePath</c>/<c>HttpPath</c>/<c>FilePath</c>) read by the
 /// transport translators. These are named apart so there is no <c>new</c>-hiding.
 /// </para>
 /// <para>
 /// Consumers that need to look up a container by name and detect when it is absent should call
-/// <see cref="IDataPath.Container"/> and check <c>IsSuccess</c> on the returned
+/// <see cref="IDataNodePath.Container"/> and check <c>IsSuccess</c> on the returned
 /// <c>IGenericResult&lt;IDataContainer&gt;</c>.
 /// </para>
 /// </remarks>
@@ -39,12 +39,12 @@ public interface IDataContainer : IDataNode, IStorageContainer
     /// Gets the path within the data store that owns this container — the container's tree-navigation parent.
     /// </summary>
     /// <remarks>
-    /// Why: this is the <see cref="IDataNode"/> tree back-reference (the owning <see cref="IDataPath"/>),
+    /// Why: this is the <see cref="IDataNode"/> tree back-reference (the owning <see cref="IDataNodePath"/>),
     /// named apart from the physical-address <see cref="IStorageContainer.Path"/> so there is no
     /// <c>new</c>-hiding ambiguity. Transport translators read the physical location from
     /// <see cref="IStorageContainer.Path"/>; tree navigation reads <see cref="Parent"/>.
     /// </remarks>
-    IDataPath Parent { get; }
+    IDataNodePath Parent { get; }
 
     /// <summary>
     /// Gets the keys defined on this container.

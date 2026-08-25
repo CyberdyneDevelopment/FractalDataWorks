@@ -34,7 +34,7 @@ public sealed class UniqueValidationRuleType : ValidationRuleTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<ValidationResult>> Validate(
+    public override Task<IGenericResult<ValidationRuleResult>> Validate(
         IReadOnlyDictionary<string, object?> record,
         IReadOnlyList<string> fields,
         IReadOnlyDictionary<string, object?> parameters,
@@ -43,8 +43,8 @@ public sealed class UniqueValidationRuleType : ValidationRuleTypeBase
         // Single-record validation cannot check uniqueness across dataset.
         // This is deferred to batch validation at the pipeline level.
         // Return success here; the pipeline executor handles full uniqueness checks.
-        return Task.FromResult<IGenericResult<ValidationResult>>(
-            GenericResult<ValidationResult>.Success(
-                ValidationResult.Success("Uniqueness deferred to batch validation")));
+        return Task.FromResult<IGenericResult<ValidationRuleResult>>(
+            GenericResult<ValidationRuleResult>.Success(
+                ValidationRuleResult.Success("Uniqueness deferred to batch validation")));
     }
 }

@@ -40,7 +40,7 @@ public sealed class MsSqlQueryTranslatorTests
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns(name);
         // Why: translator reads container.Path via IStorageContainer.Path (returns IPath) for the
-        // `is not DatabasePath` guard. IDataContainer.Path (DataNodes IDataPath) is a different
+        // `is not DatabasePath` guard. IDataContainer.Path (DataNodes IDataNodePath) is a different
         // interface member — use .As<IStorageContainer>() to target the correct overload.
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
         container.Setup(c => c.Schema).Returns(containerSchema.Object);

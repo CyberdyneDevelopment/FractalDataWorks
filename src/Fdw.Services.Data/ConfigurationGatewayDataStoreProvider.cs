@@ -365,10 +365,10 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     // miss here is the final answer (operation cannot complete), unlike the probe loops elsewhere that
     // scan every path expecting most to miss — so a miss is logged at Error here, in addition to the
     // Debug-level DataStoreLoaderLog.PathNotFound the node's own Path(name) already logs internally.
-    public async Task<IGenericResult<IDataPath>> Get(string dataStoreName, string pathName, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<IDataNodePath>> Get(string dataStoreName, string pathName, CancellationToken cancellationToken = default)
     {
         var storeResult = await Get(dataStoreName, cancellationToken).ConfigureAwait(false);
-        if (!storeResult.IsSuccess || storeResult.Value is null) return storeResult.ToNewResult<IDataPath>();
+        if (!storeResult.IsSuccess || storeResult.Value is null) return storeResult.ToNewResult<IDataNodePath>();
 
         var pathResult = storeResult.Value.Path(pathName);
         if (!pathResult.IsSuccess)

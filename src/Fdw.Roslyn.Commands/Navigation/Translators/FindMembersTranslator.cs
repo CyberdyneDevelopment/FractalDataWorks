@@ -19,7 +19,7 @@ namespace Fdw.Roslyn.Commands.Navigation.Translators;
 /// Translator for FindMembers command.
 /// </summary>
 [TypeOption(typeof(RoslynCommandTranslators), "FindMembersTranslator")]
-public sealed class FindMembersTranslator : RoslynCommandTranslatorBase<FindMembersCommand, QueryResult<IReadOnlyList<MemberInfo>>>
+public sealed class FindMembersTranslator : RoslynCommandTranslatorBase<FindMembersCommand, QueryResult<IReadOnlyList<NavigationMemberInfo>>>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="FindMembersTranslator"/> class.
@@ -30,7 +30,7 @@ public sealed class FindMembersTranslator : RoslynCommandTranslatorBase<FindMemb
     }
 
     /// <inheritdoc/>
-    public override async Task<IGenericResult<QueryResult<IReadOnlyList<MemberInfo>>>> Translate(
+    public override async Task<IGenericResult<QueryResult<IReadOnlyList<NavigationMemberInfo>>>> Translate(
         FindMembersCommand command,
         Solution solution,
         CancellationToken cancellationToken = default)
@@ -41,7 +41,7 @@ public sealed class FindMembersTranslator : RoslynCommandTranslatorBase<FindMemb
         if (documentId is null)
         {
             FindMembersTranslatorLog.DocumentNotFound(Logger, command.FilePath);
-            return GenericResult<QueryResult<IReadOnlyList<MemberInfo>>>.Failure(
+            return GenericResult<QueryResult<IReadOnlyList<NavigationMemberInfo>>>.Failure(
                 RoslynResultCodes.ByName("DocumentNotFound"),
                 ResultDetails.Create().With("FilePath", command.FilePath));
         }
@@ -50,7 +50,7 @@ public sealed class FindMembersTranslator : RoslynCommandTranslatorBase<FindMemb
         if (document is null)
         {
             FindMembersTranslatorLog.FailedToLoadDocument(Logger, command.FilePath);
-            return GenericResult<QueryResult<IReadOnlyList<MemberInfo>>>.Failure(
+            return GenericResult<QueryResult<IReadOnlyList<NavigationMemberInfo>>>.Failure(
                 RoslynResultCodes.ByName("FailedToLoadDocument"));
         }
 
@@ -61,7 +61,7 @@ public sealed class FindMembersTranslator : RoslynCommandTranslatorBase<FindMemb
         if (semanticModel is null || syntaxRoot is null)
         {
             FindMembersTranslatorLog.FailedToAnalyzeDocument(Logger, command.FilePath);
-            return GenericResult<QueryResult<IReadOnlyList<MemberInfo>>>.Failure(
+            return GenericResult<QueryResult<IReadOnlyList<NavigationMemberInfo>>>.Failure(
                 RoslynResultCodes.ByName("FailedToAnalyzeDocument"));
         }
 
@@ -73,12 +73,12 @@ public sealed class FindMembersTranslator : RoslynCommandTranslatorBase<FindMemb
         if (symbol is not INamedTypeSymbol typeSymbol)
         {
             FindMembersTranslatorLog.SymbolNotType(Logger, command.FilePath, command.Line, command.Column);
-            return GenericResult<QueryResult<IReadOnlyList<MemberInfo>>>.Failure(
+            return GenericResult<QueryResult<IReadOnlyList<NavigationMemberInfo>>>.Failure(
                 RoslynResultCodes.ByName("SymbolNotType"));
         }
 
         var allowedKinds = ParseMemberKinds(command.MemberKinds);
-        var members = new List<MemberInfo>();
+        var members = new List<NavigationMemberInfo>();
 
         var symbolMembers = command.IncludeInherited
             ? typeSymbol.GetMembers()
@@ -98,18 +98,18 @@ public sealed class FindMembersTranslator : RoslynCommandTranslatorBase<FindMemb
             members.Add(memberInfo);
         }
 
-        var result = new QueryResult<IReadOnlyList<MemberInfo>>(
+        var result = new QueryResult<IReadOnlyList<NavigationMemberInfo>>(
             $"Found {members.Count} member(s) in '{typeSymbol.Name}'",
             members);
 
         FindMembersTranslatorLog.Found(Logger, typeSymbol.Name, members.Count);
 
-        return GenericResult<QueryResult<IReadOnlyList<MemberInfo>>>.Success(result);
+        return GenericResult<QueryResult<IReadOnlyList<NavigationMemberInfo>>>.Success(result);
     }
 
-    private static MemberInfo CreateMemberInfo(ISymbol member)
+    private static NavigationMemberInfo CreateMemberInfo(ISymbol member)
     {
-        var info = new MemberInfo
+        var info = new NavigationMemberInfo
         {
             Name = member.Name,
             Kind = member.Kind.ToString(),

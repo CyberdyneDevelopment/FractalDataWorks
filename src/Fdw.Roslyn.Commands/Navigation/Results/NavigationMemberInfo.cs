@@ -5,7 +5,7 @@ namespace Fdw.Roslyn.Commands.Navigation.Results;
 /// <summary>
 /// Represents information about a type member.
 /// </summary>
-public sealed record MemberInfo
+public sealed record NavigationMemberInfo
 {
     /// <summary>
     /// Gets or sets the member name.

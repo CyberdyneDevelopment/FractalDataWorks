@@ -16,7 +16,7 @@ namespace Fdw.Data.Abstractions;
 /// <see cref="IStorageContainer.Path"/>.
 /// </para>
 /// </remarks>
-public interface IDataPath : IDataNode
+public interface IDataNodePath : IDataNode
 {
     /// <summary>
     /// Gets the data store that owns this path.

@@ -36,7 +36,7 @@ public sealed class PostgreSqlTableContainer : DataContainer
     public PostgreSqlTableContainer(
         string name,
         string? description,
-        IDataPath parent,
+        IDataNodePath parent,
         IReadOnlyList<IPostgreSqlDataField> fields,
         IReadOnlyList<IContainerKey> keys,
         IGenericResult<IReadOnlyList<ReferencingKeyBinding>> referencingKeys,

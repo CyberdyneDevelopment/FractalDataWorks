@@ -163,7 +163,7 @@ public class ParameterExpectations
     {
         if (_errors.Count > 0)
         {
-            throw new CSharp.ExpectationException($"Parameter expectations failed:\n{string.Join("\n", _errors)}");
+            throw new CSharp.ExpectationFailedException($"Parameter expectations failed:\n{string.Join("\n", _errors)}");
         }
     }
 }

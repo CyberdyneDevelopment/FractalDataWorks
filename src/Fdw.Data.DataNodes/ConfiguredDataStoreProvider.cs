@@ -123,12 +123,12 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
     }
 
     /// <inheritdoc/>
-    public async Task<IGenericResult<IDataPath>> Get(string dataStoreName, string pathName, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<IDataNodePath>> Get(string dataStoreName, string pathName, CancellationToken cancellationToken = default)
     {
         ConfiguredDataStoreProviderLog.TraceGetPathEntry(_logger, dataStoreName, pathName);
         var storeResult = await Get(dataStoreName, cancellationToken).ConfigureAwait(false);
         if (!storeResult.IsSuccess || storeResult.Value is null)
-            return storeResult.ToNewResult<IDataPath>();
+            return storeResult.ToNewResult<IDataNodePath>();
 
         return storeResult.Value.Path(pathName);
     }

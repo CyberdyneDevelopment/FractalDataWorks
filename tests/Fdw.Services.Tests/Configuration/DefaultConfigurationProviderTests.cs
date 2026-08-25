@@ -164,7 +164,7 @@ public class DefaultConfigurationProviderTests
         container.Setup(c => c.Name).Returns(containerName);
         container.Setup(c => c.Keys).Returns(new List<IContainerKey> { physicalKey.Object, logicalKey.Object });
 
-        var path = new Mock<IDataPath>();
+        var path = new Mock<IDataNodePath>();
         path.Setup(p => p.Name).Returns("data");
         path.Setup(p => p.Containers).Returns(new List<IDataContainer> { container.Object });
         path.Setup(p => p.Container(It.Is<string>(n => string.Equals(n, containerName, StringComparison.Ordinal))))
@@ -174,9 +174,9 @@ public class DefaultConfigurationProviderTests
 
         var store = new Mock<IDataStore>();
         store.Setup(s => s.Name).Returns("ConfigurationDb");
-        store.Setup(s => s.Paths).Returns(new List<IDataPath> { path.Object });
+        store.Setup(s => s.Paths).Returns(new List<IDataNodePath> { path.Object });
         store.Setup(s => s.Path(It.Is<string>(n => string.Equals(n, "data", StringComparison.Ordinal))))
-            .Returns(GenericResult<IDataPath>.Success(path.Object));
+            .Returns(GenericResult<IDataNodePath>.Success(path.Object));
 
         return new List<IDataStore> { store.Object };
     }
@@ -300,7 +300,7 @@ public class DefaultConfigurationProviderTests
         container.Setup(c => c.Name).Returns(containerName);
         container.Setup(c => c.Keys).Returns(new List<IContainerKey> { physicalKey.Object, logicalKey.Object, foreignKey.Object });
 
-        var path = new Mock<IDataPath>();
+        var path = new Mock<IDataNodePath>();
         path.Setup(p => p.Name).Returns("data");
         path.Setup(p => p.Containers).Returns(new List<IDataContainer> { container.Object });
         path.Setup(p => p.Container(It.Is<string>(n => string.Equals(n, containerName, StringComparison.Ordinal))))
@@ -310,9 +310,9 @@ public class DefaultConfigurationProviderTests
 
         var store = new Mock<IDataStore>();
         store.Setup(s => s.Name).Returns("ConfigurationDb");
-        store.Setup(s => s.Paths).Returns(new List<IDataPath> { path.Object });
+        store.Setup(s => s.Paths).Returns(new List<IDataNodePath> { path.Object });
         store.Setup(s => s.Path(It.Is<string>(n => string.Equals(n, "data", StringComparison.Ordinal))))
-            .Returns(GenericResult<IDataPath>.Success(path.Object));
+            .Returns(GenericResult<IDataNodePath>.Success(path.Object));
 
         return new List<IDataStore> { store.Object };
     }

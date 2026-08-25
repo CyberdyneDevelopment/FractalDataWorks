@@ -19,9 +19,9 @@ public sealed class MsSqlContainerTests
     private static DatabasePath CreatePath(string schema = "dbo", string name = "TestObject")
         => new("", schema, name);
 
-    private static IDataPath CreateParent(string name = "dbo")
+    private static IDataNodePath CreateParent(string name = "dbo")
     {
-        var parent = new Mock<IDataPath>();
+        var parent = new Mock<IDataNodePath>();
         parent.Setup(p => p.Name).Returns(name);
         return parent.Object;
     }

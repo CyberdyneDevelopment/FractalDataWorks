@@ -519,9 +519,9 @@ public sealed class ConfiguredDataStoreProviderTests
     public async Task GetPathReturnsSuccessWhenPathFoundOnBuiltStore()
     {
         // Arrange
-        var pathMock = new Mock<IDataPath>().Object;
+        var pathMock = new Mock<IDataNodePath>().Object;
         var storeMock = new Mock<IDataStore>();
-        storeMock.Setup(s => s.Path("Path1")).Returns(GenericResult<IDataPath>.Success(pathMock));
+        storeMock.Setup(s => s.Path("Path1")).Returns(GenericResult<IDataNodePath>.Success(pathMock));
         SetupSuccessfulBuild("Store1", storeMock.Object);
         var sut = CreateSut();
 
@@ -542,7 +542,7 @@ public sealed class ConfiguredDataStoreProviderTests
         var storeMock = new Mock<IDataStore>();
         storeMock
             .Setup(s => s.Path("MissingPath"))
-            .Returns(GenericResult<IDataPath>.Failure(new GenericMessage("path not found")));
+            .Returns(GenericResult<IDataNodePath>.Failure(new GenericMessage("path not found")));
         SetupSuccessfulBuild("Store1", storeMock.Object);
         var sut = CreateSut();
 
@@ -582,10 +582,10 @@ public sealed class ConfiguredDataStoreProviderTests
     {
         // Arrange
         var containerMock = new Mock<IDataContainer>().Object;
-        var pathMock = new Mock<IDataPath>();
+        var pathMock = new Mock<IDataNodePath>();
         pathMock.Setup(p => p.Container("Container1")).Returns(GenericResult<IDataContainer>.Success(containerMock));
         var storeMock = new Mock<IDataStore>();
-        storeMock.Setup(s => s.Path("Path1")).Returns(GenericResult<IDataPath>.Success(pathMock.Object));
+        storeMock.Setup(s => s.Path("Path1")).Returns(GenericResult<IDataNodePath>.Success(pathMock.Object));
         SetupSuccessfulBuild("Store1", storeMock.Object);
         var sut = CreateSut();
 
@@ -603,12 +603,12 @@ public sealed class ConfiguredDataStoreProviderTests
     public async Task GetContainerReturnsFailureWhenContainerNotFoundOnResolvedPath()
     {
         // Arrange
-        var pathMock = new Mock<IDataPath>();
+        var pathMock = new Mock<IDataNodePath>();
         pathMock
             .Setup(p => p.Container("MissingContainer"))
             .Returns(GenericResult<IDataContainer>.Failure(new GenericMessage("container not found")));
         var storeMock = new Mock<IDataStore>();
-        storeMock.Setup(s => s.Path("Path1")).Returns(GenericResult<IDataPath>.Success(pathMock.Object));
+        storeMock.Setup(s => s.Path("Path1")).Returns(GenericResult<IDataNodePath>.Success(pathMock.Object));
         SetupSuccessfulBuild("Store1", storeMock.Object);
         var sut = CreateSut();
 

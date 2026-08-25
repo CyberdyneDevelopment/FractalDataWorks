@@ -782,7 +782,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
     // .Keys is empty. Re-resolve the parent from the path tree to read its fully-built Physical/Logical
     // keys — a typed-body chain's parent always lives in the child's own path. Extracted to keep
     // ResolveParentJoin under the FDW007 cyclomatic-complexity threshold.
-    private static IReadOnlyList<IContainerKey> ResolveParentKeys(IDataContainer parent, IDataPath path)
+    private static IReadOnlyList<IContainerKey> ResolveParentKeys(IDataContainer parent, IDataNodePath path)
     {
         if (parent.Keys.Count > 0)
             return parent.Keys;
@@ -797,7 +797,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
     // is a DATA reference (e.g. BatchCopyPipeline → data.DataSet source/sink), never the parent — skip
     // it so the parent join is selected unambiguously when a typed body carries several FKs. Returns
     // null for root tables (no parent FK in this path).
-    private static IContainerKey? FindForeignKey(IReadOnlyList<IContainerKey> keys, IDataPath path, string ownContainerName)
+    private static IContainerKey? FindForeignKey(IReadOnlyList<IContainerKey> keys, IDataNodePath path, string ownContainerName)
     {
         for (var i = 0; i < keys.Count; i++)
         {

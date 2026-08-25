@@ -201,7 +201,7 @@ public sealed class EscalationAggregateCompositionTests
                 referencing: [Binding("EscalationPolicyRowId", levelContainer)],
                 keys: [Key("Physical", "PK_EscalationPolicy", "RowId"), Key("Logical", "AK_EscalationPolicy", "Id")]);
 
-            var path = new Mock<IDataPath>();
+            var path = new Mock<IDataNodePath>();
             path.Setup(p => p.Name).Returns("workflow");
             var containers = new List<IDataContainer> { policyContainer, levelContainer, recipientContainer };
             path.Setup(p => p.Containers).Returns(containers);
@@ -218,11 +218,11 @@ public sealed class EscalationAggregateCompositionTests
 
             var store = new Mock<IDataStore>();
             store.Setup(s => s.Name).Returns("ConfigurationDb");
-            store.Setup(s => s.Paths).Returns(new List<IDataPath> { path.Object });
+            store.Setup(s => s.Paths).Returns(new List<IDataNodePath> { path.Object });
             store.Setup(s => s.Path(It.IsAny<string>())).Returns((string n) =>
                 string.Equals(n, "workflow", StringComparison.Ordinal)
-                    ? GenericResult<IDataPath>.Success(path.Object)
-                    : GenericResult<IDataPath>.Failure(new GenericMessage("not found")));
+                    ? GenericResult<IDataNodePath>.Success(path.Object)
+                    : GenericResult<IDataNodePath>.Failure(new GenericMessage("not found")));
             return store.Object;
         }
 

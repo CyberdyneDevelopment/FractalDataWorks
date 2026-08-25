@@ -12,7 +12,7 @@ namespace Fdw.Data.DataNodes.Tests;
 
 /// <summary>
 /// Tests the store-to-path back-reference produced by <c>DataStoreBuilderBase.Build</c>.
-/// <see cref="IDataPath.Store"/> is declared NON-nullable (and enforced as such by
+/// <see cref="IDataNodePath.Store"/> is declared NON-nullable (and enforced as such by
 /// <c>DetachedDataPath</c>), but both runtime <c>DataPath</c> construction sites passed
 /// <c>store: null!</c> and nothing back-wired it, so <c>Store</c> was null on every path the builder
 /// produced. Because <c>DataPath.ContainerNotFoundResult</c> reads <c>Store.Name</c> into its

@@ -33,7 +33,7 @@ public sealed class RangeValidationRuleType : ValidationRuleTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<ValidationResult>> Validate(
+    public override Task<IGenericResult<ValidationRuleResult>> Validate(
         IReadOnlyDictionary<string, object?> record,
         IReadOnlyList<string> fields,
         IReadOnlyDictionary<string, object?> parameters,
@@ -66,12 +66,12 @@ public sealed class RangeValidationRuleType : ValidationRuleTypeBase
 
         if (errors.Count > 0)
         {
-            return Task.FromResult<IGenericResult<ValidationResult>>(
-                GenericResult<ValidationResult>.Success(
-                    ValidationResult.Failure("Range validation failed", errors)));
+            return Task.FromResult<IGenericResult<ValidationRuleResult>>(
+                GenericResult<ValidationRuleResult>.Success(
+                    ValidationRuleResult.Failure("Range validation failed", errors)));
         }
 
-        return Task.FromResult<IGenericResult<ValidationResult>>(
-            GenericResult<ValidationResult>.Success(ValidationResult.Success()));
+        return Task.FromResult<IGenericResult<ValidationRuleResult>>(
+            GenericResult<ValidationRuleResult>.Success(ValidationRuleResult.Success()));
     }
 }

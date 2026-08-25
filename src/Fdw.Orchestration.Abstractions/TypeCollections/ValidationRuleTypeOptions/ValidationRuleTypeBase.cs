@@ -53,7 +53,7 @@ public abstract class ValidationRuleTypeBase : TypeOptionBase<int, ValidationRul
     public IReadOnlyList<string> RequiredParameterNames { get; }
 
     /// <inheritdoc/>
-    public abstract Task<IGenericResult<ValidationResult>> Validate(
+    public abstract Task<IGenericResult<ValidationRuleResult>> Validate(
         IReadOnlyDictionary<string, object?> record,
         IReadOnlyList<string> fields,
         IReadOnlyDictionary<string, object?> parameters,

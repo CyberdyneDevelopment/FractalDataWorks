@@ -5,9 +5,9 @@ using Fdw.Data.Abstractions;
 using Fdw.Data.DataStores.Abstractions;
 using Fdw.Data.MsSql;
 using Shouldly;
-// Why: Phase 1 introduced IDataPath in Data.Abstractions alongside the pre-existing one in
+// Why: Phase 1 introduced IDataNodePath in Data.Abstractions alongside the pre-existing one in
 // DataStores.Abstractions. This file predates Phase 1 and uses the old interface throughout.
-using IDataPath = Fdw.Data.DataStores.Abstractions.IDataPath;
+using IDataNodePath = Fdw.Data.DataStores.Abstractions.IDataPath;
 using Xunit;
 
 namespace Fdw.Data.MsSql.Tests.Paths;
@@ -160,7 +160,7 @@ public sealed class DatabasePathTests
     public void IDataPathIdCombinesAllParts()
     {
         var sut = new DatabasePath("Northwind", "dbo", "Customers");
-        ((IDataPath)sut).Id.ShouldBe("Northwind.dbo.Customers");
+        ((IDataNodePath)sut).Id.ShouldBe("Northwind.dbo.Customers");
     }
 
     [Fact]
@@ -169,7 +169,7 @@ public sealed class DatabasePathTests
     public void IDataPathNameIsObjectName()
     {
         var sut = new DatabasePath("Northwind", "dbo", "Customers");
-        ((IDataPath)sut).Name.ShouldBe("Customers");
+        ((IDataNodePath)sut).Name.ShouldBe("Customers");
     }
 
     [Fact]
@@ -178,7 +178,7 @@ public sealed class DatabasePathTests
     public void IDataPathPathTypeIsDatabasePath()
     {
         var sut = new DatabasePath("db", "dbo", "table");
-        ((IDataPath)sut).PathType.ShouldBe("DatabasePath");
+        ((IDataNodePath)sut).PathType.ShouldBe("DatabasePath");
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public sealed class DatabasePathTests
     public void IDataPathSegmentsContainsAllParts()
     {
         var sut = new DatabasePath("Northwind", "dbo", "Customers");
-        var segments = ((IDataPath)sut).Segments;
+        var segments = ((IDataNodePath)sut).Segments;
         segments.Count.ShouldBe(3);
         segments[0].ShouldBe("Northwind");
         segments[1].ShouldBe("dbo");
@@ -200,7 +200,7 @@ public sealed class DatabasePathTests
     public void IDataPathRequiresParametersIsFalse()
     {
         var sut = new DatabasePath("db", "dbo", "table");
-        ((IDataPath)sut).RequiresParameters.ShouldBeFalse();
+        ((IDataNodePath)sut).RequiresParameters.ShouldBeFalse();
     }
 
     [Fact]
@@ -209,7 +209,7 @@ public sealed class DatabasePathTests
     public void IDataPathResolveParametersReturnsSelf()
     {
         var sut = new DatabasePath("db", "dbo", "table");
-        var resolved = ((IDataPath)sut).ResolveParameters(new Dictionary<string, object>());
+        var resolved = ((IDataNodePath)sut).ResolveParameters(new Dictionary<string, object>());
         resolved.ShouldBe(sut);
     }
 
@@ -219,7 +219,7 @@ public sealed class DatabasePathTests
     public void IDataPathValidateParametersReturnsSuccess()
     {
         var sut = new DatabasePath("db", "dbo", "table");
-        var result = ((IDataPath)sut).ValidateParameters(new Dictionary<string, object>());
+        var result = ((IDataNodePath)sut).ValidateParameters(new Dictionary<string, object>());
         result.IsSuccess.ShouldBeTrue();
     }
 
@@ -229,7 +229,7 @@ public sealed class DatabasePathTests
     public void IDataPathGetParentReturnsNull()
     {
         var sut = new DatabasePath("db", "dbo", "table");
-        ((IDataPath)sut).GetParent().ShouldBeNull();
+        ((IDataNodePath)sut).GetParent().ShouldBeNull();
     }
 
     [Fact]
@@ -238,7 +238,7 @@ public sealed class DatabasePathTests
     public void IDataPathGetChildrenReturnsEmpty()
     {
         var sut = new DatabasePath("db", "dbo", "table");
-        ((IDataPath)sut).GetChildren().ShouldBeEmpty();
+        ((IDataNodePath)sut).GetChildren().ShouldBeEmpty();
     }
 
     [Fact]
@@ -247,7 +247,7 @@ public sealed class DatabasePathTests
     public void IDataPathCombineReturnsSelf()
     {
         var sut = new DatabasePath("db", "dbo", "table");
-        ((IDataPath)sut).Combine("anything").ShouldBe(sut);
+        ((IDataNodePath)sut).Combine("anything").ShouldBe(sut);
     }
 
     [Fact]

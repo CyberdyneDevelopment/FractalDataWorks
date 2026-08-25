@@ -170,7 +170,7 @@ public class CalculationConfigurationProviderTests
             var containers = new List<IDataContainer>
             { entityContainer, inputContainer, stepContainer, fieldContainer, operandContainer, formulaContainer };
 
-            var path = new Mock<IDataPath>();
+            var path = new Mock<IDataNodePath>();
             path.Setup(p => p.Name).Returns("calc");
             path.Setup(p => p.Containers).Returns(containers);
             path.Setup(p => p.Container(It.IsAny<string>())).Returns((string n) =>
@@ -183,11 +183,11 @@ public class CalculationConfigurationProviderTests
 
             var store = new Mock<IDataStore>();
             store.Setup(s => s.Name).Returns("ConfigurationDb");
-            store.Setup(s => s.Paths).Returns(new List<IDataPath> { path.Object });
+            store.Setup(s => s.Paths).Returns(new List<IDataNodePath> { path.Object });
             store.Setup(s => s.Path(It.IsAny<string>())).Returns((string n) =>
                 string.Equals(n, "calc", StringComparison.Ordinal)
-                    ? GenericResult<IDataPath>.Success(path.Object)
-                    : GenericResult<IDataPath>.Failure(new GenericMessage("nf")));
+                    ? GenericResult<IDataNodePath>.Success(path.Object)
+                    : GenericResult<IDataNodePath>.Failure(new GenericMessage("nf")));
             return store.Object;
         }
 

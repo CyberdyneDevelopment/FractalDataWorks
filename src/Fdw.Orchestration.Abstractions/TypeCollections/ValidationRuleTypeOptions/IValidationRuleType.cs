@@ -43,7 +43,7 @@ public interface IValidationRuleType : ITypeOption<int, ValidationRuleTypeBase>
     /// <param name="parameters">Rule-specific parameters.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result containing validation outcome.</returns>
-    Task<IGenericResult<ValidationResult>> Validate(
+    Task<IGenericResult<ValidationRuleResult>> Validate(
         IReadOnlyDictionary<string, object?> record,
         IReadOnlyList<string> fields,
         IReadOnlyDictionary<string, object?> parameters,

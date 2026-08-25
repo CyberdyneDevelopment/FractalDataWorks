@@ -69,7 +69,7 @@ public sealed class EmitAssemblyTranslator
             var errorList = errors.Select(e =>
             {
                 var lineSpan = e.Location.GetLineSpan();
-                return new DiagnosticInfo
+                return new CompilationDiagnosticInfo
                 {
                     Id = e.Id,
                     Message = e.GetMessage(),
@@ -116,7 +116,7 @@ public sealed class EmitAssemblyTranslator
                 .Select(e =>
                 {
                     var lineSpan = e.Location.GetLineSpan();
-                    return new DiagnosticInfo
+                    return new CompilationDiagnosticInfo
                     {
                         Id = e.Id,
                         Message = e.GetMessage(),

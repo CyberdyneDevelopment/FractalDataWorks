@@ -20,5 +20,5 @@ public sealed class SortedMembersData
     /// <summary>
     /// Gets or sets the list of sorted members.
     /// </summary>
-    public IReadOnlyList<MemberInfo> SortedMembers { get; set; } = System.Array.Empty<MemberInfo>();
+    public IReadOnlyList<FormattedMemberInfo> SortedMembers { get; set; } = System.Array.Empty<FormattedMemberInfo>();
 }

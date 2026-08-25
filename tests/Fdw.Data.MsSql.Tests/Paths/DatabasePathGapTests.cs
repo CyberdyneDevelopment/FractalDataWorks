@@ -5,9 +5,9 @@ using Fdw.Data.Abstractions;
 using Fdw.Data.DataStores.Abstractions;
 using Fdw.Data.MsSql;
 using Moq;
-// Why: Phase 1 introduced IDataPath in Data.Abstractions alongside the pre-existing one in
+// Why: Phase 1 introduced IDataNodePath in Data.Abstractions alongside the pre-existing one in
 // DataStores.Abstractions. This file predates Phase 1 and uses the old interface throughout.
-using IDataPath = Fdw.Data.DataStores.Abstractions.IDataPath;
+using IDataNodePath = Fdw.Data.DataStores.Abstractions.IDataPath;
 using Shouldly;
 using Xunit;
 
@@ -15,7 +15,7 @@ namespace Fdw.Data.MsSql.Tests.Paths;
 
 /// <summary>
 /// Gap tests for DatabasePath - covers container operations with actual items,
-/// FullPath, Parameters, Metadata properties, and additional IDataPath members.
+/// FullPath, Parameters, Metadata properties, and additional IDataNodePath members.
 /// </summary>
 public sealed class DatabasePathGapTests
 {
@@ -186,7 +186,7 @@ public sealed class DatabasePathGapTests
         var sut = new DatabasePath("Northwind", "dbo", "Customers");
 
         // Act & Assert
-        ((IDataPath)sut).FullPath.ShouldBe("Northwind.dbo.Customers");
+        ((IDataNodePath)sut).FullPath.ShouldBe("Northwind.dbo.Customers");
     }
 
     [Fact]
@@ -198,7 +198,7 @@ public sealed class DatabasePathGapTests
         var sut = new DatabasePath("", "dbo", "Customers");
 
         // Act & Assert
-        ((IDataPath)sut).FullPath.ShouldBe("dbo.Customers");
+        ((IDataNodePath)sut).FullPath.ShouldBe("dbo.Customers");
     }
 
     [Fact]
@@ -210,7 +210,7 @@ public sealed class DatabasePathGapTests
         var sut = new DatabasePath("db", "dbo", "table");
 
         // Act
-        var parameters = ((IDataPath)sut).Parameters;
+        var parameters = ((IDataNodePath)sut).Parameters;
 
         // Assert
         parameters.ShouldNotBeNull();
@@ -226,7 +226,7 @@ public sealed class DatabasePathGapTests
         var sut = new DatabasePath("db", "dbo", "table");
 
         // Act
-        var metadata = ((IDataPath)sut).Metadata;
+        var metadata = ((IDataNodePath)sut).Metadata;
 
         // Assert
         metadata.ShouldNotBeNull();
@@ -242,7 +242,7 @@ public sealed class DatabasePathGapTests
         var sut = new DatabasePath("", "dbo", "Customers");
 
         // Act & Assert
-        ((IDataPath)sut).Id.ShouldBe(".dbo.Customers");
+        ((IDataNodePath)sut).Id.ShouldBe(".dbo.Customers");
     }
 
     [Fact]
@@ -293,7 +293,7 @@ public sealed class DatabasePathGapTests
         var sut = new DatabasePath("", "dbo", "Customers");
 
         // Act
-        var segments = ((IDataPath)sut).Segments;
+        var segments = ((IDataNodePath)sut).Segments;
 
         // Assert
         segments.Count.ShouldBe(3);

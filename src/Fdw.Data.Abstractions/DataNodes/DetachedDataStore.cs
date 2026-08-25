@@ -43,14 +43,14 @@ public sealed class DetachedDataStore : IDataStore
     public Guid ConnectionId => Guid.Empty;
 
     /// <inheritdoc />
-    public IReadOnlyList<IDataPath> Paths => [];
+    public IReadOnlyList<IDataNodePath> Paths => [];
 
     /// <inheritdoc />
     public IReadOnlyList<IDataNode> Nodes => [];
 
     /// <inheritdoc />
-    public IGenericResult<IDataPath> Path(string name)
-        => GenericResult<IDataPath>.Failure(DataNodeTreeLog.RootNodeNotFound(_logger, name));
+    public IGenericResult<IDataNodePath> Path(string name)
+        => GenericResult<IDataNodePath>.Failure(DataNodeTreeLog.RootNodeNotFound(_logger, name));
 
     /// <inheritdoc />
     public IGenericResult<IDataNode> Node(string name)

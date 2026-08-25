@@ -5,12 +5,12 @@ namespace Fdw.Data.Abstractions;
 
 /// <summary>
 /// The uniform base for every node in a data-store tree: <see cref="IDataStore"/>,
-/// <see cref="IDataPath"/>, <see cref="IDataContainer"/>, and <see cref="IDataField"/>.
+/// <see cref="IDataNodePath"/>, <see cref="IDataContainer"/>, and <see cref="IDataField"/>.
 /// </summary>
 /// <remarks>
 /// Every node carries a <see cref="Name"/>, an optional <see cref="Description"/>, and a uniform
 /// synchronous child navigation surface (<see cref="Nodes"/> + <see cref="Node(string)"/>). The
-/// typed views each kind exposes (<see cref="IDataStore.Paths"/>, <see cref="IDataPath.Containers"/>,
+/// typed views each kind exposes (<see cref="IDataStore.Paths"/>, <see cref="IDataNodePath.Containers"/>,
 /// a container's fields) are the same child set under a kind-specific element type.
 /// <para>
 /// Why: the tree is built complete and navigated synchronously. The former asynchronous

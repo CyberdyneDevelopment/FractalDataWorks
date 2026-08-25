@@ -17,7 +17,7 @@ namespace Fdw.Data.Sqlite;
 /// Because SQLite does not support schema namespaces, <see cref="Schema"/> is always null
 /// and <see cref="IDatabasePath"/> reports no schema namespace support.
 /// </remarks>
-public sealed class SqliteDatabasePath : PathBase, IDataPath<IStorageContainer>, IDatabasePath
+public sealed class SqliteDatabasePath : PathBase, IDataNodePath<IStorageContainer>, IDatabasePath
 {
     private readonly List<IStorageContainer> _containers;
 
@@ -64,7 +64,7 @@ public sealed class SqliteDatabasePath : PathBase, IDataPath<IStorageContainer>,
     // Why: dialect is a compile-time fact for this class — SQLite paths always use the SQLite dialect.
     ISqlDialect IDatabasePath.Dialect => SqliteDialect.Instance;
 
-    // IDataPath implementation — using fully qualified type to resolve ambiguity
+    // IDataNodePath implementation — using fully qualified type to resolve ambiguity
     string Fdw.Data.DataStores.Abstractions.IDataPath.Id => ObjectName;
     string Fdw.Data.DataStores.Abstractions.IDataPath.Name => ObjectName;
     string Fdw.Data.DataStores.Abstractions.IDataPath.PathType => "SqliteDatabasePath";

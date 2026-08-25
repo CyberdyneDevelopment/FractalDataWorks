@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Data.Abstractions;
 
 /// <summary>
-/// A minimal <see cref="IDataPath"/> for a detached container reached by direct physical address
+/// A minimal <see cref="IDataNodePath"/> for a detached container reached by direct physical address
 /// rather than tree navigation. It is the structurally-valid (but empty) tree parent for a
 /// <see cref="DataContainer"/> built outside the DataStore→Path→Container tree.
 /// </summary>
@@ -17,7 +17,7 @@ namespace Fdw.Data.Abstractions;
 /// container that owns it as its <see cref="IDataContainer.Parent"/> is reached by its physical
 /// <see cref="IStorageContainer.Path"/>, never by walking back up the tree.
 /// </remarks>
-public sealed class DetachedDataPath : IDataPath
+public sealed class DetachedDataPath : IDataNodePath
 {
     private readonly ILogger _logger;
 

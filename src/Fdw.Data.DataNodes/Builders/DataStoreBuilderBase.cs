@@ -117,7 +117,7 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
 
         // Why: construct the FINAL store FIRST (empty) so every path below can carry a real Store
         // back-reference, then SetPaths to wire its index — the same set-once shape DataPath uses for its
-        // containers. IDataPath.Store is non-nullable; building paths with `store: null!` left it null on
+        // containers. IDataNodePath.Store is non-nullable; building paths with `store: null!` left it null on
         // every runtime path and made the not-found helper throw instead of returning a failure result.
         var store = new DataStore(cfg.Name, cfg.ConnectionId, [], cfg.Description, _logger);
 
@@ -149,7 +149,7 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
         // object, then SetContainers to wire its index. Previously each container was parented to a
         // throwaway empty placeholder path while the populated path was a DIFFERENT object, so
         // container.Parent.Container(sibling) (e.g. a typed-body JOIN) always missed. See DataPath.SetContainers.
-        var builtPaths = new List<IDataPath>(cfg.Paths.Count);
+        var builtPaths = new List<IDataNodePath>(cfg.Paths.Count);
         foreach (var pathCfg in cfg.Paths)
         {
             var path = new DataPath(pathCfg.Name, store, [], pathCfg.Description, _logger);
@@ -213,7 +213,7 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
     /// <returns>The transport-specific <see cref="IDataContainer"/>.</returns>
     protected abstract IDataContainer BuildContainer(
         DataContainerConfiguration containerCfg,
-        IDataPath parent,
+        IDataNodePath parent,
         IReadOnlyList<IDataField> fields,
         IReadOnlyList<IContainerKey> keys,
         IGenericResult<IReadOnlyList<ReferencingKeyBinding>> referencingKeys);

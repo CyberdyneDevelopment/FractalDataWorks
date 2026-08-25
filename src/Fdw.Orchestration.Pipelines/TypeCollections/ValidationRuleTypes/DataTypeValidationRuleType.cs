@@ -33,7 +33,7 @@ public sealed class DataTypeValidationRuleType : ValidationRuleTypeBase
     }
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<ValidationResult>> Validate(
+    public override Task<IGenericResult<ValidationRuleResult>> Validate(
         IReadOnlyDictionary<string, object?> record,
         IReadOnlyList<string> fields,
         IReadOnlyDictionary<string, object?> parameters,
@@ -43,8 +43,8 @@ public sealed class DataTypeValidationRuleType : ValidationRuleTypeBase
 
         if (!parameters.TryGetValue("DataType", out var dataTypeObj) || dataTypeObj is not string dataType)
         {
-            return Task.FromResult<IGenericResult<ValidationResult>>(
-                GenericResult<ValidationResult>.Failure(PipelineResultCodes.ByName("DataTypeParameterRequired")));
+            return Task.FromResult<IGenericResult<ValidationRuleResult>>(
+                GenericResult<ValidationRuleResult>.Failure(PipelineResultCodes.ByName("DataTypeParameterRequired")));
         }
 
         foreach (var field in fields)
@@ -61,13 +61,13 @@ public sealed class DataTypeValidationRuleType : ValidationRuleTypeBase
 
         if (errors.Count > 0)
         {
-            return Task.FromResult<IGenericResult<ValidationResult>>(
-                GenericResult<ValidationResult>.Success(
-                    ValidationResult.Failure("DataType validation failed", errors)));
+            return Task.FromResult<IGenericResult<ValidationRuleResult>>(
+                GenericResult<ValidationRuleResult>.Success(
+                    ValidationRuleResult.Failure("DataType validation failed", errors)));
         }
 
-        return Task.FromResult<IGenericResult<ValidationResult>>(
-            GenericResult<ValidationResult>.Success(ValidationResult.Success()));
+        return Task.FromResult<IGenericResult<ValidationRuleResult>>(
+            GenericResult<ValidationRuleResult>.Success(ValidationRuleResult.Success()));
     }
 
     private static bool ValidateDataType(object value, string dataType)

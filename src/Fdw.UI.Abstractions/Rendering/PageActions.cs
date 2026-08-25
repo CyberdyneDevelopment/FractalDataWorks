@@ -5,6 +5,6 @@ using Fdw.Collections.Attributes;
 namespace Fdw.UI.Abstractions.Rendering;
 
 /// <summary>TypeCollection for page actions.</summary>
-[TypeCollection(typeof(PageActionBase), typeof(IPageAction), typeof(PageActions))]
+[TypeCollection(typeof(PageActionBase), typeof(IPageActionType), typeof(PageActions))]
 [ExcludeFromCodeCoverage]
-public abstract partial class PageActions : TypeCollectionBase<PageActionBase, IPageAction> { }
+public abstract partial class PageActions : TypeCollectionBase<PageActionBase, IPageActionType> { }

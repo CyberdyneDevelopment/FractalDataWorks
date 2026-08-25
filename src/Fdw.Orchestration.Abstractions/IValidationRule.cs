@@ -53,7 +53,7 @@ public interface IValidationRule
     /// <param name="record">The record to validate.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result indicating whether the record is valid.</returns>
-    Task<IGenericResult<ValidationResult>> Validate(
+    Task<IGenericResult<ValidationRuleResult>> Validate(
         IDictionary<string, object?> record,
         CancellationToken cancellationToken = default);
 }

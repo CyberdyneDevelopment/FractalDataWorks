@@ -17,7 +17,7 @@ namespace Fdw.Data.PostgreSql;
 /// PostgreSQL does not typically use three-part names (database.schema.table)
 /// since cross-database queries are not directly supported.
 /// </remarks>
-public sealed class PostgreSqlDatabasePath : PathBase, IDataPath<IStorageContainer>, IDatabasePath
+public sealed class PostgreSqlDatabasePath : PathBase, IDataNodePath<IStorageContainer>, IDatabasePath
 {
     private readonly List<IStorageContainer> _containers;
 
@@ -95,8 +95,8 @@ public sealed class PostgreSqlDatabasePath : PathBase, IDataPath<IStorageContain
     string IDatabasePath.ObjectName => ObjectName;
     ISqlDialect IDatabasePath.Dialect => PlPgSqlDialect.Instance;
 
-    // IDataPath implementation — using fully qualified type to resolve ambiguity with
-    // Fdw.Data.Abstractions.IDataPath (Phase 1 DataNodes addition)
+    // IDataNodePath implementation — using fully qualified type to resolve ambiguity with
+    // Fdw.Data.Abstractions.IDataNodePath (Phase 1 DataNodes addition)
     string Fdw.Data.DataStores.Abstractions.IDataPath.Id => $"{Database}.{Schema}.{ObjectName}";
     string Fdw.Data.DataStores.Abstractions.IDataPath.Name => ObjectName;
     string Fdw.Data.DataStores.Abstractions.IDataPath.PathType => "PostgreSqlDatabasePath";

@@ -21,7 +21,7 @@ public sealed class ValidateSyntaxData
     /// <summary>
     /// Gets or sets the list of syntax errors.
     /// </summary>
-    public required IReadOnlyList<DiagnosticInfo> Errors { get; init; }
+    public required IReadOnlyList<CompilationDiagnosticInfo> Errors { get; init; }
 
     /// <summary>
     /// Gets or sets the file path (if validating a file).

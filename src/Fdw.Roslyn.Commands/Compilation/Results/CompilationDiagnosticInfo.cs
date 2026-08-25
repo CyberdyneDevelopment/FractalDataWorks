@@ -5,7 +5,7 @@ namespace Fdw.Roslyn.Commands.Compilation.Results;
 /// <summary>
 /// Represents a diagnostic message.
 /// </summary>
-public sealed class DiagnosticInfo
+public sealed class CompilationDiagnosticInfo
 {
     /// <summary>
     /// Gets or sets the diagnostic ID (e.g., CS0103).

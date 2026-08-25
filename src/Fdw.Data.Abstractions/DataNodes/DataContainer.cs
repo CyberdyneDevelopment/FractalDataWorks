@@ -60,7 +60,7 @@ public class DataContainer : IDataContainer
     public DataContainer(
         string name,
         string? description,
-        IDataPath parent,
+        IDataNodePath parent,
         IReadOnlyList<IDataField> fields,
         IReadOnlyList<IContainerKey> keys,
         IGenericResult<IReadOnlyList<ReferencingKeyBinding>> referencingKeys,
@@ -148,7 +148,7 @@ public class DataContainer : IDataContainer
     public string? Description { get; }
 
     /// <inheritdoc />
-    public IDataPath Parent { get; }
+    public IDataNodePath Parent { get; }
 
     /// <inheritdoc />
     // Why: a container's children ARE its fields — the uniform IDataNode child surface over the

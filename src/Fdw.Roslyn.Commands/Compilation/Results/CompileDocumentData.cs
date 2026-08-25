@@ -31,5 +31,5 @@ public sealed class CompileDocumentData
     /// <summary>
     /// Gets or sets the list of diagnostics.
     /// </summary>
-    public required IReadOnlyList<DiagnosticInfo> Diagnostics { get; init; }
+    public required IReadOnlyList<CompilationDiagnosticInfo> Diagnostics { get; init; }
 }

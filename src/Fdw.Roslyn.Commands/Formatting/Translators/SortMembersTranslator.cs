@@ -101,7 +101,7 @@ public sealed class SortMembersTranslator : RoslynCommandTranslatorBase<SortMemb
         var totalMembers = 0;
         var totalChangedTypes = 0;
         var firstTypeName = string.Empty;
-        var memberOrder = new List<MemberInfo>();
+        var memberOrder = new List<FormattedMemberInfo>();
 
         foreach (var originalTypeDecl in typeDecls)
         {
@@ -146,7 +146,7 @@ public sealed class SortMembersTranslator : RoslynCommandTranslatorBase<SortMemb
             // compatibility with single-type callers.
             if (memberOrder.Count == 0)
             {
-                memberOrder.AddRange(sortedMembers.Select(m => new MemberInfo
+                memberOrder.AddRange(sortedMembers.Select(m => new FormattedMemberInfo
                 {
                     Name = m.Name,
                     Kind = GetKindName(m.Kind),

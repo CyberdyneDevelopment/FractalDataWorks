@@ -13,11 +13,11 @@ namespace Fdw.Data.MsSql;
 /// Format: Database.Schema.Object (e.g., "Northwind.dbo.Customers")
 /// </summary>
 /// <remarks>
-/// DatabasePath implements non-generic IDataPath because SQL paths can contain
+/// DatabasePath implements non-generic IDataNodePath because SQL paths can contain
 /// multiple container types (Table, View, StoredProcedure with same name in different schemas).
 /// Use Containers property to access typed SQL containers.
 /// </remarks>
-public sealed class DatabasePath : PathBase, IDataPath<IStorageContainer>, IDatabasePath
+public sealed class DatabasePath : PathBase, IDataNodePath<IStorageContainer>, IDatabasePath
 {
     private readonly List<IStorageContainer> _containers;
 
@@ -101,8 +101,8 @@ public sealed class DatabasePath : PathBase, IDataPath<IStorageContainer>, IData
     // Why: dialect is a compile-time fact for this class — MsSql paths always use T-SQL quoting.
     ISqlDialect IDatabasePath.Dialect => TSqlDialect.Instance;
 
-    // IDataPath implementation — using fully qualified type to resolve ambiguity with
-    // Fdw.Data.Abstractions.IDataPath (Phase 1 DataNodes addition)
+    // IDataNodePath implementation — using fully qualified type to resolve ambiguity with
+    // Fdw.Data.Abstractions.IDataNodePath (Phase 1 DataNodes addition)
     string Fdw.Data.DataStores.Abstractions.IDataPath.Id => $"{Database}.{Schema}.{ObjectName}";
     string Fdw.Data.DataStores.Abstractions.IDataPath.Name => ObjectName;
     string Fdw.Data.DataStores.Abstractions.IDataPath.PathType => "DatabasePath";

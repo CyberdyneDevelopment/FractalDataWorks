@@ -6,9 +6,9 @@ using Fdw.Data.Abstractions;
 using Fdw.Data.DataStores.Abstractions;
 using Fdw.Data.Http.Results;
 using Fdw.Results;
-// Why: Phase 1 introduced IDataPath in Data.Abstractions alongside the pre-existing one in
+// Why: Phase 1 introduced IDataNodePath in Data.Abstractions alongside the pre-existing one in
 // DataStores.Abstractions. This file predates Phase 1 and uses the old interface throughout.
-using IDataPath = Fdw.Data.DataStores.Abstractions.IDataPath;
+using IDataNodePath = Fdw.Data.DataStores.Abstractions.IDataPath;
 
 namespace Fdw.Data.Http.Paths;
 
@@ -17,7 +17,7 @@ namespace Fdw.Data.Http.Paths;
 /// Format: /segment/segment/{parameter} (e.g., "/api/v1/customers/{id}")
 /// </summary>
 [ExcludeFromCodeCoverage] // Excluded: requires HTTP connections
-public sealed class HttpPath : PathBase, IDataPath<IStorageContainer>
+public sealed class HttpPath : PathBase, IDataNodePath<IStorageContainer>
 {
     private readonly List<IStorageContainer> _containers;
     private readonly Dictionary<string, PathParameter> _parameters;
@@ -47,15 +47,15 @@ public sealed class HttpPath : PathBase, IDataPath<IStorageContainer>
     /// <inheritdoc/>
     public override string Domain => "Http";
 
-    // IDataPath implementation
-    string IDataPath.Id => PathValue;
-    string IDataPath.Name => PathValue.Split('/').Last();
-    string IDataPath.PathType => "HttpPath";
-    string IDataPath.FullPath => PathValue;
-    IReadOnlyList<string> IDataPath.Segments => PathValue.Split(['/'], StringSplitOptions.RemoveEmptyEntries);
-    IReadOnlyDictionary<string, PathParameter> IDataPath.Parameters => _parameters;
-    IReadOnlyDictionary<string, object> IDataPath.Metadata => new Dictionary<string, object>(StringComparer.Ordinal);
-    bool IDataPath.RequiresParameters => _parameters.Values.Any(p => p.IsRequired);
+    // IDataNodePath implementation
+    string IDataNodePath.Id => PathValue;
+    string IDataNodePath.Name => PathValue.Split('/').Last();
+    string IDataNodePath.PathType => "HttpPath";
+    string IDataNodePath.FullPath => PathValue;
+    IReadOnlyList<string> IDataNodePath.Segments => PathValue.Split(['/'], StringSplitOptions.RemoveEmptyEntries);
+    IReadOnlyDictionary<string, PathParameter> IDataNodePath.Parameters => _parameters;
+    IReadOnlyDictionary<string, object> IDataNodePath.Metadata => new Dictionary<string, object>(StringComparer.Ordinal);
+    bool IDataNodePath.RequiresParameters => _parameters.Values.Any(p => p.IsRequired);
 
     /// <inheritdoc/>
     public IReadOnlyList<IStorageContainer> Containers => _containers;
@@ -73,7 +73,7 @@ public sealed class HttpPath : PathBase, IDataPath<IStorageContainer>
         return _containers.Any(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 
-    IDataPath IDataPath.ResolveParameters(IDictionary<string, object> parameters)
+    IDataNodePath IDataNodePath.ResolveParameters(IDictionary<string, object> parameters)
     {
         if (parameters == null || parameters.Count == 0)
             return this;
@@ -87,9 +87,9 @@ public sealed class HttpPath : PathBase, IDataPath<IStorageContainer>
         return new HttpPath(resolvedPath, _containers, _parameters);
     }
 
-    IGenericResult IDataPath.ValidateParameters(IDictionary<string, object> parameters)
+    IGenericResult IDataNodePath.ValidateParameters(IDictionary<string, object> parameters)
     {
-        if (!((IDataPath)this).RequiresParameters)
+        if (!((IDataNodePath)this).RequiresParameters)
             return GenericResult.Success();
 
         foreach (var param in _parameters.Values.Where(p => p.IsRequired))
@@ -105,8 +105,8 @@ public sealed class HttpPath : PathBase, IDataPath<IStorageContainer>
         return GenericResult.Success();
     }
 
-    IDataPath? IDataPath.GetParent() => null;
-    IEnumerable<IDataPath> IDataPath.GetChildren() => Enumerable.Empty<IDataPath>();
-    IDataPath IDataPath.Combine(string relativePath) =>
+    IDataNodePath? IDataNodePath.GetParent() => null;
+    IEnumerable<IDataNodePath> IDataNodePath.GetChildren() => Enumerable.Empty<IDataNodePath>();
+    IDataNodePath IDataNodePath.Combine(string relativePath) =>
         new HttpPath($"{PathValue.TrimEnd('/')}/{relativePath.TrimStart('/')}", _containers, _parameters);
 }

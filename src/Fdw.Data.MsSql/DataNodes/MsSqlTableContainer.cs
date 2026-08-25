@@ -36,7 +36,7 @@ public sealed class MsSqlTableContainer : DataContainer
     public MsSqlTableContainer(
         string name,
         string? description,
-        IDataPath parent,
+        IDataNodePath parent,
         IReadOnlyList<IMsSqlDataField> fields,
         IReadOnlyList<IContainerKey> keys,
         IGenericResult<IReadOnlyList<ReferencingKeyBinding>> referencingKeys,

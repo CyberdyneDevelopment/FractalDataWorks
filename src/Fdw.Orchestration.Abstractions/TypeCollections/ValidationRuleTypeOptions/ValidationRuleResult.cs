@@ -7,16 +7,16 @@ namespace Fdw.Orchestration.Pipelines.Abstractions.TypeCollections.ValidationRul
 /// <summary>
 /// Represents the result of a validation operation.
 /// </summary>
-public sealed class ValidationResult
+public sealed class ValidationRuleResult
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="ValidationResult"/> class.
+    /// Initializes a new instance of the <see cref="ValidationRuleResult"/> class.
     /// </summary>
     /// <param name="isValid">Whether validation passed.</param>
     /// <param name="message">Validation message.</param>
     /// <param name="severity">The severity of any validation issues.</param>
     /// <param name="fieldErrors">Field-specific errors.</param>
-    public ValidationResult(
+    public ValidationRuleResult(
         bool isValid,
         string? message = null,
         IValidationSeverity? severity = null,
@@ -52,14 +52,14 @@ public sealed class ValidationResult
     /// Creates a successful validation result.
     /// </summary>
     /// <returns>A valid validation result.</returns>
-    public static ValidationResult Success() => new(true);
+    public static ValidationRuleResult Success() => new(true);
 
     /// <summary>
     /// Creates a successful validation result with a message.
     /// </summary>
     /// <param name="message">The message.</param>
     /// <returns>A valid validation result.</returns>
-    public static ValidationResult Success(string message) => new(true, message);
+    public static ValidationRuleResult Success(string message) => new(true, message);
 
     /// <summary>
     /// Creates a failed validation result.
@@ -67,7 +67,7 @@ public sealed class ValidationResult
     /// <param name="message">The error message.</param>
     /// <param name="severity">The severity level.</param>
     /// <returns>An invalid validation result.</returns>
-    public static ValidationResult Failure(string message, IValidationSeverity? severity = null) =>
+    public static ValidationRuleResult Failure(string message, IValidationSeverity? severity = null) =>
         new(false, message, severity);
 
     /// <summary>
@@ -77,7 +77,7 @@ public sealed class ValidationResult
     /// <param name="fieldErrors">Field-specific errors.</param>
     /// <param name="severity">The severity level.</param>
     /// <returns>An invalid validation result.</returns>
-    public static ValidationResult Failure(
+    public static ValidationRuleResult Failure(
         string message,
         IReadOnlyDictionary<string, string> fieldErrors,
         IValidationSeverity? severity = null) =>

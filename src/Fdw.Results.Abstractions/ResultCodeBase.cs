@@ -149,8 +149,16 @@ public abstract class ResultCodeBase : TypeOptionBase<int, ResultCodeBase>, IRes
         }
 
         var message = FormatMessage(details);
-#pragma warning disable CA2254 // Template should be a static expression - message is dynamically formatted from result code
+        // Why neither [MessageLogging] nor LoggerMessage.Define applies here: both bake the
+        // EventId, the level and the template in at compile time, and all three are per-instance
+        // on a result code -- EventId and Code identify THIS code, the level is derived from its
+        // Severity, and the message is formatted from the details passed in. Generating a method
+        // per result code is the only way to satisfy CA1848, and it would trade the one dispatch
+        // point every result code shares for hundreds of generated members.
+#pragma warning disable CA2254 // Template is dynamically formatted from the result code
+#pragma warning disable CA1848 // LoggerMessage delegates cannot carry a runtime EventId or level
         logger.Log(LogLevel, new EventId(EventId, Code), message);
+#pragma warning restore CA1848
 #pragma warning restore CA2254
     }
 

@@ -6,7 +6,7 @@ namespace Fdw.Roslyn.Commands.Compilation.Results;
 /// <summary>
 /// Data returned by get diagnostics operation.
 /// </summary>
-public sealed class DiagnosticsData
+public sealed class CompilationDiagnosticsData
 {
     /// <summary>
     /// Gets or sets the file path (if scoped to a document).
@@ -26,7 +26,7 @@ public sealed class DiagnosticsData
     /// <summary>
     /// Gets or sets the list of diagnostics.
     /// </summary>
-    public required IReadOnlyList<DiagnosticInfo> Diagnostics { get; init; }
+    public required IReadOnlyList<CompilationDiagnosticInfo> Diagnostics { get; init; }
 
     /// <summary>
     /// Gets or sets the minimum severity filter applied.

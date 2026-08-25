@@ -34,7 +34,7 @@ public sealed class MsSqlViewContainer : DataContainer
     public MsSqlViewContainer(
         string name,
         string? description,
-        IDataPath parent,
+        IDataNodePath parent,
         IReadOnlyList<IMsSqlDataField> fields,
         IReadOnlyList<IContainerKey> keys,
         IGenericResult<IReadOnlyList<ReferencingKeyBinding>> referencingKeys,

@@ -5,7 +5,7 @@ using Fdw.Results;
 namespace Fdw.Data.Abstractions;
 
 /// <summary>
-/// A named data store that aggregates one or more <see cref="IDataPath"/> scopes,
+/// A named data store that aggregates one or more <see cref="IDataNodePath"/> scopes,
 /// each containing <see cref="IDataContainer"/> instances.
 /// </summary>
 /// <remarks>
@@ -26,15 +26,15 @@ public interface IDataStore : IDataNode
     /// <remarks>
     /// This is the typed view of <see cref="IDataNode.Nodes"/> — every element is also a child node.
     /// </remarks>
-    IReadOnlyList<IDataPath> Paths { get; }
+    IReadOnlyList<IDataNodePath> Paths { get; }
 
     /// <summary>
     /// Returns the path with the given name, or a failure result if absent.
     /// </summary>
     /// <param name="name">The path name to look up.</param>
     /// <returns>
-    /// Success with the matching <see cref="IDataPath"/>, or Failure when no path with
+    /// Success with the matching <see cref="IDataNodePath"/>, or Failure when no path with
     /// <paramref name="name"/> exists. Callers MUST check <c>IsSuccess</c> before using <c>.Value</c>.
     /// </returns>
-    IGenericResult<IDataPath> Path(string name);
+    IGenericResult<IDataNodePath> Path(string name);
 }

@@ -67,7 +67,7 @@ public sealed class BuildProjectTranslator
         var errorList = errors.Select(e =>
         {
             var lineSpan = e.Location.GetLineSpan();
-            return new DiagnosticInfo
+            return new CompilationDiagnosticInfo
             {
                 Id = e.Id,
                 Message = e.GetMessage(),
@@ -82,7 +82,7 @@ public sealed class BuildProjectTranslator
         var warningList = warnings.Select(w =>
         {
             var lineSpan = w.Location.GetLineSpan();
-            return new DiagnosticInfo
+            return new CompilationDiagnosticInfo
             {
                 Id = w.Id,
                 Message = w.GetMessage(),

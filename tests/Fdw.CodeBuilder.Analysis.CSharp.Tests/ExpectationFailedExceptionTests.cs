@@ -11,7 +11,7 @@ public class ExpectationExceptionTests
         var message = "Test message";
 
         // Act
-        var exception = new ExpectationException(message);
+        var exception = new ExpectationFailedException(message);
 
         // Assert
         exception.ShouldNotBeNull();
@@ -28,7 +28,7 @@ public class ExpectationExceptionTests
         var innerException = new InvalidOperationException("Inner");
 
         // Act
-        var exception = new ExpectationException(message, innerException);
+        var exception = new ExpectationFailedException(message, innerException);
 
         // Assert
         exception.ShouldNotBeNull();
@@ -42,9 +42,9 @@ public class ExpectationExceptionTests
     public void Exception_CanBeThrown()
     {
         // Arrange & Act & Assert
-        Should.Throw<ExpectationException>(() =>
+        Should.Throw<ExpectationFailedException>(() =>
         {
-            throw new ExpectationException("Test");
+            throw new ExpectationFailedException("Test");
         });
     }
 
@@ -59,9 +59,9 @@ public class ExpectationExceptionTests
         // Act
         try
         {
-            throw new ExpectationException("Test");
+            throw new ExpectationFailedException("Test");
         }
-        catch (ExpectationException)
+        catch (ExpectationFailedException)
         {
             caught = true;
         }

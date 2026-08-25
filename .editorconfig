@@ -3,7 +3,9 @@
 # ===============================================
 [*.cs]
 dotnet_style_namespace_match_folder = true
-dotnet_diagnostic.IDE0130.severity = warning
+dotnet_diagnostic.IDE0130.severity = none  # Namespace must match folder. 2,237 violations, and 902 of
+# them are the deliberate .Abstractions convention - Fdw.Data in Fdw.Data.Abstractions and ~150 more
+# like it - which cannot be fixed by moving a file and should not be fixed by renaming a public API.
 # Security - These are actual vulnerabilities
 dotnet_diagnostic.CA3001.severity = error  # SQL injection
 dotnet_diagnostic.CA3003.severity = error  # File path injection
@@ -131,6 +133,7 @@ dotnet_diagnostic.FDW016.severity = warning  # IGenericResult<T>.Value accessed 
 dotnet_diagnostic.FDW017.severity = warning  # Enum declaration should be replaced with TypeCollection
 dotnet_diagnostic.FDW022.severity = warning  # Exception swallowed - caught exception neither observed nor rethrown
 dotnet_diagnostic.FDW023.severity = suggestion  # Broad System.Exception catch with no specific catch clauses (survey)
+dotnet_diagnostic.CA1716.severity = none  # Identifier matches a VB keyword (Error, Select) - no VB consumer exists, and ErrorColor/SelectElement would be worse names
 dotnet_diagnostic.FDW020.severity = none  # Abstract type has no implementation - fires on interfaces whose implementations live in another assembly
 dotnet_diagnostic.FDW021.severity = none  # Type is not referenced in the compilation
 dotnet_diagnostic.MA0051.severity = none  # Replaced by FDW006+FDW007

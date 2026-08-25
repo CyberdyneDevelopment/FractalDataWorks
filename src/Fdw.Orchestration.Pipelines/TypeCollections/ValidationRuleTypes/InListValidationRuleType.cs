@@ -36,7 +36,7 @@ public sealed class InListValidationRuleType : ValidationRuleTypeBase
 
     /// <inheritdoc/>
     [ConventionOverride(MaxCyclomaticComplexity = 20)]  // Validation logic — parameter parsing, type conversions, field validation
-    public override Task<IGenericResult<ValidationResult>> Validate(
+    public override Task<IGenericResult<ValidationRuleResult>> Validate(
         IReadOnlyDictionary<string, object?> record,
         IReadOnlyList<string> fields,
         IReadOnlyDictionary<string, object?> parameters,
@@ -46,8 +46,8 @@ public sealed class InListValidationRuleType : ValidationRuleTypeBase
 
         if (!parameters.TryGetValue("AllowedValues", out var allowedObj))
         {
-            return Task.FromResult<IGenericResult<ValidationResult>>(
-                GenericResult<ValidationResult>.Failure(PipelineResultCodes.ByName("AllowedValuesRequired")));
+            return Task.FromResult<IGenericResult<ValidationRuleResult>>(
+                GenericResult<ValidationRuleResult>.Failure(PipelineResultCodes.ByName("AllowedValuesRequired")));
         }
 
         var allowedValues = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -81,12 +81,12 @@ public sealed class InListValidationRuleType : ValidationRuleTypeBase
 
         if (errors.Count > 0)
         {
-            return Task.FromResult<IGenericResult<ValidationResult>>(
-                GenericResult<ValidationResult>.Success(
-                    ValidationResult.Failure("InList validation failed", errors)));
+            return Task.FromResult<IGenericResult<ValidationRuleResult>>(
+                GenericResult<ValidationRuleResult>.Success(
+                    ValidationRuleResult.Failure("InList validation failed", errors)));
         }
 
-        return Task.FromResult<IGenericResult<ValidationResult>>(
-            GenericResult<ValidationResult>.Success(ValidationResult.Success()));
+        return Task.FromResult<IGenericResult<ValidationRuleResult>>(
+            GenericResult<ValidationRuleResult>.Success(ValidationRuleResult.Success()));
     }
 }

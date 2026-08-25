@@ -26,7 +26,7 @@ public interface IDataStoreProvider
     Task<IGenericResult<IReadOnlyList<IDataStore>>> Get(CancellationToken cancellationToken = default);
 
     /// <summary>Gets a path within a DataStore (dot-walk of <c>Get(store).Path(path)</c>).</summary>
-    Task<IGenericResult<IDataPath>> Get(string dataStoreName, string pathName, CancellationToken cancellationToken = default);
+    Task<IGenericResult<IDataNodePath>> Get(string dataStoreName, string pathName, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a container within a path of a DataStore — the whole container with its fields
