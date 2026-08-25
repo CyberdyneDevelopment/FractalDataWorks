@@ -12,6 +12,5 @@
     <ProjectReference Include="..\..\src\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\..\src\Fdw.UI\Fdw.UI.csproj" />
     <!-- All 19 UI.Pages packages are now consolidated into Fdw.UI.Pages -->
-    <ProjectReference Include="..\..\src\Fdw.UI.Pages\Fdw.UI.Pages.csproj" />
   </ItemGroup>
 </Project>

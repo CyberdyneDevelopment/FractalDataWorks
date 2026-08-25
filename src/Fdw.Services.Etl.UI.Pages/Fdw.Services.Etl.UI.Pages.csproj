@@ -1,0 +1,64 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <!-- Why: razor component namespaces derive from RootNamespace + folder path. Holding the
+         original root keeps every generated component namespace identical to the consolidated
+         package, so no page type's typeof(...) reference has to change. -->
+    <RootNamespace>Fdw.UI.Pages</RootNamespace>
+    <PackageId>Fdw.Services.Etl.UI.Pages</PackageId>
+    <Title>Fdw Services Etl UI Pages</Title>
+    <Description>Razor pages for the EtlProjects domain.</Description>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Configuration\Fdw.Configuration.csproj" />
+    <ProjectReference Include="..\Fdw.Configuration.Components\Fdw.Configuration.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Components\Fdw.Data.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Data.UI.Components\Fdw.Data.UI.Components.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Operations.Abstractions\Fdw.Operations.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Operations.Clients\Fdw.Operations.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.Operations.Components\Fdw.Operations.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Connections.Abstractions\Fdw.Services.Connections.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Connections.Clients\Fdw.Services.Connections.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Connections.Components\Fdw.Services.Connections.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Clients\Fdw.Services.Data.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Etl.Abstractions\Fdw.Services.Etl.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Etl.Projects.Clients\Fdw.Services.Etl.Projects.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Etl.Projects.UI.Components\Fdw.Services.Etl.Projects.UI.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Pipelines.Abstractions\Fdw.Services.Pipelines.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Pipelines.Clients\Fdw.Services.Pipelines.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Pipelines.Components\Fdw.Services.Pipelines.Components.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Scheduling.Components\Fdw.Services.Scheduling.Components.csproj" />
+    <ProjectReference Include="..\Fdw.UI\Fdw.UI.csproj" />
+    <ProjectReference Include="..\Fdw.Services.SessionState.Components\Fdw.Services.SessionState.Components.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Canvas.Blazor\Fdw.UI.Canvas.Blazor.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Charts.Blazor\Fdw.UI.Charts.Blazor.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Components\Fdw.UI.Components.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Pipelines.Clients\Fdw.UI.Pipelines.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Pipelines.Clients.Models\Fdw.UI.Pipelines.Clients.Models.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Themes.Clients\Fdw.UI.Themes.Clients.csproj" />
+  </ItemGroup>
+
+</Project>
