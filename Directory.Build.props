@@ -205,13 +205,13 @@
        Height-based inference bumped the version on every commit and constantly drifted FDW out
        of sync with the apps pinning it. Bump prefix/suffix here, pack, and propagate — nothing else.
 
-       The package version is VersionPrefix + optional -VersionSuffix => 1.0.0 + rc.8 = 1.0.0-rc.8
+       The package version is VersionPrefix + optional -VersionSuffix => 1.0.0 + rc.9 = 1.0.0-rc.9
        (SemVer 2.0, 3-digit + prerelease). AssemblyVersion/FileVersion are the 4-part form
        (1.0.0.0) because assembly identity is always 4-part and cannot carry a prerelease tag;
        NuGet normalizes the trailing zero revision away, so the PACKAGE is 1.0.0-rc.1. -->
   <PropertyGroup>
     <VersionPrefix>1.0.0</VersionPrefix>
-    <VersionSuffix>rc.8</VersionSuffix>
+    <VersionSuffix>rc.9</VersionSuffix>
     <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
     <FileVersion>$(VersionPrefix).0</FileVersion>
   </PropertyGroup>
