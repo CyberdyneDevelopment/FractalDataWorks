@@ -547,16 +547,33 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
 
             if (containerResult.IsSuccess && containerResult.Value != null)
             {
-                var path = new DataPathConfiguration
+                // Why look the path up first: a path is a database SCHEMA and a container is an
+                // object within it, which is the shape configurationSchema.json declares — path
+                // "agent" holding container "AgentAction". Creating a path per object instead named
+                // every path after its own single table and dropped the schema entirely, so a
+                // ten-table database came back as ten paths of one container and nothing recorded
+                // which schema anything lived in.
+                var path = dataStore.Paths.FirstOrDefault(p =>
+                    string.Equals(p.Name, dbObject.SchemaName, StringComparison.Ordinal));
+
+                if (path is null)
                 {
-                    Id = Guid.NewGuid(),
-                    Name = dbObject.ObjectName,
-                    PathValue = $"{dbObject.SchemaName}.{dbObject.ObjectName}",
-                    PathType = "DatabasePath",
-                    SourceDescription = null
-                };
+                    path = new DataPathConfiguration
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = dbObject.SchemaName,
+                        // Why empty: Name already IS the schema, and the schema files ReferenceApi
+                        // ships leave Path unset for a DatabasePath. PathValue is non-nullable, so
+                        // empty is the model's own default rather than the schema name repeated —
+                        // carrying the same string twice invites the two to disagree later.
+                        PathValue = string.Empty,
+                        PathType = "DatabasePath",
+                        SourceDescription = null
+                    };
+                    dataStore.Paths.Add(path);
+                }
+
                 path.Containers.Add(containerResult.Value);
-                dataStore.Paths.Add(path);
                 count++;
             }
         }
