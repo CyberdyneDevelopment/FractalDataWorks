@@ -30,12 +30,10 @@ public class NotificationConfigurationProvider : DefaultConfigurationProvider<No
         ILogger<NotificationConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "notify",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "notify")
         : base(logger ?? NullLogger<NotificationConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
     }
 }

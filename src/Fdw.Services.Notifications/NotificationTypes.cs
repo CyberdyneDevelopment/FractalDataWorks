@@ -90,8 +90,7 @@ public partial class NotificationTypes
             builder.Services.TryAddSingleton<NotificationConfigurationProvider>(sp =>
                 new NotificationConfigurationProvider(
                     sp.GetService<ILogger<NotificationConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
             builder.Services.TryAddSingleton<DefaultConfigurationProvider<NotificationConfiguration, NotificationConfigurationCommand>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<NotificationConfiguration>>(
@@ -104,8 +103,7 @@ public partial class NotificationTypes
                 new DefaultConfigurationProvider<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>(
                     sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>>()!,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    "ConfigurationDb", "notify",
-                    new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    "ConfigurationDb", "notify"));
 
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));

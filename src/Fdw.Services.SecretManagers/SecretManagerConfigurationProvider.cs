@@ -54,12 +54,10 @@ public class SecretManagerConfigurationProvider : DefaultConfigurationProvider<S
         ILogger<SecretManagerConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "sec",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "sec")
         : base(logger ?? NullLogger<SecretManagerConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<SecretManagerConfigurationProvider>.Instance;
     }

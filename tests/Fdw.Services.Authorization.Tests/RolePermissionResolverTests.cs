@@ -146,8 +146,7 @@ public sealed class RolePermissionResolverTests
             MockBehavior.Loose,
             NullLogger<DefaultConfigurationProvider<TConfig, TCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
-            "TestStore", "authz",
-            (object?)null!);
+            "TestStore", "authz");
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<TConfig>>.Success(new List<TConfig>(items)));
         return mock;

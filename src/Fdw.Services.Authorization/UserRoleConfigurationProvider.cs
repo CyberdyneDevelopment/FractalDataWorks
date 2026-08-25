@@ -38,8 +38,7 @@ public class UserRoleConfigurationProvider : DefaultConfigurationProvider<UserRo
         services.TryAddSingleton<UserRoleConfigurationProvider>(sp =>
             new UserRoleConfigurationProvider(
                 sp.GetService<ILogger<UserRoleConfigurationProvider>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
         services.TryAddSingleton<DefaultConfigurationProvider<UserRoleConfiguration, Fdw.Services.Authorization.Commands.UserRoleConfigurationCommand>>(
             sp => sp.GetRequiredService<UserRoleConfigurationProvider>());
         services.TryAddSingleton<IServiceConfigurationProvider<UserRoleConfiguration>>(
@@ -52,12 +51,10 @@ public class UserRoleConfigurationProvider : DefaultConfigurationProvider<UserRo
         ILogger<UserRoleConfigurationProvider>? logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "authz",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "authz")
         : base(logger ?? NullLogger<UserRoleConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<UserRoleConfigurationProvider>.Instance;
     }

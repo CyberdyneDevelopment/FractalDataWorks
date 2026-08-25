@@ -37,8 +37,7 @@ public class DataSetConfigurationProvider : DefaultConfigurationProvider<DataSet
         services.TryAddSingleton<DataSetConfigurationProvider>(sp =>
             new DataSetConfigurationProvider(
                 sp.GetService<ILogger<DataSetConfigurationProvider>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
         services.TryAddSingleton<DefaultConfigurationProvider<DataSetConfiguration, DataSetConfigurationCommand>>(
             sp => sp.GetRequiredService<DataSetConfigurationProvider>());
         services.TryAddSingleton<IServiceConfigurationProvider<DataSetConfiguration>>(
@@ -52,12 +51,10 @@ public class DataSetConfigurationProvider : DefaultConfigurationProvider<DataSet
         ILogger<DataSetConfigurationProvider>? logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "data",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "data")
         : base(logger ?? NullLogger<DataSetConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<DataSetConfigurationProvider>.Instance;
     }

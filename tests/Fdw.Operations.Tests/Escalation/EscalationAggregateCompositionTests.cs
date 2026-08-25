@@ -74,6 +74,11 @@ public sealed class EscalationAggregateCompositionTests
     // descriptor / key-metadata / JOIN wiring.
     private sealed class AggregateGateway : IConfigurationGateway
     {
+        /// <summary>Targets this fake was asked to invalidate, in call order.</summary>
+        public List<DataStoreTarget> Invalidated { get; } = [];
+
+        public void InvalidateCachedResults(DataStoreTarget target) => Invalidated.Add(target);
+
         private readonly IReadOnlyList<IDataStore> _stores;
         private readonly List<EscalationPolicyConfiguration> _policies;
         private readonly List<EscalationLevelConfiguration> _levels;

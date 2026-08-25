@@ -56,9 +56,7 @@ public sealed class JwtAssertionIdentityType
 
                 sp.GetService<ILogger<JwtAssertionConfigurationProvider>>()!,
 
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
 
 
             IdentityLog.MechanismRegistered(log, Name);

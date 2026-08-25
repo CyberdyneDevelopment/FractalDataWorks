@@ -29,12 +29,10 @@ public class DataVaultConfigurationProvider : DefaultConfigurationProvider<DataV
         ILogger<DataVaultConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "sec",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "sec")
         : base(logger ?? NullLogger<DataVaultConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
     }
 }

@@ -93,8 +93,7 @@ public sealed class ChainedExternalIdentityProvisionerType
                     sp.GetService<ILogger<ChainedExternalIdentityProvisionerConfigurationProvider>>()!,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
                     DataStore,
-                    PathName,
-                    new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    PathName));
 
             // Why: the factory is a PURE constructor (logger only) — it holds no providers and resolves
             // nothing. The provisioner provider it needs for Provision-time sibling lookup is passed in by

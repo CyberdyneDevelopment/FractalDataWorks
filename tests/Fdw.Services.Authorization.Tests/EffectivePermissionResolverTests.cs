@@ -195,8 +195,7 @@ public sealed class EffectivePermissionResolverTests
             MockBehavior.Loose,
             NullLogger<DefaultConfigurationProvider<RoleConfiguration, RoleConfigurationCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
-            "TestStore", "cfg",
-            (object?)null!);
+            "TestStore", "cfg");
         roleProviderMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<RoleConfiguration>>.Failure(new GenericMessage("Role query failed")));
 
@@ -332,8 +331,7 @@ public sealed class EffectivePermissionResolverTests
             MockBehavior.Loose,
             NullLogger<UserRoleConfigurationProvider>.Instance,
             new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
-            "TestStore", "authz",
-            (object?)null!);
+            "TestStore", "authz");
         // Why: CallBase = true lets GetByUser() run its real body (calls Get() → Failure).
         // Without it, Loose mock returns null for the virtual GetByUser() call.
         userRoleProviderMock.CallBase = true;
@@ -455,8 +453,7 @@ public sealed class EffectivePermissionResolverTests
             MockBehavior.Loose,
             NullLogger<DefaultConfigurationProvider<TConfig, TCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
-            "TestStore", "cfg",
-            (object?)null!);
+            "TestStore", "cfg");
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<TConfig>>.Success(new List<TConfig>(items)));
         return mock;
@@ -470,8 +467,7 @@ public sealed class EffectivePermissionResolverTests
             MockBehavior.Loose,
             NullLogger<UserRoleConfigurationProvider>.Instance,
             new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
-            "TestStore", "authz",
-            (object?)null!);
+            "TestStore", "authz");
         // Why: CallBase = true lets GetByUser() delegate to its real body, which calls Get().
         // Get() is mocked to return the seeded list so GetByUser() filters by userId as normal.
         // Without CallBase, Moq returns null for the virtual GetByUser() call (Loose mock default).

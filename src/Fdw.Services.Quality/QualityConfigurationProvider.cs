@@ -42,8 +42,7 @@ public class QualityConfigurationProvider
     public QualityConfigurationProvider(
         ILogger<QualityConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
-        string dataStoreName = "ConfigurationDb",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string dataStoreName = "ConfigurationDb")
     #pragma warning restore MA0051
     {
         // Why: ILogger<T> is invariant — the QualityConfigurationProvider logger can't be passed
@@ -53,15 +52,15 @@ public class QualityConfigurationProvider
 
         // Why: All quality/catalog providers are cfg-tier — cfg-tier; loaded from ConfigurationDb at runtime.
         _qualityRuleProvider = new DefaultConfigurationProvider<QualityRuleConfiguration, QualityRuleConfigurationCommand>(
-            logger: null, lazyGateway, dataStoreName, "quality", invalidator);
+            logger: null, lazyGateway, dataStoreName, "quality");
         _annotationProvider = new DefaultConfigurationProvider<DataSetAnnotationConfiguration, DataSetAnnotationConfigurationCommand>(
-            logger: null, lazyGateway, dataStoreName, "catalog", invalidator);
+            logger: null, lazyGateway, dataStoreName, "catalog");
         _environmentProvider = new DefaultConfigurationProvider<EnvironmentConfiguration, EnvironmentConfigurationCommand>(
-            logger: null, lazyGateway, dataStoreName, "quality", invalidator);
+            logger: null, lazyGateway, dataStoreName, "quality");
         _promotionRequestProvider = new DefaultConfigurationProvider<PromotionRequestConfiguration, PromotionRequestConfigurationCommand>(
-            logger: null, lazyGateway, dataStoreName, "quality", invalidator);
+            logger: null, lazyGateway, dataStoreName, "quality");
         _glossaryTermProvider = new DefaultConfigurationProvider<GlossaryTermConfiguration, GlossaryTermConfigurationCommand>(
-            logger: null, lazyGateway, dataStoreName, "catalog", invalidator);
+            logger: null, lazyGateway, dataStoreName, "catalog");
     }
 
     /// <summary>Gets a quality rule configuration by name.</summary>

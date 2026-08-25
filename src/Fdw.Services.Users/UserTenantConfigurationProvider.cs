@@ -36,12 +36,10 @@ public class UserTenantConfigurationProvider : DefaultConfigurationProvider<User
         ILogger<UserTenantConfigurationProvider>? logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "tenant",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "tenant")
         : base(logger ?? NullLogger<UserTenantConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<UserTenantConfigurationProvider>.Instance;
     }

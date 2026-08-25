@@ -29,8 +29,7 @@ public class PipelineServiceConfigurationProvider : DefaultConfigurationProvider
         services.TryAddSingleton<PipelineServiceConfigurationProvider>(sp =>
             new PipelineServiceConfigurationProvider(
                 sp.GetService<ILogger<PipelineServiceConfigurationProvider>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
         services.TryAddSingleton<DefaultConfigurationProvider<PipelineConfiguration, PipelineConfigurationCommand>>(
             sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
         services.TryAddSingleton<IServiceConfigurationProvider<PipelineConfiguration>>(
@@ -42,12 +41,10 @@ public class PipelineServiceConfigurationProvider : DefaultConfigurationProvider
         ILogger<PipelineServiceConfigurationProvider>? logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "pipe",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "pipe")
         : base(logger ?? NullLogger<PipelineServiceConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
     }
 }

@@ -49,8 +49,7 @@ public sealed class DefaultQualityServiceType : QualityServiceTypeBase
             builder.Services.TryAddSingleton<QualityConfigurationProvider>(sp =>
                 new QualityConfigurationProvider(
                     sp.GetService<ILogger<QualityConfigurationProvider>>() ?? NullLogger<QualityConfigurationProvider>.Instance,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
 
             builder.Services.TryAddScoped<IQualityService, QualityService>();
             builder.Services.TryAddScoped<ICatalogService, CatalogService>();

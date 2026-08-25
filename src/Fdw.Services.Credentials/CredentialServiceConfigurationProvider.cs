@@ -28,12 +28,10 @@ public class CredentialServiceConfigurationProvider : DefaultConfigurationProvid
         ILogger<CredentialServiceConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "sec",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "sec")
         : base(logger ?? NullLogger<CredentialServiceConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
     }
 }

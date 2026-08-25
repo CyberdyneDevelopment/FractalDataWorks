@@ -91,8 +91,7 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<SecretManagerConfigurationProvider>(sp =>
                 new SecretManagerConfigurationProvider(
                     sp.GetService<ILogger<SecretManagerConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
             // Why: Consumers inject DefaultConfigurationProvider<TConfig, TCommand> (the new base) —
             // forward to the concrete subclass.
             builder.Services.TryAddSingleton<DefaultConfigurationProvider<SecretManagerConfiguration, SecretManagerConfigurationCommand>>(

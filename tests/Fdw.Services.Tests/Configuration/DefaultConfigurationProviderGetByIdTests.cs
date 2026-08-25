@@ -264,6 +264,11 @@ public class DefaultConfigurationProviderGetByIdTests
     /// </summary>
     private sealed class CapturingGateway : IConfigurationGateway
     {
+        /// <summary>Targets this fake was asked to invalidate, in call order.</summary>
+        public List<DataStoreTarget> Invalidated { get; } = [];
+
+        public void InvalidateCachedResults(DataStoreTarget target) => Invalidated.Add(target);
+
         /// <summary>Gets the last command passed to Execute&lt;T&gt;.</summary>
         public IDataCommand? LastCommand { get; private set; }
 

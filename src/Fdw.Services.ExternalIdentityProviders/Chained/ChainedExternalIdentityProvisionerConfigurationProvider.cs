@@ -30,12 +30,10 @@ public class ChainedExternalIdentityProvisionerConfigurationProvider
         ILogger<ChainedExternalIdentityProvisionerConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "sec",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "sec")
         : base(logger ?? NullLogger<ChainedExternalIdentityProvisionerConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
     }
 }

@@ -30,8 +30,7 @@ public class IdentityServiceConfigurationProvider : DefaultConfigurationProvider
         services.TryAddSingleton<IdentityServiceConfigurationProvider>(sp =>
             new IdentityServiceConfigurationProvider(
                 sp.GetService<ILogger<IdentityServiceConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
 
         services.TryAddSingleton<DefaultConfigurationProvider<IdentityServiceConfiguration, IdentityServiceConfigurationCommand>>(
             sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
@@ -45,17 +44,14 @@ public class IdentityServiceConfigurationProvider : DefaultConfigurationProvider
     /// <param name="lazyGateway">Deferred configuration gateway, resolved on the first configuration read.</param>
     /// <param name="dataStoreName">The data store holding the configuration.</param>
     /// <param name="pathName">The schema holding the configuration.</param>
-    /// <param name="invalidator">Optional cache invalidator, applied on write.</param>
     public IdentityServiceConfigurationProvider(
         ILogger<IdentityServiceConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "sec",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "sec")
         : base(logger ?? NullLogger<IdentityServiceConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
     }
 }

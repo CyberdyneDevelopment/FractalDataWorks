@@ -45,8 +45,7 @@ public class GetDataSetLineageDownstreamConsumersTests
             new Lazy<IConfigurationGateway>(() => throw new InvalidOperationException(
                 "BuildDownstreamConsumers must not touch the gateway directly - it only calls the provider.")),
             "ConfigurationDb",
-            "pipe",
-            (Lazy<ICacheInvalidator?>?)null!);
+            "pipe");
     }
 
     private static PipelineConfiguration ComposedPipeline(string name, string sourceDataSet, string destinationDataSet) => new()

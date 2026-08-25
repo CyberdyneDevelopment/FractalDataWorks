@@ -218,8 +218,7 @@ public sealed class OrgAwareAuthorizationTests
             MockBehavior.Loose,
             NullLogger<UserRoleConfigurationProvider>.Instance,
             new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
-            "TestStore", "authz",
-            (object?)null!);
+            "TestStore", "authz");
         // Why: CallBase = true lets GetByUser() delegate to its real body (calls Get() which is mocked).
         // Without CallBase, Loose mock returns null for the virtual GetByUser() causing NullRef.
         userRoleProviderMock.CallBase = true;
@@ -249,8 +248,7 @@ public sealed class OrgAwareAuthorizationTests
             MockBehavior.Loose,
             NullLogger<DefaultConfigurationProvider<TConfig, TCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
-            "TestStore", "cfg",
-            (object?)null!);
+            "TestStore", "cfg");
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<TConfig>>.Success(items));
         return mock;

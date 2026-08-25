@@ -30,7 +30,7 @@ public sealed class ExternalIdentityProviderResolverTests
         => new(
             NullLogger<ExternalIdentityProviderConfigurationProvider>.Instance,
             new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
-            "ConfigurationDb", "auth", new Lazy<ICacheInvalidator?>(() => null));
+            "ConfigurationDb", "auth");
 
     private static ExternalIdentityProviderResolver Resolver(
         Mock<IPlatformServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>> serviceProvider,

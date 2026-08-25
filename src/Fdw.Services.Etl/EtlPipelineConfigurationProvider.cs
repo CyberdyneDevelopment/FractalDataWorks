@@ -25,12 +25,10 @@ public class EtlPipelineConfigurationProvider : DefaultConfigurationProvider<Etl
         ILogger<EtlPipelineConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "pipe",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "pipe")
         : base(logger ?? NullLogger<EtlPipelineConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
     }
 }

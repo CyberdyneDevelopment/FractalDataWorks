@@ -32,8 +32,7 @@ public class CalculationEntityServiceTests
             NullLogger<CalculationConfigurationProvider>.Instance,
             new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
             "ConfigurationDb",
-            "calc",
-            null!);
+            "calc");
 
     private static CalculationEntityConfiguration SampleConfig(Guid id, string name = "Calc1", string type = "Formula") => new()
     {

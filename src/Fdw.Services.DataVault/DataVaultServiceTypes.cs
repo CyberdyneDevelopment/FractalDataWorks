@@ -75,8 +75,7 @@ public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<DataVaultConfigurationProvider>(sp =>
                 new DataVaultConfigurationProvider(
                     sp.GetService<ILogger<DataVaultConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
 
             // Why: consumers inject DefaultConfigurationProvider<TConfig, TCommand> — forward to the
             // concrete subclass so injection by base type succeeds.

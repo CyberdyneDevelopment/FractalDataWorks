@@ -31,13 +31,12 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
     where TConfig : class, IGenericConfiguration
     where TCommand : ConfigurationCommandBase<TConfig>
 {
+    // Why Lazy: resolving the gateway eagerly triggers DataGatewayService →
+    // ConfigurationGatewayDataStoreProvider → DataStoreConfigurationProvider, which constructs a
+    // provider again — the StackGuard deadlocks on the singleton lock. Deferring to first use breaks
+    // the cycle, and invalidation goes through this same Lazy so it inherits the same protection.
     private readonly Lazy<IConfigurationGateway> _gateway;
     private readonly ILogger _logger;
-    // Why: Lazy<ICacheInvalidator?> defers resolution until the first cfg write, preventing a
-    // circular DI deadlock. Resolving ICacheInvalidator eagerly triggers DataGatewayService →
-    // ConfigurationGatewayDataStoreProvider → DataStoreConfigurationProvider, which itself tries to
-    // resolve ICacheInvalidator — the StackGuard deadlocks on the singleton lock.
-    private readonly Lazy<ICacheInvalidator?>? _invalidator;
     private readonly AsyncLocal<bool> _isQuerying = new();
 
     /// <summary>
@@ -70,7 +69,6 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
     /// <param name="gateway">Lazy gateway for configuration queries.</param>
     /// <param name="dataStoreName">DataStore name (e.g. "ConfigurationDb").</param>
     /// <param name="pathName">Schema/path name (e.g. "conn", "sec").</param>
-    /// <param name="invalidator">Optional cache invalidator; null disables cache invalidation.</param>
     // Why: configuration is single-source ConfigurationDb — all reads go through the gateway. The retired
     // ctrl+cfg dual-source IOptionsMonitor first-look (and its UseOptionsMonitor toggle) has been removed;
     // the ctrl/cfg-tier distinction now lives entirely in dataStoreName/pathName + the app's declared
@@ -79,14 +77,12 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
         ILogger<DefaultConfigurationProvider<TConfig, TCommand>>? logger,
         Lazy<IConfigurationGateway> gateway,
         string dataStoreName,
-        string pathName,
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName)
     {
         _logger = logger ?? NullLogger<DefaultConfigurationProvider<TConfig, TCommand>>.Instance;
         _gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
         DataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
         PathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
-        _invalidator = invalidator;
     }
 
     /// <summary>
@@ -898,8 +894,6 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
             Commands().Create(DataStoreName, PathName, record), Target, ct).ConfigureAwait(false);
         if (!result.IsSuccess) return result;
 
-        TryInvalidateCache(Commands().CacheTag(PathName));
-
         // Why: the cascade runs on EVERY write, not just the first. Children FK to the owner's
         // version-specific RowId, so each new owner version needs its children re-pointed at it; the
         // previous children stay attached to the previous version, which is precisely the snapshot the
@@ -1322,8 +1316,6 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
         var result = await _gateway.Value.Execute<TConfig>(cmd, Target, ct).ConfigureAwait(false);
         if (!result.IsSuccess) return result;
 
-        TryInvalidateCache(Commands().CacheTag(PathName));
-
         return GenericResult.Success();
     }
 
@@ -1401,31 +1393,14 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
     // Why: transactional writes can't invalidate at write time — the rows aren't visible until
     // the caller commits. Without this, a committed role-permission change reads back stale
     // (cached) rows and the grant appears to vanish on reload.
-    public void InvalidateCache() => TryInvalidateCache(Commands().CacheTag(PathName));
+    //
+    // Why it asks the gateway instead of holding an invalidator: the gateway owns the cache, so it
+    // is the thing that can drop entries. Every non-transactional write is already invalidated by
+    // the gateway when the command runs, which is why this is the only invalidation a provider
+    // still initiates - and why the provider no longer takes an ICacheInvalidator at all.
+    public void InvalidateCache() => Gateway.InvalidateCachedResults(Target);
 
     /// <summary>Gateway used for cfg queries (resolves on first access).</summary>
     protected IConfigurationGateway Gateway => _gateway.Value;
 
-    /// <summary>
-    /// Attempts to invalidate the cache for the given tag.
-    /// Logs a warning if the call throws — cache invalidation failure never fails the write.
-    /// </summary>
-    // Why: Write already succeeded at this point. An invalidation exception should never
-    // roll back the persisted data. A warning surfaces the anomaly without propagating it.
-    private void TryInvalidateCache(string tag)
-    {
-        var invalidator = _invalidator?.Value;
-        if (invalidator is null)
-            return;
-
-        try
-        {
-            invalidator.InvalidateByTag(tag);
-        }
-        catch (Exception ex)
-        {
-            DefaultConfigurationProviderLog.CacheInvalidationFailed(
-                _logger, tag, typeof(TConfig).Name, ex.Message);
-        }
-    }
 }

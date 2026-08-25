@@ -116,8 +116,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                 new DefaultConfigurationProvider<PermissionConfiguration, PermissionConfigurationCommand>(
                     sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<PermissionConfiguration, PermissionConfigurationCommand>>()!,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    DataStore, pathNameAuthz,
-                    new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    DataStore, pathNameAuthz));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<PermissionConfiguration>>(sp =>
                 sp.GetRequiredService<DefaultConfigurationProvider<PermissionConfiguration, PermissionConfigurationCommand>>());
 
@@ -126,8 +125,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                 new DefaultConfigurationProvider<RolePermissionConfiguration, RolePermissionConfigurationCommand>(
                     sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<RolePermissionConfiguration, RolePermissionConfigurationCommand>>()!,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    DataStore, pathNameAuthz,
-                    new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    DataStore, pathNameAuthz));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<RolePermissionConfiguration>>(sp =>
                 sp.GetRequiredService<DefaultConfigurationProvider<RolePermissionConfiguration, RolePermissionConfigurationCommand>>());
 

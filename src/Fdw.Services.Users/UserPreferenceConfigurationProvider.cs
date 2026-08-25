@@ -35,12 +35,10 @@ public class UserPreferenceConfigurationProvider
         ILogger<UserPreferenceConfigurationProvider>? logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "usr",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "usr")
         : base(logger ?? NullLogger<UserPreferenceConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<UserPreferenceConfigurationProvider>.Instance;
     }

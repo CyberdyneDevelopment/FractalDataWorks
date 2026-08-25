@@ -53,8 +53,7 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
             builder.Services.TryAddSingleton<EscalationConfigurationProvider>(sp =>
                 new EscalationConfigurationProvider(
                     sp.GetService<ILogger<EscalationConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
             builder.Services.TryAddSingleton<DefaultConfigurationProvider<EscalationPolicyConfiguration, EscalationPolicyConfigurationCommand>>(
                 sp => sp.GetRequiredService<EscalationConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<EscalationPolicyConfiguration>>(

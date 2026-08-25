@@ -179,10 +179,21 @@ public sealed class DataGatewayService : IDataGateway
     /// <inheritdoc/>
     public async Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, bool useCache, CancellationToken cancellationToken = default)
     {
-        // Why: enable = both the cache singleton and the options knob are present AND EnableCache=true.
-        // When either is null (test paths without wired caching) caching is simply off — no fallback, no NRE.
-        bool enable = _cache is not null && _options is not null && _options.Value.EnableCache;
-        bool cacheEnabled = enable && CachePolicy.IsEnabled(command);
+        // Why the command kind gates everything below: a cache serves REPEATED READS of the same
+        // question. A write is not a question - it is not idempotent, and its result describes what
+        // one execution did. Caching it is wrong twice over: the entry is stale the moment a later
+        // write lands, and, because ComputeCacheKey only varies by filter/ordering/paging (fields a
+        // write does not have), two different writes to the same container compute the SAME key. With
+        // caching on, the second write would be answered from the first one's cached result and never
+        // execute at all. Reads cache; writes invalidate and are never read from cache.
+        bool isQuery = command is IQueryCommand;
+
+        // Why the command must ALSO opt in on this gateway but not for invalidation: a data command
+        // says whether its result is worth keeping, so a read caches only when it asked to. A write
+        // never asks - CachePolicy.IsEnabled is false for every insert/update/delete - so gating
+        // invalidation on it would mean no write ever evicted anything. Invalidation follows the
+        // infrastructure being on; caching follows the command opting in.
+        bool cacheEnabled = CacheEnabled && CachePolicy.IsEnabled(command) && isQuery;
 
         string? cacheKey = null;
         // Why the ceiling is captured here rather than the kind: these are the only two things the
@@ -226,21 +237,67 @@ public sealed class DataGatewayService : IDataGateway
 
         var result = await ExecuteCore<T>(command, target, cancellationToken).ConfigureAwait(false);
 
-        // Why: ALWAYS write on success when caching is enabled — even on useCache=false (force-refresh).
-        // Writing the fresh result ensures subsequent default reads see the updated value from the cache.
-        if (cacheKey is not null && result.IsSuccess)
+        ApplyCacheOutcome(command, target, result, isQuery, cacheKey, cacheCeiling);
+        return result;
+    }
+
+
+
+    /// <inheritdoc/>
+    public void InvalidateCachedResults(DataStoreTarget target)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+
+        if (!CacheEnabled)
+            return;
+
+        _cache!.InvalidateByTag(CacheKeyBuilder.TagFor(target));
+    }
+
+    // Why a single property rather than the expression repeated: both the read path and the outcome
+    // path must agree on whether caching is on. If they can disagree, a write invalidates a cache
+    // that reads never populate, or worse the reverse.
+    private bool CacheEnabled => _cache is not null && _options is not null && _options.Value.EnableCache;
+
+    // Why this is its own method: it is the whole of what caching DOES with an execution's outcome,
+    // and Execute is already carrying connection resolution, key computation and dispatch. Reading
+    // it in one place is also what makes the read/write asymmetry legible - the same result object
+    // is either stored under a key or used as the signal to drop keys.
+    //
+    // Why the write path invalidates here and providers no longer carry an ICacheInvalidator: this
+    // gateway is the ONLY thing that persists a change, so it is the only place that can know a
+    // change happened. Threading an invalidator through every provider asked 61 call sites to
+    // remember to announce a write they did not perform - and the tags they passed were the same
+    // "{path}.{container}" this computes from the command it just ran.
+    private void ApplyCacheOutcome<T>(
+        IDataCommand command,
+        DataStoreTarget target,
+        IGenericResult<T> result,
+        bool isQuery,
+        string? cacheKey,
+        TimeSpan cacheCeiling)
+    {
+        if (!CacheEnabled || !result.IsSuccess)
+            return;
+
+        if (isQuery)
         {
-            _cache!.Set(
-                cacheKey,
-                result,
-                CacheKeyBuilder.GetInvalidationTags(command, target),
-                CachePolicy.GetDuration(
-                    command,
-                    DefaultCacheDuration,
-                    cacheCeiling));
+            if (cacheKey is not null)
+            {
+                _cache!.Set(
+                    cacheKey,
+                    result,
+                    CacheKeyBuilder.GetInvalidationTags(command, target),
+                    CachePolicy.GetDuration(command, DefaultCacheDuration, cacheCeiling));
+            }
+
+            return;
         }
 
-        return result;
+        // Why every tag and not just the container: GetInvalidationTags honours a command's own
+        // CacheInvalidationTags metadata, which is how a write that touches rows another container
+        // projects declares the blast radius of what it changed.
+        _cache!.InvalidateByTags(CacheKeyBuilder.GetInvalidationTags(command, target));
     }
 
     // Why: ExecuteCore is the raw fresh-execution path — container resolution → connection lookup → execute.

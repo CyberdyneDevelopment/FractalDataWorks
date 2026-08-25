@@ -27,12 +27,10 @@ public class EscalationConfigurationProvider : DefaultConfigurationProvider<Esca
         ILogger<EscalationConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "workflow",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "workflow")
         : base(logger ?? NullLogger<EscalationConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
     }
 

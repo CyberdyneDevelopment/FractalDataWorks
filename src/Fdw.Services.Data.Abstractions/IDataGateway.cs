@@ -29,6 +29,25 @@ public interface IDataGateway
     Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Drops every cached result for the rows a target addresses.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A write executed through this gateway already invalidates its own container, so ordinary
+    /// callers never need this. It exists for the one case the gateway cannot observe: a write that
+    /// ran inside a transaction. Those rows are not visible to anyone until the caller commits, so
+    /// invalidating at execute time evicts nothing and the first read after the commit is served the
+    /// pre-transaction rows. The committer calls this once, after Commit succeeds.
+    /// </para>
+    /// <para>
+    /// It never fails. Invalidation runs after a write has already been persisted, so reporting a
+    /// problem here could only ask a caller to undo work that succeeded.
+    /// </para>
+    /// </remarks>
+    /// <param name="target">The DataStore/Path/Container whose cached results are now stale.</param>
+    void InvalidateCachedResults(DataStoreTarget target);
+
+    /// <summary>
     /// Executes a data command against an explicitly identified container within a DataStore,
     /// with explicit control over whether the result cache is consulted on this call.
     /// </summary>

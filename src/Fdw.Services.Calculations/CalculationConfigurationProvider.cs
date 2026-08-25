@@ -35,12 +35,10 @@ public class CalculationConfigurationProvider : DefaultConfigurationProvider<Cal
         ILogger<CalculationConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "calc",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "calc")
         : base(logger ?? NullLogger<CalculationConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
     }
 

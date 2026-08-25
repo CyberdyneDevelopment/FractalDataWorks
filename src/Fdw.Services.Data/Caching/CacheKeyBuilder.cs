@@ -28,6 +28,23 @@ public static class CacheKeyBuilder
         if (command.Metadata.TryGetValue(CachePolicy.CacheKeyPrefixKey, out var val) && val is string prefix)
             return prefix;
 
+        return TagFor(target);
+    }
+
+    /// <summary>
+    /// The invalidation tag for an address, with no command in hand.
+    /// </summary>
+    /// <remarks>
+    /// Why this exists separately from <see cref="GetKeyPrefix"/>: a caller invalidating after a
+    /// transaction commits has no command to consult - the commands ran inside the transaction and
+    /// are gone. It knows only which container changed. The command-metadata override is deliberately
+    /// not consulted here: a per-command prefix override describes ONE command's entries, and there
+    /// is no command whose override could be read.
+    /// </remarks>
+    /// <param name="target">The DataStore/Path/Container address whose entries are stale.</param>
+    /// <returns>The tag, "{schema}.{table}" - or just the container when the path is empty.</returns>
+    public static string TagFor(DataStoreTarget target)
+    {
         // Why: Default tag format matches invalidation convention: "{schema}.{table}"
         return string.IsNullOrEmpty(target.Path)
             ? target.Container

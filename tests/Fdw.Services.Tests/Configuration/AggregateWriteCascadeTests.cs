@@ -305,6 +305,11 @@ public sealed class AggregateWriteCascadeTests
     /// </summary>
     private sealed class RecordingGateway : IConfigurationGateway
     {
+        /// <summary>Targets this fake was asked to invalidate, in call order.</summary>
+        public List<DataStoreTarget> Invalidated { get; } = [];
+
+        public void InvalidateCachedResults(DataStoreTarget target) => Invalidated.Add(target);
+
         /// <summary>Every write command the gateway received, in call order.</summary>
         public List<(IDataCommand Command, DataStoreTarget Target)> AllCommands { get; } = [];
 

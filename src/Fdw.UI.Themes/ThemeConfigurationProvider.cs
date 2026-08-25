@@ -27,12 +27,10 @@ public class ThemeConfigurationProvider : DefaultConfigurationProvider<ThemeMana
         ILogger<ThemeConfigurationProvider>? logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "settings",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "settings")
         : base(logger ?? NullLogger<ThemeConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<ThemeConfigurationProvider>.Instance;
     }

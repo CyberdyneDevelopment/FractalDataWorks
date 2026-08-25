@@ -87,8 +87,7 @@ public sealed class RoslynWorkspaceConnectionType
                         ?? NullLogger<RoslynWorkspaceConnectionConfigurationProvider>.Instance,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
                     DataStore,
-                    PathName,
-                    new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    PathName));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<RoslynWorkspaceConnectionConfiguration>>(
                 sp => sp.GetRequiredService<RoslynWorkspaceConnectionConfigurationProvider>());
             // Why: RegisterFactory (below) requires ConnectionConfigurationProvider (the shared header

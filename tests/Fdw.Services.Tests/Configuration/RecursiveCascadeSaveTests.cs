@@ -246,6 +246,11 @@ public sealed class RecursiveCascadeSaveTests
     /// </summary>
     private sealed class RecordingGateway : IConfigurationGateway
     {
+        /// <summary>Targets this fake was asked to invalidate, in call order.</summary>
+        public List<DataStoreTarget> Invalidated { get; } = [];
+
+        public void InvalidateCachedResults(DataStoreTarget target) => Invalidated.Add(target);
+
         public List<object> SavedConfigs { get; } = [];
 
         public IReadOnlyList<IDataStore> DataStores { get; } = [];
@@ -302,6 +307,11 @@ public sealed class RecursiveCascadeSaveTests
     /// </summary>
     private sealed class HeaderReturningGateway : IConfigurationGateway
     {
+        /// <summary>Targets this fake was asked to invalidate, in call order.</summary>
+        public List<DataStoreTarget> Invalidated { get; } = [];
+
+        public void InvalidateCachedResults(DataStoreTarget target) => Invalidated.Add(target);
+
         private readonly TestRootConfiguration _header;
 
         public HeaderReturningGateway(TestRootConfiguration header) => _header = header;

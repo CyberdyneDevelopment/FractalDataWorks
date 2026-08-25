@@ -159,8 +159,7 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
                 sp.GetRequiredService<ILoggerFactory>().CreateLogger<DefaultConfigurationProvider<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>>(),
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
                 DataStore,
-                PathName,
-                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                PathName));
 
             // Why: a pipeline type can't run without the execution queue + its background consumer, so the
             // option registers what it needs (idempotent — guarded by an existing-registration check, so

@@ -109,8 +109,7 @@ public sealed class DefaultSchedulerType
             builder.Services.TryAddSingleton<SchedulerConfigurationProvider>(sp =>
                 new SchedulerConfigurationProvider(
                     sp.GetService<ILogger<SchedulerConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
             builder.Services.TryAddSingleton<DefaultConfigurationProvider<SchedulerConfiguration, SchedulerConfigurationCommand>>(
                 sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<SchedulerConfiguration>>(
@@ -119,8 +118,7 @@ public sealed class DefaultSchedulerType
             builder.Services.TryAddSingleton<ScheduleConfigurationProvider>(sp =>
                 new ScheduleConfigurationProvider(
                     sp.GetService<ILogger<ScheduleConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
             builder.Services.TryAddSingleton<DefaultConfigurationProvider<ScheduleConfiguration, ScheduleConfigurationCommand>>(
                 sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<ScheduleConfiguration>>(

@@ -29,8 +29,7 @@ public class TokenManagerConfigurationProvider : DefaultConfigurationProvider<To
         services.TryAddSingleton<TokenManagerConfigurationProvider>(sp =>
             new TokenManagerConfigurationProvider(
                 sp.GetService<ILogger<TokenManagerConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
 
         services.TryAddSingleton<DefaultConfigurationProvider<TokenManagerConfiguration, TokenManagerConfigurationCommand>>(
             sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
@@ -44,12 +43,10 @@ public class TokenManagerConfigurationProvider : DefaultConfigurationProvider<To
         ILogger<TokenManagerConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "auth",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "auth")
         : base(logger ?? NullLogger<TokenManagerConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
     }
 }

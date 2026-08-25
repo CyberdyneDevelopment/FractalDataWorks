@@ -74,8 +74,7 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
                     ?? NullLogger<DefaultConfigurationProvider<TConfig, TCommand>>.Instance,
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
                 "ConfigurationDb",
-                "settings",
-                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                "settings"));
         services.TryAddSingleton<IServiceConfigurationProvider<TConfig>>(sp =>
             sp.GetRequiredService<DefaultConfigurationProvider<TConfig, TCommand>>());
     }

@@ -352,4 +352,9 @@ internal sealed class LimitEnforcementDataGateway : IDataGateway
                 _counters.IncrementQueryCount(limit.ConnectionConfigurationId);
         }
     }
+
+    /// <inheritdoc/>
+    // Why this passes straight through: this decorator enforces row/size limits on what a command
+    // READS. Dropping cached results is neither a read nor bounded by a limit.
+    public void InvalidateCachedResults(DataStoreTarget target) => _inner.InvalidateCachedResults(target);
 }

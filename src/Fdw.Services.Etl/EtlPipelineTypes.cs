@@ -141,8 +141,7 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<EtlPipelineConfigurationProvider>(sp =>
                 new EtlPipelineConfigurationProvider(
                     sp.GetService<ILogger<EtlPipelineConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
             builder.Services.TryAddSingleton<DefaultConfigurationProvider<EtlPipelineConfiguration, EtlPipelineConfigurationCommand>>(
                 sp => sp.GetRequiredService<EtlPipelineConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<EtlPipelineConfiguration>>(

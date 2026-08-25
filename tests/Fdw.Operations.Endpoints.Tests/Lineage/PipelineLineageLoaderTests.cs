@@ -52,8 +52,7 @@ public class PipelineLineageLoaderTests
             new Lazy<IConfigurationGateway>(() => throw new InvalidOperationException(
                 "PipelineLineageLoader must not touch the gateway directly - it only calls the provider.")),
             "ConfigurationDb",
-            "pipe",
-            (Lazy<ICacheInvalidator?>?)null!);
+            "pipe");
     }
 
     private static PipelineConfiguration Header(string name) =>

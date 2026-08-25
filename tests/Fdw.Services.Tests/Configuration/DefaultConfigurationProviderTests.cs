@@ -353,192 +353,51 @@ public class DefaultConfigurationProviderTests
     }
 
     // ========================================================================
-    // Save — cache invalidation
-    // ========================================================================
-
-    private static DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand> MakeProviderWithInvalidator(
-        TestDualConfig[] systemConfigs,
-        ICacheInvalidator invalidator)
-    {
-        var mockGateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
-        mockGateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        // Why: Get(id) inside Save calls Execute<IEnumerable<TConfig>> — return empty so Save treats
-        // the record as new and issues a Create command.
-        mockGateway
-            .Setup(g => g.Execute<IEnumerable<TestDualConfig>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<TestDualConfig>>.Success([]));
-        // Why: The actual Save call uses Execute<TConfig> — return success so TryInvalidateCache is reached.
-        mockGateway
-            .Setup(g => g.Execute<TestDualConfig>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestDualConfig>.Success(new TestDualConfig()));
-
-        var lazyGateway = new Lazy<IConfigurationGateway>(() => mockGateway.Object);
-
-        return new DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>(
-            NullLogger<DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>>.Instance,
-            lazyGateway,
-            "TestStore",
-            "cfg",
-            new Lazy<ICacheInvalidator?>(() => invalidator));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public async Task SaveCallsInvalidateByTagWithExpectedTagOnSuccess()
-    {
-        var invalidator = new Mock<ICacheInvalidator>();
-        var provider = MakeProviderWithInvalidator([], invalidator.Object);
-        var record = new TestDualConfig { Id = Guid.NewGuid(), Name = "Cfg1" };
-
-        var result = await provider.Save(record, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        // Why: CacheTag returns "{pathName}.{TableName}" = "cfg.TestDualConfig"
-        invalidator.Verify(i => i.InvalidateByTag("cfg.TestDualConfig"), Times.Once);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public async Task SaveDoesNotCallInvalidateWhenNoInvalidatorProvided()
-    {
-        // Why: ICacheInvalidator is optional — providers without it still persist successfully.
-        var mockGateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
-        mockGateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        mockGateway
-            .Setup(g => g.Execute<IEnumerable<TestDualConfig>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<TestDualConfig>>.Success([]));
-        mockGateway
-            .Setup(g => g.Execute<TestDualConfig>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestDualConfig>.Success(new TestDualConfig()));
-
-        var provider = new DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>(
-            NullLogger<DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => mockGateway.Object),
-            "TestStore",
-            "cfg",
-            invalidator: null);
-
-        var result = await provider.Save(new TestDualConfig { Id = Guid.NewGuid(), Name = "X" }, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        // No exception — null invalidator is a no-op.
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public async Task SaveDoesNotCallInvalidateWhenGatewayFails()
-    {
-        var invalidator = new Mock<ICacheInvalidator>();
-        var mockGateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
-        mockGateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        mockGateway
-            .Setup(g => g.Execute<IEnumerable<TestDualConfig>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<TestDualConfig>>.Success([]));
-        // Why: Gateway fails — TryInvalidateCache must NOT be reached (write did not succeed).
-        mockGateway
-            .Setup(g => g.Execute<TestDualConfig>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestDualConfig>.Failure(new GenericMessage("db error")));
-
-        var provider = new DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>(
-            NullLogger<DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => mockGateway.Object),
-            "TestStore",
-            "cfg",
-            new Lazy<ICacheInvalidator?>(() => invalidator.Object));
-
-        var result = await provider.Save(new TestDualConfig { Id = Guid.NewGuid(), Name = "X" }, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeFalse();
-        invalidator.Verify(i => i.InvalidateByTag(It.IsAny<string>()), Times.Never);
-    }
-
-    // ========================================================================
-    // Delete — cache invalidation
+    // Cache invalidation
     // ========================================================================
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Configuration")]
-    public async Task DeleteCallsInvalidateByTagWithExpectedTagOnSuccess()
+    public async Task DeleteFailsForEmptyGuid()
     {
-        var invalidator = new Mock<ICacheInvalidator>();
         var mockGateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
-        mockGateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        mockGateway
-            .Setup(g => g.Execute<TestDualConfig>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestDualConfig>.Success(new TestDualConfig()));
-        // Why: Delete now READS the aggregate before retiring it — the cascade runs leaf-first, and once
-        // the header row is retired there is no navigation left to reach its children. The header read
-        // goes through Execute<IEnumerable<TConfig>>, so it must be stubbed too.
-        mockGateway
-            .Setup(g => g.Execute<IEnumerable<TestDualConfig>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<TestDualConfig>>.Success([new TestDualConfig()]));
+        mockGateway.Setup(g => g.DataStores).Returns(Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         var provider = new DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>(
             NullLogger<DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => mockGateway.Object),
             "TestStore",
-            "cfg",
-            new Lazy<ICacheInvalidator?>(() => invalidator.Object));
-
-        var result = await provider.Delete(Guid.NewGuid(), TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        // Why: CacheTag returns "{pathName}.{TableName}" = "cfg.TestDualConfig"
-        invalidator.Verify(i => i.InvalidateByTag("cfg.TestDualConfig"), Times.Once);
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Configuration")]
-    public async Task DeleteSkipsInvalidationForEmptyGuid()
-    {
-        var invalidator = new Mock<ICacheInvalidator>();
-        var provider = MakeProviderWithInvalidator([], invalidator.Object);
+            "cfg");
 
         var result = await provider.Delete(Guid.Empty, TestContext.Current.CancellationToken);
 
         // Why: deleting nothing is a caller error, not a no-op — it used to report Success.
         result.IsSuccess.ShouldBeFalse();
-        invalidator.Verify(i => i.InvalidateByTag(It.IsAny<string>()), Times.Never);
+        mockGateway.Verify(g => g.InvalidateCachedResults(It.IsAny<DataStoreTarget>()), Times.Never);
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Configuration")]
-    public async Task DeleteDoesNotCallInvalidateWhenGatewayFails()
+    public void InvalidateCacheAsksTheGatewayToDropThisContainer()
     {
-        var invalidator = new Mock<ICacheInvalidator>();
+        // Why this is the only invalidation a provider still initiates: a write executed through the
+        // gateway invalidates itself. A write made inside a transaction cannot — its rows are not
+        // visible until commit — so the committer calls this afterwards.
         var mockGateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
-        mockGateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        // Why: Gateway fails — TryInvalidateCache must NOT be reached.
-        mockGateway
-            .Setup(g => g.Execute<TestDualConfig>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestDualConfig>.Failure(new GenericMessage("db error")));
-        // Why: Delete reads the aggregate first, so the header read must fail too for this scenario.
-        mockGateway
-            .Setup(g => g.Execute<IEnumerable<TestDualConfig>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<TestDualConfig>>.Failure(new GenericMessage("db error")));
+        mockGateway.Setup(g => g.DataStores).Returns(Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
-        var provider = new DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>(
+        new DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>(
             NullLogger<DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => mockGateway.Object),
             "TestStore",
-            "cfg",
-            new Lazy<ICacheInvalidator?>(() => invalidator.Object));
+            "cfg").InvalidateCache();
 
-        var result = await provider.Delete(Guid.NewGuid(), TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeFalse();
-        invalidator.Verify(i => i.InvalidateByTag(It.IsAny<string>()), Times.Never);
+        mockGateway.Verify(
+            g => g.InvalidateCachedResults(
+                It.Is<DataStoreTarget>(t => t.Path == "cfg" && t.Container == "TestDualConfig")),
+            Times.Once);
     }
 
     // ========================================================================

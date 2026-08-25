@@ -62,8 +62,7 @@ public class DataStoreConfigurationProvider : DefaultConfigurationProvider<DataS
                 sp.GetService<ILogger<DataStoreConfigurationProvider>>(),
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
                 new Lazy<DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>>(
-                    () => sp.GetRequiredService<DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>>()),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    () => sp.GetRequiredService<DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>>())));
         services.TryAddSingleton<DefaultConfigurationProvider<DataStoreConfiguration, DataStoreConfigurationCommand>>(
             sp => sp.GetRequiredService<DataStoreConfigurationProvider>());
         services.TryAddSingleton<IServiceConfigurationProvider<DataStoreConfiguration>>(
@@ -76,24 +75,21 @@ public class DataStoreConfigurationProvider : DefaultConfigurationProvider<DataS
                 sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<DataPathConfiguration, DataPathConfigurationCommand>>()
                     ?? NullLogger<DefaultConfigurationProvider<DataPathConfiguration, DataPathConfigurationCommand>>.Instance,
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                dataStoreName, pathName,
-                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                dataStoreName, pathName));
 
         services.TryAddSingleton<DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>>(sp =>
             new DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>(
                 sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>>()
                     ?? NullLogger<DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>>.Instance,
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                dataStoreName, pathName,
-                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                dataStoreName, pathName));
 
         services.TryAddSingleton<DefaultConfigurationProvider<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>>(sp =>
             new DefaultConfigurationProvider<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>(
                 sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>>()
                     ?? NullLogger<DefaultConfigurationProvider<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>>.Instance,
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                dataStoreName, pathName,
-                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                dataStoreName, pathName));
 
         RegisterContainerKeyProviders(services, dataStoreName, pathName);
 
@@ -106,16 +102,14 @@ public class DataStoreConfigurationProvider : DefaultConfigurationProvider<DataS
                 sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>>()
                     ?? NullLogger<DefaultConfigurationProvider<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>>.Instance,
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                dataStoreName, pathName,
-                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                dataStoreName, pathName));
 
         services.TryAddSingleton<DefaultConfigurationProvider<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>>(sp =>
             new DefaultConfigurationProvider<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>(
                 sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>>()
                     ?? NullLogger<DefaultConfigurationProvider<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>>.Instance,
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                dataStoreName, pathName,
-                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                dataStoreName, pathName));
     }
 
     /// <summary>Initializes a new instance of the <see cref="DataStoreConfigurationProvider"/> class.</summary>
@@ -124,12 +118,10 @@ public class DataStoreConfigurationProvider : DefaultConfigurationProvider<DataS
         Lazy<IConfigurationGateway> lazyGateway,
         Lazy<DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>> containerProvider,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "data",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "data")
         : base(logger ?? NullLogger<DataStoreConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<DataStoreConfigurationProvider>.Instance;
         _containerProvider = containerProvider ?? throw new ArgumentNullException(nameof(containerProvider));
@@ -259,16 +251,14 @@ public class DataStoreConfigurationProvider : DefaultConfigurationProvider<DataS
                 sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>()
                     ?? NullLogger<DefaultConfigurationProvider<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>.Instance,
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                dataStoreName, pathName,
-                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                dataStoreName, pathName));
 
         services.TryAddSingleton<DefaultConfigurationProvider<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>(sp =>
             new DefaultConfigurationProvider<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>(
                 sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>()
                     ?? NullLogger<DefaultConfigurationProvider<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>.Instance,
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                dataStoreName, pathName,
-                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                dataStoreName, pathName));
     }
 
 }

@@ -157,8 +157,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
                 sp.GetRequiredService<ILoggerFactory>().CreateLogger<DefaultConfigurationProvider<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>>(),
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
                 DataStore,
-                PathName,
-                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                PathName));
 
             // Why: a pipeline type can't run without the execution queue + its background consumer, so the
             // option registers what it needs (idempotent — guarded by an existing-registration check, so

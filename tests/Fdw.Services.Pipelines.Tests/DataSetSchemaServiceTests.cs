@@ -36,8 +36,7 @@ public sealed class DataSetSchemaServiceTests
             new Lazy<IConfigurationGateway>(() => throw new InvalidOperationException(
                 "DataSetSchemaService must not touch the gateway directly - it only calls the provider.")),
             "ConfigurationDb",
-            "data",
-            (Lazy<ICacheInvalidator?>?)null!);
+            "data");
     }
 
     private static DataSetFieldDefinition Field(string name, string type, Guid dataSetId = default, int ordinal = 0) =>

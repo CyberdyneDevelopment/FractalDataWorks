@@ -29,8 +29,7 @@ public class ExternalIdentityProviderConfigurationProvider : DefaultConfiguratio
         services.TryAddSingleton<ExternalIdentityProviderConfigurationProvider>(sp =>
             new ExternalIdentityProviderConfigurationProvider(
                 sp.GetService<ILogger<ExternalIdentityProviderConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
 
         services.TryAddSingleton<DefaultConfigurationProvider<ExternalIdentityProviderConfiguration, ExternalIdentityProviderConfigurationCommand>>(
             sp => sp.GetRequiredService<ExternalIdentityProviderConfigurationProvider>());
@@ -44,12 +43,10 @@ public class ExternalIdentityProviderConfigurationProvider : DefaultConfiguratio
         ILogger<ExternalIdentityProviderConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "auth",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "auth")
         : base(logger ?? NullLogger<ExternalIdentityProviderConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
     }
 }

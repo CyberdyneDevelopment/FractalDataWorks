@@ -23,12 +23,10 @@ public class RoslynWorkspaceConnectionConfigurationProvider : DefaultConfigurati
         ILogger<RoslynWorkspaceConnectionConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "conn",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "conn")
         : base(logger ?? NullLogger<RoslynWorkspaceConnectionConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
     }
 }

@@ -23,12 +23,10 @@ public class ScheduleConfigurationProvider : DefaultConfigurationProvider<Schedu
         ILogger<ScheduleConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "sched",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "sched")
         : base(logger ?? NullLogger<ScheduleConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
     }
 }

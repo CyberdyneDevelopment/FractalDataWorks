@@ -395,8 +395,7 @@ public sealed class DefaultAuthorizationServiceTests
             new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>(
                 g => g.DataStores == (System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>())),
             "TestStore",
-            "cfg",
-            (object?)null!) // invalidator
+            "cfg") // invalidator
             .Object;
     }
 }

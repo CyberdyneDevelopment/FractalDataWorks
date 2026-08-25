@@ -67,8 +67,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
                 new UserConfigurationProvider(
                     sp.GetService<ILogger<UserConfigurationProvider>>(),
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    DataStore, "usr",
-                    new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    DataStore, "usr"));
             builder.Services.TryAddSingleton<DefaultConfigurationProvider<UserConfiguration, UserConfigurationCommand>>(
                 sp => sp.GetRequiredService<UserConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<UserConfiguration>>(
@@ -79,8 +78,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
                 new UserTenantConfigurationProvider(
                     sp.GetService<ILogger<UserTenantConfigurationProvider>>(),
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    DataStore, "tenant",
-                    new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    DataStore, "tenant"));
             builder.Services.TryAddSingleton<DefaultConfigurationProvider<UserTenantConfiguration, UserTenantConfigurationCommand>>(
                 sp => sp.GetRequiredService<UserTenantConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<UserTenantConfiguration>>(
@@ -93,8 +91,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
                 new UserPreferenceConfigurationProvider(
                     sp.GetService<ILogger<UserPreferenceConfigurationProvider>>(),
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    DataStore, "usr",
-                    new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    DataStore, "usr"));
 
             // Why: the credential edge hashes-on-arrival and forwards derived hashes to the password
             // credential service (the vault peppers + compares). No command façade — the verbs are the surface.

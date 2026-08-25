@@ -43,8 +43,7 @@ public class UserCredentialServiceTests
             NullLogger<UserConfigurationProvider>.Instance,
             new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
             "ConfigurationDb",
-            "usr",
-            null!);
+            "usr");
 
     private static void SetupGetUser(Mock<UserConfigurationProvider> providerMock, Guid userId, UserConfiguration? cfg)
         => providerMock

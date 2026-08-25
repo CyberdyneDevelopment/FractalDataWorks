@@ -103,8 +103,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<ConnectionConfigurationProvider>(sp =>
                 new ConnectionConfigurationProvider(
                     sp.GetService<ILogger<ConnectionConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
 
             builder.Services.TryAddSingleton<DefaultConfigurationProvider<ConnectionConfiguration, ConnectionConfigurationCommand>>(
                 sp => sp.GetRequiredService<ConnectionConfigurationProvider>());

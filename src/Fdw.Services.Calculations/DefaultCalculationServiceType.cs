@@ -95,8 +95,7 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
             builder.Services.TryAddSingleton<CalculationConfigurationProvider>(sp =>
                 new CalculationConfigurationProvider(
                     sp.GetService<ILogger<CalculationConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                    invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
             builder.Services.TryAddSingleton<DefaultConfigurationProvider<CalculationEntityConfiguration, CalculationEntityConfigurationCommand>>(
                 sp => sp.GetRequiredService<CalculationConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<CalculationEntityConfiguration>>(
@@ -129,7 +128,6 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
                 sp.GetService<ILogger<DefaultConfigurationProvider<TConfig, TCommand>>>(),
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
                 "ConfigurationDb",
-                "calc",
-                new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                "calc"));
     }
 }

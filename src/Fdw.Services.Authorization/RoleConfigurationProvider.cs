@@ -47,8 +47,7 @@ public class RoleConfigurationProvider : DefaultConfigurationProvider<RoleConfig
         services.TryAddSingleton<RoleConfigurationProvider>(sp =>
             new RoleConfigurationProvider(
                 sp.GetService<ILogger<RoleConfigurationProvider>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
         services.TryAddSingleton<DefaultConfigurationProvider<RoleConfiguration, RoleConfigurationCommand>>(
             sp => sp.GetRequiredService<RoleConfigurationProvider>());
         services.TryAddSingleton<IAuthorizationProvider>(sp =>
@@ -63,12 +62,10 @@ public class RoleConfigurationProvider : DefaultConfigurationProvider<RoleConfig
         ILogger<RoleConfigurationProvider>? logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "authz",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "authz")
         : base(logger ?? NullLogger<RoleConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<RoleConfigurationProvider>.Instance;
     }

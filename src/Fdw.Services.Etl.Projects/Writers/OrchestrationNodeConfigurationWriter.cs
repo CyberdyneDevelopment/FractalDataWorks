@@ -22,7 +22,6 @@ public sealed class OrchestrationNodeConfigurationWriter
 {
     private readonly IOrchestrationNodeConfigurationProvider _provider;
     private readonly IValidator<OrchestrationNodeConfiguration> _validator;
-    private readonly ICacheInvalidator _cacheInvalidator;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -31,12 +30,10 @@ public sealed class OrchestrationNodeConfigurationWriter
     public OrchestrationNodeConfigurationWriter(
         IOrchestrationNodeConfigurationProvider provider,
         IValidator<OrchestrationNodeConfiguration> validator,
-        ICacheInvalidator cacheInvalidator,
         ILogger<OrchestrationNodeConfigurationWriter>? logger = null)
     {
         _provider = provider ?? throw new ArgumentNullException(nameof(provider));
         _validator = validator ?? throw new ArgumentNullException(nameof(validator));
-        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? NullLogger<OrchestrationNodeConfigurationWriter>.Instance;
     }
 
@@ -64,9 +61,6 @@ public sealed class OrchestrationNodeConfigurationWriter
             if (!saveResult.IsSuccess)
                 return saveResult.ToNewResult<OrchestrationNodeConfiguration>();
 
-            // Why: Invalidate after successful persist so subsequent queries reflect the new record.
-            _cacheInvalidator.InvalidateByTag("pipe.OrchestrationNode");
-
             OrchestrationNodeConfigurationLog.NodeSaved(_logger, config.Name, config.Id);
             return GenericResult<OrchestrationNodeConfiguration>.Success(saveResult.Value!);
         }
@@ -87,9 +81,6 @@ public sealed class OrchestrationNodeConfigurationWriter
             var deleteResult = await _provider.Delete(id, cancellationToken).ConfigureAwait(false);
             if (!deleteResult.IsSuccess)
                 return deleteResult;
-
-            // Why: Invalidate after successful delete so subsequent queries do not return stale data.
-            _cacheInvalidator.InvalidateByTag("pipe.OrchestrationNode");
 
             return GenericResult.Success();
         }

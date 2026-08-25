@@ -24,17 +24,14 @@ public class ClientCredentialsConfigurationProvider
     /// <param name="lazyGateway">The configuration gateway.</param>
     /// <param name="dataStoreName">The store holding the table.</param>
     /// <param name="pathName">The schema the table lives in.</param>
-    /// <param name="invalidator">Cache invalidator, when one is registered.</param>
     public ClientCredentialsConfigurationProvider(
         ILogger<ClientCredentialsConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "sec",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "sec")
         : base(logger ?? NullLogger<ClientCredentialsConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
     }
 }

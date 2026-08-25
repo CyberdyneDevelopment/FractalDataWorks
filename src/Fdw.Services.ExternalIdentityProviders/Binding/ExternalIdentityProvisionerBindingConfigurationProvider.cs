@@ -35,8 +35,7 @@ public class ExternalIdentityProvisionerBindingConfigurationProvider
         services.TryAddSingleton<ExternalIdentityProvisionerBindingConfigurationProvider>(sp =>
             new ExternalIdentityProvisionerBindingConfigurationProvider(
                 sp.GetService<ILogger<ExternalIdentityProvisionerBindingConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                invalidator: new Lazy<ICacheInvalidator?>(() => sp.GetService<ICacheInvalidator>())));
+                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
 
         services.TryAddSingleton<DefaultConfigurationProvider<ExternalIdentityProvisionerBindingConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>>(
             sp => sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
@@ -50,12 +49,10 @@ public class ExternalIdentityProvisionerBindingConfigurationProvider
         ILogger<ExternalIdentityProvisionerBindingConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "sec",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "sec")
         : base(logger ?? NullLogger<ExternalIdentityProvisionerBindingConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
         // Why: the base class's own ILogger field is private — this provider's extra
         // ResolveProvisionerName method needs its own reference to the same logger for its

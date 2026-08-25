@@ -33,12 +33,10 @@ public class ConnectionConfigurationProvider : DefaultConfigurationProvider<Conn
         ILogger<ConnectionConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
         string dataStoreName = "ConfigurationDb",
-        string pathName = "conn",
-        Lazy<ICacheInvalidator?>? invalidator = null)
+        string pathName = "conn")
         : base(logger ?? NullLogger<ConnectionConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName,
-               invalidator)
+               dataStoreName, pathName)
     {
     }
 }
