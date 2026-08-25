@@ -17,7 +17,7 @@ namespace Fdw.Data.Sqlite;
 /// Because SQLite does not support schema namespaces, <see cref="Schema"/> is always null
 /// and <see cref="IDatabasePath"/> reports no schema namespace support.
 /// </remarks>
-public sealed class SqliteDatabasePath : PathBase, IDataNodePath<IStorageContainer>, IDatabasePath
+public sealed class SqliteDatabasePath : PathBase, IDataPath<IStorageContainer>, IDatabasePath
 {
     private readonly List<IStorageContainer> _containers;
 

@@ -17,7 +17,7 @@ namespace Fdw.Data.PostgreSql;
 /// PostgreSQL does not typically use three-part names (database.schema.table)
 /// since cross-database queries are not directly supported.
 /// </remarks>
-public sealed class PostgreSqlDatabasePath : PathBase, IDataNodePath<IStorageContainer>, IDatabasePath
+public sealed class PostgreSqlDatabasePath : PathBase, IDataPath<IStorageContainer>, IDatabasePath
 {
     private readonly List<IStorageContainer> _containers;
 

@@ -52,7 +52,11 @@ public sealed class RowMappingContextTests
         // Arrange
         var (reader, container) = CreateReaderAndContainer("Name", "MissingField");
         reader.Setup(r => r.GetOrdinal("Name")).Returns(0);
-        reader.Setup(r => r.GetOrdinal("MissingField")).Throws(new IndexOutOfRangeException());
+        reader.Setup(r => r.GetOrdinal("MissingField")).Throws(
+#pragma warning disable CA2201 // IDataReader.GetOrdinal is documented to throw this for an unknown name; the mock reproduces the contract
+            new IndexOutOfRangeException()
+#pragma warning restore CA2201
+            );
 
         // Act
         var context = RowMappingContext.Create(reader.Object, container.Object);

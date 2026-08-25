@@ -17,7 +17,7 @@ namespace Fdw.Data.Http.Paths;
 /// Format: /segment/segment/{parameter} (e.g., "/api/v1/customers/{id}")
 /// </summary>
 [ExcludeFromCodeCoverage] // Excluded: requires HTTP connections
-public sealed class HttpPath : PathBase, IDataNodePath<IStorageContainer>
+public sealed class HttpPath : PathBase, IDataPath<IStorageContainer>
 {
     private readonly List<IStorageContainer> _containers;
     private readonly Dictionary<string, PathParameter> _parameters;

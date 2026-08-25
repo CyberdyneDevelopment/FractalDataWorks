@@ -17,7 +17,7 @@ using Fdw.Services.Connections.Abstractions;
 
 namespace Fdw.Services.Connections.Tests;
 
-public sealed class ConnectionBaseTests
+public sealed class ConnectionBaseTests : IDisposable
 {
     private readonly Mock<IDataCommandTranslator<TestNativeCommand>> _mockTranslator;
     private readonly Mock<IDataContainer> _mockContainer;
@@ -513,4 +513,7 @@ public sealed class ConnectionBaseTests
     }
 
     #endregion
+
+    /// <summary>Disposes the connection under test.</summary>
+    public void Dispose() => _sut?.Dispose();
 }

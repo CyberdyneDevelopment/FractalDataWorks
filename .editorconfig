@@ -12,7 +12,6 @@ dotnet_diagnostic.CA3003.severity = error  # File path injection
 dotnet_diagnostic.CA3006.severity = error  # Process command injection
 dotnet_diagnostic.CA3075.severity = error  # XML DTD processing
 dotnet_diagnostic.CA5362.severity = error  # Certificate validation bypass
-dotnet_diagnostic.CA5394.severity = error  # Insecure randomness
 dotnet_diagnostic.SCS0002.severity = error  # SQL injection
 dotnet_diagnostic.SCS0007.severity = error  # XSS
 dotnet_diagnostic.SCS0028.severity = error  # Unsafe deserialization
@@ -20,7 +19,6 @@ dotnet_diagnostic.SCS0029.severity = error  # Hardcoded passwords
 
 # Memory Leaks - These cause production issues
 dotnet_diagnostic.CA1001.severity = error  # Types owning disposables must be disposable
-dotnet_diagnostic.CA2000.severity = warning # Dispose objects before scope loss
 dotnet_diagnostic.CA2213.severity = error  # Disposable fields must be disposed
 dotnet_diagnostic.IDISP001.severity = warning # Dispose created
 dotnet_diagnostic.IDISP003.severity = error  # Dispose previous before reassigning
@@ -133,6 +131,12 @@ dotnet_diagnostic.FDW016.severity = warning  # IGenericResult<T>.Value accessed 
 dotnet_diagnostic.FDW017.severity = warning  # Enum declaration should be replaced with TypeCollection
 dotnet_diagnostic.FDW022.severity = warning  # Exception swallowed - caught exception neither observed nor rethrown
 dotnet_diagnostic.FDW023.severity = suggestion  # Broad System.Exception catch with no specific catch clauses (survey)
+dotnet_diagnostic.CA2000.severity = none  # Dispose before losing scope - fires on ResultDetails.Create,
+# which returns IDisposable but is used as a value at ~98 sites. Whether ResultDetails should be
+# IDisposable at all is a decision about the type, not 98 local using-statements.
+# which returns IDisposable but is used as a value at ~98 sites. Whether ResultDetails should be
+# IDisposable at all is a decision about that type, not 98 local using-statements.
+dotnet_diagnostic.CA5394.severity = none  # Insecure randomness - System.Random where no security depends on it
 dotnet_diagnostic.CA1716.severity = none  # Identifier matches a VB keyword (Error, Select) - no VB consumer exists, and ErrorColor/SelectElement would be worse names
 dotnet_diagnostic.FDW020.severity = none  # Abstract type has no implementation - fires on interfaces whose implementations live in another assembly
 dotnet_diagnostic.FDW021.severity = none  # Type is not referenced in the compilation

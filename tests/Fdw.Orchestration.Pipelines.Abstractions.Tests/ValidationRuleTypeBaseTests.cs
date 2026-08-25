@@ -1,6 +1,6 @@
 using Fdw.Orchestration.Pipelines.Abstractions.TypeCollections.ValidationRuleTypeOptions;
 using Fdw.Results;
-using TypedValidationResult = Fdw.Orchestration.Pipelines.Abstractions.TypeCollections.ValidationRuleTypeOptions.ValidationResult;
+using TypedValidationResult = Fdw.Orchestration.Pipelines.Abstractions.TypeCollections.ValidationRuleTypeOptions.ValidationRuleResult;
 
 namespace Fdw.Orchestration.Pipelines.Abstractions.Tests;
 

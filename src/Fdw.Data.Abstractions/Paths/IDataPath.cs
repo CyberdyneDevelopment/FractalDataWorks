@@ -12,14 +12,14 @@ namespace Fdw.Data.DataStores.Abstractions;
 /// from the physical storage mechanism.
 /// </summary>
 /// <remarks>
-/// IDataNodePath represents HOW to navigate within a data store to find specific data.
+/// IDataPath represents HOW to navigate within a data store to find specific data.
 /// It's separate from the store location and the data format. Examples:
 /// - SQL: Database.Schema.Table (e.g., "SalesDB.dbo.Orders")
 /// - REST: Endpoint segments (e.g., "/api/v1/customers/{id}/orders")
 /// - File: Directory/filename pattern (e.g., "data/2024/weather_seattle.csv")
 /// - GraphQL: Query path (e.g., "user.profile.orders")
 /// </remarks>
-public interface IDataNodePath
+public interface IDataPath
 {
     /// <summary>
     /// Gets the unique identifier for this data path.
@@ -94,7 +94,7 @@ public interface IDataNodePath
     /// with actual values. For example, "/api/users/{id}" with {"id": "123"} 
     /// becomes "/api/users/123".
     /// </remarks>
-    IDataNodePath ResolveParameters(IDictionary<string, object> parameters);
+    IDataPath ResolveParameters(IDictionary<string, object> parameters);
 
     /// <summary>
     /// Validates whether the provided parameters satisfy this path's requirements.
@@ -114,7 +114,7 @@ public interface IDataNodePath
     /// This method supports hierarchical path navigation. For example,
     /// the parent of "Database.Schema.Table" would be "Database.Schema".
     /// </remarks>
-    IDataNodePath? GetParent();
+    IDataPath? GetParent();
 
     /// <summary>
     /// Gets child paths if this path supports hierarchical navigation.
@@ -124,7 +124,7 @@ public interface IDataNodePath
     /// This method supports discovery of sub-paths. For example, a database
     /// schema path might return table paths as children.
     /// </remarks>
-    IEnumerable<IDataNodePath> GetChildren();
+    IEnumerable<IDataPath> GetChildren();
 
     /// <summary>
     /// Combines this path with a relative path to create a new path.
@@ -135,7 +135,7 @@ public interface IDataNodePath
     /// This method supports path composition. For example, combining
     /// "/api/users" with "{id}/orders" creates "/api/users/{id}/orders".
     /// </remarks>
-    IDataNodePath Combine(string relativePath);
+    IDataPath Combine(string relativePath);
 }
 
 /// <summary>
@@ -153,7 +153,7 @@ public interface IDataNodePath
 /// <see cref="Fdw.Data.Abstractions.IDataNodePath"/> tree-navigation node (with
 /// <c>Containers</c>/<c>Container(name)</c>) is the model going forward.
 /// </remarks>
-public interface IDataNodePath<TContainer> : IDataNodePath
+public interface IDataPath<TContainer> : IDataPath
     where TContainer : IStorageContainer
 {
     /// <summary>

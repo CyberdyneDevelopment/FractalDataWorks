@@ -89,7 +89,7 @@ public class ResilienceOptionsTests
         };
 
         sut.OnRetry.ShouldNotBeNull();
-        sut.OnRetry!(new Exception(), 1, TimeSpan.Zero);
+        sut.OnRetry!(new InvalidOperationException("retry probe"), 1, TimeSpan.Zero);
         callbackInvoked.ShouldBeTrue();
     }
 
