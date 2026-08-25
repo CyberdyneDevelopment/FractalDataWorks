@@ -88,17 +88,15 @@ public sealed class AuthenticationService : IAuthenticationService
 
         TokenManagerLog.AuthenticatingGrant(_logger, request.GrantType);
 
-        // Why: only first-party credential grants are verified here — client_credentials and any
-        // other provider-specific grant validation is left entirely to the active token manager's
-        // Issue, per the TokenManager build plan.
-        if (string.Equals(request.GrantType, "password", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(request.GrantType, "agent_key", StringComparison.OrdinalIgnoreCase))
-        {
-            var credentialResult = await VerifyCredential(request, cancellationToken).ConfigureAwait(false);
-            if (!credentialResult.IsSuccess)
-                return credentialResult.ToNewResult<ClaimsPrincipal>();
-        }
-
+        // Why no credential check here: the active token manager IS the credential seam — this service
+        // is the provider-agnostic half and delegates every grant to it. Verifying first-party grants
+        // here as well ran the derivation TWICE for one login: once at VerifyCredential and again inside
+        // Issue, two 210,000-iteration PBKDF2 passes for the same password on the same request.
+        //
+        // The split is by AUTHORITY, not by layer. Either an external provider verified the caller
+        // (external_identity — no password ever reaches us) or we verify it ourselves (password /
+        // agent_key). One authority means one check. Removing the outer one also keeps the stricter
+        // of the two: the token manager rejects an inactive user, this service never did.
         var tokenManagerResult = await ResolveActiveTokenManager(cancellationToken).ConfigureAwait(false);
         if (!tokenManagerResult.IsSuccess)
             return tokenManagerResult.ToNewResult<ClaimsPrincipal>();
@@ -193,60 +191,7 @@ public sealed class AuthenticationService : IAuthenticationService
         return GenericResult.Success();
     }
 
-    private async Task<IGenericResult> VerifyCredential(TokenIssuanceRequest request, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrEmpty(request.Subject))
-            return GenericResult.Failure(TokenManagerLog.SubjectInvalid(_logger, request.GrantType));
 
-        if (string.IsNullOrEmpty(request.Credential))
-            return GenericResult.Failure(TokenManagerLog.CredentialMissing(_logger, request.GrantType));
-
-        // Why: password/agent_key grants carry the FDW username (not a GUID) in Subject — resolve it
-        // to the durable user Id via UserConfigurationProvider before calling Verify, which is keyed
-        // by Id. Only fall back to treating Subject as an already-resolved Id if it parses as a GUID
-        // (defensive — no caller currently sends a GUID here, but this keeps the check non-lossy).
-        Guid userId;
-        if (!Guid.TryParse(request.Subject, out userId))
-        {
-            var userResult = await _userConfigurationProvider.GetUser(request.Subject, cancellationToken).ConfigureAwait(false);
-            if (!userResult.IsSuccess || userResult.Value is null)
-                return GenericResult.Failure(TokenManagerLog.SubjectNotResolved(_logger, request.GrantType, request.Subject));
-
-            userId = userResult.Value.Id;
-        }
-
-        // Why: an agent key is not a user secret. IUserCredentialService is the PASSWORD edge and
-        // says so — it rejects every secretType but Password — so routing agent_key there could
-        // never succeed. The agent-key edge verifies the key itself, which also resolves its owner.
-        if (string.Equals(request.GrantType, "agent_key", StringComparison.OrdinalIgnoreCase))
-            return await VerifyAgentKey(request, userId, cancellationToken).ConfigureAwait(false);
-
-        var verifyResult = await _userCredentialService.Verify(userId, "Password", request.Credential, cancellationToken).ConfigureAwait(false);
-        if (!verifyResult.IsSuccess)
-            return verifyResult;
-
-        if (!verifyResult.Value!.GrantsAccess)
-            return GenericResult.Failure(TokenManagerLog.CredentialDenied(_logger, request.GrantType));
-
-        return GenericResult.Success();
-    }
-
-    private async Task<IGenericResult> VerifyAgentKey(TokenIssuanceRequest request, Guid userId, CancellationToken cancellationToken)
-    {
-        if (_agentKeyService is null)
-            return GenericResult.Failure(TokenManagerLog.AgentKeyServiceNotConfigured(_logger));
-
-        var keyResult = await _agentKeyService.ValidateKey(request.Credential!, cancellationToken).ConfigureAwait(false);
-        if (!keyResult.IsSuccess)
-            return keyResult;
-
-        // Why: the key carries its own owner. Requiring it to match the resolved subject stops a
-        // valid key being presented for somebody else's account.
-        if (!keyResult.Value!.IsValid || keyResult.Value.UserId != userId)
-            return GenericResult.Failure(TokenManagerLog.CredentialDenied(_logger, request.GrantType));
-
-        return GenericResult.Success();
-    }
 
     // Why: resolves the active token manager BY CONFIGURED NAME rather than the list-all Get()
     // overload (the scaffold gap) — mirrors how the OpenIddict configurators resolve the secret
