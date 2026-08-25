@@ -4,7 +4,7 @@ using Fdw.Configuration;
 using Fdw.Data;
 using Fdw.Services.Connections.Abstractions;
 
-namespace Fdw.Aegis.McpServer.Tests;
+namespace Fdw.Services.Connections.TestDouble;
 
 /// <summary>
 /// A connection configuration used only to give the schema-load tests a typed body to

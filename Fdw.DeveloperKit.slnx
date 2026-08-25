@@ -699,6 +699,14 @@
       <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
+    <Project Path="tests/Fdw.Services.Connections.TestDouble/Fdw.Services.Connections.TestDouble.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
     <Project Path="tests/Fdw.Services.Data.Abstractions.Tests/Fdw.Services.Data.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Services.Data.Clients.Tests/Fdw.Services.Data.Clients.Tests.csproj" />
     <Project Path="tests/Fdw.Services.Etl.Abstractions.Tests/Fdw.Services.Etl.Abstractions.Tests.csproj" />

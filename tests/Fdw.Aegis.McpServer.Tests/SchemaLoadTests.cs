@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Fdw.Aegis.Configuration;
 using Fdw.Services.SecretManagers.TestDouble;
+using Fdw.Services.Connections.TestDouble;
 using Fdw.Aegis.McpServer.Tests;
 
 namespace Fdw.Aegis.McpServer.Tests;
