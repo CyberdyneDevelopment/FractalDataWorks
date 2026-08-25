@@ -429,7 +429,7 @@ public static partial class PipelineBuilderProviderLog
     /// <remarks>
     /// Why: <c>OperationTypes.All()</c>/<c>TransformationTypes.All()</c> live only in the server-side
     /// Fdw.Services.Transformations core, which Fdw.UI.Pages no longer references (canvas decoupling).
-    /// <c>GetConfigurationTypesByCategoryEndpoint</c> (configuration/types?category=) is NOT the right
+    /// <c>GetConfigurationTypesByCategoryEndpointBase</c> (configuration/types?category=) is NOT the right
     /// mechanism here — it discovers <c>[ManagedConfiguration]</c> containers by physical schema/table
     /// (and, per its own remarks, returns empty until Wave A6 adds SectionPath metadata to
     /// IDataContainer), not <c>ServiceTypeCollection</c> behavior catalogs. The same gap already forced

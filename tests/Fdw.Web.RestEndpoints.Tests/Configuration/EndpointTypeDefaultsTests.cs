@@ -29,7 +29,7 @@ public class EndpointTypeDefaultsTests
     public void QueryEndpointHasCorrectDefaults()
     {
         // Arrange & Act
-        var sut = new QueryEndpoint();
+        var sut = new QueryEndpointBase();
 
         // Assert
         sut.SecurityMethodName.ShouldBe("ApiKey");
@@ -46,7 +46,7 @@ public class EndpointTypeDefaultsTests
     public void CommandEndpointHasCorrectDefaults()
     {
         // Arrange & Act
-        var sut = new CommandEndpoint();
+        var sut = new CommandEndpointBase();
 
         // Assert
         sut.SecurityMethodName.ShouldBe("JWT");

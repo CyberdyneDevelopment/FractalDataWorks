@@ -11,7 +11,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// Generic base endpoint for retrieving a specific data set by name.
 /// Delegates all reads to DataSetConfigurationProvider.
 /// </summary>
-public abstract class GetDataSetEndpointBase : CrudGetEndpoint<DataSetNameRequest, DataSetDetailResponse>
+public abstract class GetDataSetEndpointBase : CrudGetEndpointBase<DataSetNameRequest, DataSetDetailResponse>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
 

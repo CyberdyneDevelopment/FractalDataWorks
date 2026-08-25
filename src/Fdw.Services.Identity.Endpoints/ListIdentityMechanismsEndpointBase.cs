@@ -16,7 +16,7 @@ namespace Fdw.Services.Identity.Endpoints;
 /// referencing a package appears here without this endpoint changing. A hardcoded list would close a
 /// set the framework deliberately keeps open.
 /// </remarks>
-public abstract class ListIdentityMechanismsEndpointBase : CrudListEndpoint<IdentityMechanismDto>
+public abstract class ListIdentityMechanismsEndpointBase : CrudListEndpointBase<IdentityMechanismDto>
 {
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "identity-mechanisms";

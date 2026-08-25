@@ -30,7 +30,7 @@ public class ScheduleHttpClient : ApiClientBase, IScheduleClient, IResourceQuery
     /// <inheritdoc />
     public Task<IGenericResult<IReadOnlyList<ScheduleInfoDto>>> List(CancellationToken cancellationToken = default)
     {
-        // Why: CrudListEndpoint emits the paged envelope { items: [...], totalCount } —
+        // Why: CrudListEndpointBase emits the paged envelope { items: [...], totalCount } —
         // use GetList which unwraps both the envelope and a plain array; Get<IReadOnlyList<T>>
         // can't unwrap the envelope and always yields an empty list (FINDINGS bug #2).
         return GetList<ScheduleInfoDto>("schedules", cancellationToken);

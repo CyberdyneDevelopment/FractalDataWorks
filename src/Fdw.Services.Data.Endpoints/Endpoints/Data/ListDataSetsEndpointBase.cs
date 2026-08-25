@@ -13,7 +13,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// Generic base endpoint for listing all configured data sets.
 /// Delegates all reads to DataSetConfigurationProvider.
 /// </summary>
-public abstract class ListDataSetsEndpointBase : CrudListEndpoint<DataSetSummaryResponse>
+public abstract class ListDataSetsEndpointBase : CrudListEndpointBase<DataSetSummaryResponse>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
 

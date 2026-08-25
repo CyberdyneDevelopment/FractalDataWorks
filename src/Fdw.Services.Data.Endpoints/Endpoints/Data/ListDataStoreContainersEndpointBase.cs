@@ -12,7 +12,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// <summary>
 /// Base endpoint for listing all containers across all data stores.
 /// </summary>
-public abstract class ListDataStoreContainersEndpointBase : CrudListEndpoint<DataStoreContainerWithPathDto>
+public abstract class ListDataStoreContainersEndpointBase : CrudListEndpointBase<DataStoreContainerWithPathDto>
 {
     // Why: DataStoreConfigurationProvider (dual-source) merges system (ctrl) and user (cfg) DataStore configs.
     private readonly DataStoreConfigurationProvider _dataStoreProvider;

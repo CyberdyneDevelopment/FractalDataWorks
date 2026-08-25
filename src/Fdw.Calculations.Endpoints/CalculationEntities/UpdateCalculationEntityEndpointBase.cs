@@ -6,7 +6,7 @@ namespace Fdw.Calculations.Endpoints.CalculationEntities;
 /// Base endpoint for updating a calculation entity.
 /// Route: PATCH /calculation-entities/{id}
 /// </summary>
-public abstract class UpdateCalculationEntityEndpointBase : CrudUpdateEndpoint<UpdateCalculationEntityRequest, CalculationEntityDetailDto>
+public abstract class UpdateCalculationEntityEndpointBase : CrudUpdateEndpointBase<UpdateCalculationEntityRequest, CalculationEntityDetailDto>
 {
     /// <inheritdoc/>
     protected override string ResourceName => "calculation-entities";

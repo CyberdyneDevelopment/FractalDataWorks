@@ -9,7 +9,7 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// Generic base endpoint for deleting a pipeline configuration.
 /// </summary>
 /// <typeparam name="TConfig">The concrete pipeline configuration type.</typeparam>
-public abstract class DeletePipelineEndpointBase<TConfig> : CrudDeleteEndpoint<PipelineNameRequest>
+public abstract class DeletePipelineEndpointBase<TConfig> : CrudDeleteEndpointBase<PipelineNameRequest>
     where TConfig : PipelineConfiguration
 {
     // Why: PipelineServiceConfigurationProvider replaces IOptionsMonitor<List<T>> with dual-source

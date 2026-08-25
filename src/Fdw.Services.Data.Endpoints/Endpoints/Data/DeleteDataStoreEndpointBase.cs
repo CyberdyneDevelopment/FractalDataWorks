@@ -13,7 +13,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// Generic base endpoint for deleting a data store configuration.
 /// </summary>
 /// <typeparam name="TConfig">The concrete data store configuration type.</typeparam>
-public abstract class DeleteDataStoreEndpointBase<TConfig> : CrudDeleteEndpoint<DataStoreNameRequest>
+public abstract class DeleteDataStoreEndpointBase<TConfig> : CrudDeleteEndpointBase<DataStoreNameRequest>
     where TConfig : DataStoreConfiguration
 {
     // Why: DataStoreConfigurationProvider (dual-source) merges system (ctrl) and user (cfg) DataStore configs.

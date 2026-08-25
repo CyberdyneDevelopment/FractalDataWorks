@@ -20,7 +20,7 @@ namespace Fdw.Services.Identity.Endpoints;
 /// location. A single route taking a union of both would accept combinations that cannot work.
 /// </remarks>
 public abstract class CreateIdentityEndpointBase<TConfig, TRequest>
-    : CrudCreateEndpoint<TRequest, IdentityDetailResponse>
+    : CrudCreateEndpointBase<TRequest, IdentityDetailResponse>
     where TConfig : class, IIdentityServiceConfiguration
     where TRequest : CreateIdentityRequest, new()
 {

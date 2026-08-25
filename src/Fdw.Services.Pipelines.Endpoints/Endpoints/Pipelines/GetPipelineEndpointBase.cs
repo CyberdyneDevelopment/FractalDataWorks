@@ -10,7 +10,7 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// Generic base endpoint for getting a pipeline by name.
 /// </summary>
 /// <typeparam name="TConfig">The concrete pipeline configuration type.</typeparam>
-public abstract class GetPipelineEndpointBase<TConfig> : CrudGetEndpoint<PipelineNameRequest, PipelineDetailResponse>
+public abstract class GetPipelineEndpointBase<TConfig> : CrudGetEndpointBase<PipelineNameRequest, PipelineDetailResponse>
     where TConfig : PipelineConfiguration
 {
     // Why: PipelineServiceConfigurationProvider replaces IOptionsMonitor<List<T>> with dual-source

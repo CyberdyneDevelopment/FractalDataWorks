@@ -12,7 +12,7 @@ namespace Fdw.Services.Scheduling.Endpoints;
 /// Generic base endpoint for updating an existing schedule configuration.
 /// </summary>
 /// <typeparam name="TConfig">The concrete schedule configuration type.</typeparam>
-public abstract class UpdateScheduleEndpointBase<TConfig> : CrudUpdateEndpoint<UpdateScheduleRequest, ScheduleDetailDto>
+public abstract class UpdateScheduleEndpointBase<TConfig> : CrudUpdateEndpointBase<UpdateScheduleRequest, ScheduleDetailDto>
     where TConfig : ScheduleConfiguration
 {
     // Why: ScheduleConfigurationProvider replaces IOptionsMonitor<List<T>> with dual-source

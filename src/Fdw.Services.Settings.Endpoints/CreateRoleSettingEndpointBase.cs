@@ -14,7 +14,7 @@ namespace Fdw.Services.Settings.Endpoints;
 /// <summary>
 /// Base endpoint for creating a role-level setting override.
 /// </summary>
-public abstract class CreateRoleSettingEndpointBase : CrudCreateEndpoint<CreateRoleSettingRequest, RoleSettingSummaryDto>
+public abstract class CreateRoleSettingEndpointBase : CrudCreateEndpointBase<CreateRoleSettingRequest, RoleSettingSummaryDto>
 {
     // Why: SettingsConfigurationProvider replaces IOptionsMonitor<List<RoleSettingConfiguration>>
     // with dual-source (ctrl + cfg) provider that provides server/tenant/role settings.

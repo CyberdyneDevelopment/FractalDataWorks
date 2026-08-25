@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Web.RestEndpoints.Tests.Base;
 
-// Test implementation for CommandEndpoint with result
-public class TestCommandEndpoint : CommandEndpoint<TestCommand, TestCommandResult>
+// Test implementation for CommandEndpointBase with result
+public class TestCommandEndpoint : CommandEndpointBase<TestCommand, TestCommandResult>
 {
     private readonly Func<TestCommand, CancellationToken, Task<IGenericResult<TestCommandResult>>> _executeFunc;
     private readonly Func<TestCommand, CancellationToken, Task<IGenericResult>>? _authFunc;
@@ -48,8 +48,8 @@ public class TestCommandEndpoint : CommandEndpoint<TestCommand, TestCommandResul
     public Task<IGenericResult> PublicCheckAuthorizationAsync(TestCommand command, CancellationToken ct) => CheckAuthorization(command, ct);
 }
 
-// Test implementation for void CommandEndpoint
-public class TestVoidCommandEndpoint : CommandEndpoint<TestCommand>
+// Test implementation for void CommandEndpointBase
+public class TestVoidCommandEndpoint : CommandEndpointBase<TestCommand>
 {
     private readonly Func<TestCommand, CancellationToken, Task<IGenericResult>> _executeFunc;
 

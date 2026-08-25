@@ -29,7 +29,7 @@ namespace Fdw.Services.Connections;
 /// <c>ConnectionConfigurationProvider.Save(ConnectionConfiguration, CancellationToken)</c> (inherited,
 /// generic-closed; not a resolvable cref target),
 /// and records history through <see cref="IConnectionHealthService"/> — the same two writes
-/// <c>TestConnectionEndpoint</c> performs for a manual test, just on a timer instead of a click.
+/// <c>TestConnectionEndpointBase</c> performs for a manual test, just on a timer instead of a click.
 /// <para>
 /// Why a fixed internal scan tick rather than a config value: each row's own
 /// <see cref="ConnectionConfiguration.HealthCheckIntervalSeconds"/> is the domain value that governs

@@ -14,7 +14,7 @@ namespace Fdw.Web.RestEndpoints.Crud;
 /// <typeparam name="TResource">The resource detail type returned after update.</typeparam>
 /// <typeparam name="TKey">The key type used for lookup.</typeparam>
 public abstract class UpdateByPropertyEndpointBase<TBody, TResource, TKey>
-    : CrudUpdateEndpoint<UpdateByPropertyRequest<TKey, TBody>, TResource>
+    : CrudUpdateEndpointBase<UpdateByPropertyRequest<TKey, TBody>, TResource>
     where TBody : class
     where TResource : class
     where TKey : notnull

@@ -6,7 +6,7 @@ namespace Fdw.Calculations.Endpoints.CalculationEntities;
 /// Base endpoint for deleting a calculation entity (soft delete).
 /// Route: DELETE /calculation-entities/{id}
 /// </summary>
-public abstract class DeleteCalculationEntityEndpointBase : CrudDeleteEndpoint<CalculationEntityIdRequest>
+public abstract class DeleteCalculationEntityEndpointBase : CrudDeleteEndpointBase<CalculationEntityIdRequest>
 {
     /// <inheritdoc/>
     protected override string ResourceName => "calculation-entities";

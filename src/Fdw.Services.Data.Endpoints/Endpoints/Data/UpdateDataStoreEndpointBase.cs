@@ -17,7 +17,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// Generic base endpoint for updating an existing data store configuration.
 /// </summary>
 /// <typeparam name="TConfig">The concrete data store configuration type.</typeparam>
-public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpoint<UpdateDataStoreRequest, DataStoreDetailResponse>
+public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointBase<UpdateDataStoreRequest, DataStoreDetailResponse>
     where TConfig : DataStoreConfiguration
 {
     // Why: DataStoreConfigurationProvider provides dual-source (ctrl + cfg) merging

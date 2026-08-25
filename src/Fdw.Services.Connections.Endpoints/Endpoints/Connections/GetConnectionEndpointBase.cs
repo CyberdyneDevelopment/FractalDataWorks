@@ -16,7 +16,7 @@ namespace Fdw.Services.Connections.Endpoints;
 /// every connection type (MsSql, Http, PostgreSql, FileSystem, RoslynWorkspace) rather than being
 /// locked to a single typed provider.
 /// </summary>
-public abstract class GetConnectionEndpointBase : CrudGetEndpoint<ConnectionNameRequest, ConnectionDetailDto>
+public abstract class GetConnectionEndpointBase : CrudGetEndpointBase<ConnectionNameRequest, ConnectionDetailDto>
 {
     // Why: the parent provider reads conn.Connection via the configuration gateway AND populates
     // header.Configuration with the typed body (PopulateTypedBody dispatches on ServiceOptionType).

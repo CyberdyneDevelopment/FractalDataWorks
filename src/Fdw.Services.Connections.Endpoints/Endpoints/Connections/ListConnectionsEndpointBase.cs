@@ -13,7 +13,7 @@ namespace Fdw.Services.Connections.Endpoints;
 /// Reads from the connection configuration provider (dual-source: ctrl + cfg),
 /// so newly created connections appear without requiring a server restart.
 /// </summary>
-public abstract class ListConnectionsEndpointBase : CrudListEndpoint<ConnectionSummaryDto>
+public abstract class ListConnectionsEndpointBase : CrudListEndpointBase<ConnectionSummaryDto>
 {
     // Why: ConnectionConfigurationProvider (dual-source) replaces IConnectionProvider.GetAllConnectionConfigurations()
     // which was removed. The provider merges system (ctrl) and user (cfg) connection configs.

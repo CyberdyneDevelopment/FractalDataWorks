@@ -10,7 +10,7 @@ namespace Fdw.Calculations.Endpoints.CalculationEntities;
 /// Base endpoint for listing calculation entities.
 /// Route: GET /calculation-entities
 /// </summary>
-public abstract class ListCalculationEntitiesEndpointBase : CrudListEndpoint<CalculationEntitySummaryDto>
+public abstract class ListCalculationEntitiesEndpointBase : CrudListEndpointBase<CalculationEntitySummaryDto>
 {
     /// <inheritdoc/>
     protected override string ResourceName => "calculation-entities";

@@ -12,7 +12,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// <summary>
 /// Base endpoint for retrieving a specific data store by name, including paths and containers.
 /// </summary>
-public abstract class GetDataStoreEndpointBase : CrudGetEndpoint<DataStoreNameRequest, DataStoreDetailResponse>
+public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNameRequest, DataStoreDetailResponse>
 {
     // Why: DataStoreConfigurationProvider provides dual-source (ctrl + cfg) merging
     // with full hierarchy assembly.

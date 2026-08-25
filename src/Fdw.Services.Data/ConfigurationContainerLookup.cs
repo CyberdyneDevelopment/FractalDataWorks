@@ -79,7 +79,7 @@ public class ConfigurationContainerLookup : IConfigurationContainerLookup
     public IReadOnlyList<IDataContainer> ByCategory(string sectionPath)
     {
         // Why: configuration categories are derived from the container's schema (Path.Name) —
-        // the same proxy used by GetConfigurationCategoriesEndpoint.MapCategories and
+        // the same proxy used by GetConfigurationCategoriesEndpointBase.MapCategories and
         // ListConfigurationInstancesEndpointBase.MapToSummary. Filtering containers by Path.Name
         // is therefore the consistent, fully-general implementation across all schemas
         // (conn, data, sched, theme, settings, …) — no per-category special-casing.

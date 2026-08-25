@@ -11,7 +11,7 @@ namespace Fdw.Services.SecretManagers.Endpoints;
 /// <summary>
 /// Generic base endpoint for listing available secret manager types from the source-generated collection.
 /// </summary>
-public abstract class ListSecretManagerTypesEndpointBase : CrudListEndpoint<SecretManagerTypeDto>
+public abstract class ListSecretManagerTypesEndpointBase : CrudListEndpointBase<SecretManagerTypeDto>
 {
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "secret-manager-types";

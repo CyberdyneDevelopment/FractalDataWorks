@@ -14,7 +14,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// Generic base endpoint for retrieving fields for a specific data set.
 /// Delegates reads to DataSetConfigurationProvider (which assembles field hierarchy on Get).
 /// </summary>
-public abstract class GetDataSetFieldsEndpointBase : CrudGetEndpoint<DataSetNameRequest, List<DataSetFieldPayload>>
+public abstract class GetDataSetFieldsEndpointBase : CrudGetEndpointBase<DataSetNameRequest, List<DataSetFieldPayload>>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
 

@@ -10,7 +10,7 @@ namespace Fdw.Services.Notifications.Endpoints;
 /// <summary>
 /// Base endpoint for getting a notification configuration by name.
 /// </summary>
-public abstract class GetNotificationEndpointBase : CrudGetEndpoint<NotificationNameRequest, NotificationDetailDto>
+public abstract class GetNotificationEndpointBase : CrudGetEndpointBase<NotificationNameRequest, NotificationDetailDto>
 {
     // Why: NotificationConfigurationProvider replaces IOptionsMonitor<List<NotificationConfiguration>>
     // with dual-source (ctrl + cfg) provider that merges system and user configurations.

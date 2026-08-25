@@ -15,7 +15,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// Generic base endpoint for updating an existing data set configuration.
 /// Delegates all reads and writes to DataSetConfigurationProvider.
 /// </summary>
-public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpoint<UpdateDataSetRequest, DataSetDetailResponse>
+public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateDataSetRequest, DataSetDetailResponse>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
 

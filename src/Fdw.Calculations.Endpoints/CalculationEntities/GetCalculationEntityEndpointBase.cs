@@ -6,7 +6,7 @@ namespace Fdw.Calculations.Endpoints.CalculationEntities;
 /// Base endpoint for getting a calculation entity by ID.
 /// Route: GET /calculation-entities/{id}
 /// </summary>
-public abstract class GetCalculationEntityEndpointBase : CrudGetEndpoint<CalculationEntityIdRequest, CalculationEntityDetailDto>
+public abstract class GetCalculationEntityEndpointBase : CrudGetEndpointBase<CalculationEntityIdRequest, CalculationEntityDetailDto>
 {
     /// <inheritdoc/>
     protected override string ResourceName => "calculation-entities";

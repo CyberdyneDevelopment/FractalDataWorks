@@ -14,7 +14,7 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// Reads from <see cref="PipelineServiceConfigurationProvider"/> — the domain-owned gateway path
 /// over pipe.Pipeline, with full [GenerateMapper] support for DataGateway queries.
 /// </summary>
-public abstract class ListPipelinesEndpointBase : CrudListEndpoint<PipelineSummaryResponse>
+public abstract class ListPipelinesEndpointBase : CrudListEndpointBase<PipelineSummaryResponse>
 {
     private readonly PipelineServiceConfigurationProvider _configProvider;
 

@@ -27,7 +27,7 @@ namespace Fdw.Web.RestEndpoints.Base;
 /// <typeparam name="TRequest">The trigger request type, must inherit from <see cref="TriggerOperationRequest"/>.</typeparam>
 /// <remarks>
 /// <para>
-/// Mirrors the <see cref="Fdw.Web.RestEndpoints.Crud.CrudCreateEndpoint{TCreateRequest, TDetail}"/>
+/// Mirrors the <see cref="Fdw.Web.RestEndpoints.Crud.CrudCreateEndpointBase{TCreateRequest, TDetail}"/>
 /// pattern but for trigger-and-track workflows. Subclasses only need to specify
 /// <see cref="ResourceName"/> and <see cref="ItemType"/>.
 /// </para>

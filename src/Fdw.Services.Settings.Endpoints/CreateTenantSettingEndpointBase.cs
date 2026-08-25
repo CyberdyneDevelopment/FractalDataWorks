@@ -14,7 +14,7 @@ namespace Fdw.Services.Settings.Endpoints;
 /// <summary>
 /// Base endpoint for creating a tenant-level setting override.
 /// </summary>
-public abstract class CreateTenantSettingEndpointBase : CrudCreateEndpoint<CreateTenantSettingRequest, TenantSettingSummaryDto>
+public abstract class CreateTenantSettingEndpointBase : CrudCreateEndpointBase<CreateTenantSettingRequest, TenantSettingSummaryDto>
 {
     // Why: SettingsConfigurationProvider replaces IOptionsMonitor<List<TenantSettingConfiguration>>
     // with dual-source (ctrl + cfg) provider that provides server/tenant/role settings.

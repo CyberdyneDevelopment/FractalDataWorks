@@ -17,7 +17,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// Enumerates all registered TransformationTypes, filters to FieldTransformationBase instances,
 /// and maps each to a TransformTypePayload including parameter definitions.
 /// </summary>
-public abstract class ListTransformTypesEndpointBase : CrudListEndpoint<TransformTypePayload>
+public abstract class ListTransformTypesEndpointBase : CrudListEndpointBase<TransformTypePayload>
 {
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "transform-types";

@@ -6,7 +6,7 @@ namespace Fdw.Calculations.Endpoints.CalculationEntities;
 /// Base endpoint for creating a calculation entity.
 /// Route: POST /calculation-entities
 /// </summary>
-public abstract class CreateCalculationEntityEndpointBase : CrudCreateEndpoint<CreateCalculationEntityRequest, CalculationEntityDetailDto>
+public abstract class CreateCalculationEntityEndpointBase : CrudCreateEndpointBase<CreateCalculationEntityRequest, CalculationEntityDetailDto>
 {
     /// <inheritdoc/>
     protected override string ResourceName => "calculation-entities";

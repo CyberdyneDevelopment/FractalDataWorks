@@ -13,7 +13,7 @@ namespace Fdw.Web.RestEndpoints.Crud;
 /// <typeparam name="TResource">The resource type for identity/logging.</typeparam>
 /// <typeparam name="TKey">The key type used for lookup.</typeparam>
 public abstract class DeleteByPropertyEndpointBase<TResource, TKey>
-    : CrudDeleteEndpoint<ByPropertyRequest<TKey>>
+    : CrudDeleteEndpointBase<ByPropertyRequest<TKey>>
     where TResource : class
     where TKey : notnull
 {
@@ -26,7 +26,7 @@ public abstract class DeleteByPropertyEndpointBase<TResource, TKey>
     /// <summary>Returns true if a resource with the given key exists.</summary>
     protected abstract Task<IGenericResult<bool>> ExistsByKey(TKey key, CancellationToken ct);
 
-    /// <summary>Performs the delete. The CrudDeleteEndpoint pipeline already gated by ExistsByKey.</summary>
+    /// <summary>Performs the delete. The CrudDeleteEndpointBase pipeline already gated by ExistsByKey.</summary>
     protected abstract Task<IGenericResult> DeleteByKey(TKey key, CancellationToken ct);
 
     /// <inheritdoc/>

@@ -24,7 +24,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// The configuration connection name and path are sourced from DataSetConfigurationProvider
 /// rather than IConfigurationConnectionNameProvider (which is an anti-pattern).
 /// </remarks>
-public abstract class SaveFieldMappingTransformEndpointBase : CrudCreateEndpoint<SaveFieldMappingTransformRequest, FieldMappingTransformPayload>
+public abstract class SaveFieldMappingTransformEndpointBase : CrudCreateEndpointBase<SaveFieldMappingTransformRequest, FieldMappingTransformPayload>
 {
     /// <summary>Gets the data gateway for executing queries and commands.</summary>
     protected IDataGateway DataGateway { get; }

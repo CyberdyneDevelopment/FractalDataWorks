@@ -20,7 +20,7 @@ namespace Fdw.Services.Connections.Endpoints;
 /// provider purely to delete the body itself, which meant one delete endpoint per connection type and a
 /// silent "typed body missing is non-fatal" branch that let a half-deleted connection report success.
 /// </remarks>
-public abstract class DeleteConnectionEndpointBase : CrudDeleteEndpoint<ConnectionNameRequest>
+public abstract class DeleteConnectionEndpointBase : CrudDeleteEndpointBase<ConnectionNameRequest>
 {
     // Why: the connection provider owns the whole aggregate delete — header, typed body, and everything
     // hanging off either of them.

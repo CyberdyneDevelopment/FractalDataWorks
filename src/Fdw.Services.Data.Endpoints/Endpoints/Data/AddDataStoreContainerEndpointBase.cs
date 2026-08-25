@@ -13,7 +13,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// Generic base endpoint for adding a container to an existing data store path.
 /// POST datastores/{name}/containers
 /// </summary>
-public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpoint<AddDataStoreContainerRequest, DataStoreContainerResponse>
+public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase<AddDataStoreContainerRequest, DataStoreContainerResponse>
 {
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
 
@@ -34,7 +34,7 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpoint<Add
 
     /// <summary>
     /// Existence and duplicate-container checks are delegated to the provider's AddContainer method.
-    /// Always returns false so the CrudCreateEndpoint lifecycle proceeds to Create.
+    /// Always returns false so the CrudCreateEndpointBase lifecycle proceeds to Create.
     /// </summary>
     protected override Task<IGenericResult<bool>> CheckExists(AddDataStoreContainerRequest request, CancellationToken ct)
         => Task.FromResult(GenericResult<bool>.Success(false));

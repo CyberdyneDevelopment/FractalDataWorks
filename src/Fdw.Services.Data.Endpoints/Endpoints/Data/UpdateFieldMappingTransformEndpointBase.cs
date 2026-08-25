@@ -26,7 +26,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// a caller sending a shorter list means those parameters are gone, not unchanged.
 /// </remarks>
 public abstract class UpdateFieldMappingTransformEndpointBase
-    : CrudUpdateEndpoint<UpdateFieldMappingTransformRequest, FieldMappingTransformPayload>
+    : CrudUpdateEndpointBase<UpdateFieldMappingTransformRequest, FieldMappingTransformPayload>
 {
     /// <summary>Gets the gateway every read and write goes through.</summary>
     protected IDataGateway DataGateway { get; }

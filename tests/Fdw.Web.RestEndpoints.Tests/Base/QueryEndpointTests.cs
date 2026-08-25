@@ -6,8 +6,8 @@ using Fdw.Web.RestEndpoints.Pagination;
 
 namespace Fdw.Web.RestEndpoints.Tests.Base;
 
-// Test implementation for QueryEndpoint with custom request
-public class TestQueryEndpoint : QueryEndpoint<TestPagedRequest, TestQueryResult>
+// Test implementation for QueryEndpointBase with custom request
+public class TestQueryEndpoint : QueryEndpointBase<TestPagedRequest, TestQueryResult>
 {
     private readonly System.Func<TestPagedRequest, CancellationToken, Task<IGenericResult<PagedResponse<TestQueryResult>>>> _executeFunc;
     private readonly int? _defaultPageSize;
@@ -39,8 +39,8 @@ public class TestQueryEndpoint : QueryEndpoint<TestPagedRequest, TestQueryResult
     public Task<object> PublicExecute(TestPagedRequest query, CancellationToken ct) => Execute(query, ct);
 }
 
-// Test implementation for QueryEndpoint without custom request
-public class TestSimpleQueryEndpoint : QueryEndpoint<TestQueryResult>
+// Test implementation for QueryEndpointBase without custom request
+public class TestSimpleQueryEndpoint : QueryEndpointBase<TestQueryResult>
 {
     private readonly System.Func<PagedRequest, CancellationToken, Task<IGenericResult<PagedResponse<TestQueryResult>>>> _executeFunc;
 

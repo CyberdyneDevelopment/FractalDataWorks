@@ -25,7 +25,7 @@ public class PipelineHttpClient : ApiClientBase, IPipelineClient, IResourceQuery
     /// <inheritdoc />
     public Task<IGenericResult<IReadOnlyList<PipelineSummaryResponse>>> List(CancellationToken cancellationToken = default)
     {
-        // Why: CrudListEndpoint emits { items: [...] } — use GetList which handles both the
+        // Why: CrudListEndpointBase emits { items: [...] } — use GetList which handles both the
         // paginated envelope and a plain array; Get<IReadOnlyList<T>> can't unwrap the envelope.
         return GetList<PipelineSummaryResponse>("pipelines", cancellationToken);
     }

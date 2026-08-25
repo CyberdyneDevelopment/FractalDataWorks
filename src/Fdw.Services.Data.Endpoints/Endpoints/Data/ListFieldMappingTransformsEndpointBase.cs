@@ -23,7 +23,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// so reads go through IDataGateway directly. The configuration connection name and path are
 /// sourced from DataSetConfigurationProvider rather than IConfigurationConnectionNameProvider.
 /// </remarks>
-public abstract class ListFieldMappingTransformsEndpointBase : CrudListEndpoint<FieldMappingTransformPayload>
+public abstract class ListFieldMappingTransformsEndpointBase : CrudListEndpointBase<FieldMappingTransformPayload>
 {
     /// <summary>Gets the data gateway for executing queries.</summary>
     protected IDataGateway DataGateway { get; }

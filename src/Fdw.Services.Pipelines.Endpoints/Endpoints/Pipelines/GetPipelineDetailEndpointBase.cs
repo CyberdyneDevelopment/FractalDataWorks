@@ -60,7 +60,7 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
         if (!result.IsSuccess)
         {
             // Why: a failed result carries its own structured CurrentMessage; surface it verbatim instead of
-            // a magic-string fallback. The guard mirrors GenericEndpoint's failure-message handling so an
+            // a magic-string fallback. The guard mirrors GenericEndpointBase's failure-message handling so an
             // empty message yields an empty Details rather than an invented literal.
             OnPipelineFetchFailed(req.Name, result.CurrentMessage);
             HttpContext.Response.StatusCode = 500;

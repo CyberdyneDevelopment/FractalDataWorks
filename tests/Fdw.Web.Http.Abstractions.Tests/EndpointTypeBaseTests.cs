@@ -107,7 +107,7 @@ public sealed class EndpointTypeBaseTests
     [Trait("Category", "Api")]
     public void QueryHasCorrectId()
     {
-        var sut = new QueryEndpoint();
+        var sut = new QueryEndpointBase();
 
         sut.Id.ShouldBe(2);
     }
@@ -117,9 +117,9 @@ public sealed class EndpointTypeBaseTests
     [Trait("Category", "Api")]
     public void QueryHasCorrectName()
     {
-        var sut = new QueryEndpoint();
+        var sut = new QueryEndpointBase();
 
-        sut.Name.ShouldBe("QueryEndpoint");
+        sut.Name.ShouldBe("QueryEndpointBase");
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public sealed class EndpointTypeBaseTests
     [Trait("Category", "Api")]
     public void QueryDoesNotRequireAuthentication()
     {
-        var sut = new QueryEndpoint();
+        var sut = new QueryEndpointBase();
 
         sut.RequiresAuthentication.ShouldBeFalse();
     }
@@ -137,7 +137,7 @@ public sealed class EndpointTypeBaseTests
     [Trait("Category", "Api")]
     public void QueryIsReadOnly()
     {
-        var sut = new QueryEndpoint();
+        var sut = new QueryEndpointBase();
 
         sut.IsReadOnly.ShouldBeTrue();
     }
@@ -147,7 +147,7 @@ public sealed class EndpointTypeBaseTests
     [Trait("Category", "Api")]
     public void QuerySupportsCaching()
     {
-        var sut = new QueryEndpoint();
+        var sut = new QueryEndpointBase();
 
         sut.SupportsCaching.ShouldBeTrue();
     }
@@ -157,7 +157,7 @@ public sealed class EndpointTypeBaseTests
     [Trait("Category", "Api")]
     public void QueryHasFiveMinuteCacheDuration()
     {
-        var sut = new QueryEndpoint();
+        var sut = new QueryEndpointBase();
 
         sut.DefaultCacheDurationSeconds.ShouldBe(300);
     }
@@ -167,7 +167,7 @@ public sealed class EndpointTypeBaseTests
     [Trait("Category", "Api")]
     public void QueryDoesNotRequireValidation()
     {
-        var sut = new QueryEndpoint();
+        var sut = new QueryEndpointBase();
 
         sut.RequiresValidation.ShouldBeFalse();
     }
@@ -177,7 +177,7 @@ public sealed class EndpointTypeBaseTests
     [Trait("Category", "Api")]
     public void QueryHasCacheCachingStrategy()
     {
-        var sut = new QueryEndpoint();
+        var sut = new QueryEndpointBase();
 
         sut.CachingStrategy.ShouldBe("Cache");
     }
@@ -187,7 +187,7 @@ public sealed class EndpointTypeBaseTests
     [Trait("Category", "Api")]
     public void QueryHasGetOnly()
     {
-        var sut = new QueryEndpoint();
+        var sut = new QueryEndpointBase();
 
         sut.DefaultHttpMethods.ShouldBe(["GET"]);
     }
@@ -199,7 +199,7 @@ public sealed class EndpointTypeBaseTests
     [Trait("Category", "Api")]
     public void CommandHasCorrectId()
     {
-        var sut = new CommandEndpoint();
+        var sut = new CommandEndpointBase();
 
         sut.Id.ShouldBe(3);
     }
@@ -209,9 +209,9 @@ public sealed class EndpointTypeBaseTests
     [Trait("Category", "Api")]
     public void CommandHasCorrectName()
     {
-        var sut = new CommandEndpoint();
+        var sut = new CommandEndpointBase();
 
-        sut.Name.ShouldBe("CommandEndpoint");
+        sut.Name.ShouldBe("CommandEndpointBase");
     }
 
     [Fact]
@@ -219,7 +219,7 @@ public sealed class EndpointTypeBaseTests
     [Trait("Category", "Api")]
     public void CommandRequiresAuthentication()
     {
-        var sut = new CommandEndpoint();
+        var sut = new CommandEndpointBase();
 
         sut.RequiresAuthentication.ShouldBeTrue();
     }
@@ -229,7 +229,7 @@ public sealed class EndpointTypeBaseTests
     [Trait("Category", "Api")]
     public void CommandIsNotReadOnly()
     {
-        var sut = new CommandEndpoint();
+        var sut = new CommandEndpointBase();
 
         sut.IsReadOnly.ShouldBeFalse();
     }
@@ -239,7 +239,7 @@ public sealed class EndpointTypeBaseTests
     [Trait("Category", "Api")]
     public void CommandHasPostPutPatchMethods()
     {
-        var sut = new CommandEndpoint();
+        var sut = new CommandEndpointBase();
 
         sut.DefaultHttpMethods.ShouldBe(["POST", "PUT", "PATCH"]);
     }
@@ -249,7 +249,7 @@ public sealed class EndpointTypeBaseTests
     [Trait("Category", "Api")]
     public void CommandRequiresValidation()
     {
-        var sut = new CommandEndpoint();
+        var sut = new CommandEndpointBase();
 
         sut.RequiresValidation.ShouldBeTrue();
     }

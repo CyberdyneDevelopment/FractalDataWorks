@@ -13,7 +13,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// Generic base endpoint for listing available DataSet types from the source-generated TypeCollection.
 /// Enumerates all registered DataSetTypes and maps each to a summary DTO.
 /// </summary>
-public abstract class ListDataSetTypesEndpointBase : CrudListEndpoint<DataSetTypeSummaryPayload>
+public abstract class ListDataSetTypesEndpointBase : CrudListEndpointBase<DataSetTypeSummaryPayload>
 {
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "datasets/types";

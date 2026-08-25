@@ -11,8 +11,8 @@ using Fdw.Web.RestEndpoints.Base;
 
 namespace Fdw.Web.RestEndpoints.Tests.Base;
 
-// Test implementation of GenericEndpoint for testing
-public class TestGenericEndpoint : GenericEndpoint<TestRequest, TestResponse>
+// Test implementation of GenericEndpointBase for testing
+public class TestGenericEndpoint : GenericEndpointBase<TestRequest, TestResponse>
 {
     private readonly Func<TestRequest, CancellationToken, Task<object>> _executeFunc;
 

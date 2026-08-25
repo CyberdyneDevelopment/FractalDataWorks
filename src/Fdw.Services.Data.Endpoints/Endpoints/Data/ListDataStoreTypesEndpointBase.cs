@@ -13,7 +13,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// Generic base endpoint for listing available DataStore types from the source-generated TypeCollection.
 /// Enumerates all registered DataStoreTypes and maps each to a summary DTO.
 /// </summary>
-public abstract class ListDataStoreTypesEndpointBase : CrudListEndpoint<DataStoreTypeSummaryPayload>
+public abstract class ListDataStoreTypesEndpointBase : CrudListEndpointBase<DataStoreTypeSummaryPayload>
 {
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "datastores/types";

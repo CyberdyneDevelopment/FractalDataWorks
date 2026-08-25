@@ -10,7 +10,7 @@ namespace Fdw.Services.Notifications.Endpoints;
 /// <summary>
 /// Base endpoint for listing all notification lists (recipient groups).
 /// </summary>
-public abstract class ListNotificationListsEndpointBase : CrudListEndpoint<NotificationListSummaryDto>
+public abstract class ListNotificationListsEndpointBase : CrudListEndpointBase<NotificationListSummaryDto>
 {
     /// <inheritdoc />
     protected override string ResourceName => "notifications/lists";

@@ -17,7 +17,7 @@ using Xunit;
 namespace Fdw.Operations.Endpoints.Tests.Lineage;
 
 /// <summary>
-/// Regression tests for <see cref="GetDataSetLineageEndpoint.BuildDownstreamConsumers"/>. The OLD code
+/// Regression tests for <see cref="GetDataSetLineageEndpointBase.BuildDownstreamConsumers"/>. The OLD code
 /// filtered <c>pipe.Pipeline</c> directly on SourceDataSet/DestinationDataSet columns that do not exist
 /// on that flat header table (SQL "Invalid column name", silently swallowed into an empty list by the
 /// existing best-effort <c>QueryAll</c> pattern) — downstream consumers were ALWAYS empty. The fix loads
@@ -28,8 +28,8 @@ namespace Fdw.Operations.Endpoints.Tests.Lineage;
 public class GetDataSetLineageDownstreamConsumersTests
 {
     private sealed class TestableEndpoint(
-        IConfigurationGateway gateway, PipelineServiceConfigurationProvider provider, ILogger<GetDataSetLineageEndpoint> logger)
-        : GetDataSetLineageEndpoint(gateway, provider, logger)
+        IConfigurationGateway gateway, PipelineServiceConfigurationProvider provider, ILogger<GetDataSetLineageEndpointBase> logger)
+        : GetDataSetLineageEndpointBase(gateway, provider, logger)
     {
         public Task<IReadOnlyList<LineageConsumerResponse>> InvokeBuildDownstreamConsumers(string dataSetName, CancellationToken ct) =>
             BuildDownstreamConsumers(dataSetName, ct);
@@ -66,7 +66,7 @@ public class GetDataSetLineageDownstreamConsumersTests
     };
 
     private static TestableEndpoint CreateEndpoint(Mock<PipelineServiceConfigurationProvider> providerMock) =>
-        new(Mock.Of<IConfigurationGateway>(), providerMock.Object, Mock.Of<ILogger<GetDataSetLineageEndpoint>>());
+        new(Mock.Of<IConfigurationGateway>(), providerMock.Object, Mock.Of<ILogger<GetDataSetLineageEndpointBase>>());
 
     [Fact]
     public async Task DownstreamConsumersPopulatedWhenPipelineConsumesDataSet()

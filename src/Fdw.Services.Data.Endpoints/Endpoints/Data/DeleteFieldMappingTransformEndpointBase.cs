@@ -23,7 +23,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// is the documented exception for child records. The configuration connection name and path are
 /// sourced from DataSetConfigurationProvider rather than IConfigurationConnectionNameProvider.
 /// </remarks>
-public abstract class DeleteFieldMappingTransformEndpointBase : CrudDeleteEndpoint<DeleteFieldMappingTransformRequest>
+public abstract class DeleteFieldMappingTransformEndpointBase : CrudDeleteEndpointBase<DeleteFieldMappingTransformRequest>
 {
     /// <summary>Gets the data gateway for executing queries and commands.</summary>
     protected IDataGateway DataGateway { get; }

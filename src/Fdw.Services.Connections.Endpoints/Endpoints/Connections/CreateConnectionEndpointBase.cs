@@ -26,7 +26,7 @@ namespace Fdw.Services.Connections.Endpoints;
 /// header and the body disagree: a request with ServiceType "Http" wrote an MsSql body under an Http header,
 /// because only the endpoint's own generic argument decided what got written.
 /// </remarks>
-public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint<CreateConnectionRequest, ConnectionDetailDto>
+public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpointBase<CreateConnectionRequest, ConnectionDetailDto>
     where TConfig : class, IConnectionConfiguration
 {
     // Why: the connection provider writes the whole aggregate — the conn.Connection header row AND, by

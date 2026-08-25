@@ -11,7 +11,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// Generic base endpoint for deleting a data set configuration.
 /// Delegates all reads and deletes to DataSetConfigurationProvider.
 /// </summary>
-public abstract class DeleteDataSetEndpointBase : CrudDeleteEndpoint<DataSetNameRequest>
+public abstract class DeleteDataSetEndpointBase : CrudDeleteEndpointBase<DataSetNameRequest>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
 

@@ -13,7 +13,7 @@ namespace Fdw.Services.Settings.Endpoints;
 /// <summary>
 /// Base endpoint for listing tenant-level setting overrides.
 /// </summary>
-public abstract class ListTenantSettingsEndpointBase : CrudListEndpoint<TenantSettingSummaryDto>
+public abstract class ListTenantSettingsEndpointBase : CrudListEndpointBase<TenantSettingSummaryDto>
 {
     private readonly IServiceConfigurationProvider<TenantSettingConfiguration> _provider;
 

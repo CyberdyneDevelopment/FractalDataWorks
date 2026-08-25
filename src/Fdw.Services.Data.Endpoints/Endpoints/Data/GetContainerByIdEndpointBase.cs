@@ -13,7 +13,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// <summary>
 /// Base endpoint for retrieving a specific container by its identifier.
 /// </summary>
-public abstract class GetContainerByIdEndpointBase : CrudGetEndpoint<ContainerIdRequest, DataStoreContainerDetailDto>
+public abstract class GetContainerByIdEndpointBase : CrudGetEndpointBase<ContainerIdRequest, DataStoreContainerDetailDto>
 {
     // Why: DataStoreConfigurationProvider (dual-source) merges system (ctrl) and user (cfg) DataStore configs.
     private readonly DataStoreConfigurationProvider _dataStoreProvider;

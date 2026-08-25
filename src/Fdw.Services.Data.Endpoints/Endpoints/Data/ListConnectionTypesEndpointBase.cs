@@ -11,7 +11,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// <summary>
 /// Generic base endpoint for listing available connection types from the source-generated collection.
 /// </summary>
-public abstract class ListConnectionTypesEndpointBase : CrudListEndpoint<ConnectionTypeSummaryDto>
+public abstract class ListConnectionTypesEndpointBase : CrudListEndpointBase<ConnectionTypeSummaryDto>
 {
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "connection-types";

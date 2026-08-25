@@ -21,7 +21,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// Loads the DataSet configuration via DataSetConfigurationProvider (including Fields and Sources),
 /// then queries the first active source for sample rows.
 /// </summary>
-public abstract class PreviewDataSetEndpointBase : CrudGetEndpoint<PreviewDataSetRequest, PreviewDataSetResponse>
+public abstract class PreviewDataSetEndpointBase : CrudGetEndpointBase<PreviewDataSetRequest, PreviewDataSetResponse>
 {
     // Why: DataSetConfigurationProvider.Get(name) composes Fields, Sources, and FieldMappings —
     // no separate source resolver or secondary IDataGateway config reads needed.

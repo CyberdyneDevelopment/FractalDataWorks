@@ -21,7 +21,7 @@ namespace Fdw.Services.Connections.Endpoints;
 /// through two providers let them drift apart, and saving them separately meant an update that touched only
 /// the header left the body pointing at the previous version of it.
 /// </remarks>
-public abstract class UpdateConnectionEndpointBase<TConfig> : CrudUpdateEndpoint<UpdateConnectionRequest, ConnectionDetailDto>
+public abstract class UpdateConnectionEndpointBase<TConfig> : CrudUpdateEndpointBase<UpdateConnectionRequest, ConnectionDetailDto>
     where TConfig : class, IConnectionConfiguration
 {
     // Why: the connection provider reads and writes the whole aggregate — header plus dispatched typed body.

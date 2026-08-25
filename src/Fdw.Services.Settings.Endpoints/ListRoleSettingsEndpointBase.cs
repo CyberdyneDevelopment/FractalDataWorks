@@ -13,7 +13,7 @@ namespace Fdw.Services.Settings.Endpoints;
 /// <summary>
 /// Base endpoint for listing role-level setting overrides.
 /// </summary>
-public abstract class ListRoleSettingsEndpointBase : CrudListEndpoint<RoleSettingSummaryDto>
+public abstract class ListRoleSettingsEndpointBase : CrudListEndpointBase<RoleSettingSummaryDto>
 {
     private readonly IServiceConfigurationProvider<RoleSettingConfiguration> _provider;
 

@@ -23,7 +23,7 @@ namespace Fdw.Services.Connections.Endpoints;
 /// Connection types that do not implement an interface return an empty list for that capability.
 /// </remarks>
 public abstract class GetConnectionTypeCapabilitiesEndpointBase
-    : CrudGetEndpoint<ConnectionTypeNameRequest, ConnectionTypeCapabilitiesResponse>
+    : CrudGetEndpointBase<ConnectionTypeNameRequest, ConnectionTypeCapabilitiesResponse>
 {
     private readonly ILogger<GetConnectionTypeCapabilitiesEndpointBase> _logger;
     private readonly ConnectionConfigurationProvider _configProvider;

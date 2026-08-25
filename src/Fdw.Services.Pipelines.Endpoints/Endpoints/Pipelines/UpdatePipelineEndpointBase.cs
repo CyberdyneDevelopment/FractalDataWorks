@@ -13,7 +13,7 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// Generic base endpoint for updating an existing pipeline configuration.
 /// </summary>
 /// <typeparam name="TConfig">The concrete pipeline configuration type.</typeparam>
-public abstract class UpdatePipelineEndpointBase<TConfig> : CrudUpdateEndpoint<UpdatePipelineRequest, PipelineDetailResponse>
+public abstract class UpdatePipelineEndpointBase<TConfig> : CrudUpdateEndpointBase<UpdatePipelineRequest, PipelineDetailResponse>
     where TConfig : PipelineConfiguration
 {
     // Why: PipelineServiceConfigurationProvider replaces IOptionsMonitor<List<T>> with dual-source

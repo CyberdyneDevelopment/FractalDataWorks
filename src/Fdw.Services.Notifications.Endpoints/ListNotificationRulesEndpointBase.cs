@@ -13,7 +13,7 @@ namespace Fdw.Services.Notifications.Endpoints;
 /// <summary>
 /// Base endpoint for listing all notification rules.
 /// </summary>
-public abstract class ListNotificationRulesEndpointBase : CrudListEndpoint<NotificationRuleSummaryDto>
+public abstract class ListNotificationRulesEndpointBase : CrudListEndpointBase<NotificationRuleSummaryDto>
 {
     private readonly IServiceConfigurationProvider<NotificationRuleConfiguration> _provider;
 

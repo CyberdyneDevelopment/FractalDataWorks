@@ -12,7 +12,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// <summary>
 /// Generic base endpoint for retrieving connections of a specific type.
 /// </summary>
-public abstract class GetConnectionsByTypeEndpointBase : CrudGetEndpoint<GetConnectionsByTypeRequest, List<ConnectionByTypeDto>>
+public abstract class GetConnectionsByTypeEndpointBase : CrudGetEndpointBase<GetConnectionsByTypeRequest, List<ConnectionByTypeDto>>
 {
     // Why: ConnectionConfigurationProvider replaces IOptionsMonitor<List<ConnectionConfiguration>>
     // with dual-source (ctrl + cfg) provider that merges system and user configurations.

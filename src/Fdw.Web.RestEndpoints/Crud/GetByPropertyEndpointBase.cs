@@ -20,7 +20,7 @@ namespace Fdw.Web.RestEndpoints.Crud;
 /// <typeparam name="TResource">The resource detail type returned by the endpoint.</typeparam>
 /// <typeparam name="TKey">The key type used for lookup (string, Guid, int, etc.).</typeparam>
 public abstract class GetByPropertyEndpointBase<TResource, TKey>
-    : CrudGetEndpoint<ByPropertyRequest<TKey>, TResource>
+    : CrudGetEndpointBase<ByPropertyRequest<TKey>, TResource>
     where TResource : class
     where TKey : notnull
 {

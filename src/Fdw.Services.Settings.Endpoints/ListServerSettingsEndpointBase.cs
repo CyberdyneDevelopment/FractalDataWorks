@@ -13,7 +13,7 @@ namespace Fdw.Services.Settings.Endpoints;
 /// <summary>
 /// Base endpoint for listing all server-level settings.
 /// </summary>
-public abstract class ListServerSettingsEndpointBase : CrudListEndpoint<ServerSettingSummaryDto>
+public abstract class ListServerSettingsEndpointBase : CrudListEndpointBase<ServerSettingSummaryDto>
 {
     private readonly IServiceConfigurationProvider<ServerSettingConfiguration> _provider;
 

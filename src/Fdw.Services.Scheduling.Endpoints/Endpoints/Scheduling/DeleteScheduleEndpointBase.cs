@@ -11,7 +11,7 @@ namespace Fdw.Services.Scheduling.Endpoints;
 /// Generic base endpoint for deleting a schedule configuration.
 /// </summary>
 /// <typeparam name="TConfig">The concrete schedule configuration type.</typeparam>
-public abstract class DeleteScheduleEndpointBase<TConfig> : CrudDeleteEndpoint<ScheduleNameRequest>
+public abstract class DeleteScheduleEndpointBase<TConfig> : CrudDeleteEndpointBase<ScheduleNameRequest>
     where TConfig : ScheduleConfiguration
 {
     // Why: ScheduleConfigurationProvider replaces IOptionsMonitor<List<T>> with dual-source

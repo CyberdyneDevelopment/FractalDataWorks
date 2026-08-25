@@ -14,7 +14,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// Generic base endpoint for retrieving sources for a specific data set.
 /// Uses DataSetConfigurationProvider for the dataset lookup; sources are part of the composed aggregate.
 /// </summary>
-public abstract class GetDataSetSourcesEndpointBase : CrudGetEndpoint<DataSetNameRequest, List<DataSetSourcePayload>>
+public abstract class GetDataSetSourcesEndpointBase : CrudGetEndpointBase<DataSetNameRequest, List<DataSetSourcePayload>>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
 

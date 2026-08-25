@@ -14,7 +14,7 @@ namespace Fdw.Services.Identity.Endpoints;
 /// <remarks>
 /// Returns no credential and no token — see <see cref="IdentitySummaryResponse"/>.
 /// </remarks>
-public abstract class ListIdentitiesEndpointBase : CrudListEndpoint<IdentitySummaryResponse>
+public abstract class ListIdentitiesEndpointBase : CrudListEndpointBase<IdentitySummaryResponse>
 {
     /// <summary>Gets the configuration provider identities are read through.</summary>
     protected abstract IServiceConfigurationProvider<IdentityServiceConfiguration> Identities { get; }

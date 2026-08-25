@@ -15,7 +15,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// Generic base endpoint for creating a new data set configuration.
 /// Delegates all reads and writes to DataSetConfigurationProvider.
 /// </summary>
-public abstract class CreateDataSetEndpointBase : CrudCreateEndpoint<CreateDataSetRequest, DataSetDetailResponse>
+public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateDataSetRequest, DataSetDetailResponse>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
