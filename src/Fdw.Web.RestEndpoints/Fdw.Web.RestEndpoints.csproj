@@ -21,6 +21,7 @@
     <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
     <ProjectReference Include="..\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
     <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.WebMcp.Abstractions\Fdw.WebMcp.Abstractions.csproj" />
 
   </ItemGroup>
 

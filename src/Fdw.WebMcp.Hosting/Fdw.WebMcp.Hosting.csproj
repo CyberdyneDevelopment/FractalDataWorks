@@ -10,6 +10,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Why: the tool registry and its route join are internal — the join is the behaviour worth
+         testing, and making it public to test it would put a startup-only step on the package's API. -->
+    <InternalsVisibleTo Include="Fdw.WebMcp.Hosting.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
@@ -19,6 +25,7 @@
     <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
     <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.WebMcp.Abstractions\Fdw.WebMcp.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

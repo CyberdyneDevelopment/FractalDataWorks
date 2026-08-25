@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <Description>The WebMCP tool marker attribute and the collection endpoint options declare themselves into. Deliberately free of ASP.NET and of Fdw.WebMcp.Hosting so an endpoint package can mark a tool without taking a dependency on the server that serves it.</Description>
+  </PropertyGroup>
+
+</Project>

@@ -1,6 +1,8 @@
 using System;
+using System.Reflection;
 using Fdw.Collections;
 using Fdw.Results;
+using Fdw.WebMcp.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -292,6 +294,7 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
         // where a scanner would have found and routed it regardless.
         builder.Services.AddTransient(EndpointType);
         DeclaredEndpoints.Declare(EndpointType);
+        DeclareWebMcpTool();
 
         return RegistrationMethod(builder, loggerFactory);
     }
@@ -320,6 +323,36 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
 
         Initialized = true;
         return result;
+    }
+
+    /// <summary>
+    /// Offers this endpoint to AI agents when the option is marked <see cref="WebMcpToolAttribute"/>.
+    /// </summary>
+    /// <remarks>
+    /// Called from Register, on the line after the endpoint declares itself, because those two facts
+    /// are the same fact: a tool is worth offering exactly when its route is switched on. Reading the
+    /// mark off the OPTION rather than the endpoint class is what ties them together — an endpoint
+    /// that is never declared is never routed, and a tool the agent cannot call is worse than a
+    /// missing one, because the agent has no way to tell a 404 from a genuine empty result.
+    ///
+    /// No route is read here. It is not known yet: FastEndpoints has not built the route table at
+    /// Register time, and the route lives in the endpoint's Configure body regardless. MapWebMcp
+    /// joins these declarations against the live route table once it exists.
+    /// </remarks>
+    private void DeclareWebMcpTool()
+    {
+        var tool = GetType().GetCustomAttribute<WebMcpToolAttribute>(inherit: false);
+        if (tool is null)
+        {
+            return;
+        }
+
+        DeclaredWebMcpTools.Declare(new WebMcpToolDeclaration(
+            EndpointType,
+            tool.Name,
+            tool.Description,
+            tool.ReadOnly,
+            tool.HttpMethod));
     }
 
     /// <summary>

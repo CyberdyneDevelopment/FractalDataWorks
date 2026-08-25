@@ -1,11 +1,12 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using Fdw.WebMcp.Abstractions;
 
 namespace Fdw.WebMcp.Hosting;
 
 /// <summary>
-/// Internal DTO representing a discovered WebMCP tool derived from an endpoint decorated with
-/// <see cref="WebMcpToolAttribute"/>.
+/// A WebMCP tool ready to be served: what the endpoint option declared in
+/// <see cref="WebMcpToolAttribute"/>, joined with the route the application actually serves it on.
 /// </summary>
 // Why: pure positional-record DTO, no logic.
 [ExcludeFromCodeCoverage]

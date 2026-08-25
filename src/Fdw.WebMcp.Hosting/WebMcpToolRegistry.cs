@@ -1,14 +1,28 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using Fdw.WebMcp.Abstractions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.WebMcp.Hosting;
 
 /// <summary>
-/// Scans assemblies for endpoint classes decorated with <see cref="WebMcpToolAttribute"/>
-/// and builds the set of WebMCP tool descriptors served at <c>/.well-known/webmcp.js</c>.
+/// Joins the endpoints that declared themselves WebMCP tools against the routes the application
+/// actually serves, producing the descriptors served at <c>/.well-known/webmcp.js</c>.
 /// </summary>
+/// <remarks>
+/// Tools are not searched for. They arrive already declared, in <see cref="DeclaredWebMcpTools"/>,
+/// put there by the endpoint option that switched the endpoint on. All this type adds is the half of
+/// a tool the declaration deliberately does not carry: the route and the verb, read from the live
+/// route table so they are by construction the ones the router will match.
+///
+/// Reading them from the router rather than from the endpoint is the whole point. A route declared a
+/// second time on an attribute is free to drift from the FastEndpoints <c>Configure()</c> body that
+/// defines it, and an agent handed a drifted route gets a 404 it cannot interpret.
+/// </remarks>
 internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
 {
     private readonly List<WebMcpToolDescriptor> _tools = [];
@@ -17,265 +31,154 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
     public IReadOnlyList<WebMcpToolDescriptor> Tools => _tools;
 
     /// <summary>
-    /// Scans the provided assemblies and populates the tool registry.
-    /// Skips any type where a route cannot be determined, logging a warning.
+    /// Resolves declared tools against the application's route table.
     /// </summary>
-    internal void Discover(IEnumerable<Assembly> assemblies, ILogger logger)
+    /// <param name="declarations">What the endpoint options declared.</param>
+    /// <param name="endpointDataSource">The application's endpoints, after routing is built.</param>
+    /// <param name="logger">The logger.</param>
+    /// <remarks>
+    /// The declarations are passed in rather than read from <see cref="DeclaredWebMcpTools"/> here.
+    /// That collection is process-wide, so a join that reached for it directly could only ever be
+    /// exercised against whatever the whole process had declared.
+    /// </remarks>
+    internal void Resolve(
+        IReadOnlyList<WebMcpToolDeclaration> declarations,
+        EndpointDataSource endpointDataSource,
+        ILogger logger)
     {
-        foreach (var assembly in assemblies)
+        var routesByEndpointType = MapRoutesByEndpointType(endpointDataSource);
+
+        foreach (var declaration in declarations)
         {
-            Type[] types;
-            try
+            var typeName = declaration.EndpointType.FullName ?? declaration.EndpointType.Name;
+            WebMcpLog.DiscoveringTool(logger, typeName);
+
+            if (!routesByEndpointType.TryGetValue(declaration.EndpointType, out var candidates))
             {
-                types = assembly.GetTypes();
-            }
-            catch (ReflectionTypeLoadException ex)
-            {
-                // Partial load — iterate what succeeded
-                types = ex.Types is not null
-                    ? [.. Array.FindAll(ex.Types, t => t is not null)!]
-                    : [];
+                // Why Warning rather than a silent skip: the option declared this tool, which means
+                // the endpoint was switched on, so a missing route is a contradiction — not an
+                // ordinary absence — and the tool vanishing quietly is how it stays unnoticed.
+                WebMcpLog.ToolSkipped(logger, typeName);
+                continue;
             }
 
-            WebMcpLog.AssemblyScanned(logger, assembly.GetName().Name ?? assembly.FullName ?? "unknown", types.Length);
-
-            foreach (var type in types)
+            var selected = Select(candidates, declaration.HttpMethodOverride);
+            if (selected is null)
             {
-                var descriptor = DescribeTool(type, logger);
-                if (descriptor is null)
-                {
-                    continue;
-                }
-
-                _tools.Add(descriptor);
-                WebMcpLog.ToolDiscovered(logger, descriptor.Name, descriptor.Route, descriptor.HttpMethod);
+                // Why not pick the first: several routes or verbs on one endpoint is a genuine
+                // question about which one the agent should call, and the attribute's HttpMethod is
+                // the way to answer it. Guessing would hand an agent a working call to the wrong one.
+                WebMcpLog.ToolRouteAmbiguous(logger, typeName, candidates.Count);
+                continue;
             }
+
+            WebMcpLog.RouteResolved(logger, typeName, selected.Value.Route, "application route table");
+            WebMcpLog.HttpMethodResolved(
+                logger,
+                typeName,
+                selected.Value.HttpMethod,
+                declaration.HttpMethodOverride is null ? "application route table" : "WebMcpTool.HttpMethod");
+            WebMcpLog.EndpointTypesResolved(
+                logger,
+                typeName,
+                selected.Value.RequestType?.FullName ?? "none",
+                selected.Value.ResponseType?.FullName ?? "none");
+
+            _tools.Add(new WebMcpToolDescriptor(
+                declaration.Name,
+                declaration.Description,
+                selected.Value.Route,
+                selected.Value.HttpMethod,
+                declaration.ReadOnly,
+                selected.Value.RequestType,
+                selected.Value.ResponseType));
+
+            WebMcpLog.ToolDiscovered(logger, declaration.Name, selected.Value.Route, selected.Value.HttpMethod);
         }
 
         WebMcpLog.ToolsRegistered(logger, _tools.Count);
     }
 
-    /// <summary>
-    /// Builds the descriptor for one candidate type, or returns <see langword="null"/> when the type
-    /// is not a tool or its route cannot be resolved.
-    /// </summary>
-    private static WebMcpToolDescriptor? DescribeTool(Type type, ILogger logger)
-    {
-        if (type.IsAbstract || type.IsInterface)
-        {
-            return null;
-        }
-
-        var toolAttr = type.GetCustomAttribute<WebMcpToolAttribute>();
-        if (toolAttr is null)
-        {
-            return null;
-        }
-
-        WebMcpLog.DiscoveringTool(logger, type.FullName ?? type.Name);
-
-        var route = ResolveRoute(type, logger);
-        if (route is null)
-        {
-            WebMcpLog.ToolSkipped(logger, type.FullName ?? type.Name);
-            return null;
-        }
-
-        var (requestType, responseType) = ResolveTypeArguments(type);
-
-        WebMcpLog.EndpointTypesResolved(
-            logger,
-            type.FullName ?? type.Name,
-            requestType?.FullName ?? "none",
-            responseType?.FullName ?? "none");
-
-        return new WebMcpToolDescriptor(
-            toolAttr.Name,
-            toolAttr.Description,
-            route,
-            ResolveHttpMethod(type, toolAttr, logger),
-            toolAttr.ReadOnly,
-            requestType,
-            responseType);
-    }
-
-    // ── Route resolution ────────────────────────────────────────────────────
+    /// <summary>One route the application serves for a given endpoint class.</summary>
+    private readonly record struct RouteCandidate(
+        string Route,
+        string HttpMethod,
+        Type? RequestType,
+        Type? ResponseType);
 
     /// <summary>
-    /// Maps a FastEndpoints attribute name to its HTTP verb. Keyed by name rather than type so this
-    /// project keeps no hard dependency on a particular FastEndpoints version.
+    /// Narrows an endpoint's routes to the single one a tool should call.
     /// </summary>
-    private static readonly Dictionary<string, string> HttpAttributeMethods = new(StringComparer.Ordinal)
+    /// <returns>The chosen route, or <see langword="null"/> when the choice is ambiguous.</returns>
+    private static RouteCandidate? Select(List<RouteCandidate> candidates, string? httpMethodOverride)
     {
-        ["HttpGetAttribute"] = "GET",
-        ["HttpPostAttribute"] = "POST",
-        ["HttpPutAttribute"] = "PUT",
-        ["HttpPatchAttribute"] = "PATCH",
-        ["HttpDeleteAttribute"] = "DELETE",
-    };
+        var considered = httpMethodOverride is null
+            ? candidates
+            : [.. candidates.Where(c => string.Equals(c.HttpMethod, httpMethodOverride, StringComparison.OrdinalIgnoreCase))];
 
-    private static string? ResolveRoute(Type endpointType, ILogger logger)
-    {
-        var typeName = endpointType.FullName ?? endpointType.Name;
-
-        if (RouteFromField(endpointType) is { } fieldRoute)
-        {
-            WebMcpLog.RouteResolved(logger, typeName, fieldRoute, "static Route field");
-            return fieldRoute;
-        }
-
-        if (RouteFromProperty(endpointType) is { } propertyRoute)
-        {
-            WebMcpLog.RouteResolved(logger, typeName, propertyRoute, "static Route property");
-            return propertyRoute;
-        }
-
-        return RouteFromHttpAttribute(endpointType, logger);
-    }
-
-    /// <summary>Strategy 1: a public const or static string field named <c>Route</c>.</summary>
-    private static string? RouteFromField(Type endpointType)
-    {
-        var routeField = endpointType.GetField(
-            "Route",
-            BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-
-        if (routeField is null || routeField.FieldType != typeof(string))
-        {
-            return null;
-        }
-
-        return routeField.GetValue(null) as string is { } value && !string.IsNullOrWhiteSpace(value)
-            ? value
-            : null;
-    }
-
-    /// <summary>Strategy 2: a public static string property named <c>Route</c>.</summary>
-    private static string? RouteFromProperty(Type endpointType)
-    {
-        var routeProp = endpointType.GetProperty(
-            "Route",
-            BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-
-        if (routeProp is null || routeProp.PropertyType != typeof(string))
-        {
-            return null;
-        }
-
-        return routeProp.GetValue(null) as string is { } value && !string.IsNullOrWhiteSpace(value)
-            ? value
-            : null;
+        return considered.Count == 1 ? considered[0] : null;
     }
 
     /// <summary>
-    /// Strategy 3: a FastEndpoints <c>[Http*]</c> attribute, matched by attribute name so this
-    /// project keeps no hard dependency on a particular FastEndpoints version.
+    /// Indexes the application's route table by the endpoint class each route was built from.
     /// </summary>
-    private static string? RouteFromHttpAttribute(Type endpointType, ILogger logger)
+    /// <remarks>
+    /// The endpoint class is read off FastEndpoints' <c>EndpointDefinition</c> metadata by NAME
+    /// rather than by type, so this package keeps no hard dependency on a particular FastEndpoints
+    /// version — the same stance the rest of this package takes toward it.
+    /// </remarks>
+    private static Dictionary<Type, List<RouteCandidate>> MapRoutesByEndpointType(EndpointDataSource endpointDataSource)
     {
-        foreach (var attr in endpointType.GetCustomAttributes())
-        {
-            var attrType = attr.GetType();
+        var map = new Dictionary<Type, List<RouteCandidate>>();
 
-            if (!HttpAttributeMethods.ContainsKey(attrType.Name))
+        foreach (var endpoint in endpointDataSource.Endpoints)
+        {
+            if (endpoint is not RouteEndpoint routeEndpoint)
             {
                 continue;
             }
 
-            if (attrType.GetProperty("Route")?.GetValue(attr) as string is { } value
-                && !string.IsNullOrWhiteSpace(value))
+            var definition = routeEndpoint.Metadata.FirstOrDefault(
+                m => m is not null && string.Equals(m.GetType().Name, "EndpointDefinition", StringComparison.Ordinal));
+
+            if (definition is null)
             {
-                WebMcpLog.RouteResolved(logger, endpointType.FullName ?? endpointType.Name, value, attrType.Name);
-                return value;
+                continue;
             }
-        }
 
-        return null;
-    }
-
-    // ── HTTP method resolution ───────────────────────────────────────────────
-
-    private static string ResolveHttpMethod(Type endpointType, WebMcpToolAttribute toolAttr, ILogger logger)
-    {
-        var typeName = endpointType.FullName ?? endpointType.Name;
-
-        // Explicit override wins
-        if (!string.IsNullOrWhiteSpace(toolAttr.HttpMethod))
-        {
-            var explicitMethod = toolAttr.HttpMethod!.ToUpperInvariant();
-            WebMcpLog.HttpMethodResolved(logger, typeName, explicitMethod, "WebMcpTool.HttpMethod");
-            return explicitMethod;
-        }
-
-        // Inspect FastEndpoints [Http*] attribute names
-        foreach (var attr in endpointType.GetCustomAttributes())
-        {
-            var attrName = attr.GetType().Name;
-
-            if (HttpAttributeMethods.TryGetValue(attrName, out var attributeMethod))
+            if (ReadTypeProperty(definition, "EndpointType") is not { } endpointType)
             {
-                return Resolved(attributeMethod, attrName);
+                continue;
             }
-        }
 
-        // Fall back to base class name heuristics
-        if (endpointType.Name.StartsWith("Create", StringComparison.OrdinalIgnoreCase)) return Resolved("POST", "class-name heuristic");
-        if (endpointType.Name.StartsWith("Update", StringComparison.OrdinalIgnoreCase)) return Resolved("PUT", "class-name heuristic");
-        if (endpointType.Name.StartsWith("Delete", StringComparison.OrdinalIgnoreCase)) return Resolved("DELETE", "class-name heuristic");
-
-        // Why this is logged with its strategy named rather than returned quietly: GET here is a
-        // guess, not a declaration. Naming the strategy is what lets a wrong verb be spotted in a
-        // log instead of as a failing agent call.
-        return Resolved("GET", "default - no method declared");
-
-        string Resolved(string method, string strategy)
-        {
-            WebMcpLog.HttpMethodResolved(logger, typeName, method, strategy);
-            return method;
-        }
-    }
-
-    // ── Generic type argument resolution ────────────────────────────────────
-
-    private static (Type? RequestType, Type? ResponseType) ResolveTypeArguments(Type endpointType)
-    {
-        // Walk the inheritance chain looking for a closed generic base such as
-        //   Endpoint<TRequest, TResponse>
-        //   Endpoint<TRequest>
-        //   EndpointWithoutRequest<TResponse>
-        var current = endpointType.BaseType;
-
-        while (current is not null && current != typeof(object))
-        {
-            if (current.IsGenericType)
+            if (routeEndpoint.RoutePattern.RawText is not { } rawRoute || string.IsNullOrWhiteSpace(rawRoute))
             {
-                var args = current.GetGenericArguments();
-                var baseName = current.GetGenericTypeDefinition().Name;
+                continue;
+            }
 
-                // "Endpoint`2" pattern: TRequest, TResponse
-                if (args.Length == 2
-                    && baseName.StartsWith("Endpoint", StringComparison.Ordinal))
+            var route = rawRoute.StartsWith('/') ? rawRoute : "/" + rawRoute;
+
+            foreach (var httpMethod in routeEndpoint.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? [])
+            {
+                if (!map.TryGetValue(endpointType, out var list))
                 {
-                    return (args[0], args[1]);
+                    list = [];
+                    map[endpointType] = list;
                 }
 
-                // "Endpoint`1" pattern: could be TRequest only
-                if (args.Length == 1
-                    && baseName.StartsWith("Endpoint", StringComparison.Ordinal))
-                {
-                    // EndpointWithoutRequest<TResponse> has no request type
-                    if (baseName.Contains("WithoutRequest", StringComparison.Ordinal))
-                    {
-                        return (null, args[0]);
-                    }
-
-                    return (args[0], null);
-                }
+                list.Add(new RouteCandidate(
+                    route,
+                    httpMethod,
+                    ReadTypeProperty(definition, "ReqDtoType"),
+                    ReadTypeProperty(definition, "ResDtoType")));
             }
-
-            current = current.BaseType;
         }
 
-        return (null, null);
+        return map;
     }
+
+    private static Type? ReadTypeProperty(object definition, string propertyName)
+        => definition.GetType()
+            .GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance)?
+            .GetValue(definition) as Type;
 }

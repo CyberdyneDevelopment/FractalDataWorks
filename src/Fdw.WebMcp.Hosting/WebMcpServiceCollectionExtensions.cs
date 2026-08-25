@@ -1,9 +1,9 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
-using Fdw.WebMcp.Hosting;
+using Fdw.WebMcp.Abstractions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -11,43 +11,26 @@ namespace Fdw.WebMcp.Hosting;
 
 /// <summary>
 /// Hosting extensions for WebMCP — the W3C browser standard that exposes structured tools
-/// to AI agents via <c>navigator.modelContext.registerTool()</c>.
+/// to AI agents via <c>document.modelContext.registerTool()</c>.
 /// </summary>
 public static class WebMcpServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers WebMCP services. The tool registry will be populated from the supplied
-    /// <paramref name="assemblies"/> when <see cref="MapWebMcp"/> is called during startup.
+    /// Registers WebMCP services.
     /// </summary>
     /// <param name="services">The service collection.</param>
-    /// <param name="assemblies">
-    ///   Assemblies to scan for endpoint classes decorated with <see cref="WebMcpToolAttribute"/>.
-    ///   Pass at least the assembly that contains your endpoint implementations.
-    /// </param>
-    [ExcludeFromCodeCoverage]
-    public static IServiceCollection AddWebMcp(
-        this IServiceCollection services,
-        params Assembly[] assemblies)
-        => services.AddWebMcp(assemblies, configure: null);
-
-    /// <summary>
-    /// Registers WebMCP services with optional configuration. The tool registry will be
-    /// populated from the supplied <paramref name="assemblies"/> when <see cref="MapWebMcp"/>
-    /// is called during startup.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="assemblies">
-    ///   Assemblies to scan for endpoint classes decorated with <see cref="WebMcpToolAttribute"/>.
-    ///   Pass at least the assembly that contains your endpoint implementations.
-    /// </param>
     /// <param name="configure">
     ///   Optional delegate to configure <see cref="WebMcpOptions"/>, including API key
     ///   authentication settings.
     /// </param>
+    /// <remarks>
+    /// Takes no assemblies. Which endpoints are tools is decided by the endpoints themselves, in
+    /// <see cref="WebMcpToolAttribute"/> on their options, and a host that had to name assemblies
+    /// would be maintaining a second list that says the same thing and can disagree with it.
+    /// </remarks>
     [ExcludeFromCodeCoverage]
     public static IServiceCollection AddWebMcp(
         this IServiceCollection services,
-        Assembly[] assemblies,
         Action<WebMcpOptions>? configure = null)
     {
         var options = new WebMcpOptions();
@@ -55,9 +38,6 @@ public static class WebMcpServiceCollectionExtensions
         services.AddSingleton(options);
 
         var registry = new WebMcpToolRegistry();
-
-        // Store the assembly list alongside the registry for deferred discovery in MapWebMcp
-        services.AddSingleton(new WebMcpAssemblyList(assemblies));
         services.AddSingleton<IWebMcpToolRegistry>(registry);
         services.AddSingleton(registry);  // also as concrete type for internal use
         services.AddSingleton<WebMcpJsGenerator>();
@@ -66,18 +46,25 @@ public static class WebMcpServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Triggers WebMCP tool discovery and maps the <c>GET /.well-known/webmcp.js</c> route.
-    /// Call this after <c>app.Build()</c> alongside other <c>Map*</c> calls.
+    /// Resolves the declared WebMCP tools against the application's routes and maps the
+    /// <c>GET /.well-known/webmcp.js</c> route.
     /// </summary>
+    /// <param name="app">The built application.</param>
+    /// <remarks>
+    /// ORDERING: call this AFTER the call that maps the endpoints — <c>MapFastEndpoints</c> — and
+    /// after every domain has registered. It reads the route table to learn each tool's route, so
+    /// called too early it finds no routes and serves a script with no tools.
+    /// </remarks>
     [ExcludeFromCodeCoverage]
     public static WebApplication MapWebMcp(this WebApplication app)
     {
-        var assemblyList = app.Services.GetRequiredService<WebMcpAssemblyList>();
         var registry = app.Services.GetRequiredService<WebMcpToolRegistry>();
-        var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
-        var logger = loggerFactory.CreateLogger("Fdw.Hosting.WebMcp");
+        var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Fdw.Hosting.WebMcp");
 
-        registry.Discover(assemblyList.Assemblies, logger);
+        registry.Resolve(
+            DeclaredWebMcpTools.Declarations,
+            app.Services.GetRequiredService<EndpointDataSource>(),
+            logger);
 
         var generator = app.Services.GetRequiredService<WebMcpJsGenerator>();
 

@@ -8,13 +8,13 @@ namespace Fdw.WebMcp.Hosting;
 /// <summary>
 /// MessageLogging for WebMCP tool discovery and serving operations.
 /// EventIds are categorized numbers (<c>Category = Id / 10000</c>), drawn from this package's open
-/// band: 11018-11031 informational/operational, 51002 auth, 61004-61005 configuration.
+/// band: 11018-11031 informational/operational, 51002 auth, 61004-61006 configuration.
 /// </summary>
 [ExcludeFromCodeCoverage(Justification = "MessageLogging partial class - implementation is source-generated")]
 [MessageLoggingTypeCode("HOSTING")]
 internal static partial class WebMcpLog
 {
-    [MessageLogging(EventId = 11018, Level = LogLevel.Debug, Message = "Discovering WebMCP tools in assembly type '{typeName}'")]
+    [MessageLogging(EventId = 11018, Level = LogLevel.Debug, Message = "Resolving declared WebMCP tool '{typeName}' against the route table")]
     public static partial IGenericMessage DiscoveringTool(ILogger logger, string typeName);
 
     [MessageLogging(EventId = 11019, Level = LogLevel.Debug, Message = "WebMCP tool registered: '{name}' → {method} {route}")]
@@ -22,6 +22,12 @@ internal static partial class WebMcpLog
 
     [MessageLogging(EventId = 61004, Level = LogLevel.Warning, Message = "WebMCP tool skipped (no route resolved): '{typeName}'")]
     public static partial IGenericMessage ToolSkipped(ILogger logger, string typeName);
+
+    // Why Warning rather than a quiet skip: an endpoint mapping several routes or verbs is a real
+    // question about which one an agent should call, and WebMcpTool.HttpMethod is how it is answered.
+    // Dropping the tool silently looks identical to never having declared it.
+    [MessageLogging(EventId = 61006, Level = LogLevel.Warning, Message = "WebMCP tool skipped (ambiguous route): '{typeName}' maps {candidateCount} route/verb pair(s); set WebMcpTool.HttpMethod to choose one")]
+    public static partial IGenericMessage ToolRouteAmbiguous(ILogger logger, string typeName, int candidateCount);
 
     [MessageLogging(EventId = 11020, Level = LogLevel.Information, Message = "WebMCP registration complete: {count} tool(s) registered")]
     public static partial IGenericMessage ToolsRegistered(ILogger logger, int count);
@@ -37,9 +43,6 @@ internal static partial class WebMcpLog
 
     [MessageLogging(EventId = 11023, Level = LogLevel.Debug, Message = "WebMCP agent request authenticated: '{label}' (userId={userId}) → {route}")]
     public static partial IGenericMessage AgentRequestAuthenticated(ILogger logger, string label, string userId, string route);
-
-    [MessageLogging(EventId = 11024, Level = LogLevel.Trace, Message = "WebMCP scanned assembly '{assemblyName}': {typeCount} type(s) examined")]
-    public static partial IGenericMessage AssemblyScanned(ILogger logger, string assemblyName, int typeCount);
 
     [MessageLogging(EventId = 11025, Level = LogLevel.Trace, Message = "WebMCP route resolved for '{typeName}': '{route}' (via {strategy})")]
     public static partial IGenericMessage RouteResolved(ILogger logger, string typeName, string route, string strategy);
