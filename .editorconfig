@@ -1,7 +1,9 @@
 # ===============================================
 # CRITICAL RULES - BLOCK DEVELOPMENT (Real bugs/security)
 # ===============================================
-
+[*.cs]
+dotnet_style_namespace_match_folder = true
+dotnet_diagnostic.IDE0130.severity = warning
 # Security - These are actual vulnerabilities
 dotnet_diagnostic.CA3001.severity = error  # SQL injection
 dotnet_diagnostic.CA3003.severity = error  # File path injection
@@ -129,8 +131,8 @@ dotnet_diagnostic.FDW016.severity = warning  # IGenericResult<T>.Value accessed 
 dotnet_diagnostic.FDW017.severity = warning  # Enum declaration should be replaced with TypeCollection
 dotnet_diagnostic.FDW022.severity = warning  # Exception swallowed - caught exception neither observed nor rethrown
 dotnet_diagnostic.FDW023.severity = suggestion  # Broad System.Exception catch with no specific catch clauses (survey)
-dotnet_diagnostic.FDW020.severity = warning  # Abstract type has no implementation
-dotnet_diagnostic.FDW021.severity = warning  # Type is not referenced in the compilation
+dotnet_diagnostic.FDW020.severity = none  # Abstract type has no implementation - fires on interfaces whose implementations live in another assembly
+dotnet_diagnostic.FDW021.severity = none  # Type is not referenced in the compilation
 dotnet_diagnostic.MA0051.severity = none  # Replaced by FDW006+FDW007
 dotnet_diagnostic.VSTHRD200.severity = none  # Async suffix - confusing API
 

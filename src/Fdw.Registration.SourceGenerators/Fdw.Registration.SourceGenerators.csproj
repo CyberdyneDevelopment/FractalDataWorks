@@ -39,10 +39,10 @@
 
   <!-- Package generator DLL in analyzers folder for transitive flow -->
   <ItemGroup>
-    <None Include="$(OutputPath)$(AssemblyName).dll"
-          Pack="true"
-          PackagePath="analyzers/dotnet/cs"
-          Visible="false" />
+    <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Abstractions\Fdw.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>
