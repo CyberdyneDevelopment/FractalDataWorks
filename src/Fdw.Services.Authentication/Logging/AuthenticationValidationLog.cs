@@ -13,37 +13,37 @@ public static partial class AuthenticationValidationLog
 {
     /// <summary>Logs an AuthenticationServices entry that names no mechanism.</summary>
     [MessageLogging(EventId = 71100, Level = LogLevel.Error,
-        Message = "Authentication service at '{sectionPath}' declares no ServiceOptionType; nothing says which mechanism validates its tokens")]
+        Message = "Authentication service at '{sectionPath}' declares no ServiceOptionType. Set it to a REGISTERED member of AuthenticationServiceTypes - 'OpenIddict' for tokens this host issues, 'JwtBearer' for tokens a remote authority issues. A value that is not a registered member registers no scheme at all, and every request then falls through to UnmatchedIssuerHandler")]
     public static partial IGenericMessage EntryMissingServiceOptionType(ILogger logger, string sectionPath);
 
     /// <summary>Logs an enabled AuthenticationServices entry with no name.</summary>
     [MessageLogging(EventId = 71101, Level = LogLevel.Error,
-        Message = "Authentication service at '{sectionPath}' declares no Name; its scheme cannot be named or reported on")]
+        Message = "Authentication service at '{sectionPath}' declares no Name. Set Name to a unique label for this issuer - it becomes the ASP.NET scheme name and the identifier in every routing and rejection log line")]
     public static partial IGenericMessage EntryMissingName(ILogger logger, string sectionPath);
 
     /// <summary>Logs an enabled AuthenticationServices entry with no authority.</summary>
     [MessageLogging(EventId = 71102, Level = LogLevel.Error,
-        Message = "Authentication service '{serviceName}' declares no Authority; there is no issuer to accept tokens from")]
+        Message = "Authentication service '{serviceName}' declares no Authority. Set Authority to the absolute issuer URL its tokens carry in their 'iss' claim - this host's own authority for OpenIddict, or the remote authority for JwtBearer (e.g. https://login.example.dev/application/o/{{slug}}/). There is NO default: without it no scheme is registered and every token from this issuer is rejected. The trailing slash is compared literally - take the value from the issuer's own /.well-known/openid-configuration rather than typing it")]
     public static partial IGenericMessage EntryMissingAuthority(ILogger logger, string serviceName);
 
     /// <summary>Logs an authority that is not an absolute http(s) URL.</summary>
     [MessageLogging(EventId = 71103, Level = LogLevel.Error,
-        Message = "Authentication service '{serviceName}' declares Authority '{authority}', which is not an absolute http(s) URL")]
+        Message = "Authentication service '{serviceName}' declares Authority '{authority}', which is not an absolute http(s) URL. It must be the full issuer URL including scheme - https://host/path, not a host name, a relative path, or a bare name")]
     public static partial IGenericMessage AuthorityNotAbsolute(ILogger logger, string serviceName, string authority);
 
     /// <summary>Logs a JwtBearer entry with no audience.</summary>
     [MessageLogging(EventId = 71104, Level = LogLevel.Error,
-        Message = "JwtBearer authentication service '{serviceName}' declares no Audience; its roles would be conferred on every token the issuer mints")]
+        Message = "JwtBearer authentication service '{serviceName}' declares no Audience. Set Audience to the value this host's tokens carry in their 'aud' claim - decode a real token and read it rather than assuming, since a token minted for an application carries the client id while one minted for an exposed API carries that API's identifier. Without it, the roles below would be conferred on EVERY token this issuer mints, for any audience")]
     public static partial IGenericMessage JwtBearerMissingAudience(ILogger logger, string serviceName);
 
     /// <summary>Logs a JwtBearer entry with no roles.</summary>
     [MessageLogging(EventId = 71105, Level = LogLevel.Error,
-        Message = "JwtBearer authentication service '{serviceName}' declares no Roles; a caller it authenticates would be denied by every route it reaches")]
+        Message = "JwtBearer authentication service '{serviceName}' declares no Roles. Set Roles to the local role names a caller from this issuer receives - they must exist in authz.Role, and their permissions are what every role-gated endpoint checks. Registration is refused rather than authenticating a caller into nothing: with no roles the caller would pass authentication and be denied by every route it reaches")]
     public static partial IGenericMessage JwtBearerMissingRoles(ILogger logger, string serviceName);
 
     /// <summary>Logs a host that registered a validation mechanism but declared no authentication services.</summary>
     [MessageLogging(EventId = 71106, Level = LogLevel.Error,
-        Message = "No enabled entries in '{sectionName}'; this host registered a token-validation mechanism and declared no issuer for it to trust")]
+        Message = "No enabled entries in '{sectionName}'. This host registered a token-validation mechanism and declared no issuer for it to trust, so it accepts no tokens at all. Add at least one entry naming a ServiceOptionType and an Authority, and confirm its Enabled flag is set - a declared-but-disabled entry reads as absent here")]
     public static partial IGenericMessage NoAuthenticationServicesDeclared(ILogger logger, string sectionName);
 
     /// <summary>Logs a mechanism that returned success without producing a scheme binding.</summary>
@@ -53,7 +53,7 @@ public static partial class AuthenticationValidationLog
 
     /// <summary>Logs an AuthenticationServices section that could not be read.</summary>
     [MessageLogging(EventId = 71108, Level = LogLevel.Error,
-        Message = "The AuthenticationServices declarations for mechanism '{mechanism}' reported success with no entries")]
+        Message = "The AuthenticationServices declarations for mechanism '{mechanism}' reported success with no entries. The section was readable and empty - check that an entry names ServiceOptionType '{mechanism}' exactly, since a mechanism name that matches no registered option is silently skipped rather than rejected")]
     public static partial IGenericMessage SectionUnreadable(ILogger logger, string mechanism);
 
     /// <summary>Logs a validated token that carried no claims identity.</summary>
@@ -63,7 +63,7 @@ public static partial class AuthenticationValidationLog
 
     /// <summary>Logs declared roles that could not be expanded to permissions.</summary>
     [MessageLogging(EventId = 71110, Level = LogLevel.Error,
-        Message = "Authentication service '{serviceName}' could not resolve its declared roles '{roles}' to permissions: {reason}")]
+        Message = "Authentication service '{serviceName}' could not resolve its declared roles '{roles}' to permissions: {reason}. Each name must match a row in authz.Role, and that role needs grants in authz.RolePermission - a role that exists with no grants resolves to an empty permission set and authorises nothing")]
     public static partial IGenericMessage DeclaredRolesNotResolved(ILogger logger, string serviceName, string roles, string reason);
 
     /// <summary>Logs a bearer token whose issuer no authentication service declared.</summary>
