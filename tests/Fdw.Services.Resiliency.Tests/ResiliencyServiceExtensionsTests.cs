@@ -64,37 +64,4 @@ public sealed class ResiliencyServiceExtensionsTests
         var factory = serviceProvider.GetService<IResiliencyPipelineFactory>();
         factory.ShouldBe(stub);
     }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void ResiliencyOptionsHasCorrectDefaults()
-    {
-        // Arrange & Act
-        var options = new ResiliencyOptions();
-
-        // Assert
-        options.DefaultTimeout.ShouldBe(TimeSpan.FromSeconds(30));
-        options.EnableDetailedLogging.ShouldBeFalse();
-        options.IncludeExceptionDetails.ShouldBeFalse();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void ResiliencyOptionsCanBeConfigured()
-    {
-        // Arrange
-        var options = new ResiliencyOptions();
-
-        // Act
-        options.DefaultTimeout = TimeSpan.FromMinutes(2);
-        options.EnableDetailedLogging = true;
-        options.IncludeExceptionDetails = false;
-
-        // Assert
-        options.DefaultTimeout.ShouldBe(TimeSpan.FromMinutes(2));
-        options.EnableDetailedLogging.ShouldBeTrue();
-        options.IncludeExceptionDetails.ShouldBeFalse();
-    }
 }

@@ -29,11 +29,6 @@ public class ConfigurationConnectionOptions
     public string? ConnectionName { get; set; } = "ConfigurationDb";
 
     /// <summary>
-    /// Gets or sets inline connection options when not using a named connection.
-    /// </summary>
-    public InlineConnectionOptions? Connection { get; set; }
-
-    /// <summary>
     /// Gets or sets whether to automatically initialize the configuration schema on startup.
     /// Default is true when configuration is enabled.
     /// </summary>
