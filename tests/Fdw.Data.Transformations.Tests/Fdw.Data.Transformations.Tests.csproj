@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <Configurations>Debug;Release;Test</Configurations>
+    <IsPublicProject>true</IsPublicProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Data.Transformations\Fdw.Data.Transformations.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.Transformations.Boolean\Fdw.Data.Transformations.Boolean.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.Transformations.Conditional\Fdw.Data.Transformations.Conditional.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.Transformations.DateTime\Fdw.Data.Transformations.DateTime.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.Transformations.Injection\Fdw.Data.Transformations.Injection.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.Transformations.Numeric\Fdw.Data.Transformations.Numeric.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Data.Transformations.Text\Fdw.Data.Transformations.Text.csproj" />
+  </ItemGroup>
+</Project>

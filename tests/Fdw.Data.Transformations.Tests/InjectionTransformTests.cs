@@ -1,0 +1,50 @@
+using System.Threading.Tasks;
+using Shouldly;
+using Xunit;
+
+namespace Fdw.Data.Transformations.Tests;
+
+/// <summary>The injection family — values that come from configuration rather than the row.</summary>
+public sealed class InjectionTransformTests
+{
+    [Fact]
+    public async Task ConstantIgnoresTheIncomingValueAndEmitsTheConfiguredOne()
+    {
+        var result = await new ConstantFieldTransformer().Transform(
+            "ignored", TransformTestContext.With(("value", "FIXED")), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe("FIXED");
+    }
+
+    [Fact]
+    public async Task ParameterEmitsTheOperatingDateFromTheContext()
+    {
+        // Why only these two names: Parameter injects RUN context, not arbitrary configuration —
+        // "operatingDate" and "now" are the whole vocabulary. Any other name yields null.
+        var result = await new ParameterFieldTransformer().Transform(
+            null, TransformTestContext.With(("name", "operatingDate")), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBeOfType<System.DateOnly>();
+    }
+
+    [Fact]
+    public async Task ParameterEmitsNowFromTheContext()
+    {
+        var result = await new ParameterFieldTransformer().Transform(
+            null, TransformTestContext.With(("name", "now")), TestContext.Current.CancellationToken);
+
+        result.Value.ShouldBeOfType<System.DateTimeOffset>();
+    }
+
+    [Fact]
+    public async Task ParameterYieldsNullForAnyOtherName()
+    {
+        var result = await new ParameterFieldTransformer().Transform(
+            null, TransformTestContext.With(("name", "season")), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+    }
+}

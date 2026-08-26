@@ -57,9 +57,24 @@ public sealed class RoundFieldTransformer : FieldTransformationBase
                 "Round transform requires a valid 'precision' parameter (integer).");
         }
 
+        // Why a type and not a MidpointRounding literal: which way a midpoint goes is a decision the
+        // configuration makes, the same way the duration unit and the timezone are. AwayFromZero when
+        // unspecified is the behaviour every existing Round config was written against.
+        var modeName = context.Parameters.TryGetValue("mode", out var configured) && !string.IsNullOrWhiteSpace(configured)
+            ? configured
+            : "AwayFromZero";
+
+        // Why the name is checked and not just null: ByName returns a NotFound sentinel called
+        // "_Empty" rather than null, so a ?? guard passes an object that rounds nothing.
+        var mode = RoundingTypes.ByName(modeName);
+        if (mode is null || string.Equals(mode.Name, "_Empty", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Unknown rounding mode '{modeName}'. Use RoundingTypes.All() for available options.");
+        }
+
         var value = ConvertToDecimal(input);
-        var rounded = Math.Round(value, precision, MidpointRounding.AwayFromZero);
-        return Task.FromResult(GenericResult<object?>.Success(rounded));
+        return Task.FromResult(GenericResult<object?>.Success(mode.Round(value, precision)));
     }
 
 

@@ -586,6 +586,13 @@
     <Project Path="tests/Fdw.Data.RowSources.Tests/Fdw.Data.RowSources.Tests.csproj" />
     <Project Path="tests/Fdw.Data.SourceGenerators.Tests/Fdw.Data.SourceGenerators.Tests.csproj" />
     <Project Path="tests/Fdw.Data.Tests/Fdw.Data.Tests.csproj" />
+    <Project Path="tests/Fdw.Data.Transformations.Tests/Fdw.Data.Transformations.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+    </Project>
     <Project Path="tests/Fdw.DevSession.Tests/Fdw.DevSession.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />
       <BuildType Solution="Develop-Local|*" Project="Debug" />
