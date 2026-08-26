@@ -64,8 +64,7 @@ public sealed class RoundFieldTransformer : FieldTransformationBase
             ? configured
             : "AwayFromZero";
 
-        // Why the name is checked and not just null: ByName returns a NotFound sentinel called
-        // "_Empty" rather than null, so a ?? guard passes an object that rounds nothing.
+        // ByName returns a NotFound sentinel, never null — the same check AddDuration and Timezone make.
         var mode = RoundingTypes.ByName(modeName);
         if (mode is null || string.Equals(mode.Name, "_Empty", StringComparison.Ordinal))
         {
