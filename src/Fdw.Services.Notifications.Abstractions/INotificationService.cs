@@ -7,9 +7,9 @@ namespace Fdw.Services.Notifications.Abstractions;
 /// <summary>
 /// Interface for channel-specific notification services.
 /// Each notification channel (Email, Teams, Webhook) has its own implementation.
-/// Extends IGenericNotification with notification-specific operations.
+/// Extends IPlatformNotification with notification-specific operations.
 /// </summary>
-public interface INotificationService : IGenericNotification
+public interface INotificationService : IPlatformNotification
 {
     /// <summary>
     /// Sends a notification through this channel.

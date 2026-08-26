@@ -35,7 +35,7 @@ namespace Fdw.Services.Multitenancy;
 /// the single configured choice and drives that ONE option's Configure/Register
 /// directly, instead of the generated blanket Configure/Register that would iterate every discovered
 /// option; Register/Initialize become no-ops since Configure already did the only work needed. This
-/// makes the domain self-selecting — it is no longer <c>[ServiceTypeCollection(Manual = true)]</c>; it
+/// makes the domain self-selecting — it is not excluded from the collect; it
 /// participates in the ordinary PlatformServices Configure/Register/Initialize collects like every other
 /// domain, and the "exactly one option runs" guarantee lives here instead of in each host's Program.cs.
 /// </para>

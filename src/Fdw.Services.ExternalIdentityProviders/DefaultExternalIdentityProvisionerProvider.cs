@@ -22,14 +22,14 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// until it was killed (FDW-615).
 /// </para>
 /// <para>
-/// Overriding <see cref="DefaultServiceProvider{TService,TConfiguration,TFactory,TConfigurationProvider}.Create"/>
+/// Overriding <see cref="PlatformServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}.Create"/>
 /// removes the container from the picture entirely: the provider passes <c>this</c> — a value it
 /// already holds — as a plain method argument. Mirrors <c>DefaultDataVaultProvider</c>, which hands the
 /// factory an already-resolved connection and pepper.
 /// </para>
 /// </remarks>
 public class DefaultExternalIdentityProvisionerProvider
-    : DefaultServiceProvider<
+    : PlatformServiceProviderBase<
         IExternalIdentityProvisioner,
         ExternalIdentityProvisionerConfiguration,
         IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>,
@@ -42,12 +42,12 @@ public class DefaultExternalIdentityProvisionerProvider
     /// <param name="logger">Logger instance.</param>
     public DefaultExternalIdentityProvisionerProvider(
         IServiceProvider services,
-        ILogger<DefaultServiceProvider<
+        ILogger<PlatformServiceProviderBase<
             IExternalIdentityProvisioner,
             ExternalIdentityProvisionerConfiguration,
             IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>,
             IServiceConfigurationProvider<ExternalIdentityProvisionerConfiguration>>> logger)
-        : base(services, logger ?? NullLogger<DefaultServiceProvider<
+        : base(services, logger ?? NullLogger<PlatformServiceProviderBase<
             IExternalIdentityProvisioner,
             ExternalIdentityProvisionerConfiguration,
             IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>,

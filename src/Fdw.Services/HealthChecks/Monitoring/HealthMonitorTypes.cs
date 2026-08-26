@@ -39,7 +39,6 @@ namespace Fdw.Services.HealthChecks.Monitoring;
     typeof(HealthMonitorTypeBase<IHealthMonitorService, IHealthMonitorFactory<IHealthMonitorService, HealthMonitorConfiguration>, HealthMonitorConfiguration>),
     typeof(IHealthMonitorType),
     typeof(HealthMonitorTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(IHealthMonitorService),
     ConfigurationType = typeof(HealthMonitorConfiguration),
     // Why: the concrete domain provider + domain-named interface, exactly like ConnectionTypes

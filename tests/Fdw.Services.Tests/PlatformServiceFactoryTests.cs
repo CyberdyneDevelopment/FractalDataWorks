@@ -10,7 +10,7 @@ using Xunit;
 namespace Fdw.Services.Tests;
 
 [Collection(nameof(ServicesTestCollection))]
-public class GenericServiceFactoryTests
+public class PlatformServiceFactoryTests
 {
     [Fact]
     [Trait("Priority", "P1")]
@@ -18,10 +18,10 @@ public class GenericServiceFactoryTests
     public void Constructor_WithLogger_StoresLogger()
     {
         // Arrange
-        var mockLogger = new Mock<ILogger<TestService>>();
+        var mockLogger = new Mock<ILogger<PlatformServiceFactory<TestService, TestConfiguration>>>();
 
         // Act
-        var factory = new GenericServiceFactory<TestService, TestConfiguration>(mockLogger.Object);
+        var factory = new TestServiceFactory(mockLogger.Object);
 
         // Assert
         factory.ShouldNotBeNull();
@@ -33,7 +33,7 @@ public class GenericServiceFactoryTests
     public void Constructor_WithoutLogger_UsesNullLogger()
     {
         // Arrange & Act
-        var factory = new GenericServiceFactory<TestService, TestConfiguration>();
+        var factory = new TestServiceFactory();
 
         // Assert
         factory.ShouldNotBeNull();
@@ -45,7 +45,7 @@ public class GenericServiceFactoryTests
     public void Create_WithValidConfiguration_ReturnsSuccess()
     {
         // Arrange
-        var factory = new GenericServiceFactory<TestService, TestConfiguration>();
+        var factory = new TestServiceFactory();
         var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "GenTestConfig" };
 
         // Act
@@ -64,7 +64,7 @@ public class GenericServiceFactoryTests
     public void Create_WithValidConfiguration_CreatesServiceInstance()
     {
         // Arrange
-        var factory = new GenericServiceFactory<TestService, TestConfiguration>();
+        var factory = new TestServiceFactory();
         var testId = Guid.NewGuid();
         var config = new TestConfiguration { Id = testId, Name = "InstanceConfig" };
 
@@ -84,7 +84,7 @@ public class GenericServiceFactoryTests
     public void Create_WithValidConfiguration_ReturnsSuccessMessage()
     {
         // Arrange
-        var factory = new GenericServiceFactory<TestService, TestConfiguration>();
+        var factory = new TestServiceFactory();
         var config = new TestConfiguration();
 
         // Act
@@ -102,7 +102,7 @@ public class GenericServiceFactoryTests
     public void Create_WithNullLogger_DoesNotThrow()
     {
         // Arrange
-        var factory = new GenericServiceFactory<TestService, TestConfiguration>();
+        var factory = new TestServiceFactory();
         var config = new TestConfiguration();
 
         // Act & Assert
@@ -115,15 +115,14 @@ public class GenericServiceFactoryTests
     public void Create_InheritsBaseValidation()
     {
         // Arrange
-        var factory = new GenericServiceFactory<TestService, TestConfiguration>();
+        var factory = new TestServiceFactory();
 
         // Act
         var result = factory.Create(null!);
 
         // Assert - Should use base class validation
         result.IsFailure.ShouldBeTrue();
-        result.CurrentMessage.ShouldNotBeNull();
-        result.CurrentMessage!.ShouldContain("Configuration cannot be null");
+        result.Code?.Name.ShouldBe("ConfigurationRequired");
     }
 
     [Fact]
@@ -132,7 +131,7 @@ public class GenericServiceFactoryTests
     public void Create_WithMultipleConfigurations_CreatesDifferentInstances()
     {
         // Arrange
-        var factory = new GenericServiceFactory<TestService, TestConfiguration>();
+        var factory = new TestServiceFactory();
         var testId1 = Guid.NewGuid();
         var testId2 = Guid.NewGuid();
         var config1 = new TestConfiguration { Id = testId1, Name = "First" };
@@ -156,7 +155,7 @@ public class GenericServiceFactoryTests
     public void Create_OverridesBaseCreateMethod()
     {
         // Arrange
-        var factory = new GenericServiceFactory<TestService, TestConfiguration>();
+        var factory = new TestServiceFactory();
         var config = new TestConfiguration { Name = "override-test" };
 
         // Act
@@ -164,7 +163,7 @@ public class GenericServiceFactoryTests
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        // Verify it logs with ServiceFactoryLog (specific to GenericServiceFactory)
+        // Verify it logs with ServiceFactoryLog (specific to PlatformServiceFactory)
         result.CurrentMessage.ShouldNotBeNull();
         result.CurrentMessage!.ShouldContain("created successfully");
     }
@@ -175,7 +174,7 @@ public class GenericServiceFactoryTests
     public void Create_WithConfigurationHavingDescription_StoresDescription()
     {
         // Arrange
-        var factory = new GenericServiceFactory<TestService, TestConfiguration>();
+        var factory = new TestServiceFactory();
         var config = new TestConfiguration
         {
             Id = Guid.NewGuid(),

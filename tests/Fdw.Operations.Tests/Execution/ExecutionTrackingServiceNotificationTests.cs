@@ -27,7 +27,7 @@ namespace Fdw.Operations.Tests.Execution;
 public sealed class ExecutionTrackingServiceNotificationTests
 {
     private readonly Mock<IDataGateway> _mockGateway;
-    private readonly Mock<IPlatformServiceProvider<IGenericNotification, NotificationConfiguration>> _mockNotificationProvider;
+    private readonly Mock<IPlatformServiceProvider<IPlatformNotification, NotificationConfiguration>> _mockNotificationProvider;
     private readonly Mock<IServiceConfigurationProvider<NotificationRuleConfiguration>> _mockRuleProvider;
     private readonly Mock<INotificationService> _mockNotificationSvc;
 
@@ -37,7 +37,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
     public ExecutionTrackingServiceNotificationTests()
     {
         _mockGateway = new Mock<IDataGateway>();
-        _mockNotificationProvider = new Mock<IPlatformServiceProvider<IGenericNotification, NotificationConfiguration>>();
+        _mockNotificationProvider = new Mock<IPlatformServiceProvider<IPlatformNotification, NotificationConfiguration>>();
         _mockRuleProvider = new Mock<IServiceConfigurationProvider<NotificationRuleConfiguration>>();
         _mockNotificationSvc = new Mock<INotificationService>();
     }
@@ -137,7 +137,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
 
         _mockNotificationProvider
             .Setup(p => p.Get("console-channel", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IGenericNotification>.Success(_mockNotificationSvc.Object));
+            .ReturnsAsync(GenericResult<IPlatformNotification>.Success(_mockNotificationSvc.Object));
 
         _mockNotificationSvc
             .Setup(s => s.Send(It.IsAny<INotificationRequest>(), It.IsAny<CancellationToken>()))
@@ -355,7 +355,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
 
         _mockNotificationProvider
             .Setup(p => p.Get("console-channel", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IGenericNotification>.Success(_mockNotificationSvc.Object));
+            .ReturnsAsync(GenericResult<IPlatformNotification>.Success(_mockNotificationSvc.Object));
 
         var sut = new ExecutionTrackingService(
             _mockGateway.Object,
@@ -396,7 +396,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
 
         _mockNotificationProvider
             .Setup(p => p.Get("console-channel", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IGenericNotification>.Success(_mockNotificationSvc.Object));
+            .ReturnsAsync(GenericResult<IPlatformNotification>.Success(_mockNotificationSvc.Object));
 
         // Why: simulate a send failure — Complete must still succeed.
         _mockNotificationSvc

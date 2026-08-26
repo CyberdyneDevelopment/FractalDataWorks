@@ -28,17 +28,5 @@ public sealed class PlatformServiceProviderAttribute : Attribute
     /// </summary>
     public string? ServiceCategory { get; set; }
 
-    /// <summary>
-    /// Dependency-depth layer for <c>PlatformServices</c> ordering — mirrors
-    /// <see cref="ServiceTypeCollectionAttribute.Group"/>; the domain declares its own layer on itself.
-    /// Default is 10 (no declared dependency on the core chain).
-    /// </summary>
-    public int Group { get; set; } = 10;
 
-    /// <summary>
-    /// Declares this a "declared choice" domain — mirrors <see cref="ServiceTypeCollectionAttribute.Manual"/>.
-    /// When true, the PlatformServices collects (<c>Configure</c>/<c>Register</c>/<c>Initialize</c>) skip
-    /// it and a host resolves the one configured option explicitly instead. Default is false.
-    /// </summary>
-    public bool Manual { get; set; }
 }

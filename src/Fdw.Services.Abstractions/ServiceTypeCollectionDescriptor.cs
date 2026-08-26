@@ -20,6 +20,6 @@ namespace Fdw.ServiceTypes;
 public sealed record ServiceTypeCollectionDescriptor(
     string ServiceCategory,
     Type CollectionType,
-    Func<IHostApplicationBuilder, ILoggerFactory?, bool, IGenericResult<IHostApplicationBuilder>> Configure,
-    Func<IHostApplicationBuilder, ILoggerFactory?, bool, IGenericResult<IHostApplicationBuilder>> Register,
-    Func<IHost, ILoggerFactory?, bool, IGenericResult<IHost>> Initialize) : IServiceTypeCollection;
+    Func<IHostApplicationBuilder, ILoggerFactory?, bool, bool, IGenericResult<IHostApplicationBuilder>> Configure,
+    Func<IHostApplicationBuilder, ILoggerFactory?, bool, bool, IGenericResult<IHostApplicationBuilder>> Register,
+    Func<IHost, ILoggerFactory?, bool, bool, IGenericResult<IHost>> Initialize) : IServiceTypeCollection;

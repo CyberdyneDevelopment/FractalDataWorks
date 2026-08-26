@@ -20,9 +20,9 @@ namespace Fdw.Services.Registration.SourceGenerators;
 /// app that doesn't reference either project gets none of this; the feature is fully opt-in.
 /// </para>
 /// <para>
-/// Each discovered domain's dependency-depth group is generator-emitted straight from
-/// <c>[ServiceTypeCollection(Group = n)]</c> — the domain declares its own layer on itself (default 10
-/// when unspecified). This generator does not compute a cross-domain dependency order automatically:
+/// This generator emits no ordering. A host controls order by running a domain's own entry ahead of
+/// the collect, or deferring it out of the collect and running it afterwards. It does not compute a
+/// cross-domain dependency order automatically:
 /// Roslyn cannot see method-body syntax for types compiled in a referenced assembly, only current-
 /// compilation source has a syntax tree, so an automatic dependency scan is not implementable here.
 /// </para>
@@ -198,25 +198,10 @@ public sealed class PlatformServicesRegistrationGenerator : IIncrementalGenerato
                 categoryName = className;
         }
 
-        // Why: Manual mirrors [ServiceTypeCollection(Manual = true)] — a "declared choice" domain
-        // (e.g. Multitenancy, the auth-server roles) declares this once on the attribute so every host's
-        // generated registration excludes it from the collects. The attribute is the only way to set the
-        // flag; there is no host-side setter.
-        var manualArg = attribute.NamedArguments
-            .FirstOrDefault(kvp => string.Equals(kvp.Key, "Manual", StringComparison.Ordinal)).Value;
-        var manual = manualArg.Value as bool? ?? false;
-
-        // Why: Group mirrors [ServiceTypeCollection(Group = n)] — the domain declares its own
-        // dependency-depth layer on itself (default 10, matching the attribute's own default); there is
-        // no spine-side override table and no PlatformServices.SetGroup call.
-        var groupArg = attribute.NamedArguments
-            .FirstOrDefault(kvp => string.Equals(kvp.Key, "Group", StringComparison.Ordinal)).Value;
-        var group = groupArg.Value as int? ?? 10;
-
-        return new CollectionModel(categoryName!, type.ToDisplayString(), manual, group);
+        return new CollectionModel(categoryName!, type.ToDisplayString());
     }
 
-    private sealed record CollectionModel(string CategoryName, string CollectionFullName, bool Manual, int Group);
+    private sealed record CollectionModel(string CategoryName, string CollectionFullName);
 
     private static string GenerateSource(List<CollectionModel> models, string assemblySafe)
     {
@@ -254,15 +239,6 @@ public sealed class PlatformServicesRegistrationGenerator : IIncrementalGenerato
         {
             foreach (var m in models)
             {
-                // Why: Group is generator-emitted straight from [ServiceTypeCollection(Group = n)] —
-                // the domain declares its own dependency-depth layer on itself; no cross-domain
-                // dependency graph is computed here (Roslyn cannot see referenced-assembly method-body
-                // syntax), and there is no spine-side SetGroup override table.
-                //
-                // Why the collection's own type stays fully namespace-qualified (unlike the well-known
-                // Fdw.ServiceTypes types above, which use the file's `using`): it is an arbitrary
-                // discovered type from any referenced assembly — a `using` per discovered namespace risks
-                // colliding with another discovered domain's identically-shaped short name.
                 sb.AppendLine($"            _{FieldNameFor(m.CategoryName)} = PlatformServices.Add(");
                 sb.AppendLine($"                \"{m.CategoryName}\",");
                 sb.AppendLine($"                new ServiceTypeCollectionDescriptor(");
@@ -270,16 +246,7 @@ public sealed class PlatformServicesRegistrationGenerator : IIncrementalGenerato
                 sb.AppendLine($"                    typeof({m.CollectionFullName}),");
                 sb.AppendLine($"                    {m.CollectionFullName}.Configure,");
                 sb.AppendLine($"                    {m.CollectionFullName}.Register,");
-                sb.AppendLine($"                    {m.CollectionFullName}.Initialize),");
-                if (m.Manual)
-                {
-                    sb.AppendLine($"                {m.Group},");
-                    sb.AppendLine($"                manual: true);");
-                }
-                else
-                {
-                    sb.AppendLine($"                {m.Group});");
-                }
+                sb.AppendLine($"                    {m.CollectionFullName}.Initialize));");
             }
         }
         sb.AppendLine("        }");

@@ -8,7 +8,7 @@ namespace Fdw.Services.Notifications.Abstractions;
 /// Base interface for notification services in the Fdw framework.
 /// All notification implementations must implement this interface.
 /// </summary>
-public interface IGenericNotification : IDisposable, IServiceOption
+public interface IPlatformNotification : IDisposable, IServiceOption
 {
     /// <summary>
     /// Gets the notification channel this service handles.

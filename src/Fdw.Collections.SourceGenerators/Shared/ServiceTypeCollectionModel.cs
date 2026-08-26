@@ -17,7 +17,6 @@ internal readonly record struct ServiceTypeCollectionModel(
     bool RestrictToCurrentCompilation,
     string? ParentCollectionMatchKey,
     string? ChildName,
-    bool GenerateProvider,
     string? ServiceInterfaceTypeName,
     string? ConfigurationInterfaceTypeName,
     string? ConfigurationTypeName,

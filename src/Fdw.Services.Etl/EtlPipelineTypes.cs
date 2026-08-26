@@ -41,7 +41,6 @@ namespace Fdw.Services.Etl;
     typeof(EtlPipelineTypeBase<IEtlPipeline, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, EtlPipelineConfiguration>),
     typeof(IEtlPipelineType),
     typeof(EtlPipelineTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(IEtlPipeline),
     // Why: the runtime service provider name-resolves via the ROOT header (pipe.Pipeline /
     // PipelineConfiguration, which owns Name + ServiceOptionType), then composes the kind/engine

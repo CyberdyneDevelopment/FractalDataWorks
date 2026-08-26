@@ -28,7 +28,6 @@ namespace Fdw.Services.ExternalIdentityProviders;
     typeof(ExternalIdentityProviderTypeBase<IExternalIdentityProvider, ExternalIdentityProviderConfiguration, IExternalIdentityProviderFactory<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>>),
     typeof(IExternalIdentityProviderType),
     typeof(ExternalIdentityProviderTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(IExternalIdentityProvider),
     ConfigurationType = typeof(ExternalIdentityProviderConfiguration),
     ProviderType = typeof(DefaultServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration, IExternalIdentityProviderFactory<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>, IServiceConfigurationProvider<ExternalIdentityProviderConfiguration>>),

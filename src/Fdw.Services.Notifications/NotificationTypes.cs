@@ -35,19 +35,18 @@ namespace Fdw.Services.Notifications;
 /// Use <c>NotificationTypes.ByName("Email")</c> to look up specific types.
 /// </remarks>
 [ServiceTypeCollection(
-    typeof(NotificationTypeBase<IGenericNotification, INotificationFactory<IGenericNotification, NotificationConfiguration>, NotificationConfiguration>),
+    typeof(NotificationTypeBase<IPlatformNotification, INotificationFactory<IPlatformNotification, NotificationConfiguration>, NotificationConfiguration>),
     typeof(INotificationType),
     typeof(NotificationTypes),
-    GenerateProvider = true,
-    ServiceInterface = typeof(IGenericNotification),
+    ServiceInterface = typeof(IPlatformNotification),
     ConfigurationInterface = typeof(NotificationConfiguration),
     ConfigurationType = typeof(NotificationConfiguration),
-    ProviderType = typeof(DefaultServiceProvider<IGenericNotification, NotificationConfiguration, INotificationFactory<IGenericNotification, NotificationConfiguration>, IServiceConfigurationProvider<NotificationConfiguration>>),
-    ProviderInterface = typeof(IPlatformServiceProvider<IGenericNotification, NotificationConfiguration>),
+    ProviderType = typeof(NotificationServiceProvider),
+    ProviderInterface = typeof(INotificationServiceProvider),
     ServiceCategory = "Notification")]
 public partial class NotificationTypes
     : ServiceTypeCollectionBase<
-        NotificationTypeBase<IGenericNotification, INotificationFactory<IGenericNotification, NotificationConfiguration>, NotificationConfiguration>,
+        NotificationTypeBase<IPlatformNotification, INotificationFactory<IPlatformNotification, NotificationConfiguration>, NotificationConfiguration>,
         INotificationType>
 {
     // Configure(), Register() and Initialize() are source-generated
@@ -68,7 +67,7 @@ public partial class NotificationTypes
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IPlatformServiceProvider<IGenericNotification, NotificationConfiguration>).ToString();
+        var providerService = typeof(IPlatformServiceProvider<IPlatformNotification, NotificationConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -111,12 +110,12 @@ public partial class NotificationTypes
             ServiceTypeLog.DomainOptionsCollected(log, nameof(NotificationTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(NotificationTypes), providerService);
 
-            builder.Services.AddScoped<IPlatformServiceProvider<IGenericNotification, NotificationConfiguration>>(sp =>
+            builder.Services.AddScoped<IPlatformServiceProvider<IPlatformNotification, NotificationConfiguration>>(sp =>
             {
-                var provider = new DefaultServiceProvider<IGenericNotification, NotificationConfiguration, INotificationFactory<IGenericNotification, NotificationConfiguration>, IServiceConfigurationProvider<NotificationConfiguration>>(
+                var provider = new DefaultServiceProvider<IPlatformNotification, NotificationConfiguration, INotificationFactory<IPlatformNotification, NotificationConfiguration>, IServiceConfigurationProvider<NotificationConfiguration>>(
                     sp,
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultServiceProvider<IGenericNotification, NotificationConfiguration, INotificationFactory<IGenericNotification, NotificationConfiguration>, IServiceConfigurationProvider<NotificationConfiguration>>>()
-                    ?? NullLogger<DefaultServiceProvider<IGenericNotification, NotificationConfiguration, INotificationFactory<IGenericNotification, NotificationConfiguration>, IServiceConfigurationProvider<NotificationConfiguration>>>.Instance);
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultServiceProvider<IPlatformNotification, NotificationConfiguration, INotificationFactory<IPlatformNotification, NotificationConfiguration>, IServiceConfigurationProvider<NotificationConfiguration>>>()
+                    ?? NullLogger<DefaultServiceProvider<IPlatformNotification, NotificationConfiguration, INotificationFactory<IPlatformNotification, NotificationConfiguration>, IServiceConfigurationProvider<NotificationConfiguration>>>.Instance);
 
                 // Why ILogger<NotificationTypes> and not CreateLogger("NotificationTypes"): SourceContext then
                 // carries the namespace-qualified collection, and the category cannot drift from the

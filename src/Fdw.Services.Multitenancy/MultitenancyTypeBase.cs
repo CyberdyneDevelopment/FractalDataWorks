@@ -13,7 +13,7 @@ namespace Fdw.Services.Multitenancy;
 /// <remarks>
 /// The domain registers tenant/org infrastructure directly in <c>Register</c> — there
 /// is no runtime-resolved service instance, so this collection has no generated provider
-/// (<c>GenerateProvider</c> is not set) and options are looked up and invoked directly by
+/// (it names no <c>ProviderType</c>) and options are looked up and invoked directly by
 /// <see cref="MultitenancyTypes.ByName(string)"/> rather than through a domain provider. This mirrors
 /// <c>AuthorizationTypeBase</c> — a "declared choice" domain, not a "many named instances" domain.
 /// </remarks>

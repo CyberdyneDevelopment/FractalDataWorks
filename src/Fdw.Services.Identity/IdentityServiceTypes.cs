@@ -29,7 +29,6 @@ namespace Fdw.Services.Identity;
     typeof(IdentityServiceTypeBase<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>>),
     typeof(IIdentityServiceType),
     typeof(IdentityServiceTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(IIdentityService),
     ConfigurationType = typeof(IdentityServiceConfiguration),
     ProviderType = typeof(DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>),

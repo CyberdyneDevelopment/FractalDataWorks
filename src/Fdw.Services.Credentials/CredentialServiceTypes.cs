@@ -37,14 +37,12 @@ namespace Fdw.Services.Credentials;
     typeof(CredentialServiceTypeBase<ICredentialService, ICredentialServiceFactory<ICredentialService, CredentialServiceConfiguration>, CredentialServiceConfiguration>),
     typeof(ICredentialServiceType),
     typeof(CredentialServiceTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(ICredentialService),
     ConfigurationType = typeof(CredentialServiceConfiguration),
     ProviderType = typeof(CredentialServiceProvider),
     ProviderInterface = typeof(ICredentialServiceProvider),
     ServiceCategory = "CredentialService",
-    RestrictToCurrentCompilation = true,
-    Group = 5)]
+    RestrictToCurrentCompilation = true)]
 public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
     CredentialServiceTypeBase<ICredentialService, ICredentialServiceFactory<ICredentialService, CredentialServiceConfiguration>, CredentialServiceConfiguration>,
     ICredentialServiceType<ICredentialService, ICredentialServiceFactory<ICredentialService, CredentialServiceConfiguration>, CredentialServiceConfiguration>>

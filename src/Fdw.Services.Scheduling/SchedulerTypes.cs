@@ -26,7 +26,6 @@ namespace Fdw.Services.Scheduling;
     typeof(SchedulerTypeBase<IFrameworkSchedulingService, SchedulerConfiguration, ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>>),
     typeof(ISchedulerType),
     typeof(SchedulerTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(IFrameworkSchedulingService),
     ConfigurationType = typeof(SchedulerConfiguration),
     ProviderType = typeof(DefaultServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration, ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>, IServiceConfigurationProvider<SchedulerConfiguration>>),

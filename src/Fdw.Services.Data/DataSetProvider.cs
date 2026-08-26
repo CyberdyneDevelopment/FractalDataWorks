@@ -32,7 +32,7 @@ namespace Fdw.Services.Data;
 /// Merges DataSet configurations from the DB-backed provider and the static TypeCollection.
 /// Also provides static Configure/Register/Initialize methods for three-phase DI registration.
 /// </summary>
-[PlatformServiceProvider(ServiceCategory = "DataSet", Group = 9)]
+[PlatformServiceProvider(ServiceCategory = "DataSet")]
 public sealed class DataSetProvider : IDataSetConfigurationProvider
 {
     // ============================================================
@@ -47,7 +47,8 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     /// <param name="loggerFactory">Optional logger factory for startup diagnostics.</param>
     /// <returns>The builder, for chaining.</returns>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
-    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
         if (loggerFactory != null)
         {
@@ -64,7 +65,8 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     /// <param name="builder">The host application builder.</param>
     /// <param name="loggerFactory">Optional logger factory for startup diagnostics.</param>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
-    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
         var services = builder.Services;
         // Why: the DataSet domain registers the gateway-backed DataSetConfigurationProvider it
@@ -112,7 +114,8 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">Optional logger factory.</param>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
-    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
         var logger = loggerFactory?.CreateLogger<DataSetProvider>()
             ?? host.Services.GetRequiredService<ILoggerFactory>().CreateLogger<DataSetProvider>();

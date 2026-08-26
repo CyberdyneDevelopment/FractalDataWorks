@@ -37,7 +37,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     private readonly IDataGateway _dataGateway;
     private readonly ILogger _logger;
     private readonly string _dataStoreName;
-    private readonly IPlatformServiceProvider<IGenericNotification, NotificationConfiguration>? _notificationProvider;
+    private readonly IPlatformServiceProvider<IPlatformNotification, NotificationConfiguration>? _notificationProvider;
     private readonly IServiceConfigurationProvider<NotificationRuleConfiguration>? _notificationRuleProvider;
 
     /// <summary>
@@ -52,7 +52,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         IDataGateway dataGateway,
         ILoggerFactory loggerFactory,
         string dataStoreName,
-        IPlatformServiceProvider<IGenericNotification, NotificationConfiguration>? notificationProvider = null,
+        IPlatformServiceProvider<IPlatformNotification, NotificationConfiguration>? notificationProvider = null,
         IServiceConfigurationProvider<NotificationRuleConfiguration>? notificationRuleProvider = null)
     {
         _dataGateway = dataGateway ?? throw new ArgumentNullException(nameof(dataGateway));

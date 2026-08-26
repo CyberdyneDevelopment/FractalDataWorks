@@ -27,7 +27,7 @@ namespace Fdw.Services.Notifications;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Notification")]
-public partial class NotificationConfiguration : IGenericConfiguration
+public partial class NotificationConfiguration : INotificationConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationConfiguration"/> class.

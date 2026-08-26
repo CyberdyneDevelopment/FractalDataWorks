@@ -65,7 +65,7 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
                 var gateway = sp.GetRequiredService<IDataGateway>();
                 // Why: GetService (not GetRequired) — notification providers are optional; callers
                 // that don't wire notifications (e.g. reference-etl, reference-scheduler) still boot.
-                var notificationProvider = sp.GetService<IPlatformServiceProvider<IGenericNotification, NotificationConfiguration>>();
+                var notificationProvider = sp.GetService<IPlatformServiceProvider<IPlatformNotification, NotificationConfiguration>>();
                 var ruleProvider = sp.GetService<IServiceConfigurationProvider<NotificationRuleConfiguration>>();
                 return new ExecutionTrackingService(gateway, lf, "OpsDb", notificationProvider, ruleProvider);
             });

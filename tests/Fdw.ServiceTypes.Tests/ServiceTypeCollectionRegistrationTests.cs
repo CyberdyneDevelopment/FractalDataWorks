@@ -48,14 +48,15 @@ public class ServiceTypeCollectionRegistrationTests
         public string PathName => "cfg";
         public string Container => Name;
 
-        public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
+        public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
             => GenericResult<IHostApplicationBuilder>.Success(builder);
 
         public IGenericResult<IHostApplicationBuilder> Register(
-            IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
+            IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false,
+            bool defer = false)
             => GenericResult<IHostApplicationBuilder>.Success(builder);
 
-        public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
+        public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
             => GenericResult<IHost>.Success(host);
     }
 

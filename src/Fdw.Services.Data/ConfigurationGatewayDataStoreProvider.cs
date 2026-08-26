@@ -35,7 +35,7 @@ namespace Fdw.Services.Data;
 /// result so any endpoint targeting either set resolves correctly.
 /// Also provides static Configure/Register/Initialize methods for three-phase DI registration.
 /// </summary>
-[PlatformServiceProvider(ServiceCategory = "DataStore", Group = 8)]
+[PlatformServiceProvider(ServiceCategory = "DataStore")]
 public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
 {
     // ============================================================
@@ -49,7 +49,8 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     /// <param name="builder">The host builder.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
-    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
 
         // Why: ctrl-tier IDataStore tree (built by DataStoreLoader.BuildTreeFromFlatLists, used by
@@ -84,7 +85,8 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     /// <param name="builder">The host builder.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
-    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
         var services = builder.Services;
         // Why: the DataStore domain registers the gateway-backed DataStoreConfigurationProvider it
@@ -166,7 +168,8 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
-    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
         // Why the scope: this provider is Scoped, so resolving it from the root provider throws under
         // Development ValidateScopes.

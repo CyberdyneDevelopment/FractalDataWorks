@@ -64,7 +64,7 @@ public interface IPlatformServiceProvider<TService> : IPlatformServiceProvider
 /// <typeparam name="TConfiguration">The configuration type for this service domain.</typeparam>
 public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformServiceProvider<TService>
     where TService : IGenericService
-    where TConfiguration : class, IGenericConfiguration
+    where TConfiguration : IGenericConfiguration
 {
     /// <summary>
     /// Gets a service instance built from the supplied strongly-typed configuration.
@@ -109,7 +109,7 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
 public interface IPlatformServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
     : IPlatformServiceProvider<TService, TConfiguration>
     where TService : IGenericService
-    where TConfiguration : class, IGenericConfiguration
+    where TConfiguration : IGenericConfiguration
     where TFactory : IServiceFactory<TService>
     where TConfigurationProvider : IServiceConfigurationProvider<TConfiguration>
 {

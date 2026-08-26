@@ -20,7 +20,7 @@ namespace Fdw.Services.DataVault;
 
 /// <summary>
 /// Default implementation of <see cref="IDataVaultProvider"/>.
-/// Wraps <see cref="DefaultServiceProvider{TService,TConfiguration,TFactory,TConfigurationProvider}"/>
+/// Wraps <see cref="PlatformServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}"/>
 /// and adds vault-specific cache-by-name lookup plus the typed
 /// <see cref="Get(DataVaultRequest, CancellationToken)"/> entry point.
 /// </summary>
@@ -35,7 +35,7 @@ namespace Fdw.Services.DataVault;
 /// </para>
 /// </remarks>
 public sealed class DefaultDataVaultProvider
-    : DefaultServiceProvider<IDataVault, DataVaultConfiguration, IDataVaultFactory<IDataVault, DataVaultConfiguration>, IServiceConfigurationProvider<DataVaultConfiguration>>,
+    : PlatformServiceProviderBase<IDataVault, DataVaultConfiguration, IDataVaultFactory<IDataVault, DataVaultConfiguration>, IServiceConfigurationProvider<DataVaultConfiguration>>,
       IDataVaultProvider
 {
     private readonly ILogger<DefaultDataVaultProvider> _logger;

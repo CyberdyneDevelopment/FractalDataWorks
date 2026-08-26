@@ -35,22 +35,11 @@ namespace Fdw.Services.SecretManagers;
     typeof(SecretManagerTypeBase<ISecretManager, ISecretManagerServiceFactory<ISecretManager, SecretManagerConfiguration>, SecretManagerConfiguration>),
     typeof(ISecretManagerType),
     typeof(SecretManagerTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(ISecretManager),
     ConfigurationType = typeof(SecretManagerConfiguration),
     ProviderType = typeof(DefaultSecretManagerProvider),
     ProviderInterface = typeof(IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>),
-    ServiceCategory = "SecretManager",
-    // Why there is no lifetime here any more: ProviderLifetime was removed from
-    // ServiceTypeCollectionAttribute, and ServiceTypeCollectionGenerator now registers EVERY domain
-    // provider AddScoped so factory lambdas may legally hold scoped dependencies. This domain
-    // previously pinned Singleton so a Singleton connection factory could take
-    // IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration> as a plain constructor
-    // dependency; with the provider scoped, any Singleton consumer resolving it from the ROOT
-    // container captures a scoped instance. Nothing in this domain is scoped, so the registration
-    // itself is safe — the risk lives at the consumers, which is why secret resolution moved onto
-    // the factory rather than staying a provider a factory holds.
-    Group = 0)]
+    ServiceCategory = "SecretManager")]
 public partial class SecretManagerTypes : ServiceTypeCollectionBase<
     SecretManagerTypeBase<ISecretManager, ISecretManagerServiceFactory<ISecretManager, SecretManagerConfiguration>, SecretManagerConfiguration>,
     ISecretManagerType<ISecretManager, ISecretManagerServiceFactory<ISecretManager, SecretManagerConfiguration>, SecretManagerConfiguration>>

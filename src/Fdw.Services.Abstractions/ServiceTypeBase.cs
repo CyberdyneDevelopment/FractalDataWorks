@@ -103,35 +103,31 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     // replaced needed a virtual, an override, a nullable override field and an Invoke wrapper that
     // checked the field before falling through to virtual dispatch — four moving parts for one body.
 
-    /// <summary>Gets a value indicating whether Configure has run.</summary>
+    private PhaseState _configure;
+    private PhaseState _register;
+    private PhaseState _initialize;
+
+    /// <summary>Gets whether Configure has not run, is deferred, or has run.</summary>
     /// <remarks>
     /// A phase runs once. Idempotence is what makes chaining safe: a body appended by one contributor
     /// cannot re-run what an earlier one already did, however many times a phase is invoked.
     /// </remarks>
-    public bool Configured { get; private set; }
+    public PhaseState ConfigureState => _configure;
+
+    /// <summary>Gets whether Register has not run, is deferred, or has run.</summary>
+    public PhaseState RegisterState => _register;
+
+    /// <summary>Gets whether Initialize has not run, is deferred, or has run.</summary>
+    public PhaseState InitializeState => _initialize;
+
+    /// <summary>Gets a value indicating whether Configure has run.</summary>
+    public bool Configured => _configure == PhaseState.Ran;
 
     /// <summary>Gets a value indicating whether Register has run.</summary>
-    public bool Registered { get; private set; }
+    public bool Registered => _register == PhaseState.Ran;
 
     /// <summary>Gets a value indicating whether Initialize has run.</summary>
-    public bool Initialized { get; private set; }
-
-    /// <summary>Gets or sets a value indicating whether this option is switched off.</summary>
-    /// <remarks>
-    /// Checked by the option itself, not only by the collection cycling it — calling a phase directly
-    /// must honour the switch too, or the switch means nothing to half its callers.
-    /// </remarks>
-    public bool SkipRegistration { get; set; }
-    /// <summary>Gets or sets a value indicating whether Configure is switched off.</summary>
-    /// <remarks>
-    /// One flag per phase, because they are switched off for different reasons: a domain may
-    /// need its services registered while its post-Build wiring is suppressed, and a single flag
-    /// named for one phase silently governing the other two says something false about what it does.
-    /// </remarks>
-    public bool SkipConfiguration { get; set; }
-
-    /// <summary>Gets or sets a value indicating whether Initialize is switched off.</summary>
-    public bool SkipInitialization { get; set; }
+    public bool Initialized => _initialize == PhaseState.Ran;
 
 
     /// <summary>
@@ -531,10 +527,18 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// <c>ServiceTypeCollectionGenerator</c> from the <c>[ServiceTypeCollection]</c> attribute, not by
     /// hand. It is that generated collect which calls this, in the order the log line reports.
     /// </remarks>
-    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        if (!force && (Configured || SkipConfiguration))
+        if (!force && _configure == PhaseState.Ran)
         {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        // Why the claim happens before the work and not after: a deferred phase must look done to the
+        // collect without having run, which is the one thing a bool latch cannot express.
+        if (defer)
+        {
+            _configure = PhaseState.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
@@ -551,7 +555,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return result;
         }
 
-        Configured = true;
+        _configure = PhaseState.Ran;
         return result;
     }
 
@@ -563,10 +567,19 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     public IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory = null,
-        bool force = false)
+        bool force = false,
+        bool defer = false)
     {
-        if (!force && (Registered || SkipRegistration))
+        if (!force && _register == PhaseState.Ran)
         {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        // Why the claim happens before the work and not after: a deferred phase must look done to the
+        // collect without having run, which is the one thing a bool latch cannot express.
+        if (defer)
+        {
+            _register = PhaseState.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
@@ -584,7 +597,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return result;
         }
 
-        Registered = true;
+        _register = PhaseState.Ran;
         return result;
     }
 
@@ -592,10 +605,18 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// <remarks>
     /// Called by the generated collection's phase-3 collect, after the host has been built.
     /// </remarks>
-    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
+    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        if (!force && (Initialized || SkipInitialization))
+        if (!force && _initialize == PhaseState.Ran)
         {
+            return GenericResult<IHost>.Success(host);
+        }
+
+        // Why the claim happens before the work and not after: a deferred phase must look done to the
+        // collect without having run, which is the one thing a bool latch cannot express.
+        if (defer)
+        {
+            _initialize = PhaseState.Deferred;
             return GenericResult<IHost>.Success(host);
         }
 
@@ -613,7 +634,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return result;
         }
 
-        Initialized = true;
+        _initialize = PhaseState.Ran;
         return result;
     }
 

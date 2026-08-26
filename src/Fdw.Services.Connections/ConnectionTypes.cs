@@ -43,13 +43,11 @@ namespace Fdw.Services.Connections;
     typeof(ConnectionTypeBase<IGenericConnection, IConnectionFactory<IGenericConnection, ConnectionConfiguration>, ConnectionConfiguration>),
     typeof(IConnectionType),
     typeof(ConnectionTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(IGenericConnection),
     ConfigurationType = typeof(ConnectionConfiguration),
     ProviderType = typeof(DefaultConnectionProvider),
     ProviderInterface = typeof(IConnectionProvider),
-    ServiceCategory = "Connection",
-    Group = 1)]
+    ServiceCategory = "Connection")]
 public partial class ConnectionTypes : ServiceTypeCollectionBase<
     ConnectionTypeBase<IGenericConnection, IConnectionFactory<IGenericConnection, ConnectionConfiguration>, ConnectionConfiguration>,
     IConnectionType<IGenericConnection, ConnectionConfiguration, IConnectionFactory<IGenericConnection, ConnectionConfiguration>>>

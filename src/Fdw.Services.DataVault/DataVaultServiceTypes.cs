@@ -28,13 +28,11 @@ namespace Fdw.Services.DataVault;
     typeof(DataVaultTypeBase<IDataVault, IDataVaultFactory<IDataVault, DataVaultConfiguration>, DataVaultConfiguration>),
     typeof(IDataVaultType),
     typeof(DataVaultServiceTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(IDataVault),
     ConfigurationType = typeof(DataVaultConfiguration),
     ProviderType = typeof(DefaultDataVaultProvider),
     ProviderInterface = typeof(IDataVaultProvider),
-    ServiceCategory = "DataVault",
-    Group = 4)]
+    ServiceCategory = "DataVault")]
 public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
     DataVaultTypeBase<IDataVault, IDataVaultFactory<IDataVault, DataVaultConfiguration>, DataVaultConfiguration>,
     IDataVaultType<IDataVault, IDataVaultFactory<IDataVault, DataVaultConfiguration>, DataVaultConfiguration>>

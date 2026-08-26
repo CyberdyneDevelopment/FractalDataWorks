@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Fdw.ServiceTypes.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.ServiceTypes;
 
@@ -43,9 +44,8 @@ public static class PlatformServices
     private static volatile bool _frozen;
 
     /// <summary>
-    /// Registers a ServiceTypeCollection descriptor under <paramref name="categoryName"/> with its
-    /// dependency-depth <paramref name="group"/>, returning the created (or, for a harmless duplicate
-    /// re-registration, the existing) entry. Called exclusively from the source-generated
+    /// Registers a ServiceTypeCollection descriptor under <paramref name="categoryName"/>, returning
+    /// the created (or, for a harmless duplicate re-registration, the existing) entry. Called exclusively from the source-generated
     /// <c>[ModuleInitializer]</c> as the entry-point assembly loads — one call per discovered
     /// <c>[ServiceTypeCollection]</c> domain. The generator assigns the return value to that domain's
     /// own private field, which its generated dot-walkable property reads from directly — no lookup of
@@ -53,21 +53,11 @@ public static class PlatformServices
     /// </summary>
     /// <param name="categoryName">Category name (e.g. "Connection") — matches the collection's <c>ServiceCategory</c>.</param>
     /// <param name="serviceCollection">Descriptor exposing the collection's three-phase entry points.</param>
-    /// <param name="group">Dependency-depth DAG layer; see <see cref="PlatformServiceEntry.Group"/>.</param>
-    /// <param name="manual">
-    /// Mirrors <c>[ServiceTypeCollection(Manual = true)]</c> on the collection — set by the generator
-    /// from the attribute, never by a hand-written call site (there is no host-side setter). A "declared
-    /// choice" domain (e.g. Multitenancy, the auth-server roles) declares this on the attribute so every
-    /// host is excluded from the <see cref="Configure"/>/<see cref="Register"/>/<see cref="Initialize"/>
-    /// collects automatically. The flag stays visible on the returned <see cref="PlatformServiceEntry.Manual"/>
-    /// as the indicator that the domain is handled out-of-band, and the host drives it (if at all) by
-    /// dot-walking the entry.
-    /// </param>
     /// <exception cref="InvalidOperationException">
     /// The registry is already frozen, or <paramref name="categoryName"/> is already registered to a
     /// <em>different</em> collection type (a real conflict — never silently last-write-wins).
     /// </exception>
-    public static PlatformServiceEntry Add(string categoryName, IServiceTypeCollection serviceCollection, int group, bool manual = false)
+    public static PlatformServiceEntry Add(string categoryName, IServiceTypeCollection serviceCollection)
     {
         if (string.IsNullOrWhiteSpace(categoryName))
             throw new ArgumentException("categoryName must not be empty.", nameof(categoryName));
@@ -97,7 +87,7 @@ public static class PlatformServices
                 return existing;
             }
 
-            var entry = new PlatformServiceEntry(categoryName, serviceCollection, group) { Manual = manual };
+            var entry = new PlatformServiceEntry(categoryName, serviceCollection);
             _pending.Add(entry);
             return entry;
         }
@@ -128,11 +118,15 @@ public static class PlatformServices
         EnsureFrozen();
         foreach (var entry in _frozenOrder)
         {
-            if (entry.Manual) continue;
             // Why the entry and not its Descriptor: the entry is what consults a phase replacement
             // and records that the phase ran. Reaching past it to the descriptor made a Configure
             // replacement silently not run under the collect, and left Configured unset so neither the
             // lock-at-collect guard nor the already-run skip fired — the exact silent no-op they exist for.
+            // Why the collect skips Deferred but an explicit call does not: that asymmetry IS the
+            // mechanism. A host claims a domain out of the collect, lets the collect finish, then runs
+            // the domain itself — and the run has to actually happen when it does.
+            if (entry.ConfigureState == PhaseState.Deferred) continue;
+
             var result = entry.Configure(builder, loggerFactory);
             if (result.IsFailure)
             {
@@ -169,7 +163,11 @@ public static class PlatformServices
         EnsureFrozen();
         foreach (var entry in _frozenOrder)
         {
-            if (entry.Manual) continue;
+
+            // Why the collect skips Deferred but an explicit call does not: that asymmetry IS the
+            // mechanism. A host claims a domain out of the collect, lets the collect finish, then runs
+            // the domain itself — and the run has to actually happen when it does.
+            if (entry.RegisterState == PhaseState.Deferred) continue;
 
             var result = entry.Register(builder, loggerFactory);
             if (result.IsFailure)
@@ -205,7 +203,11 @@ public static class PlatformServices
         EnsureFrozen();
         foreach (var entry in _frozenOrder)
         {
-            if (entry.Manual) continue;
+
+            // Why the collect skips Deferred but an explicit call does not: that asymmetry IS the
+            // mechanism. A host claims a domain out of the collect, lets the collect finish, then runs
+            // the domain itself — and the run has to actually happen when it does.
+            if (entry.InitializeState == PhaseState.Deferred) continue;
 
             var result = entry.Initialize(host, loggerFactory);
             if (result.IsFailure)
@@ -253,9 +255,10 @@ public static class PlatformServices
         lock (_gate)
         {
             if (_frozen) return;
-            // Stable sort: ties (same Group) keep _pending's insertion order, which is itself the
+            // Why no sort: order is the host's to control, by running a domain's own entry ahead of
+            // this collect or deferring it out of the collect entirely. What survives here is the
             // generator's deterministic alphabetical-by-category emission order.
-            _frozenOrder = _pending.OrderBy(e => e.Group).ToImmutableArray();
+            _frozenOrder = _pending.ToImmutableArray();
             _frozen = true;
         }
     }

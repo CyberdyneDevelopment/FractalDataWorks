@@ -52,7 +52,8 @@ public abstract partial class RealTimeHubs : TypeCollectionBase<RealTimeHubOptio
     /// <param name="loggerFactory">Unused.</param>
     /// <returns><paramref name="builder"/>, unchanged.</returns>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
-    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
         => GenericResult<IHostApplicationBuilder>.Success(builder);
 
     /// <summary>
@@ -68,7 +69,8 @@ public abstract partial class RealTimeHubs : TypeCollectionBase<RealTimeHubOptio
     /// </remarks>
     /// <exception cref="ArgumentNullException"><paramref name="builder"/> is <see langword="null"/>.</exception>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
-    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
         ArgumentNullException.ThrowIfNull(builder);
         var services = builder.Services;
@@ -100,6 +102,7 @@ public abstract partial class RealTimeHubs : TypeCollectionBase<RealTimeHubOptio
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">Unused.</param>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
-    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
         => GenericResult<IHost>.Success(host);
 }

@@ -92,7 +92,6 @@ public class ServiceTypeInstanceCollectionGenerator : IIncrementalGenerator
             RestrictToCurrentCompilation: restrictToCurrentCompilation,
             ParentCollectionMatchKey: parentCollection != null ? ServiceTypeOptionDiscovery.GetMatchKey(parentCollection) : null,
             ChildName: childName,
-            GenerateProvider: false,
             ServiceInterfaceTypeName: null,
             ConfigurationInterfaceTypeName: null,
             ConfigurationTypeName: null,

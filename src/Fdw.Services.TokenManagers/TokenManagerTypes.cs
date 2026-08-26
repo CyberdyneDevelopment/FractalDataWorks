@@ -27,7 +27,6 @@ namespace Fdw.Services.TokenManagers;
     typeof(TokenManagerTypeBase<ITokenManager, TokenManagerConfiguration, ITokenManagerFactory<ITokenManager, TokenManagerConfiguration>>),
     typeof(ITokenManagerType),
     typeof(TokenManagerTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(ITokenManager),
     ConfigurationType = typeof(TokenManagerConfiguration),
     ProviderType = typeof(DefaultServiceProvider<ITokenManager, TokenManagerConfiguration, ITokenManagerFactory<ITokenManager, TokenManagerConfiguration>, IServiceConfigurationProvider<TokenManagerConfiguration>>),

@@ -30,7 +30,7 @@ namespace Fdw.Services.Connections;
 /// that factory builds the connection. Every public overload funnels through it. Nothing is cached.
 /// </remarks>
 public sealed class DefaultConnectionProvider
-    : DefaultServiceProvider<IGenericConnection, ConnectionConfiguration, IServiceFactory<IGenericConnection>, IServiceConfigurationProvider<ConnectionConfiguration>>,
+    : PlatformServiceProviderBase<IGenericConnection, ConnectionConfiguration, IServiceFactory<IGenericConnection>, IServiceConfigurationProvider<ConnectionConfiguration>>,
       IConnectionProvider,
       IDataConnectionProvider
 {

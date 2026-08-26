@@ -15,7 +15,7 @@ namespace Fdw.Collections.SourceGenerators;
 /// </summary>
 /// <remarks>
 /// Why intentionally untouched by the scoped-provider rework (Area B): MutableServiceTypeCollection
-/// always has GenerateProvider=false, so it never emits a provider registration or Initialize() loop.
+/// never emits a provider registration or Initialize() loop.
 /// </remarks>
 [Generator]
 public class MutableServiceTypeCollectionGenerator : IIncrementalGenerator
@@ -94,7 +94,6 @@ public class MutableServiceTypeCollectionGenerator : IIncrementalGenerator
             RestrictToCurrentCompilation: restrictToCurrentCompilation,
             ParentCollectionMatchKey: parentCollection != null ? ServiceTypeOptionDiscovery.GetMatchKey(parentCollection) : null,
             ChildName: childName,
-            GenerateProvider: false,
             ServiceInterfaceTypeName: null,
             ConfigurationInterfaceTypeName: null,
             ConfigurationTypeName: null,

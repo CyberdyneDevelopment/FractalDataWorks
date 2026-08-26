@@ -7,7 +7,7 @@ namespace Fdw.Services.SecretManagers;
 
 /// <summary>
 /// The SecretManagers domain provider. Behaviourally identical to
-/// <see cref="DefaultServiceProvider{TService, TConfiguration, TFactory, TConfigurationProvider}"/> —
+/// <see cref="PlatformServiceProviderBase{TService, TConfiguration, TFactory, TConfigurationProvider}"/> —
 /// it exists so the domain's own <see cref="ISecretManagerProvider"/> interface has a concrete type
 /// behind it.
 /// </summary>
@@ -19,7 +19,7 @@ namespace Fdw.Services.SecretManagers;
 /// same one-line specialisation for the Connections domain.
 /// </remarks>
 public sealed class DefaultSecretManagerProvider
-    : DefaultServiceProvider<ISecretManager, SecretManagerConfiguration, ISecretManagerServiceFactory<ISecretManager, SecretManagerConfiguration>, IServiceConfigurationProvider<SecretManagerConfiguration>>,
+    : PlatformServiceProviderBase<ISecretManager, SecretManagerConfiguration, ISecretManagerServiceFactory<ISecretManager, SecretManagerConfiguration>, IServiceConfigurationProvider<SecretManagerConfiguration>>,
       ISecretManagerProvider
 {
     /// <summary>

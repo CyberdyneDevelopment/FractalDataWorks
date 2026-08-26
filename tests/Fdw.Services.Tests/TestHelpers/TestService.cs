@@ -54,10 +54,12 @@ public sealed class TestConfiguration : IGenericConfiguration
 /// <summary>
 /// Test service factory for unit testing.
 /// </summary>
-public class TestServiceFactory : ServiceFactory<TestService, TestConfiguration>
+public class TestServiceFactory : PlatformServiceFactory<TestService, TestConfiguration>
 {
-    public TestServiceFactory(ILogger<TestService>? logger = null)
-        : base(logger)
+    public TestServiceFactory(
+        ILogger<PlatformServiceFactory<TestService, TestConfiguration>>? logger = null,
+        ILogger<TestService>? serviceLogger = null)
+        : base(logger, serviceLogger)
     {
     }
 }

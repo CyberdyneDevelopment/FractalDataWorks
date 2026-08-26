@@ -27,7 +27,6 @@ namespace Fdw.Services.ExternalIdentityProviders;
     typeof(ExternalIdentityProvisionerTypeBase<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>),
     typeof(IExternalIdentityProvisionerType),
     typeof(ExternalIdentityProvisionerTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(IExternalIdentityProvisioner),
     ConfigurationType = typeof(ExternalIdentityProvisionerConfiguration),
     // Why: DefaultExternalIdentityProvisionerProvider (not the raw DefaultServiceProvider) so the

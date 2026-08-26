@@ -51,7 +51,7 @@ public interface IServiceConfigurationProvider
 // async-returning interface is impossible in C#. Use concrete types as TConfig throughout, not
 // interfaces — the erased view above is how a caller holds a provider without naming its type.
 public interface IServiceConfigurationProvider<TConfig>
-    where TConfig : class, IGenericConfiguration
+    where TConfig : IGenericConfiguration
 {
     /// <summary>Gets a configuration by ID.</summary>
     Task<IGenericResult<TConfig>> Get(Guid id, CancellationToken ct = default);

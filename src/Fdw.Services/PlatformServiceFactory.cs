@@ -1,42 +1,52 @@
 using System;
 using System.Globalization;
 using Fdw.Results;
+using Fdw.Results.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using FastGenericNew;
 using Fdw.Abstractions;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Results;
 using Fdw.Configuration;
 using Fdw.Services.Logging;
 
 namespace Fdw.Services;
 
 /// <summary>
-/// Base implementation of the service factory with comprehensive type-safe creation patterns.
-/// Provides a complete foundation for service factories with automatic configuration validation,
-/// type checking, and structured logging support.
+/// The one factory base. A service gets a named, closed subclass of it — <c>MsSqlConnectionFactory</c>,
+/// <c>EmailNotificationFactory</c> — which overrides the behaviour it needs and inherits the rest.
 /// </summary>
 /// <typeparam name="TService">The type of service this factory creates.</typeparam>
 /// <typeparam name="TConfiguration">The configuration type required by the service.</typeparam>
-public abstract class ServiceFactory<TService, TConfiguration> : IServiceFactory<TService, TConfiguration> where TService : class
+public abstract class PlatformServiceFactory<TService, TConfiguration> : IServiceFactory<TService, TConfiguration> where TService : class
     where TConfiguration : class, IGenericConfiguration
 {
-    private readonly ILogger<TService> _logger;
+    private readonly ILogger<PlatformServiceFactory<TService, TConfiguration>> _logger;
+    private readonly ILogger<TService> _serviceLogger;
 
     /// <summary>
-    /// Gets the logger instance for derived classes.
+    /// Gets the factory's own logger, for derived factories to narrate their creation logic.
     /// </summary>
-    protected ILogger<TService> Logger => _logger;
+    protected ILogger<PlatformServiceFactory<TService, TConfiguration>> Logger => _logger;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ServiceFactory{TService,TConfiguration}"/> class.
+    /// Initializes a new instance of the <see cref="PlatformServiceFactory{TService,TConfiguration}"/> class.
     /// </summary>
-    /// <param name="logger">The logger instance. If null, uses Microsoft's NullLogger.</param>
-    protected ServiceFactory(ILogger<TService>? logger)
+    /// <param name="logger">The factory's own logger. A derived factory passes its own
+    /// <c>ILogger&lt;TDerived&gt;</c>, which the covariant <c>ILogger&lt;out T&gt;</c> accepts here.</param>
+    /// <param name="serviceLogger">The logger handed to each service this factory constructs.</param>
+    /// <remarks>
+    /// Two categories, deliberately: the factory narrates under its own name while the service it
+    /// builds logs under <typeparamref name="TService"/>. Sharing one would file every service's
+    /// output under whichever factory happened to construct it.
+    /// </remarks>
+    protected PlatformServiceFactory(
+        ILogger<PlatformServiceFactory<TService, TConfiguration>>? logger,
+        ILogger<TService>? serviceLogger)
     {
-        // Use Microsoft's NullLogger for consistency with ILogger abstractions
-        // This works seamlessly when Serilog is registered via services.AddSerilog()
-        _logger = logger ?? NullLogger<TService>.Instance;
+        _logger = logger ?? NullLogger<PlatformServiceFactory<TService, TConfiguration>>.Instance;
+        _serviceLogger = serviceLogger ?? NullLogger<TService>.Instance;
     }
 
     /// <summary>
@@ -49,31 +59,20 @@ public abstract class ServiceFactory<TService, TConfiguration> : IServiceFactory
     {
         var serviceTypeName = typeof(TService).Name;
 
-        if (configuration == null)
-        {
-            return GenericResult<TService>.Failure(ServiceLogger.InvalidConfigurationWarning(_logger, "Configuration cannot be null"));
-        }
+        if (configuration is null)
+            return GenericResult<TService>.Failure(
+                ServicesResultCodes.ByName("ConfigurationRequired"),
+                ResultDetails.Create("ServiceType", serviceTypeName));
 
-        // Log configuration
-        ServiceLogger.ValidatingServiceConfiguration(_logger, serviceTypeName);
+        ServiceFactoryLogger.CreatingService(_logger, serviceTypeName, configuration.Name ?? "unnamed");
 
-        // Must pass logger as first parameter per service constructor pattern
-        var serviceLogger = NullLogger<TService>.Instance; // FUTURE: Get proper logger for service
-        if (FastNew.TryCreateInstance<TService, ILogger<TService>, TConfiguration>(serviceLogger, configuration, out var service))
-        {
-            // Use structured logging for success
-            ServiceLogger.FastGenericServiceCreated(_logger, serviceTypeName);
-            ServiceLogger.ServiceStarted(_logger, serviceTypeName);
+        // FastNew requires the service's own logger as the first constructor parameter.
+        if (FastNew.TryCreateInstance<TService, ILogger<TService>, TConfiguration>(_serviceLogger, configuration, out var service))
+            return GenericResult<TService>.Success(service, ServiceFactoryLogger.ServiceCreatedWithFastNew(_logger, serviceTypeName));
 
-            // Use Enhanced Enum factory method with parameters
-            return GenericResult<TService>.Success(service, $"Service created successfully: {serviceTypeName}");
-        }
-
-        // Use structured logging and Enhanced Enum factory method with parameters for failure
-        ServiceLogger.FastGenericServiceCreationFailed(_logger, serviceTypeName);
-        var exception = new InvalidOperationException("FastNew failed to create service");
-
-        return GenericResult<TService>.Failure(ServiceFactoryLogger.CreateServiceError(_logger, exception, serviceTypeName));
+        return GenericResult<TService>.Failure(
+            ServicesResultCodes.ByName("NoSuitableConstructor"),
+            ResultDetails.Create("ServiceType", serviceTypeName, "ConfigurationType", typeof(TConfiguration).Name));
     }
 
 
@@ -92,7 +91,9 @@ public abstract class ServiceFactory<TService, TConfiguration> : IServiceFactory
         if (configuration == null)
         {
             validConfiguration = null;
-            return GenericResult<TConfiguration>.Failure(ServiceLogger.InvalidConfigurationWarning(_logger, "Configuration cannot be null"));
+            return GenericResult<TConfiguration>.Failure(
+                ServicesResultCodes.ByName("ConfigurationRequired"),
+                ResultDetails.Create("ServiceType", typeof(TService).Name));
         }
 
         if (configuration is TConfiguration config)
@@ -108,7 +109,8 @@ public abstract class ServiceFactory<TService, TConfiguration> : IServiceFactory
 
         validConfiguration = null;
         return GenericResult<TConfiguration>.Failure(
-            ServiceLogger.InvalidConfigurationWarning(_logger, errorMessage));
+            ServicesResultCodes.ByName("InvalidConfigurationType"),
+            ResultDetails.Create("ExpectedType", typeof(TConfiguration).Name, "ActualType", configuration.GetType().Name));
     }
 
     #endregion
@@ -133,7 +135,8 @@ public abstract class ServiceFactory<TService, TConfiguration> : IServiceFactory
                 typeof(T).Name);
 
             return GenericResult<T>.Failure(
-                ServiceLogger.InvalidConfigurationWarning(_logger, errorMessage));
+                ServicesResultCodes.ByName("ServiceCastFailed"),
+                ResultDetails.Create("ExpectedType", typeof(TService).Name, "ActualType", typeof(T).Name));
         }
 
         // Validate configuration and create service
@@ -158,7 +161,10 @@ public abstract class ServiceFactory<TService, TConfiguration> : IServiceFactory
         var sourceTypeName = typeof(TService).Name;
         var targetTypeName = typeof(T).Name;
 
-        return GenericResult<T>.Failure(ServiceLogger.ServiceTypeCastFailed(_logger, sourceTypeName, targetTypeName));
+        ServiceLogger.ServiceTypeCastFailed(_logger, sourceTypeName, targetTypeName);
+        return GenericResult<T>.Failure(
+            ServicesResultCodes.ByName("ServiceCastFailed"),
+            ResultDetails.Create("ExpectedType", targetTypeName, "ActualType", sourceTypeName));
     }
 
     /// <summary>
@@ -189,7 +195,10 @@ public abstract class ServiceFactory<TService, TConfiguration> : IServiceFactory
         // Use structured logging and Enhanced Enum factory method with parameters
         var sourceTypeName = typeof(TService).Name;
 
-        return GenericResult<IGenericService>.Failure(ServiceLogger.ServiceTypeCastFailed(_logger, sourceTypeName, nameof(IGenericService)));
+        ServiceLogger.ServiceTypeCastFailed(_logger, sourceTypeName, nameof(IGenericService));
+        return GenericResult<IGenericService>.Failure(
+            ServicesResultCodes.ByName("ServiceCastFailed"),
+            ResultDetails.Create("ExpectedType", nameof(IGenericService), "ActualType", sourceTypeName));
     }
 
     #endregion

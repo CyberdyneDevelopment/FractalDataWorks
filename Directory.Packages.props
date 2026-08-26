@@ -6,8 +6,6 @@
          fixed by waiting for the intermediate package to bump. -->
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
-    <!-- Disable for ReferenceSolutions folder -->
-    <ManagePackageVersionsCentrally Condition="$(MSBuildProjectDirectory.Contains('\ReferenceSolutions\'))">false</ManagePackageVersionsCentrally>
     <!-- Detect -Local configuration (must be defined here since Directory.Packages.props is evaluated first) -->
     <IsLocalConfiguration>false</IsLocalConfiguration>
     <IsLocalConfiguration Condition="$(Configuration.EndsWith('-Local'))">true</IsLocalConfiguration>

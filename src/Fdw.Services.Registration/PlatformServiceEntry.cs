@@ -3,53 +3,53 @@ using Fdw.Results;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.ServiceTypes;
 
 /// <summary>
-/// One registered ServiceTypeCollection domain plus its dependency-depth group and Initialize tracking.
+/// One registered ServiceTypeCollection domain and its per-phase run state.
 /// </summary>
 /// <param name="CategoryName">Category name (e.g. "Connection") — matches the collection's <c>ServiceCategory</c>.</param>
 /// <param name="Descriptor">Descriptor exposing the collection's Configure/Register/Initialize entry points.</param>
-/// <param name="Group">
-/// Dependency-depth DAG layer: 0 if the domain depends on no other domain; otherwise
-/// 1 + the maximum group of every domain it depends on. Domains sharing a group have no
-/// dependency relationship between them (by construction of the graph), so their relative order
-/// within a group is provably safe regardless of arrangement.
-/// </param>
 /// <remarks>
-/// <see cref="Group"/> is immutable-by-replace: "changing" it is always <c>entry with { Group = newValue }</c>,
-/// never in-place mutation — this keeps the frozen snapshot's sort order genuinely immutable with no back
-/// door. <see cref="Configured"/>, <see cref="Initialized"/> and <see cref="Registered"/> are deliberately
-/// the exceptions: they are pure bookkeeping that never affects sort/graph correctness, so they are mutated
-/// in place — the entry is a reference type, so flipping any of them on one shared instance is visible
-/// everywhere that instance is held, with no array rebuild.
+/// The per-phase state is mutated in place rather than replaced: the entry is a reference type, so a
+/// phase advancing on one shared instance is visible everywhere that instance is held, with no array
+/// rebuild. Order is not a property of the entry — a host controls it by running a domain ahead of the
+/// collect, or deferring it out of the collect and running it afterwards.
 /// </remarks>
-public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeCollection Descriptor, int Group)
+public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeCollection Descriptor)
 {
     /// <summary>Whether <see cref="Configure"/> has already run for this entry.</summary>
-    public bool Configured { get; private set; }
+    private PhaseState _configure;
+
+    /// <summary>Gets whether this phase has not run, is deferred, or has run.</summary>
+    public PhaseState ConfigureState => _configure;
+
+    /// <summary>Gets a value indicating whether the phase has run.</summary>
+    public bool Configured => _configure == PhaseState.Ran;
 
     /// <summary>Whether <see cref="Initialize"/> has already run for this entry.</summary>
-    public bool Initialized { get; private set; }
+    private PhaseState _initialize;
+
+    /// <summary>Gets whether this phase has not run, is deferred, or has run.</summary>
+    public PhaseState InitializeState => _initialize;
+
+    /// <summary>Gets a value indicating whether the phase has run.</summary>
+    public bool Initialized => _initialize == PhaseState.Ran;
 
     /// <summary>Whether <see cref="Register"/> has already run for this entry.</summary>
-    public bool Registered { get; private set; }
+    private PhaseState _register;
+
+    /// <summary>Gets whether this phase has not run, is deferred, or has run.</summary>
+    public PhaseState RegisterState => _register;
+
+    /// <summary>Gets a value indicating whether the phase has run.</summary>
+    public bool Registered => _register == PhaseState.Ran;
 
     /// <summary>
     /// Whether this domain is excluded from the <see cref="PlatformServices"/> collects
     /// (<see cref="PlatformServices.Configure"/>/<see cref="PlatformServices.Register"/>/
-    /// <see cref="PlatformServices.Initialize"/>) and driven manually by the host instead.
-    /// </summary>
-    /// <remarks>
-    /// Why: "declared choice" domains (e.g. Multitenancy, the auth-server roles) have multiple options
-    /// registering the SAME interfaces — a blanket collect would leave the winner to module-initializer
-    /// discovery order. The domain declares itself manual via <c>[ServiceTypeCollection(Manual = true)]</c>
-    /// (there is no host-side setter); a host reads this indicator to see the domain is handled
-    /// out-of-band and drives exactly ONE option by its configured name. Set once at construction.
-    /// </remarks>
-    public bool Manual { get; init; }
-
     // ── Phase-delegate replacements (author-curated variant selection; the keyset stays frozen) ─────────
     // Why: the frozen registry locks the SET of entries (no add/remove), but an entry is a mutable
     // reference type — exactly as Initialized/Registered are mutated post-freeze. That lets a host SELECT
@@ -129,15 +129,26 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     // RUN, not that it succeeded. Leaving it unset would let a later collect run it a second time on top
     // of whatever the first attempt already did — double-initializing the part that worked in order to
     // retry the part that did not. The failure goes to the caller; the re-run does not happen.
-    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
+    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool defer = false)
     {
-        if (Initialized) return GenericResult<IHost>.Success(host);
+        if (_initialize == PhaseState.Ran) return GenericResult<IHost>.Success(host);
 
+        // Why the claim happens before the work: a deferred phase must look done to the collect
+        // without having run, which is the one thing a bool latch cannot express.
+        if (defer)
+        {
+            _initialize = PhaseState.Deferred;
+            return GenericResult<IHost>.Success(host);
+        }
+
+        // Why the descriptor is forced: this entry is the authority on whether the phase runs, and it
+        // has just decided. A second latch on the descriptor could only disagree — and would do so
+        // silently, returning Success for a deferred domain whose explicit run never happened.
         var result = _initializationMethod is not null
             ? _initializationMethod(host, loggerFactory)
-            : Descriptor.Initialize(host, loggerFactory, false);
+            : Descriptor.Initialize(host, loggerFactory, true, false);
 
-        Initialized = true;
+        _initialize = PhaseState.Ran;
         return result;
     }
 
@@ -150,15 +161,26 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// is not configured a second time by the later <see cref="PlatformServices.Configure"/> pass.
     /// </summary>
     // Why the flag is set even when the phase failed: see Initialize — it records that the phase ran.
-    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool defer = false)
     {
-        if (Configured) return GenericResult<IHostApplicationBuilder>.Success(builder);
+        if (_configure == PhaseState.Ran) return GenericResult<IHostApplicationBuilder>.Success(builder);
 
+        // Why the claim happens before the work: a deferred phase must look done to the collect
+        // without having run, which is the one thing a bool latch cannot express.
+        if (defer)
+        {
+            _configure = PhaseState.Deferred;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        // Why the descriptor is forced: this entry is the authority on whether the phase runs, and it
+        // has just decided. A second latch on the descriptor could only disagree — and would do so
+        // silently, returning Success for a deferred domain whose explicit run never happened.
         var result = _configurationMethod is not null
             ? _configurationMethod(builder, loggerFactory)
-            : Descriptor.Configure(builder, loggerFactory, false);
+            : Descriptor.Configure(builder, loggerFactory, true, false);
 
-        Configured = true;
+        _configure = PhaseState.Ran;
         return result;
     }
 
@@ -167,19 +189,30 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// so a specific domain can be dot-walked directly (e.g.
     /// <c>PlatformServices.Connection?.Register(services, loggerFactory)</c>) without reaching through
     /// <see cref="Descriptor"/> explicitly. Idempotent like <see cref="Initialize"/> — a host that
-    /// registers a <c>Manual</c> domain explicitly and is then collected by <see cref="PlatformServices.Register"/>
+    /// registers a domain explicitly and is then collected by <see cref="PlatformServices.Register"/>
     /// (or vice versa) does not double-register the domain's services.
     /// </summary>
     // Why the flag is set even when the phase failed: see Initialize — it records that the phase ran.
-    public IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
+    public IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool defer = false)
     {
-        if (Registered) return GenericResult<IHostApplicationBuilder>.Success(builder);
+        if (_register == PhaseState.Ran) return GenericResult<IHostApplicationBuilder>.Success(builder);
 
+        // Why the claim happens before the work: a deferred phase must look done to the collect
+        // without having run, which is the one thing a bool latch cannot express.
+        if (defer)
+        {
+            _register = PhaseState.Deferred;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        // Why the descriptor is forced: this entry is the authority on whether the phase runs, and it
+        // has just decided. A second latch on the descriptor could only disagree — and would do so
+        // silently, returning Success for a deferred domain whose explicit run never happened.
         var result = _registrationMethod is not null
             ? _registrationMethod(builder, loggerFactory)
-            : Descriptor.Register(builder, loggerFactory, false);
+            : Descriptor.Register(builder, loggerFactory, true, false);
 
-        Registered = true;
+        _register = PhaseState.Ran;
         return result;
     }
 }

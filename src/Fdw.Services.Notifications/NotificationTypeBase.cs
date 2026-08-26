@@ -16,7 +16,7 @@ namespace Fdw.Services.Notifications;
 public abstract class NotificationTypeBase<TService, TFactory, TConfiguration>
     : ServiceTypeBase<TService, TFactory, TConfiguration>,
       INotificationType
-    where TService : IGenericNotification
+    where TService : IPlatformNotification
     where TFactory : INotificationFactory<TService, TConfiguration>
     where TConfiguration : NotificationConfiguration
 {
