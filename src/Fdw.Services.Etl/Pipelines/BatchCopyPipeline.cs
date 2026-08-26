@@ -36,7 +36,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     private readonly ILogger<BatchCopyPipeline> _logger;
     private readonly IDataGateway? _dataGateway;
     private readonly object? _calculationEngine;
-    private readonly IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>? _connectionProvider;
+    private readonly IConnectionProvider? _connectionProvider;
     private readonly IDataStoreProvider? _dataStoreProvider;
     private readonly IPipelineStatusBroadcaster? _broadcaster;
     private int _isExecuting;
@@ -56,7 +56,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         ILogger<BatchCopyPipeline> logger,
         IDataGateway? dataGateway = null,
         object? calculationEngine = null,
-        IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>? connectionProvider = null,
+        IConnectionProvider? connectionProvider = null,
         IDataStoreProvider? dataStoreProvider = null,
         IPipelineStatusBroadcaster? broadcaster = null)
         : base(logger)

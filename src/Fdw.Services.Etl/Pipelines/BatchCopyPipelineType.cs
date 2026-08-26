@@ -148,8 +148,8 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
                 sp.GetRequiredService<ILogger<BatchCopyPipelineFactory>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetService<IDataGateway>(),
-                new Lazy<IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>>(
-                    () => sp.GetService<IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>>()!),
+                new Lazy<IConnectionProvider>(
+                    () => sp.GetService<IConnectionProvider>()!),
                 sp.GetService<IDataStoreProvider>()));
 
             // Why: Lazy<IConfigurationGateway> defers cfg resolution until first runtime query, avoiding

@@ -147,8 +147,8 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
                 sp.GetRequiredService<ILogger<StreamingPipelineFactory>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetService<IDataGateway>(),
-                new Lazy<IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>>(
-                    () => sp.GetService<IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>>()!)));
+                new Lazy<IConnectionProvider>(
+                    () => sp.GetService<IConnectionProvider>()!)));
 
             // Why: Lazy<IConfigurationGateway> defers cfg resolution until first runtime query, avoiding
             // circular dependency with the DataGateway that hasn't been built yet at registration time.

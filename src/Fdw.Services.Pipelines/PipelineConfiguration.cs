@@ -14,7 +14,7 @@ namespace Fdw.Services.Pipelines;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Pipeline")]
-public partial class PipelineConfiguration : IGenericConfiguration, IServiceDispatchHost
+public partial class PipelineConfiguration : IPipelineServiceConfiguration, IServiceDispatchHost
 {
     /// <summary>
     /// Gets or sets the unique identifier for this pipeline.
