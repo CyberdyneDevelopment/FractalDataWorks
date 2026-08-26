@@ -44,7 +44,8 @@ namespace Fdw.Services.Multitenancy;
 [ServiceTypeCollection(
     typeof(MultitenancyTypeBase<IMultitenancyFactory>),
     typeof(IMultitenancyType),
-    typeof(MultitenancyTypes))]
+    typeof(MultitenancyTypes),
+    ServiceCategory = "Multitenancy")]
 public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyTypeBase<IMultitenancyFactory>, IMultitenancyType>
 {
     // Why [ModuleInitializer] rather than an explicit static constructor: the generator ALREADY emits

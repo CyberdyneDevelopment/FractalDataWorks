@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
+using Fdw.Services.Abstractions.Health.Monitoring;
 
 namespace Fdw.Services.HealthChecks.Monitoring;
 
@@ -24,7 +25,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
     ServiceType = "HealthMonitor",
     DisplayName = "Health Monitor",
     Description = "Configuration for the health monitoring service including check intervals and retention.")]
-public sealed partial class HealthMonitorConfiguration : IGenericConfiguration
+public sealed partial class HealthMonitorConfiguration : IHealthMonitorConfiguration
 {
     /// <inheritdoc/>
     public Guid Id { get; set; }

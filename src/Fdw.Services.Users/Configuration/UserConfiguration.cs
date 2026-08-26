@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
 using Fdw.Services.Users.Models;
+using Fdw.Services.Users.Abstractions;
 
 namespace Fdw.Services.Users.Configuration;
 
@@ -18,7 +19,7 @@ namespace Fdw.Services.Users.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "User")]
-public partial class UserConfiguration : IGenericConfiguration, IUser
+public partial class UserConfiguration : IUserConfiguration, IUser
 {
     /// <inheritdoc />
     public Guid Id { get; set; }

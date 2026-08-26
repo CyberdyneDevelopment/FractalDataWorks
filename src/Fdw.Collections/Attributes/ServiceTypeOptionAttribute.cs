@@ -21,12 +21,15 @@ public sealed class ServiceTypeOptionAttribute : Attribute
     /// Must be unique within the collection and a valid C# identifier.
     /// </param>
     /// <remarks>
-    /// The name does NOT feed Id generation. A ServiceTypeOption's Id is
-    /// <c>MD5($"{TService.FullName}:{TFactory.FullName}")</c> (see <c>ServiceTypeBase.Id</c>), so two options
-    /// with different names but the same closed &lt;TService, TFactory&gt; pair share an Id — and the generated
-    /// <c>RegisterMember</c> silently discards the second. Uniqueness comes from each option closing the base's
-    /// open type parameters over distinct types, not from the name. <c>ST001</c> catches collisions only within
-    /// the collection's own compilation; cross-assembly options are invisible to it.
+    /// The name IS the identity. An option's Id is derived from it —
+    /// <c>ServiceTypeBase.DeriveId(name)</c> — so distinct names within a collection are sufficient and the
+    /// option's generic arguments are irrelevant to identity. Deriving the Id from the closed
+    /// &lt;TService, TFactory&gt; pair was the previous scheme and was replaced because a domain's options
+    /// routinely close the base identically: every option in <c>SessionStateTypes</c> is the same closed
+    /// type, so the id was one value shared by the whole domain and
+    /// <c>ServiceTypeCollectionBase.RegisterMember</c> — which keys membership on it — dropped every option
+    /// after the first without a word. Two options in one collection cannot share a name without colliding
+    /// in <c>ByName</c> first, which is why the name is the right source.
     /// </remarks>
     public ServiceTypeOptionAttribute(Type collectionType, string name)
     {
