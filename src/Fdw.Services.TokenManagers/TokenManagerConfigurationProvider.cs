@@ -1,6 +1,7 @@
 using System;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
+using Fdw.Services.TokenManagers.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.TokenManagers.Commands;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +18,12 @@ namespace Fdw.Services.TokenManagers;
 // Why: TokenManagerConfiguration is loaded from ConfigurationDb at runtime via
 // Lazy<IConfigurationGateway>, not through BindConfiguration("TokenManagers:..."). Mirrors
 // SchedulerConfigurationProvider/AuthenticationServiceConfigurationProvider exactly.
-public class TokenManagerConfigurationProvider : ImplementationConfigurationProviderBase<TokenManagerConfiguration, TokenManagerConfigurationCommand>
+public class TokenManagerConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          TokenManagerConfiguration,
+          ITokenManagerImplementationConfiguration,
+          TokenManagerConfigurationCommand>,
+      ITokenManagerConfigurationProvider
 {
     /// <summary>
     /// Registers the TokenManagerConfigurationProvider and interface forwardings with DI, targeting
@@ -49,4 +55,16 @@ public class TokenManagerConfigurationProvider : ImplementationConfigurationProv
                dataStoreName, pathName)
     {
     }
+
+    /// <inheritdoc />
+    protected override TokenManagerConfiguration Compose<T>(
+        string serviceOptionType,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            ServiceOptionType = serviceOptionType,
+            Configuration = implementationConfiguration,
+        };
 }

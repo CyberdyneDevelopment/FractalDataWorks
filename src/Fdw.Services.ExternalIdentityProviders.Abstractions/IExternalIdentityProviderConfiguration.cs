@@ -9,7 +9,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Abstractions;
 /// implements this interface directly without inheriting from a concrete header class — the header
 /// (<c>ExternalIdentityProviderConfiguration</c>) carries a <c>[NotMapped]
 /// IExternalIdentityProviderConfiguration? Configuration</c> property populated on the read path,
-/// mirroring <c>ITokenManagerConfiguration</c>/<c>TokenManagerConfiguration</c>.
+/// mirroring <c>ITokenManagerImplementationConfiguration</c>/<c>TokenManagerConfiguration</c>.
 /// </summary>
 public interface IExternalIdentityProviderConfiguration : IImplementationConfiguration
 {

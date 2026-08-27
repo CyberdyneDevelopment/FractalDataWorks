@@ -24,17 +24,22 @@ namespace Fdw.Services.TokenManagers;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(TokenManagerTypeBase<ITokenManager, TokenManagerConfiguration, ITokenManagerFactory<ITokenManager, TokenManagerConfiguration>>),
+    typeof(TokenManagerTypeBase<ITokenManager, ITokenManagerImplementationConfiguration, ITokenManagerFactory<ITokenManager, ITokenManagerImplementationConfiguration>>),
     typeof(ITokenManagerType),
     typeof(TokenManagerTypes),
     ServiceInterface = typeof(ITokenManager),
-    ProviderType = typeof(DefaultServiceProvider<ITokenManager, TokenManagerConfiguration, ITokenManagerFactory<ITokenManager, TokenManagerConfiguration>, IServiceConfigurationProvider<TokenManagerConfiguration>>),
-    ProviderInterface = typeof(IPlatformServiceProvider<ITokenManager, TokenManagerConfiguration>),
+    ProviderType = typeof(TokenManagerProvider),
+    ProviderInterface = typeof(ITokenManagerProvider),
     ServiceCategory = "TokenManager")]
 public partial class TokenManagerTypes : ServiceTypeCollectionBase<
-    TokenManagerTypeBase<ITokenManager, TokenManagerConfiguration, ITokenManagerFactory<ITokenManager, TokenManagerConfiguration>>,
+    TokenManagerTypeBase<ITokenManager, ITokenManagerImplementationConfiguration, ITokenManagerFactory<ITokenManager, ITokenManagerImplementationConfiguration>>,
     ITokenManagerType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
     // Configure(), Register(), Initialize() are source-generated.
 
     /// <summary>
@@ -53,7 +58,7 @@ public partial class TokenManagerTypes : ServiceTypeCollectionBase<
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IPlatformServiceProvider<ITokenManager, TokenManagerConfiguration>).ToString();
+        var providerService = typeof(ITokenManagerProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -72,12 +77,12 @@ public partial class TokenManagerTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(TokenManagerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(TokenManagerTypes), providerService);
 
-            builder.Services.AddScoped<IPlatformServiceProvider<ITokenManager, TokenManagerConfiguration>>(sp =>
+            builder.Services.AddScoped<ITokenManagerProvider>(sp =>
             {
-                var provider = new DefaultServiceProvider<ITokenManager, TokenManagerConfiguration, ITokenManagerFactory<ITokenManager, TokenManagerConfiguration>, IServiceConfigurationProvider<TokenManagerConfiguration>>(
+                var provider = new TokenManagerProvider(
                     sp,
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultServiceProvider<ITokenManager, TokenManagerConfiguration, ITokenManagerFactory<ITokenManager, TokenManagerConfiguration>, IServiceConfigurationProvider<TokenManagerConfiguration>>>()
-                    ?? NullLogger<DefaultServiceProvider<ITokenManager, TokenManagerConfiguration, ITokenManagerFactory<ITokenManager, TokenManagerConfiguration>, IServiceConfigurationProvider<TokenManagerConfiguration>>>.Instance);
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<TokenManagerProvider>()
+                    ?? NullLogger<TokenManagerProvider>.Instance);
 
                 // Why ILogger<TokenManagerTypes> and not CreateLogger("TokenManagerTypes"): SourceContext then
                 // carries the namespace-qualified collection, and the category cannot drift from the
@@ -88,7 +93,7 @@ public partial class TokenManagerTypes : ServiceTypeCollectionBase<
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(TokenManagerTypes), provider.GetType().Name);
                 try
                 {
-                    if (sp.GetService<IServiceConfigurationProvider<TokenManagerConfiguration>>() is { } cfgProvider)
+                    if (sp.GetService<TokenManagerConfigurationProvider>() is { } cfgProvider)
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.

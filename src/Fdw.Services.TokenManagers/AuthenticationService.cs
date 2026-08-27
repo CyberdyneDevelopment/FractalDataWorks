@@ -29,11 +29,11 @@ namespace Fdw.Services.TokenManagers;
 /// </summary>
 public sealed class AuthenticationService : IAuthenticationService
 {
-    private readonly IPlatformServiceProvider<ITokenManager, TokenManagerConfiguration> _tokenManagerProvider;
+    private readonly ITokenManagerProvider _tokenManagerProvider;
     private readonly TokenManagerConfigurationProvider _tokenManagerConfigurationProvider;
     private readonly IUserCredentialService _userCredentialService;
     private readonly UserConfigurationProvider _userConfigurationProvider;
-    private readonly IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration> _secretManagerProvider;
+    private readonly ISecretManagerProvider _secretManagerProvider;
     // Why: optional — a host that issues no agent keys need not register the edge. The agent_key
     // grant fails loud when it is absent rather than silently falling through to another verifier.
     private readonly IAgentKeyService? _agentKeyService;
@@ -56,11 +56,11 @@ public sealed class AuthenticationService : IAuthenticationService
 
     /// <summary>Initializes a new instance of the <see cref="AuthenticationService"/> class.</summary>
     public AuthenticationService(
-        IPlatformServiceProvider<ITokenManager, TokenManagerConfiguration> tokenManagerProvider,
+        ITokenManagerProvider tokenManagerProvider,
         TokenManagerConfigurationProvider tokenManagerConfigurationProvider,
         IUserCredentialService userCredentialService,
         UserConfigurationProvider userConfigurationProvider,
-        IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration> secretManagerProvider,
+        ISecretManagerProvider secretManagerProvider,
         ILogger<AuthenticationService>? logger,
         IAgentKeyService? agentKeyService = null)
     {
