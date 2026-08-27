@@ -26,7 +26,7 @@ namespace Fdw.Services.Identity.ClientCredentials;
 [ExcludeFromCodeCoverage]
 [ServiceTypeOption(typeof(IdentityServiceTypes), "ClientCredentials")]
 public sealed class ClientCredentialsIdentityType
-    : IdentityServiceTypeBase<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>>
+    : IdentityServiceTypeBase<IIdentityService, IIdentityServiceImplementationConfiguration, IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>>
 {
     /// <summary>Initializes a new instance of the <see cref="ClientCredentialsIdentityType"/> class.</summary>
     public ClientCredentialsIdentityType()
@@ -46,17 +46,17 @@ public sealed class ClientCredentialsIdentityType
             // to turn a configuration's ServiceOptionType into something that can build the service. An
             // option that skips it resolves to "No registered service type matches ServiceOptionType"
             // at the first request, which reads like a configuration fault and is not one.
-            DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>
+            IdentityServiceProvider
                 .Register(Name, sp => new ClientCredentialsIdentityFactory(
                     sp.GetService<ILoggerFactory>(),
                     sp.GetRequiredService<IHttpClientFactory>().CreateClient(IdentityHttpClient.Name),
-                    sp.GetRequiredService<Lazy<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>>()));
+                    sp.GetRequiredService<Lazy<ISecretManagerProvider>>()));
 
             // Why registered here: the factory takes the secret-manager provider as a Lazy so it is
             // resolved after the container is built, and nothing else in the graph registers that
             // closed Lazy.
-            builder.Services.TryAddScoped(sp => new Lazy<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>(
-                sp.GetRequiredService<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>));
+            builder.Services.TryAddScoped(sp => new Lazy<ISecretManagerProvider>(
+                sp.GetRequiredService<ISecretManagerProvider>));
 
             // The typed body provider, so the header provider can compose the aggregate. Registration
             // only makes it resolvable; Initialization is where it is handed over, because the header
@@ -73,12 +73,10 @@ public sealed class ClientCredentialsIdentityType
 
         Initialization((host, loggerFactory) =>
         {
-            // Why here and not in Register: the header provider composes the aggregate by dispatching
-            // on ServiceOptionType to whichever typed provider was registered for it. Without this the
-            // header loads and Configuration stays null, which the factory reports as "typed
-            // configuration body did not load" — several layers from the missing hand-over.
+            // Why here and not in Register: registering into the domain provider needs a live
+            // container, and Register runs while it is still being built.
             var services = host.Services;
-            services.GetRequiredService<IdentityServiceConfigurationProvider>()
+            services.GetRequiredService<IIdentityServiceConfigurationProvider>()
                 .Register(Name, services.GetRequiredService<ClientCredentialsConfigurationProvider>());
 
             IdentityLog.MechanismRegistered(

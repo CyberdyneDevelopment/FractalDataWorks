@@ -26,17 +26,22 @@ namespace Fdw.Services.Identity;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(IdentityServiceTypeBase<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>>),
+    typeof(IdentityServiceTypeBase<IIdentityService, IIdentityServiceImplementationConfiguration, IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>>),
     typeof(IIdentityServiceType),
     typeof(IdentityServiceTypes),
     ServiceInterface = typeof(IIdentityService),
-    ProviderType = typeof(DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>),
-    ProviderInterface = typeof(IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration>),
+    ProviderType = typeof(IdentityServiceProvider),
+    ProviderInterface = typeof(IIdentityServiceProvider),
     ServiceCategory = "Identity")]
 public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
-    IdentityServiceTypeBase<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>>,
+    IdentityServiceTypeBase<IIdentityService, IIdentityServiceImplementationConfiguration, IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>>,
     IIdentityServiceType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
     // Configure(), Register(), Initialize() are source-generated.
 
     /// <summary>
@@ -55,7 +60,7 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
 
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below. Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration>).ToString();
+        var providerService = typeof(IIdentityServiceProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -84,19 +89,19 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(IdentityServiceTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(IdentityServiceTypes), providerService);
 
-            builder.Services.AddScoped<IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration>>(sp =>
+            builder.Services.AddScoped<IIdentityServiceProvider>(sp =>
             {
-                var provider = new DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>(
+                var provider = new IdentityServiceProvider(
                     sp,
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>>()
-                    ?? NullLogger<DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>>.Instance);
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<IdentityServiceProvider>()
+                    ?? NullLogger<IdentityServiceProvider>.Instance);
 
                 var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<IdentityServiceTypes>()
                     ?? NullLogger<IdentityServiceTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(IdentityServiceTypes), provider.GetType().Name);
                 try
                 {
-                    if (sp.GetService<IServiceConfigurationProvider<IdentityServiceConfiguration>>() is { } cfgProvider)
+                    if (sp.GetService<IIdentityServiceConfigurationProvider>() is { } cfgProvider)
                     {
                         // Why the result is read: a provider that did not take its parent still
                         // constructs, and every later read silently misses.

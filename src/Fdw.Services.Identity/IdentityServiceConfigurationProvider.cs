@@ -1,6 +1,7 @@
 using System;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
+using Fdw.Services.Identity.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Identity.Commands;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +18,12 @@ namespace Fdw.Services.Identity;
 // Why: IdentityServiceConfiguration is loaded from ConfigurationDb at runtime via
 // Lazy<IConfigurationGateway>, not through BindConfiguration("Identities:..."). Mirrors
 // TokenManagerConfigurationProvider / SecretManagerConfigurationProvider exactly.
-public class IdentityServiceConfigurationProvider : ImplementationConfigurationProviderBase<IdentityServiceConfiguration, IdentityServiceConfigurationCommand>
+public class IdentityServiceConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          IdentityServiceConfiguration,
+          IIdentityServiceImplementationConfiguration,
+          IdentityServiceConfigurationCommand>,
+      IIdentityServiceConfigurationProvider
 {
     /// <summary>
     /// Registers the IdentityServiceConfigurationProvider and interface forwardings with DI,
@@ -54,4 +60,16 @@ public class IdentityServiceConfigurationProvider : ImplementationConfigurationP
                dataStoreName, pathName)
     {
     }
+
+    /// <inheritdoc />
+    protected override IdentityServiceConfiguration Compose<T>(
+        string serviceOptionType,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            ServiceOptionType = serviceOptionType,
+            Configuration = implementationConfiguration,
+        };
 }

@@ -26,7 +26,7 @@ public sealed class ClientCredentialsIdentityService
     : IdentityServiceBase<ClientCredentialsConfiguration, ClientCredentialsIdentityService>
 {
     private readonly OAuth2TokenEndpointClient _tokenEndpoint;
-    private readonly Lazy<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>> _secretManagers;
+    private readonly Lazy<ISecretManagerProvider> _secretManagers;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientCredentialsIdentityService"/> class.
@@ -40,7 +40,7 @@ public sealed class ClientCredentialsIdentityService
         ILogger<ClientCredentialsIdentityService>? logger,
         ClientCredentialsConfiguration configuration,
         OAuth2TokenEndpointClient tokenEndpoint,
-        Lazy<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>> secretManagers)
+        Lazy<ISecretManagerProvider> secretManagers)
         : base(logger, configuration)
     {
         _tokenEndpoint = tokenEndpoint ?? throw new ArgumentNullException(nameof(tokenEndpoint));

@@ -1,5 +1,6 @@
 using System;
 using Fdw.Services.Configuration;
+using Fdw.Services.Identity.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Identity.ClientCredentials.Commands;
 using Microsoft.Extensions.Logging;
@@ -17,7 +18,10 @@ namespace Fdw.Services.Identity.ClientCredentials;
 /// did not load", several layers from the missing registration.
 /// </remarks>
 public class ClientCredentialsConfigurationProvider
-    : ImplementationConfigurationProviderBase<ClientCredentialsConfiguration, ClientCredentialsConfigurationCommand>
+    : ImplementationConfigurationProvider<
+          IIdentityServiceImplementationConfiguration,
+          ClientCredentialsConfiguration,
+          ClientCredentialsConfigurationCommand>
 {
     /// <summary>Initializes a new instance of the class.</summary>
     /// <param name="logger">The logger.</param>

@@ -1,5 +1,6 @@
 using System;
 using Fdw.Services.Configuration;
+using Fdw.Services.Identity.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Identity.JwtAssertion.Commands;
 using Microsoft.Extensions.Logging;
@@ -9,7 +10,10 @@ namespace Fdw.Services.Identity.JwtAssertion;
 
 /// <summary>Reads and writes the <c>sec.JwtAssertionIdentity</c> typed body.</summary>
 public class JwtAssertionConfigurationProvider
-    : ImplementationConfigurationProviderBase<JwtAssertionConfiguration, JwtAssertionConfigurationCommand>
+    : ImplementationConfigurationProvider<
+          IIdentityServiceImplementationConfiguration,
+          JwtAssertionConfiguration,
+          JwtAssertionConfigurationCommand>
 {
     /// <summary>Initializes a new instance of the class.</summary>
     /// <param name="logger">The logger.</param>

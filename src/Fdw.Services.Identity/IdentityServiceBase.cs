@@ -18,7 +18,7 @@ namespace Fdw.Services.Identity;
 /// <typeparam name="TService">The concrete service type, for the logging category.</typeparam>
 public abstract class IdentityServiceBase<TConfiguration, TService>
     : ServiceBase<IdentityTokenCommand, TConfiguration, TService>, IIdentityService
-    where TConfiguration : class, IIdentityServiceConfiguration
+    where TConfiguration : class, IIdentityServiceImplementationConfiguration
     where TService : class
 {
     /// <summary>

@@ -21,7 +21,7 @@ namespace Fdw.Services.Identity.Endpoints;
 /// </remarks>
 public abstract class CreateIdentityEndpointBase<TConfig, TRequest>
     : CrudCreateEndpointBase<TRequest, IdentityDetailResponse>
-    where TConfig : class, IIdentityServiceConfiguration
+    where TConfig : class, IIdentityServiceImplementationConfiguration
     where TRequest : CreateIdentityRequest, new()
 {
     /// <summary>Gets the provider that reads and writes identity configuration.</summary>

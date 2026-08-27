@@ -34,7 +34,7 @@ namespace Fdw.Services.Identity.JwtAssertion;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Identity", ServiceType = "JwtAssertion")]
-public partial class JwtAssertionConfiguration : IIdentityServiceConfiguration
+public partial class JwtAssertionConfiguration : IIdentityServiceImplementationConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="JwtAssertionConfiguration"/> class.

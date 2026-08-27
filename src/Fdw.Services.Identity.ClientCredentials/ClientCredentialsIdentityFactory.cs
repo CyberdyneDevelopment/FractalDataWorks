@@ -27,12 +27,12 @@ namespace Fdw.Services.Identity.ClientCredentials;
 /// than while this domain's own resolver lambda is still running.
 /// </remarks>
 internal sealed class ClientCredentialsIdentityFactory
-    : IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>
+    : IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ClientCredentialsIdentityFactory> _logger;
     private readonly HttpClient _http;
-    private readonly Lazy<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>> _secretManagers;
+    private readonly Lazy<ISecretManagerProvider> _secretManagers;
 
     /// <summary>Initializes a new instance of the <see cref="ClientCredentialsIdentityFactory"/> class.</summary>
     /// <param name="loggerFactory">The logger factory for created services.</param>
@@ -42,7 +42,7 @@ internal sealed class ClientCredentialsIdentityFactory
     public ClientCredentialsIdentityFactory(
         ILoggerFactory? loggerFactory,
         HttpClient http,
-        Lazy<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>> secretManagers)
+        Lazy<ISecretManagerProvider> secretManagers)
     {
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<ClientCredentialsIdentityFactory>();
@@ -51,15 +51,12 @@ internal sealed class ClientCredentialsIdentityFactory
     }
 
     /// <inheritdoc />
-    public IGenericResult<IIdentityService> Create(IdentityServiceConfiguration configuration)
+    public IGenericResult<IIdentityService> Create(IIdentityServiceImplementationConfiguration configuration)
     {
         if (configuration is null)
             return GenericResult<IIdentityService>.Failure(IdentityLog.ConfigurationNotFound(_logger, "(null)"));
 
-        // Why this fails rather than constructing with an empty body: runtime dispatch reads only the
-        // typed body, so a header that arrived without one would produce a service whose every field
-        // is null and whose first acquisition fails somewhere far from the cause.
-        if (configuration.Configuration is not ClientCredentialsConfiguration typed)
+        if (configuration is not ClientCredentialsConfiguration typed)
             return GenericResult<IIdentityService>.Failure(
                 IdentityLog.TypedBodyMissing(_logger, configuration.Name, "ClientCredentials"));
 
@@ -73,8 +70,8 @@ internal sealed class ClientCredentialsIdentityFactory
 
     /// <inheritdoc />
     public IGenericResult<IIdentityService> Create(IGenericConfiguration configuration)
-        => configuration is IdentityServiceConfiguration header
-            ? Create(header)
+        => configuration is IIdentityServiceImplementationConfiguration implementation
+            ? Create(implementation)
             : GenericResult<IIdentityService>.Failure(
                 IdentityLog.TypedBodyMissing(_logger, configuration?.Name ?? "(null)", "ClientCredentials"));
 

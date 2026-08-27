@@ -38,7 +38,7 @@ namespace Fdw.Services.Identity.ClientCredentials;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Identity", ServiceType = "ClientCredentials")]
-public partial class ClientCredentialsConfiguration : IIdentityServiceConfiguration
+public partial class ClientCredentialsConfiguration : IIdentityServiceImplementationConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientCredentialsConfiguration"/> class.
