@@ -217,7 +217,7 @@ public static class AegisHostRegistration
         }
 
         var domainResult = services
-            .GetRequiredService<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>()
+            .GetRequiredService<ISecretManagerProvider>()
             .Register(new DeclaredSecretManagerConfigurationProvider([.. schema.SecretManagers]));
 
         // Why this returns rather than throws: an exception decides for the host that the process
