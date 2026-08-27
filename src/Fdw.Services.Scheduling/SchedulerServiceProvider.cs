@@ -15,7 +15,7 @@ namespace Fdw.Services.Scheduling;
 /// and overrides nothing — schedulers resolve exactly the way the platform does. A domain that needs
 /// different behaviour overrides the virtual member here rather than reaching into the base.
 /// <para>
-/// Closed over <see cref="ISchedulerConfiguration"/> rather than the configuration class:
+/// Closed over <see cref="ISchedulerImplementationConfiguration"/> rather than the configuration class:
 /// <c>IServiceConfigurationProvider&lt;T&gt;</c> is invariant, so a base closed over the class cannot
 /// satisfy an interface closed over the contract.
 /// </para>
@@ -23,9 +23,9 @@ namespace Fdw.Services.Scheduling;
 public sealed class SchedulerServiceProvider
     : PlatformServiceProviderBase<
         IFrameworkSchedulingService,
-        ISchedulerConfiguration,
-        ISchedulingFactory<IFrameworkSchedulingService, ISchedulerConfiguration>,
-        IServiceConfigurationProvider<ISchedulerConfiguration>>,
+        ISchedulerImplementationConfiguration,
+        ISchedulingFactory<IFrameworkSchedulingService, ISchedulerImplementationConfiguration>,
+        ISchedulerConfigurationProvider>,
       ISchedulerServiceProvider
 {
     /// <summary>

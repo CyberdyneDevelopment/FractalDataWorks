@@ -3,17 +3,10 @@ using Fdw.Configuration;
 namespace Fdw.Services.Scheduling.Abstractions;
 
 /// <summary>
-/// The configuration a scheduler is resolved against.
+/// One configured scheduler — the domain record, naming which implementation it is and holding that
+/// implementation's own configuration.
 /// </summary>
-/// <remarks>
-/// It lives here rather than beside its class because a contract in this package cannot name a type in
-/// the core package; the dependency runs the other way. Declaring it is what lets
-/// <see cref="ISchedulerServiceProvider"/> name its configuration at all.
-/// <para>
-/// Scheduling is single-level: a scheduler's configuration is one record, not a list holding typed
-/// members, so this one interface serves the whole domain.
-/// </para>
-/// </remarks>
-public interface ISchedulerConfiguration : IImplementationConfiguration
+public interface ISchedulerConfiguration
+    : IPlatformServiceConfiguration<ISchedulerImplementationConfiguration>
 {
 }

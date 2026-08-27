@@ -39,7 +39,7 @@ public sealed class DefaultSchedulingService : IFrameworkSchedulingService
 {
     private readonly ILogger<DefaultSchedulingService> _logger;
     private readonly IDataGateway _dataGateway;
-    private readonly SchedulerConfiguration _configuration;
+    private readonly ISchedulerImplementationConfiguration _configuration;
     private readonly ITenantContext? _tenantContext;
 
     /// <summary>
@@ -52,7 +52,7 @@ public sealed class DefaultSchedulingService : IFrameworkSchedulingService
     public DefaultSchedulingService(
         ILogger<DefaultSchedulingService> logger,
         IDataGateway dataGateway,
-        SchedulerConfiguration configuration,
+        ISchedulerImplementationConfiguration configuration,
         ITenantContext? tenantContext = null)
     {
         _logger = logger ?? NullLogger<DefaultSchedulingService>.Instance;

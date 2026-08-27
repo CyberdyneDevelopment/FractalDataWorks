@@ -105,4 +105,6 @@ public partial class SchedulerConfiguration : ISchedulerConfiguration
     /// </summary>
     public IList<ScheduleConfiguration> Schedules { get; set; } = [];
 
+    /// <inheritdoc/>
+    public ISchedulerImplementationConfiguration? Configuration { get; set; }
 }

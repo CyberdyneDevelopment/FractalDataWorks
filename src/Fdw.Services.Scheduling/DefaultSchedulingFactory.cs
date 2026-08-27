@@ -24,7 +24,7 @@ namespace Fdw.Services.Scheduling;
 // time pins the root-scope context (HasTenant=false, TenantId=null) permanently, killing tenant
 // filtering. IHttpContextAccessor is a singleton that reads the ambient per-request HttpContext,
 // delivering the correct per-request ITenantContext at factory.Create() time — not at construction.
-public sealed class DefaultSchedulingFactory : ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>
+public sealed class DefaultSchedulingFactory : ISchedulingFactory<IFrameworkSchedulingService, ISchedulerImplementationConfiguration>
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<DefaultSchedulingFactory> _logger;
@@ -45,7 +45,7 @@ public sealed class DefaultSchedulingFactory : ISchedulingFactory<IFrameworkSche
     }
 
     /// <inheritdoc />
-    public IGenericResult<IFrameworkSchedulingService> Create(SchedulerConfiguration configuration)
+    public IGenericResult<IFrameworkSchedulingService> Create(ISchedulerImplementationConfiguration configuration)
     {
         if (configuration is null)
             return GenericResult<IFrameworkSchedulingService>.Failure(
