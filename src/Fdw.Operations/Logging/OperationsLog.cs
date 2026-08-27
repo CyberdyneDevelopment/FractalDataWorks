@@ -79,8 +79,8 @@ public static partial class OperationsLog
     /// <summary>
     /// Logs when parent execution item validation fails.
     /// </summary>
-    [MessageLogging(EventId = 31001, Level = LogLevel.Error, Message = "Parent execution item '{domainConfigurationId}' not found for child '{childName}'")]
-    public static partial IGenericMessage ParentExecutionItemNotFound(ILogger logger, Guid domainConfigurationId, string childName);
+    [MessageLogging(EventId = 31001, Level = LogLevel.Error, Message = "Parent execution item '{parentId}' not found for child '{childName}'")]
+    public static partial IGenericMessage ParentExecutionItemNotFound(ILogger logger, Guid parentId, string childName);
 
     /// <summary>
     /// Logs when containment validation fails.

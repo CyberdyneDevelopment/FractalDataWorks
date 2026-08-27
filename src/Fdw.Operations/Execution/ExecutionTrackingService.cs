@@ -71,7 +71,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     public async Task<IGenericResult<IExecutionItem>> CreateItem(
         IExecutionItemType itemType,
         string name,
-        Guid? domainConfigurationId = null,
+        Guid? parentId = null,
         string? correlationId = null,
         string? triggerSource = null,
         IReadOnlyDictionary<string, object?>? parameters = null,
@@ -83,7 +83,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
                 OperationsLog.ExecutionItemNameRequired(_logger));
         }
 
-        var parentValidation = await ValidateParent(itemType, name, domainConfigurationId, cancellationToken).ConfigureAwait(false);
+        var parentValidation = await ValidateParent(itemType, name, parentId, cancellationToken).ConfigureAwait(false);
         if (!parentValidation.IsSuccess)
         {
             return parentValidation.ToNewResult<IExecutionItem>();
@@ -91,9 +91,9 @@ public sealed class ExecutionTrackingService : IExecutionTracker
 
         var rootId = parentValidation.Value;
 
-        var poco = ExecutionItemRecord.CreatePoco(itemType, name, domainConfigurationId, rootId, correlationId, triggerSource, parameters);
+        var poco = ExecutionItemRecord.CreatePoco(itemType, name, parentId, rootId, correlationId, triggerSource, parameters);
 
-        if (!domainConfigurationId.HasValue)
+        if (!parentId.HasValue)
         {
             poco.RootExecutionItemId = poco.Id;
         }
@@ -309,7 +309,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
 
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<IExecutionItem>>> GetChildren(
-        Guid domainConfigurationId,
+        Guid parentId,
         CancellationToken cancellationToken = default)
     {
         var queryCommand = new QueryCommand<ExecutionItem>
@@ -320,7 +320,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
                 {
                     PropertyName = "ParentExecutionItemId",
                     Operator = FilterOperators.ByName("Equal"),
-                    Value = domainConfigurationId
+                    Value = parentId
                 }
             },
             Ordering = new OrderingExpression
@@ -509,19 +509,19 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     private async Task<IGenericResult<Guid>> ValidateParent(
         IExecutionItemType itemType,
         string name,
-        Guid? domainConfigurationId,
+        Guid? parentId,
         CancellationToken cancellationToken)
     {
-        if (!domainConfigurationId.HasValue)
+        if (!parentId.HasValue)
         {
             return GenericResult<Guid>.Success(Guid.NewGuid());
         }
 
-        var domainResult = await GetItemInternal(domainConfigurationId.Value, cancellationToken).ConfigureAwait(false);
+        var domainResult = await GetItemInternal(parentId.Value, cancellationToken).ConfigureAwait(false);
         if (!domainResult.IsSuccess)
         {
             return GenericResult<Guid>.Failure(
-                OperationsLog.ParentExecutionItemNotFound(_logger, domainConfigurationId.Value, name));
+                OperationsLog.ParentExecutionItemNotFound(_logger, parentId.Value, name));
         }
 
         var parentItem = domainResult.Value!;

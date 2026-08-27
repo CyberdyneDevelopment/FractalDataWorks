@@ -65,9 +65,9 @@ public class ExecutionApiClient : ApiClientBase
     /// <summary>
     /// Gets child executions for a given parent execution.
     /// </summary>
-    /// <param name="domainConfigurationId">The parent execution ID.</param>
+    /// <param name="parentId">The parent execution ID.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the list of child execution summaries.</returns>
-    public virtual Task<IGenericResult<IReadOnlyList<ExecutionSummaryPayload>>> GetChildren(Guid domainConfigurationId, CancellationToken ct = default)
-        => GetList<ExecutionSummaryPayload>($"executions/{domainConfigurationId:D}/children", ct);
+    public virtual Task<IGenericResult<IReadOnlyList<ExecutionSummaryPayload>>> GetChildren(Guid parentId, CancellationToken ct = default)
+        => GetList<ExecutionSummaryPayload>($"executions/{parentId:D}/children", ct);
 }
