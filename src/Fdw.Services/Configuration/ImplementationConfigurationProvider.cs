@@ -22,13 +22,17 @@ namespace Fdw.Services.Configuration;
 /// It is typed to the domain's <i>contract</i> as well as its own concrete configuration, which is what
 /// lets one domain hold every implementation provider it has in a single dictionary.
 /// </remarks>
-public abstract class ImplementationConfigurationProvider<TContract, TConfig, TCommand>
+public class ImplementationConfigurationProvider<TContract, TConfig, TCommand>
     : ImplementationConfigurationProviderBase<TConfig, TCommand>,
       IImplementationConfigurationProvider<TContract>
     where TContract : IImplementationConfiguration
     where TConfig : class, TContract
     where TCommand : ConfigurationCommandBase<TConfig>
 {
+    // Why concrete: it declares no abstract member, so requiring a subclass per implementation bought
+    // nothing but a file. An implementation that needs no behaviour of its own closes the three type
+    // arguments at its registration; one that does still derives.
+
     /// <summary>
     /// Initializes a new instance of the
     /// <see cref="ImplementationConfigurationProvider{TContract, TConfig, TCommand}"/> class.
@@ -37,7 +41,7 @@ public abstract class ImplementationConfigurationProvider<TContract, TConfig, TC
     /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
     /// <param name="dataStoreName">The connection the rows live in.</param>
     /// <param name="pathName">The schema the rows live in.</param>
-    protected ImplementationConfigurationProvider(
+    public ImplementationConfigurationProvider(
         ILogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>? logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
