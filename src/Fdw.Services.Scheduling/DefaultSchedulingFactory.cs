@@ -71,7 +71,7 @@ public sealed class DefaultSchedulingFactory : ISchedulingFactory<IFrameworkSche
             return GenericResult<IFrameworkSchedulingService>.Failure(
                 SchedulingLog.FactoryConfigurationNull(_logger));
 
-        if (configuration is SchedulerConfiguration typed)
+        if (configuration is ISchedulerImplementationConfiguration typed)
             return Create(typed);
 
         return GenericResult<IFrameworkSchedulingService>.Failure(

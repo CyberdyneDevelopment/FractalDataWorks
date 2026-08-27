@@ -34,7 +34,7 @@ namespace Fdw.Services.Scheduling.Tests;
 /// </summary>
 public sealed class TenantIsolationTests
 {
-    private static SchedulerConfiguration CreateConfig() => new()
+    private static DefaultSchedulerConfiguration CreateConfig() => new()
     {
         Id = Guid.CreateVersion7(),
         Name = "TestScheduler",
