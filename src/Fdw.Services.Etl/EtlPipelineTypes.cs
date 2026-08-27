@@ -6,6 +6,7 @@ using Fdw.Services;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
 using Fdw.Services.Etl.Abstractions;
+using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Execution;
 using Fdw.Services.Pipelines;
@@ -47,8 +48,8 @@ namespace Fdw.Services.Etl;
     // typed bodies and downcasts in the factory. ConfigurationType therefore is the header config —
     // it drives the generated parent-provider lookup + IOptions binding. The ENGINE type-options
     // (BatchCopy/Streaming) keep EtlPipelineConfiguration as their base config (positional arg above).
-    ProviderType = typeof(DefaultServiceProvider<IEtlPipeline, PipelineConfiguration, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, IServiceConfigurationProvider<PipelineConfiguration>>),
-    ProviderInterface = typeof(IPlatformServiceProvider<IEtlPipeline, PipelineConfiguration>),
+    ProviderType = typeof(EtlPipelineProvider),
+    ProviderInterface = typeof(IEtlPipelineProvider),
     ServiceCategory = "Pipeline")]
 public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
     EtlPipelineTypeBase<IEtlPipeline, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, EtlPipelineConfiguration>,
@@ -121,7 +122,7 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IPlatformServiceProvider<IEtlPipeline, PipelineConfiguration>).ToString();
+        var providerService = typeof(IEtlPipelineProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -151,12 +152,12 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(EtlPipelineTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(EtlPipelineTypes), providerService);
 
-            builder.Services.AddScoped<IPlatformServiceProvider<IEtlPipeline, PipelineConfiguration>>(sp =>
+            builder.Services.AddScoped<IEtlPipelineProvider>(sp =>
             {
-                var provider = new DefaultServiceProvider<IEtlPipeline, PipelineConfiguration, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, IServiceConfigurationProvider<PipelineConfiguration>>(
+                var provider = new EtlPipelineProvider(
                     sp,
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultServiceProvider<IEtlPipeline, PipelineConfiguration, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, IServiceConfigurationProvider<PipelineConfiguration>>>()
-                    ?? NullLogger<DefaultServiceProvider<IEtlPipeline, PipelineConfiguration, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, IServiceConfigurationProvider<PipelineConfiguration>>>.Instance);
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<EtlPipelineProvider>()
+                    ?? NullLogger<EtlPipelineProvider>.Instance);
 
                 // Why ILogger<EtlPipelineTypes> and not CreateLogger("EtlPipelineTypes"): SourceContext then
                 // carries the namespace-qualified collection, and the category cannot drift from the
@@ -167,7 +168,7 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(EtlPipelineTypes), provider.GetType().Name);
                 try
                 {
-                    if (sp.GetService<IServiceConfigurationProvider<PipelineConfiguration>>() is { } cfgProvider)
+                    if (sp.GetService<IPipelineConfigurationProvider>() is { } cfgProvider)
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.

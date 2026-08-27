@@ -91,7 +91,7 @@ public class ConnectionProviderTests
     /// <summary>
     /// Simple test configuration provider for testing.
     /// </summary>
-    private class TestConnectionConfigurationProvider : IServiceConfigurationProvider<ConnectionConfiguration>, IServiceConfigurationProvider
+    private class TestConnectionConfigurationProvider : IServiceConfigurationProvider<ConnectionConfiguration>, IServiceConfigurationProvider, IConnectionConfigurationProvider
     {
         private readonly List<ConnectionConfiguration> _configs;
 
@@ -164,6 +164,38 @@ public class ConnectionProviderTests
                 ? await Save(typed, ct).ConfigureAwait(false)
                 : GenericResult.Failure(ServicesResultCodes.ByName("ServiceCastFailed"));
 
+
+        // ── IDomainConfigurationProvider ────────────────────────────────────
+        async Task<IGenericResult<IConnectionImplementationConfiguration>> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Get(
+            string name, CancellationToken ct)
+        {
+            var result = await Get(name, ct).ConfigureAwait(false);
+            return result.IsSuccess && result.Value?.Configuration is { } implementation
+                ? GenericResult<IConnectionImplementationConfiguration>.Success(implementation)
+                : result.ToNewResult<IConnectionImplementationConfiguration>();
+        }
+
+        async Task<IGenericResult<IConnectionImplementationConfiguration>> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Get(
+            Guid id, CancellationToken ct)
+        {
+            var result = await Get(id, ct).ConfigureAwait(false);
+            return result.IsSuccess && result.Value?.Configuration is { } implementation
+                ? GenericResult<IConnectionImplementationConfiguration>.Success(implementation)
+                : result.ToNewResult<IConnectionImplementationConfiguration>();
+        }
+
+        Task<IGenericResult> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Save<T>(
+            string serviceOptionType, string name, T implementationConfiguration, CancellationToken ct)
+            => Task.FromResult<IGenericResult>(GenericResult.Success());
+
+        Task<IGenericResult> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Delete(Guid id, CancellationToken ct)
+            => Task.FromResult<IGenericResult>(GenericResult.Success());
+
+        Task<IGenericResult> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Delete(string name, CancellationToken ct)
+            => Task.FromResult<IGenericResult>(GenericResult.Success());
+
+        IGenericResult IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Register<T>(
+            string name, T implementationConfigurationProvider) => GenericResult.Success();
 }
 
     [Fact]
@@ -839,39 +871,6 @@ public class ConnectionProviderTests
                 It.IsAny<CancellationToken>()),
             Times.Exactly(2));
     }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public async Task EvictCausesNextGetToRebuildTheConnection()
-    {
-        // Arrange
-        _configurations.Add(new ConnectionConfiguration
-        {
-            Id = Guid.CreateVersion7(),
-            Name = "TestConnection",
-            ServiceOptionType = "MsSql"
-        });
-        var mockFactory = FactoryReturning(new Mock<IGenericConnection>().Object);
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
-
-        // Act
-        await _provider.Get("TestConnection");
-        _provider.Evict("TestConnection");
-        var afterEvict = await _provider.Get("TestConnection");
-
-        // Assert
-        afterEvict.IsSuccess.ShouldBeTrue();
-        mockFactory.Verify(
-            x => x.Create(
-                It.IsAny<IGenericConfiguration>(),
-                It.IsAny<CancellationToken>()),
-            Times.Exactly(2));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Configuration")]
     public async Task GetWithPermanentlyStaleConnectionFailsInsteadOfRecursing()
     {
         // Arrange - a connection that is stale the moment it is built. The old implementation

@@ -5,7 +5,7 @@ namespace Fdw.Services.Pipelines.Abstractions;
 /// <summary>
 /// Marker interface for a pipeline KIND typed body (e.g. <c>EtlPipelineConfiguration</c>).
 /// The general <c>PipelineConfiguration</c> header carries an
-/// <c>IPipelineTypedConfiguration? Configuration</c> property whose runtime type is the kind body
+/// <c>IPipelineImplementationConfiguration? Configuration</c> property whose runtime type is the kind body
 /// selected by the header's <c>ServiceOptionType</c> discriminator (e.g. "Etl").
 /// </summary>
 /// <remarks>
@@ -16,6 +16,6 @@ namespace Fdw.Services.Pipelines.Abstractions;
 /// The kind body is persisted in its own table (<c>pipe.EtlPipeline</c>) and linked to the parent
 /// <c>pipe.Pipeline</c> row via a <c>PipelineId</c>/<c>PipelineRowId</c> foreign key.
 /// </remarks>
-public interface IPipelineTypedConfiguration : IImplementationConfiguration
+public interface IPipelineImplementationConfiguration : IImplementationConfiguration
 {
 }

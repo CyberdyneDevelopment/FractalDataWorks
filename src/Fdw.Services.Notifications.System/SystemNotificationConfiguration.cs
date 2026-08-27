@@ -38,16 +38,6 @@ public sealed partial class SystemNotificationConfiguration : INotificationImple
     public Guid NotificationId { get; set; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SystemNotificationConfiguration"/> class.
-    /// </summary>
-
-    // ========================================
-    // Runtime fields (not on parent header)
-    // Why: Polymorphic configuration pattern — parent is identity-only.
-    // These fields are specific to the typed body and read by the factory at service construction time.
-    // ========================================
-
-    /// <summary>
     /// Gets or sets the service lifetime for DI registration.
     /// </summary>
     public IServiceLifetime Lifetime { get; set; } = ServiceLifetimes.Transient;

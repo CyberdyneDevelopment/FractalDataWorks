@@ -1,6 +1,7 @@
 using System;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
+using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Pipelines.Commands;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,7 +19,12 @@ namespace Fdw.Services.Pipelines;
 /// kind typed provider is attached to this header from the Services.Etl side (the ETL domain the general header
 /// consumes), mirroring the connections→secret-managers consumer-injects-provider pattern.
 /// </summary>
-public class PipelineServiceConfigurationProvider : ImplementationConfigurationProviderBase<PipelineConfiguration, PipelineConfigurationCommand>
+public class PipelineServiceConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          PipelineConfiguration,
+          IPipelineImplementationConfiguration,
+          PipelineConfigurationCommand>,
+      IPipelineConfigurationProvider
 {
     /// <summary>
     /// Registers the PipelineServiceConfigurationProvider with DI, targeting this domain's own default
@@ -47,4 +53,16 @@ public class PipelineServiceConfigurationProvider : ImplementationConfigurationP
                dataStoreName, pathName)
     {
     }
+
+    /// <inheritdoc />
+    protected override PipelineConfiguration Compose<T>(
+        string serviceOptionType,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            ServiceOptionType = serviceOptionType,
+            Configuration = implementationConfiguration,
+        };
 }

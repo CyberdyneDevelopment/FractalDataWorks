@@ -73,7 +73,7 @@ public sealed class IdentityHostBootTests
         using var scope = host.Services.CreateScope();
 
         var provider = scope.ServiceProvider
-            .GetRequiredService<IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration>>();
+            .GetRequiredService<IIdentityServiceProvider>();
 
         // A configuration naming a registered mechanism must not fail with "no factory registered".
         // It fails for want of a typed body instead, which is the next gate and a different message.
@@ -111,7 +111,7 @@ public sealed class IdentityHostBootTests
         // Why scoped: the generator registers every domain provider AddScoped, so resolving from the
         // root container would be the capture bug the framework warns about.
         scope.ServiceProvider
-            .GetService<IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration>>()
+            .GetService<IIdentityServiceProvider>()
             .ShouldNotBeNull();
     }
 

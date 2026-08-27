@@ -69,7 +69,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            var provider = services.GetRequiredService<IPlatformServiceProvider<IEtlPipeline, PipelineConfiguration>>();
+            var provider = services.GetRequiredService<IEtlPipelineProvider>();
             var log = loggerFactory?.CreateLogger<StreamingPipelineType>() ?? NullLogger<StreamingPipelineType>.Instance;
 
             // Resolve factory from DI (registered in Phase 1)
@@ -137,7 +137,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
 
             // Factory - DI handles all constructor dependencies
             // Why Scoped: the factory optionally consumes IDataGateway (scoped). EtlPipelineTypes'
-            // generated IPlatformServiceProvider<IEtlPipeline, PipelineConfiguration> is itself Scoped and
+            // generated IEtlPipelineProvider is itself Scoped and
             // resolves this factory via RegisterFactory inside its own per-scope resolver, so a Scoped
             // factory here is lifetime-consistent, not a captive dependency.
             // Why: lambda registration so the cross-collection connection provider is injected as a Lazy —

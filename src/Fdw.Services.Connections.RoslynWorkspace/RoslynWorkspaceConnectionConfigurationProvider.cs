@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Fdw.Services.Configuration;
+using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.RoslynWorkspace.Commands;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Data.Abstractions;
@@ -16,7 +17,11 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 /// Connection's logical Id and routes to <c>WHERE [ConnectionId]=@p0 AND IsCurrent=1</c>
 /// via the container FK key discovered from the IDataStore tree.
 /// </remarks>
-public class RoslynWorkspaceConnectionConfigurationProvider : ImplementationConfigurationProviderBase<RoslynWorkspaceConnectionConfiguration, RoslynWorkspaceConnectionConfigurationCommand>
+public class RoslynWorkspaceConnectionConfigurationProvider
+    : ImplementationConfigurationProvider<
+          IConnectionImplementationConfiguration,
+          RoslynWorkspaceConnectionConfiguration,
+          RoslynWorkspaceConnectionConfigurationCommand>
 {
     /// <summary>Initializes a new instance of the <see cref="RoslynWorkspaceConnectionConfigurationProvider"/> class.</summary>
     public RoslynWorkspaceConnectionConfigurationProvider(
