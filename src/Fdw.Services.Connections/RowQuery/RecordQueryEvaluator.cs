@@ -1,3 +1,5 @@
+using System.Linq;
+using System.Globalization;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,6 +37,8 @@ public static class RecordQueryEvaluator
     /// <param name="loadJoinedRows">Loads the join target's container and rows.</param>
     /// <param name="logger">Logger for the structured evaluation trace/failure.</param>
     /// <param name="cancellationToken">Cancellation token for the join-rows load.</param>
+    /// <param name="ordering">The command's ordering, if any. Applied here because a file cannot.</param>
+    /// <param name="paging">The command's page, if any. Applied after ordering, as SQL would.</param>
     public static async Task<IGenericResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>> Evaluate(
         IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
         IDataContainer primaryContainer,
@@ -42,6 +46,8 @@ public static class RecordQueryEvaluator
         IReadOnlyList<IJoinExpression> joins,
         JoinedRowsLoader loadJoinedRows,
         ILogger logger,
+        IOrderingExpression? ordering = null,
+        IPagingExpression? paging = null,
         CancellationToken cancellationToken = default)
     {
         RecordQueryLog.EvaluatingQuery(logger, rows.Count, filter?.Root is not null, joins.Count);
@@ -71,8 +77,15 @@ public static class RecordQueryEvaluator
 
         var matched = MatchRows(rows, join, filter);
 
-        RecordQueryLog.QueryEvaluated(logger, matched.Count, rows.Count);
-        return GenericResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>.Success(matched);
+        // Why here and not in the caller: a source whose translator cannot express ORDER BY or
+        // OFFSET has to have them applied to the rows instead, and this is the one place that
+        // already holds every matched row. Order before page, the same sequence SQL uses — paging
+        // an unordered set returns an arbitrary window and calls it page one.
+        var ordered = ApplyOrdering(matched, ordering);
+        var paged = ApplyPaging(ordered, paging);
+
+        RecordQueryLog.QueryEvaluated(logger, paged.Count, rows.Count);
+        return GenericResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>.Success(paged);
     }
 
     // Why: isolates the join-target load + its own row/column validation from Evaluate's top-level
@@ -170,5 +183,78 @@ public static class RecordQueryEvaluator
         public string RightField { get; }
 
         public string ParentContainerName { get; }
+    }
+
+    // Why a stable sort chained per field: OrderBy/ThenBy preserve the order of equal elements, so a
+    // secondary key is honoured rather than overwritten, and rows the sort cannot distinguish keep the
+    // order the file gave them instead of shuffling between runs.
+    private static IReadOnlyList<IReadOnlyDictionary<string, object?>> ApplyOrdering(
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
+        IOrderingExpression? ordering)
+    {
+        if (ordering is null || ordering.OrderedFields.Count == 0)
+            return rows;
+
+        IOrderedEnumerable<IReadOnlyDictionary<string, object?>>? sorted = null;
+        foreach (var field in ordering.OrderedFields)
+        {
+            var name = field.PropertyName;
+            Func<IReadOnlyDictionary<string, object?>, object?> key =
+                row => row.TryGetValue(name, out var value) ? value : null;
+
+            bool ascending = field.Direction?.IsAscending ?? true;
+            sorted = sorted is null
+                ? (ascending
+                    ? rows.OrderBy(key, RowValueComparer.Instance)
+                    : rows.OrderByDescending(key, RowValueComparer.Instance))
+                : (ascending
+                    ? sorted.ThenBy(key, RowValueComparer.Instance)
+                    : sorted.ThenByDescending(key, RowValueComparer.Instance));
+        }
+
+        return sorted!.ToList();
+    }
+
+    // Why Take is nullable and Skip is not: a page with no size is "everything from here", which is
+    // how a caller asks for the remainder. A negative skip is treated as none rather than throwing —
+    // it constrains nothing, and failing a read over it would be worse than ignoring it.
+    private static IReadOnlyList<IReadOnlyDictionary<string, object?>> ApplyPaging(
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
+        IPagingExpression? paging)
+    {
+        if (paging is null)
+            return rows;
+
+        IEnumerable<IReadOnlyDictionary<string, object?>> window = rows;
+        if (paging.Skip > 0)
+            window = window.Skip(paging.Skip);
+        if (paging.Take is int take && take >= 0)
+            window = window.Take(take);
+
+        return ReferenceEquals(window, rows) ? rows : window.ToList();
+    }
+
+    // Why the comparer lives here rather than reusing the filter operators: ordering needs a total
+    // order over mixed CLR types coming out of a file, where a filter only needs a yes or no. Nulls
+    // sort first, matching SQL Server's default for ASC.
+    private sealed class RowValueComparer : IComparer<object?>
+    {
+        public static readonly RowValueComparer Instance = new();
+
+        public int Compare(object? x, object? y)
+        {
+            if (x is null && y is null) return 0;
+            if (x is null) return -1;
+            if (y is null) return 1;
+
+            if (x is IComparable c && x.GetType() == y.GetType())
+                return c.CompareTo(y);
+
+            if (decimal.TryParse(x.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var dx)
+                && decimal.TryParse(y.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var dy))
+                return dx.CompareTo(dy);
+
+            return string.Compare(x.ToString(), y.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
     }
 }
