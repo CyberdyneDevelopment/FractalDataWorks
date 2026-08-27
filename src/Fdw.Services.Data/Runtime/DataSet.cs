@@ -13,7 +13,7 @@ namespace Fdw.Services.Data.Runtime;
 
 /// <summary>
 /// Concrete runtime implementation of <see cref="IDataSet"/>.
-/// Built by <see cref="DataSetFactory"/> from a <c>DataSetConfiguration</c>.
+/// Built by <see cref="DataSetBuilder"/> from a <c>DataSetConfiguration</c>.
 /// </summary>
 public sealed class DataSet : IDataSet
 {

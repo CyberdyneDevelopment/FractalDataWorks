@@ -107,10 +107,6 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             const string pathNameAuthz = "authz";
 
             // Why: RoleConfigurationProvider exposes IAuthorizationProvider (GetPermissions etc.).
-            // Registered via the domain cascade so every consumer option shares ONE canonical
-            // registration shape instead of racing TryAdds.
-            RoleConfigurationProvider.RegisterDomainConfiguration(builder.Services);
-
             // Permission dual-source provider (no custom subclass — plain inline provider).
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>>(sp =>
                 new ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>(
@@ -144,9 +140,6 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                 new DefaultOrgAccessProvider(
                     sp.GetRequiredService<TenantOrgAccessConfigurationProvider>(),
                     sp.GetService<ILogger<DefaultOrgAccessProvider>>()));
-
-            // Why: UserRoleConfigurationProvider handles user-role assignments with GetByUser() filtering.
-            UserRoleConfigurationProvider.RegisterDomainConfiguration(builder.Services);
 
             // Why: ISystemRoleConfiguration is the single source of truth for all system role name checks
             // throughout the framework (SetRolePermissionsEndpointBase, RequestTenantInfo, hub policies, etc.).

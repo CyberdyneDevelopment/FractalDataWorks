@@ -17,12 +17,12 @@ namespace Fdw.Services.Data;
 /// <summary>
 /// Default implementation of <see cref="IDataSetProvider"/>.
 /// Resolves DataSet configurations via <see cref="IDataSetConfigurationProvider"/> and
-/// builds live <see cref="IDataSet"/> runtimes via <see cref="IDataSetFactory"/>.
+/// builds live <see cref="IDataSet"/> runtimes via <see cref="IDataSetBuilder"/>.
 /// </summary>
 public sealed class DataSetRuntimeProvider : IDataSetProvider
 {
     private readonly IDataSetConfigurationProvider _configurationProvider;
-    private readonly IDataSetFactory _factory;
+    private readonly IDataSetBuilder _factory;
     private readonly ILogger<DataSetRuntimeProvider> _logger;
 
     /// <summary>
@@ -33,7 +33,7 @@ public sealed class DataSetRuntimeProvider : IDataSetProvider
     /// <param name="logger">Optional logger instance.</param>
     public DataSetRuntimeProvider(
         IDataSetConfigurationProvider configurationProvider,
-        IDataSetFactory factory,
+        IDataSetBuilder factory,
         ILogger<DataSetRuntimeProvider>? logger = null)
     {
         _configurationProvider = configurationProvider ?? throw new ArgumentNullException(nameof(configurationProvider));
@@ -63,7 +63,11 @@ public sealed class DataSetRuntimeProvider : IDataSetProvider
                     ResultDetails.Create().With("DataSetName", name));
         }
 
-        var buildResult = _factory.Create(configResult.Value!);
+        var configured = _factory.Configure(configResult.Value!);
+        if (!configured.IsSuccess)
+            return configured.ToNewResult<IDataSet>();
+
+        var buildResult = await _factory.Build(cancellationToken).ConfigureAwait(false);
         if (!buildResult.IsSuccess)
         {
             return buildResult.Messages.Any()
@@ -92,7 +96,11 @@ public sealed class DataSetRuntimeProvider : IDataSetProvider
                     ResultDetails.Create().With("DataSetId", id));
         }
 
-        var buildResult = _factory.Create(configResult.Value!);
+        var configured = _factory.Configure(configResult.Value!);
+        if (!configured.IsSuccess)
+            return configured.ToNewResult<IDataSet>();
+
+        var buildResult = await _factory.Build(cancellationToken).ConfigureAwait(false);
         if (!buildResult.IsSuccess)
         {
             return buildResult.Messages.Any()
@@ -123,7 +131,14 @@ public sealed class DataSetRuntimeProvider : IDataSetProvider
         var failureCount = 0;
         foreach (var config in allConfigsResult.Value!)
         {
-            var buildResult = _factory.Create(config);
+            var configured = _factory.Configure(config);
+            if (!configured.IsSuccess)
+            {
+                failureCount++;
+                continue;
+            }
+
+            var buildResult = await _factory.Build(cancellationToken).ConfigureAwait(false);
             if (buildResult.IsSuccess)
             {
                 dataSets.Add(buildResult.Value!);
@@ -131,7 +146,7 @@ public sealed class DataSetRuntimeProvider : IDataSetProvider
             else
             {
                 // Why: A single failing DataSet does not block the rest of the list.
-                // The failure is logged by DataSetFactory. We count and log at summary level.
+                // The failure is logged by DataSetBuilder. We count and log at summary level.
                 failureCount++;
             }
         }
