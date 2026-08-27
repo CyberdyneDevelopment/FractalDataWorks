@@ -14,6 +14,6 @@ namespace Fdw.Services.Scheduling.Abstractions;
 /// members, so this one interface serves the whole domain.
 /// </para>
 /// </remarks>
-public interface ISchedulerConfiguration : IGenericConfiguration
+public interface ISchedulerConfiguration : IImplementationConfiguration
 {
 }

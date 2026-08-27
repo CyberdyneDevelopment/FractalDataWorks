@@ -10,6 +10,6 @@ namespace Fdw.Services.TokenManagers.Abstractions;
 /// Configuration</c> property populated on the read path, mirroring every other polymorphic
 /// header/typed-body domain (Connection, SecretManager, AuthenticationService).
 /// </summary>
-public interface ITokenManagerConfiguration : IGenericConfiguration
+public interface ITokenManagerConfiguration : IImplementationConfiguration
 {
 }

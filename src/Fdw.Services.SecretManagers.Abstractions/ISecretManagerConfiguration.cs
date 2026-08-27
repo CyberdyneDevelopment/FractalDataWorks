@@ -16,7 +16,7 @@ namespace Fdw.Services.SecretManagers.Abstractions;
 /// The parent <c>SecretManagerConfiguration</c>
 /// carries an <c>ISecretManagerConfiguration? Configuration</c> property populated on the read path.
 /// </remarks>
-public interface ISecretManagerConfiguration : IGenericConfiguration
+public interface ISecretManagerConfiguration : IImplementationConfiguration
 {
     /// <summary>Gets or sets the FK to the parent SecretManager's logical Id.</summary>
     Guid SecretManagerId { get; set; }

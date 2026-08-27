@@ -16,6 +16,6 @@ namespace Fdw.Services.Pipelines.Abstractions;
 /// The kind body is persisted in its own table (<c>pipe.EtlPipeline</c>) and linked to the parent
 /// <c>pipe.Pipeline</c> row via a <c>PipelineId</c>/<c>PipelineRowId</c> foreign key.
 /// </remarks>
-public interface IPipelineTypedConfiguration : IGenericConfiguration
+public interface IPipelineTypedConfiguration : IImplementationConfiguration
 {
 }

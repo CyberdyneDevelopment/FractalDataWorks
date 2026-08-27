@@ -10,11 +10,11 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// <summary>
 /// Default implementation of <see cref="IHealthMonitorProvider"/>. Resolves the configured
 /// <see cref="IHealthMonitorService"/> by row name: loads the <c>settings.HealthMonitor</c> row via
-/// the registered <see cref="IServiceConfigurationProvider{TConfig}"/>, then dispatches to the
+/// the registered <c>IDomainConfigurationProvider</c>, then dispatches to the
 /// factory registered for the row's <c>ServiceOptionType</c> ("Local", "HttpClient", …).
 /// </summary>
 public sealed class DefaultHealthMonitorProvider
-    : PlatformServiceProviderBase<IHealthMonitorService, HealthMonitorConfiguration, IServiceFactory<IHealthMonitorService>, IServiceConfigurationProvider<HealthMonitorConfiguration>>,
+    : PlatformServiceProviderBase<IHealthMonitorService, IHealthMonitorConfiguration, IServiceFactory<IHealthMonitorService>, IDomainConfigurationProvider<IHealthMonitorConfiguration>>,
       IHealthMonitorProvider
 {
     /// <summary>
@@ -26,7 +26,7 @@ public sealed class DefaultHealthMonitorProvider
         IServiceProvider services,
         ILogger<DefaultHealthMonitorProvider>? logger = null)
         : base(services, logger is null
-            ? NullLogger<PlatformServiceProviderBase<IHealthMonitorService, HealthMonitorConfiguration, IServiceFactory<IHealthMonitorService>, IServiceConfigurationProvider<HealthMonitorConfiguration>>>.Instance
+            ? NullLogger<PlatformServiceProviderBase<IHealthMonitorService, IHealthMonitorConfiguration, IServiceFactory<IHealthMonitorService>, IDomainConfigurationProvider<IHealthMonitorConfiguration>>>.Instance
             : logger)
     {
     }

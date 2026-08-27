@@ -14,7 +14,7 @@ namespace Fdw.Services.Credentials.Abstractions;
 /// foreign key property. The parent header carries an
 /// <c>ICredentialServiceConfiguration? Configuration</c> property populated on the read path.
 /// </remarks>
-public interface ICredentialServiceConfiguration : IGenericConfiguration
+public interface ICredentialServiceConfiguration : IImplementationConfiguration
 {
     /// <summary>Gets or sets the FK to <c>sec.CredentialService.Id</c>.</summary>
     Guid CredentialServiceId { get; set; }

@@ -64,7 +64,7 @@ public interface IPlatformServiceProvider<TService> : IPlatformServiceProvider
 /// <typeparam name="TConfiguration">The configuration type for this service domain.</typeparam>
 public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformServiceProvider<TService>
     where TService : IGenericService
-    where TConfiguration : IGenericConfiguration
+    where TConfiguration : IImplementationConfiguration
 {
     /// <summary>
     /// Gets a service instance built from the supplied strongly-typed configuration.
@@ -81,7 +81,6 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
     /// <summary>
     /// Registers a configuration provider for a service option type.
     /// </summary>
-    /// <typeparam name="TConcrete">
     /// The configuration provider's own closed type — inferred at the call site, never written.
     /// </typeparam>
     // Why the type parameter follows the CONFIGURATION and not the provider: every configuration
@@ -101,9 +100,7 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
     /// <see cref="IGenericConfiguration.ServiceOptionType"/>.
     /// </summary>
     /// <param name="domainConfigurationProvider">The parent configuration provider.</param>
-    /// <typeparam name="TConcrete">The parent provider's own closed type; inferred at the call site.</typeparam>
-    IGenericResult Register<TConcrete>(IServiceConfigurationProvider<TConcrete> domainConfigurationProvider)
-        where TConcrete : class, TConfiguration;
+    IGenericResult Register(IDomainConfigurationProvider<TConfiguration> domainConfigurationProvider);
 
 }
 
@@ -117,8 +114,8 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
 public interface IPlatformServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
     : IPlatformServiceProvider<TService, TConfiguration>
     where TService : IGenericService
-    where TConfiguration : IGenericConfiguration
+    where TConfiguration : IImplementationConfiguration
     where TFactory : IServiceFactory<TService>
-    where TConfigurationProvider : IServiceConfigurationProvider<TConfiguration>
+    where TConfigurationProvider : IDomainConfigurationProvider<TConfiguration>
 {
 }

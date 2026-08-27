@@ -27,14 +27,14 @@ namespace Fdw.Services;
 public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>
     : IPlatformServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
     where TService : IGenericService
-    where TConfiguration : class, IGenericConfiguration
+    where TConfiguration : class, IImplementationConfiguration
     where TFactory : IServiceFactory<TService>
-    where TConfigurationProvider : IServiceConfigurationProvider<TConfiguration>
+    where TConfigurationProvider : IDomainConfigurationProvider<TConfiguration>
 {
     private readonly ILogger<PlatformServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>> _logger;
     private readonly Dictionary<string, IServiceFactory<TService>> _factories = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IServiceConfigurationProvider> _configurationProviders = new(StringComparer.OrdinalIgnoreCase);
-    private IServiceConfigurationProvider? _domainConfigurationProvider;
+    private IDomainConfigurationProvider<TConfiguration>? _domainConfigurationProvider;
 
     /// <summary>Gets the registered service factories keyed by service option type.</summary>
     protected IDictionary<string, IServiceFactory<TService>> Factories => _factories;
@@ -43,7 +43,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     // Why the erased view: a configuration provider is always closed over its CONCRETE configuration
     // class and IServiceConfigurationProvider<T> is invariant, so no single closed typed field can hold
     // one. This base reads only Id and ServiceOptionType off the record it returns.
-    protected IServiceConfigurationProvider? DomainConfigurationProvider => _domainConfigurationProvider;
+    protected IDomainConfigurationProvider<TConfiguration>? DomainConfigurationProvider => _domainConfigurationProvider;
 
     private static readonly Dictionary<string, Func<IServiceProvider, IServiceFactory<TService>>> _registered
         = new(StringComparer.OrdinalIgnoreCase);
@@ -182,25 +182,10 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     }
 
     /// <inheritdoc />
-    public IGenericResult Register<TConcrete>(IServiceConfigurationProvider<TConcrete> domainConfigurationProvider)
-        where TConcrete : class, TConfiguration
+    public IGenericResult Register(IDomainConfigurationProvider<TConfiguration> domainConfigurationProvider)
     {
-        _domainConfigurationProvider = Erase(domainConfigurationProvider);
+        _domainConfigurationProvider = domainConfigurationProvider;
         ServiceLogger.DomainConfigurationProviderRegistered(_logger);
-
-        // Why the implementation providers come across with it: an option registers its implementation
-        // configuration provider on the DOMAIN provider, which is what composes the configuration. The
-        // service provider needs the same set to resolve, and requiring each option to register twice
-        // would leave the two sets free to disagree — one registration, both places.
-        if (domainConfigurationProvider is IDomainConfigurationProvider source)
-        {
-            foreach (var implementation in source.ImplementationProviders)
-            {
-                _configurationProviders[implementation.Key] = implementation.Value;
-                ServiceLogger.ProviderConfigurationRegistered(_logger, implementation.Key);
-            }
-        }
-
         return GenericResult.Success();
     }
 

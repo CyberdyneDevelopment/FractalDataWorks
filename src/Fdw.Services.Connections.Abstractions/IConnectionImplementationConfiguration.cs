@@ -15,7 +15,7 @@ namespace Fdw.Services.Connections.Abstractions;
 /// The parent <c>ConnectionConfiguration</c>
 /// carries an <c>IConnectionImplementationConfiguration? Configuration</c> property populated on the read path.
 /// </remarks>
-public interface IConnectionImplementationConfiguration : IGenericConfiguration
+public interface IConnectionImplementationConfiguration : IImplementationConfiguration
 {
     /// <summary>Gets or sets the FK to <c>conn.Connection.Id</c>.</summary>
     Guid ConnectionId { get; set; }

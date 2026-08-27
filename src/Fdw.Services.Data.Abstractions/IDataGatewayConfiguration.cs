@@ -10,6 +10,6 @@ namespace Fdw.Services.Data.Abstractions;
 /// the core package; the dependency runs the other way. Declaring it is what lets the domain's provider
 /// contract name its configuration at all.
 /// </remarks>
-public interface IDataGatewayConfiguration : IGenericConfiguration
+public interface IDataGatewayConfiguration : IImplementationConfiguration
 {
 }

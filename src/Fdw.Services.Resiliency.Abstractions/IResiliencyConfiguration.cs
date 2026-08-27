@@ -10,6 +10,6 @@ namespace Fdw.Services.Resiliency.Abstractions;
 /// the core package; the dependency runs the other way. Declaring it is what lets the domain's provider
 /// contract name its configuration at all.
 /// </remarks>
-public interface IResiliencyConfiguration : IGenericConfiguration
+public interface IResiliencyConfiguration : IImplementationConfiguration
 {
 }

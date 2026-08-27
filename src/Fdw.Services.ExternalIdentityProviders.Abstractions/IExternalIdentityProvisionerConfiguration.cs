@@ -11,6 +11,6 @@ namespace Fdw.Services.ExternalIdentityProviders.Abstractions;
 /// IExternalIdentityProvisionerConfiguration? Configuration</c> property populated on the read path,
 /// mirroring <c>IExternalIdentityProviderConfiguration</c>/<c>ExternalIdentityProviderConfiguration</c>.
 /// </summary>
-public interface IExternalIdentityProvisionerConfiguration : IGenericConfiguration
+public interface IExternalIdentityProvisionerConfiguration : IImplementationConfiguration
 {
 }

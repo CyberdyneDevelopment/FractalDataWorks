@@ -14,7 +14,7 @@ namespace Fdw.Services.Identity.Abstractions;
 /// mirroring every other polymorphic header/typed-body domain (Connection, SecretManager,
 /// TokenManager).
 /// </remarks>
-public interface IIdentityServiceConfiguration : IGenericConfiguration
+public interface IIdentityServiceConfiguration : IImplementationConfiguration
 {
     /// <summary>
     /// Gets the identity provider's issuer URL — the authority this configuration obtains tokens

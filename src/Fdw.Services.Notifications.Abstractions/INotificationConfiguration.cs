@@ -10,6 +10,6 @@ namespace Fdw.Services.Notifications.Abstractions;
 /// the core package — the dependency runs the other way. Declaring the interface here is what lets
 /// <see cref="INotificationServiceProvider"/> name its configuration at all.
 /// </remarks>
-public interface INotificationConfiguration : IGenericConfiguration
+public interface INotificationConfiguration : IImplementationConfiguration
 {
 }

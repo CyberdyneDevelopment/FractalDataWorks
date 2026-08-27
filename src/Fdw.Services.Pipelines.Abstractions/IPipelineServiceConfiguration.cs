@@ -16,6 +16,6 @@ namespace Fdw.Services.Pipelines.Abstractions;
 /// <c>ConfigurationType</c> names this root, because resolution starts here. Two collections, one root.
 /// </para>
 /// </remarks>
-public interface IPipelineServiceConfiguration : IGenericConfiguration
+public interface IPipelineServiceConfiguration : IImplementationConfiguration
 {
 }

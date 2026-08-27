@@ -162,15 +162,6 @@ public sealed class DefaultConnectionProvider
                 ConnectionProviderLogger.ServiceOptionTypeMissing(_logger, header.Name));
         }
 
-        if (header.Configuration is null)
-        {
-            // Why: ComposedHeaderNoConfiguration is [LoggerMessage] (void) — it logs the warning that
-            // names the header; TypedBodyMissing is [MessageLogging] and carries the failure.
-            ConnectionProviderLogger.ComposedHeaderNoConfiguration(_logger, header.Name, serviceOptionType);
-            return GenericResult<IGenericConnection>.Failure(
-                ConnectionProviderLogger.TypedBodyMissing(_logger, header.Name, serviceOptionType));
-        }
-
         // Why the provider's own registry and not the container: each option registered its factory
         // func from its Register method, and this provider resolved every one of them in its constructor.
         // Nothing here reaches back into DI at request time.
@@ -201,7 +192,7 @@ public sealed class DefaultConnectionProvider
                 ConnectionProviderLogger.FactoryNotConnectionFactory(_logger, header.Name, serviceOptionType));
         }
 
-        ConnectionProviderLogger.ComposedHeaderCreating(_logger, header.Name, serviceOptionType, header.Configuration.GetType().Name);
+        ConnectionProviderLogger.ComposedHeaderCreating(_logger, header.Name, serviceOptionType, header.GetType().Name);
 
         // Why the header and not header.Configuration: a factory needs the connection's NAME, and the
         // name is on the header — the typed body's table has no Name column. Every connection factory

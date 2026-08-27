@@ -11,7 +11,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Abstractions;
 /// IExternalIdentityProviderConfiguration? Configuration</c> property populated on the read path,
 /// mirroring <c>ITokenManagerConfiguration</c>/<c>TokenManagerConfiguration</c>.
 /// </summary>
-public interface IExternalIdentityProviderConfiguration : IGenericConfiguration
+public interface IExternalIdentityProviderConfiguration : IImplementationConfiguration
 {
     /// <summary>
     /// Populates the public, non-secret fields of <paramref name="summary"/> that this typed body owns,

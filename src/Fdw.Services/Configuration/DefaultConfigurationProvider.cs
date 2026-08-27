@@ -27,7 +27,7 @@ namespace Fdw.Services.Configuration;
 /// <typeparam name="TConfig">The configuration POCO type.</typeparam>
 /// <typeparam name="TCommand">The configuration command TypeOption for this domain.</typeparam>
 public class DefaultConfigurationProvider<TConfig, TCommand>
-    : IServiceConfigurationProvider<TConfig>, IServiceConfigurationProvider, IDomainConfigurationProvider
+    : IServiceConfigurationProvider<TConfig>, IServiceConfigurationProvider
     where TConfig : class, IGenericConfiguration
     where TCommand : ConfigurationCommandBase<TConfig>
 {
@@ -95,10 +95,6 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
     /// </summary>
     protected ConcurrentDictionary<string, IServiceConfigurationProvider> ImplementationProviders { get; }
         = new(StringComparer.OrdinalIgnoreCase);
-
-    /// <inheritdoc />
-    IReadOnlyDictionary<string, IServiceConfigurationProvider> IDomainConfigurationProvider.ImplementationProviders
-        => ImplementationProviders;
 
     /// <summary>
     /// Registers a typed-body configuration provider for a specific <c>ServiceOptionType</c> discriminator.

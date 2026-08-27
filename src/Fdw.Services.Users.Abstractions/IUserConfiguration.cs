@@ -10,6 +10,6 @@ namespace Fdw.Services.Users.Abstractions;
 /// the core package; the dependency runs the other way. Declaring it is what lets the domain's provider
 /// contract name its configuration at all.
 /// </remarks>
-public interface IUserConfiguration : IGenericConfiguration
+public interface IUserConfiguration : IImplementationConfiguration
 {
 }

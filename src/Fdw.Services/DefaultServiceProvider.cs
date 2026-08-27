@@ -22,9 +22,9 @@ namespace Fdw.Services;
 public class DefaultServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
     : PlatformServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>
     where TService : IGenericService
-    where TConfiguration : class, IGenericConfiguration
+    where TConfiguration : class, IImplementationConfiguration
     where TFactory : IServiceFactory<TService>
-    where TConfigurationProvider : IServiceConfigurationProvider<TConfiguration>
+    where TConfigurationProvider : IDomainConfigurationProvider<TConfiguration>
 {
     /// <summary>
     /// Initializes a new instance of the

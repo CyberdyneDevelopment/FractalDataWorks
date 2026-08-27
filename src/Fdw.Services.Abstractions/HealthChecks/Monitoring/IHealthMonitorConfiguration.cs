@@ -16,6 +16,6 @@ namespace Fdw.Services.Abstractions.Health.Monitoring;
 /// here rather than in a domain package that does not exist.
 /// </para>
 /// </remarks>
-public interface IHealthMonitorConfiguration : IGenericConfiguration
+public interface IHealthMonitorConfiguration : IImplementationConfiguration
 {
 }

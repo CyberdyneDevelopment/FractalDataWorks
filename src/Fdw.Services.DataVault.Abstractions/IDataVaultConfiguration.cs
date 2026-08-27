@@ -14,7 +14,7 @@ namespace Fdw.Services.DataVault.Abstractions;
 /// parent header carries an <c>IDataVaultConfiguration? Configuration</c> property populated
 /// on the read path.
 /// </remarks>
-public interface IDataVaultConfiguration : IGenericConfiguration
+public interface IDataVaultConfiguration : IImplementationConfiguration
 {
     /// <summary>Gets or sets the FK to <c>sec.DataVault.Id</c>.</summary>
     Guid DataVaultId { get; set; }
