@@ -59,9 +59,8 @@ public sealed class ChainedExternalIdentityProvisionerTests
         ChainedExternalIdentityProvisionerConfiguration typed,
         Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>> providerMock)
     {
-        var header = new ExternalIdentityProvisionerConfiguration { Name = "chained", Configuration = typed };
         return new ChainedExternalIdentityProvisioner(
-            header, typed, providerMock.Object, NullLogger<ChainedExternalIdentityProvisioner>.Instance);
+            typed, providerMock.Object, NullLogger<ChainedExternalIdentityProvisioner>.Instance);
     }
 
     [Fact]

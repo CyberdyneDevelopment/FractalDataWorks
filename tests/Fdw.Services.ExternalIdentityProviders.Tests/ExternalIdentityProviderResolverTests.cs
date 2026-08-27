@@ -21,7 +21,7 @@ public sealed class ExternalIdentityProviderResolverTests
     private static ExternalIdentityProviderConfiguration Header(string name)
         => new() { Id = Guid.NewGuid(), Name = name };
 
-    private static Mock<IPlatformServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>> ServiceProvider()
+    private static Mock<IExternalIdentityProviderServiceProvider> ServiceProvider()
         => new();
 
     // Why: the resolver depends on the concrete configuration provider (its Get(ct) is virtual). Mock it
@@ -33,7 +33,7 @@ public sealed class ExternalIdentityProviderResolverTests
             "ConfigurationDb", "auth");
 
     private static ExternalIdentityProviderResolver Resolver(
-        Mock<IPlatformServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>> serviceProvider,
+        Mock<IExternalIdentityProviderServiceProvider> serviceProvider,
         Mock<ExternalIdentityProviderConfigurationProvider> configProvider)
         => new(serviceProvider.Object, configProvider.Object, NullLogger<ExternalIdentityProviderResolver>.Instance);
 

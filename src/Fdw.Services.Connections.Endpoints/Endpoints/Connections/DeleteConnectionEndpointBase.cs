@@ -52,15 +52,12 @@ public abstract class DeleteConnectionEndpointBase : CrudDeleteEndpointBase<Conn
         return GenericResult<bool>.Success(existingResult.IsSuccess && existingResult.Value != null);
     }
 
-    /// <summary>Soft-deletes the connection aggregate, then evicts the live instance from the provider cache.</summary>
+    /// <summary>Soft-deletes the connection aggregate.</summary>
     protected override async Task<IGenericResult> Delete(ConnectionNameRequest request, CancellationToken ct)
     {
-        // Why: the name overload resolves the record and delegates to Delete(Guid), so the cascade, the
-        // audit columns and the cache invalidation all happen in the one place that owns them. A name that
-        // resolves to nothing now fails loud from the provider rather than reporting a delete that never ran.
-        var deleteResult = await _connectionProvider.Delete(request.Name, ct).ConfigureAwait(false);
-        if (deleteResult.IsFailure) return deleteResult;
-
-        return deleteResult;
+        // Why the name overload: it resolves the record and delegates to Delete(Guid), so the cascade
+        // and the audit columns happen in the one place that owns them. A name that resolves to nothing
+        // fails loud from the provider rather than reporting a delete that never ran.
+        return await _connectionProvider.Delete(request.Name, ct).ConfigureAwait(false);
     }
 }
