@@ -23,7 +23,14 @@ namespace Fdw.Services.Data;
 /// <see cref="IConnectionFactory"/> implementation (and optionally an <see cref="ISecretManager"/>)
 /// at registration time, which the ServiceTypeCollection 3-phase cannot do cleanly.
 /// </summary>
-internal static partial class ConfigurationSchemaLoader
+/// <summary>
+/// Loads <c>configurationSchema.json</c>, resolving environment placeholders.
+/// </summary>
+/// <remarks>
+/// Public because a host that builds its own gateway - a test fixture, or an app that does not run
+/// the registration sweep - still has to read the same schema the sweep would have read.
+/// </remarks>
+public static partial class ConfigurationSchemaLoader
 {
     // Why: Centralized JsonSerializerOptions for configurationSchema.json deserialization.
     // PropertyNameCaseInsensitive so JSON written with either casing round-trips cleanly.
@@ -47,7 +54,10 @@ internal static partial class ConfigurationSchemaLoader
     // on the first Execute call. The schema is static (shipped with the app) so there is no
     // value in deferring the load. The InvalidOperationException propagates up to Program.cs
     // which is the appropriate failure boundary for a misconfigured app.
-    internal static ConfigurationSchema Load(string jsonFilePath)
+    /// <summary>Reads the schema at <paramref name="jsonFilePath"/>.</summary>
+    /// <param name="jsonFilePath">Path to the schema file; relative paths resolve against the app's base directory.</param>
+    /// <returns>The declared connections, secret managers and data stores.</returns>
+    public static ConfigurationSchema Load(string jsonFilePath)
     {
         if (string.IsNullOrWhiteSpace(jsonFilePath))
             throw new InvalidOperationException("configurationSchema.json path must not be null or whitespace.");
