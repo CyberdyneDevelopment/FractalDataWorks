@@ -85,7 +85,7 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
 
         var config = new DataSetConfiguration
         {
-            // Why: Id is Guid.Empty — DefaultConfigurationProvider.Save mints UUIDv7 on insert.
+            // Why: Id is Guid.Empty — ImplementationConfigurationProviderBase.Save mints UUIDv7 on insert.
             Name = request.Name,
             Description = request.Description ?? string.Empty,
             Category = request.Category ?? "Dataset",

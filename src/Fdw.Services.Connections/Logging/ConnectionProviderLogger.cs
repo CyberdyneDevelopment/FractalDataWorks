@@ -22,7 +22,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Debug,
         Message = "Getting connection for type: {connectionType}")]
     public static partial IGenericMessage GettingConnection(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionType);
 
     /// <summary>
@@ -36,7 +36,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Warning,
         Message = "Unknown connection type: {connectionType}")]
     public static partial IGenericMessage UnknownConnectionType(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionType);
 
     /// <summary>
@@ -50,7 +50,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "No factory registered for connection type: {connectionType}")]
     public static partial IGenericMessage NoFactoryRegistered(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionType);
 
     /// <summary>
@@ -64,7 +64,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Debug,
         Message = "Successfully created connection for type: {connectionType}")]
     public static partial IGenericMessage ConnectionCreated(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionType);
 
     /// <summary>
@@ -79,7 +79,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "Failed to create connection for type: {connectionType}. Error: {error}")]
     public static partial IGenericMessage ConnectionCreationFailed(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionType,
         string error);
 
@@ -95,7 +95,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "Failed to create connection for type {connectionType}")]
     public static partial IGenericMessage ConnectionCreationException(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         Exception exception,
         string connectionType);
 
@@ -110,7 +110,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Debug,
         Message = "Getting connection by name: {connectionName}")]
     public static partial IGenericMessage GettingConnectionByName(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName);
 
     /// <summary>
@@ -124,7 +124,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "Connection configuration not found: {connectionName}")]
     public static partial IGenericMessage ConnectionConfigurationNotFound(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName);
 
     /// <summary>
@@ -138,7 +138,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Warning,
         Message = "GetConnection by ID is not implemented: {configurationId}")]
     public static partial IGenericMessage GetConnectionByIdNotImplemented(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         int configurationId);
 
     /// <summary>
@@ -152,7 +152,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Debug,
         Message = "Getting connection by configuration name: {configurationName}")]
     public static partial IGenericMessage GettingConnectionByConfigurationName(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string configurationName);
 
     /// <summary>
@@ -166,7 +166,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Warning,
         Message = "Configuration section not found: Connections:{configurationName}")]
     public static partial IGenericMessage ConfigurationSectionNotFound(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string configurationName);
 
     /// <summary>
@@ -180,7 +180,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Warning,
         Message = "ConnectionType not specified in configuration section: {configurationName}")]
     public static partial IGenericMessage ConnectionTypeNotSpecified(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string configurationName);
 
     /// <summary>
@@ -194,7 +194,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Warning,
         Message = "Unknown connection type in configuration: {connectionType}")]
     public static partial IGenericMessage UnknownConnectionTypeInConfiguration(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionType);
 
     /// <summary>
@@ -208,7 +208,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "Failed to bind configuration section to type: {configurationType}")]
     public static partial IGenericMessage ConfigurationBindingFailed(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string? configurationType);
 
     /// <summary>
@@ -223,7 +223,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "Failed to get connection by configuration name: {configurationName}")]
     public static partial IGenericMessage GetConnectionByNameException(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         Exception exception,
         string configurationName);
 
@@ -238,7 +238,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Debug,
         Message = "Attempting to get connection as type: {targetType}")]
     public static partial IGenericMessage AttemptingTypedConnection(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string targetType);
 
     /// <summary>
@@ -252,7 +252,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Debug,
         Message = "Successfully cast connection to type: {targetType}")]
     public static partial IGenericMessage ConnectionCastSucceeded(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string targetType);
 
     /// <summary>
@@ -267,7 +267,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Warning,
         Message = "Failed to cast connection to type: {targetType}. Actual type: {actualType}")]
     public static partial IGenericMessage ConnectionCastFailed(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string targetType,
         string actualType);
 
@@ -282,7 +282,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Debug,
         Message = "Getting data connection by name: {connectionName}")]
     public static partial IGenericMessage GettingDataConnection(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName);
 
     /// <summary>
@@ -297,7 +297,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "Connection '{connectionName}' does not implement IDataConnection. Actual type: {actualType}")]
     public static partial IGenericMessage ConnectionNotDataConnection(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName,
         string actualType);
 
@@ -310,7 +310,7 @@ public static partial class ConnectionProviderLogger
         EventId = 11010,
         Level = LogLevel.Debug,
         Message = "Loading connection configurations from Connections section")]
-    public static partial IGenericMessage LoadingConnectionConfigurations(ILogger<DefaultConnectionProvider> logger);
+    public static partial IGenericMessage LoadingConnectionConfigurations(ILogger<ConnectionProvider> logger);
 
     /// <summary>
     /// Logs when a connection configuration is successfully loaded.
@@ -324,7 +324,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Information,
         Message = "Loaded connection configuration '{connectionName}' (type: {connectionType})")]
     public static partial IGenericMessage ConnectionConfigurationLoaded(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName,
         string connectionType);
 
@@ -339,7 +339,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Information,
         Message = "Loaded {count} connection configuration(s)")]
     public static partial IGenericMessage ConnectionConfigurationsLoaded(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         int count);
 
     /// <summary>
@@ -353,7 +353,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Debug,
         Message = "Retrieved connection configuration '{connectionName}' from cache")]
     public static partial IGenericMessage ConnectionConfigurationRetrievedFromCache(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName);
 
     /// <summary>
@@ -368,7 +368,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Debug,
         Message = "Creating connection '{connectionName}' using factory {factoryType}")]
     public static partial IGenericMessage CreatingConnectionWithFactory(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName,
         string factoryType);
 
@@ -381,7 +381,7 @@ public static partial class ConnectionProviderLogger
         EventId = 31002,
         Level = LogLevel.Warning,
         Message = "Connections section not found in configuration")]
-    public static partial IGenericMessage ConnectionsSectionNotFound(ILogger<DefaultConnectionProvider> logger);
+    public static partial IGenericMessage ConnectionsSectionNotFound(ILogger<ConnectionProvider> logger);
 
     /// <summary>
     /// Logs when a connection factory is not registered in DI.
@@ -395,7 +395,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "Factory for connection '{connectionName}' not registered in DI. Expected type: {factoryType}")]
     public static partial IGenericMessage FactoryNotRegisteredInDi(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName,
         string factoryType);
 
@@ -407,7 +407,7 @@ public static partial class ConnectionProviderLogger
         EventId = 7128,
         Level = LogLevel.Debug,
         Message = "Subscribed to connection configuration change notifications")]
-    public static partial void SubscribedToConfigurationChanges(ILogger<DefaultConnectionProvider> logger);
+    public static partial void SubscribedToConfigurationChanges(ILogger<ConnectionProvider> logger);
 
     /// <summary>
     /// Logs when configuration changes are detected.
@@ -417,7 +417,7 @@ public static partial class ConnectionProviderLogger
         EventId = 7129,
         Level = LogLevel.Information,
         Message = "Connection configuration changed, clearing cache")]
-    public static partial void ConfigurationChanged(ILogger<DefaultConnectionProvider> logger);
+    public static partial void ConfigurationChanged(ILogger<ConnectionProvider> logger);
 
     /// <summary>
     /// Logs when the connection cache is cleared.
@@ -428,7 +428,7 @@ public static partial class ConnectionProviderLogger
         EventId = 7130,
         Level = LogLevel.Debug,
         Message = "Cleared {count} cached connection configuration(s)")]
-    public static partial void CacheCleared(ILogger<DefaultConnectionProvider> logger, int count);
+    public static partial void CacheCleared(ILogger<ConnectionProvider> logger, int count);
 
     /// <summary>
     /// Logs when configuration loading fails.
@@ -442,7 +442,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "Failed to load configuration '{connectionName}' for type '{typeName}'")]
     public static partial IGenericMessage ConfigurationLoadFailed(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName,
         string typeName);
 
@@ -459,7 +459,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "Factory '{factoryType}' failed to create connection '{connectionName}': {reason}")]
     public static partial IGenericMessage FactoryCreationFailed(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName,
         string factoryType,
         string reason);
@@ -475,7 +475,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Information,
         Message = "Connection '{ConnectionName}' created successfully (type: {ConnectionType})")]
     public static partial void ConnectionCreatedSuccessfully(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName,
         string connectionType);
 
@@ -491,7 +491,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Trace,
         Message = "Resolving factory for connection type '{ConnectionType}'")]
     public static partial void ResolvingFactory(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionType);
 
     /// <summary>
@@ -502,7 +502,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Trace,
         Message = "Factory resolved for connection type '{ConnectionType}': {FactoryType}")]
     public static partial void FactoryResolved(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionType,
         string factoryType);
 
@@ -514,7 +514,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Trace,
         Message = "Looking up configuration for connection '{ConnectionName}'")]
     public static partial void LookingUpConfiguration(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName);
 
     /// <summary>
@@ -525,7 +525,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Trace,
         Message = "Configuration found for connection '{ConnectionName}': Type='{ConnectionType}'")]
     public static partial void ConfigurationFound(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName,
         string connectionType);
 
@@ -537,7 +537,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Trace,
         Message = "Available connections: [{ConnectionNames}]")]
     public static partial void AvailableConnections(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionNames);
 
     /// <summary>
@@ -548,7 +548,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Trace,
         Message = "Registering factory '{FactoryType}' for connection type '{ConnectionType}'")]
     public static partial void RegisteringFactory(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string factoryType,
         string connectionType);
 
@@ -560,7 +560,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Trace,
         Message = "Registering configuration provider for connection type '{ConnectionType}'")]
     public static partial void RegisteringConfigurationProvider(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionType);
 
     /// <summary>
@@ -571,7 +571,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Trace,
         Message = "Factory.Create called for connection '{ConnectionName}' (type: {ConnectionType})")]
     public static partial void FactoryCreateCalled(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName,
         string connectionType);
 
@@ -583,7 +583,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Trace,
         Message = "Accessing connection pool for '{ConnectionName}'")]
     public static partial void AccessingConnectionPool(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName);
 
     /// <summary>
@@ -594,7 +594,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Trace,
         Message = "IOptionsMonitor contains {Count} connection configuration(s)")]
     public static partial void OptionsMonitorCount(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         int count);
 
     /// <summary>
@@ -605,7 +605,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Trace,
         Message = "Searching {Count} configuration provider(s) for connection '{ConnectionName}'")]
     public static partial void SearchingConfigurationProviders(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         int count,
         string connectionName);
 
@@ -617,7 +617,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Trace,
         Message = "Binding configuration section '{SectionName}' for connection type '{ConnectionType}'")]
     public static partial void BindingConfigurationSection(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string sectionName,
         string connectionType);
 
@@ -644,7 +644,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Information,
         Message = "Connection instance cache invalidated, cleared {entriesCleared} cached connection(s)")]
     public static partial IGenericMessage ConnectionCacheInvalidated(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         int entriesCleared);
 
     /// <summary>
@@ -669,14 +669,14 @@ public static partial class ConnectionProviderLogger
         EventId = 61007,
         Level = LogLevel.Error,
         Message = "Failed to register parent configuration provider: {error}")]
-    public static partial IGenericMessage ParentProviderRegistrationFailed(
-        ILogger<DefaultConnectionProvider> logger,
+    public static partial IGenericMessage DomainConfigurationProviderRegistrationFailed(
+        ILogger<ConnectionProvider> logger,
         string error);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Composed-Header Factory Path Events (7165-7169)
     // Why: After config-split, typed bodies are attached to the composed header via
-    // ConnectionConfigurationProvider.PopulateTypedBody. DefaultConnectionProvider
+    // ConnectionConfigurationProvider.PopulateTypedBody. ConnectionProvider
     // extracts header.Configuration and passes it directly to the factory — bypassing
     // DefaultServiceProvider.CreateFromType which would look up _configurationProviders
     // (now empty). These events trace that new path.
@@ -688,7 +688,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Warning,
         Message = "Connection header '{ConnectionName}' (type '{ServiceOptionType}') has no typed body configuration — cannot create connection")]
     public static partial void ComposedHeaderNoConfiguration(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName,
         string serviceOptionType);
 
@@ -698,7 +698,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "No factory registered for service option type '{ServiceOptionType}' (connection '{ConnectionName}') on composed-header path")]
     public static partial void ComposedHeaderNoFactory(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string serviceOptionType,
         string connectionName);
 
@@ -708,7 +708,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Trace,
         Message = "Creating connection '{ConnectionName}' via composed-header factory (type '{ServiceOptionType}', body '{BodyType}')")]
     public static partial void ComposedHeaderCreating(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName,
         string serviceOptionType,
         string bodyType);
@@ -719,7 +719,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Trace,
         Message = "Connection '{ConnectionName}' created from composed header (type '{ServiceOptionType}')")]
     public static partial void ComposedHeaderCreated(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName,
         string serviceOptionType);
 
@@ -731,7 +731,7 @@ public static partial class ConnectionProviderLogger
         EventId = 7163,
         Level = LogLevel.Debug,
         Message = "Subscribed to system connection configuration change notifications")]
-    public static partial void SubscribedToSystemConfigurationChanges(ILogger<DefaultConnectionProvider> logger);
+    public static partial void SubscribedToSystemConfigurationChanges(ILogger<ConnectionProvider> logger);
 
     /// <summary>
     /// Logs when a connection header carries no ServiceOptionType, so there is nothing to dispatch on.
@@ -744,7 +744,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "Cannot resolve connection '{connectionName}' — its configuration header declares no ServiceOptionType, so no connection kind can be selected")]
     public static partial IGenericMessage ServiceOptionTypeMissing(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName);
 
     /// <summary>
@@ -759,7 +759,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "Cannot resolve connection '{connectionName}' — its '{serviceOptionType}' typed body is missing from the composed header")]
     public static partial IGenericMessage TypedBodyMissing(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName,
         string serviceOptionType);
 
@@ -777,7 +777,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "Cannot resolve connection '{connectionName}' — factory for '{serviceOptionType}' does not implement IConnectionFactory")]
     public static partial IGenericMessage FactoryNotConnectionFactory(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName,
         string serviceOptionType);
 
@@ -791,9 +791,9 @@ public static partial class ConnectionProviderLogger
     [MessageLogging(
         EventId = 71008,
         Level = LogLevel.Error,
-        Message = "Cannot resolve connection '{identifier}' — no header configuration provider registered (RegisterParentProvider has not run)")]
-    public static partial IGenericMessage ParentProviderNotRegistered(
-        ILogger<DefaultConnectionProvider> logger,
+        Message = "Cannot resolve connection '{identifier}' — no header configuration provider registered (RegisterDomainConfigurationProvider has not run)")]
+    public static partial IGenericMessage DomainConfigurationProviderNotRegistered(
+        ILogger<ConnectionProvider> logger,
         string identifier);
 
     /// <summary>
@@ -808,7 +808,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "Connection configuration (Id: {connectionId}) has no Name — cannot resolve a connection from it")]
     public static partial IGenericMessage ConnectionConfigurationNameMissing(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionId);
 
     /// <summary>
@@ -823,7 +823,7 @@ public static partial class ConnectionProviderLogger
         Level = LogLevel.Error,
         Message = "Connection '{connectionName}' is stale immediately after creation — the factory or its configuration is producing unusable connections")]
     public static partial IGenericMessage ConnectionStaleOnCreation(
-        ILogger<DefaultConnectionProvider> logger,
+        ILogger<ConnectionProvider> logger,
         string connectionName);
 
     /// <summary>

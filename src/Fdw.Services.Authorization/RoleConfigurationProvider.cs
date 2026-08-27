@@ -21,9 +21,9 @@ namespace Fdw.Services.Authorization;
 
 /// <summary>
 /// Domain configuration provider for roles. Thin wrapper over
-/// <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> with permission-aggregation helpers.
+/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with permission-aggregation helpers.
 /// </summary>
-public class RoleConfigurationProvider : DefaultConfigurationProvider<RoleConfiguration, RoleConfigurationCommand>, IAuthorizationProvider
+public class RoleConfigurationProvider : ImplementationConfigurationProviderBase<RoleConfiguration, RoleConfigurationCommand>, IAuthorizationProvider
 {
     private readonly ILogger _logger;
 
@@ -47,8 +47,8 @@ public class RoleConfigurationProvider : DefaultConfigurationProvider<RoleConfig
         services.TryAddSingleton<RoleConfigurationProvider>(sp =>
             new RoleConfigurationProvider(
                 sp.GetService<ILogger<RoleConfigurationProvider>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-        services.TryAddSingleton<DefaultConfigurationProvider<RoleConfiguration, RoleConfigurationCommand>>(
+                sp.GetRequiredService<IConfigurationGatewayProvider>()));
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<RoleConfiguration, RoleConfigurationCommand>>(
             sp => sp.GetRequiredService<RoleConfigurationProvider>());
         services.TryAddSingleton<IAuthorizationProvider>(sp =>
             sp.GetRequiredService<RoleConfigurationProvider>());
@@ -60,11 +60,11 @@ public class RoleConfigurationProvider : DefaultConfigurationProvider<RoleConfig
     /// <summary>Initializes a new instance of the <see cref="RoleConfigurationProvider"/> class.</summary>
     public RoleConfigurationProvider(
         ILogger<RoleConfigurationProvider>? logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "authz")
         : base(logger ?? NullLogger<RoleConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<RoleConfigurationProvider>.Instance;
@@ -89,7 +89,7 @@ public class RoleConfigurationProvider : DefaultConfigurationProvider<RoleConfig
 
     /// <inheritdoc />
     // Why: virtual to match GetByUser — both are the seams the auth resolver tests stub on a
-    // loose mock. Without virtual, a loose mock runs the real body against a null gateway and NREs.
+    // loose mock. Without virtual, a loose mock runs the real body against a null gatewayProvider and NREs.
     public virtual async Task<IReadOnlyList<RoleConfiguration>> GetAllRoles(CancellationToken cancellationToken = default)
     {
         var result = await Get(cancellationToken).ConfigureAwait(false);
@@ -126,7 +126,7 @@ public class RoleConfigurationProvider : DefaultConfigurationProvider<RoleConfig
             .OrderBy("Domain")
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<PermissionConfiguration>>(command, cancellationToken).ConfigureAwait(false);
+        var result = await Execute<IEnumerable<PermissionConfiguration>>(command, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess || result.Value is null)
         {
             RoleConfigurationProviderLog.PermissionQueryFailed(_logger, result.CurrentMessage ?? "Unknown error");
@@ -152,7 +152,7 @@ public class RoleConfigurationProvider : DefaultConfigurationProvider<RoleConfig
             .Where("IsDeleted", false)
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<RolePermissionConfiguration>>(command, cancellationToken).ConfigureAwait(false);
+        var result = await Execute<IEnumerable<RolePermissionConfiguration>>(command, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess || result.Value is null)
         {
             RoleConfigurationProviderLog.RolePermissionQueryFailed(_logger, roleId.ToString(), result.CurrentMessage ?? "Unknown error");

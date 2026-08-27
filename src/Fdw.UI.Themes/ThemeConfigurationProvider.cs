@@ -16,20 +16,20 @@ namespace Fdw.UI.Themes;
 
 /// <summary>
 /// Configuration provider for themes. Thin wrapper over
-/// <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> with theme-specific logging.
+/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with theme-specific logging.
 /// </summary>
-public class ThemeConfigurationProvider : DefaultConfigurationProvider<ThemeManagedConfiguration, ThemeConfigurationCommand>
+public class ThemeConfigurationProvider : ImplementationConfigurationProviderBase<ThemeManagedConfiguration, ThemeConfigurationCommand>
 {
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ThemeConfigurationProvider"/> class.</summary>
     public ThemeConfigurationProvider(
         ILogger<ThemeConfigurationProvider>? logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "settings")
         : base(logger ?? NullLogger<ThemeConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<ThemeConfigurationProvider>.Instance;

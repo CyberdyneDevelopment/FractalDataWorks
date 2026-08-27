@@ -1,6 +1,7 @@
 using System;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
+using Fdw.Services.TokenManagers.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.TokenManagers.Commands;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,36 +18,35 @@ namespace Fdw.Services.TokenManagers;
 // Why: TokenManagerConfiguration is loaded from ConfigurationDb at runtime via
 // Lazy<IConfigurationGateway>, not through BindConfiguration("TokenManagers:..."). Mirrors
 // SchedulerConfigurationProvider/AuthenticationServiceConfigurationProvider exactly.
-public class TokenManagerConfigurationProvider : DefaultConfigurationProvider<TokenManagerConfiguration, TokenManagerConfigurationCommand>
+public class TokenManagerConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          TokenManagerConfiguration,
+          ITokenManagerImplementationConfiguration,
+          TokenManagerConfigurationCommand>,
+      ITokenManagerConfigurationProvider
 {
-    /// <summary>
-    /// Registers the TokenManagerConfigurationProvider and interface forwardings with DI, targeting
-    /// this domain's own default location. To override, call <c>SetConfiguration</c> on the resolved
-    /// singleton.
-    /// </summary>
-    public static void RegisterDomainServices(IServiceCollection services)
-    {
-        services.TryAddSingleton<TokenManagerConfigurationProvider>(sp =>
-            new TokenManagerConfigurationProvider(
-                sp.GetService<ILogger<TokenManagerConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-
-        services.TryAddSingleton<DefaultConfigurationProvider<TokenManagerConfiguration, TokenManagerConfigurationCommand>>(
-            sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
-
-        services.TryAddSingleton<IServiceConfigurationProvider<TokenManagerConfiguration>>(sp =>
-            sp.GetRequiredService<TokenManagerConfigurationProvider>());
-    }
 
     /// <summary>Initializes a new instance of the <see cref="TokenManagerConfigurationProvider"/> class.</summary>
     public TokenManagerConfigurationProvider(
         ILogger<TokenManagerConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "auth")
         : base(logger ?? NullLogger<TokenManagerConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }
+
+    /// <inheritdoc />
+    protected override TokenManagerConfiguration Compose<T>(
+        string serviceOptionType,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            ServiceOptionType = serviceOptionType,
+            Configuration = implementationConfiguration,
+        };
 }

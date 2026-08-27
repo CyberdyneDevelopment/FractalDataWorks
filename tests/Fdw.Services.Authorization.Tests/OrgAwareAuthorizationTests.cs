@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Authorization.Tests;
 
@@ -217,7 +218,7 @@ public sealed class OrgAwareAuthorizationTests
         var userRoleProviderMock = new Mock<UserRoleConfigurationProvider>(
             MockBehavior.Loose,
             NullLogger<UserRoleConfigurationProvider>.Instance,
-            new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
+            new ConfigurationGatewayProvider(),
             "TestStore", "authz");
         // Why: CallBase = true lets GetByUser() delegate to its real body (calls Get() which is mocked).
         // Without CallBase, Loose mock returns null for the virtual GetByUser() causing NullRef.
@@ -239,15 +240,15 @@ public sealed class OrgAwareAuthorizationTests
             new Lazy<IOrgAccessProvider>(() => orgAccessMock.Object));
     }
 
-    private static Mock<DefaultConfigurationProvider<TConfig, TCommand>> MockProvider<TConfig, TCommand>(
+    private static Mock<ImplementationConfigurationProviderBase<TConfig, TCommand>> MockProvider<TConfig, TCommand>(
         List<TConfig> items)
         where TConfig : class, Fdw.Configuration.IGenericConfiguration
         where TCommand : Fdw.Services.Configuration.ConfigurationCommandBase<TConfig>
     {
-        var mock = new Mock<DefaultConfigurationProvider<TConfig, TCommand>>(
+        var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, TCommand>>(
             MockBehavior.Loose,
-            NullLogger<DefaultConfigurationProvider<TConfig, TCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
+            NullLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>.Instance,
+            new ConfigurationGatewayProvider(),
             "TestStore", "cfg");
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<TConfig>>.Success(items));

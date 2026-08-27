@@ -24,7 +24,7 @@ public sealed class ServicesTypeCollectionFixture
         // Why: TestConfigurationCommand is defined in this test assembly and is not picked up
         // by TypeOptionModuleInitializerGenerator (which only scans referenced assemblies).
         // Registering here ensures ConfigurationCommands.All().OfType<TestConfigurationCommand>()
-        // returns the instance before DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>
+        // returns the instance before ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand>
         // freezes the collection via its static Lazy<TCommand> field.
         ConfigurationCommands.RegisterMember(new DefaultConfigurationProviderTests.TestConfigurationCommand());
         // Why: TestChildCommand is also defined in this test assembly and requires the same

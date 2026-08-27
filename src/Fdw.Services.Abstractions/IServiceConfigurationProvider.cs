@@ -30,6 +30,14 @@ public interface IServiceConfigurationProvider
     /// <returns>The record, widened to the configuration abstraction.</returns>
     Task<IGenericResult<IGenericConfiguration>> Get(Guid id, CancellationToken ct = default);
 
+    /// <summary>Gets a configuration by name.</summary>
+    /// <param name="name">The configuration's name.</param>
+    /// <param name="ct">Cancels the lookup.</param>
+    /// <returns>The configuration, or a structured failure.</returns>
+    // Why this is on the erased view and not only the typed one: name resolution is the PRIMARY
+    // path — a provider resolves by name far more often than by id — and a holder of the erased
+    Task<IGenericResult<IGenericConfiguration>> Get(string name, CancellationToken ct = default);
+
     /// <summary>Saves a configuration record.</summary>
     /// <param name="record">The record to save.</param>
     /// <param name="ct">A cancellation token.</param>
@@ -51,7 +59,7 @@ public interface IServiceConfigurationProvider
 // async-returning interface is impossible in C#. Use concrete types as TConfig throughout, not
 // interfaces — the erased view above is how a caller holds a provider without naming its type.
 public interface IServiceConfigurationProvider<TConfig>
-    where TConfig : class, IGenericConfiguration
+    where TConfig : IGenericConfiguration
 {
     /// <summary>Gets a configuration by ID.</summary>
     Task<IGenericResult<TConfig>> Get(Guid id, CancellationToken ct = default);

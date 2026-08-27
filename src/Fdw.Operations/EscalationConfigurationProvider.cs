@@ -20,22 +20,22 @@ using Microsoft.Extensions.Options;
 namespace Fdw.Operations;
 
 /// <summary>Configuration provider for escalation policy configurations.</summary>
-public class EscalationConfigurationProvider : DefaultConfigurationProvider<EscalationPolicyConfiguration, EscalationPolicyConfigurationCommand>
+public class EscalationConfigurationProvider : ImplementationConfigurationProviderBase<EscalationPolicyConfiguration, EscalationPolicyConfigurationCommand>
 {
     /// <summary>Initializes a new instance of the <see cref="EscalationConfigurationProvider"/> class.</summary>
     public EscalationConfigurationProvider(
         ILogger<EscalationConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "workflow")
         : base(logger ?? NullLogger<EscalationConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }
 
     // Why: Get(string)/Get(Guid) no longer override to assemble the Policy→Levels→Recipients tree.
-    // DefaultConfigurationProvider.Get composes that nested 1:N hierarchy uniformly via ComposeChildren
+    // ImplementationConfigurationProviderBase.Get composes that nested 1:N hierarchy uniformly via ComposeChildren
     // (the read mirror of the save cascade), driven by the EscalationPolicy container's inbound-FK
     // metadata — EscalationLevel (FK EscalationPolicyRowId) then EscalationLevelRecipient (FK
     // EscalationLevelRowId). The old hand-rolled AssembleHierarchy is deleted.
@@ -51,7 +51,7 @@ public class EscalationConfigurationProvider : DefaultConfigurationProvider<Esca
             .WithCaching()
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<EscalationLevelConfiguration>>(
+        var result = await Execute<IEnumerable<EscalationLevelConfiguration>>(
             command, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
     }
@@ -66,7 +66,7 @@ public class EscalationConfigurationProvider : DefaultConfigurationProvider<Esca
             .WithCaching()
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<EscalationLevelRecipientConfiguration>>(
+        var result = await Execute<IEnumerable<EscalationLevelRecipientConfiguration>>(
             command, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
     }
@@ -81,7 +81,7 @@ public class EscalationConfigurationProvider : DefaultConfigurationProvider<Esca
             .Where("IsDeleted", false)
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<EscalationLevelConfiguration>>(
+        var result = await Execute<IEnumerable<EscalationLevelConfiguration>>(
             command, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.FirstOrDefault() : null;
     }
@@ -96,7 +96,7 @@ public class EscalationConfigurationProvider : DefaultConfigurationProvider<Esca
             .Where("IsDeleted", false)
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<EscalationLevelConfiguration>>(
+        var result = await Execute<IEnumerable<EscalationLevelConfiguration>>(
             command, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.FirstOrDefault() : null;
     }
@@ -111,7 +111,7 @@ public class EscalationConfigurationProvider : DefaultConfigurationProvider<Esca
             .Where("IsDeleted", false)
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<EscalationLevelRecipientConfiguration>>(
+        var result = await Execute<IEnumerable<EscalationLevelRecipientConfiguration>>(
             command, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.FirstOrDefault() : null;
     }
@@ -126,7 +126,7 @@ public class EscalationConfigurationProvider : DefaultConfigurationProvider<Esca
             .Where("IsDeleted", false)
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<EscalationLevelRecipientConfiguration>>(
+        var result = await Execute<IEnumerable<EscalationLevelRecipientConfiguration>>(
             command, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.FirstOrDefault() : null;
     }

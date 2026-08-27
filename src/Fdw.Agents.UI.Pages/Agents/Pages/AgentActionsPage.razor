@@ -43,7 +43,7 @@
                                 @foreach (var action in ctx.Actions)
                                 {
                                     <tr>
-                                        <td class="cellpad mut">@action.AgentActionId</td>
+                                        <td class="cellpad mut">@action.Id</td>
                                         <td class="cellpad">
                                             <div class="nm">@action.AgentLabel</div>
                                             <div class="mut">@action.UserId</div>
@@ -60,7 +60,7 @@
                                             @if (string.Equals(action.Status, "Pending", StringComparison.Ordinal))
                                             {
                                                 <button class="btn btn-primary btn-sm"
-                                                        @onclick="@(() => Nav.NavigateTo("/review/" + action.AgentActionId))">
+                                                        @onclick="@(() => Nav.NavigateTo("/review/" + action.Id))">
                                                     Review
                                                 </button>
                                             }

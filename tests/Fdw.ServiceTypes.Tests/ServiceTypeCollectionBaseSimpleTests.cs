@@ -77,9 +77,9 @@ public class ServiceTypeCollectionBaseSimpleTests
         // ServiceTypeBase<IGenericService, ISessionStateServiceFactory, IServiceConfiguration>. Identity
         // computed from those arguments is one value for the whole domain, and because
         // ServiceTypeCollectionBase.RegisterMember keys membership on it, every option after the first
-        // was dropped without a word. Identity comes from the option's name instead.
+        // is dropped without a word. Identity comes from the option's own type, which is unique.
         var first = new SameShapeServiceType("First");
-        var second = new SameShapeServiceType("Second");
+        var second = new OtherShapeServiceType("Second");
 
         first.Id.ShouldNotBe(second.Id);
     }
@@ -87,11 +87,11 @@ public class ServiceTypeCollectionBaseSimpleTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void ServiceTypeIdTracksTheNameRatherThanTheGenericArguments()
+    public void ServiceTypeIdTracksTheTypeRatherThanTheName()
     {
-        // Same name through a different closure of the base is the same option identity: the name is the
-        // discriminator ByName already resolves on, and two options in one collection cannot share it.
-        new SameShapeServiceType("Shared").Id.ShouldBe(new OtherShapeServiceType("Shared").Id);
+        // A name is unique only inside its collection, and Id is global: "Default" is an option name in
+        // fifteen of them. Two options sharing a name are still two options, and their ids differ.
+        new SameShapeServiceType("Shared").Id.ShouldNotBe(new OtherShapeServiceType("Shared").Id);
     }
 
     [Fact]

@@ -13,6 +13,8 @@ using Moq;
 using Shouldly;
 using Xunit;
 
+using Fdw.Configuration;
+
 namespace Fdw.Services.ExternalIdentityProviders.Tests;
 
 /// <summary>
@@ -55,11 +57,10 @@ public sealed class ChainedExternalIdentityProvisionerTests
 
     private static ChainedExternalIdentityProvisioner BuildSut(
         ChainedExternalIdentityProvisionerConfiguration typed,
-        Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>> providerMock)
+        Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>> providerMock)
     {
-        var header = new ExternalIdentityProvisionerConfiguration { Name = "chained", Configuration = typed };
         return new ChainedExternalIdentityProvisioner(
-            header, typed, providerMock.Object, NullLogger<ChainedExternalIdentityProvisioner>.Instance);
+            typed, providerMock.Object, NullLogger<ChainedExternalIdentityProvisioner>.Instance);
     }
 
     [Fact]
@@ -75,7 +76,7 @@ public sealed class ChainedExternalIdentityProvisionerTests
             .Setup(p => p.Provision(Provider, ExternalSubject, It.IsAny<ClaimsPrincipal>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<Guid>.Success(userId));
 
-        var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>(MockBehavior.Strict);
+        var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(MockBehavior.Strict);
         providerMock.Setup(p => p.Get("First", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IExternalIdentityProvisioner>.Success(firstMock.Object));
         // Why: Strict with no "Second" setup — a call to Get("Second") throws, proving the match short-circuited.
@@ -101,7 +102,7 @@ public sealed class ChainedExternalIdentityProvisionerTests
             .Setup(p => p.Provision(Provider, ExternalSubject, It.IsAny<ClaimsPrincipal>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<Guid>.Failure(new Fdw.Messages.GenericMessage("boom — a hard error, not a NotFound.")));
 
-        var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>(MockBehavior.Strict);
+        var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(MockBehavior.Strict);
         providerMock.Setup(p => p.Get("First", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IExternalIdentityProvisioner>.Success(firstMock.Object));
 
@@ -131,7 +132,7 @@ public sealed class ChainedExternalIdentityProvisionerTests
             .Setup(p => p.Provision(Provider, ExternalSubject, It.IsAny<ClaimsPrincipal>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<Guid>.Success(userId));
 
-        var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>(MockBehavior.Strict);
+        var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(MockBehavior.Strict);
         providerMock.Setup(p => p.Get("First", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IExternalIdentityProvisioner>.Success(firstMock.Object));
         providerMock.Setup(p => p.Get("Second", It.IsAny<CancellationToken>()))
@@ -153,7 +154,7 @@ public sealed class ChainedExternalIdentityProvisionerTests
         // Why: zero steps is the current shipped state (no leaf provisioner in this PR) — the chain
         // must resolve to nothing, byte-identical to today's default-OFF.
         var typed = BuildTyped();
-        var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>(MockBehavior.Strict);
+        var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(MockBehavior.Strict);
 
         var sut = BuildSut(typed, providerMock);
 
@@ -182,7 +183,7 @@ public sealed class ChainedExternalIdentityProvisionerTests
             .Setup(p => p.Provision(Provider, ExternalSubject, It.IsAny<ClaimsPrincipal>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => { callOrder.Add("Second"); return GenericResult<Guid>.Success(userId); });
 
-        var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>(MockBehavior.Strict);
+        var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(MockBehavior.Strict);
         providerMock.Setup(p => p.Get("First", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IExternalIdentityProvisioner>.Success(firstMock.Object));
         providerMock.Setup(p => p.Get("Second", It.IsAny<CancellationToken>()))
@@ -203,7 +204,7 @@ public sealed class ChainedExternalIdentityProvisionerTests
     {
         var typed = BuildTyped(("First", 1), ("Second", 2));
 
-        var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>(MockBehavior.Strict);
+        var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(MockBehavior.Strict);
         providerMock.Setup(p => p.Get("First", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IExternalIdentityProvisioner>.Failure(
                 new Fdw.Messages.GenericMessage("provisioner 'First' is not registered.")));
@@ -233,7 +234,7 @@ public sealed class ChainedExternalIdentityProvisionerTests
             .Setup(p => p.Provision(Provider, ExternalSubject, It.IsAny<ClaimsPrincipal>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<Guid>.Success(userId));
 
-        var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>(MockBehavior.Strict);
+        var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(MockBehavior.Strict);
         providerMock.Setup(p => p.Get("NestedChain", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IExternalIdentityProvisioner>.Success(nestedMock.Object));
         providerMock.Setup(p => p.Get("Second", It.IsAny<CancellationToken>()))

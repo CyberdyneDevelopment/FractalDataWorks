@@ -111,7 +111,7 @@ public sealed class ServiceTypeCollectionPhaseMethodsAnalyzer : DiagnosticAnalyz
         // `HealthMonitorTypes.Configure` binds to the base and the generator's method group is valid.
         // GetMembers sees only declared members, so checking the type alone reports every correct
         // collection in the solution. The generator additionally emits an override on some collections
-        // (Register, when GenerateProvider = true), which is why a declared-only check failed
+        // (Register, when the collection names a ProviderType), which is why a declared-only check failed
         // inconsistently rather than uniformly.
         for (var current = type; current is not null; current = current.BaseType)
         {
@@ -129,23 +129,24 @@ public sealed class ServiceTypeCollectionPhaseMethodsAnalyzer : DiagnosticAnalyz
             Rule,
             type.Locations.Length > 0 ? type.Locations[0] : Location.None,
             type.Name,
-            $"{Short(returnType)} {phaseName}({Short(firstParameterType)}, ILoggerFactory?, bool)"));
+            $"{Short(returnType)} {phaseName}({Short(firstParameterType)}, ILoggerFactory?, bool force = false, bool defer = false)"));
     }
 
     private static bool IsPhaseMethod(IMethodSymbol method, string firstParameterType, string returnType)
     {
         if (!method.IsStatic
             || method.DeclaredAccessibility != Accessibility.Public
-            || method.Parameters.Length is not (2 or 3))
+            || method.Parameters.Length is not (2 or 3 or 4))
         {
             return false;
         }
 
         return Is(method.Parameters[0].Type, firstParameterType)
             && Is(method.Parameters[1].Type, LoggerFactory)
-            // Why three is allowed: the third is the optional force flag, which lets a caller run a
-            // phase out of the normal order. A collection that predates it still satisfies the shape.
-            && (method.Parameters.Length == 2 || method.Parameters[2].Type.SpecialType == SpecialType.System_Boolean)
+            // Why the trailing flags are optional to the shape: they are `force` and `defer`, both
+            // bool, both defaulted. A collection that predates either still satisfies the contract the
+            // generator emits a method group against.
+            && method.Parameters.Skip(2).All(p => p.Type.SpecialType == SpecialType.System_Boolean)
             && Is(method.ReturnType, returnType);
     }
 

@@ -14,7 +14,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// <c>sec.ExternalIdentityProvisioner</c> via <see cref="ExternalIdentityProvisionerId"/>. Carries no
 /// scalar columns of its own — its policy lives entirely in the ordered <see cref="Steps"/> child
 /// collection (<c>sec.ChainedProvisionerStep</c>), auto-cascaded by
-/// <c>DefaultConfigurationProvider.ComposeChildren</c>/<c>CascadeOwnerChildren</c> via the generated
+/// <c>ImplementationConfigurationProviderBase.ComposeChildren</c>/<c>CascadeOwnerChildren</c> via the generated
 /// mapper's typed-list child detection — no additional attribute is needed beyond <c>[GenerateMapper]</c>
 /// on both this type and <see cref="ChainedProvisionerStepConfiguration"/>.
 /// </summary>
@@ -26,7 +26,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "ExternalIdentityProvisioner", ServiceType = "Chained")]
-public sealed partial class ChainedExternalIdentityProvisionerConfiguration : IExternalIdentityProvisionerConfiguration
+public sealed partial class ChainedExternalIdentityProvisionerConfiguration : IExternalIdentityProvisionerImplementationConfiguration
 {
     // ========================================
     // IGenericConfiguration (typed-body identity)
@@ -63,6 +63,10 @@ public sealed partial class ChainedExternalIdentityProvisionerConfiguration : IE
     /// Gets or sets the durable logical FK to <c>sec.ExternalIdentityProvisioner.Id</c> (the parent header).
     /// </summary>
     public Guid ExternalIdentityProvisionerId { get; set; }
+
+    /// <inheritdoc/>
+    public string Name { get; set; } = string.Empty;
+
 
     // ========================================
     // Ordered children

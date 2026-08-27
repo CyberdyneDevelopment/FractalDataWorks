@@ -24,5 +24,6 @@
     <ProjectReference Include="..\..\src\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Data\Fdw.Data.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Credentials.Sql\Fdw.Services.Credentials.Sql.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Data\Fdw.Services.Data.csproj" />
   </ItemGroup>
 </Project>

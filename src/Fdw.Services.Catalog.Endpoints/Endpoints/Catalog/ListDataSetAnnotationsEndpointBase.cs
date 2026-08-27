@@ -61,7 +61,7 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
         }
 
         // Why: The provider's Get(all) returns every annotation; we filter client-side by DataSetName
-        // because DefaultConfigurationProvider has no per-field filter overload and DataSetName is
+        // because ImplementationConfigurationProviderBase has no per-field filter overload and DataSetName is
         // a domain-specific filter. This is acceptable since annotation counts are small.
         var result = await _provider.GetAllAnnotations(ct).ConfigureAwait(false);
 

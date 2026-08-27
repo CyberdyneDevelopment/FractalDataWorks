@@ -46,7 +46,7 @@ public sealed class SecretManagerConfigurationJsonConverter : JsonConverter<Secr
         var root = doc.RootElement;
         var innerOptions = GetInnerOptions(options);
 
-        // Strip nested Configuration before first pass — STJ can't deserialize ISecretManagerConfiguration.
+        // Strip nested Configuration before first pass — STJ can't deserialize ISecretManagerImplementationConfiguration.
         using var stream = new System.IO.MemoryStream();
         using (var writer = new Utf8JsonWriter(stream))
         {
@@ -80,15 +80,15 @@ public sealed class SecretManagerConfigurationJsonConverter : JsonConverter<Secr
             }
 
             var settingsType = secretManagerType.ConfigurationType;
-            if (settingsType is null || !typeof(ISecretManagerConfiguration).IsAssignableFrom(settingsType))
+            if (settingsType is null || !typeof(ISecretManagerImplementationConfiguration).IsAssignableFrom(settingsType))
             {
                 throw new JsonException(
                     $"SecretManager '{secretManager.Name}' resolved ServiceOptionType '{secretManager.ServiceOptionType}' "
                     + $"to configuration type '{settingsType?.FullName ?? "(null)"}', which does not implement "
-                    + $"{nameof(ISecretManagerConfiguration)}.");
+                    + $"{nameof(ISecretManagerImplementationConfiguration)}.");
             }
 
-            secretManager.Configuration = (ISecretManagerConfiguration?)JsonSerializer.Deserialize(
+            secretManager.Configuration = (ISecretManagerImplementationConfiguration?)JsonSerializer.Deserialize(
                 settingsElement.GetRawText(), settingsType, innerOptions);
         }
 

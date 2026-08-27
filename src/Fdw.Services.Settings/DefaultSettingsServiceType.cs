@@ -68,14 +68,14 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
         where TConfig : class, IGenericConfiguration
         where TCommand : ConfigurationCommandBase<TConfig>
     {
-        services.TryAddSingleton<DefaultConfigurationProvider<TConfig, TCommand>>(sp =>
-            new DefaultConfigurationProvider<TConfig, TCommand>(
-                sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<TConfig, TCommand>>()
-                    ?? NullLogger<DefaultConfigurationProvider<TConfig, TCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<TConfig, TCommand>>(sp =>
+            new ImplementationConfigurationProviderBase<TConfig, TCommand>(
+                sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>()
+                    ?? NullLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>.Instance,
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 "ConfigurationDb",
                 "settings"));
         services.TryAddSingleton<IServiceConfigurationProvider<TConfig>>(sp =>
-            sp.GetRequiredService<DefaultConfigurationProvider<TConfig, TCommand>>());
+            sp.GetRequiredService<ImplementationConfigurationProviderBase<TConfig, TCommand>>());
     }
 }

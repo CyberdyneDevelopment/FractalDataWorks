@@ -80,33 +80,20 @@ public sealed class ServiceTypeCollectionAttribute : Attribute
     /// </summary>
     public bool RestrictToCurrentCompilation { get; set; }
 
-    /// <summary>
-    /// If true, generates an IXxxProvider interface and implementation for resolving
-    /// service factories by configuration name at runtime.
-    /// </summary>
-    public bool GenerateProvider { get; set; }
 
     /// <summary>
     /// The service interface type that factories in this collection create.
-    /// Required when GenerateProvider is true.
+    /// Required when ProviderType is specified.
     /// </summary>
     public Type? ServiceInterface { get; set; }
 
     /// <summary>
     /// The configuration interface type used by services in this collection.
-    /// Required when GenerateProvider is true.
     /// </summary>
     public Type? ConfigurationInterface { get; set; }
 
     /// <summary>
-    /// The concrete configuration type used for IOptionsSnapshot binding.
-    /// When specified, the generated provider constructor will use IOptionsSnapshot&lt;List&lt;ConfigurationType&gt;&gt;.
-    /// If not specified, the generator will attempt to derive it from ConfigurationInterface by removing the "I" prefix.
-    /// </summary>
-    public Type? ConfigurationType { get; set; }
-
-    /// <summary>
-    /// The concrete provider type to use in Register (e.g., typeof(DefaultConnectionProvider)).
+    /// The concrete provider type to use in Register (e.g., typeof(ConnectionProvider)).
     /// When specified, the generator will create this provider and register factories with it.
     /// </summary>
     public Type? ProviderType { get; set; }
@@ -124,25 +111,6 @@ public sealed class ServiceTypeCollectionAttribute : Attribute
     /// </summary>
     public string? ServiceCategory { get; set; }
 
-    /// <summary>
-    /// Declares this a "declared choice" domain: multiple options register the SAME service
-    /// interfaces, so exactly one is active per host, selected by configured
-    /// <c>ServiceOptionType</c> — never every option at once. When true, the
-    /// <c>Fdw.Services.Registration.SourceGenerators</c> module initializer registers this
-    /// collection into <c>PlatformServices</c> as manual: the <c>Configure</c>/<c>Register</c>/
-    /// <c>Initialize</c> phases skip it, and a host resolves the one configured option
-    /// explicitly instead. Default is false (the collection participates in the collects).
-    /// </summary>
-    public bool Manual { get; set; }
 
-    /// <summary>
-    /// Dependency-depth layer for <c>PlatformServices</c> ordering — the domain declares its OWN layer
-    /// on itself; there is no spine-side override table. Canonical layers: SecretManagers=0,
-    /// Connections=1, DataGateway/DataStores=2, DataSets=3, DataVault=4, Credentials=5, Users=6,
-    /// Authentication/Authorization=7. Everything else defaults to 10 (no declared dependency on the
-    /// core chain). Domains sharing a value have no dependency relationship between them, so relative
-    /// order within a value is provably safe regardless of arrangement.
-    /// </summary>
-    public int Group { get; set; } = 10;
 
 }

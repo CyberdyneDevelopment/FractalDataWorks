@@ -21,7 +21,7 @@ namespace Fdw.Services.Identity.JwtAssertion;
 /// <c>ClientCredentialsIdentityFactory</c>.
 /// </remarks>
 internal sealed class JwtAssertionIdentityFactory
-    : IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>
+    : IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<JwtAssertionIdentityFactory> _logger;
@@ -39,15 +39,12 @@ internal sealed class JwtAssertionIdentityFactory
     }
 
     /// <inheritdoc />
-    public IGenericResult<IIdentityService> Create(IdentityServiceConfiguration configuration)
+    public IGenericResult<IIdentityService> Create(IIdentityServiceImplementationConfiguration configuration)
     {
         if (configuration is null)
             return GenericResult<IIdentityService>.Failure(IdentityLog.ConfigurationNotFound(_logger, "(null)"));
 
-        // Why this fails rather than constructing with an empty body: runtime dispatch reads only the
-        // typed body, so a header that arrived without one would produce a service whose every field
-        // is null and whose first acquisition fails somewhere far from the cause.
-        if (configuration.Configuration is not JwtAssertionConfiguration typed)
+        if (configuration is not JwtAssertionConfiguration typed)
             return GenericResult<IIdentityService>.Failure(
                 IdentityLog.TypedBodyMissing(_logger, configuration.Name, "JwtAssertion"));
 
@@ -60,8 +57,8 @@ internal sealed class JwtAssertionIdentityFactory
 
     /// <inheritdoc />
     public IGenericResult<IIdentityService> Create(IGenericConfiguration configuration)
-        => configuration is IdentityServiceConfiguration header
-            ? Create(header)
+        => configuration is IIdentityServiceImplementationConfiguration implementation
+            ? Create(implementation)
             : GenericResult<IIdentityService>.Failure(
                 IdentityLog.TypedBodyMissing(_logger, configuration?.Name ?? "(null)", "JwtAssertion"));
 

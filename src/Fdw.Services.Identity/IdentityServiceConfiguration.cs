@@ -26,7 +26,7 @@ namespace Fdw.Services.Identity;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Identity")]
-public partial class IdentityServiceConfiguration : IGenericConfiguration, IServiceDispatchHost
+public partial class IdentityServiceConfiguration : IIdentityServiceConfiguration, IServiceDispatchHost
 {
     /// <inheritdoc/>
     // Why implemented rather than left to the header's own ServiceOptionType: this states outright
@@ -80,7 +80,7 @@ public partial class IdentityServiceConfiguration : IGenericConfiguration, IServ
     // typed body independently via its own provider; the read path populates this by dispatching on
     // ServiceOptionType to the appropriate typed provider.
     [NotMapped]
-    public IIdentityServiceConfiguration? Configuration { get; set; }
+    public IIdentityServiceImplementationConfiguration? Configuration { get; set; }
 
     // ── Tenant / visibility / audit ──────────────────────────────────────────
     // Why: no value defaults — a missing tenant/visibility/audit value must read as its

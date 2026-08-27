@@ -112,24 +112,24 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             RoleConfigurationProvider.RegisterDomainConfiguration(builder.Services);
 
             // Permission dual-source provider (no custom subclass — plain inline provider).
-            builder.Services.TryAddSingleton<DefaultConfigurationProvider<PermissionConfiguration, PermissionConfigurationCommand>>(sp =>
-                new DefaultConfigurationProvider<PermissionConfiguration, PermissionConfigurationCommand>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<PermissionConfiguration, PermissionConfigurationCommand>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>>(sp =>
+                new ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>>()!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, pathNameAuthz));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<PermissionConfiguration>>(sp =>
-                sp.GetRequiredService<DefaultConfigurationProvider<PermissionConfiguration, PermissionConfigurationCommand>>());
+                sp.GetRequiredService<ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>>());
 
             // RolePermission junction provider.
-            builder.Services.TryAddSingleton<DefaultConfigurationProvider<RolePermissionConfiguration, RolePermissionConfigurationCommand>>(sp =>
-                new DefaultConfigurationProvider<RolePermissionConfiguration, RolePermissionConfigurationCommand>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<RolePermissionConfiguration, RolePermissionConfigurationCommand>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand>>(sp =>
+                new ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand>>()!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, pathNameAuthz));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<RolePermissionConfiguration>>(sp =>
-                sp.GetRequiredService<DefaultConfigurationProvider<RolePermissionConfiguration, RolePermissionConfigurationCommand>>());
+                sp.GetRequiredService<ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand>>());
 
-            // Why: TenantOrgAccessConfigurationProvider is the domain-owned gateway path for TenantOrgAccess.
+            // Why: TenantOrgAccessConfigurationProvider is the domain-owned gatewayProvider path for TenantOrgAccess.
             // Registered as singleton — it holds no per-request state.
             builder.Services.TryAddSingleton<TenantOrgAccessConfigurationProvider>(sp =>
                 new TenantOrgAccessConfigurationProvider(

@@ -17,11 +17,12 @@ using Microsoft.Extensions.Options;
 using Xunit;
 using Shouldly;
 using Moq;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Tests.Configuration;
 
 /// <summary>
-/// Smoke test for <see cref="DefaultConfigurationProvider{TConfig,TCommand}.Get(Guid, CancellationToken)"/>
+/// Smoke test for <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}.Get(Guid, CancellationToken)"/>
 /// verifying that when the container has a Foreign key (no Primary key), the emitted command
 /// uses the FK column rather than [Id].
 /// </summary>
@@ -47,14 +48,14 @@ public class DefaultConfigurationProviderGetByIdTests
             fkColumn: "SecretManagerId");
 
 
-        var provider = new DefaultConfigurationProvider<TestChildConfig, TestChildCommand>(
-            NullLogger<DefaultConfigurationProvider<TestChildConfig, TestChildCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => fakeGateway),
+        var provider = new ImplementationConfigurationProviderBase<TestChildConfig, TestChildCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TestChildConfig, TestChildCommand>>.Instance,
+            GatewayProviderFor(fakeGateway),
             "ConfigurationDb",
             "sec");
 
-        var parentId = Guid.NewGuid();
-        await provider.Get(parentId, TestContext.Current.CancellationToken);
+        var domainConfigurationId = Guid.NewGuid();
+        await provider.Get(domainConfigurationId, TestContext.Current.CancellationToken);
 
         // Assert: the FK join filters by the PARENT's durable Logical key ("SecretManager.Id"); the
         // caller passes the parent's Id as the value. The join column itself (SecretManagerRowId →
@@ -65,7 +66,7 @@ public class DefaultConfigurationProviderGetByIdTests
         var filterNode = ExtractKeyPredicate(qc.Filter);
         filterNode.ShouldNotBeNull();
         filterNode!.PropertyName.ShouldBe("SecretManager.Id");
-        filterNode.Value.ShouldBe(parentId);
+        filterNode.Value.ShouldBe(domainConfigurationId);
     }
 
     // ========================================================================
@@ -264,6 +265,9 @@ public class DefaultConfigurationProviderGetByIdTests
     /// </summary>
     private sealed class CapturingGateway : IConfigurationGateway
     {
+        /// <summary>The connection this fake stands in for.</summary>
+        public string ConnectionName => "PlatformConfiguration";
+
         /// <summary>Targets this fake was asked to invalidate, in call order.</summary>
         public List<DataStoreTarget> Invalidated { get; } = [];
 
@@ -328,4 +332,25 @@ public class DefaultConfigurationProviderGetByIdTests
         public Task<IGenericResult<IDataGatewayTransaction>> BeginTransaction(string connectionName, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<IDataGatewayTransaction>.Failure(new GenericMessage("Transactions not supported in test double")));
     }
+
+    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
+    // connection it was told its rows live on, so the fake has to answer to that name to be found.
+    // Why a double rather than the real provider: these tests exercise what a configuration provider
+    // does with its gateway, not which gateway it selects, so the double answers for whatever
+    // connection is asked. Selection itself is covered where the real provider is under test.
+    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+        => new AnyConnectionGateways(gateway);
+
+    private sealed class AnyConnectionGateways : IConfigurationGatewayProvider
+    {
+        private readonly IConfigurationGateway _gateway;
+
+        public AnyConnectionGateways(IConfigurationGateway gateway) => _gateway = gateway;
+
+        public IGenericResult<IConfigurationGateway> Get(string connectionName)
+            => GenericResult<IConfigurationGateway>.Success(_gateway);
+
+        public IGenericResult Register(IConfigurationGateway gateway) => GenericResult.Success();
+    }
+
 }

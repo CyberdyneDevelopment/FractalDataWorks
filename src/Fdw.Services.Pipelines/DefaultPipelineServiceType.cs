@@ -28,7 +28,6 @@ public sealed class DefaultPipelineServiceType : PipelineServiceTypeBase
         Registration((builder, loggerFactory) =>
         {
 
-            PipelineServiceConfigurationProvider.RegisterDomainConfiguration(builder.Services);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 

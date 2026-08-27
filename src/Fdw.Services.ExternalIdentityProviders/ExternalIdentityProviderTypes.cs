@@ -12,6 +12,10 @@ using System;
 using System.Linq;
 using Fdw.Results;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.ExternalIdentityProviders.Commands;
 
 namespace Fdw.Services.ExternalIdentityProviders;
 
@@ -25,19 +29,22 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(ExternalIdentityProviderTypeBase<IExternalIdentityProvider, ExternalIdentityProviderConfiguration, IExternalIdentityProviderFactory<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>>),
+    typeof(ExternalIdentityProviderTypeBase<IExternalIdentityProvider, IExternalIdentityProviderImplementationConfiguration, IExternalIdentityProviderFactory<IExternalIdentityProvider, IExternalIdentityProviderImplementationConfiguration>>),
     typeof(IExternalIdentityProviderType),
     typeof(ExternalIdentityProviderTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(IExternalIdentityProvider),
-    ConfigurationType = typeof(ExternalIdentityProviderConfiguration),
-    ProviderType = typeof(DefaultServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration, IExternalIdentityProviderFactory<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>, IServiceConfigurationProvider<ExternalIdentityProviderConfiguration>>),
-    ProviderInterface = typeof(IPlatformServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>),
+    ProviderType = typeof(ExternalIdentityProviderServiceProvider),
+    ProviderInterface = typeof(IExternalIdentityProviderServiceProvider),
     ServiceCategory = "ExternalIdentityProvider")]
 public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
-    ExternalIdentityProviderTypeBase<IExternalIdentityProvider, ExternalIdentityProviderConfiguration, IExternalIdentityProviderFactory<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>>,
+    ExternalIdentityProviderTypeBase<IExternalIdentityProvider, IExternalIdentityProviderImplementationConfiguration, IExternalIdentityProviderFactory<IExternalIdentityProvider, IExternalIdentityProviderImplementationConfiguration>>,
     IExternalIdentityProviderType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
     // Configure(), Register(), Initialize() are source-generated.
 
     /// <summary>
@@ -56,7 +63,7 @@ public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IPlatformServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>).ToString();
+        var providerService = typeof(IPlatformServiceProvider<IExternalIdentityProvider, IExternalIdentityProviderImplementationConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -75,12 +82,34 @@ public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(ExternalIdentityProviderTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(ExternalIdentityProviderTypes), providerService);
 
-            builder.Services.AddScoped<IPlatformServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>>(sp =>
+            // Why the domain interface and not only the concrete class: this collection resolves
+            // IExternalIdentityProviderConfigurationProvider to attach it to the domain provider, and a registration of
+            // the concrete type alone leaves that lookup empty — the domain then fails every lookup by
+            // name for the life of the scope. ConfigurationConnection is the one place that names which
+            // store these rows live in.
+            builder.Services.TryAddSingleton<IExternalIdentityProviderConfigurationProvider>(sp =>
+                new ExternalIdentityProviderConfigurationProvider(
+                    sp.GetService<ILogger<ExternalIdentityProviderConfigurationProvider>>()!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<ExternalIdentityProviderConfigurationProvider>(
+                sp => (ExternalIdentityProviderConfigurationProvider)sp.GetRequiredService<IExternalIdentityProviderConfigurationProvider>());
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProviderConfiguration, ExternalIdentityProviderConfigurationCommand>>(
+                sp => sp.GetRequiredService<ExternalIdentityProviderConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProviderConfiguration>>(
+                sp => sp.GetRequiredService<ExternalIdentityProviderConfigurationProvider>());
+
+            // Why the resolver is registered by the domain and not by an option: ConnectTokenEndpointBase
+            // takes it as a required dependency, so registering it from one concrete option makes the
+            // core token endpoint unresolvable — password grant included — whenever that option is absent.
+            ExternalIdentityProviderResolver.RegisterDomainServices(builder.Services);
+
+            builder.Services.AddScoped<IPlatformServiceProvider<IExternalIdentityProvider, IExternalIdentityProviderImplementationConfiguration>>(sp =>
             {
-                var provider = new DefaultServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration, IExternalIdentityProviderFactory<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>, IServiceConfigurationProvider<ExternalIdentityProviderConfiguration>>(
+                var provider = new ExternalIdentityProviderServiceProvider(
                     sp,
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration, IExternalIdentityProviderFactory<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>, IServiceConfigurationProvider<ExternalIdentityProviderConfiguration>>>()
-                    ?? NullLogger<DefaultServiceProvider<IExternalIdentityProvider, ExternalIdentityProviderConfiguration, IExternalIdentityProviderFactory<IExternalIdentityProvider, ExternalIdentityProviderConfiguration>, IServiceConfigurationProvider<ExternalIdentityProviderConfiguration>>>.Instance);
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ExternalIdentityProviderServiceProvider>()
+                    ?? NullLogger<ExternalIdentityProviderServiceProvider>.Instance);
 
                 // Why ILogger<ExternalIdentityProviderTypes> and not CreateLogger("ExternalIdentityProviderTypes"): SourceContext then
                 // carries the namespace-qualified collection, and the category cannot drift from the
@@ -91,15 +120,15 @@ public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(ExternalIdentityProviderTypes), provider.GetType().Name);
                 try
                 {
-                    if (sp.GetService<IServiceConfigurationProvider<ExternalIdentityProviderConfiguration>>() is { } cfgProvider)
+                    if (sp.GetService<IExternalIdentityProviderConfigurationProvider>() is { } cfgProvider)
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
-                        var parentResult = provider.Register(cfgProvider);
-                        if (parentResult.IsSuccess)
+                        var domainResult = provider.Register(cfgProvider);
+                        if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(ExternalIdentityProviderTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(ExternalIdentityProviderTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(ExternalIdentityProviderTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {

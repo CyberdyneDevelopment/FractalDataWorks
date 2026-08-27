@@ -22,7 +22,7 @@ namespace Fdw.Services.Connections.Endpoints;
 /// the header left the body pointing at the previous version of it.
 /// </remarks>
 public abstract class UpdateConnectionEndpointBase<TConfig> : CrudUpdateEndpointBase<UpdateConnectionRequest, ConnectionDetailDto>
-    where TConfig : class, IConnectionConfiguration
+    where TConfig : class, IConnectionImplementationConfiguration
 {
     // Why: the connection provider reads and writes the whole aggregate — header plus dispatched typed body.
     private readonly ConnectionConfigurationProvider _connectionProvider;

@@ -118,7 +118,7 @@ public sealed class MsSqlQueryTranslatorTests
         // RowId (which is never projected). Every column is qualified by table name so the joined
         // tables' shared columns (Id/IsCurrent/IsDeleted) are unambiguous. Locks the SQL shape so a
         // future change can't silently revert to a single-table WHERE on an unmaterialized RowId.
-        var parentId = Guid.Parse("8383b1b2-c3d4-5e6f-7a8b-9c0d1e2f3a4b");
+        var domainConfigurationId = Guid.Parse("8383b1b2-c3d4-5e6f-7a8b-9c0d1e2f3a4b");
         var fields = new[] { CreateField("Id").Object, CreateField("ServerName").Object };
         var container = CreateContainer(name: "MsSqlConnection", schema: "conn", fields: fields);
 
@@ -126,7 +126,7 @@ public sealed class MsSqlQueryTranslatorTests
             .Join("Connection", "ConnectionRowId", "RowId")
             .Where("IsCurrent", true)
             .Where("IsDeleted", false)
-            .Where("Connection.Id", parentId)
+            .Where("Connection.Id", domainConfigurationId)
             .Build();
 
         var result = await _sut.Translate((IQueryCommand)call.Command, container.Object, TestContext.Current.CancellationToken);

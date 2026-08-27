@@ -32,29 +32,22 @@ namespace Fdw.Services.SecretManagers;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(SecretManagerTypeBase<ISecretManager, ISecretManagerServiceFactory<ISecretManager, SecretManagerConfiguration>, SecretManagerConfiguration>),
+    typeof(SecretManagerTypeBase<ISecretManager, ISecretManagerServiceFactory<ISecretManager, ISecretManagerImplementationConfiguration>, ISecretManagerImplementationConfiguration>),
     typeof(ISecretManagerType),
     typeof(SecretManagerTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(ISecretManager),
-    ConfigurationType = typeof(SecretManagerConfiguration),
-    ProviderType = typeof(DefaultSecretManagerProvider),
-    ProviderInterface = typeof(IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>),
-    ServiceCategory = "SecretManager",
-    // Why there is no lifetime here any more: ProviderLifetime was removed from
-    // ServiceTypeCollectionAttribute, and ServiceTypeCollectionGenerator now registers EVERY domain
-    // provider AddScoped so factory lambdas may legally hold scoped dependencies. This domain
-    // previously pinned Singleton so a Singleton connection factory could take
-    // IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration> as a plain constructor
-    // dependency; with the provider scoped, any Singleton consumer resolving it from the ROOT
-    // container captures a scoped instance. Nothing in this domain is scoped, so the registration
-    // itself is safe — the risk lives at the consumers, which is why secret resolution moved onto
-    // the factory rather than staying a provider a factory holds.
-    Group = 0)]
+    ProviderType = typeof(SecretManagerProvider),
+    ProviderInterface = typeof(ISecretManagerProvider),
+    ServiceCategory = "SecretManager")]
 public partial class SecretManagerTypes : ServiceTypeCollectionBase<
-    SecretManagerTypeBase<ISecretManager, ISecretManagerServiceFactory<ISecretManager, SecretManagerConfiguration>, SecretManagerConfiguration>,
-    ISecretManagerType<ISecretManager, ISecretManagerServiceFactory<ISecretManager, SecretManagerConfiguration>, SecretManagerConfiguration>>
+    SecretManagerTypeBase<ISecretManager, ISecretManagerServiceFactory<ISecretManager, ISecretManagerImplementationConfiguration>, ISecretManagerImplementationConfiguration>,
+    ISecretManagerType<ISecretManager, ISecretManagerServiceFactory<ISecretManager, ISecretManagerImplementationConfiguration>, ISecretManagerImplementationConfiguration>>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
     // Configure(), Register() and Initialize() are source-generated
 
     /// <summary>
@@ -73,7 +66,7 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>).ToString();
+        var providerService = typeof(ISecretManagerProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -88,13 +81,21 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
             // SecretManager configuration, registered once for the domain here rather
             // than by every caller that needs it.
 
-            builder.Services.TryAddSingleton<SecretManagerConfigurationProvider>(sp =>
+            // Why the domain interface and not only the concrete class: this collection resolves
+            // ISecretManagerConfigurationProvider to attach it to the domain provider, and a registration
+            // of the concrete type alone leaves that lookup empty — the domain then fails every lookup by
+            // name for the life of the scope. ConfigurationConnection is the one place that names which
+            // store these rows live in.
+            builder.Services.TryAddSingleton<ISecretManagerConfigurationProvider>(sp =>
                 new SecretManagerConfigurationProvider(
                     sp.GetService<ILogger<SecretManagerConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-            // Why: Consumers inject DefaultConfigurationProvider<TConfig, TCommand> (the new base) —
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<SecretManagerConfigurationProvider>(
+                sp => (SecretManagerConfigurationProvider)sp.GetRequiredService<ISecretManagerConfigurationProvider>());
+            // Why: Consumers inject ImplementationConfigurationProviderBase<TConfig, TCommand> (the new base) —
             // forward to the concrete subclass.
-            builder.Services.TryAddSingleton<DefaultConfigurationProvider<SecretManagerConfiguration, SecretManagerConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<SecretManagerConfiguration, SecretManagerConfigurationCommand>>(
                 sp => sp.GetRequiredService<SecretManagerConfigurationProvider>());
             // Why: Generated Initialize() links IServiceConfigurationProvider<T> as the parent on the
             // domain provider (SecretManagerProvider); this forward lets that lookup succeed.
@@ -104,24 +105,18 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
             // provider under IPlatformServiceProvider<,>, which no factory may take by constructor (FDW045).
             // Consumers — the connection factories above all — depend on ISecretManagerProvider instead, and
             // this forward hands them the SAME instance, so its factory registrations and cache are shared.
-            // The cast is deliberate and fail-loud: the generator constructs DefaultSecretManagerProvider,
-            // and if anything ever replaces that registration with a type that is not the domain provider,
-            // the composition root must break loudly rather than resolve a second, empty provider.
-            builder.Services.TryAddSingleton<ISecretManagerProvider>(
-                sp => (ISecretManagerProvider)sp.GetRequiredService<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>());
-
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
 
             ServiceTypeLog.DomainOptionsCollected(log, nameof(SecretManagerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(SecretManagerTypes), providerService);
 
-            builder.Services.AddScoped<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>(sp =>
+            builder.Services.AddScoped<ISecretManagerProvider>(sp =>
             {
-                var provider = new DefaultSecretManagerProvider(
+                var provider = new SecretManagerProvider(
                     sp,
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultSecretManagerProvider>()
-                    ?? NullLogger<DefaultSecretManagerProvider>.Instance);
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<SecretManagerProvider>()
+                    ?? NullLogger<SecretManagerProvider>.Instance);
 
                 // Why ILogger<SecretManagerTypes> and not CreateLogger("SecretManagerTypes"): SourceContext then
                 // carries the namespace-qualified collection, and the category cannot drift from the
@@ -132,15 +127,15 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(SecretManagerTypes), provider.GetType().Name);
                 try
                 {
-                    if (sp.GetService<IServiceConfigurationProvider<SecretManagerConfiguration>>() is { } cfgProvider)
+                    if (sp.GetService<ISecretManagerConfigurationProvider>() is { } cfgProvider)
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
-                        var parentResult = provider.Register(cfgProvider);
-                        if (parentResult.IsSuccess)
+                        var domainResult = provider.Register(cfgProvider);
+                        if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(SecretManagerTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(SecretManagerTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(SecretManagerTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {

@@ -293,8 +293,9 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// <param name="builder">The host builder.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     /// <returns>The builder, or the first failure encountered.</returns>
-    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
         // Why the flag is set here rather than after the work: a phase that failed halfway
         // has already registered whatever came before the failure, and re-entering would do
@@ -340,10 +341,12 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// taken from what a body says it registers.
     /// </remarks>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     public IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory = null,
-        bool force = false)
+        bool force = false,
+        bool defer = false)
     {
         // Why: the factory is null until the host has one, and reporting is not optional work that
         // gets dropped when it is — NullLogger keeps every call below unconditional and silent.
@@ -413,11 +416,13 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// <param name="host">The built host.</param>
         /// <param name="loggerFactory">The logger factory.</param>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     /// <returns>The host, or the first failure encountered.</returns>
     public IGenericResult<IHost> Initialize(
         IHost host,
         ILoggerFactory? loggerFactory = null,
-        bool force = false)
+        bool force = false,
+        bool defer = false)
     {
         // Why the flag is set here rather than after the work: a phase that failed halfway
         // has already registered whatever came before the failure, and re-entering would do

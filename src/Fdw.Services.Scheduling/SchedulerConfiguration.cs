@@ -1,108 +1,41 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
-using Fdw.Services.Abstractions;
 using Fdw.Services.Scheduling.Abstractions;
-using Fdw.Services.Scheduling.Abstractions.Configuration;
 
 namespace Fdw.Services.Scheduling;
 
 /// <summary>
-/// Header configuration for scheduling services representing the sched.Scheduler parent table.
+/// One configured scheduler — the <c>sched.Scheduler</c> domain record, naming which implementation
+/// it is and holding that implementation's own configuration.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
-[ManagedConfiguration( ServiceCategory = "Scheduler")]
-public partial class SchedulerConfiguration : IGenericConfiguration
+[ManagedConfiguration(ServiceCategory = "Scheduler")]
+public partial class SchedulerConfiguration : ISchedulerConfiguration
 {
-    /// <summary>
-    /// Gets or sets the unique identifier for this scheduler.
-    /// </summary>
-    public Guid Id { get; set; } = Guid.CreateVersion7();
+    // Why no generated default: the database assigns identity. A value minted here reaches
+    // Get(domainId) as a real-looking id that matches no row, and the miss reads as a data problem
+    // rather than an unsaved record.
+    /// <summary>Gets or sets the durable logical identifier (matches sched.Scheduler.Id).</summary>
+    public Guid Id { get; set; }
 
-    /// <summary>
-    /// Gets or sets the name of this scheduler for lookup and display.
-    /// </summary>
+    /// <summary>Gets or sets the name of this scheduler for lookup and display.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets the section name for configuration binding.
-    /// </summary>
+    /// <summary>Gets the section name for configuration binding.</summary>
     public string SectionName => "Scheduler";
 
-    /// <summary>
-    /// Gets the service type (domain) - always "Scheduler" for this configuration.
-    /// </summary>
+    /// <summary>Gets the service type (domain).</summary>
     public string ServiceType => "Scheduler";
 
-    /// <summary>
-    /// Gets or sets the name of the DataSet container for schedule data access.
-    /// </summary>
-    public string ScheduleContainerName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the DataStore name for schedule data access (required).
-    /// </summary>
-    public string DataStoreName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the path name (schema) within the DataStore (required).
-    /// </summary>
-    public string PathName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the service option type (e.g., "Quartz", "Hangfire").
-    /// </summary>
+    /// <summary>Gets or sets the implementation this scheduler is (e.g. "Default", "Quartz").</summary>
     public string? ServiceOptionType { get; set; }
 
-    /// <summary>
-    /// Gets the scheduling type name. Alias for <see cref="ServiceOptionType"/>.
-    /// </summary>
-    public string? SchedulingType => ServiceOptionType;
-
-    /// <inheritdoc />
-    public IServiceLifetime Lifetime { get; set; } = ServiceLifetimes.Singleton;
-
-    /// <inheritdoc />
-    public string? SecretManagerName { get; set; }
-
-    /// <inheritdoc />
-    public string? SecretKeyName { get; set; }
-
-    /// <inheritdoc />
-    public int MaxConcurrency { get; set; } = 10;
-
-    /// <inheritdoc />
-    public int DefaultTimeoutSeconds { get; set; } = 3600;
-
-    /// <inheritdoc />
-    public bool PersistJobHistory { get; set; }
-
-    /// <inheritdoc />
-    public string? PersistenceConnectionString { get; set; }
-
-    /// <inheritdoc />
-    public bool EnableClustering { get; set; }
-
-    /// <inheritdoc />
-    public string? ClusterInstanceId { get; set; }
-
-    /// <inheritdoc />
-    public int MisfireThresholdSeconds { get; set; } = 60;
-
-    /// <inheritdoc />
-    public bool EnableDetailedLogging { get; set; }
-
-    /// <summary>
-    /// Gets or sets the optional description of this scheduling.
-    /// </summary>
+    /// <inheritdoc/>
     public string? Description { get; set; }
 
-    /// <summary>
-    /// Gets or sets the nested schedules collection.
-    /// </summary>
-    public IList<ScheduleConfiguration> Schedules { get; set; } = [];
-
+    /// <inheritdoc/>
+    public ISchedulerImplementationConfiguration? Configuration { get; set; }
 }

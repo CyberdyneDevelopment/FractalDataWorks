@@ -3,13 +3,10 @@ using Fdw.Configuration;
 namespace Fdw.Services.TokenManagers.Abstractions;
 
 /// <summary>
-/// Marker interface for typed token-manager body configurations (e.g. an OpenIddict-specific
-/// configuration carrying Authority/TokenEndpoint/lifetimes). Each typed body implements this
-/// interface directly without inheriting from a concrete header class — the header
-/// (<c>TokenManagerConfiguration</c>) carries a <c>[NotMapped] ITokenManagerConfiguration?
-/// Configuration</c> property populated on the read path, mirroring every other polymorphic
-/// header/typed-body domain (Connection, SecretManager, AuthenticationService).
+/// One configured token manager — the domain record, naming which implementation it is and holding
+/// that implementation's own configuration.
 /// </summary>
-public interface ITokenManagerConfiguration : IGenericConfiguration
+public interface ITokenManagerConfiguration
+    : IPlatformServiceConfiguration<ITokenManagerImplementationConfiguration>
 {
 }

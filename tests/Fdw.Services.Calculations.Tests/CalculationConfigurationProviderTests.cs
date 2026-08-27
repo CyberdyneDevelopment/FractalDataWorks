@@ -17,6 +17,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
 using Xunit;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Calculations.Tests;
 
@@ -39,14 +40,14 @@ public class CalculationConfigurationProviderTests
         var gateway = new AggregateGateway();
         var provider = new CalculationConfigurationProvider(
             NullLogger<CalculationConfigurationProvider>.Instance,
-            new Lazy<IConfigurationGateway>(() => gateway),
+            GatewayProviderFor(gateway),
             "ConfigurationDb",
             "calc");
 
         // Register the Formula typed provider exactly as DefaultCalculationServiceType.RegisterFactory does.
-        var formulaProvider = new DefaultConfigurationProvider<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>(
-            NullLogger<DefaultConfigurationProvider<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => gateway),
+        var formulaProvider = new ImplementationConfigurationProviderBase<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>>.Instance,
+            GatewayProviderFor(gateway),
             "ConfigurationDb",
             "calc");
         provider.Register("Formula", formulaProvider);
@@ -68,6 +69,9 @@ public class CalculationConfigurationProviderTests
     // ConfigurationCommand.ContainerName, recursing one level into the step.
     private sealed class AggregateGateway : IConfigurationGateway
     {
+        /// <summary>The connection this fake stands in for.</summary>
+        public string ConnectionName => "ConfigurationDb";
+
         /// <summary>Targets this fake was asked to invalidate, in call order.</summary>
         public List<DataStoreTarget> Invalidated { get; } = [];
 
@@ -238,4 +242,25 @@ public class CalculationConfigurationProviderTests
             return key.Object;
         }
     }
+
+    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
+    // connection it was told its rows live on, so the fake has to answer to that name to be found.
+    // Why a double rather than the real provider: these tests exercise what a configuration provider
+    // does with its gateway, not which gateway it selects, so the double answers for whatever
+    // connection is asked. Selection itself is covered where the real provider is under test.
+    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+        => new AnyConnectionGateways(gateway);
+
+    private sealed class AnyConnectionGateways : IConfigurationGatewayProvider
+    {
+        private readonly IConfigurationGateway _gateway;
+
+        public AnyConnectionGateways(IConfigurationGateway gateway) => _gateway = gateway;
+
+        public IGenericResult<IConfigurationGateway> Get(string connectionName)
+            => GenericResult<IConfigurationGateway>.Success(_gateway);
+
+        public IGenericResult Register(IConfigurationGateway gateway) => GenericResult.Success();
+    }
+
 }

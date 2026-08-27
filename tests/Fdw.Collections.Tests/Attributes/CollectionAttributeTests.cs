@@ -5,7 +5,7 @@ namespace Fdw.Collections.Tests.Attributes;
 
 /// <summary>
 /// Tests for MutableTypeCollectionAttribute, TypeInstanceCollectionAttribute,
-/// TypeCollectionFactoryAttribute, ServiceTypeCollectionAttribute,
+/// ServiceTypeCollectionAttribute,
 /// MutableServiceTypeCollectionAttribute, ServiceTypeInstanceCollectionAttribute,
 /// and ServiceTypeOptionAttribute.
 /// </summary>
@@ -217,77 +217,6 @@ public class CollectionAttributeTests
 
     #endregion
 
-    #region TypeCollectionFactoryAttribute Tests
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void TypeCollectionFactoryAttribute_Constructor_SetsBaseType()
-    {
-        var attr = new TypeCollectionFactoryAttribute(typeof(TestBase));
-
-        attr.BaseType.ShouldBe(typeof(TestBase));
-        attr.InterfaceType.ShouldBeNull();
-        attr.AllowNesting.ShouldBeFalse();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void TypeCollectionFactoryAttribute_Constructor_SetsAllParams()
-    {
-        var attr = new TypeCollectionFactoryAttribute(typeof(TestBase), typeof(TestReturn), allowNesting: true);
-
-        attr.BaseType.ShouldBe(typeof(TestBase));
-        attr.InterfaceType.ShouldBe(typeof(TestReturn));
-        attr.AllowNesting.ShouldBeTrue();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void TypeCollectionFactoryAttribute_ThrowsOnNullBaseType()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            new TypeCollectionFactoryAttribute(null!))
-            .ParamName.ShouldBe("baseType");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void TypeCollectionFactoryAttribute_GenerateUIComponent_DefaultsFalse()
-    {
-        var attr = new TypeCollectionFactoryAttribute(typeof(TestBase));
-        attr.GenerateUIComponent.ShouldBeFalse();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void TypeCollectionFactoryAttribute_UIComponent_DefaultsNull()
-    {
-        var attr = new TypeCollectionFactoryAttribute(typeof(TestBase));
-        attr.UIComponent.ShouldBeNull();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void TypeCollectionFactoryAttribute_OptionalProperties_CanBeSet()
-    {
-        var attr = new TypeCollectionFactoryAttribute(typeof(TestBase))
-        {
-            GenerateUIComponent = true,
-            UIComponent = typeof(TestParent)
-        };
-
-        attr.GenerateUIComponent.ShouldBeTrue();
-        attr.UIComponent.ShouldBe(typeof(TestParent));
-    }
-
-    #endregion
-
     #region ServiceTypeCollectionAttribute Tests
 
     [Fact]
@@ -325,10 +254,8 @@ public class CollectionAttributeTests
         var attr = new ServiceTypeCollectionAttribute(typeof(TestBase), typeof(TestReturn), typeof(TestCollection));
 
         attr.RestrictToCurrentCompilation.ShouldBeFalse();
-        attr.GenerateProvider.ShouldBeFalse();
         attr.ServiceInterface.ShouldBeNull();
         attr.ConfigurationInterface.ShouldBeNull();
-        attr.ConfigurationType.ShouldBeNull();
         attr.ProviderType.ShouldBeNull();
         attr.ProviderInterface.ShouldBeNull();
         attr.ServiceCategory.ShouldBeNull();
@@ -342,20 +269,16 @@ public class CollectionAttributeTests
         var attr = new ServiceTypeCollectionAttribute(typeof(TestBase), typeof(TestReturn), typeof(TestCollection))
         {
             RestrictToCurrentCompilation = true,
-            GenerateProvider = true,
             ServiceInterface = typeof(TestBase),
             ConfigurationInterface = typeof(TestReturn),
-            ConfigurationType = typeof(TestCollection),
             ProviderType = typeof(TestParent),
             ProviderInterface = typeof(TestReturn),
             ServiceCategory = "Connection"
         };
 
         attr.RestrictToCurrentCompilation.ShouldBeTrue();
-        attr.GenerateProvider.ShouldBeTrue();
         attr.ServiceInterface.ShouldBe(typeof(TestBase));
         attr.ConfigurationInterface.ShouldBe(typeof(TestReturn));
-        attr.ConfigurationType.ShouldBe(typeof(TestCollection));
         attr.ProviderType.ShouldBe(typeof(TestParent));
         attr.ProviderInterface.ShouldBe(typeof(TestReturn));
         attr.ServiceCategory.ShouldBe("Connection");

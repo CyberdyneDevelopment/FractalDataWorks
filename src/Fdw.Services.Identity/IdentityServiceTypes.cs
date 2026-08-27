@@ -11,6 +11,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Identity.Commands;
 
 namespace Fdw.Services.Identity;
 
@@ -26,19 +30,22 @@ namespace Fdw.Services.Identity;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(IdentityServiceTypeBase<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>>),
+    typeof(IdentityServiceTypeBase<IIdentityService, IIdentityServiceImplementationConfiguration, IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>>),
     typeof(IIdentityServiceType),
     typeof(IdentityServiceTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(IIdentityService),
-    ConfigurationType = typeof(IdentityServiceConfiguration),
-    ProviderType = typeof(DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>),
-    ProviderInterface = typeof(IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration>),
+    ProviderType = typeof(IdentityServiceProvider),
+    ProviderInterface = typeof(IIdentityServiceProvider),
     ServiceCategory = "Identity")]
 public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
-    IdentityServiceTypeBase<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>>,
+    IdentityServiceTypeBase<IIdentityService, IIdentityServiceImplementationConfiguration, IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>>,
     IIdentityServiceType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
     // Configure(), Register(), Initialize() are source-generated.
 
     /// <summary>
@@ -57,7 +64,7 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
 
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below. Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration>).ToString();
+        var providerService = typeof(IIdentityServiceProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -69,7 +76,22 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
             if (registered.IsFailure)
                 return registered;
 
-            IdentityServiceConfigurationProvider.RegisterDomainServices(builder.Services);
+            // Why the domain interface and not only the concrete class: this collection resolves
+            // IIdentityServiceConfigurationProvider to attach it to the domain provider, and a registration of the
+            // concrete type alone leaves that lookup empty — the domain then fails every lookup by name
+            // for the life of the scope. ConfigurationConnection is the one place that names which store
+            // these rows live in.
+            builder.Services.TryAddSingleton<IIdentityServiceConfigurationProvider>(sp =>
+                new IdentityServiceConfigurationProvider(
+                    sp.GetService<ILogger<IdentityServiceConfigurationProvider>>()!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<IdentityServiceConfigurationProvider>(
+                sp => (IdentityServiceConfigurationProvider)sp.GetRequiredService<IIdentityServiceConfigurationProvider>());
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IdentityServiceConfiguration, IdentityServiceConfigurationCommand>>(
+                sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<IdentityServiceConfiguration>>(
+                sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
 
             // Why singleton: the cache's whole purpose is that one live token is reused across every
             // outbound call in the process. A scoped cache would acquire a new token per scope, which
@@ -86,27 +108,27 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(IdentityServiceTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(IdentityServiceTypes), providerService);
 
-            builder.Services.AddScoped<IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration>>(sp =>
+            builder.Services.AddScoped<IIdentityServiceProvider>(sp =>
             {
-                var provider = new DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>(
+                var provider = new IdentityServiceProvider(
                     sp,
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>>()
-                    ?? NullLogger<DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>>.Instance);
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<IdentityServiceProvider>()
+                    ?? NullLogger<IdentityServiceProvider>.Instance);
 
                 var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<IdentityServiceTypes>()
                     ?? NullLogger<IdentityServiceTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(IdentityServiceTypes), provider.GetType().Name);
                 try
                 {
-                    if (sp.GetService<IServiceConfigurationProvider<IdentityServiceConfiguration>>() is { } cfgProvider)
+                    if (sp.GetService<IIdentityServiceConfigurationProvider>() is { } cfgProvider)
                     {
                         // Why the result is read: a provider that did not take its parent still
                         // constructs, and every later read silently misses.
-                        var parentResult = provider.Register(cfgProvider);
-                        if (parentResult.IsSuccess)
+                        var domainResult = provider.Register(cfgProvider);
+                        if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(IdentityServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(IdentityServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(IdentityServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {

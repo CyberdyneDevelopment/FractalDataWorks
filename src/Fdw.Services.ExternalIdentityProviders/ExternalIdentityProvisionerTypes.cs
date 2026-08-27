@@ -13,6 +13,12 @@ using System.Linq;
 using Fdw.Results;
 using Microsoft.Extensions.Hosting;
 
+using Fdw.Configuration;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.ExternalIdentityProviders.Commands;
+
 namespace Fdw.Services.ExternalIdentityProviders;
 
 /// <summary>
@@ -24,23 +30,26 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(ExternalIdentityProvisionerTypeBase<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>),
+    typeof(ExternalIdentityProvisionerTypeBase<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration, IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>),
     typeof(IExternalIdentityProvisionerType),
     typeof(ExternalIdentityProvisionerTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(IExternalIdentityProvisioner),
-    ConfigurationType = typeof(ExternalIdentityProvisionerConfiguration),
-    // Why: DefaultExternalIdentityProvisionerProvider (not the raw DefaultServiceProvider) so the
+    // Why: ExternalIdentityProvisionerServiceProvider (not the raw DefaultServiceProvider) so the
     // provider supplies ITSELF to the factory at Create time. That keeps provisioner factories pure —
     // a factory that ctor-injected this provider recursed forever during the provider's own
     // realization and hung the host silently (FDW-615).
-    ProviderType = typeof(DefaultExternalIdentityProvisionerProvider),
-    ProviderInterface = typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>),
+    ProviderType = typeof(ExternalIdentityProvisionerServiceProvider),
+    ProviderInterface = typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>),
     ServiceCategory = "ExternalIdentityProvisioner")]
 public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBase<
-    ExternalIdentityProvisionerTypeBase<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>,
+    ExternalIdentityProvisionerTypeBase<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration, IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>,
     IExternalIdentityProvisionerType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
     // Configure(), Register(), Initialize() are source-generated.
 
     /// <summary>
@@ -59,7 +68,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>).ToString();
+        var providerService = typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -78,12 +87,29 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
             ServiceTypeLog.DomainOptionsCollected(log, nameof(ExternalIdentityProvisionerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(ExternalIdentityProvisionerTypes), providerService);
 
-            builder.Services.AddScoped<IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>(sp =>
+            // Why the domain interface and not only the concrete class: this collection resolves
+            // IExternalIdentityProvisionerConfigurationProvider to attach it to the domain provider, and a registration of
+            // the concrete type alone leaves that lookup empty — the domain then fails every lookup by
+            // name for the life of the scope. ConfigurationConnection is the one place that names which
+            // store these rows live in.
+            builder.Services.TryAddSingleton<IExternalIdentityProvisionerConfigurationProvider>(sp =>
+                new ExternalIdentityProvisionerConfigurationProvider(
+                    sp.GetService<ILogger<ExternalIdentityProvisionerConfigurationProvider>>()!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<ExternalIdentityProvisionerConfigurationProvider>(
+                sp => (ExternalIdentityProvisionerConfigurationProvider)sp.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>());
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerConfiguration, ExternalIdentityProvisionerConfigurationCommand>>(
+                sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProvisionerConfiguration>>(
+                sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
+
+            builder.Services.AddScoped<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(sp =>
             {
-                var provider = new DefaultExternalIdentityProvisionerProvider(
+                var provider = new ExternalIdentityProvisionerServiceProvider(
                     sp,
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultExternalIdentityProvisionerProvider>()
-                    ?? NullLogger<DefaultExternalIdentityProvisionerProvider>.Instance);
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ExternalIdentityProvisionerServiceProvider>()
+                    ?? NullLogger<ExternalIdentityProvisionerServiceProvider>.Instance);
 
                 // Why ILogger<ExternalIdentityProvisionerTypes> and not CreateLogger("ExternalIdentityProvisionerTypes"): SourceContext then
                 // carries the namespace-qualified collection, and the category cannot drift from the
@@ -94,15 +120,15 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(ExternalIdentityProvisionerTypes), provider.GetType().Name);
                 try
                 {
-                    if (sp.GetService<IServiceConfigurationProvider<ExternalIdentityProvisionerConfiguration>>() is { } cfgProvider)
+                    if (sp.GetService<IExternalIdentityProvisionerConfigurationProvider>() is { } cfgProvider)
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
-                        var parentResult = provider.Register(cfgProvider);
-                        if (parentResult.IsSuccess)
+                        var domainResult = provider.Register(cfgProvider);
+                        if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(ExternalIdentityProvisionerTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(ExternalIdentityProvisionerTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(ExternalIdentityProvisionerTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {
@@ -115,7 +141,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                             stLogger,
                             nameof(ExternalIdentityProvisionerTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<ExternalIdentityProvisionerConfiguration>).ToString());
+                            typeof(IServiceConfigurationProvider<IExternalIdentityProvisionerImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)

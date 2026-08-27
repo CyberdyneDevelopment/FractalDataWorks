@@ -24,7 +24,7 @@ namespace Fdw.Services.Etl.Abstractions;
 /// builder can dot-walk any current or future engine polymorphically. Both existing engines already
 /// expose these getters, so this promotion is non-breaking.
 /// </remarks>
-public interface IEtlPipelineTypedConfiguration : IGenericConfiguration
+public interface IEtlPipelineTypedConfiguration : IImplementationConfiguration
 {
     /// <summary>Gets a value indicating whether the pipeline is enabled.</summary>
     bool IsEnabled { get; }

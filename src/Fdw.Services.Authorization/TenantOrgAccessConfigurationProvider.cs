@@ -31,7 +31,7 @@ public class TenantOrgAccessConfigurationProvider
     /// <summary>
     /// Initializes a new instance of the <see cref="TenantOrgAccessConfigurationProvider"/> class.
     /// </summary>
-    /// <param name="gateway">The configuration gateway for ConfigurationDb access.</param>
+    /// <param name="gateway">The configuration gateway.</param>
     /// <param name="logger">Optional logger instance.</param>
     public TenantOrgAccessConfigurationProvider(
         IConfigurationGateway gateway,

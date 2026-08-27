@@ -23,7 +23,7 @@ namespace Fdw.Services.Authentication.OpenIddict;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "TokenManager", ServiceType = "OpenIddict")]
-public sealed partial class OpenIddictTokenManagerConfiguration : ITokenManagerConfiguration
+public sealed partial class OpenIddictTokenManagerConfiguration : ITokenManagerImplementationConfiguration
 {
     // ========================================
     // IGenericConfiguration (typed-body identity)

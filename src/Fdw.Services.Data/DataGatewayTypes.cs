@@ -13,8 +13,7 @@ namespace Fdw.Services.Data;
     typeof(DataGatewayTypeBase<IGenericService, IDataGatewayFactory>),
     typeof(IDataGatewayType),
     typeof(DataGatewayTypes),
-    ServiceCategory = "DataGateway",
-    Group = 2)]
+    ServiceCategory = "DataGateway")]
 public partial class DataGatewayTypes : ServiceTypeCollectionBase<
     DataGatewayTypeBase<IGenericService, IDataGatewayFactory>,
     IDataGatewayType>

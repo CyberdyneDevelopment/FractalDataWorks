@@ -114,7 +114,7 @@ public sealed class ExecutionItemRecord : IExecutionItem
     public static ExecutionItem CreatePoco(
         IExecutionItemType itemType,
         string name,
-        Guid? parentId,
+        Guid? domainConfigurationId,
         Guid rootId,
         string? correlationId,
         string? triggerSource,
@@ -130,7 +130,7 @@ public sealed class ExecutionItemRecord : IExecutionItem
         return new ExecutionItem
         {
             Id = Guid.CreateVersion7(),
-            ParentExecutionItemId = parentId,
+            ParentExecutionItemId = domainConfigurationId,
             RootExecutionItemId = rootId,
             ItemType = itemType.Name,
             Name = name,

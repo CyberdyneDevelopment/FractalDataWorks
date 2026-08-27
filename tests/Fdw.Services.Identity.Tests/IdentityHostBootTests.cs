@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Identity.Tests;
 
@@ -45,8 +46,9 @@ public sealed class IdentityHostBootTests
         // The prerequisites a real entry-point app supplies before any domain registers. Named here
         // rather than mocked away, because discovering exactly this list is the point of the test.
         builder.Services.AddHttpClient();
-        builder.Services.AddSingleton(new Lazy<IConfigurationGateway>(() =>
-            throw new InvalidOperationException("No gateway is needed to register the domain; a read would need one.")));
+        // Why the interface and not the concrete type: the collections resolve
+        // IConfigurationGatewayProvider, which ConfigurationGatewayTypes would normally supply.
+        builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
 
         return builder;
     }
@@ -73,7 +75,7 @@ public sealed class IdentityHostBootTests
         using var scope = host.Services.CreateScope();
 
         var provider = scope.ServiceProvider
-            .GetRequiredService<IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration>>();
+            .GetRequiredService<IIdentityServiceProvider>();
 
         // A configuration naming a registered mechanism must not fail with "no factory registered".
         // It fails for want of a typed body instead, which is the next gate and a different message.
@@ -111,7 +113,7 @@ public sealed class IdentityHostBootTests
         // Why scoped: the generator registers every domain provider AddScoped, so resolving from the
         // root container would be the capture bug the framework warns about.
         scope.ServiceProvider
-            .GetService<IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration>>()
+            .GetService<IIdentityServiceProvider>()
             .ShouldNotBeNull();
     }
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,7 +28,7 @@ public interface IAgentActionService
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A result containing the agent action, or failure if not found.</returns>
     Task<IGenericResult<AgentActionRecord>> Get(
-        int actionId,
+        Guid actionId,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -38,7 +39,7 @@ public interface IAgentActionService
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A result indicating success or failure.</returns>
     Task<IGenericResult> Approve(
-        int actionId,
+        Guid actionId,
         string reviewedBy,
         CancellationToken cancellationToken = default);
 
@@ -50,7 +51,7 @@ public interface IAgentActionService
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A result indicating success or failure.</returns>
     Task<IGenericResult> Deny(
-        int actionId,
+        Guid actionId,
         string reviewedBy,
         CancellationToken cancellationToken = default);
 }

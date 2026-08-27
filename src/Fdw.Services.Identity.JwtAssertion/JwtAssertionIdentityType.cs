@@ -24,7 +24,7 @@ namespace Fdw.Services.Identity.JwtAssertion;
 [ExcludeFromCodeCoverage]
 [ServiceTypeOption(typeof(IdentityServiceTypes), "JwtAssertion")]
 public sealed class JwtAssertionIdentityType
-    : IdentityServiceTypeBase<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>>
+    : IdentityServiceTypeBase<IIdentityService, IIdentityServiceImplementationConfiguration, IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>>
 {
     /// <summary>Initializes a new instance of the <see cref="JwtAssertionIdentityType"/> class.</summary>
     public JwtAssertionIdentityType()
@@ -43,7 +43,7 @@ public sealed class JwtAssertionIdentityType
             // Why the option registers its own factory: see ClientCredentialsIdentityType —
             // an option that skips this resolves to "No registered service type matches
             // ServiceOptionType" at the first request.
-            DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>
+            IdentityServiceProvider
                 .Register(Name, sp => new JwtAssertionIdentityFactory(
                     sp.GetService<ILoggerFactory>(),
                     sp.GetRequiredService<IHttpClientFactory>().CreateClient(IdentityHttpClient.Name)));
@@ -56,7 +56,7 @@ public sealed class JwtAssertionIdentityType
 
                 sp.GetService<ILogger<JwtAssertionConfigurationProvider>>()!,
 
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
+                sp.GetRequiredService<IConfigurationGatewayProvider>()));
 
 
             IdentityLog.MechanismRegistered(log, Name);
@@ -68,7 +68,7 @@ public sealed class JwtAssertionIdentityType
             // The header provider dispatches on ServiceOptionType to the typed provider registered for
             // it. Without this hand-over the header loads and Configuration stays null.
             var services = host.Services;
-            services.GetRequiredService<IdentityServiceConfigurationProvider>()
+            services.GetRequiredService<IIdentityServiceConfigurationProvider>()
                 .Register(Name, services.GetRequiredService<JwtAssertionConfigurationProvider>());
 
             return GenericResult<IHost>.Success(host);

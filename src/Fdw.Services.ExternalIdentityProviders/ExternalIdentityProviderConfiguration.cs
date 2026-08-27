@@ -24,7 +24,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "ExternalIdentityProvider")]
-public partial class ExternalIdentityProviderConfiguration : IGenericConfiguration
+public partial class ExternalIdentityProviderConfiguration : IExternalIdentityProviderConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ExternalIdentityProviderConfiguration"/> class.
@@ -75,7 +75,7 @@ public partial class ExternalIdentityProviderConfiguration : IGenericConfigurati
     // saves the typed body independently via its own provider. The read path populates this by
     // dispatching on ServiceOptionType to the appropriate typed provider.
     [NotMapped]
-    public IExternalIdentityProviderConfiguration? Configuration { get; set; }
+    public IExternalIdentityProviderImplementationConfiguration? Configuration { get; set; }
 
     // ── Tenant / visibility / audit ──────────────────────────────────────────
     // Why: no value defaults — a missing tenant/visibility/audit value must read as its

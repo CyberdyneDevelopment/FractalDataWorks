@@ -9,7 +9,7 @@ namespace Fdw.Services.Etl.Projects.Abstractions;
 
 /// <summary>
 /// Configuration provider for OrchestrationNode — the self-referencing-tree (node→parent, same table) domain.
-/// The tree overloads (Get(name,parentId)/Get(id,depth)/GetRoots/GetChildren) are the sanctioned carve-out
+/// The tree overloads (Get(name,domainConfigurationId)/Get(id,depth)/GetRoots/GetChildren) are the sanctioned carve-out
 /// over the keystone base, which loads the flat rows; the plain Get(id)/Get()/Save/Delete are the base's.
 /// All typed ergonomic providers (IProjectConfigurationProvider, IStageConfigurationProvider,
 /// IStepConfigurationProvider) are thin wrappers over this interface.
@@ -18,9 +18,9 @@ public interface IOrchestrationNodeConfigurationProvider
 {
     /// <summary>Gets a node by name within a given parent scope.</summary>
     /// <param name="name">The node name.</param>
-    /// <param name="parentId">The parent logical Id, or null for root nodes.</param>
+    /// <param name="domainConfigurationId">The parent logical Id, or null for root nodes.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    Task<IGenericResult<OrchestrationNodeConfiguration>> Get(string name, Guid? parentId, CancellationToken cancellationToken = default);
+    Task<IGenericResult<OrchestrationNodeConfiguration>> Get(string name, Guid? domainConfigurationId, CancellationToken cancellationToken = default);
 
     /// <summary>Gets a node by its logical identifier.</summary>
     /// <param name="id">The node logical identifier.</param>
@@ -40,9 +40,9 @@ public interface IOrchestrationNodeConfigurationProvider
     Task<IGenericResult<IReadOnlyList<OrchestrationNodeConfiguration>>> GetRoots(CancellationToken cancellationToken = default);
 
     /// <summary>Gets all direct children of the given parent node.</summary>
-    /// <param name="parentId">The durable Id of the parent node (RowId is DB-managed and invisible).</param>
+    /// <param name="domainConfigurationId">The durable Id of the parent node (RowId is DB-managed and invisible).</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    Task<IGenericResult<IReadOnlyList<OrchestrationNodeConfiguration>>> GetChildren(Guid parentId, CancellationToken cancellationToken = default);
+    Task<IGenericResult<IReadOnlyList<OrchestrationNodeConfiguration>>> GetChildren(Guid domainConfigurationId, CancellationToken cancellationToken = default);
 
     /// <summary>Gets all current, non-deleted nodes (merged ctrl + cfg).</summary>
     /// <param name="cancellationToken">The cancellation token.</param>

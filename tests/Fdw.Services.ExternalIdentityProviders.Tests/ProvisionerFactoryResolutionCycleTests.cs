@@ -8,6 +8,8 @@ using Microsoft.Extensions.Logging;
 using Shouldly;
 using Xunit;
 
+using Fdw.Configuration;
+
 namespace Fdw.Services.ExternalIdentityProviders.Tests;
 
 /// <summary>
@@ -35,7 +37,7 @@ public sealed class ProvisionerFactoryResolutionCycleTests
 {
     // Why: the exact provider service type whose realization the factory must NOT re-enter.
     private static readonly Type ProviderServiceType =
-        typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>);
+        typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>);
 
     [Fact]
     [Trait("Priority", "P0")]
@@ -83,26 +85,6 @@ public sealed class ProvisionerFactoryResolutionCycleTests
             + "Create(configuration, provisionerProvider). Holding a provider (even as Lazy<T>) keeps the "
             + "deviation alive instead of removing it. Offending parameters: "
             + string.Join(", ", nonLoggerParameters));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void ProvisionerFactoryContractExposesProviderSuppliedCreate()
-    {
-        // Arrange
-        var factoryInterface = typeof(IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>);
-
-        // Act
-        var providerSuppliedCreate = factoryInterface.GetMethods()
-            .SingleOrDefault(m => m.Name == "Create"
-                                  && m.GetParameters().Length == 2
-                                  && m.GetParameters()[1].ParameterType == ProviderServiceType);
-
-        // Assert
-        providerSuppliedCreate.ShouldNotBeNull(
-            "the factory contract must expose Create(configuration, provisionerProvider) so the provider "
-            + "can hand over the already-resolved provider instead of the factory resolving it.");
     }
 
     // Why: generalises the guard to the whole assembly so a NEW option cannot reintroduce the same

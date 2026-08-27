@@ -16,7 +16,7 @@ public interface INotificationFactory
 /// <typeparam name="TNotification">The type of notification service this factory creates.</typeparam>
 /// <typeparam name="TConfiguration">The type of configuration this factory requires.</typeparam>
 public interface INotificationFactory<TNotification, TConfiguration> : INotificationFactory, IServiceFactory<TNotification, TConfiguration>
-    where TNotification : IGenericNotification
+    where TNotification : IPlatformNotification
     where TConfiguration : IGenericConfiguration
 {
 }

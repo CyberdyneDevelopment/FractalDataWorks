@@ -53,8 +53,8 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
             builder.Services.TryAddSingleton<EscalationConfigurationProvider>(sp =>
                 new EscalationConfigurationProvider(
                     sp.GetService<ILogger<EscalationConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-            builder.Services.TryAddSingleton<DefaultConfigurationProvider<EscalationPolicyConfiguration, EscalationPolicyConfigurationCommand>>(
+                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<EscalationPolicyConfiguration, EscalationPolicyConfigurationCommand>>(
                 sp => sp.GetRequiredService<EscalationConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<EscalationPolicyConfiguration>>(
                 sp => sp.GetRequiredService<EscalationConfigurationProvider>());
@@ -62,12 +62,12 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
             builder.Services.TryAddScoped<IExecutionTracker>(sp =>
             {
                 var lf = sp.GetRequiredService<ILoggerFactory>();
-                var gateway = sp.GetRequiredService<IDataGateway>();
+                var gatewayProvider = sp.GetRequiredService<IDataGateway>();
                 // Why: GetService (not GetRequired) — notification providers are optional; callers
                 // that don't wire notifications (e.g. reference-etl, reference-scheduler) still boot.
-                var notificationProvider = sp.GetService<IPlatformServiceProvider<IGenericNotification, NotificationConfiguration>>();
+                var notificationProvider = sp.GetService<INotificationServiceProvider>();
                 var ruleProvider = sp.GetService<IServiceConfigurationProvider<NotificationRuleConfiguration>>();
-                return new ExecutionTrackingService(gateway, lf, "OpsDb", notificationProvider, ruleProvider);
+                return new ExecutionTrackingService(gatewayProvider, lf, "OpsDb", notificationProvider, ruleProvider);
             });
 
             builder.Services.TryAddScoped<IEscalationService>(sp =>

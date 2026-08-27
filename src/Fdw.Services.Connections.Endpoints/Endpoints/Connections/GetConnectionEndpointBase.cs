@@ -43,12 +43,12 @@ public abstract class GetConnectionEndpointBase : CrudGetEndpointBase<Connection
     protected override async Task<IGenericResult<ConnectionDetailDto?>> FindByIdentifier(ConnectionNameRequest request, CancellationToken ct)
     {
         // Accept either Guid (connection Id) or string name as identifier.
-        var parentResult = Guid.TryParse(request.Name, out var id)
+        var domainResult = Guid.TryParse(request.Name, out var id)
             ? await _configProvider.Get(id, ct).ConfigureAwait(false)
             : await _configProvider.Get(request.Name, ct).ConfigureAwait(false);
-        if (!parentResult.IsSuccess) return parentResult.ToNewResult<ConnectionDetailDto?>();
+        if (!domainResult.IsSuccess) return domainResult.ToNewResult<ConnectionDetailDto?>();
 
-        var parent = parentResult.Value;
+        var parent = domainResult.Value;
         if (parent is null) return GenericResult<ConnectionDetailDto?>.Success(null);
 
         // Why: parent.Configuration is the typed body already loaded by PopulateTypedBody for this
@@ -62,5 +62,5 @@ public abstract class GetConnectionEndpointBase : CrudGetEndpointBase<Connection
     /// dispatch the type-specific projection on <see cref="ConnectionConfiguration.ServiceOptionType"/>.
     /// The body may be null if the typed row does not exist yet (header-only render).
     /// </summary>
-    protected abstract ConnectionDetailDto MapToDetail(ConnectionConfiguration connection, IConnectionConfiguration? body);
+    protected abstract ConnectionDetailDto MapToDetail(ConnectionConfiguration connection, IConnectionImplementationConfiguration? body);
 }

@@ -55,19 +55,21 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
     /// <summary>Override to add Tags or other endpoint configuration.</summary>
     protected virtual void ConfigureEndpoint() { }
 
-    private (ISecretManagerConfiguration? Body, string? Error) BuildTypedBody(
-        CreateSecretManagerRequest req, Guid parentId)
+    private static (ISecretManagerImplementationConfiguration? Body, string? Error) BuildTypedBody(
+        CreateSecretManagerRequest req, Guid domainConfigurationId)
     {
-        // Why: discriminator must resolve to a registered typed-body type — otherwise the
-        // caller asked for an SM kind the server doesn't know how to persist.
-        var typedType = _configProvider.GetTypedConfigType(req.SecretManagerType);
-        if (typedType is null)
+        // Why the collection and not a registry of its own: the option already declares the
+        // configuration type it binds, so asking the option is asking the one thing that knows.
+        var option = SecretManagerTypes.ByName(req.SecretManagerType);
+        if (option is null)
             return (null, $"Unknown SecretManagerType: '{req.SecretManagerType}'");
 
-        ISecretManagerConfiguration? typedBody;
+        var typedType = option.ConfigurationType;
+
+        ISecretManagerImplementationConfiguration? typedBody;
         try
         {
-            typedBody = (ISecretManagerConfiguration?)req.Configuration!.Value.Deserialize(typedType, JsonOptions);
+            typedBody = (ISecretManagerImplementationConfiguration?)req.Configuration!.Value.Deserialize(typedType, JsonOptions);
         }
         catch (JsonException jex)
         {
@@ -78,9 +80,9 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
 
         if (typedBody.Id == Guid.Empty)
             typedBody.Id = Guid.CreateVersion7();
-        // Why: SecretManagerId is declared on ISecretManagerConfiguration — set the FK directly,
+        // Why: SecretManagerId is declared on ISecretManagerImplementationConfiguration — set the FK directly,
         // no reflection. (typedType is still needed above for JSON deserialize-by-type.)
-        typedBody.SecretManagerId = parentId;
+        typedBody.SecretManagerId = domainConfigurationId;
 
         return (typedBody, null);
     }
@@ -117,8 +119,8 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
                 return;
             }
 
-            var parentId = Guid.NewGuid();
-            var bodyResult = BuildTypedBody(req, parentId);
+            var domainConfigurationId = Guid.NewGuid();
+            var bodyResult = BuildTypedBody(req, domainConfigurationId);
             if (bodyResult.Error is not null)
             {
                 AddError(bodyResult.Error);
@@ -128,7 +130,7 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
 
             var config = new SecretManagerConfiguration
             {
-                Id = parentId,
+                Id = domainConfigurationId,
                 Name = req.Name,
                 ServiceOptionType = req.SecretManagerType,
                 Description = req.Description,

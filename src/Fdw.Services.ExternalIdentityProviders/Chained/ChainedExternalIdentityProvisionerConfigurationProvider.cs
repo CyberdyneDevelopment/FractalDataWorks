@@ -4,11 +4,13 @@ using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Services.ExternalIdentityProviders.Abstractions;
+
 namespace Fdw.Services.ExternalIdentityProviders.Chained;
 
 /// <summary>
 /// Typed-body configuration provider for <c>sec.ChainedExternalIdentityProvisioner</c> rows.
-/// Extends <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> — all reads go to the gateway
+/// Extends <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> — all reads go to the gatewayProvider
 /// against ConfigurationDb.
 ///
 /// <c>Get(Guid id)</c> accepts the parent <c>sec.ExternalIdentityProvisioner.Id</c> (the durable
@@ -20,7 +22,10 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// Mirrors <c>OidcExternalIdentityProviderConfigurationProvider</c> from the ExternalIdentityProviders domain.
 /// </remarks>
 public class ChainedExternalIdentityProvisionerConfigurationProvider
-    : DefaultConfigurationProvider<ChainedExternalIdentityProvisionerConfiguration, ChainedExternalIdentityProvisionerConfigurationCommand>
+    : ImplementationConfigurationProvider<
+          IExternalIdentityProvisionerImplementationConfiguration,
+          ChainedExternalIdentityProvisionerConfiguration,
+          ChainedExternalIdentityProvisionerConfigurationCommand>
 {
     /// <summary>
     /// Initializes a new instance of the
@@ -28,11 +33,11 @@ public class ChainedExternalIdentityProvisionerConfigurationProvider
     /// </summary>
     public ChainedExternalIdentityProvisionerConfigurationProvider(
         ILogger<ChainedExternalIdentityProvisionerConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sec")
         : base(logger ?? NullLogger<ChainedExternalIdentityProvisionerConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

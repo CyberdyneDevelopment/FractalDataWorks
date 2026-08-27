@@ -14,7 +14,7 @@ namespace Fdw.Services.Quality.Configuration;
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Quality",
     ServiceType = "Rule")]
-// Why: IGenericConfiguration is required by DefaultConfigurationProvider<T>
+// Why: IGenericConfiguration is required by ImplementationConfigurationProviderBase<T>
 // for dual-source (ctrl+cfg) provider pattern.
 public sealed partial class QualityRuleConfiguration : IGenericConfiguration
 {

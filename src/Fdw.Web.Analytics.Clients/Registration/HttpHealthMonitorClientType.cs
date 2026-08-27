@@ -56,7 +56,7 @@ public sealed class HttpHealthMonitorClientType
 
         Registration((builder, loggerFactory) =>
         {
-            DefaultHealthMonitorProvider.Register(Name, sp => sp.GetRequiredService<HttpHealthMonitorFactory>());
+            HealthMonitorProvider.Register(Name, sp => sp.GetRequiredService<HttpHealthMonitorFactory>());
 
             // Why this line exists at all: the call above writes into a STATIC registry that nothing
             // else narrates. Until the provider drains it — much later, in another scope — a

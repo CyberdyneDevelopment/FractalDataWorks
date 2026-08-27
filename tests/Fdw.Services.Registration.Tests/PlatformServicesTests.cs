@@ -32,19 +32,18 @@ public sealed class PlatformServicesTests : IDisposable
         public ServiceTypeCollectionDescriptor Descriptor(string category, Type collectionType) => new(
             category,
             collectionType,
-            (builder, _, _) => { ConfigureCalls++; return GenericResult<IHostApplicationBuilder>.Success(builder); },
-            (builder, _, _) => { RegisterCalls++; return GenericResult<IHostApplicationBuilder>.Success(builder); },
-            (host, _, _) => { InitializeCalls++; return GenericResult<IHost>.Success(host); });
+            (builder, _, _, _) => { ConfigureCalls++; return GenericResult<IHostApplicationBuilder>.Success(builder); },
+            (builder, _, _, _) => { RegisterCalls++; return GenericResult<IHostApplicationBuilder>.Success(builder); },
+            (host, _, _, _) => { InitializeCalls++; return GenericResult<IHost>.Success(host); });
     }
 
     [Fact]
     public void AddReturnsNewEntry()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
 
         entry.CategoryName.ShouldBe("Widget");
-        entry.Group.ShouldBe(0);
         entry.Initialized.ShouldBeFalse();
     }
 
@@ -52,8 +51,8 @@ public sealed class PlatformServicesTests : IDisposable
     public void AddWithSameCategoryAndSameCollectionTypeIsIdempotent()
     {
         var counter = new CallCounter();
-        var first = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
-        var second = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var first = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
+        var second = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
 
         second.ShouldBeSameAs(first);
     }
@@ -62,70 +61,78 @@ public sealed class PlatformServicesTests : IDisposable
     public void AddWithSameCategoryButDifferentCollectionTypeThrows()
     {
         var counter = new CallCounter();
-        PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
 
         Should.Throw<InvalidOperationException>(() =>
-            PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(int)), 0));
+            PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(int))));
     }
 
     [Fact]
     public void AddAfterFreezeThrows()
     {
         var counter = new CallCounter();
-        PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
         PlatformServices.Entries(); // triggers freeze
 
         Should.Throw<InvalidOperationException>(() =>
-            PlatformServices.Add("Gadget", counter.Descriptor("Gadget", typeof(int)), 0));
+            PlatformServices.Add("Gadget", counter.Descriptor("Gadget", typeof(int))));
     }
 
     [Fact]
-    public void AddOrdersEntriesByGroupAscendingRegardlessOfInsertionOrder()
+    public void EntriesKeepRegistrationOrderAndDoNotReorderThemselves()
     {
-        // Why: Group is now generator-emitted straight from [ServiceTypeCollection(Group = n)] — each
-        // domain declares its own layer via the Add(..., group) argument; there is no SetGroup override.
+        // Why this is asserted rather than left implicit: there is no sort any more, so the ONLY thing
+        // a caller can rely on is the order things registered in. A host that needs a different order
+        // states it by running a domain early or deferring it — not by expecting the collect to know.
         var counter = new CallCounter();
-        PlatformServices.Add("Second", counter.Descriptor("Second", typeof(string)), 1);
-        PlatformServices.Add("First", counter.Descriptor("First", typeof(int)), 0);
+        PlatformServices.Add("Second", counter.Descriptor("Second", typeof(string)));
+        PlatformServices.Add("First", counter.Descriptor("First", typeof(int)));
 
         var entries = PlatformServices.Entries();
-        entries[0].CategoryName.ShouldBe("First");
-        entries[1].CategoryName.ShouldBe("Second");
+        entries[0].CategoryName.ShouldBe("Second");
+        entries[1].CategoryName.ShouldBe("First");
     }
 
     [Fact]
-    public void AddWithManualTrueExcludesDomainFromSweepsButKeepsEntryDotWalkDrivable()
+    public void DeferExcludesDomainFromSweepsButKeepsEntryDotWalkDrivable()
     {
         var swept = new CallCounter();
-        var declaredManual = new CallCounter();
-        PlatformServices.Add("Swept", swept.Descriptor("Swept", typeof(string)), 0);
-        var manualEntry = PlatformServices.Add("Declared", declaredManual.Descriptor("Declared", typeof(int)), 0, manual: true);
+        var deferred = new CallCounter();
+        PlatformServices.Add("Swept", swept.Descriptor("Swept", typeof(string)));
+        var deferredEntry = PlatformServices.Add("Declared", deferred.Descriptor("Declared", typeof(int)));
 
-        // The Manual indicator is visible on the entry so a host can see the domain is handled out-of-band.
-        manualEntry.Manual.ShouldBeTrue();
+        // Claiming the phase without running it: nothing has executed yet.
+        deferredEntry.Register(Host.CreateApplicationBuilder(), defer: true);
+        deferredEntry.Initialize(Host.CreateApplicationBuilder().Build(), defer: true);
+        deferred.RegisterCalls.ShouldBe(0);
+        deferred.InitializeCalls.ShouldBe(0);
 
         var builder = Host.CreateApplicationBuilder();
 
         PlatformServices.Register(builder);
         PlatformServices.Initialize(builder.Build());
 
-        // The swept domain runs in the sweep; the Manual domain is skipped by it.
+        // The swept domain runs in the sweep; the deferred domain is skipped by it.
         swept.RegisterCalls.ShouldBe(1);
         swept.InitializeCalls.ShouldBe(1);
-        declaredManual.RegisterCalls.ShouldBe(0);
-        declaredManual.InitializeCalls.ShouldBe(0);
+        deferred.RegisterCalls.ShouldBe(0);
+        deferred.InitializeCalls.ShouldBe(0);
 
-        // But the Manual domain's entry stays dot-walkable and fully drivable by the host — the sweep
-        // did not touch it, so this is the first (and only) time its Register runs.
-        manualEntry.Register(Host.CreateApplicationBuilder());
-        declaredManual.RegisterCalls.ShouldBe(1);
+        // A deferred phase RUNS on the next explicit call — this is what distinguishes it from a phase
+        // that has already run, which the sweep skips identically but an explicit call no-ops.
+        deferredEntry.Register(Host.CreateApplicationBuilder());
+        deferred.RegisterCalls.ShouldBe(1);
+
+        // And it is now Ran, so a further call does nothing.
+        deferredEntry.Register(Host.CreateApplicationBuilder());
+        deferred.RegisterCalls.ShouldBe(1);
     }
 
     [Fact]
     public void EntryConfigureIsIdempotent()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
 
         entry.Configure(EmptyHostApplicationBuilder());
         entry.Configure(EmptyHostApplicationBuilder());
@@ -141,7 +148,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void ConfigureSweepSkipsAlreadyManuallyConfiguredEntry()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
 
         entry.Configure(EmptyHostApplicationBuilder());
         PlatformServices.Configure(EmptyHostApplicationBuilder());
@@ -153,7 +160,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void EntryInitializeIsIdempotent()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
 
         entry.Initialize(EmptyHost());
         entry.Initialize(EmptyHost());
@@ -166,7 +173,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void EntryRegisterIsIdempotent()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
 
         entry.Register(Host.CreateApplicationBuilder());
         entry.Register(Host.CreateApplicationBuilder());
@@ -179,7 +186,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void RegisterSweepSkipsAlreadyManuallyRegisteredEntry()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
 
         // Manual, dot-walked register (mirrors PlatformServices.Widget?.Register(...) usage).
         entry.Register(Host.CreateApplicationBuilder());
@@ -195,7 +202,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void InitializeSkipsAlreadyManuallyInitializedEntry()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
 
         // Manual, dot-walked initialize (mirrors PlatformServices.Widget?.Initialize(...) usage).
         entry.Initialize(EmptyHost());
@@ -212,8 +219,8 @@ public sealed class PlatformServicesTests : IDisposable
     {
         var counterA = new CallCounter();
         var counterB = new CallCounter();
-        PlatformServices.Add("B", counterB.Descriptor("B", typeof(string)), 1);
-        PlatformServices.Add("A", counterA.Descriptor("A", typeof(int)), 0);
+        PlatformServices.Add("B", counterB.Descriptor("B", typeof(string)));
+        PlatformServices.Add("A", counterA.Descriptor("A", typeof(int)));
 
         PlatformServices.Initialize(EmptyHost());
 
@@ -225,7 +232,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void ConfigureAndRegisterInvokeEveryEntry()
     {
         var counter = new CallCounter();
-        PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
 
         PlatformServices.Configure(EmptyHostApplicationBuilder());
         PlatformServices.Register(Host.CreateApplicationBuilder());
@@ -240,7 +247,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void RegistrationReplacesDescriptorRegisterDelegate()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
         var replacementRan = 0;
         entry.Registration((builder, _) => { replacementRan++; return GenericResult<IHostApplicationBuilder>.Success(builder); });
 
@@ -255,7 +262,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void InitializationReplacesDescriptorInitializeDelegate()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
         var replacementRan = 0;
         entry.Initialization((host, _) => { replacementRan++; return GenericResult<IHost>.Success(host); });
 
@@ -270,7 +277,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void ConfigurationReplacesDescriptorConfigureDelegate()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
         var replacementRan = 0;
         entry.Configuration((builder, _) => { replacementRan++; return GenericResult<IHostApplicationBuilder>.Success(builder); });
 
@@ -284,7 +291,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void WithoutAReplacementTheDescriptorDefaultRunsVerbatim()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
 
         entry.Configure(EmptyHostApplicationBuilder());
         entry.Register(Host.CreateApplicationBuilder());
@@ -299,7 +306,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void RegistrationAfterRegisterHasRunThrows()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
         entry.Register(Host.CreateApplicationBuilder());
 
         Should.Throw<InvalidOperationException>(() => entry.Registration((builder, _) => GenericResult<IHostApplicationBuilder>.Success(builder)));
@@ -309,7 +316,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void InitializationAfterInitializeHasRunThrows()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
         entry.Initialize(EmptyHost());
 
         Should.Throw<InvalidOperationException>(() => entry.Initialization((host, _) => GenericResult<IHost>.Success(host)));
@@ -319,7 +326,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void ConfigurationAfterConfigureHasRunThrows()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
         entry.Configure(EmptyHostApplicationBuilder());
 
         Should.Throw<InvalidOperationException>(() => entry.Configuration((b, _) => GenericResult<IHostApplicationBuilder>.Success(b)));
@@ -329,7 +336,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void RegisterSweepUsesTheSelectedReplacement()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
         var replacementRan = 0;
         entry.Registration((builder, _) => { replacementRan++; return GenericResult<IHostApplicationBuilder>.Success(builder); });
 
@@ -347,7 +354,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void ConfigureSweepUsesTheSelectedReplacement()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
         var replacementRan = 0;
         entry.Configuration((builder, _) => { replacementRan++; return GenericResult<IHostApplicationBuilder>.Success(builder); });
 
@@ -361,7 +368,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void InitializeSweepUsesTheSelectedReplacement()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
         var replacementRan = 0;
         entry.Initialization((host, _) => { replacementRan++; return GenericResult<IHost>.Success(host); });
 
@@ -375,7 +382,7 @@ public sealed class PlatformServicesTests : IDisposable
     public void ReplacementReturnsSameEntryForFluentChaining()
     {
         var counter = new CallCounter();
-        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)), 0);
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
 
         entry.Registration((builder, _) => GenericResult<IHostApplicationBuilder>.Success(builder)).ShouldBeSameAs(entry);
     }

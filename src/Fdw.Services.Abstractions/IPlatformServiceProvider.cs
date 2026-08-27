@@ -48,12 +48,6 @@ public interface IPlatformServiceProvider<TService> : IPlatformServiceProvider
     /// structured failure, never a fallback.
     /// </summary>
     Task<IGenericResult<TService>> Get(IGenericConfiguration configuration, CancellationToken cancellationToken = default);
-
-    /// <summary>Evicts a cached service instance by name so the next Get() recreates it.</summary>
-    void Evict(string name);
-
-    /// <summary>Evicts a cached service instance by ID so the next Get() recreates it.</summary>
-    void Evict(Guid id);
 }
 
 /// <summary>
@@ -64,7 +58,7 @@ public interface IPlatformServiceProvider<TService> : IPlatformServiceProvider
 /// <typeparam name="TConfiguration">The configuration type for this service domain.</typeparam>
 public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformServiceProvider<TService>
     where TService : IGenericService
-    where TConfiguration : class, IGenericConfiguration
+    where TConfiguration : IImplementationConfiguration
 {
     /// <summary>
     /// Gets a service instance built from the supplied strongly-typed configuration.
@@ -77,25 +71,14 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
     /// Registers a factory for a service option type.
     /// </summary>
     IGenericResult Register(string serviceOptionType, IServiceFactory<TService> factory);
-
-    /// <summary>
-    /// Registers a configuration provider for a service option type.
-    /// </summary>
-    // Why exact-typed only: this serves domains whose child config type IS the domain's configuration
-    // type (Scheduling, ExternalIdentityProviders). The widening overload that used to sit beside it —
-    // Register{TDerived} for a SUBTYPE — existed solely to bridge the invariant
-    // IServiceConfigurationProvider{T} via a forwarding adapter, and a typed body belongs on the
-    // domain's HEADER provider by discriminator, not here.
-    IGenericResult Register(string serviceOptionType, IServiceConfigurationProvider<TConfiguration> configurationProvider);
-
     /// <summary>
     /// Registers a parent configuration provider for direct name-to-type resolution.
     /// The parent provider holds ALL configurations across all service option types,
     /// enabling O(1) lookup by name to determine which factory to use via
     /// <see cref="IGenericConfiguration.ServiceOptionType"/>.
     /// </summary>
-    /// <param name="parentProvider">The parent configuration provider.</param>
-    IGenericResult Register(IServiceConfigurationProvider<TConfiguration> parentProvider);
+    /// <param name="domainConfigurationProvider">The parent configuration provider.</param>
+    IGenericResult Register(IDomainConfigurationProvider<TConfiguration> domainConfigurationProvider);
 
 }
 
@@ -109,8 +92,8 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
 public interface IPlatformServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
     : IPlatformServiceProvider<TService, TConfiguration>
     where TService : IGenericService
-    where TConfiguration : class, IGenericConfiguration
+    where TConfiguration : IImplementationConfiguration
     where TFactory : IServiceFactory<TService>
-    where TConfigurationProvider : IServiceConfigurationProvider<TConfiguration>
+    where TConfigurationProvider : IDomainConfigurationProvider<TConfiguration>
 {
 }

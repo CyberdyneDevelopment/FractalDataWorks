@@ -16,8 +16,7 @@ namespace Fdw.Services.Users;
     typeof(IUserServiceType),
     typeof(UserServiceTypes),
     ServiceCategory = "User",
-    RestrictToCurrentCompilation = true,
-    Group = 6)]
+    RestrictToCurrentCompilation = true)]
 public partial class UserServiceTypes : ServiceTypeCollectionBase<UserServiceTypeBase, IUserServiceType>
 {
 }

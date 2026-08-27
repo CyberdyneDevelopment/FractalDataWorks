@@ -82,7 +82,7 @@ public sealed class AegisTestFixture : IAsyncLifetime
 
         Host = builder.Build();
 
-        AegisHostRegistration.Initialize(Host, schema, loggerFactory: null);
+        AegisHostRegistration.Initialize(Host, loggerFactory: null);
     }
 
     /// <inheritdoc />

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
+using Fdw.Services.Scheduling.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Scheduling.Commands;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,18 +20,35 @@ namespace Fdw.Services.Scheduling;
 // Why: SchedulerConfiguration is loaded from ConfigurationDb at runtime via Lazy<IConfigurationGateway>,
 // not through BindConfiguration("Schedulers:..."). The empty IOptionsMonitor passed to the base class
 // means the provider's gateway-backed query path is the only source.
-public class SchedulerConfigurationProvider : DefaultConfigurationProvider<SchedulerConfiguration, SchedulerConfigurationCommand>
+public class SchedulerConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          SchedulerConfiguration,
+          ISchedulerImplementationConfiguration,
+          SchedulerConfigurationCommand>,
+      ISchedulerConfigurationProvider
 {
 
     /// <summary>Initializes a new instance of the <see cref="SchedulerConfigurationProvider"/> class.</summary>
     public SchedulerConfigurationProvider(
         ILogger<SchedulerConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sched")
         : base(logger ?? NullLogger<SchedulerConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }
+
+    /// <inheritdoc />
+    protected override SchedulerConfiguration Compose<T>(
+        string serviceOptionType,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            ServiceOptionType = serviceOptionType,
+            Configuration = implementationConfiguration,
+        };
 }

@@ -59,7 +59,7 @@ public abstract class ListQualityRulesEndpointBase : Endpoint<DataSetQueryReques
 
         IEnumerable<QualityRuleConfiguration> rules = result.Value ?? [];
 
-        // Why: Apply optional DataSet name filter here — DefaultConfigurationProvider has no
+        // Why: Apply optional DataSet name filter here — ImplementationConfigurationProviderBase has no
         // per-field filter overload. Quality rule counts per DataSet are small enough that
         // in-memory filtering is acceptable.
         if (!string.IsNullOrWhiteSpace(req.DataSetName))

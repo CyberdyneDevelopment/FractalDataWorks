@@ -12,6 +12,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Services.ExternalIdentityProviders.Abstractions;
+
 namespace Fdw.Services.ExternalIdentityProviders.Binding;
 
 /// <summary>
@@ -21,7 +23,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Binding;
 /// <c>OpenIdTokenManager</c>) use to pick a named provisioner for a (tenant, external provider) pair.
 /// </summary>
 public class ExternalIdentityProvisionerBindingConfigurationProvider
-    : DefaultConfigurationProvider<ExternalIdentityProvisionerBindingConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>
+    : ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>
 {
     private readonly ILogger _logger;
 
@@ -35,9 +37,9 @@ public class ExternalIdentityProvisionerBindingConfigurationProvider
         services.TryAddSingleton<ExternalIdentityProvisionerBindingConfigurationProvider>(sp =>
             new ExternalIdentityProvisionerBindingConfigurationProvider(
                 sp.GetService<ILogger<ExternalIdentityProvisionerBindingConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
+                sp.GetRequiredService<IConfigurationGatewayProvider>()));
 
-        services.TryAddSingleton<DefaultConfigurationProvider<ExternalIdentityProvisionerBindingConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>>(
             sp => sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
 
         services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProvisionerBindingConfiguration>>(sp =>
@@ -47,11 +49,11 @@ public class ExternalIdentityProvisionerBindingConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="ExternalIdentityProvisionerBindingConfigurationProvider"/> class.</summary>
     public ExternalIdentityProvisionerBindingConfigurationProvider(
         ILogger<ExternalIdentityProvisionerBindingConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sec")
         : base(logger ?? NullLogger<ExternalIdentityProvisionerBindingConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
         // Why: the base class's own ILogger field is private — this provider's extra

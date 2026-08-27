@@ -262,7 +262,7 @@ public abstract class ComponentTypeCollectionBase<TBase> : TypeCollectionBase<TB
     }
 
     /// <inheritdoc />
-    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
         // Why the flag is set here rather than after the work: a phase that failed halfway
         // has already registered whatever came before the failure, and re-entering would do
@@ -299,7 +299,8 @@ public abstract class ComponentTypeCollectionBase<TBase> : TypeCollectionBase<TB
     public IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory = null,
-        bool force = false)
+        bool force = false,
+        bool defer = false)
     {
         // Why the flag is set here rather than after the work: a phase that failed halfway
         // has already registered whatever came before the failure, and re-entering would do
@@ -333,7 +334,7 @@ public abstract class ComponentTypeCollectionBase<TBase> : TypeCollectionBase<TB
     }
 
     /// <inheritdoc />
-    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
+    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
         // Why the flag is set here rather than after the work: a phase that failed halfway
         // has already registered whatever came before the failure, and re-entering would do

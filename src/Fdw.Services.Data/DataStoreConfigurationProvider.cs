@@ -26,22 +26,21 @@ namespace Fdw.Services.Data;
 /// The polymorphic typed-body read (dispatch on <see cref="DataStoreConfiguration.ServiceOptionType"/> to
 /// load the typed body row, e.g. <c>data.MsSqlDataStore</c>, and attach it to
 /// <see cref="DataStoreConfiguration.Configuration"/>) is composed uniformly by
-/// <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>; typed providers are registered via the
-/// inherited <c>Register</c>. Unlike most domains, a missing typed provider is not a defect
-/// here — see <see cref="OnNoTypedProvider"/> for the body-less-store rule.
+/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>; typed providers are registered via the
+/// inherited <c>Register</c>.
 /// </summary>
 /// <remarks>
 /// The hierarchy assembly that previously lived here (<c>AssembleHierarchy</c>) was removed
 /// in Phase 6.M — it caused the ConfigurationGateway/DataStoreLoader cycle by making
-/// gateway round-trips for every DataStore lookup. The IDataStore tree is now assembled
+/// gatewayProvider round-trips for every DataStore lookup. The IDataStore tree is now assembled
 /// in memory by the per-transport <c>DataStoreBuilderBase</c> from the nested store configuration
 /// (the same builder mechanism ConfigurationGateway and ConfigurationGatewayDataStoreProvider.Load feed).
 /// </remarks>
-public class DataStoreConfigurationProvider : DefaultConfigurationProvider<DataStoreConfiguration, DataStoreConfigurationCommand>
+public class DataStoreConfigurationProvider : ImplementationConfigurationProviderBase<DataStoreConfiguration, DataStoreConfigurationCommand>
 {
     // Why: Lazy to avoid DI resolution-order cycle — the container provider is registered AFTER
     // DataStoreConfigurationProvider in RegisterDomainConfiguration, so eager resolution would fail.
-    private readonly Lazy<DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>> _containerProvider;
+    private readonly Lazy<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>> _containerProvider;
 
     private readonly ILogger<DataStoreConfigurationProvider> _logger;
 
@@ -51,7 +50,7 @@ public class DataStoreConfigurationProvider : DefaultConfigurationProvider<DataS
     /// </summary>
     public static void RegisterDomainConfiguration(IServiceCollection services)
     {
-        // Why literal: the child-type providers below are plain DefaultConfigurationProvider<,>
+        // Why literal: the child-type providers below are plain ImplementationConfigurationProviderBase<,>
         // instances (not domain-specific subclasses), so there is no per-domain constructor default
         // to fall back on — this is the domain's own default location.
         const string dataStoreName = "ConfigurationDb";
@@ -60,35 +59,35 @@ public class DataStoreConfigurationProvider : DefaultConfigurationProvider<DataS
         services.TryAddSingleton<DataStoreConfigurationProvider>(sp =>
             new DataStoreConfigurationProvider(
                 sp.GetService<ILogger<DataStoreConfigurationProvider>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
-                new Lazy<DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>>(
-                    () => sp.GetRequiredService<DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>>())));
-        services.TryAddSingleton<DefaultConfigurationProvider<DataStoreConfiguration, DataStoreConfigurationCommand>>(
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                new Lazy<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>(
+                    () => sp.GetRequiredService<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>())));
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<DataStoreConfiguration, DataStoreConfigurationCommand>>(
             sp => sp.GetRequiredService<DataStoreConfigurationProvider>());
         services.TryAddSingleton<IServiceConfigurationProvider<DataStoreConfiguration>>(
             sp => sp.GetRequiredService<DataStoreConfigurationProvider>());
 
         // Why: Child types (DataPath/DataContainer/DataContainerField) need their own providers so
         // SchemaInformationService and MsSqlSchemaImportPersister can Save discovered schema.
-        services.TryAddSingleton<DefaultConfigurationProvider<DataPathConfiguration, DataPathConfigurationCommand>>(sp =>
-            new DefaultConfigurationProvider<DataPathConfiguration, DataPathConfigurationCommand>(
-                sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<DataPathConfiguration, DataPathConfigurationCommand>>()
-                    ?? NullLogger<DefaultConfigurationProvider<DataPathConfiguration, DataPathConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand>>(sp =>
+            new ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand>(
+                sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand>>()
+                    ?? NullLogger<ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand>>.Instance,
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 dataStoreName, pathName));
 
-        services.TryAddSingleton<DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>>(sp =>
-            new DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>(
-                sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>>()
-                    ?? NullLogger<DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>(sp =>
+            new ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>(
+                sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>()
+                    ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>.Instance,
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 dataStoreName, pathName));
 
-        services.TryAddSingleton<DefaultConfigurationProvider<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>>(sp =>
-            new DefaultConfigurationProvider<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>(
-                sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>>()
-                    ?? NullLogger<DefaultConfigurationProvider<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>>(sp =>
+            new ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>(
+                sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>>()
+                    ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>>.Instance,
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 dataStoreName, pathName));
 
         RegisterContainerKeyProviders(services, dataStoreName, pathName);
@@ -97,30 +96,30 @@ public class DataStoreConfigurationProvider : DefaultConfigurationProvider<DataS
         // data.DataPath using a physical FK (DataPathRowId → DataPath.RowId). Registering their
         // providers here makes them available for cascade load in FileSystemDataStoreConfigProvider
         // without the FileSystem package taking a dependency on IConfigurationGateway directly.
-        services.TryAddSingleton<DefaultConfigurationProvider<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>>(sp =>
-            new DefaultConfigurationProvider<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>(
-                sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>>()
-                    ?? NullLogger<DefaultConfigurationProvider<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>>(sp =>
+            new ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>(
+                sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>>()
+                    ?? NullLogger<ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>>.Instance,
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 dataStoreName, pathName));
 
-        services.TryAddSingleton<DefaultConfigurationProvider<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>>(sp =>
-            new DefaultConfigurationProvider<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>(
-                sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>>()
-                    ?? NullLogger<DefaultConfigurationProvider<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>>(sp =>
+            new ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>(
+                sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>>()
+                    ?? NullLogger<ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>>.Instance,
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 dataStoreName, pathName));
     }
 
     /// <summary>Initializes a new instance of the <see cref="DataStoreConfigurationProvider"/> class.</summary>
     public DataStoreConfigurationProvider(
         ILogger<DataStoreConfigurationProvider>? logger,
-        Lazy<IConfigurationGateway> lazyGateway,
-        Lazy<DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand>> containerProvider,
+        IConfigurationGatewayProvider gatewayProvider,
+        Lazy<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>> containerProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "data")
         : base(logger ?? NullLogger<DataStoreConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<DataStoreConfigurationProvider>.Instance;
@@ -176,22 +175,6 @@ public class DataStoreConfigurationProvider : DefaultConfigurationProvider<DataS
         DataStoreConfigurationProviderLog.ContainerAdded(_logger, container.Name, pathName, storeName);
         return GenericResult<DataContainerConfiguration>.Success(container);
     }
-
-    /// <inheritdoc />
-    // Why: a DataStore's ServiceOptionType is its CONNECTION's transport (MsSql, FileSystem, Http,
-    // PostgreSql, ...), set at create time. Only transports with extra typed-body columns (MsSql,
-    // FileSystem) register a typed provider in their DataStoreType.RegisterFactory; transports with NO
-    // datastore-specific columns (Http, and the body-less Rest/Soap/File) carry the full configuration
-    // on the header row itself. So "no typed provider registered" reliably means "body-less store" —
-    // return the header as the complete config rather than failing loud (the base default). A genuinely
-    // typed store cannot reach here because it always registers its provider before reads occur. This is
-    // a well-defined domain rule (overriding the base fail-loud), NOT a value fallback.
-    protected override IGenericResult<DataStoreConfiguration> OnNoTypedProvider(DataStoreConfiguration header)
-    {
-        DataStoreConfigurationProviderLog.HeaderIsTypedBody(_logger, header.Name, header.ServiceOptionType!);
-        return GenericResult<DataStoreConfiguration>.Success(header);
-    }
-
     /// <inheritdoc />
     // Why (FDW-558): the base Get(CancellationToken) returns bare header rows (by design — other
     // domains, e.g. lineage, rely on the cheap flat list). But DataStore's list DTO
@@ -246,18 +229,18 @@ public class DataStoreConfigurationProvider : DefaultConfigurationProvider<DataS
         // option that claims its type. Nothing claimed a container key, so saving a container that
         // declared one returned NoChildCommandForType and data.DataContainerKey stayed empty in
         // every database. The commands now exist; these providers make a key addressable on its own.
-        services.TryAddSingleton<DefaultConfigurationProvider<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>(sp =>
-            new DefaultConfigurationProvider<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>(
-                sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>()
-                    ?? NullLogger<DefaultConfigurationProvider<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>(sp =>
+            new ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>(
+                sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>()
+                    ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>.Instance,
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 dataStoreName, pathName));
 
-        services.TryAddSingleton<DefaultConfigurationProvider<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>(sp =>
-            new DefaultConfigurationProvider<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>(
-                sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>()
-                    ?? NullLogger<DefaultConfigurationProvider<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>(sp =>
+            new ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>(
+                sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>()
+                    ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>.Instance,
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 dataStoreName, pathName));
     }
 

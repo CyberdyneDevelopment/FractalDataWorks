@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
+using Fdw.Services.Abstractions.Health.Monitoring;
 
 namespace Fdw.Services.HealthChecks.Monitoring;
 
@@ -24,7 +25,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
     ServiceType = "HealthMonitor",
     DisplayName = "Health Monitor",
     Description = "Configuration for the health monitoring service including check intervals and retention.")]
-public sealed partial class HealthMonitorConfiguration : IGenericConfiguration
+public sealed partial class HealthMonitorConfiguration : IHealthMonitorConfiguration
 {
     /// <inheritdoc/>
     public Guid Id { get; set; }
@@ -41,18 +42,9 @@ public sealed partial class HealthMonitorConfiguration : IGenericConfiguration
     /// <inheritdoc/>
     public string? ServiceOptionType { get; set; }
 
-    /// <summary>
-    /// Gets or sets the interval between health checks in seconds.
-    /// </summary>
-    public int CheckIntervalSeconds { get; set; }
+    /// <inheritdoc/>
+    public string? Description { get; set; }
 
-    /// <summary>
-    /// Gets or sets the history retention period in minutes.
-    /// </summary>
-    public int HistoryRetentionMinutes { get; set; }
-
-    /// <summary>
-    /// Gets or sets the throughput window size in seconds.
-    /// </summary>
-    public int ThroughputWindowSeconds { get; set; }
+    /// <inheritdoc/>
+    public IHealthMonitorImplementationConfiguration? Configuration { get; set; }
 }

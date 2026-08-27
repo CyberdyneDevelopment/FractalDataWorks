@@ -7,6 +7,7 @@ using Fdw.Configuration;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.SecretManagers;
+using Fdw.Services.SecretManagers.Abstractions;
 
 namespace Fdw.Aegis.Configuration;
 
@@ -29,7 +30,9 @@ namespace Fdw.Aegis.Configuration;
 /// </para>
 /// </remarks>
 public sealed class DeclaredSecretManagerConfigurationProvider
-    : IServiceConfigurationProvider<SecretManagerConfiguration>, IServiceConfigurationProvider
+    : IServiceConfigurationProvider<SecretManagerConfiguration>,
+      IServiceConfigurationProvider,
+      ISecretManagerConfigurationProvider
 {
     private readonly IReadOnlyList<SecretManagerConfiguration> _declared;
 
@@ -88,6 +91,14 @@ public sealed class DeclaredSecretManagerConfigurationProvider
             : result.ToNewResult<IGenericConfiguration>();
     }
 
+    async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(string name, CancellationToken ct)
+    {
+        var result = await Get(name, ct).ConfigureAwait(false);
+        return result.IsSuccess && result.Value is not null
+            ? GenericResult<IGenericConfiguration>.Success(result.Value)
+            : result.ToNewResult<IGenericConfiguration>();
+    }
+
     /// <inheritdoc />
     public Task<IGenericResult<SecretManagerConfiguration>> Save(SecretManagerConfiguration record, CancellationToken ct = default)
         => Task.FromResult<IGenericResult<SecretManagerConfiguration>>(
@@ -114,4 +125,56 @@ public sealed class DeclaredSecretManagerConfigurationProvider
             GenericResult.Failure(
                 AegisResultCodes.ByName("SecretResolutionFailed"),
                 ResultDetails.Create("Operation", nameof(Delete))));
+
+    // ── IDomainConfigurationProvider ────────────────────────────────────────
+    // Why declared-only: this reads what configurationSchema.json declares, so there is nothing to
+    // route to and nothing to write. Every member fails loud rather than pretending.
+
+    /// <inheritdoc />
+    async Task<IGenericResult<ISecretManagerImplementationConfiguration>> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Get(
+        string name, CancellationToken cancellationToken)
+    {
+        var result = await Get(name, cancellationToken).ConfigureAwait(false);
+        return result.IsSuccess && result.Value?.Configuration is { } implementation
+            ? GenericResult<ISecretManagerImplementationConfiguration>.Success(implementation)
+            : result.ToNewResult<ISecretManagerImplementationConfiguration>();
+    }
+
+    /// <inheritdoc />
+    async Task<IGenericResult<ISecretManagerImplementationConfiguration>> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Get(
+        Guid id, CancellationToken cancellationToken)
+    {
+        var result = await Get(id, cancellationToken).ConfigureAwait(false);
+        return result.IsSuccess && result.Value?.Configuration is { } implementation
+            ? GenericResult<ISecretManagerImplementationConfiguration>.Success(implementation)
+            : result.ToNewResult<ISecretManagerImplementationConfiguration>();
+    }
+
+    /// <inheritdoc />
+    Task<IGenericResult> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Save<T>(
+        string serviceOptionType, string name, T implementationConfiguration, CancellationToken cancellationToken)
+        => Task.FromResult<IGenericResult>(GenericResult.Failure(
+            AegisResultCodes.ByName("SecretResolutionFailed"),
+            ResultDetails.Create("Operation", "Save")));
+
+    /// <inheritdoc />
+    Task<IGenericResult> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Delete(
+        Guid id, CancellationToken cancellationToken)
+        => Task.FromResult<IGenericResult>(GenericResult.Failure(
+            AegisResultCodes.ByName("SecretResolutionFailed"),
+            ResultDetails.Create("Operation", "Delete")));
+
+    /// <inheritdoc />
+    Task<IGenericResult> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Delete(
+        string name, CancellationToken cancellationToken)
+        => Task.FromResult<IGenericResult>(GenericResult.Failure(
+            AegisResultCodes.ByName("SecretResolutionFailed"),
+            ResultDetails.Create("Operation", "Delete")));
+
+    /// <inheritdoc />
+    IGenericResult IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Register<T>(
+        string name, T implementationConfigurationProvider)
+        => GenericResult.Failure(
+            AegisResultCodes.ByName("SecretResolutionFailed"),
+            ResultDetails.Create("Operation", "Register"));
 }

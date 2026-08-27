@@ -1,22 +1,15 @@
-using System;
 using Fdw.Configuration;
 
 namespace Fdw.Services.Connections.Abstractions;
 
 /// <summary>
-/// Marker interface for typed connection body configurations (MsSqlConnectionConfiguration,
-/// HttpConnectionConfiguration, etc.). Each typed body implements this interface directly
-/// without inheriting from <c>ConnectionConfiguration</c>.
+/// One configured connection — the domain record, naming which connection kind it is and holding that
+/// kind's own configuration.
 /// </summary>
 /// <remarks>
-/// Connection bodies are persisted in their own tables (conn.MsSqlConnection,
-/// conn.HttpConnection, etc.) and linked to the parent <c>conn.Connection</c> row
-/// via a <c>ConnectionId</c> foreign key property.
-/// The parent <c>ConnectionConfiguration</c>
-/// carries an <c>IConnectionConfiguration? Configuration</c> property populated on the read path.
+/// The interface of <c>ConnectionConfiguration</c>. The implementation contract is
+/// <see cref="IConnectionImplementationConfiguration"/>.
 /// </remarks>
-public interface IConnectionConfiguration : IGenericConfiguration
+public interface IConnectionConfiguration : IPlatformServiceConfiguration<IConnectionImplementationConfiguration>
 {
-    /// <summary>Gets or sets the FK to <c>conn.Connection.Id</c>.</summary>
-    Guid ConnectionId { get; set; }
 }

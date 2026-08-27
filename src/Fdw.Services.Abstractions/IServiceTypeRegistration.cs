@@ -57,6 +57,7 @@ public interface IServiceTypeRegistration : ITypeOption
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <returns>The builder on success; a failure carrying the reason otherwise.</returns>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     // Why the builder rather than (IServiceCollection, IConfiguration): it carries both, so an option
     // that needs to read IConfiguration can, while the common case just uses builder.Services. Passing
     // the narrower pair would decide for every option that it never needs anything else.
@@ -64,24 +65,27 @@ public interface IServiceTypeRegistration : ITypeOption
     // Why the logger factory is here as well as on the other two phases: without it this phase alone
     // could not say which body it ran, and a phase that cannot report is the one whose silent failure
     // takes longest to find.
-    IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false);
+    IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false);
 
     /// <summary>Registers this option's factory and configuration provider.</summary>
     /// <param name="builder">The host application builder.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <returns>The builder on success; a failure carrying the reason otherwise.</returns>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     // Why the builder here too: Register runs before Build(), same as Configure, so an option that
     // needs IConfiguration while registering can reach it rather than being handed Services alone.
     IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory = null,
-        bool force = false);
+        bool force = false,
+        bool defer = false);
 
     /// <summary>Post-Build initialization for this option.</summary>
     /// <param name="host">The built host. Its <c>Services</c> is the provider this phase used to take.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <returns>The host on success; a failure carrying the reason otherwise.</returns>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
-    IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false);
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false);
 }

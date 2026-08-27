@@ -27,6 +27,8 @@ using TestBodyConfiguration = Fdw.Services.Tests.Configuration.RecursiveCascadeS
 using TestBodyCommand = Fdw.Services.Tests.Configuration.RecursiveCascadeSaveTests.TestBodyCommand;
 using TestOpConfiguration = Fdw.Services.Tests.Configuration.RecursiveCascadeSaveTests.TestOpConfiguration;
 using TestMapConfiguration = Fdw.Services.Tests.Configuration.RecursiveCascadeSaveTests.TestMapConfiguration;
+using Fdw.Services.Data;
+using Moq;
 
 namespace Fdw.Services.Tests.Configuration;
 
@@ -46,10 +48,10 @@ namespace Fdw.Services.Tests.Configuration;
 [Collection(nameof(ServicesTestCollection))]
 public sealed class AggregateWriteCascadeTests
 {
-    private static DefaultConfigurationProvider<TestRootConfiguration, TestRootCommand> MakeProvider(RecordingGateway gateway)
+    private static ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand> MakeProvider(RecordingGateway gateway)
         => new(
-            NullLogger<DefaultConfigurationProvider<TestRootConfiguration, TestRootCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => gateway),
+            NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>>.Instance,
+            GatewayProviderFor(gateway),
             "ConfigurationDb",
             "pipe");
 
@@ -132,9 +134,9 @@ public sealed class AggregateWriteCascadeTests
         var provider = MakeProvider(gateway);
         provider.Register(
             "Default",
-            new DefaultConfigurationProvider<TestBodyConfiguration, TestBodyCommand>(
-                NullLogger<DefaultConfigurationProvider<TestBodyConfiguration, TestBodyCommand>>.Instance,
-                new Lazy<IConfigurationGateway>(() => gateway),
+            new ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>(
+                NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>>.Instance,
+                GatewayProviderFor(gateway),
                 "ConfigurationDb",
                 "pipe"));
 
@@ -261,7 +263,7 @@ public sealed class AggregateWriteCascadeTests
     // ========================================================================
 
     // Why: a typed-body provider resolves Get(Guid) by the PARENT's durable Id (see
-    // DefaultConfigurationProvider.Get(Guid)) — the row it returns carries its OWN distinct Id. Passing
+    // ImplementationConfigurationProviderBase.Get(Guid)) — the row it returns carries its OWN distinct Id. Passing
     // the caller's id straight through to the delete command targets [Id]=<the argument>, which matches
     // nothing on the child table and silently retires no row. The delete command must carry the resolved
     // row's own Id.
@@ -270,27 +272,27 @@ public sealed class AggregateWriteCascadeTests
     [Trait("Category", "Cascade")]
     public async Task DeleteRetiresByRowsOwnIdNotTheArgumentPassedToFindIt()
     {
-        var parentId = Guid.NewGuid();
+        var domainConfigurationId = Guid.NewGuid();
         var body = new TestBodyConfiguration { Id = Guid.NewGuid(), Name = "Body" };
 
         // The gateway always answers a TestBodyConfiguration header read with `body`, regardless of the
         // id used to look it up — simulating a parent-join read (caller passes the PARENT's id) that
         // resolves to a row with its own distinct durable Id.
         var gateway = new RecordingGateway { BodyHeader = body };
-        var bodyProvider = new DefaultConfigurationProvider<TestBodyConfiguration, TestBodyCommand>(
-            NullLogger<DefaultConfigurationProvider<TestBodyConfiguration, TestBodyCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => gateway),
+        var bodyProvider = new ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>>.Instance,
+            GatewayProviderFor(gateway),
             "ConfigurationDb",
             "pipe");
 
-        var result = await bodyProvider.Delete(parentId, TestContext.Current.CancellationToken);
+        var result = await bodyProvider.Delete(domainConfigurationId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
 
         var headerDelete = (ConfigurationDeleteCommand)gateway.AllCommands
             .Single(c => c.Command is ConfigurationDeleteCommand).Command;
         headerDelete.Data.ShouldBe(body.Id);
-        headerDelete.Data.ShouldNotBe(parentId);
+        headerDelete.Data.ShouldNotBe(domainConfigurationId);
     }
 
     // ========================================================================
@@ -305,6 +307,9 @@ public sealed class AggregateWriteCascadeTests
     /// </summary>
     private sealed class RecordingGateway : IConfigurationGateway
     {
+        /// <summary>The connection this fake stands in for.</summary>
+        public string ConnectionName => "ConfigurationDb";
+
         /// <summary>Targets this fake was asked to invalidate, in call order.</summary>
         public List<DataStoreTarget> Invalidated { get; } = [];
 
@@ -388,4 +393,25 @@ public sealed class AggregateWriteCascadeTests
         public Task<IGenericResult<IDataGatewayTransaction>> BeginTransaction(string connectionName, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<IDataGatewayTransaction>.Failure(new GenericMessage("Transactions not supported in test double")));
     }
+
+    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
+    // connection it was told its rows live on, so the fake has to answer to that name to be found.
+    // Why a double rather than the real provider: these tests exercise what a configuration provider
+    // does with its gateway, not which gateway it selects, so the double answers for whatever
+    // connection is asked. Selection itself is covered where the real provider is under test.
+    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+        => new AnyConnectionGateways(gateway);
+
+    private sealed class AnyConnectionGateways : IConfigurationGatewayProvider
+    {
+        private readonly IConfigurationGateway _gateway;
+
+        public AnyConnectionGateways(IConfigurationGateway gateway) => _gateway = gateway;
+
+        public IGenericResult<IConfigurationGateway> Get(string connectionName)
+            => GenericResult<IConfigurationGateway>.Success(_gateway);
+
+        public IGenericResult Register(IConfigurationGateway gateway) => GenericResult.Success();
+    }
+
 }

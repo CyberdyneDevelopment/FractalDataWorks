@@ -19,21 +19,38 @@ namespace Fdw.Services.Notifications;
 
 /// <summary>
 /// Configuration provider for notifications. Thin wrapper over
-/// <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>. Also registers the
+/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>. Also registers the
 /// NotificationRule sub-provider (separate config category, same domain).
 /// </summary>
-public class NotificationConfigurationProvider : DefaultConfigurationProvider<NotificationConfiguration, NotificationConfigurationCommand>
+public class NotificationConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          NotificationConfiguration,
+          INotificationImplementationConfiguration,
+          NotificationConfigurationCommand>,
+      INotificationConfigurationProvider
 {
 
     /// <summary>Initializes a new instance of the <see cref="NotificationConfigurationProvider"/> class.</summary>
     public NotificationConfigurationProvider(
         ILogger<NotificationConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "notify")
         : base(logger ?? NullLogger<NotificationConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }
+
+    /// <inheritdoc />
+    protected override NotificationConfiguration Compose<T>(
+        string serviceOptionType,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            ServiceOptionType = serviceOptionType,
+            Configuration = implementationConfiguration,
+        };
 }

@@ -1,6 +1,7 @@
 using System;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
+using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Pipelines.Commands;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,37 +15,39 @@ namespace Fdw.Services.Pipelines;
 /// The general pipeline header provider over <c>pipe.Pipeline</c>. The full aggregate — the
 /// ETL-kind typed body (pipe.EtlPipeline), its engine typed body (pipe.BatchCopyPipeline /
 /// pipe.StreamingPipeline), and the kind body's Transforms — is composed on read and cascade-saved on
-/// write entirely by the keystone <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>. The "Etl"
+/// write entirely by the keystone <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>. The "Etl"
 /// kind typed provider is attached to this header from the Services.Etl side (the ETL domain the general header
 /// consumes), mirroring the connections→secret-managers consumer-injects-provider pattern.
 /// </summary>
-public class PipelineServiceConfigurationProvider : DefaultConfigurationProvider<PipelineConfiguration, PipelineConfigurationCommand>
+public class PipelineServiceConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          PipelineConfiguration,
+          IPipelineImplementationConfiguration,
+          PipelineConfigurationCommand>,
+      IPipelineConfigurationProvider
 {
-    /// <summary>
-    /// Registers the PipelineServiceConfigurationProvider with DI, targeting this domain's own default
-    /// location. To override, call <c>SetConfiguration</c> on the resolved singleton.
-    /// </summary>
-    public static void RegisterDomainConfiguration(IServiceCollection services)
-    {
-        services.TryAddSingleton<PipelineServiceConfigurationProvider>(sp =>
-            new PipelineServiceConfigurationProvider(
-                sp.GetService<ILogger<PipelineServiceConfigurationProvider>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-        services.TryAddSingleton<DefaultConfigurationProvider<PipelineConfiguration, PipelineConfigurationCommand>>(
-            sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
-        services.TryAddSingleton<IServiceConfigurationProvider<PipelineConfiguration>>(
-            sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
-    }
 
     /// <summary>Initializes a new instance of the <see cref="PipelineServiceConfigurationProvider"/> class.</summary>
     public PipelineServiceConfigurationProvider(
         ILogger<PipelineServiceConfigurationProvider>? logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "pipe")
         : base(logger ?? NullLogger<PipelineServiceConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }
+
+    /// <inheritdoc />
+    protected override PipelineConfiguration Compose<T>(
+        string serviceOptionType,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            ServiceOptionType = serviceOptionType,
+            Configuration = implementationConfiguration,
+        };
 }

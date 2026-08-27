@@ -21,7 +21,7 @@ namespace Fdw.Services.Connections.TestDouble;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "MockConnection")]
-public partial class MockConnectionConfiguration : IConnectionConfiguration
+public partial class MockConnectionConfiguration : IConnectionImplementationConfiguration
 {
     /// <summary>Gets or sets the identifier of this typed body row.</summary>
     /// <remarks>Why no default: the provider mints this before INSERT, as the real ones do.</remarks>

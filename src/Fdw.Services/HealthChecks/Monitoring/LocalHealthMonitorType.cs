@@ -4,6 +4,8 @@ using System.Diagnostics.CodeAnalysis;
 using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Services.Abstractions.Health.Monitoring;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,7 +24,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 [ExcludeFromCodeCoverage]
 [ServiceTypeOption(typeof(HealthMonitorTypes), "Local")]
 public sealed class LocalHealthMonitorType
-    : HealthMonitorTypeBase<IHealthMonitorService, ILocalHealthMonitorFactory, HealthMonitorConfiguration>
+    : HealthMonitorTypeBase<IHealthMonitorService, ILocalHealthMonitorFactory, LocalHealthMonitorConfiguration>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="LocalHealthMonitorType"/> class.
@@ -33,22 +35,9 @@ public sealed class LocalHealthMonitorType
         displayName: "In-Process Health Monitor",
         description: "Aggregates health from the host's own registered IHealthCheckable services")
     {
-        // Why: health monitor configuration is HOST-TOPOLOGY (which implementation this host runs), so
-        // it binds from the host's appsettings/environment rather than shared ConfigurationDb rows.
-        Configuration(builder =>
-        {
-
-            builder.Services.AddOptions<List<HealthMonitorConfiguration>>()
-                .BindConfiguration("HealthMonitors");
-            builder.Services.AddOptions<HealthMonitorSelectionOptions>()
-                .BindConfiguration(HealthMonitorSelectionOptions.SectionName);
-    
-                    return GenericResult<IHostApplicationBuilder>.Success(builder);
-});
-
         Registration((builder, loggerFactory) =>
         {
-            DefaultHealthMonitorProvider.Register(Name, sp => sp.GetRequiredService<LocalHealthMonitorFactory>());
+            HealthMonitorProvider.Register(Name, sp => sp.GetRequiredService<LocalHealthMonitorFactory>());
 
             // Why this line exists at all: the call above writes into a STATIC registry that nothing
             // else narrates. Until the provider drains it — much later, in another scope — a
@@ -63,9 +52,22 @@ public sealed class LocalHealthMonitorType
                 nameof(LocalHealthMonitorFactory));
 
             builder.Services.TryAddSingleton<LocalHealthMonitorFactory>();
-            // Why nothing registers the domain provider here: HealthMonitorTypes registers it before
-            // running the options, so it is present by the time this option needs it.
+            builder.Services.TryAddSingleton<LocalHealthMonitorConfigurationProvider>(sp =>
+                new LocalHealthMonitorConfigurationProvider(
+                    sp.GetService<ILogger<LocalHealthMonitorConfigurationProvider>>()!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    HealthMonitorTypes.ConfigurationConnection));
             return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+
+        // Why Initialize: registering into the domain provider needs a live container, and Register
+        // runs while it is still being built.
+        Initialization((host, hostLoggerFactory) =>
+        {
+            var services = host.Services;
+            services.GetRequiredService<IHealthMonitorConfigurationProvider>()
+                .Register(Name, services.GetRequiredService<LocalHealthMonitorConfigurationProvider>());
+            return GenericResult<IHost>.Success(host);
         });
 
     }

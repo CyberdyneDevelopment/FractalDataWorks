@@ -34,21 +34,23 @@ namespace Fdw.Services.Credentials;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(CredentialServiceTypeBase<ICredentialService, ICredentialServiceFactory<ICredentialService, CredentialServiceConfiguration>, CredentialServiceConfiguration>),
+    typeof(CredentialServiceTypeBase<ICredentialService, ICredentialServiceFactory<ICredentialService, ICredentialServiceImplementationConfiguration>, ICredentialServiceImplementationConfiguration>),
     typeof(ICredentialServiceType),
     typeof(CredentialServiceTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(ICredentialService),
-    ConfigurationType = typeof(CredentialServiceConfiguration),
     ProviderType = typeof(CredentialServiceProvider),
     ProviderInterface = typeof(ICredentialServiceProvider),
     ServiceCategory = "CredentialService",
-    RestrictToCurrentCompilation = true,
-    Group = 5)]
+    RestrictToCurrentCompilation = true)]
 public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
-    CredentialServiceTypeBase<ICredentialService, ICredentialServiceFactory<ICredentialService, CredentialServiceConfiguration>, CredentialServiceConfiguration>,
-    ICredentialServiceType<ICredentialService, ICredentialServiceFactory<ICredentialService, CredentialServiceConfiguration>, CredentialServiceConfiguration>>
+    CredentialServiceTypeBase<ICredentialService, ICredentialServiceFactory<ICredentialService, ICredentialServiceImplementationConfiguration>, ICredentialServiceImplementationConfiguration>,
+    ICredentialServiceType<ICredentialService, ICredentialServiceFactory<ICredentialService, ICredentialServiceImplementationConfiguration>, ICredentialServiceImplementationConfiguration>>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
     // Configure(), Register() and Initialize() are source-generated
 
     /// <summary>
@@ -77,14 +79,22 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
             // owner of a registration is the type that knows the thing exists, and this collection ships
             // beside it. It goes before the collect because each option registers itself against this
             // provider, so it has to be there when the member cycle runs.
-            builder.Services.TryAddSingleton<CredentialServiceConfigurationProvider>(sp =>
+            // Why the domain interface and not only the concrete class: this collection resolves
+            // ICredentialServiceConfigurationProvider to attach it to the domain provider, and a registration
+            // of the concrete type alone leaves that lookup empty — the domain then fails every
+            // lookup by name for the life of the scope. ConfigurationConnection is the one place that
+            // names which store these rows live in.
+            builder.Services.TryAddSingleton<ICredentialServiceConfigurationProvider>(sp =>
                 new CredentialServiceConfigurationProvider(
                     sp.GetService<ILogger<CredentialServiceConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<CredentialServiceConfigurationProvider>(
+                sp => (CredentialServiceConfigurationProvider)sp.GetRequiredService<ICredentialServiceConfigurationProvider>());
 
-            // Why the forwards: consumers inject the base DefaultConfigurationProvider<TConfig, TCommand>,
+            // Why the forwards: consumers inject the base ImplementationConfigurationProviderBase<TConfig, TCommand>,
             // and the generated provider wiring looks the domain provider up as IServiceConfigurationProvider<T>.
-            builder.Services.TryAddSingleton<DefaultConfigurationProvider<CredentialServiceConfiguration, CredentialServiceConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<CredentialServiceConfiguration, CredentialServiceConfigurationCommand>>(
                 sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<CredentialServiceConfiguration>>(
                 sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());
@@ -118,15 +128,15 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(CredentialServiceTypes), provider.GetType().Name);
                 try
                 {
-                    if (sp.GetService<IServiceConfigurationProvider<CredentialServiceConfiguration>>() is { } cfgProvider)
+                    if (sp.GetService<ICredentialServiceConfigurationProvider>() is { } cfgProvider)
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
-                        var parentResult = provider.Register(cfgProvider);
-                        if (parentResult.IsSuccess)
+                        var domainResult = provider.Register(cfgProvider);
+                        if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(CredentialServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(CredentialServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(CredentialServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {

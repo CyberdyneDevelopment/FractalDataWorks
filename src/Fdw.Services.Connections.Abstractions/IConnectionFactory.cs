@@ -43,7 +43,7 @@ public interface IConnectionFactory
     /// <summary>
     /// Creates a connection asynchronously, resolving its secret manager BY NAME from the connection's
     /// own authentication configuration through the secret-manager provider the factory was CONSTRUCTED
-    /// with. This is the runtime path used by <c>DefaultConnectionProvider</c>.
+    /// with. This is the runtime path used by <c>ConnectionProvider</c>.
     /// </summary>
     /// <param name="configuration">The connection configuration (composed header or typed body).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -64,7 +64,7 @@ public interface IConnectionFactory
 /// </summary>
 /// <typeparam name="TConnection">The type of connection this factory creates.</typeparam>
 /// <typeparam name="TConfiguration">The type of configuration this factory requires.</typeparam>
-public interface IConnectionFactory<TConnection, TConfiguration> : IConnectionFactory, IServiceFactory<TConnection, TConfiguration>
+public interface IConnectionFactory<TConnection, TConfiguration> : IConnectionFactory, IServiceFactory<TConnection, TConfiguration>, IAsyncServiceFactory<TConnection>
     where TConnection : IGenericConnection
     where TConfiguration : IGenericConfiguration
 {

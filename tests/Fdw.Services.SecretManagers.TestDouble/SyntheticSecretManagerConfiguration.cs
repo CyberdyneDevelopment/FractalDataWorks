@@ -15,7 +15,7 @@ namespace Fdw.Services.SecretManagers.TestDouble;
 /// option in its OWN assembly, exactly as the downstream-extensible model intends. That keeps the
 /// non-exposure proof self-contained and keeps Aegis ignorant of any specific backend.
 /// </remarks>
-public sealed class SyntheticSecretManagerConfiguration : ISecretManagerConfiguration
+public sealed class SyntheticSecretManagerConfiguration : ISecretManagerImplementationConfiguration
 {
     /// <inheritdoc />
     public Guid Id { get; set; }

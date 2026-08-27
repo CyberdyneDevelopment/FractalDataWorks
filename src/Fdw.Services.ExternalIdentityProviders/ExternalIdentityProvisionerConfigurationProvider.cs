@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Services.ExternalIdentityProviders.Abstractions;
+
 namespace Fdw.Services.ExternalIdentityProviders;
 
 /// <summary>
@@ -18,36 +20,35 @@ namespace Fdw.Services.ExternalIdentityProviders;
 // Why: ExternalIdentityProvisionerConfiguration is loaded from ConfigurationDb at runtime via
 // Lazy<IConfigurationGateway>, not through BindConfiguration("ExternalIdentityProvisioners:..."). Mirrors
 // ExternalIdentityProviderConfigurationProvider exactly, targeting sec instead of auth.
-public class ExternalIdentityProvisionerConfigurationProvider : DefaultConfigurationProvider<ExternalIdentityProvisionerConfiguration, ExternalIdentityProvisionerConfigurationCommand>
+public class ExternalIdentityProvisionerConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          ExternalIdentityProvisionerConfiguration,
+          IExternalIdentityProvisionerImplementationConfiguration,
+          ExternalIdentityProvisionerConfigurationCommand>,
+      IExternalIdentityProvisionerConfigurationProvider
 {
-    /// <summary>
-    /// Registers the ExternalIdentityProvisionerConfigurationProvider and interface forwardings with
-    /// DI, targeting this domain's own default location. To override, call <c>SetConfiguration</c> on
-    /// the resolved singleton.
-    /// </summary>
-    public static void RegisterDomainServices(IServiceCollection services)
-    {
-        services.TryAddSingleton<ExternalIdentityProvisionerConfigurationProvider>(sp =>
-            new ExternalIdentityProvisionerConfigurationProvider(
-                sp.GetService<ILogger<ExternalIdentityProvisionerConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-
-        services.TryAddSingleton<DefaultConfigurationProvider<ExternalIdentityProvisionerConfiguration, ExternalIdentityProvisionerConfigurationCommand>>(
-            sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
-
-        services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProvisionerConfiguration>>(sp =>
-            sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
-    }
 
     /// <summary>Initializes a new instance of the <see cref="ExternalIdentityProvisionerConfigurationProvider"/> class.</summary>
     public ExternalIdentityProvisionerConfigurationProvider(
         ILogger<ExternalIdentityProvisionerConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sec")
         : base(logger ?? NullLogger<ExternalIdentityProvisionerConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }
+
+    /// <inheritdoc />
+    protected override ExternalIdentityProvisionerConfiguration Compose<T>(
+        string serviceOptionType,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            ServiceOptionType = serviceOptionType,
+            Configuration = implementationConfiguration,
+        };
 }

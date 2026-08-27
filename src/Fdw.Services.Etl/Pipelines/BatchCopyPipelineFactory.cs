@@ -25,7 +25,7 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
     private readonly IDataGateway? _dataGateway;
     // Why: Lazy so the factory stays pure (FDW045). Cross-collection connection provider, used only at
     // Create() time; Lazy defers resolution past construction (see StreamingPipelineFactory).
-    private readonly Lazy<IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>>? _connectionProvider;
+    private readonly Lazy<IConnectionProvider>? _connectionProvider;
     private readonly IDataStoreProvider? _dataStoreProvider;
 
     /// <summary>
@@ -40,7 +40,7 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
         ILogger<BatchCopyPipelineFactory> logger,
         ILoggerFactory loggerFactory,
         IDataGateway? dataGateway = null,
-        Lazy<IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>>? connectionProvider = null,
+        Lazy<IConnectionProvider>? connectionProvider = null,
         IDataStoreProvider? dataStoreProvider = null)
     {
         _logger = logger;

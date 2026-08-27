@@ -92,7 +92,7 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
             test,
             new DiagnosticResult(ServiceTypeCollectionPhaseMethodsAnalyzer.DiagnosticId, Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
                 .WithLocation(0)
-                .WithArguments("MissingInitializeTypes", "IGenericResult<IHost> Initialize(IHost, ILoggerFactory?, bool)"));
+                .WithArguments("MissingInitializeTypes", "IGenericResult<IHost> Initialize(IHost, ILoggerFactory?, bool force = false, bool defer = false)"));
     }
 
     [Fact]
@@ -121,13 +121,13 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
             test,
             new DiagnosticResult(ServiceTypeCollectionPhaseMethodsAnalyzer.DiagnosticId, Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
                 .WithLocation(0)
-                .WithArguments("BareProvider", "IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder, ILoggerFactory?, bool)"),
+                .WithArguments("BareProvider", "IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder, ILoggerFactory?, bool force = false, bool defer = false)"),
             new DiagnosticResult(ServiceTypeCollectionPhaseMethodsAnalyzer.DiagnosticId, Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
                 .WithLocation(0)
-                .WithArguments("BareProvider", "IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder, ILoggerFactory?, bool)"),
+                .WithArguments("BareProvider", "IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder, ILoggerFactory?, bool force = false, bool defer = false)"),
             new DiagnosticResult(ServiceTypeCollectionPhaseMethodsAnalyzer.DiagnosticId, Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
                 .WithLocation(0)
-                .WithArguments("BareProvider", "IGenericResult<IHost> Initialize(IHost, ILoggerFactory?, bool)"));
+                .WithArguments("BareProvider", "IGenericResult<IHost> Initialize(IHost, ILoggerFactory?, bool force = false, bool defer = false)"));
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
             test,
             new DiagnosticResult(ServiceTypeCollectionPhaseMethodsAnalyzer.DiagnosticId, Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
                 .WithLocation(0)
-                .WithArguments("WrongShapeTypes", "IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder, ILoggerFactory?, bool)"));
+                .WithArguments("WrongShapeTypes", "IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder, ILoggerFactory?, bool force = false, bool defer = false)"));
     }
 
     [Fact]

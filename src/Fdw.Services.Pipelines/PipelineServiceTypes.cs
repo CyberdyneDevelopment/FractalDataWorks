@@ -1,5 +1,18 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
+using Fdw.Configuration;
+using Fdw.Results;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Pipelines.Abstractions;
+using Fdw.Services.Pipelines.Commands;
+using Fdw.ServiceTypes;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Pipelines;
 
@@ -22,4 +35,41 @@ namespace Fdw.Services.Pipelines;
     ServiceCategory = "PipelineService")]
 public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineServiceTypeBase, IPipelineServiceType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
+    /// <summary>
+    /// Sets this collection's Register body: the option collect, then this domain's configuration provider.
+    /// </summary>
+    static PipelineServiceTypes()
+    {
+        var collectOptions = RegisterFunc;
+
+        Registration((builder, loggerFactory) =>
+        {
+            var registered = collectOptions(builder, loggerFactory);
+            if (registered.IsFailure)
+                return registered;
+
+            // Why the collection and not an option: every consumer of this domain resolves
+            // IPipelineConfigurationProvider, and an option owning the registration means the whole
+            // domain loses name resolution whenever that option is not referenced.
+            // ConfigurationConnection is the one place that names which store these rows live in.
+            builder.Services.TryAddSingleton<IPipelineConfigurationProvider>(sp =>
+                new PipelineServiceConfigurationProvider(
+                    sp.GetService<ILogger<PipelineServiceConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<PipelineServiceConfigurationProvider>(
+                sp => (PipelineServiceConfigurationProvider)sp.GetRequiredService<IPipelineConfigurationProvider>());
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<PipelineConfiguration, PipelineConfigurationCommand>>(
+                sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<PipelineConfiguration>>(
+                sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
+
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+    }
 }

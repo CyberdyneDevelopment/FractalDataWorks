@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Shouldly;
 using Xunit;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Calculations.Tests;
 
@@ -30,7 +31,7 @@ public class CalculationEntityServiceTests
     private static Mock<CalculationConfigurationProvider> CreateProviderMock()
         => new(
             NullLogger<CalculationConfigurationProvider>.Instance,
-            new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
+            new ConfigurationGatewayProvider(),
             "ConfigurationDb",
             "calc");
 

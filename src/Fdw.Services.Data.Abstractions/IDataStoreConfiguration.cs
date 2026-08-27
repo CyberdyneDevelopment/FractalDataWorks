@@ -16,7 +16,7 @@ namespace Fdw.Services.Data.Abstractions;
 /// The parent <c>DataStoreConfiguration</c> carries an
 /// <c>IDataStoreConfiguration? Configuration</c> property populated on the read path.
 /// </remarks>
-public interface IDataStoreConfiguration : IGenericConfiguration
+public interface IDataStoreConfiguration : IImplementationConfiguration
 {
     /// <summary>Gets or sets the FK to the parent DataStore's logical Id.</summary>
     Guid DataStoreId { get; set; }

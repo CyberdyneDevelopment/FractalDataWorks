@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Fdw.Messages;
 using Fdw.MessageLogging;
 
+using Fdw.Services.ExternalIdentityProviders.Abstractions;
+
 namespace Fdw.Services.ExternalIdentityProviders.Logging;
 
 /// <summary>

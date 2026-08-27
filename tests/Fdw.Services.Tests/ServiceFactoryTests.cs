@@ -55,8 +55,7 @@ public class ServiceFactoryTests
         // Assert
         result.ShouldNotBeNull();
         result.IsFailure.ShouldBeTrue();
-        result.CurrentMessage.ShouldNotBeNull();
-        result.CurrentMessage!.ShouldContain("Configuration cannot be null");
+        result.Code?.Name.ShouldBe("ConfigurationRequired");
     }
 
     [Fact]
@@ -265,8 +264,7 @@ public class ServiceFactoryTests
         // Assert
         result.ShouldNotBeNull();
         result.IsFailure.ShouldBeTrue();
-        result.CurrentMessage.ShouldNotBeNull();
-        result.CurrentMessage!.ShouldContain("Invalid service type");
+        result.Code?.Name.ShouldBe("ServiceCastFailed");
     }
 
     [Fact]

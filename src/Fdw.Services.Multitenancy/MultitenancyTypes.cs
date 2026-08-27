@@ -35,7 +35,7 @@ namespace Fdw.Services.Multitenancy;
 /// the single configured choice and drives that ONE option's Configure/Register
 /// directly, instead of the generated blanket Configure/Register that would iterate every discovered
 /// option; Register/Initialize become no-ops since Configure already did the only work needed. This
-/// makes the domain self-selecting — it is no longer <c>[ServiceTypeCollection(Manual = true)]</c>; it
+/// makes the domain self-selecting — it is not excluded from the collect; it
 /// participates in the ordinary PlatformServices Configure/Register/Initialize collects like every other
 /// domain, and the "exactly one option runs" guarantee lives here instead of in each host's Program.cs.
 /// </para>
@@ -44,7 +44,8 @@ namespace Fdw.Services.Multitenancy;
 [ServiceTypeCollection(
     typeof(MultitenancyTypeBase<IMultitenancyFactory>),
     typeof(IMultitenancyType),
-    typeof(MultitenancyTypes))]
+    typeof(MultitenancyTypes),
+    ServiceCategory = "Multitenancy")]
 public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyTypeBase<IMultitenancyFactory>, IMultitenancyType>
 {
     // Why [ModuleInitializer] rather than an explicit static constructor: the generator ALREADY emits
@@ -97,7 +98,7 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
 
         // Why: which Multitenancy option a host runs is per-host topology, declared once in
         // configurationSchema.json (ConfigurationSchema.Multitenancy) — not a shared ConfigurationDb row.
-        // AddConfigurationGateway registers the deserialized ConfigurationSchema as a direct singleton
+        // ConfigurationGatewayTypes registers the deserialized ConfigurationSchema as a direct singleton
         // INSTANCE (TryAddSingleton(schema)), so it is resolvable straight off the pre-Build service
         // descriptor — no factory invocation, no partially-built ServiceProvider required.
         var schema = builder.Services

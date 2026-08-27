@@ -92,7 +92,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         string? typedBodyTypeFqn = null;
 
         // Why: the cascade stamps the parent's logical Id onto each level-1 child's FK property,
-        // named {Strip(parentType)}Id (mirrors DefaultConfigurationProvider.StripConfigurationSuffix).
+        // named {Strip(parentType)}Id (mirrors ImplementationConfigurationProviderBase.StripConfigurationSuffix).
         var parentFkName = StripConfigurationSuffix(typeSymbol.Name) + "Id";
         // Why: the READ cascade filters child rows by the PHYSICAL {Strip(parentType)}RowId FK
         // (e.g. DataStoreRowId, MsSqlConnectionRowId) = owner.RowId — version-pinned, no schema lookup.
@@ -717,7 +717,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         return false;
     }
 
-    // Why: the cascade stamps parentId onto the child's {Strip(parent)}Id property; only emit the
+    // Why: the cascade stamps domainConfigurationId onto the child's {Strip(parent)}Id property; only emit the
     // typed assignment when the child actually declares a public-settable Guid property of that name.
     private static bool ChildHasFkSetter(ITypeSymbol childType, string fkName)
     {
@@ -740,7 +740,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         return false;
     }
 
-    // Why: mirrors DefaultConfigurationProvider.StripConfigurationSuffix so the FK column name the
+    // Why: mirrors ImplementationConfigurationProviderBase.StripConfigurationSuffix so the FK column name the
     // generator resolves matches the runtime cascade's logical FK ({Strip(parentType)}Id).
     private static string StripConfigurationSuffix(string typeName)
     {

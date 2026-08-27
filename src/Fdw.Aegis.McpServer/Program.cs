@@ -46,7 +46,7 @@ public static class Program
 
         // Why: aegisSchema.json is the entire "directory" this standalone host needs — the
         // declared connections, secret managers, and commands. There is no ConfigurationDb
-        // connection here (NEVER AddConfigurationGateway) — see AegisHostRegistration.Register.
+        // connection here — see AegisHostRegistration.Register.
         var schema = AegisHostRegistration.LoadSchema("aegisSchema.json");
 
         // Phase 1a/1b (before Build). Why the results are checked: a phase that fails returns a
@@ -83,7 +83,7 @@ public static class Program
         var app = builder.Build();
 
         // Phase 2 (after Build).
-        var initialized = AegisHostRegistration.Initialize(app, schema, loggerFactory: null);
+        var initialized = AegisHostRegistration.Initialize(app, loggerFactory: null);
         if (initialized.IsFailure)
         {
             // Why stderr and not a logger: this mirrors the Serilog guard above — stdout is the

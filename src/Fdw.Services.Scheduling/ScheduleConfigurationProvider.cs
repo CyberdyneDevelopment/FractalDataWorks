@@ -15,17 +15,17 @@ using Microsoft.Extensions.Options;
 namespace Fdw.Services.Scheduling;
 
 /// <summary>Configuration provider for schedule configurations. Thin wrapper over
-/// <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>.</summary>
-public class ScheduleConfigurationProvider : DefaultConfigurationProvider<ScheduleConfiguration, ScheduleConfigurationCommand>
+/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>.</summary>
+public class ScheduleConfigurationProvider : ImplementationConfigurationProviderBase<ScheduleConfiguration, ScheduleConfigurationCommand>
 {
     /// <summary>Initializes a new instance of the <see cref="ScheduleConfigurationProvider"/> class.</summary>
     public ScheduleConfigurationProvider(
         ILogger<ScheduleConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sched")
         : base(logger ?? NullLogger<ScheduleConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

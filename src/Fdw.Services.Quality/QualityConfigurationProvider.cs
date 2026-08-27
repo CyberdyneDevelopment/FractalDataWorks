@@ -21,7 +21,7 @@ namespace Fdw.Services.Quality;
 
 /// <summary>
 /// Composite configuration provider for the Quality domain. Wraps five two-arity
-/// <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> instances (Quality, Catalog, Promotion).
+/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> instances (Quality, Catalog, Promotion).
 /// </summary>
 public class QualityConfigurationProvider
 {
@@ -31,17 +31,17 @@ public class QualityConfigurationProvider
     /// binding from IConfiguration is a Phase-1a concern and lives in the consuming
     /// <c>[ServiceTypeOption].Configure</c>, not here.
     /// </summary>
-    private readonly DefaultConfigurationProvider<QualityRuleConfiguration, QualityRuleConfigurationCommand> _qualityRuleProvider;
-    private readonly DefaultConfigurationProvider<DataSetAnnotationConfiguration, DataSetAnnotationConfigurationCommand> _annotationProvider;
-    private readonly DefaultConfigurationProvider<EnvironmentConfiguration, EnvironmentConfigurationCommand> _environmentProvider;
-    private readonly DefaultConfigurationProvider<PromotionRequestConfiguration, PromotionRequestConfigurationCommand> _promotionRequestProvider;
-    private readonly DefaultConfigurationProvider<GlossaryTermConfiguration, GlossaryTermConfigurationCommand> _glossaryTermProvider;
+    private readonly ImplementationConfigurationProviderBase<QualityRuleConfiguration, QualityRuleConfigurationCommand> _qualityRuleProvider;
+    private readonly ImplementationConfigurationProviderBase<DataSetAnnotationConfiguration, DataSetAnnotationConfigurationCommand> _annotationProvider;
+    private readonly ImplementationConfigurationProviderBase<EnvironmentConfiguration, EnvironmentConfigurationCommand> _environmentProvider;
+    private readonly ImplementationConfigurationProviderBase<PromotionRequestConfiguration, PromotionRequestConfigurationCommand> _promotionRequestProvider;
+    private readonly ImplementationConfigurationProviderBase<GlossaryTermConfiguration, GlossaryTermConfigurationCommand> _glossaryTermProvider;
 
     /// <summary>Initializes a new instance of the <see cref="QualityConfigurationProvider"/> class.</summary>
     #pragma warning disable MA0051
     public QualityConfigurationProvider(
         ILogger<QualityConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb")
     #pragma warning restore MA0051
     {
@@ -51,16 +51,16 @@ public class QualityConfigurationProvider
         _ = logger;
 
         // Why: All quality/catalog providers are cfg-tier — cfg-tier; loaded from ConfigurationDb at runtime.
-        _qualityRuleProvider = new DefaultConfigurationProvider<QualityRuleConfiguration, QualityRuleConfigurationCommand>(
-            logger: null, lazyGateway, dataStoreName, "quality");
-        _annotationProvider = new DefaultConfigurationProvider<DataSetAnnotationConfiguration, DataSetAnnotationConfigurationCommand>(
-            logger: null, lazyGateway, dataStoreName, "catalog");
-        _environmentProvider = new DefaultConfigurationProvider<EnvironmentConfiguration, EnvironmentConfigurationCommand>(
-            logger: null, lazyGateway, dataStoreName, "quality");
-        _promotionRequestProvider = new DefaultConfigurationProvider<PromotionRequestConfiguration, PromotionRequestConfigurationCommand>(
-            logger: null, lazyGateway, dataStoreName, "quality");
-        _glossaryTermProvider = new DefaultConfigurationProvider<GlossaryTermConfiguration, GlossaryTermConfigurationCommand>(
-            logger: null, lazyGateway, dataStoreName, "catalog");
+        _qualityRuleProvider = new ImplementationConfigurationProviderBase<QualityRuleConfiguration, QualityRuleConfigurationCommand>(
+            logger: null, gatewayProvider, dataStoreName, "quality");
+        _annotationProvider = new ImplementationConfigurationProviderBase<DataSetAnnotationConfiguration, DataSetAnnotationConfigurationCommand>(
+            logger: null, gatewayProvider, dataStoreName, "catalog");
+        _environmentProvider = new ImplementationConfigurationProviderBase<EnvironmentConfiguration, EnvironmentConfigurationCommand>(
+            logger: null, gatewayProvider, dataStoreName, "quality");
+        _promotionRequestProvider = new ImplementationConfigurationProviderBase<PromotionRequestConfiguration, PromotionRequestConfigurationCommand>(
+            logger: null, gatewayProvider, dataStoreName, "quality");
+        _glossaryTermProvider = new ImplementationConfigurationProviderBase<GlossaryTermConfiguration, GlossaryTermConfigurationCommand>(
+            logger: null, gatewayProvider, dataStoreName, "catalog");
     }
 
     /// <summary>Gets a quality rule configuration by name.</summary>
@@ -168,7 +168,7 @@ public class QualityConfigurationProvider
         => _glossaryTermProvider.Delete(name, ct);
 
     // ============================================================================================
-    // Mappers — DTO → Configuration. No Guid.NewGuid(); DefaultConfigurationProvider mints UUIDv7.
+    // Mappers — DTO → Configuration. No Guid.NewGuid(); ImplementationConfigurationProviderBase mints UUIDv7.
     // ============================================================================================
 
     /// <summary>
@@ -183,7 +183,7 @@ public class QualityConfigurationProvider
     public static DataSetAnnotationConfiguration MapAnnotationFromDto(string dataSetName, string? owner, string? steward, string? classification, IEnumerable<string>? tags)
         => new()
         {
-            // Why: Id is Guid.Empty so DefaultConfigurationProvider.Save mints a UUIDv7 on insert.
+            // Why: Id is Guid.Empty so ImplementationConfigurationProviderBase.Save mints a UUIDv7 on insert.
             Name = dataSetName,
             DataSetName = dataSetName,
             BusinessOwner = owner,
@@ -202,7 +202,7 @@ public class QualityConfigurationProvider
         string? pattern, string? expression, string? name = null)
         => new()
         {
-            // Why: Id is Guid.Empty so DefaultConfigurationProvider.Save mints a UUIDv7 on insert.
+            // Why: Id is Guid.Empty so ImplementationConfigurationProviderBase.Save mints a UUIDv7 on insert.
             // Use the caller-supplied Name when present; otherwise synthesize the conventional
             // "{dataSet}:{ruleType}" identifier (existing behavior, not a new fallback value).
             Name = string.IsNullOrWhiteSpace(name) ? $"{dataSetName}:{ruleType}" : name,

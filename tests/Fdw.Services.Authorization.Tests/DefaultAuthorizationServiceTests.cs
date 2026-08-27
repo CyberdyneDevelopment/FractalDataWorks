@@ -11,6 +11,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
+using Fdw.Services.Data;
+using Fdw.Results;
 
 namespace Fdw.Services.Authorization.Tests;
 
@@ -382,20 +384,41 @@ public sealed class DefaultAuthorizationServiceTests
         return mock.Object;
     }
 
-    // Why: DefaultConfigurationProvider<T, TCommand> has 10 constructor params (params 7-10 are optional).
+    // Why: ImplementationConfigurationProviderBase<T, TCommand> has 10 constructor params (params 7-10 are optional).
     // All must be passed explicitly to Moq — Castle DynamicProxy uses reflection-based instantiation
     // and cannot resolve C# optional parameter defaults.
-    private static DefaultConfigurationProvider<T, TCommand> CreateProviderMock<T, TCommand>()
+    private static ImplementationConfigurationProviderBase<T, TCommand> CreateProviderMock<T, TCommand>()
         where T : class, Fdw.Configuration.IGenericConfiguration
         where TCommand : Fdw.Services.Configuration.ConfigurationCommandBase<T>
     {
-        return new Mock<DefaultConfigurationProvider<T, TCommand>>(
+        return new Mock<ImplementationConfigurationProviderBase<T, TCommand>>(
             MockBehavior.Loose,
-            NullLogger<DefaultConfigurationProvider<T, TCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>(
+            NullLogger<ImplementationConfigurationProviderBase<T, TCommand>>.Instance,
+            GatewayProviderFor(Mock.Of<IConfigurationGateway>(
                 g => g.DataStores == (System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>())),
             "TestStore",
             "cfg") // invalidator
             .Object;
     }
+
+    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
+    // connection it was told its rows live on, so the fake has to answer to that name to be found.
+    // Why a double rather than the real provider: these tests exercise what a configuration provider
+    // does with its gateway, not which gateway it selects, so the double answers for whatever
+    // connection is asked. Selection itself is covered where the real provider is under test.
+    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+        => new AnyConnectionGateways(gateway);
+
+    private sealed class AnyConnectionGateways : IConfigurationGatewayProvider
+    {
+        private readonly IConfigurationGateway _gateway;
+
+        public AnyConnectionGateways(IConfigurationGateway gateway) => _gateway = gateway;
+
+        public IGenericResult<IConfigurationGateway> Get(string connectionName)
+            => GenericResult<IConfigurationGateway>.Success(_gateway);
+
+        public IGenericResult Register(IConfigurationGateway gateway) => GenericResult.Success();
+    }
+
 }

@@ -1,12 +1,13 @@
 using System;
 using Fdw.Configuration;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Data;
 
 /// <summary>
 /// Configuration for the DataGateway service.
 /// </summary>
-public sealed class DataGatewayConfiguration : IGenericConfiguration
+public sealed class DataGatewayConfiguration : IDataGatewayConfiguration
 {
     /// <inheritdoc/>
     public Guid Id { get; set; } = Guid.CreateVersion7();

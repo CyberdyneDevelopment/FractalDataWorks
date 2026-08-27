@@ -36,7 +36,7 @@ public class SessionStateConfigurationProvider
     /// <summary>
     /// Initializes a new instance of the <see cref="SessionStateConfigurationProvider"/> class.
     /// </summary>
-    /// <param name="gateway">The configuration gateway for ConfigurationDb access.</param>
+    /// <param name="gateway">The configuration gateway.</param>
     /// <param name="logger">Optional logger instance.</param>
     public SessionStateConfigurationProvider(
         IConfigurationGateway gateway,

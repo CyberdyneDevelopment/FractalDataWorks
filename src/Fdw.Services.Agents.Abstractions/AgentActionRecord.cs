@@ -13,7 +13,10 @@ namespace Fdw.Services.Agents.Abstractions;
 public sealed partial class AgentActionRecord
 {
     /// <summary>Gets or sets the agent action identifier.</summary>
-    public int AgentActionId { get; set; }
+    public int RowId { get; set; }
+
+    /// <summary>Gets or sets the logical identity, minted by the application before insert.</summary>
+    public Guid Id { get; set; }
 
     /// <summary>Gets or sets the agent key identifier.</summary>
     public int AgentKeyId { get; set; }

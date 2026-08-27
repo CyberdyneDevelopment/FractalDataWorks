@@ -25,9 +25,9 @@ public abstract class SecretManagerTypeBase<TService, TFactory, TConfiguration> 
     ISecretManagerType<TService, TFactory, TConfiguration>
     where TService : ISecretManager
     where TFactory : ISecretManagerServiceFactory<TService, TConfiguration>
-    // Why: TConfiguration is constrained to IGenericConfiguration (not ISecretManagerConfiguration)
+    // Why: TConfiguration is constrained to IGenericConfiguration (not ISecretManagerImplementationConfiguration)
     // because SecretManagerTypes registers the root provider with SecretManagerConfiguration (the header)
-    // as the type parameter. The header implements IGenericConfiguration but not ISecretManagerConfiguration.
+    // as the type parameter. The header implements IGenericConfiguration but not ISecretManagerImplementationConfiguration.
     // Factory-level runtime checks (is SecretManagerConfiguration header && header.Configuration is XyzConfig)
     // enforce typed body correctness — the constraint here only needs to ensure serializability.
     where TConfiguration : class, IGenericConfiguration

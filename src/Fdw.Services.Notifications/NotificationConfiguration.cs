@@ -27,7 +27,7 @@ namespace Fdw.Services.Notifications;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Notification")]
-public partial class NotificationConfiguration : IGenericConfiguration
+public partial class NotificationConfiguration : INotificationConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationConfiguration"/> class.
@@ -55,7 +55,7 @@ public partial class NotificationConfiguration : IGenericConfiguration
     /// Gets or sets the unique identifier for this notification.
     /// </summary>
     // Why: No Guid.NewGuid() default — DB owns identity assignment. A random default would
-    // propagate to typed-body lookups via WHERE [NotificationId] = @parentId, causing misses.
+    // propagate to typed-body lookups via WHERE [NotificationId] = @domainConfigurationId, causing misses.
     public Guid Id { get; set; }
 
     /// <summary>
@@ -88,4 +88,6 @@ public partial class NotificationConfiguration : IGenericConfiguration
     /// </summary>
     public string? Description { get; set; }
 
+    /// <inheritdoc/>
+    public INotificationImplementationConfiguration? Configuration { get; set; }
 }

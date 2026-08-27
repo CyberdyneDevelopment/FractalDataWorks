@@ -69,7 +69,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            var provider = services.GetRequiredService<IPlatformServiceProvider<IEtlPipeline, PipelineConfiguration>>();
+            var provider = services.GetRequiredService<IEtlPipelineProvider>();
             var log = loggerFactory?.CreateLogger<StreamingPipelineType>() ?? NullLogger<StreamingPipelineType>.Instance;
 
             // Resolve factory from DI (registered in Phase 1)
@@ -101,7 +101,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             // Not registered with the runtime IPlatformServiceProvider (typed to the ETL-kind EtlPipelineConfiguration,
             // resolved from DI by the generated resolver) — the engine config is a distinct typed body reached
             // through the kind body's .Configuration, attached below.
-            var configProvider = services.GetRequiredService<DefaultConfigurationProvider<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>>();
+            var configProvider = services.GetRequiredService<ImplementationConfigurationProviderBase<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>>();
 
             // Why: wire the two-level configuration typed-body chain (Pipeline → Etl → engine). (1) Attach this
             // engine's body provider to the ETL-kind provider keyed by the engine discriminator ("Streaming");
@@ -133,11 +133,10 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             // Why: ETL is a KIND the general Pipeline header consumes. Register the general header provider
             // (idempotent TryAdd) here too so the "Etl" typed-provider attachment in RegisterFactory never
             // depends on cross-collection registration ordering (PipelineServiceTypes vs EtlPipelineTypes).
-            PipelineServiceConfigurationProvider.RegisterDomainConfiguration(builder.Services);
 
             // Factory - DI handles all constructor dependencies
             // Why Scoped: the factory optionally consumes IDataGateway (scoped). EtlPipelineTypes'
-            // generated IPlatformServiceProvider<IEtlPipeline, PipelineConfiguration> is itself Scoped and
+            // generated IEtlPipelineProvider is itself Scoped and
             // resolves this factory via RegisterFactory inside its own per-scope resolver, so a Scoped
             // factory here is lifetime-consistent, not a captive dependency.
             // Why: lambda registration so the cross-collection connection provider is injected as a Lazy —
@@ -147,15 +146,15 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
                 sp.GetRequiredService<ILogger<StreamingPipelineFactory>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetService<IDataGateway>(),
-                new Lazy<IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>>(
-                    () => sp.GetService<IPlatformServiceProvider<IGenericConnection, IGenericConfiguration>>()!)));
+                new Lazy<IConnectionProvider>(
+                    () => sp.GetService<IConnectionProvider>()!)));
 
             // Why: Lazy<IConfigurationGateway> defers cfg resolution until first runtime query, avoiding
             // circular dependency with the DataGateway that hasn't been built yet at registration time.
             // DataStore flows from TypeCollection.Configure() so "ConfigurationDb" is never hardcoded here.
-            builder.Services.AddSingleton(sp => new DefaultConfigurationProvider<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>(
-                sp.GetRequiredService<ILoggerFactory>().CreateLogger<DefaultConfigurationProvider<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+            builder.Services.AddSingleton(sp => new ImplementationConfigurationProviderBase<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>(
+                sp.GetRequiredService<ILoggerFactory>().CreateLogger<ImplementationConfigurationProviderBase<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>>(),
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 DataStore,
                 PathName));
 

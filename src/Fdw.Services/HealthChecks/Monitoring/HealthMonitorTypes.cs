@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Abstractions.Health.Monitoring;
 using Fdw.ServiceTypes;
 using Fdw.ServiceTypes.Logging;
@@ -39,13 +40,11 @@ namespace Fdw.Services.HealthChecks.Monitoring;
     typeof(HealthMonitorTypeBase<IHealthMonitorService, IHealthMonitorFactory<IHealthMonitorService, HealthMonitorConfiguration>, HealthMonitorConfiguration>),
     typeof(IHealthMonitorType),
     typeof(HealthMonitorTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(IHealthMonitorService),
-    ConfigurationType = typeof(HealthMonitorConfiguration),
     // Why: the concrete domain provider + domain-named interface, exactly like ConnectionTypes
-    // (DefaultConnectionProvider/IConnectionProvider) — consumers inject IHealthMonitorProvider,
+    // (ConnectionProvider/IConnectionProvider) — consumers inject IHealthMonitorProvider,
     // so the generated Register must bind THAT interface, not the generic IPlatformServiceProvider<,>.
-    ProviderType = typeof(DefaultHealthMonitorProvider),
+    ProviderType = typeof(HealthMonitorProvider),
     ProviderInterface = typeof(IHealthMonitorProvider),
     ServiceCategory = "HealthMonitor")]
 public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
@@ -62,6 +61,16 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
     /// body is what makes it replaceable: an application calling <c>Registration(...)</c> replaces the
     /// collect and this registration together, which is the correct semantic for a host taking over phase 2.
     /// </remarks>
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    /// <remarks>
+    /// Which monitor a host runs is per-host rather than shared across hosts, so this domain defaults
+    /// to <c>ServerConfiguration</c> — the store for boot-time and near-static server values — where a
+    /// domain whose rows are shared defaults to <c>PlatformConfiguration</c>.
+    /// </remarks>
+    public static string ConfigurationConnection { get; set; } = "ServerConfiguration";
+
     static HealthMonitorTypes()
     {
         var collectOptions = RegisterFunc;
@@ -79,7 +88,11 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
             // owner of a registration is the type that knows the thing exists, and this collection ships
             // beside it. It goes before the collect because each monitor option registers itself against
             // this provider, so it has to be there when the member cycle runs.
-            builder.Services.TryAddSingleton<HealthMonitorConfigurationProvider>();
+            builder.Services.TryAddSingleton<IHealthMonitorConfigurationProvider>(sp =>
+                new HealthMonitorConfigurationProvider(
+                    sp.GetService<ILogger<HealthMonitorConfigurationProvider>>()!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConfigurationConnection));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<HealthMonitorConfiguration>>(
                 sp => sp.GetRequiredService<HealthMonitorConfigurationProvider>());
 
@@ -100,10 +113,10 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
 
             builder.Services.AddScoped<IHealthMonitorProvider>(sp =>
             {
-                var provider = new DefaultHealthMonitorProvider(
+                var provider = new HealthMonitorProvider(
                     sp,
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultHealthMonitorProvider>()
-                    ?? NullLogger<DefaultHealthMonitorProvider>.Instance);
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<HealthMonitorProvider>()
+                    ?? NullLogger<HealthMonitorProvider>.Instance);
 
                 // Why ILogger<HealthMonitorTypes> and not CreateLogger("HealthMonitorTypes"): SourceContext then
                 // carries the namespace-qualified collection, and the category cannot drift from the
@@ -114,15 +127,15 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(HealthMonitorTypes), provider.GetType().Name);
                 try
                 {
-                    if (sp.GetService<IServiceConfigurationProvider<HealthMonitorConfiguration>>() is { } cfgProvider)
+                    if (sp.GetService<IHealthMonitorConfigurationProvider>() is { } cfgProvider)
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
-                        var parentResult = provider.Register(cfgProvider);
-                        if (parentResult.IsSuccess)
+                        var domainResult = provider.Register(cfgProvider);
+                        if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(HealthMonitorTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(HealthMonitorTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(HealthMonitorTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {

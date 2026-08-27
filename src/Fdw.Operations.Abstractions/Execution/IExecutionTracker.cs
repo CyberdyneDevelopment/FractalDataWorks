@@ -19,7 +19,7 @@ public interface IExecutionTracker
     /// </summary>
     /// <param name="itemType">The type of execution item.</param>
     /// <param name="name">The name of the execution item.</param>
-    /// <param name="parentId">The parent execution item ID, if any.</param>
+    /// <param name="domainConfigurationId">The parent execution item ID, if any.</param>
     /// <param name="correlationId">The correlation ID for distributed tracing.</param>
     /// <param name="triggerSource">The source that triggered this execution.</param>
     /// <param name="parameters">The execution parameters.</param>
@@ -28,7 +28,7 @@ public interface IExecutionTracker
     Task<IGenericResult<IExecutionItem>> CreateItem(
         IExecutionItemType itemType,
         string name,
-        Guid? parentId = null,
+        Guid? domainConfigurationId = null,
         string? correlationId = null,
         string? triggerSource = null,
         IReadOnlyDictionary<string, object?>? parameters = null,
@@ -107,11 +107,11 @@ public interface IExecutionTracker
     /// <summary>
     /// Gets child execution items for a parent.
     /// </summary>
-    /// <param name="parentId">The parent execution item ID.</param>
+    /// <param name="domainConfigurationId">The parent execution item ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The list of child execution items.</returns>
     Task<IGenericResult<IReadOnlyList<IExecutionItem>>> GetChildren(
-        Guid parentId,
+        Guid domainConfigurationId,
         CancellationToken cancellationToken = default);
 
     /// <summary>

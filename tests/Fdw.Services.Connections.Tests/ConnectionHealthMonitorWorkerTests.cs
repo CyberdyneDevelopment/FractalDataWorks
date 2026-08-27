@@ -9,6 +9,7 @@ using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Connections.Tests;
 
@@ -39,8 +40,7 @@ public sealed class ConnectionHealthMonitorWorkerTests
         public StubConnectionConfigurationProvider(IGenericResult<IReadOnlyList<ConnectionConfiguration>> result)
             : base(
                 NullLogger<ConnectionConfigurationProvider>.Instance,
-                new Lazy<IConfigurationGateway>(static () => throw new InvalidOperationException(
-                    "The stub provider overrides Get, so the gateway must never be resolved.")))
+                new ConfigurationGatewayProvider())
         {
             _result = result;
         }
@@ -113,7 +113,7 @@ public sealed class ConnectionHealthMonitorWorkerTests
 
     // Why this exact shape: it mirrors what DataStore.Path builds when the store registers no 'conn'
     // path — the typed code chained over the node's own navigation message — which ConfigurationGateway
-    // and DefaultConfigurationProvider then propagate with ToNewResult (Code/InnerResult preserved).
+    // and ImplementationConfigurationProviderBase then propagate with ToNewResult (Code/InnerResult preserved).
     private static IGenericResult<IReadOnlyList<ConnectionConfiguration>> PathNotRegistered() =>
         GenericResult<IReadOnlyList<ConnectionConfiguration>>.Chain(
             DataStoresResultCodes.DataPathNotFound,

@@ -18,7 +18,7 @@ using Fdw.Services.Results;
 namespace Fdw.Services.Tests;
 
 /// <summary>
-/// Comprehensive tests for DefaultServiceProvider demonstrating service lifetime behaviors.
+/// Comprehensive tests for PlatformServiceProviderBase demonstrating service lifetime behaviors.
 /// These tests verify that singleton providers, scoped configurations, and factory registrations
 /// behave correctly across DI scopes.
 /// </summary>
@@ -30,7 +30,7 @@ public class ServiceProviderLifetimeTests
     /// <summary>
     /// Test configuration class for service provider tests.
     /// </summary>
-    public class TestServiceConfiguration : IGenericConfiguration<TestServiceConfiguration>
+    public class TestServiceConfiguration : IGenericConfiguration<TestServiceConfiguration>, IImplementationConfiguration
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
@@ -118,13 +118,13 @@ public class ServiceProviderLifetimeTests
     }
 
     /// <summary>
-    /// Concrete test provider for testing DefaultServiceProvider behavior.
+    /// Concrete test provider for testing PlatformServiceProviderBase behavior.
     /// </summary>
-    public class TestServiceProvider : DefaultServiceProvider<
+    public class TestServiceProvider : PlatformServiceProviderBase<
         ITestService,
         TestServiceConfiguration,
         IServiceFactory<ITestService>,
-        IServiceConfigurationProvider<TestServiceConfiguration>>
+        IDomainConfigurationProvider<TestServiceConfiguration>>
     {
         public TestServiceProvider(IServiceProvider services, ILogger<TestServiceProvider> logger)
             : base(services, logger)
@@ -134,19 +134,14 @@ public class ServiceProviderLifetimeTests
         public new void Register(string serviceOptionType, IServiceFactory<ITestService> factory)
             => base.Register(serviceOptionType, factory);
 
-        public new void Register(string serviceOptionType, IServiceConfigurationProvider<TestServiceConfiguration> configProvider)
-            => base.Register(serviceOptionType, configProvider);
-
-        // Why: DefaultServiceProvider.Get(name/id) now requires a parent provider for
-        // O(1) name-to-type resolution via ServiceOptionType.
-        public new IGenericResult Register(IServiceConfigurationProvider<TestServiceConfiguration> parentProvider)
-            => base.Register(parentProvider);
+        public new IGenericResult Register(IDomainConfigurationProvider<TestServiceConfiguration> domainConfigurationProvider)
+            => base.Register(domainConfigurationProvider);
     }
 
     /// <summary>
     /// Simple test configuration provider for testing.
     /// </summary>
-    public class TestServiceConfigurationProvider : IServiceConfigurationProvider<TestServiceConfiguration>, IServiceConfigurationProvider
+    public class TestServiceConfigurationProvider : IServiceConfigurationProvider<TestServiceConfiguration>, IServiceConfigurationProvider, IDomainConfigurationProvider<TestServiceConfiguration>
     {
         private readonly List<TestServiceConfiguration> _configs;
 
@@ -198,19 +193,47 @@ public class ServiceProviderLifetimeTests
                 : result.ToNewResult<IGenericConfiguration>();
         }
 
+        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(string name, CancellationToken ct)
+        {
+            var result = await Get(name, ct).ConfigureAwait(false);
+            return result.IsSuccess
+                ? result.ToNewResult<IGenericConfiguration>(result.Value!)
+                : result.ToNewResult<IGenericConfiguration>();
+        }
+
         async Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
             => record is TestServiceConfiguration typed
                 ? await Save(typed, ct).ConfigureAwait(false)
                 : GenericResult.Failure(ServicesResultCodes.ByName("ServiceCastFailed"));
 
+
+        // ── IDomainConfigurationProvider ────────────────────────────────────
+        Task<IGenericResult<TestServiceConfiguration>> IDomainConfigurationProvider<TestServiceConfiguration>.Get(
+            string name, CancellationToken ct) => Get(name, ct);
+
+        Task<IGenericResult<TestServiceConfiguration>> IDomainConfigurationProvider<TestServiceConfiguration>.Get(
+            Guid id, CancellationToken ct) => Get(id, ct);
+
+        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Save<T>(
+            string serviceOptionType, string name, T implementationConfiguration, CancellationToken ct)
+            => Task.FromResult<IGenericResult>(GenericResult.Success());
+
+        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(Guid id, CancellationToken ct)
+            => Task.FromResult<IGenericResult>(GenericResult.Success());
+
+        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(string name, CancellationToken ct)
+            => Task.FromResult<IGenericResult>(GenericResult.Success());
+
+        IGenericResult IDomainConfigurationProvider<TestServiceConfiguration>.Register<T>(
+            string name, T implementationConfigurationProvider) => GenericResult.Success();
 }
 
     /// <summary>
     /// Aggregates multiple config providers into one for parent provider registration.
     /// </summary>
-    // Why: DefaultServiceProvider.Get(name/id) now requires a parent provider for O(1)
+    // Why: PlatformServiceProviderBase.Get(name/id) now requires a parent provider for O(1)
     // name-to-type resolution. Tests with multiple type registrations need an aggregate.
-    public class AggregateConfigProvider : IServiceConfigurationProvider<TestServiceConfiguration>, IServiceConfigurationProvider
+    public class AggregateConfigProvider : IServiceConfigurationProvider<TestServiceConfiguration>, IServiceConfigurationProvider, IDomainConfigurationProvider<TestServiceConfiguration>
     {
         private readonly IServiceConfigurationProvider<TestServiceConfiguration>[] _providers;
 
@@ -272,11 +295,39 @@ public class ServiceProviderLifetimeTests
                 : result.ToNewResult<IGenericConfiguration>();
         }
 
+        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(string name, CancellationToken ct)
+        {
+            var result = await Get(name, ct).ConfigureAwait(false);
+            return result.IsSuccess
+                ? result.ToNewResult<IGenericConfiguration>(result.Value!)
+                : result.ToNewResult<IGenericConfiguration>();
+        }
+
         async Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
             => record is TestServiceConfiguration typed
                 ? await Save(typed, ct).ConfigureAwait(false)
                 : GenericResult.Failure(ServicesResultCodes.ByName("ServiceCastFailed"));
 
+
+        // ── IDomainConfigurationProvider ────────────────────────────────────
+        Task<IGenericResult<TestServiceConfiguration>> IDomainConfigurationProvider<TestServiceConfiguration>.Get(
+            string name, CancellationToken ct) => Get(name, ct);
+
+        Task<IGenericResult<TestServiceConfiguration>> IDomainConfigurationProvider<TestServiceConfiguration>.Get(
+            Guid id, CancellationToken ct) => Get(id, ct);
+
+        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Save<T>(
+            string serviceOptionType, string name, T implementationConfiguration, CancellationToken ct)
+            => Task.FromResult<IGenericResult>(GenericResult.Success());
+
+        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(Guid id, CancellationToken ct)
+            => Task.FromResult<IGenericResult>(GenericResult.Success());
+
+        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(string name, CancellationToken ct)
+            => Task.FromResult<IGenericResult>(GenericResult.Success());
+
+        IGenericResult IDomainConfigurationProvider<TestServiceConfiguration>.Register<T>(
+            string name, T implementationConfigurationProvider) => GenericResult.Success();
 }
 
     #endregion
@@ -341,7 +392,7 @@ public class ServiceProviderLifetimeTests
             var provider = scope1.ServiceProvider.GetRequiredService<TestServiceProvider>();
             var configProvider = new TestServiceConfigurationProvider(configs);
             var factory = new TestServiceFactory();
-            provider.Register("TypeA", configProvider);
+            provider.Register(configProvider);
             provider.Register(configProvider);
             provider.Register("TypeA", factory);
         }
@@ -376,7 +427,7 @@ public class ServiceProviderLifetimeTests
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         var factory = new TestServiceFactory();
-        provider.Register("TypeA", configProvider);
+        provider.Register(configProvider);
         provider.Register(configProvider);
         provider.Register("TypeA", factory);
 
@@ -408,7 +459,7 @@ public class ServiceProviderLifetimeTests
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         var factory = new TestServiceFactory();
-        provider.Register("TypeA", configProvider);
+        provider.Register(configProvider);
         provider.Register(configProvider);
         provider.Register("TypeA", factory);
 
@@ -435,7 +486,7 @@ public class ServiceProviderLifetimeTests
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
-        provider.Register("TypeA", configProvider);
+        provider.Register(configProvider);
         provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
@@ -460,7 +511,7 @@ public class ServiceProviderLifetimeTests
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
-        provider.Register("TypeA", configProvider);
+        provider.Register(configProvider);
         provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
@@ -496,7 +547,7 @@ public class ServiceProviderLifetimeTests
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
-        provider.Register("TypeA", configProvider);
+        provider.Register(configProvider);
         provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
@@ -540,9 +591,7 @@ public class ServiceProviderLifetimeTests
 
         var configProviderA = new TestServiceConfigurationProvider(typeAConfigs);
         var configProviderB = new TestServiceConfigurationProvider(typeBConfigs);
-        provider.Register("TypeA", configProviderA);
         provider.Register("TypeA", new TestServiceFactory());
-        provider.Register("TypeB", configProviderB);
         provider.Register("TypeB", new TestServiceFactory());
         provider.Register(new AggregateConfigProvider(configProviderA, configProviderB));
 
@@ -595,9 +644,7 @@ public class ServiceProviderLifetimeTests
         // Act
         var configProviderA = new TestServiceConfigurationProvider(configsA);
         var configProviderB = new TestServiceConfigurationProvider(configsB);
-        provider.Register("TypeA", configProviderA);
         provider.Register("TypeA", factoryA);
-        provider.Register("TypeB", configProviderB);
         provider.Register("TypeB", factoryB);
         provider.Register(new AggregateConfigProvider(configProviderA, configProviderB));
 
@@ -629,7 +676,7 @@ public class ServiceProviderLifetimeTests
         var factory2 = new TestServiceFactory();
 
         // Act
-        provider.Register("TypeA", configProvider);
+        provider.Register(configProvider);
         provider.Register(configProvider);
         provider.Register("TypeA", factory1);
         provider.Register("TypeA", factory2); // Overwrite
@@ -667,9 +714,9 @@ public class ServiceProviderLifetimeTests
 
         var msSqlConfigProvider = new TestServiceConfigurationProvider(msSqlConfigs);
         var restConfigProvider = new TestServiceConfigurationProvider(restConfigs);
-        provider.Register("MsSql", msSqlConfigProvider);
+        provider.Register(msSqlConfigProvider);
         provider.Register("MsSql", msSqlFactory);
-        provider.Register("Rest", restConfigProvider);
+        provider.Register(restConfigProvider);
         provider.Register("Rest", restFactory);
         provider.Register(new AggregateConfigProvider(msSqlConfigProvider, restConfigProvider));
 
@@ -702,7 +749,7 @@ public class ServiceProviderLifetimeTests
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
-        provider.Register("TypeA", configProvider);
+        provider.Register(configProvider);
         provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
@@ -731,7 +778,7 @@ public class ServiceProviderLifetimeTests
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
-        provider.Register("TypeA", configProvider);
+        provider.Register(configProvider);
         provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
@@ -756,7 +803,7 @@ public class ServiceProviderLifetimeTests
 
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
         var configProvider = new TestServiceConfigurationProvider(configs);
-        provider.Register("TypeA", configProvider);
+        provider.Register(configProvider);
         provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
@@ -783,7 +830,7 @@ public class ServiceProviderLifetimeTests
 
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
         var configProvider = new TestServiceConfigurationProvider(configs);
-        provider.Register("TypeA", configProvider);
+        provider.Register(configProvider);
         provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
@@ -816,7 +863,7 @@ public class ServiceProviderLifetimeTests
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
-        provider.Register("TypeA", configProvider);
+        provider.Register(configProvider);
         provider.Register(configProvider);
         provider.Register("TypeA", new TestServiceFactory());
 
@@ -867,9 +914,7 @@ public class ServiceProviderLifetimeTests
         var factory = rootProvider.GetRequiredService<TestServiceFactory>();
         var configProviderA = new TestServiceConfigurationProvider(typeAConfigs);
         var configProviderB = new TestServiceConfigurationProvider(typeBConfigs);
-        testProvider.Register("TypeA", configProviderA);
         testProvider.Register("TypeA", factory);
-        testProvider.Register("TypeB", configProviderB);
         testProvider.Register("TypeB", factory);
         testProvider.Register(new AggregateConfigProvider(configProviderA, configProviderB));
 
@@ -909,9 +954,9 @@ public class ServiceProviderLifetimeTests
 
         var msSqlConfigProvider = new TestServiceConfigurationProvider(msSqlConfigs);
         var restConfigProvider = new TestServiceConfigurationProvider(restConfigs);
-        provider.Register("MsSql", msSqlConfigProvider);
+        provider.Register(msSqlConfigProvider);
         provider.Register("MsSql", msSqlFactory);
-        provider.Register("Rest", restConfigProvider);
+        provider.Register(restConfigProvider);
         provider.Register("Rest", restFactory);
         provider.Register(new AggregateConfigProvider(msSqlConfigProvider, restConfigProvider));
 

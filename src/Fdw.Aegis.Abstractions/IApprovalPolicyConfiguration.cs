@@ -9,7 +9,7 @@ namespace Fdw.Aegis.Abstractions;
 /// inheriting from <c>AegisCommandConfiguration</c>.
 /// </summary>
 /// <remarks>
-/// Mirrors <c>IConnectionConfiguration</c>. Approval-policy bodies are (Phase 2) persisted in their
+/// Mirrors <c>IConnectionImplementationConfiguration</c>. Approval-policy bodies are (Phase 2) persisted in their
 /// own tables and linked to the parent <c>AegisCommandConfiguration</c> row via an
 /// <see cref="AegisCommandId"/> foreign key property. The parent carries an
 /// <c>IApprovalPolicyConfiguration? Configuration</c> property populated on the read path.

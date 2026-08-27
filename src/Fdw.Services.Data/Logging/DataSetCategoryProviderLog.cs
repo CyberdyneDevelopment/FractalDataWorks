@@ -27,6 +27,12 @@ public static partial class DataSetCategoryProviderLog
     [MessageLogging(EventId = 71010, Level = LogLevel.Warning, Message = "DataSetCategoryProvider.Initialize: failed to load categories from database — runtime categories unavailable: {reason}")]
     public static partial IGenericMessage LoadFailed(ILogger logger, string reason);
 
+    /// <summary>Logged at Error when no configuration gateway serves the connection categories live on.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="connectionName">The connection no gateway serves.</param>
+    [MessageLogging(EventId = 61022, Level = LogLevel.Error, Message = "DataSetCategoryProvider.Initialize: no configuration gateway is registered for connection '{connectionName}' — runtime categories unavailable")]
+    public static partial IGenericMessage GatewayUnavailable(ILogger logger, string connectionName);
+
     /// <summary>Logged at Warning when a category row has a blank Name and is skipped.</summary>
     [MessageLogging(EventId = 21001, Level = LogLevel.Warning, Message = "DataSetCategoryProvider.Initialize: skipping category row Id='{id}' — Name is blank")]
     public static partial IGenericMessage SkippingBlankName(ILogger logger, System.Guid id);

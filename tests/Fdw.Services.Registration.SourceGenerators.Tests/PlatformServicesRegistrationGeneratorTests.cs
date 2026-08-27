@@ -66,7 +66,7 @@ public sealed class PlatformServicesRegistrationGeneratorTests
         generated.ShouldNotBeNull();
 
         // Initialize is always the bare method group — no wrapping lambda, no service resolution.
-        generated.ShouldContain("TestDomain.WidgetTypes.Initialize),");
+        generated.ShouldContain("TestDomain.WidgetTypes.Initialize));");
         generated.ShouldNotContain("SystemAuthenticationContextScope");
         generated.ShouldNotContain("IAuthenticationContextAccessor");
         generated.ShouldNotContain("GetRequiredService");
@@ -91,92 +91,13 @@ public sealed class PlatformServicesRegistrationGeneratorTests
         generated.ShouldContain("typeof(TestDomain.WidgetTypes)");
         generated.ShouldContain("TestDomain.WidgetTypes.Configure,");
         generated.ShouldContain("TestDomain.WidgetTypes.Register,");
-        generated.ShouldContain("TestDomain.WidgetTypes.Initialize),");
-        // Why 10: the default Group when [ServiceTypeCollection] doesn't specify one — matches the
-        // attribute's own default and "everything else defaults to 10" in the canonical layer scheme.
-        generated.ShouldContain("10);");
+        generated.ShouldContain("TestDomain.WidgetTypes.Initialize));");
         // Why non-nullable: the module initializer always assigns the backing field before any read,
         // so the dot-walk property fails loud (?? throw) rather than handing back a nullable.
         generated.ShouldContain("public static PlatformServiceEntry Widget");
         generated.ShouldContain("=> PlatformServicesRegistration._widgetEntry");
         // No name-based lookup surface — dot-walk only (no actual ByName(...) call emitted).
         generated.ShouldNotContain(".ByName(");
-    }
-
-    [Fact]
-    public void EmitsManualTrueArgumentWhenAttributeDeclaresManual()
-    {
-        const string source = """
-            using System;
-            using Microsoft.Extensions.DependencyInjection;
-            using Microsoft.Extensions.Hosting;
-            using Microsoft.Extensions.Logging;
-            using Fdw.Collections;
-
-            namespace TestDomain;
-
-            [ServiceTypeCollection(typeof(object), typeof(object), typeof(ChosenTypes), ServiceCategory = "Chosen", Manual = true)]
-            public static class ChosenTypes
-            {
-                public static TBuilder Configure<TBuilder>(TBuilder builder, ILoggerFactory? loggerFactory = null)
-                    where TBuilder : IHostApplicationBuilder
-                    => builder;
-
-                public static void Register(IServiceCollection services, ILoggerFactory? loggerFactory = null) { }
-
-                public static void Initialize(IServiceProvider services, ILoggerFactory? loggerFactory = null) { }
-            }
-            """;
-
-        var (compilation, diagnostics) = CompilationHelper.RunGenerator(source);
-
-        diagnostics.ShouldBeEmpty();
-
-        var generated = compilation.SyntaxTrees
-            .Select(t => t.GetText().ToString())
-            .FirstOrDefault(t => t.Contains("PlatformServicesRegistration"));
-
-        generated.ShouldNotBeNull();
-        generated.ShouldContain("_chosenEntry = PlatformServices.Add(");
-        generated.ShouldContain("manual: true);");
-    }
-
-    [Fact]
-    public void EmitsExplicitGroupValueWhenAttributeDeclaresGroup()
-    {
-        const string source = """
-            using System;
-            using Microsoft.Extensions.DependencyInjection;
-            using Microsoft.Extensions.Hosting;
-            using Microsoft.Extensions.Logging;
-            using Fdw.Collections;
-
-            namespace TestDomain;
-
-            [ServiceTypeCollection(typeof(object), typeof(object), typeof(FoundationTypes), ServiceCategory = "Foundation", Group = 1)]
-            public static class FoundationTypes
-            {
-                public static TBuilder Configure<TBuilder>(TBuilder builder, ILoggerFactory? loggerFactory = null)
-                    where TBuilder : IHostApplicationBuilder
-                    => builder;
-
-                public static void Register(IServiceCollection services, ILoggerFactory? loggerFactory = null) { }
-
-                public static void Initialize(IServiceProvider services, ILoggerFactory? loggerFactory = null) { }
-            }
-            """;
-
-        var (compilation, diagnostics) = CompilationHelper.RunGenerator(source);
-
-        diagnostics.ShouldBeEmpty();
-
-        var generated = compilation.SyntaxTrees
-            .Select(t => t.GetText().ToString())
-            .FirstOrDefault(t => t.Contains("PlatformServicesRegistration"));
-
-        generated.ShouldNotBeNull();
-        generated.ShouldContain("_foundationEntry = PlatformServices.Add(");
-        generated.ShouldContain("1);");
     }
 
     [Fact]

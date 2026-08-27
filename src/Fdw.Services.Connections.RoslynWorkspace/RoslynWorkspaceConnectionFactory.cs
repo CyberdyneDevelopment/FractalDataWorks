@@ -47,7 +47,7 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
         // Why: synchronous create cannot load the workspace (async-only). Return failure;
         // callers that need a connection should use the async overload.
 
-        // Why: After config-split, DefaultConnectionProvider passes a composed ConnectionConfiguration
+        // Why: After config-split, ConnectionProvider passes a composed ConnectionConfiguration
         // header. Extract connectionName from the header; typed body is irrelevant here since we
         // always return failure (sync creation is not supported for workspace connections).
         if (configuration is ConnectionConfiguration composedHeader
@@ -78,7 +78,7 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
         ISecretManager? secretManager,
         CancellationToken cancellationToken = default)
     {
-        // Why: After config-split, DefaultConnectionProvider passes a composed ConnectionConfiguration
+        // Why: After config-split, ConnectionProvider passes a composed ConnectionConfiguration
         // header. Extract connectionName and typed body from the header.
         if (configuration is ConnectionConfiguration header
             && header.Configuration is RoslynWorkspaceConnectionConfiguration typedBody)

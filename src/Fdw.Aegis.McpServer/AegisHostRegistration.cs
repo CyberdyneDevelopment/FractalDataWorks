@@ -31,7 +31,7 @@ public static class AegisHostRegistration
 {
     // Why: the same three discriminator-dispatch converters ConfigurationGatewayExtensions uses —
     // Aegis.McpServer deserializes its own aegisSchema.json directly via STJ (bypassing IConfiguration
-    // binding) rather than calling AddConfigurationGateway, which would additionally register
+    // binding) rather than letting ConfigurationGatewayTypes build them, which would additionally register
     // IConnectionFactory/IConfigurationGateway against a real ConfigurationDb this host never touches.
     private static readonly JsonSerializerOptions SchemaJsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -151,12 +151,12 @@ public static class AegisHostRegistration
         }
 
         // Why: every SecretManager-kind [ServiceTypeOption]'s Register (and the shared
-        // SecretManagerConfigurationProvider it registers) constructs a DefaultConfigurationProvider
+        // SecretManagerConfigurationProvider it registers) constructs a ImplementationConfigurationProviderBase
         // that takes a Lazy<IConfigurationGateway> constructor dependency — that dependency exists
         // purely to satisfy the shared FDW registration machinery; this host never resolves it.
         // AegisInjector resolves secret managers via ISecretManagerProvider.Get(name), whose parent
         // configuration provider is the in-memory DeclaredSecretManagerConfigurationProvider wired in
-        // Initialize — so name resolution never touches this gateway either. Mirrors the exact
+        // Initialize — so name resolution never touches this gatewayProvider either. Mirrors the exact
         // registration line ConfigurationGatewayServiceType uses (Fdw.Services.Data); IConfigurationGateway
         // itself is deliberately never registered here — any accidental use fails loud with a normal DI
         // resolution exception instead of silently reaching a real ConfigurationDb.
@@ -176,6 +176,14 @@ public static class AegisHostRegistration
 
         builder.Services.AddSingleton(Options.Create(new AegisCommandsOptions { Commands = [.. schema.Commands] }));
 
+        // Why the declared schema is registered as the domain configuration provider rather than
+        // handed to the provider directly: ISecretManagerProvider is Scoped, so an instance resolved
+        // here is not the instance AegisInjector receives per tool call. SecretManagerTypes' own
+        // registration reads ISecretManagerConfigurationProvider out of DI for every scope it builds,
+        // so supplying it here reaches all of them and swaps only the SOURCE of the configuration.
+        builder.Services.AddSingleton<ISecretManagerConfigurationProvider>(
+            new DeclaredSecretManagerConfigurationProvider([.. schema.SecretManagers]));
+
         // Why: Scoped — IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration> (registered by
         // SecretManagerTypes.Register above) is itself Scoped by default, so AegisInjector (which takes
         // it as a constructor dependency) must be Scoped too. PreApprovedPolicyEvaluator and
@@ -191,21 +199,19 @@ public static class AegisHostRegistration
     }
 
     /// <summary>
-    /// Phase 2 (after Build): wires <see cref="SecretManagerTypes"/> factories into its provider, then
-    /// gives that provider the declared schema as its PARENT configuration provider so
+    /// Phase 2 (after Build): wires <see cref="SecretManagerTypes"/> factories into its provider, so
     /// <c>ISecretManagerProvider.Get(name)</c> resolves a logical name with zero ConfigurationDb access.
     /// </summary>
     /// <remarks>
-    /// Why the parent provider rather than an Aegis-side directory: name-to-configuration resolution is
-    /// the domain provider's job, not the injector's. Registering
-    /// <see cref="DeclaredSecretManagerConfigurationProvider"/> here swaps only the SOURCE of that
-    /// configuration (declared JSON instead of ConfigurationDb) and leaves the resolution path
-    /// identical, so <c>AegisInjector</c> holds no directory and names no specific secret manager.
+    /// Why name resolution is not an Aegis-side directory: turning a name into a configuration is the
+    /// domain provider's job, not the injector's. The
+    /// <see cref="DeclaredSecretManagerConfigurationProvider"/> registered in <c>Register</c> swaps only
+    /// the SOURCE of that configuration (declared JSON instead of ConfigurationDb) and leaves the
+    /// resolution path identical, so <c>AegisInjector</c> holds no directory and names no specific
+    /// secret manager.
     /// </remarks>
-    public static IGenericResult<IHost> Initialize(IHost host, ConfigurationSchema schema, ILoggerFactory? loggerFactory = null)
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null)
     {
-        var services = host.Services;
-
         var logger = Logger(loggerFactory);
         AegisLog.HostPhaseStarting(logger, nameof(Initialize));
 
@@ -214,20 +220,6 @@ public static class AegisHostRegistration
         {
             AegisLog.HostPhaseFailed(logger, nameof(Initialize), secretManagersInitialized.CurrentMessage);
             return secretManagersInitialized;
-        }
-
-        var parentResult = services
-            .GetRequiredService<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>()
-            .Register(new DeclaredSecretManagerConfigurationProvider([.. schema.SecretManagers]));
-
-        // Why this returns rather than throws: an exception decides for the host that the process
-        // ends. Registration failures arrive here as values from every other phase, and this one was
-        // the odd path out - it aborted startup with a stack trace where its siblings returned a coded
-        // failure the caller could log and act on.
-        if (parentResult.IsFailure)
-        {
-            AegisLog.HostPhaseFailed(logger, nameof(Initialize), parentResult.CurrentMessage);
-            return parentResult.ToNewResult<IHost>();
         }
 
         AegisLog.HostPhaseCompleted(logger, nameof(Initialize));

@@ -13,7 +13,7 @@ namespace Fdw.Services.Calculations.Configuration;
 /// child collections (Inputs, Steps→{Fields,Operands}) and polymorphic typed body (Formula/Windowed).
 /// </summary>
 /// <remarks>
-/// Why: the keystone <c>DefaultConfigurationProvider</c> composes the full aggregate on read
+/// Why: the keystone <c>ImplementationConfigurationProviderBase</c> composes the full aggregate on read
 /// (ComposeChildren for the nav collections, ComposeTypedBody for <see cref="Configuration"/> dispatched
 /// on <see cref="ServiceOptionType"/>) and cascade-saves it on write — there is no per-domain hand-assembly.
 /// Named without the "Managed" suffix so the cascade FK derives correctly: Strip("Configuration") =>

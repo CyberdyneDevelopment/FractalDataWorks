@@ -9,19 +9,21 @@ namespace Fdw.UI.Components.Blazor.Tests.DataInfra;
 /// </summary>
 internal static class ProviderStubState
 {
-    private static readonly Dictionary<Type, object?> s_pending = [];
+    // Why AsyncLocal: xUnit runs test collections in parallel, so a single static store is shared by
+    // tests running at the same moment - one test's Set is taken by another's Take, and both render
+    // the wrong context. AsyncLocal flows the pending value into the render call's own execution
+    // context and nowhere else, so each test hands off only to itself.
+    private static readonly AsyncLocal<Dictionary<Type, object?>?> s_pending = new();
 
-    internal static void Set<TContext>(TContext? value) =>
-        s_pending[typeof(TContext)] = value;
+    internal static void Set<TContext>(TContext? value)
+        => (s_pending.Value ??= [])[typeof(TContext)] = value;
 
     internal static TContext? Take<TContext>() where TContext : new()
     {
-        if (s_pending.TryGetValue(typeof(TContext), out var value))
-        {
-            s_pending.Remove(typeof(TContext));
-            return (TContext?)value;
-        }
-        return default;
+        var pending = s_pending.Value;
+        if (pending is null || !pending.Remove(typeof(TContext), out var value))
+            return default;
+        return (TContext?)value;
     }
 }
 
@@ -44,8 +46,6 @@ public sealed class ProviderStub<TContext> : ComponentBase
 
     protected override void OnInitialized()
     {
-        // Why: PendingContext was previously a static property on this generic type, which CA1000
-        // flags. State is now stored in the non-generic ProviderStubState keyed by TContext type.
         _context = ProviderStubState.Take<TContext>() ?? new TContext();
     }
 

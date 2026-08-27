@@ -27,7 +27,7 @@ namespace Fdw.Services.SecretManagers;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "SecretManager")]
-public partial class SecretManagerConfiguration : IGenericConfiguration
+public partial class SecretManagerConfiguration : ISecretManagerConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SecretManagerConfiguration"/> class.
@@ -56,7 +56,7 @@ public partial class SecretManagerConfiguration : IGenericConfiguration
     /// Gets or sets the durable logical identifier (matches sec.SecretManager.Id).
     /// </summary>
     // Why: NO Guid.NewGuid() default — DB owns identity assignment. A random default
-    // here would silently propagate to child Get(parentId) lookups when the mapper
+    // here would silently propagate to child Get(domainConfigurationId) lookups when the mapper
     // failed to bind Id, returning ConfigurationNotFound for valid records.
     public Guid Id { get; set; }
 
@@ -105,5 +105,5 @@ public partial class SecretManagerConfiguration : IGenericConfiguration
     // Why: [NotMapped] — not a column on sec.SecretManager. Written separately via typed provider.
     // Read path populates by dispatching on ServiceOptionType to the appropriate typed provider.
     [NotMapped]
-    public ISecretManagerConfiguration? Configuration { get; set; }
+    public ISecretManagerImplementationConfiguration? Configuration { get; set; }
 }

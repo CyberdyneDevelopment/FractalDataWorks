@@ -30,23 +30,23 @@ public static partial class OperationsEndpointLog
 
     /// <summary>Logs the start of fetching a single agent action.</summary>
     [MessageLogging(EventId = 11018, Level = LogLevel.Trace, Message = "Getting agent action {actionId}")]
-    public static partial IGenericMessage GettingAgentAction(ILogger logger, int actionId);
+    public static partial IGenericMessage GettingAgentAction(ILogger logger, Guid actionId);
 
     /// <summary>Logs that an agent action was not found.</summary>
     [MessageLogging(EventId = 31003, Level = LogLevel.Warning, Message = "Agent action {actionId} not found")]
-    public static partial IGenericMessage AgentActionNotFound(ILogger logger, int actionId);
+    public static partial IGenericMessage AgentActionNotFound(ILogger logger, Guid actionId);
 
     /// <summary>Logs the start of a review operation on an agent action.</summary>
     [MessageLogging(EventId = 11019, Level = LogLevel.Trace, Message = "Reviewing agent action {actionId} as '{decision}'")]
-    public static partial IGenericMessage ReviewingAgentAction(ILogger logger, int actionId, string decision);
+    public static partial IGenericMessage ReviewingAgentAction(ILogger logger, Guid actionId, string decision);
 
     /// <summary>Logs a successful review of an agent action.</summary>
     [MessageLogging(EventId = 11020, Level = LogLevel.Information, Message = "Agent action {actionId} reviewed as '{decision}' by '{reviewedBy}'")]
-    public static partial IGenericMessage AgentActionReviewed(ILogger logger, int actionId, string decision, string reviewedBy);
+    public static partial IGenericMessage AgentActionReviewed(ILogger logger, Guid actionId, string decision, string reviewedBy);
 
     /// <summary>Logs a failure to review an agent action.</summary>
     [MessageLogging(EventId = 91003, Level = LogLevel.Error, Message = "Failed to review agent action {actionId} as '{decision}': {message}")]
-    public static partial IGenericMessage ReviewAgentActionFailed(ILogger logger, int actionId, string decision, string message);
+    public static partial IGenericMessage ReviewAgentActionFailed(ILogger logger, Guid actionId, string decision, string message);
 
     /// <summary>Logs that the user identity claim was not found.</summary>
     [MessageLogging(EventId = 51000, Level = LogLevel.Warning, Message = "User identity claim not found for agent action review")]

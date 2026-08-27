@@ -53,7 +53,7 @@ public sealed class DataSetCategoryProvider
     {
         services.TryAddSingleton<DataSetCategoryProvider>(sp =>
             new DataSetCategoryProvider(
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 sp.GetService<ILogger<DataSetCategoryProvider>>()));
     }
 
@@ -67,7 +67,7 @@ public sealed class DataSetCategoryProvider
         var provider = services.GetRequiredService<DataSetCategoryProvider>();
         // Why: Synchronous Initialize is required by the three-phase contract.
         // CancellationToken.None is safe here — startup is not cancellable.
-#pragma warning disable VSTHRD002 // three-phase Initialize is sync-by-contract; the gateway query is a one-shot startup load
+#pragma warning disable VSTHRD002 // three-phase Initialize is sync-by-contract; the gatewayProvider query is a one-shot startup load
         provider.LoadAndRegister(CancellationToken.None).GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
     }
@@ -76,19 +76,19 @@ public sealed class DataSetCategoryProvider
     // Instance
     // ============================================================
 
-    private readonly Lazy<IConfigurationGateway> _lazyGateway;
+    private readonly IConfigurationGatewayProvider _gatewayProvider;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of <see cref="DataSetCategoryProvider"/>.
     /// </summary>
-    /// <param name="lazyGateway">Lazy gateway to avoid circular DI at registration time.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
     /// <param name="logger">Optional logger; falls back to NullLogger.</param>
     public DataSetCategoryProvider(
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         ILogger<DataSetCategoryProvider>? logger)
     {
-        _lazyGateway = lazyGateway;
+        _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
         // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions.
         _logger = logger ?? NullLogger<DataSetCategoryProvider>.Instance;
     }
@@ -111,7 +111,14 @@ public sealed class DataSetCategoryProvider
                 .OrderBy("SortOrder")
                 .Build();
 
-            result = await _lazyGateway.Value.Execute<IEnumerable<DataSetCategoryConfiguration>>(command, cancellationToken)
+            var gateway = _gatewayProvider.Get(DataStoreName);
+            if (gateway.IsFailure)
+            {
+                DataSetCategoryProviderLog.GatewayUnavailable(_logger, DataStoreName);
+                return;
+            }
+
+            result = await gateway.Value!.Execute<IEnumerable<DataSetCategoryConfiguration>>(command, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)

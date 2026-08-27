@@ -5,9 +5,14 @@ using Fdw.Configuration;
 using Fdw.Services;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Scheduling.Abstractions;
+using Fdw.Services.Scheduling.Abstractions.Configuration;
+using Fdw.Services.Scheduling.Commands;
 using Fdw.ServiceTypes.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
@@ -23,19 +28,22 @@ namespace Fdw.Services.Scheduling;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(SchedulerTypeBase<IFrameworkSchedulingService, SchedulerConfiguration, ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>>),
+    typeof(SchedulerTypeBase<IFrameworkSchedulingService, ISchedulerImplementationConfiguration, ISchedulingFactory<IFrameworkSchedulingService, ISchedulerImplementationConfiguration>>),
     typeof(ISchedulerType),
     typeof(SchedulerTypes),
-    GenerateProvider = true,
     ServiceInterface = typeof(IFrameworkSchedulingService),
-    ConfigurationType = typeof(SchedulerConfiguration),
-    ProviderType = typeof(DefaultServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration, ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>, IServiceConfigurationProvider<SchedulerConfiguration>>),
-    ProviderInterface = typeof(IPlatformServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration>),
+    ProviderType = typeof(SchedulerServiceProvider),
+    ProviderInterface = typeof(ISchedulerServiceProvider),
     ServiceCategory = "Scheduler")]
 public partial class SchedulerTypes : ServiceTypeCollectionBase<
-    SchedulerTypeBase<IFrameworkSchedulingService, SchedulerConfiguration, ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>>,
+    SchedulerTypeBase<IFrameworkSchedulingService, ISchedulerImplementationConfiguration, ISchedulingFactory<IFrameworkSchedulingService, ISchedulerImplementationConfiguration>>,
     ISchedulerType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
     // Configure(), Register() and Initialize() are source-generated
 
     /// <summary>
@@ -54,7 +62,7 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IPlatformServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration>).ToString();
+        var providerService = typeof(ISchedulerServiceProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -73,12 +81,38 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(SchedulerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(SchedulerTypes), providerService);
 
-            builder.Services.AddScoped<IPlatformServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration>>(sp =>
+            // Why the collection registers the configuration providers, and under the domain interface:
+            // this collection is what resolves ISchedulerConfigurationProvider to attach it, and the
+            // owner of a registration is the type that knows the thing exists. Registered on an option
+            // instead, the whole domain loses name resolution whenever that option is not referenced.
+            // ConfigurationConnection is the one place that names which store these rows live in.
+            builder.Services.TryAddSingleton<ISchedulerConfigurationProvider>(sp =>
+                new SchedulerConfigurationProvider(
+                    sp.GetService<ILogger<SchedulerConfigurationProvider>>()!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<SchedulerConfigurationProvider>(
+                sp => (SchedulerConfigurationProvider)sp.GetRequiredService<ISchedulerConfigurationProvider>());
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<SchedulerConfiguration, SchedulerConfigurationCommand>>(
+                sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<SchedulerConfiguration>>(
+                sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
+
+            builder.Services.TryAddSingleton<ScheduleConfigurationProvider>(sp =>
+                new ScheduleConfigurationProvider(
+                    sp.GetService<ILogger<ScheduleConfigurationProvider>>()!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ScheduleConfiguration, ScheduleConfigurationCommand>>(
+                sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ScheduleConfiguration>>(
+                sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
+
+            builder.Services.AddScoped<ISchedulerServiceProvider>(sp =>
             {
-                var provider = new DefaultServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration, ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>, IServiceConfigurationProvider<SchedulerConfiguration>>(
+                var provider = new SchedulerServiceProvider(
                     sp,
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration, ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>, IServiceConfigurationProvider<SchedulerConfiguration>>>()
-                    ?? NullLogger<DefaultServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration, ISchedulingFactory<IFrameworkSchedulingService, SchedulerConfiguration>, IServiceConfigurationProvider<SchedulerConfiguration>>>.Instance);
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<SchedulerServiceProvider>()
+                    ?? NullLogger<SchedulerServiceProvider>.Instance);
 
                 // Why ILogger<SchedulerTypes> and not CreateLogger("SchedulerTypes"): SourceContext then
                 // carries the namespace-qualified collection, and the category cannot drift from the type
@@ -89,15 +123,15 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(SchedulerTypes), provider.GetType().Name);
                 try
                 {
-                    if (sp.GetService<IServiceConfigurationProvider<SchedulerConfiguration>>() is { } cfgProvider)
+                    if (sp.GetService<ISchedulerConfigurationProvider>() is { } cfgProvider)
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
-                        var parentResult = provider.Register(cfgProvider);
-                        if (parentResult.IsSuccess)
+                        var domainResult = provider.Register(cfgProvider);
+                        if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(SchedulerTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(SchedulerTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(SchedulerTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {

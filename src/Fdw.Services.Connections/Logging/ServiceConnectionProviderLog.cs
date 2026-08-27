@@ -6,7 +6,7 @@ using Fdw.Messages;
 namespace Fdw.Services.Connections.Logging;
 
 /// <summary>
-/// Source-generated logging methods for DefaultServiceConnectionProvider operations.
+/// Source-generated logging methods for ServiceConnectionProvider operations.
 /// EventId range: 7162-7169
 /// </summary>
 [MessageLoggingTypeCode("CONNECTIONS")]

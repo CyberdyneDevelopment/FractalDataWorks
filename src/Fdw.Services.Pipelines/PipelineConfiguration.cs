@@ -14,7 +14,7 @@ namespace Fdw.Services.Pipelines;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Pipeline")]
-public partial class PipelineConfiguration : IGenericConfiguration, IServiceDispatchHost
+public partial class PipelineConfiguration : IPipelineConfiguration
 {
     /// <summary>
     /// Gets or sets the unique identifier for this pipeline.
@@ -79,9 +79,9 @@ public partial class PipelineConfiguration : IGenericConfiguration, IServiceDisp
     /// (e.g. <c>EtlPipelineConfiguration</c> for kind "Etl"). The keystone cascade persists this typed-body
     /// row alongside the parent on write and composes it on read.
     /// </summary>
-    // Why: declared as the IPipelineTypedConfiguration marker (NOT bare IGenericConfiguration) so the
+    // Why: declared as the IPipelineImplementationConfiguration marker (NOT bare IGenericConfiguration) so the
     // generated mapper emits GetTypedBody/SetTypedBody and the polymorphic typed-body composition fires.
-    public IPipelineTypedConfiguration? Configuration { get; set; }
+    public IPipelineImplementationConfiguration? Configuration { get; set; }
 
     /// <inheritdoc />
     // Why: the runtime service factory is registered under the ENGINE discriminator on the kind typed

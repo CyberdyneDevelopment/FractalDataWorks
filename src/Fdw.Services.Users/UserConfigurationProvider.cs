@@ -20,8 +20,8 @@ using Microsoft.Extensions.Options;
 namespace Fdw.Services.Users;
 
 /// <summary>
-/// Domain configuration provider for users. Sole owner of <c>usr.Users</c> gateway access.
-/// Thin wrapper over <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> with
+/// Domain configuration provider for users. Sole owner of <c>usr.Users</c> gatewayProvider access.
+/// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with
 /// by-id, by-username, and CRUD convenience methods.
 /// </summary>
 /// <remarks>
@@ -29,18 +29,18 @@ namespace Fdw.Services.Users;
 /// usage — usr.Users is ConfigurationDb data, and the schema-built ConfigurationDb store has no ConnectionId,
 /// so routing through IDataGateway produces "DataStore 'ConfigurationDb' has no ConnectionId".
 /// </remarks>
-public class UserConfigurationProvider : DefaultConfigurationProvider<UserConfiguration, UserConfigurationCommand>
+public class UserConfigurationProvider : ImplementationConfigurationProviderBase<UserConfiguration, UserConfigurationCommand>
 {
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="UserConfigurationProvider"/> class.</summary>
     public UserConfigurationProvider(
         ILogger<UserConfigurationProvider>? logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "usr")
         : base(logger ?? NullLogger<UserConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<UserConfigurationProvider>.Instance;
@@ -77,7 +77,7 @@ public class UserConfigurationProvider : DefaultConfigurationProvider<UserConfig
             .Where("IsCurrent", true)
             .Where("IsDeleted", false)
             .Build();
-        var result = await Gateway.Execute<IEnumerable<UserConfiguration>>(cmd, cancellationToken).ConfigureAwait(false);
+        var result = await Execute<IEnumerable<UserConfiguration>>(cmd, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
             return GenericResult<UserConfiguration?>.Failure(
                 UserConfigurationProviderLog.GatewayQueryFailed(_logger));

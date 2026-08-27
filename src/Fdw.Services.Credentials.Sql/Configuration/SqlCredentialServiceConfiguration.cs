@@ -23,7 +23,7 @@ namespace Fdw.Services.Credentials.Sql.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "CredentialService", ServiceType = "Sql")]
-public partial class SqlCredentialServiceConfiguration : ICredentialServiceConfiguration
+public partial class SqlCredentialServiceConfiguration : ICredentialServiceImplementationConfiguration
 {
     // ========================================
     // IGenericConfiguration — typed body identity
@@ -61,7 +61,7 @@ public partial class SqlCredentialServiceConfiguration : ICredentialServiceConfi
     string? IGenericConfiguration.ServiceOptionType => "Sql";
 
     // ========================================
-    // ICredentialServiceConfiguration
+    // ICredentialServiceImplementationConfiguration
     // ========================================
 
     /// <summary>
@@ -103,7 +103,7 @@ public partial class SqlCredentialServiceConfiguration : ICredentialServiceConfi
     /// Gets or sets the maximum number of active personal access tokens allowed per user.
     /// </summary>
     // Why: plain { get; set; } — NO `= 10` initializer. The no-fallback rule (and the
-    // DefaultDataVaultConfiguration exemplar, whose value-type properties are all plain) forbid a
+    // SqlDataVaultConfiguration exemplar, whose value-type properties are all plain) forbid a
     // baked-in default; the value is supplied by the sec.SqlCredentialService row (seeded to 10).
     // PatVaultCommands fails loud if the resolved value is not a positive limit.
     public int MaxTokensPerUser { get; set; }

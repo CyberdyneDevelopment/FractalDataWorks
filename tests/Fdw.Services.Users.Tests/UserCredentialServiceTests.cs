@@ -14,6 +14,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
 using Xunit;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Users.Tests;
 
@@ -41,9 +42,18 @@ public class UserCredentialServiceTests
     private static Mock<UserConfigurationProvider> MakeUserProviderMock()
         => new(
             NullLogger<UserConfigurationProvider>.Instance,
-            new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
+            GatewayProviderOn("ConfigurationDb"),
             "ConfigurationDb",
             "usr");
+
+    // Why the name is passed twice: the provider resolves its gateway by the connection it was told
+    // its rows live on, so a gateway filed under any other name is not the one it will ask for.
+    private static IConfigurationGatewayProvider GatewayProviderOn(string connectionName)
+    {
+        var gateways = new ConfigurationGatewayProvider();
+        gateways.Register(Mock.Of<IConfigurationGateway>(g => g.ConnectionName == connectionName));
+        return gateways;
+    }
 
     private static void SetupGetUser(Mock<UserConfigurationProvider> providerMock, Guid userId, UserConfiguration? cfg)
         => providerMock

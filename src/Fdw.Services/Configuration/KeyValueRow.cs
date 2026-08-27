@@ -13,7 +13,7 @@ namespace Fdw.Services.Configuration;
 /// the provider can call <c>Execute&lt;IEnumerable&lt;KeyValueRow&gt;&gt;</c> and let
 /// <c>PocoMapperCollection.ByName("KeyValueRow")</c> materialise — no inline type dispatch.
 /// Why it lives here (Fdw.Services) rather than Fdw.Services.Data: the
-/// child-composition that consumes it is in <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>,
+/// child-composition that consumes it is in <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>,
 /// and Services cannot reference up into Services.Data.
 /// </remarks>
 [ExcludeFromCodeCoverage]

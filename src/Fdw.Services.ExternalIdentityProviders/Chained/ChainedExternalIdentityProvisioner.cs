@@ -11,6 +11,8 @@ using Fdw.Services.ExternalIdentityProviders.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Configuration;
+
 namespace Fdw.Services.ExternalIdentityProviders.Chained;
 
 /// <summary>
@@ -25,7 +27,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// <para>
 /// Algorithm (<see cref="Provision"/>): sort <see cref="ChainedExternalIdentityProvisionerConfiguration.Steps"/>
 /// by <c>ExecutionOrder</c> ascending in memory — the read cascade
-/// (<c>DefaultConfigurationProvider.ComposeChildren</c>) does not order children. For each step:
+/// (<c>ImplementationConfigurationProviderBase.ComposeChildren</c>) does not order children. For each step:
 /// </para>
 /// <list type="number">
 ///   <item><description>Resolve the sibling provisioner by name. A resolution failure propagates immediately (hard error).</description></item>
@@ -49,20 +51,16 @@ internal sealed class ChainedExternalIdentityProvisioner : IExternalIdentityProv
     // Comparing on the numeric Id (not the prefixed Code string) recognizes a NotFound failure
     // regardless of which package's NotFound code a leaf provisioner used.
     private const int CanonicalNotFoundId = 30000;
-
-    private readonly ExternalIdentityProvisionerConfiguration _header;
     private readonly ChainedExternalIdentityProvisionerConfiguration _typed;
-    private readonly IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration> _provisionerProvider;
+    private readonly IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration> _provisionerProvider;
     private readonly ILogger<ChainedExternalIdentityProvisioner> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ChainedExternalIdentityProvisioner"/> class.</summary>
     public ChainedExternalIdentityProvisioner(
-        ExternalIdentityProvisionerConfiguration header,
         ChainedExternalIdentityProvisionerConfiguration typed,
-        IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration> provisionerProvider,
+        IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration> provisionerProvider,
         ILogger<ChainedExternalIdentityProvisioner>? logger)
     {
-        _header = header ?? throw new ArgumentNullException(nameof(header));
         _typed = typed ?? throw new ArgumentNullException(nameof(typed));
         _provisionerProvider = provisionerProvider ?? throw new ArgumentNullException(nameof(provisionerProvider));
         _logger = logger ?? NullLogger<ChainedExternalIdentityProvisioner>.Instance;
@@ -74,10 +72,10 @@ internal sealed class ChainedExternalIdentityProvisioner : IExternalIdentityProv
     // base-interface obligation.
 
     /// <inheritdoc cref="IGenericService.Id" />
-    public string Id => _header.Id.ToString();
+    public string Id => _typed.Id.ToString();
 
     /// <inheritdoc />
-    public string Name => _header.Name;
+    public string Name => _typed.Name;
 
     /// <inheritdoc cref="IGenericService.ServiceType" />
     public string ServiceType => "Chained";

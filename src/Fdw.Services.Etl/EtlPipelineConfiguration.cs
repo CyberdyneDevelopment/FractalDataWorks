@@ -24,7 +24,7 @@ namespace Fdw.Services.Etl;
 [GenerateMapper]
 [ExcludeFromCodeCoverage]
 [ManagedConfiguration(ServiceCategory = "Pipeline", ServiceType = "Etl")]
-public partial class EtlPipelineConfiguration : IPipelineTypedConfiguration
+public partial class EtlPipelineConfiguration : IPipelineImplementationConfiguration
 {
 
     /// <inheritdoc/>

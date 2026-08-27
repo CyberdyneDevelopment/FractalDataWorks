@@ -167,7 +167,7 @@ public sealed class AuthenticationProviderLoggerTests
     [Trait("Category", "Security")]
     public void ParentProviderRegistrationFailedProducesErrorMessageWithCorrectCode()
     {
-        var result = AuthenticationProviderLogger.ParentProviderRegistrationFailed(_logger.Object, "gateway unreachable");
+        var result = AuthenticationProviderLogger.DomainConfigurationProviderRegistrationFailed(_logger.Object, "gateway unreachable");
 
         result.Code.ShouldBe("AUTHENTICATION-61008");
         VerifyLogged(LogLevel.Error, 61008);

@@ -20,7 +20,7 @@ namespace Fdw.Services.TokenManagers;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "TokenManager")]
-public partial class TokenManagerConfiguration : IGenericConfiguration
+public partial class TokenManagerConfiguration : ITokenManagerConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="TokenManagerConfiguration"/> class.
@@ -71,7 +71,7 @@ public partial class TokenManagerConfiguration : IGenericConfiguration
     // the typed body independently via its own provider. The read path populates this by dispatching
     // on ServiceOptionType to the appropriate typed provider.
     [NotMapped]
-    public ITokenManagerConfiguration? Configuration { get; set; }
+    public ITokenManagerImplementationConfiguration? Configuration { get; set; }
 
     // ── Tenant / visibility / audit ──────────────────────────────────────────
     // Why: no value defaults — a missing tenant/visibility/audit value must read as its

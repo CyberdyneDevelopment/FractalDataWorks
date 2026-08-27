@@ -31,7 +31,7 @@ namespace Fdw.Services.Connections.MsSql;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "MsSql")]
-public partial class MsSqlConnectionConfiguration : IConnectionConfiguration
+public partial class MsSqlConnectionConfiguration : IConnectionImplementationConfiguration
 {
     // ========================================
     // IGenericConfiguration — typed body identity
@@ -39,7 +39,7 @@ public partial class MsSqlConnectionConfiguration : IConnectionConfiguration
 
     /// <summary>
     /// Gets or sets the unique identifier for this typed body row (conn.MsSqlConnection.Id).
-    /// Minted by <see cref="Fdw.Services.Configuration.DefaultConfigurationProvider{TConfig,TCommand}"/>
+    /// Minted by <see cref="Fdw.Services.Configuration.ImplementationConfigurationProviderBase{TConfig,TCommand}"/>
     /// via <see cref="Guid.CreateVersion7()"/> when <see cref="Guid.Empty"/>.
     /// </summary>
     // Why: NO Guid.NewGuid() default — DB owns no identity; the provider mints this before INSERT.

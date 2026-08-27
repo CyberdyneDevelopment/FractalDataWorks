@@ -238,7 +238,7 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
         if (!assignmentsResult.IsSuccess || assignmentsResult.Value is null)
             return Array.Empty<string>();
 
-        // Why: GetRole(Guid id, ct) on DefaultConfigurationProvider incorrectly resolves
+        // Why: GetRole(Guid id, ct) on ImplementationConfigurationProviderBase incorrectly resolves
         // the WHERE column to ParentRoleId (authz.Role's self-referential FK) via
         // TryResolveFkColumnForGet, emitting WHERE ParentRoleId=@id and returning 0 rows.
         // Load all roles once and match by Id in memory — Get(ct) is cached per scope.

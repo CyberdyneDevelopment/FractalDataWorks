@@ -1,26 +1,45 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Fdw.Abstractions;
-using Fdw.Data.Abstractions;
-using Fdw.ServiceTypes;
+using Fdw.Results;
 
 namespace Fdw.Services.Connections.Abstractions;
 
 /// <summary>
-/// Provides framework-internal operational connections (e.g., the ConfigurationDb connection).
-/// Marker interface distinguishing framework connections from user-defined connections.
+/// Holds framework-internal connections that were built before the configuration system existed —
+/// ConfigurationDb itself, chiefly — and hands them back by name.
 /// </summary>
 /// <remarks>
-/// Framework components that need access to infrastructure connections (ConfigurationDb, etc.)
-/// should depend on <see cref="IServiceConnectionProvider"/> rather than <see cref="IConnectionProvider"/>.
-/// This prevents user-defined connections from accidentally being resolved for internal use
-/// and makes the dependency intent explicit in DI registrations.
+/// It is not an <see cref="IConnectionProvider"/>. A platform provider resolves a configuration and
+/// dispatches on its ServiceOptionType to a registered factory; this one is a name-to-instance registry
+/// whose entries are handed to it pre-built. Declaring it as a connection provider obliged it to answer
+/// factory registration, configuration registration and build-from-configuration calls that have no
+/// meaning for a fixed registry, which it did by returning failures and no-ops — a contract it appeared
+/// to satisfy and did not.
 /// </remarks>
-public interface IServiceConnectionProvider : IConnectionProvider
+public interface IServiceConnectionProvider
 {
-    /// <summary>
-    /// Registers a framework connection under the specified name.
-    /// Call this after the app is built (Phase 2) to seed the bootstrap connection.
-    /// </summary>
-    /// <param name="name">The logical name for the connection (case-insensitive).</param>
-    /// <param name="connection">The pre-created connection instance.</param>
+    /// <summary>Registers a pre-built connection under a logical name.</summary>
+    /// <param name="name">The logical name, matched case-insensitively.</param>
+    /// <param name="connection">The already-created connection.</param>
     void Register(string name, IGenericConnection connection);
+
+    /// <summary>Gets a registered connection by name.</summary>
+    /// <param name="name">The logical name.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The connection, or a structured failure when the name is not registered.</returns>
+    Task<IGenericResult<IGenericConnection>> Get(string name, CancellationToken cancellationToken = default);
+
+    /// <summary>Gets a registered connection by its durable id.</summary>
+    /// <param name="id">The connection's id.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The connection, or a structured failure when the id is not registered.</returns>
+    Task<IGenericResult<IGenericConnection>> Get(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Gets every registered connection.</summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The registered connections.</returns>
+    Task<IGenericResult<IReadOnlyList<IGenericConnection>>> Get(CancellationToken cancellationToken = default);
 }

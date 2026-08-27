@@ -49,7 +49,7 @@ public sealed class DefaultQualityServiceType : QualityServiceTypeBase
             builder.Services.TryAddSingleton<QualityConfigurationProvider>(sp =>
                 new QualityConfigurationProvider(
                     sp.GetService<ILogger<QualityConfigurationProvider>>() ?? NullLogger<QualityConfigurationProvider>.Instance,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
 
             builder.Services.TryAddScoped<IQualityService, QualityService>();
             builder.Services.TryAddScoped<ICatalogService, CatalogService>();

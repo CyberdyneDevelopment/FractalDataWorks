@@ -14,19 +14,23 @@ namespace Fdw.Services.Credentials;
 
 /// <summary>
 /// Default implementation of <see cref="ICredentialServiceProvider"/>.
-/// Wraps <see cref="DefaultServiceProvider{TService,TConfiguration,TFactory,TConfigurationProvider}"/>
+/// Wraps <see cref="PlatformServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}"/>
 /// and adds credential-service-specific cache-by-name lookup and the typed
 /// <see cref="Get(CredentialServiceRequest, CancellationToken)"/> entry point.
 /// </summary>
 public sealed class CredentialServiceProvider
-    : DefaultServiceProvider<ICredentialService, CredentialServiceConfiguration, ICredentialServiceFactory<ICredentialService, CredentialServiceConfiguration>, IServiceConfigurationProvider<CredentialServiceConfiguration>>,
+    : PlatformServiceProviderBase<
+          ICredentialService,
+          ICredentialServiceImplementationConfiguration,
+          ICredentialServiceFactory<ICredentialService, ICredentialServiceImplementationConfiguration>,
+          ICredentialServiceConfigurationProvider>,
       ICredentialServiceProvider
 {
     private readonly ILogger<CredentialServiceProvider> _logger;
 
     // Why: credential service instances cache their resolved vault, so we cache the services
     // by name. ConcurrentDictionary<string, Lazy<...>> mirrors the pattern used by
-    // DefaultDataVaultProvider — the Lazy ensures a single initialization per name even under
+    // DataVaultProvider — the Lazy ensures a single initialization per name even under
     // concurrent first-access. No stale-eviction: services are long-lived system objects;
     // configuration changes restart the host.
     private readonly ConcurrentDictionary<string, Lazy<Task<IGenericResult<ICredentialService>>>> _cache

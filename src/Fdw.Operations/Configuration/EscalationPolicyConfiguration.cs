@@ -43,7 +43,7 @@ namespace Fdw.Operations.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Operations")]
-// Why: IGenericConfiguration is required by DefaultConfigurationProvider<T>
+// Why: IGenericConfiguration is required by ImplementationConfigurationProviderBase<T>
 // for dual-source (ctrl+cfg) provider pattern.
 public sealed partial class EscalationPolicyConfiguration : IGenericConfiguration
 {
@@ -62,7 +62,7 @@ public sealed partial class EscalationPolicyConfiguration : IGenericConfiguratio
     /// <summary>
     /// Gets or sets the unique identifier for this escalation policy.
     /// </summary>
-    // Why: no default GUID — DefaultConfigurationProvider.Save mints a UUID v7 on insert when Id is
+    // Why: no default GUID — ImplementationConfigurationProviderBase.Save mints a UUID v7 on insert when Id is
     // empty (the single sanctioned place). Pre-minting here is a forbidden default-GUID fallback.
     public Guid Id { get; set; }
 

@@ -11,7 +11,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// <typeparam name="TFactory">The factory type that creates the service.</typeparam>
 /// <typeparam name="TConfiguration">The configuration type this option requires.</typeparam>
 /// <remarks>
-/// Options wire their factory into <see cref="DefaultHealthMonitorProvider"/> in
+/// Options wire their factory into <see cref="HealthMonitorProvider"/> in
 /// <c>RegisterFactory</c>; consumers depend on <see cref="IHealthMonitorProvider"/> and resolve by the
 /// host's configured row name — never on a direct <see cref="IHealthMonitorService"/> registration
 /// (a direct registration is the registration-order race this domain exists to eliminate).

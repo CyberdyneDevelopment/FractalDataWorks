@@ -13,7 +13,7 @@ namespace Fdw.Services.Resiliency;
 /// These are loaded from the database via <see cref="IResiliencyPolicyProvider"/>
 /// and passed directly into <see cref="IResiliencyType.Execute"/>.
 /// </remarks>
-public class ResiliencyConfiguration : IGenericConfiguration
+public class ResiliencyConfiguration : IResiliencyConfiguration
 {
     /// <inheritdoc/>
     public Guid Id { get; set; } = Guid.CreateVersion7();

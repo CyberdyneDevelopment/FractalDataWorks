@@ -24,7 +24,7 @@ public sealed class HealthMonitorService : IHealthMonitorService
 {
     private readonly IEnumerable<IHealthCheckable> _healthCheckables;
     private readonly IServiceProvider _serviceProvider;
-    private readonly HealthMonitorConfiguration _configuration;
+    private readonly LocalHealthMonitorConfiguration _configuration;
     private readonly ILogger<HealthMonitorService> _logger;
 
     private readonly ConcurrentDictionary<string, CircularBuffer<HealthCheckPoint>> _historyBuffers = new(StringComparer.OrdinalIgnoreCase);
@@ -44,7 +44,7 @@ public sealed class HealthMonitorService : IHealthMonitorService
     public HealthMonitorService(
         IEnumerable<IHealthCheckable> healthCheckables,
         IServiceProvider serviceProvider,
-        HealthMonitorConfiguration configuration,
+        LocalHealthMonitorConfiguration configuration,
         ILogger<HealthMonitorService>? logger = null)
     {
         _healthCheckables = healthCheckables;
