@@ -83,15 +83,15 @@ public class VsCodeCommandIdentityTests
         IdOf(new DuplicateOfAlphaCommand()).ShouldNotBe(IdOf(new AlphaCommand()));
     }
 
-    // Why: the silent-drop hazard did not disappear, it moved. Two options sharing a name are one id, and
-    // the second is discarded with no throw and no log — so the failure mode stays documented in an
-    // executable form, pointed at what actually collides today.
+    // Why this is asserted rather than assumed: an id is global while a name is unique only inside its
+    // collection, so two options sharing a name must still be two options. When identity came from the
+    // name they were one, and RegisterMember discarded the second with no throw and no log.
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void CommandsSharingANameCollideAndWouldBeSilentlyDropped()
+    public void CommandsSharingANameStillGetDistinctIds()
     {
-        IdOf(new SameNameAsAlphaCommand()).ShouldBe(IdOf(new AlphaCommand()));
+        IdOf(new SameNameAsAlphaCommand()).ShouldNotBe(IdOf(new AlphaCommand()));
     }
 
     [Fact]

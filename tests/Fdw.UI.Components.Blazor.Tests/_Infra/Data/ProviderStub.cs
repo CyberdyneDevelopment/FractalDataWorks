@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 
@@ -9,20 +10,16 @@ namespace Fdw.UI.Components.Blazor.Tests.DataInfra;
 /// </summary>
 internal static class ProviderStubState
 {
-    private static readonly Dictionary<Type, object?> s_pending = [];
+    // Why concurrent: xUnit runs test collections in parallel and bUnit instantiates components on
+    // its own renderer thread, so Set and Take genuinely interleave across threads. A plain
+    // Dictionary corrupts its buckets under that access and throws from an unrelated test.
+    private static readonly ConcurrentDictionary<Type, object?> s_pending = new();
 
     internal static void Set<TContext>(TContext? value) =>
         s_pending[typeof(TContext)] = value;
 
-    internal static TContext? Take<TContext>() where TContext : new()
-    {
-        if (s_pending.TryGetValue(typeof(TContext), out var value))
-        {
-            s_pending.Remove(typeof(TContext));
-            return (TContext?)value;
-        }
-        return default;
-    }
+    internal static TContext? Take<TContext>() where TContext : new() =>
+        s_pending.TryRemove(typeof(TContext), out var value) ? (TContext?)value : default;
 }
 
 /// <summary>
@@ -44,8 +41,6 @@ public sealed class ProviderStub<TContext> : ComponentBase
 
     protected override void OnInitialized()
     {
-        // Why: PendingContext was previously a static property on this generic type, which CA1000
-        // flags. State is now stored in the non-generic ProviderStubState keyed by TContext type.
         _context = ProviderStubState.Take<TContext>() ?? new TContext();
     }
 

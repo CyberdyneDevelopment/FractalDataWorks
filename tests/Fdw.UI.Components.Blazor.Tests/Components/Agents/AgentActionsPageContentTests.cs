@@ -28,9 +28,11 @@ public sealed class AgentActionsPageContentTests : IDisposable
         return _ctx.Render<AgentActionsPage>();
     }
 
-    private static AgentActionPayload Action(int id = 1, string method = "POST", string status = "Pending") => new()
+    private static readonly Guid SampleId = Guid.Parse("6f1d2c3b-4a59-4e7f-8b21-9c0d5e6f7a80");
+
+    private static AgentActionPayload Action(Guid? id = null, string method = "POST", string status = "Pending") => new()
     {
-        Id = Guid.Parse($"{id:D8}-0000-0000-0000-000000000000"),
+        Id = id ?? SampleId,
         AgentLabel = "GptAgent",
         UserId = "u1",
         Route = "/api/x",
@@ -56,7 +58,7 @@ public sealed class AgentActionsPageContentTests : IDisposable
     [Fact]
     public void RendersTableRows()
     {
-        var cut = Render(new AgentActionContext { Actions = [Action(1), Action(2)] });
+        var cut = Render(new AgentActionContext { Actions = [Action(), Action(Guid.Parse("1b2c3d4e-5f60-4718-9a2b-3c4d5e6f7081"))] });
         cut.FindAll("tbody tr").Count.ShouldBe(2);
         cut.Markup.ShouldContain("GptAgent");
     }
@@ -111,10 +113,10 @@ public sealed class AgentActionsPageContentTests : IDisposable
     [Fact]
     public void ReviewButtonNavigatesToReview()
     {
-        var cut = Render(new AgentActionContext { Actions = [Action(id: 42, status: "Pending")] });
+        var cut = Render(new AgentActionContext { Actions = [Action(status: "Pending")] });
         var nav = _ctx.Services.GetRequiredService<NavigationManager>();
         cut.FindAll("button").First(b => string.Equals(b.TextContent.Trim(), "Review", StringComparison.Ordinal)).Click();
-        nav.Uri.ShouldEndWith("/review/42");
+        nav.Uri.ShouldEndWith($"/review/{SampleId}");
     }
 
     public void Dispose() => _ctx.Dispose();
