@@ -64,7 +64,7 @@ public interface IConnectionFactory
 /// </summary>
 /// <typeparam name="TConnection">The type of connection this factory creates.</typeparam>
 /// <typeparam name="TConfiguration">The type of configuration this factory requires.</typeparam>
-public interface IConnectionFactory<TConnection, TConfiguration> : IConnectionFactory, IServiceFactory<TConnection, TConfiguration>
+public interface IConnectionFactory<TConnection, TConfiguration> : IConnectionFactory, IServiceFactory<TConnection, TConfiguration>, IAsyncServiceFactory<TConnection>
     where TConnection : IGenericConnection
     where TConfiguration : IGenericConfiguration
 {
