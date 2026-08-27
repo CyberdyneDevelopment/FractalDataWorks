@@ -25,7 +25,7 @@ namespace Fdw.Services.Credentials;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "CredentialService")]
-public partial class CredentialServiceConfiguration : IGenericConfiguration
+public partial class CredentialServiceConfiguration : ICredentialServiceConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CredentialServiceConfiguration"/> class.
@@ -105,5 +105,5 @@ public partial class CredentialServiceConfiguration : IGenericConfiguration
     // Why: [NotMapped] — not a column on sec.CredentialService. Written separately via typed provider.
     // Read path populates by dispatching on ServiceOptionType to the appropriate typed provider.
     [NotMapped]
-    public ICredentialServiceConfiguration? Configuration { get; set; }
+    public ICredentialServiceImplementationConfiguration? Configuration { get; set; }
 }

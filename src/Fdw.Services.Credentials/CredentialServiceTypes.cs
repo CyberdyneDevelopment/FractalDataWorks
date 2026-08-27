@@ -34,7 +34,7 @@ namespace Fdw.Services.Credentials;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(CredentialServiceTypeBase<ICredentialService, ICredentialServiceFactory<ICredentialService, CredentialServiceConfiguration>, CredentialServiceConfiguration>),
+    typeof(CredentialServiceTypeBase<ICredentialService, ICredentialServiceFactory<ICredentialService, ICredentialServiceImplementationConfiguration>, ICredentialServiceImplementationConfiguration>),
     typeof(ICredentialServiceType),
     typeof(CredentialServiceTypes),
     ServiceInterface = typeof(ICredentialService),
@@ -43,9 +43,14 @@ namespace Fdw.Services.Credentials;
     ServiceCategory = "CredentialService",
     RestrictToCurrentCompilation = true)]
 public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
-    CredentialServiceTypeBase<ICredentialService, ICredentialServiceFactory<ICredentialService, CredentialServiceConfiguration>, CredentialServiceConfiguration>,
-    ICredentialServiceType<ICredentialService, ICredentialServiceFactory<ICredentialService, CredentialServiceConfiguration>, CredentialServiceConfiguration>>
+    CredentialServiceTypeBase<ICredentialService, ICredentialServiceFactory<ICredentialService, ICredentialServiceImplementationConfiguration>, ICredentialServiceImplementationConfiguration>,
+    ICredentialServiceType<ICredentialService, ICredentialServiceFactory<ICredentialService, ICredentialServiceImplementationConfiguration>, ICredentialServiceImplementationConfiguration>>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
     // Configure(), Register() and Initialize() are source-generated
 
     /// <summary>
@@ -115,7 +120,7 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(CredentialServiceTypes), provider.GetType().Name);
                 try
                 {
-                    if (sp.GetService<IServiceConfigurationProvider<CredentialServiceConfiguration>>() is { } cfgProvider)
+                    if (sp.GetService<ICredentialServiceConfigurationProvider>() is { } cfgProvider)
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.

@@ -23,7 +23,7 @@ namespace Fdw.Services.Credentials.Sql.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "CredentialService", ServiceType = "Sql")]
-public partial class SqlCredentialServiceConfiguration : ICredentialServiceConfiguration
+public partial class SqlCredentialServiceConfiguration : ICredentialServiceImplementationConfiguration
 {
     // ========================================
     // IGenericConfiguration — typed body identity
@@ -61,7 +61,7 @@ public partial class SqlCredentialServiceConfiguration : ICredentialServiceConfi
     string? IGenericConfiguration.ServiceOptionType => "Sql";
 
     // ========================================
-    // ICredentialServiceConfiguration
+    // ICredentialServiceImplementationConfiguration
     // ========================================
 
     /// <summary>

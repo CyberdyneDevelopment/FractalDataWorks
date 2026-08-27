@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Fdw.Configuration;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
+using Fdw.Services.Credentials.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -19,7 +20,12 @@ namespace Fdw.Services.Credentials;
 /// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>; typed providers are registered via the
 /// inherited <c>Register</c>.
 /// </summary>
-public class CredentialServiceConfigurationProvider : ImplementationConfigurationProviderBase<CredentialServiceConfiguration, CredentialServiceConfigurationCommand>
+public class CredentialServiceConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          CredentialServiceConfiguration,
+          ICredentialServiceImplementationConfiguration,
+          CredentialServiceConfigurationCommand>,
+      ICredentialServiceConfigurationProvider
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CredentialServiceConfigurationProvider"/> class.
@@ -34,4 +40,16 @@ public class CredentialServiceConfigurationProvider : ImplementationConfiguratio
                dataStoreName, pathName)
     {
     }
+
+    /// <inheritdoc />
+    protected override CredentialServiceConfiguration Compose<T>(
+        string serviceOptionType,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            ServiceOptionType = serviceOptionType,
+            Configuration = implementationConfiguration,
+        };
 }

@@ -19,7 +19,11 @@ namespace Fdw.Services.Credentials;
 /// <see cref="Get(CredentialServiceRequest, CancellationToken)"/> entry point.
 /// </summary>
 public sealed class CredentialServiceProvider
-    : PlatformServiceProviderBase<ICredentialService, CredentialServiceConfiguration, ICredentialServiceFactory<ICredentialService, CredentialServiceConfiguration>, IServiceConfigurationProvider<CredentialServiceConfiguration>>,
+    : PlatformServiceProviderBase<
+          ICredentialService,
+          ICredentialServiceImplementationConfiguration,
+          ICredentialServiceFactory<ICredentialService, ICredentialServiceImplementationConfiguration>,
+          ICredentialServiceConfigurationProvider>,
       ICredentialServiceProvider
 {
     private readonly ILogger<CredentialServiceProvider> _logger;

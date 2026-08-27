@@ -21,9 +21,9 @@ public abstract class CredentialServiceTypeBase<TService, TFactory, TConfigurati
     ICredentialServiceType<TService, TFactory, TConfiguration>
     where TService : ICredentialService
     where TFactory : ICredentialServiceFactory<TService, TConfiguration>
-    // Why: TConfiguration is constrained to IGenericConfiguration (not ICredentialServiceConfiguration)
+    // Why: TConfiguration is constrained to IGenericConfiguration (not ICredentialServiceImplementationConfiguration)
     // because CredentialServiceTypes registers the root provider with CredentialServiceConfiguration (the header)
-    // as the type parameter. The header implements IGenericConfiguration but not ICredentialServiceConfiguration.
+    // as the type parameter. The header implements IGenericConfiguration but not ICredentialServiceImplementationConfiguration.
     // Factory-level runtime checks enforce typed body correctness.
     where TConfiguration : class, IGenericConfiguration
 {
