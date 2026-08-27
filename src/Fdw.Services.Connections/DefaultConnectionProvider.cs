@@ -30,7 +30,7 @@ namespace Fdw.Services.Connections;
 /// that factory builds the connection. Every public overload funnels through it. Nothing is cached.
 /// </remarks>
 public sealed class DefaultConnectionProvider
-    : PlatformServiceProviderBase<IGenericConnection, ConnectionConfiguration, IServiceFactory<IGenericConnection>, IServiceConfigurationProvider<ConnectionConfiguration>>,
+    : PlatformServiceProviderBase<IGenericConnection, IConnectionImplementationConfiguration, IServiceFactory<IGenericConnection>, IServiceConfigurationProvider<IConnectionImplementationConfiguration>>,
       IConnectionProvider,
       IDataConnectionProvider
 {
@@ -50,42 +50,12 @@ public sealed class DefaultConnectionProvider
     }
 
     /// <summary>
-    /// Gets a connection by name, building it from current configuration on every call.
-    /// </summary>
-    public override Task<IGenericResult<IGenericConnection>> Get(string name, CancellationToken cancellationToken = default)
-        => CreateChecked(name, ct => CreateByName(name, ct), cancellationToken);
-
-    /// <summary>
-    /// Gets a connection by configuration id.
-    /// </summary>
-    // Why: resolve the header ONCE here and hand it to the configuration overload. Resolving the id to
-    // a name and then re-resolving that name would cost a second parent round trip and, under row-level
-    // security, could land on a different row than the one the id already identified.
-    public override async Task<IGenericResult<IGenericConnection>> Get(Guid id, CancellationToken cancellationToken = default)
-    {
-        if (ParentProvider is null)
-        {
-            return GenericResult<IGenericConnection>.Failure(
-                ConnectionProviderLogger.ParentProviderNotRegistered(_logger, id.ToString()));
-        }
-
-        var headerResult = await ParentProvider.Get(id, cancellationToken).ConfigureAwait(false);
-        if (!headerResult.IsSuccess || headerResult.Value is null)
-        {
-            return GenericResult<IGenericConnection>.Failure(
-                ConnectionProviderLogger.ConnectionConfigurationNotFound(_logger, id.ToString()));
-        }
-
-        return await Get(headerResult.Value, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
     /// Gets a connection built from an already-resolved composed-header configuration.
     /// </summary>
     // Why: the caller (e.g. a DataVault) resolved the configuration once in system context;
     // re-resolving by name at request time would run under the caller's SESSION_CONTEXT and
     // can be filtered by row-level security, so the already-resolved header is used as given.
-    public override Task<IGenericResult<IGenericConnection>> Get(ConnectionConfiguration configuration, CancellationToken cancellationToken = default)
+    public override Task<IGenericResult<IGenericConnection>> Get(IConnectionImplementationConfiguration configuration, CancellationToken cancellationToken = default)
     {
         if (configuration is null)
         {
@@ -145,6 +115,21 @@ public sealed class DefaultConnectionProvider
     //
     // Why the stale check stays: a connection that is stale straight out of the factory is a factory or
     // configuration defect, so it fails loud rather than being handed to a caller.
+    /// <inheritdoc />
+    // Why: a connection can come back already stale — the factory succeeded but what it produced is
+    // unusable. Every creation path goes through here, so the check cannot be skipped by adding one.
+    protected override IGenericResult<IGenericConnection> Create(
+        IServiceFactory<IGenericConnection> factory,
+        IConnectionImplementationConfiguration configuration)
+    {
+        var result = base.Create(factory, configuration);
+        if (!result.IsSuccess || !result.Value!.IsStale)
+            return result;
+
+        return GenericResult<IGenericConnection>.Failure(
+            ConnectionProviderLogger.ConnectionStaleOnCreation(_logger, configuration.Name));
+    }
+
     private async Task<IGenericResult<IGenericConnection>> CreateChecked(
         string name,
         Func<CancellationToken, Task<IGenericResult<IGenericConnection>>> create,
@@ -163,29 +148,12 @@ public sealed class DefaultConnectionProvider
     // the typed body as header.Configuration before returning — so resolution is ONE call, never a
     // per-type child-provider lookup. That is why the base class's CreateFromType path is bypassed
     // entirely for connections: the base's child-provider dictionary is empty here by design.
-    private async Task<IGenericResult<IGenericConnection>> CreateByName(string name, CancellationToken cancellationToken)
-    {
-        if (ParentProvider is null)
-        {
-            return GenericResult<IGenericConnection>.Failure(
-                ConnectionProviderLogger.ParentProviderNotRegistered(_logger, name));
-        }
-
-        var headerResult = await ParentProvider.Get(name, cancellationToken).ConfigureAwait(false);
-        if (!headerResult.IsSuccess || headerResult.Value is null)
-        {
-            return GenericResult<IGenericConnection>.Failure(
-                ConnectionProviderLogger.ConnectionConfigurationNotFound(_logger, name));
-        }
-
-        return await CreateFromHeader(headerResult.Value, cancellationToken).ConfigureAwait(false);
-    }
 
     // Why: the domain's ONLY creation step. Dispatches on the header's ServiceOptionType to the
     // registered factory, which owns secret resolution through the secret-manager provider it was
     // constructed with. Every missing prerequisite below is a DISTINCT structured failure — the three
     // used to collapse into one "no factory registered" message that named the wrong problem.
-    private async Task<IGenericResult<IGenericConnection>> CreateFromHeader(ConnectionConfiguration header, CancellationToken cancellationToken)
+    private async Task<IGenericResult<IGenericConnection>> CreateFromHeader(IConnectionImplementationConfiguration header, CancellationToken cancellationToken)
     {
         var serviceOptionType = header.ServiceOptionType;
         if (string.IsNullOrEmpty(serviceOptionType))

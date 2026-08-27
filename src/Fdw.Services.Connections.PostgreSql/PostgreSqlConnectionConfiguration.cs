@@ -31,7 +31,7 @@ namespace Fdw.Services.Connections.PostgreSql;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "PostgreSql")]
-public partial class PostgreSqlConnectionConfiguration : IConnectionConfiguration
+public partial class PostgreSqlConnectionConfiguration : IConnectionImplementationConfiguration
 {
     // ========================================
     // IGenericConfiguration — typed body identity

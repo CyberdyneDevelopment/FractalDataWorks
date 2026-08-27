@@ -30,7 +30,7 @@
         {
             <div style="max-width:680px;display:flex;flex-direction:column;gap:14px;">
                 <div class="card"><div class="card-b">
-                    <h3 style="margin:0 0 8px;">Action #@ctx.CurrentAction.AgentActionId — @ctx.CurrentAction.Status</h3>
+                    <h3 style="margin:0 0 8px;">Action #@ctx.CurrentAction.Id — @ctx.CurrentAction.Status</h3>
                     <p class="u-fs-13" style="color:var(--n-400);">This action has already been reviewed.</p>
                     @if (ctx.CurrentAction.ReviewedAt.HasValue)
                     {

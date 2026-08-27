@@ -163,7 +163,7 @@ public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, Trigger
             var createResult = await tracker.CreateItem(
                 ItemType,
                 req.Name,
-                parentId: null,
+                domainConfigurationId: null,
                 correlationId: correlationId,
                 triggerSource: triggerSource,
                 parameters: (IReadOnlyDictionary<string, object?>?)req.Parameters,

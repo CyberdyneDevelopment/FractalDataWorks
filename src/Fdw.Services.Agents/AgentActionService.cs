@@ -64,13 +64,13 @@ public sealed class AgentActionService : IAgentActionService
 
     /// <inheritdoc />
     public async Task<IGenericResult<AgentActionRecord>> Get(
-        int actionId,
+        Guid actionId,
         CancellationToken cancellationToken = default)
     {
         AgentActionLog.FetchingAgentAction(_logger, actionId);
 
         var command = DataQuery.From<AgentActionRecord>("ConfigurationDb", "agent", "AgentAction")
-            .Where("AgentActionId", actionId)
+            .Where("Id", actionId)
             .Build();
 
         var result = await _gateway.Execute<IEnumerable<AgentActionRecord>>(command, cancellationToken)
@@ -95,7 +95,7 @@ public sealed class AgentActionService : IAgentActionService
 
     /// <inheritdoc />
     public Task<IGenericResult> Approve(
-        int actionId,
+        Guid actionId,
         string reviewedBy,
         CancellationToken cancellationToken = default)
     {
@@ -104,7 +104,7 @@ public sealed class AgentActionService : IAgentActionService
 
     /// <inheritdoc />
     public Task<IGenericResult> Deny(
-        int actionId,
+        Guid actionId,
         string reviewedBy,
         CancellationToken cancellationToken = default)
     {
@@ -112,7 +112,7 @@ public sealed class AgentActionService : IAgentActionService
     }
 
     private async Task<IGenericResult> Review(
-        int actionId,
+        Guid actionId,
         string newStatus,
         string reviewedBy,
         CancellationToken cancellationToken)
@@ -140,7 +140,7 @@ public sealed class AgentActionService : IAgentActionService
         var updateCommand = new UpdateCommandBuilder<AgentActionRecord>("AgentAction")
             .DataStore("ConfigurationDb")
             .Path("agent")
-            .Where("AgentActionId", actionId)
+            .Where("Id", actionId)
             .Value(existing);
 
         var result = await _gateway.Execute<int>(updateCommand, cancellationToken).ConfigureAwait(false);

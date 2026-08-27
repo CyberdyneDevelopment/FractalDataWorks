@@ -15,7 +15,7 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "RoslynWorkspace")]
-public partial class RoslynWorkspaceConnectionConfiguration : IConnectionConfiguration
+public partial class RoslynWorkspaceConnectionConfiguration : IConnectionImplementationConfiguration
 {
     // ========================================
     // IGenericConfiguration — typed body identity

@@ -33,18 +33,21 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
 {
     private readonly ILogger<PlatformServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>> _logger;
     private readonly Dictionary<string, IServiceFactory<TService>> _factories = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, IServiceConfigurationProvider<TConfiguration>> _configurationProviders = new(StringComparer.OrdinalIgnoreCase);
-    private IServiceConfigurationProvider<TConfiguration>? _parentProvider;
+    private readonly Dictionary<string, IServiceConfigurationProvider> _configurationProviders = new(StringComparer.OrdinalIgnoreCase);
+    private IServiceConfigurationProvider? _domainConfigurationProvider;
 
     /// <summary>Gets the registered service factories keyed by service option type.</summary>
     protected IDictionary<string, IServiceFactory<TService>> Factories => _factories;
 
-    /// <summary>Gets the domain's configuration provider.</summary>
-    protected IServiceConfigurationProvider<TConfiguration>? ParentProvider => _parentProvider;
+    /// <summary>Gets the domain's parent configuration provider.</summary>
+    // Why the erased view: a configuration provider is always closed over its CONCRETE configuration
+    // class and IServiceConfigurationProvider<T> is invariant, so no single closed typed field can hold
+    // one. This base reads only Id and ServiceOptionType off the record it returns.
+    protected IServiceConfigurationProvider? DomainConfigurationProvider => _domainConfigurationProvider;
 
     private static readonly Dictionary<string, Func<IServiceProvider, IServiceFactory<TService>>> _registered
         = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Dictionary<string, IServiceConfigurationProvider<TConfiguration>> _registeredConfigurationProviders
+    private static readonly Dictionary<string, IServiceConfigurationProvider> _registeredConfigurationProviders
         = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
@@ -114,6 +117,50 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
 
     // ── Registration ────────────────────────────────────────────────────────
 
+    // Why an adapter rather than a checked cast: IServiceConfigurationProvider<T> does NOT inherit the
+    // erased IServiceConfigurationProvider — they are two independent interfaces that
+    // DefaultConfigurationProvider happens to implement both of. Register accepts the typed one in its
+    // signature, so refusing an argument that satisfies that signature makes the signature a lie, and
+    // the refusal lands at start-up on something the compiler already accepted. Erasing it here means
+    // every value the signature admits actually works.
+    private static IServiceConfigurationProvider Erase<TConcrete>(IServiceConfigurationProvider<TConcrete> provider)
+        where TConcrete : class, TConfiguration
+        => provider as IServiceConfigurationProvider ?? new ErasedConfigurationProvider<TConcrete>(provider);
+
+    private sealed class ErasedConfigurationProvider<TConcrete> : IServiceConfigurationProvider
+        where TConcrete : class, TConfiguration
+    {
+        private readonly IServiceConfigurationProvider<TConcrete> _inner;
+
+        public ErasedConfigurationProvider(IServiceConfigurationProvider<TConcrete> inner) => _inner = inner;
+
+        public async Task<IGenericResult<IGenericConfiguration>> Get(Guid id, CancellationToken ct = default)
+            => Widen(await _inner.Get(id, ct).ConfigureAwait(false));
+
+        public async Task<IGenericResult<IGenericConfiguration>> Get(string name, CancellationToken ct = default)
+            => Widen(await _inner.Get(name, ct).ConfigureAwait(false));
+
+        public async Task<IGenericResult> Save(IGenericConfiguration record, CancellationToken ct = default)
+        {
+            if (record is not TConcrete typed)
+            {
+                return GenericResult.Failure(
+                    ServicesResultCodes.ByName("InvalidConfigurationType"),
+                    ResultDetails.Create("ExpectedType", typeof(TConcrete).Name,
+                                         "ActualType", record?.GetType().Name ?? "(null)"));
+            }
+
+            return await _inner.Save(typed, ct).ConfigureAwait(false);
+        }
+
+        public Task<IGenericResult> Delete(Guid id, CancellationToken ct = default) => _inner.Delete(id, ct);
+
+        private static IGenericResult<IGenericConfiguration> Widen(IGenericResult<TConcrete> result)
+            => result.IsSuccess && result.Value is not null
+                ? GenericResult<IGenericConfiguration>.Success(result.Value)
+                : result.ToNewResult<IGenericConfiguration>();
+    }
+
     /// <inheritdoc />
     public IGenericResult Register(string serviceOptionType, IServiceFactory<TService> factory)
     {
@@ -124,19 +171,36 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     }
 
     /// <inheritdoc />
-    public IGenericResult Register(string serviceOptionType, IServiceConfigurationProvider<TConfiguration> configurationProvider)
+    public IGenericResult Register<TConcrete>(string serviceOptionType, IServiceConfigurationProvider<TConcrete> configurationProvider)
+        where TConcrete : class, TConfiguration
     {
-        _configurationProviders[serviceOptionType] = configurationProvider;
-        _registeredConfigurationProviders[serviceOptionType] = configurationProvider;
+        var erased = Erase(configurationProvider);
+        _configurationProviders[serviceOptionType] = erased;
+        _registeredConfigurationProviders[serviceOptionType] = erased;
         ServiceLogger.ProviderConfigurationRegistered(_logger, serviceOptionType);
         return GenericResult.Success();
     }
 
     /// <inheritdoc />
-    public IGenericResult Register(IServiceConfigurationProvider<TConfiguration> parentProvider)
+    public IGenericResult Register<TConcrete>(IServiceConfigurationProvider<TConcrete> domainConfigurationProvider)
+        where TConcrete : class, TConfiguration
     {
-        _parentProvider = parentProvider;
-        ServiceLogger.ParentProviderRegistered(_logger);
+        _domainConfigurationProvider = Erase(domainConfigurationProvider);
+        ServiceLogger.DomainConfigurationProviderRegistered(_logger);
+
+        // Why the implementation providers come across with it: an option registers its implementation
+        // configuration provider on the DOMAIN provider, which is what composes the configuration. The
+        // service provider needs the same set to resolve, and requiring each option to register twice
+        // would leave the two sets free to disagree — one registration, both places.
+        if (domainConfigurationProvider is IDomainConfigurationProvider source)
+        {
+            foreach (var implementation in source.ImplementationProviders)
+            {
+                _configurationProviders[implementation.Key] = implementation.Value;
+                ServiceLogger.ProviderConfigurationRegistered(_logger, implementation.Key);
+            }
+        }
+
         return GenericResult.Success();
     }
 
@@ -158,16 +222,16 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     {
         ServiceLogger.GettingServiceByName(_logger, name);
 
-        if (_parentProvider is null)
+        if (_domainConfigurationProvider is null)
         {
-            ServiceLogger.NoParentProviderRegistered(_logger, name);
+            ServiceLogger.NoDomainConfigurationProviderRegistered(_logger, name);
             return GenericResult<TService>.Failure(
-                ServicesResultCodes.ByName("NoParentProvider"),
+                ServicesResultCodes.ByName("NoDomainConfigurationProvider"),
                 ResultDetails.Create("Identifier", name));
         }
 
-        var parentResult = await _parentProvider.Get(name, cancellationToken).ConfigureAwait(false);
-        if (!parentResult.IsSuccess || parentResult.Value is null)
+        var domainResult = await _domainConfigurationProvider.Get(name, cancellationToken).ConfigureAwait(false);
+        if (!domainResult.IsSuccess || domainResult.Value is null)
         {
             ServiceLogger.ConfigurationNotFound(_logger, name);
             return GenericResult<TService>.Failure(
@@ -177,8 +241,8 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
 
         // Why the drill: a multi-level domain (header → kind → engine, e.g. Pipeline) registers its
         // factories under the ENGINE discriminator on the nested typed body, not the header's KIND.
-        var cfgType = (parentResult.Value as IServiceDispatchHost)?.ServiceDispatchBody?.ServiceOptionType
-            ?? parentResult.Value.ServiceOptionType;
+        var cfgType = (domainResult.Value as IServiceDispatchHost)?.ServiceDispatchBody?.ServiceOptionType
+            ?? domainResult.Value.ServiceOptionType;
         if (string.IsNullOrEmpty(cfgType))
         {
             ServiceLogger.ServiceOptionTypeMissing(_logger, name);
@@ -188,7 +252,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
         }
 
         ServiceLogger.ResolvedViaParentConfig(_logger, name, cfgType);
-        return await ResolveAndCreate(name, cfgType, parentResult.Value.Id, cancellationToken).ConfigureAwait(false);
+        return await ResolveAndCreate(name, cfgType, domainResult.Value.Id, cancellationToken).ConfigureAwait(false);
     }
 #pragma warning restore MA0051
 
@@ -201,16 +265,16 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
         var idString = id.ToString();
         ServiceLogger.GettingServiceById(_logger, idString);
 
-        if (_parentProvider is null)
+        if (_domainConfigurationProvider is null)
         {
-            ServiceLogger.NoParentProviderRegistered(_logger, idString);
+            ServiceLogger.NoDomainConfigurationProviderRegistered(_logger, idString);
             return GenericResult<TService>.Failure(
-                ServicesResultCodes.ByName("NoParentProvider"),
+                ServicesResultCodes.ByName("NoDomainConfigurationProvider"),
                 ResultDetails.Create("Identifier", idString));
         }
 
-        var parentResult = await _parentProvider.Get(id, cancellationToken).ConfigureAwait(false);
-        if (!parentResult.IsSuccess || parentResult.Value is null)
+        var domainResult = await _domainConfigurationProvider.Get(id, cancellationToken).ConfigureAwait(false);
+        if (!domainResult.IsSuccess || domainResult.Value is null)
         {
             ServiceLogger.ConfigurationNotFound(_logger, idString);
             return GenericResult<TService>.Failure(
@@ -218,20 +282,20 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
                 ResultDetails.Create("Identifier", idString));
         }
 
-        var cfgType = (parentResult.Value as IServiceDispatchHost)?.ServiceDispatchBody?.ServiceOptionType
-            ?? parentResult.Value.ServiceOptionType;
+        var cfgType = (domainResult.Value as IServiceDispatchHost)?.ServiceDispatchBody?.ServiceOptionType
+            ?? domainResult.Value.ServiceOptionType;
         if (string.IsNullOrEmpty(cfgType))
         {
-            var configName = parentResult.Value.Name ?? idString;
+            var configName = domainResult.Value.Name ?? idString;
             ServiceLogger.ServiceOptionTypeMissing(_logger, configName);
             return GenericResult<TService>.Failure(
                 ServicesResultCodes.ByName("ServiceOptionTypeMissing"),
                 ResultDetails.Create("Identifier", configName));
         }
 
-        var configNameResolved = parentResult.Value.Name ?? idString;
+        var configNameResolved = domainResult.Value.Name ?? idString;
         ServiceLogger.ResolvedViaParentConfig(_logger, configNameResolved, cfgType);
-        return await ResolveAndCreate(configNameResolved, cfgType, parentResult.Value.Id, cancellationToken).ConfigureAwait(false);
+        return await ResolveAndCreate(configNameResolved, cfgType, domainResult.Value.Id, cancellationToken).ConfigureAwait(false);
     }
 #pragma warning restore MA0051
 
@@ -351,6 +415,110 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
             ResultDetails.Create("ExpectedType", expectedType, "ActualType", actualType));
     }
 
+    /// <summary>
+    /// Resolves the implementation configuration behind a domain configuration name.
+    /// </summary>
+    /// <param name="name">The domain configuration's name.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The implementation configuration, or a structured failure.</returns>
+    /// <remarks>
+    /// For domains that need the configuration without building the service — one that caches by name,
+    /// say. It takes the same two steps the create path takes: the domain configuration supplies the Id
+    /// and the ServiceOptionType, and the implementation configuration provider registered for that type
+    /// supplies the configuration itself.
+    /// </remarks>
+    protected async Task<IGenericResult<TConfiguration>> ResolveConfiguration(
+        string name, CancellationToken cancellationToken = default)
+    {
+        if (_domainConfigurationProvider is null)
+        {
+            ServiceLogger.NoDomainConfigurationProviderRegistered(_logger, name);
+            return GenericResult<TConfiguration>.Failure(
+                ServicesResultCodes.ByName("NoDomainConfigurationProvider"),
+                ResultDetails.Create("Identifier", name));
+        }
+
+        var domainResult = await _domainConfigurationProvider.Get(name, cancellationToken).ConfigureAwait(false);
+        return await ResolveFromDomainRecord(name, domainResult, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Resolves the implementation configuration behind a domain configuration id.
+    /// </summary>
+    /// <param name="id">The domain configuration's durable id.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The implementation configuration, or a structured failure.</returns>
+    protected async Task<IGenericResult<TConfiguration>> ResolveConfiguration(
+        Guid id, CancellationToken cancellationToken = default)
+    {
+        var identifier = id.ToString();
+        if (_domainConfigurationProvider is null)
+        {
+            ServiceLogger.NoDomainConfigurationProviderRegistered(_logger, identifier);
+            return GenericResult<TConfiguration>.Failure(
+                ServicesResultCodes.ByName("NoDomainConfigurationProvider"),
+                ResultDetails.Create("Identifier", identifier));
+        }
+
+        var domainResult = await _domainConfigurationProvider.Get(id, cancellationToken).ConfigureAwait(false);
+        return await ResolveFromDomainRecord(identifier, domainResult, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<IGenericResult<TConfiguration>> ResolveFromDomainRecord(
+        string identifier,
+        IGenericResult<IGenericConfiguration> domainResult,
+        CancellationToken cancellationToken)
+    {
+        if (!domainResult.IsSuccess || domainResult.Value is null)
+        {
+            ServiceLogger.ConfigurationNotFound(_logger, identifier);
+            return GenericResult<TConfiguration>.Failure(
+                ServicesResultCodes.ByName("ConfigurationNotFound"),
+                ResultDetails.Create("Identifier", identifier));
+        }
+
+        var serviceOptionType = (domainResult.Value as IServiceDispatchHost)?.ServiceDispatchBody?.ServiceOptionType
+            ?? domainResult.Value.ServiceOptionType;
+        if (string.IsNullOrEmpty(serviceOptionType))
+        {
+            ServiceLogger.ServiceOptionTypeMissing(_logger, identifier);
+            return GenericResult<TConfiguration>.Failure(
+                ServicesResultCodes.ByName("ServiceOptionTypeMissing"),
+                ResultDetails.Create("Identifier", identifier));
+        }
+
+        if (!_configurationProviders.TryGetValue(serviceOptionType, out var configProvider))
+        {
+            ServiceLogger.NoConfigurationProviderRegistered(_logger, identifier, serviceOptionType);
+            return GenericResult<TConfiguration>.Failure(
+                ServicesResultCodes.ByName("NoConfigurationProvider"),
+                ResultDetails.Create("ServiceOptionType", serviceOptionType, "Identifier", identifier));
+        }
+
+        var configResult = domainResult.Value.Id != Guid.Empty
+            ? await configProvider.Get(domainResult.Value.Id, cancellationToken).ConfigureAwait(false)
+            : await configProvider.Get(identifier, cancellationToken).ConfigureAwait(false);
+
+        if (!configResult.IsSuccess || configResult.Value is null)
+        {
+            ServiceLogger.ConfigurationNotFound(_logger, identifier);
+            return GenericResult<TConfiguration>.Failure(
+                ServicesResultCodes.ByName("ConfigurationNotFound"),
+                ResultDetails.Create("Identifier", identifier));
+        }
+
+        if (configResult.Value is not TConfiguration typed)
+        {
+            ServiceLogger.CastFailed(_logger, typeof(TConfiguration).Name, configResult.Value.GetType().Name);
+            return GenericResult<TConfiguration>.Failure(
+                ServicesResultCodes.ByName("InvalidConfigurationType"),
+                ResultDetails.Create("ExpectedType", typeof(TConfiguration).Name,
+                                     "ActualType", configResult.Value.GetType().Name));
+        }
+
+        return GenericResult<TConfiguration>.Success(typed);
+    }
+
     // ── Resolve the configuration, then create ───────────────────────────────
 
     // Why one path where there were two: every call site that registers a per-discriminator
@@ -360,7 +528,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     // depended on which registration it happened to make. The lookup order survives, so a
     // genuinely distinct typed provider still wins; the failure semantics no longer vary.
     private async Task<IGenericResult<TService>> ResolveAndCreate(
-        string name, string serviceOptionType, Guid parentId, CancellationToken cancellationToken)
+        string name, string serviceOptionType, Guid domainConfigurationId, CancellationToken cancellationToken)
     {
         if (!_factories.TryGetValue(serviceOptionType, out var factory))
         {
@@ -370,25 +538,26 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
                 ResultDetails.Create("ServiceOptionType", serviceOptionType));
         }
 
-        var configProvider = _configurationProviders.TryGetValue(serviceOptionType, out var typedProvider)
-            ? typedProvider
-            : _parentProvider;
-
-        if (configProvider is null)
+        // Why not fall back to the parent provider here: the parent yields the child's Id and
+        // ServiceOptionType and nothing else. Reading the configuration off it instead would resolve a
+        // record of the wrong shape for every domain whose option carries a typed body, and would do it
+        // silently — the miss is a missing registration, so it fails as one.
+        if (!_configurationProviders.TryGetValue(serviceOptionType, out var configProvider))
         {
-            ServiceLogger.NoParentProviderRegistered(_logger, name);
+            ServiceLogger.NoConfigurationProviderRegistered(_logger, name, serviceOptionType);
             return GenericResult<TService>.Failure(
-                ServicesResultCodes.ByName("NoParentProvider"),
-                ResultDetails.Create("Identifier", name));
+                ServicesResultCodes.ByName("NoConfigurationProvider"),
+                ResultDetails.Create("ServiceOptionType", serviceOptionType,
+                                     "Identifier", name));
         }
 
-        ServiceLogger.CreatingFromTypedConfiguration(_logger, name, serviceOptionType, parentId);
+        ServiceLogger.CreatingFromTypedConfiguration(_logger, name, serviceOptionType, domainConfigurationId);
 
-        // Why the Id wins outright when present: it is the parent record that was just resolved, so
-        // a miss is an inconsistency — never an invitation to find a record from a DIFFERENT parent
-        // by name.
-        var configResult = parentId != Guid.Empty
-            ? await configProvider.Get(parentId, cancellationToken).ConfigureAwait(false)
+        // Why the Id wins outright when present: it is the domain record that was just resolved, so a
+        // miss is an inconsistency — never an invitation to find a record from a DIFFERENT domain
+        // configuration by name.
+        var configResult = domainConfigurationId != Guid.Empty
+            ? await configProvider.Get(domainConfigurationId, cancellationToken).ConfigureAwait(false)
             : await configProvider.Get(name, cancellationToken).ConfigureAwait(false);
 
         if (!configResult.IsSuccess || configResult.Value is null)
@@ -399,9 +568,22 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
                 ResultDetails.Create("Identifier", name));
         }
 
+        // Why the cast is here and checked: the configuration comes back through the erased provider
+        // view as IGenericConfiguration, but the factory is typed. A configuration of the wrong
+        // concrete type is a real defect — a domain wired to another domain's provider — so it fails
+        // with the type it got, rather than being coerced or skipped.
+        if (configResult.Value is not TConfiguration typedConfig)
+        {
+            ServiceLogger.CastFailed(_logger, typeof(TConfiguration).Name, configResult.Value.GetType().Name);
+            return GenericResult<TService>.Failure(
+                ServicesResultCodes.ByName("InvalidConfigurationType"),
+                ResultDetails.Create("ExpectedType", typeof(TConfiguration).Name,
+                                     "ActualType", configResult.Value.GetType().Name));
+        }
+
         ServiceLogger.FactoryLookupSucceeded(_logger, serviceOptionType);
 
-        var result = Create(factory, configResult.Value);
+        var result = Create(factory, typedConfig);
         if (result.IsSuccess)
             ServiceLogger.ServiceCreated(_logger, name, serviceOptionType);
         else

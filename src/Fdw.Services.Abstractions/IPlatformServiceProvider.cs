@@ -81,12 +81,18 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
     /// <summary>
     /// Registers a configuration provider for a service option type.
     /// </summary>
-    // Why exact-typed only: this serves domains whose child config type IS the domain's configuration
-    // type (Scheduling, ExternalIdentityProviders). The widening overload that used to sit beside it —
-    // Register{TDerived} for a SUBTYPE — existed solely to bridge the invariant
-    // IServiceConfigurationProvider{T} via a forwarding adapter, and a typed body belongs on the
-    // domain's HEADER provider by discriminator, not here.
-    IGenericResult Register(string serviceOptionType, IServiceConfigurationProvider<TConfiguration> configurationProvider);
+    /// <typeparam name="TConcrete">
+    /// The configuration provider's own closed type — inferred at the call site, never written.
+    /// </typeparam>
+    // Why the type parameter follows the CONFIGURATION and not the provider: every configuration
+    // provider is a DefaultConfigurationProvider<TConfig, TCommand>, which implements
+    // IServiceConfigurationProvider<TConfig> closed over its CONCRETE class. That interface is
+    // invariant by C# rule — Save takes TConfig and Get returns it — so a parameter typed
+    // IServiceConfigurationProvider<TConfiguration> could never accept one, whatever TConfiguration
+    // is renamed to. Binding TConcrete to the concrete class and carrying the relationship in the
+    // constraint converts directly, with no adapter and no variance change. The previous exact-typed
+    IGenericResult Register<TConcrete>(string serviceOptionType, IServiceConfigurationProvider<TConcrete> configurationProvider)
+        where TConcrete : class, TConfiguration;
 
     /// <summary>
     /// Registers a parent configuration provider for direct name-to-type resolution.
@@ -94,8 +100,10 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
     /// enabling O(1) lookup by name to determine which factory to use via
     /// <see cref="IGenericConfiguration.ServiceOptionType"/>.
     /// </summary>
-    /// <param name="parentProvider">The parent configuration provider.</param>
-    IGenericResult Register(IServiceConfigurationProvider<TConfiguration> parentProvider);
+    /// <param name="domainConfigurationProvider">The parent configuration provider.</param>
+    /// <typeparam name="TConcrete">The parent provider's own closed type; inferred at the call site.</typeparam>
+    IGenericResult Register<TConcrete>(IServiceConfigurationProvider<TConcrete> domainConfigurationProvider)
+        where TConcrete : class, TConfiguration;
 
 }
 

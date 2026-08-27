@@ -216,7 +216,7 @@ public static class AegisHostRegistration
             return secretManagersInitialized;
         }
 
-        var parentResult = services
+        var domainResult = services
             .GetRequiredService<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>()
             .Register(new DeclaredSecretManagerConfigurationProvider([.. schema.SecretManagers]));
 
@@ -224,10 +224,10 @@ public static class AegisHostRegistration
         // ends. Registration failures arrive here as values from every other phase, and this one was
         // the odd path out - it aborted startup with a stack trace where its siblings returned a coded
         // failure the caller could log and act on.
-        if (parentResult.IsFailure)
+        if (domainResult.IsFailure)
         {
-            AegisLog.HostPhaseFailed(logger, nameof(Initialize), parentResult.CurrentMessage);
-            return parentResult.ToNewResult<IHost>();
+            AegisLog.HostPhaseFailed(logger, nameof(Initialize), domainResult.CurrentMessage);
+            return domainResult.ToNewResult<IHost>();
         }
 
         AegisLog.HostPhaseCompleted(logger, nameof(Initialize));

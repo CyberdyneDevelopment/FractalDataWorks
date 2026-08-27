@@ -1,13 +1,13 @@
 using Fdw.Abstractions;
 using Fdw.ServiceTypes;
 
+using Fdw.Configuration;
+
 namespace Fdw.Services.Connections.Abstractions;
 
 /// <summary>
 /// Interface for providers that create and manage generic connections.
 /// </summary>
-// Why: Connection providers provide CONNECTIONS, not configurations.
-// Configuration comes from ConnectionConfigurationProvider.
-public interface IConnectionProvider : IPlatformServiceProvider<IGenericConnection>
+public interface IConnectionProvider : IPlatformServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>
 {
 }

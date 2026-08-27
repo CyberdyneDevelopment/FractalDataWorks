@@ -6,6 +6,8 @@ using Fdw.Services.ExternalIdentityProviders.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Configuration;
+
 namespace Fdw.Services.ExternalIdentityProviders;
 
 /// <summary>
@@ -15,7 +17,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// <remarks>
 /// <para>
 /// This exists to keep provisioner factories PURE. A factory that ctor-injected
-/// <c>IPlatformServiceProvider&lt;IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration&gt;</c>
+/// <c>IPlatformServiceProvider&lt;IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration&gt;</c>
 /// was resolved from inside that provider's own generated scoped resolver lambda, so resolving it
 /// re-entered the lambda — whose cache entry is not published yet — and recursed without bound. MEDI's
 /// StackGuard migrates that recursion onto fresh stacks instead of throwing, so the host hung SILENTLY
@@ -28,30 +30,31 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// factory an already-resolved connection and pepper.
 /// </para>
 /// </remarks>
-public class DefaultExternalIdentityProvisionerProvider
+public class ExternalIdentityProvisionerServiceProvider
     : PlatformServiceProviderBase<
         IExternalIdentityProvisioner,
-        ExternalIdentityProvisionerConfiguration,
-        IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>,
-        IServiceConfigurationProvider<ExternalIdentityProvisionerConfiguration>>
+        IExternalIdentityProvisionerConfiguration,
+        IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>,
+        IServiceConfigurationProvider<IExternalIdentityProvisionerConfiguration>>,
+      IExternalIdentityProvisionerServiceProvider
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="DefaultExternalIdentityProvisionerProvider"/> class.
+    /// Initializes a new instance of the <see cref="ExternalIdentityProvisionerServiceProvider"/> class.
     /// </summary>
     /// <param name="services">The container this provider resolves factories from.</param>
     /// <param name="logger">Logger instance.</param>
-    public DefaultExternalIdentityProvisionerProvider(
+    public ExternalIdentityProvisionerServiceProvider(
         IServiceProvider services,
         ILogger<PlatformServiceProviderBase<
             IExternalIdentityProvisioner,
-            ExternalIdentityProvisionerConfiguration,
-            IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>,
-            IServiceConfigurationProvider<ExternalIdentityProvisionerConfiguration>>> logger)
+            IExternalIdentityProvisionerConfiguration,
+            IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>,
+            IServiceConfigurationProvider<IExternalIdentityProvisionerConfiguration>>> logger)
         : base(services, logger ?? NullLogger<PlatformServiceProviderBase<
             IExternalIdentityProvisioner,
-            ExternalIdentityProvisionerConfiguration,
-            IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>,
-            IServiceConfigurationProvider<ExternalIdentityProvisionerConfiguration>>>.Instance)
+            IExternalIdentityProvisionerConfiguration,
+            IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>,
+            IServiceConfigurationProvider<IExternalIdentityProvisionerConfiguration>>>.Instance)
     {
     }
 
@@ -61,9 +64,9 @@ public class DefaultExternalIdentityProvisionerProvider
     // does not implement the domain overload still works via the base pure-construction path.
     protected override IGenericResult<IExternalIdentityProvisioner> Create(
         IServiceFactory<IExternalIdentityProvisioner> factory,
-        ExternalIdentityProvisionerConfiguration configuration)
+        IExternalIdentityProvisionerConfiguration configuration)
     {
-        if (factory is IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration> provisionerFactory)
+        if (factory is IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration> provisionerFactory)
             return provisionerFactory.Create(configuration, this);
 
         return base.Create(factory, configuration);

@@ -7,15 +7,15 @@ namespace Fdw.Services.Results;
 /// <summary>
 /// No parent configuration provider registered — service lookup cannot proceed.
 /// </summary>
-[TypeOption(typeof(ServicesResultCodes), "NoParentProvider", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ServicesResultCodes), "NoDomainConfigurationProvider", RestrictToCurrentCompilation = true)]
 [ExcludeFromCodeCoverage]
-public sealed class NoParentProviderCode : ServicesResultCodeBase
+public sealed class NoDomainConfigurationProviderCode : ServicesResultCodeBase
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="NoParentProviderCode"/> class.
+    /// Initializes a new instance of the <see cref="NoDomainConfigurationProviderCode"/> class.
     /// </summary>
-    public NoParentProviderCode()
-        : base(61003, "NoParentProvider",
+    public NoDomainConfigurationProviderCode()
+        : base(61003, "NoDomainConfigurationProvider",
             ResultSeverities.ByName("Error"),
             "No parent configuration provider registered — cannot resolve '{Identifier}'",
             isRetryable: false)

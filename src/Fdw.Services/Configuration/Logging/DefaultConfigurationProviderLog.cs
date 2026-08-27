@@ -232,11 +232,11 @@ public static partial class DefaultConfigurationProviderLog
     /// <param name="configTypeName">The configuration type name being resolved.</param>
     /// <param name="containerName">The name of the child container being fetched.</param>
     /// <param name="parentContainerName">The name of the resolved parent container.</param>
-    /// <param name="parentId">The resolved identifier of the parent container.</param>
+    /// <param name="domainConfigurationId">The resolved identifier of the parent container.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11006, Level = LogLevel.Trace,
-        Message = "Parent '{parentContainerName}' resolved id='{parentId}' — fetching child '{containerName}' by FK for {configTypeName}")]
-    public static partial IGenericMessage ChildOnlyParentResolved(ILogger logger, string configTypeName, string containerName, string parentContainerName, string parentId);
+        Message = "Parent '{parentContainerName}' resolved id='{domainConfigurationId}' — fetching child '{containerName}' by FK for {configTypeName}")]
+    public static partial IGenericMessage ChildOnlyParentResolved(ILogger logger, string configTypeName, string containerName, string parentContainerName, string domainConfigurationId);
 
     // ── Error (9379) — explicit key overload ──
 

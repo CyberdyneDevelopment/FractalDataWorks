@@ -11,6 +11,8 @@ using Fdw.Services.ExternalIdentityProviders.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Configuration;
+
 namespace Fdw.Services.ExternalIdentityProviders.Chained;
 
 /// <summary>
@@ -50,16 +52,16 @@ internal sealed class ChainedExternalIdentityProvisioner : IExternalIdentityProv
     // regardless of which package's NotFound code a leaf provisioner used.
     private const int CanonicalNotFoundId = 30000;
 
-    private readonly ExternalIdentityProvisionerConfiguration _header;
+    private readonly IExternalIdentityProvisionerConfiguration _header;
     private readonly ChainedExternalIdentityProvisionerConfiguration _typed;
-    private readonly IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration> _provisionerProvider;
+    private readonly IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration> _provisionerProvider;
     private readonly ILogger<ChainedExternalIdentityProvisioner> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ChainedExternalIdentityProvisioner"/> class.</summary>
     public ChainedExternalIdentityProvisioner(
-        ExternalIdentityProvisionerConfiguration header,
+        IExternalIdentityProvisionerConfiguration header,
         ChainedExternalIdentityProvisionerConfiguration typed,
-        IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration> provisionerProvider,
+        IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration> provisionerProvider,
         ILogger<ChainedExternalIdentityProvisioner>? logger)
     {
         _header = header ?? throw new ArgumentNullException(nameof(header));

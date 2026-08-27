@@ -28,7 +28,6 @@ namespace Fdw.Services.TokenManagers;
     typeof(ITokenManagerType),
     typeof(TokenManagerTypes),
     ServiceInterface = typeof(ITokenManager),
-    ConfigurationType = typeof(TokenManagerConfiguration),
     ProviderType = typeof(DefaultServiceProvider<ITokenManager, TokenManagerConfiguration, ITokenManagerFactory<ITokenManager, TokenManagerConfiguration>, IServiceConfigurationProvider<TokenManagerConfiguration>>),
     ProviderInterface = typeof(IPlatformServiceProvider<ITokenManager, TokenManagerConfiguration>),
     ServiceCategory = "TokenManager")]
@@ -93,11 +92,11 @@ public partial class TokenManagerTypes : ServiceTypeCollectionBase<
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
-                        var parentResult = provider.Register(cfgProvider);
-                        if (parentResult.IsSuccess)
+                        var domainResult = provider.Register(cfgProvider);
+                        if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(TokenManagerTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(TokenManagerTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(TokenManagerTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {

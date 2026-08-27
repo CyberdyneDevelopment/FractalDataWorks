@@ -36,7 +36,6 @@ namespace Fdw.Services.SecretManagers;
     typeof(ISecretManagerType),
     typeof(SecretManagerTypes),
     ServiceInterface = typeof(ISecretManager),
-    ConfigurationType = typeof(SecretManagerConfiguration),
     ProviderType = typeof(DefaultSecretManagerProvider),
     ProviderInterface = typeof(IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>),
     ServiceCategory = "SecretManager")]
@@ -125,11 +124,11 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
-                        var parentResult = provider.Register(cfgProvider);
-                        if (parentResult.IsSuccess)
+                        var domainResult = provider.Register(cfgProvider);
+                        if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(SecretManagerTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(SecretManagerTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(SecretManagerTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {

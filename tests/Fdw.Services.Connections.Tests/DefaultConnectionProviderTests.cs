@@ -74,11 +74,11 @@ public class DefaultConnectionProviderTests
     }
 
     /// <summary>
-    /// Minimal IConnectionConfiguration stub — DefaultConnectionProvider.CreateFromHeader
+    /// Minimal IConnectionImplementationConfiguration stub — DefaultConnectionProvider.CreateFromHeader
     /// requires a non-null Configuration on the parent header before it dispatches to the
     /// registered factory, so the test config provider attaches one of these to every match.
     /// </summary>
-    private sealed class StubConnectionConfiguration : IConnectionConfiguration
+    private sealed class StubConnectionConfiguration : IConnectionImplementationConfiguration
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
@@ -146,6 +146,14 @@ public class DefaultConnectionProviderTests
         async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
         {
             var result = await Get(id, ct).ConfigureAwait(false);
+            return result.IsSuccess
+                ? result.ToNewResult<IGenericConfiguration>(result.Value!)
+                : result.ToNewResult<IGenericConfiguration>();
+        }
+
+        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(string name, CancellationToken ct)
+        {
+            var result = await Get(name, ct).ConfigureAwait(false);
             return result.IsSuccess
                 ? result.ToNewResult<IGenericConfiguration>(result.Value!)
                 : result.ToNewResult<IGenericConfiguration>();

@@ -50,7 +50,7 @@ public sealed class DefaultSchedulerType
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            var provider = services.GetRequiredService<IPlatformServiceProvider<IFrameworkSchedulingService, SchedulerConfiguration>>();
+            var provider = services.GetRequiredService<ISchedulerServiceProvider>();
             var log = loggerFactory?.CreateLogger<DefaultSchedulerType>()
                 ?? NullLogger<DefaultSchedulerType>.Instance;
 

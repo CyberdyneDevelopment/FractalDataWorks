@@ -14,6 +14,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Results;
 
+using Fdw.Configuration;
+
 namespace Fdw.Services.ExternalIdentityProviders.Chained;
 
 /// <summary>
@@ -27,8 +29,8 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 public sealed class ChainedExternalIdentityProvisionerType
     : ExternalIdentityProvisionerTypeBase<
         IExternalIdentityProvisioner,
-        ExternalIdentityProvisionerConfiguration,
-        IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>
+        IExternalIdentityProvisionerConfiguration,
+        IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>>
 {
     /// <summary>Initializes a new instance of <see cref="ChainedExternalIdentityProvisionerType"/>.</summary>
     public ChainedExternalIdentityProvisionerType() : base(name: "Chained", defaultContainerName: "ExternalIdentityProvisioner")
@@ -39,12 +41,12 @@ public sealed class ChainedExternalIdentityProvisionerType
         Initialization((host, hostLoggerFactory) =>
         {
             var services = host.Services;
-            var provider = services.GetRequiredService<IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>();
+            var provider = services.GetRequiredService<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>>();
 
             var loggerFactory = services.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance;
             var logger = loggerFactory.CreateLogger<ChainedExternalIdentityProvisionerType>();
 
-            var factory = services.GetRequiredService<IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>();
+            var factory = services.GetRequiredService<IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>>();
             var headerProvider = services.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>();
             var typedProvider = services.GetRequiredService<ChainedExternalIdentityProvisionerConfigurationProvider>();
 
@@ -53,14 +55,14 @@ public sealed class ChainedExternalIdentityProvisionerType
             headerProvider.Register("Chained", typedProvider);
 
             // Why: multiple ExternalIdentityProvisionerTypes options may register against the SAME header
-            // provider — RegisterParentProvider is safe to call from every option since they all point at
+            // provider — RegisterDomainConfigurationProvider is safe to call from every option since they all point at
             // the one sec.ExternalIdentityProvisioner table.
             // Why these now propagate instead of returning the host: each of these three returned
             // `host` on failure, which the old signature made indistinguishable from success — the
             // provisioner silently did not register and the host started as if it had. There was
             // nowhere to put the failure. There is now, so it goes there.
-            var parentResult = provider.Register(headerProvider);
-            if (!parentResult.IsSuccess) return parentResult.ToNewResult<IHost>();
+            var domainResult = provider.Register(headerProvider);
+            if (!domainResult.IsSuccess) return domainResult.ToNewResult<IHost>();
 
             var factoryResult = provider.Register("Chained", factory);
             if (!factoryResult.IsSuccess) return factoryResult.ToNewResult<IHost>();
@@ -101,7 +103,7 @@ public sealed class ChainedExternalIdentityProvisionerType
             // resolving this factory from re-entering the provider's own resolver lambda (FDW-615).
             // Scoped to match the provider's generated lifetime — never Singleton over a Scoped dependency.
             builder.Services.TryAddScoped<ChainedExternalIdentityProvisionerFactory>();
-            builder.Services.TryAddScoped<IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>>(
+            builder.Services.TryAddScoped<IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>>(
                 sp => sp.GetRequiredService<ChainedExternalIdentityProvisionerFactory>());
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

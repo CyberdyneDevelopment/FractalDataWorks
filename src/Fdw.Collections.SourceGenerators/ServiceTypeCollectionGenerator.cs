@@ -347,28 +347,6 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
             "Fdw.Types"
         };
 
-        // Add namespaces needed for provider pattern (discovered from types, not hardcoded)
-        if (collection.HasExplicitProviderType)
-        {
-            namespaces.Add("Fdw.Configuration.Abstractions");
-
-            // Extract namespaces from the types specified in the attribute
-            if (collection.ProviderInterfaceTypeName is { } providerInterfaceTypeName &&
-                GetNamespaceFromFullTypeName(providerInterfaceTypeName) is { Length: > 0 } ns1)
-                namespaces.Add(ns1);
-
-            if (collection.ConfigurationInterfaceTypeName is { } configurationInterfaceTypeName &&
-                GetNamespaceFromFullTypeName(configurationInterfaceTypeName) is { Length: > 0 } ns2)
-                namespaces.Add(ns2);
-
-            if (collection.ServiceInterfaceTypeName is { } serviceInterfaceTypeName &&
-                GetNamespaceFromFullTypeName(serviceInterfaceTypeName) is { Length: > 0 } ns3)
-                namespaces.Add(ns3);
-
-            if (collection.ProviderTypeName is { } providerTypeName &&
-                GetNamespaceFromFullTypeName(providerTypeName) is { Length: > 0 } ns4)
-                namespaces.Add(ns4);
-        }
         var netstandardNamespaces = new HashSet<string>(StringComparer.Ordinal)
         {
             "System.Collections.Immutable"
@@ -666,41 +644,6 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
 
         return sb.ToString();
     }
-
-
-    // Why: extracted from GenerateCode so that method stays within the FDW006 executable-line budget.
-    // Emits the scoped-provider resolver lambda (shared by the Register and Configure emission paths).
-    // The per-scope factory wiring is wrapped in a fail-loud try/catch: a throw here was previously
-    // SILENT — the process went dark after the last provider Debug line (e.g. "Parent configuration
-    // provider registered") with no exception logged — leaving a scoped-lifetime crash/freeze
-    // impossible to diagnose. The catch logs the exception via MessageLogging and rethrows (mirrors
-    // the singleton Initialize() path's log-and-rethrow), so the real cause surfaces.
-    // <paramref name="addMethod"/> is "AddScoped" (Register path) or "TryAddScoped" (Configure path).
-    private static void AppendScopedProviderRegistration(StringBuilder bodySb, ServiceTypeCollectionModel collection, string addMethod)
-    {
-        bodySb.AppendLine($"                builder.Services.{addMethod}<{collection.ProviderInterfaceTypeName}>(sp =>");
-        bodySb.AppendLine($"            {{");
-        bodySb.AppendLine($"                var provider = new {collection.ProviderTypeName}(");
-        bodySb.AppendLine($"                    sp,");
-        bodySb.AppendLine($"                    sp.GetService<Microsoft.Extensions.Logging.ILoggerFactory>()?.CreateLogger<{collection.ProviderTypeName}>()");
-        bodySb.AppendLine($"                    ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<{collection.ProviderTypeName}>.Instance);");
-        bodySb.AppendLine($"                try");
-        bodySb.AppendLine($"                {{");
-        if (collection.ConfigurationTypeName != null)
-        {
-            bodySb.AppendLine($"                    if (sp.GetService<Fdw.Services.Abstractions.IServiceConfigurationProvider<{collection.ConfigurationTypeName}>>() is {{}} cfg) provider.Register(cfg);");
-        }
-        bodySb.AppendLine($"                }}");
-        bodySb.AppendLine($"                catch (System.Exception ex)");
-        bodySb.AppendLine($"                {{");
-        bodySb.AppendLine($"                    var stLogger = sp.GetService<Microsoft.Extensions.Logging.ILoggerFactory>()?.CreateLogger(\"{collection.ClassName}\");");
-        bodySb.AppendLine($"                    if (stLogger != null) ServiceTypeLog.FactoryRegistrationException(stLogger, ex, \"{collection.ClassName}\");");
-        bodySb.AppendLine($"                    throw;");
-        bodySb.AppendLine($"                }}");
-        bodySb.AppendLine($"                return provider;");
-        bodySb.AppendLine($"            }});");
-    }
-
     // Why: extracted from GenerateCode so that method stays within the FDW006 executable-line budget.
     // Emits the GetMetadata() accessor plus the private ComputeFnv1aHash helper for one collection.
     private static void AppendMetadataMethod(StringBuilder bodySb, ServiceTypeCollectionModel collection)

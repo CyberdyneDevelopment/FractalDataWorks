@@ -1,3 +1,4 @@
+using System;
 namespace Fdw.Operations.Endpoints.AgentActions;
 
 /// <summary>
@@ -6,5 +7,5 @@ namespace Fdw.Operations.Endpoints.AgentActions;
 public class AgentActionIdRequest
 {
     /// <summary>Gets or sets the agent action identifier.</summary>
-    public int ActionId { get; set; }
+    public Guid ActionId { get; set; }
 }

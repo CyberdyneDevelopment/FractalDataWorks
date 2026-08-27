@@ -134,34 +134,8 @@ public sealed class DefaultServiceConnectionProvider : IServiceConnectionProvide
         return Get(configuration.Name, cancellationToken);
     }
 
-    /// <inheritdoc />
-    async Task<IGenericResult<T>> IPlatformServiceProvider.Get<T>(string name, CancellationToken cancellationToken)
-    {
-        var result = await Get(name, cancellationToken).ConfigureAwait(false);
-        return CastResult<T>(result);
-    }
 
-    /// <inheritdoc />
-    async Task<IGenericResult<T>> IPlatformServiceProvider.Get<T>(Guid id, CancellationToken cancellationToken)
-    {
-        var result = await Get(id, cancellationToken).ConfigureAwait(false);
-        return CastResult<T>(result);
-    }
 
-    /// <inheritdoc />
-    async Task<IGenericResult<IReadOnlyList<T>>> IPlatformServiceProvider.Get<T>(CancellationToken cancellationToken)
-    {
-        var result = await Get(cancellationToken).ConfigureAwait(false);
-        if (!result.IsSuccess) return result.ToNewResult<IReadOnlyList<T>>();
-        var typed = result.Value?.OfType<T>().ToList() ?? [];
-        return GenericResult<IReadOnlyList<T>>.Success(typed);
-    }
-
-    /// <inheritdoc />
-    public void Evict(string name) { }
-
-    /// <inheritdoc />
-    public void Evict(Guid id) { }
 
     /// <inheritdoc />
     public void Dispose()

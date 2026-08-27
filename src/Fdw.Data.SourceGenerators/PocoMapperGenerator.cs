@@ -717,7 +717,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         return false;
     }
 
-    // Why: the cascade stamps parentId onto the child's {Strip(parent)}Id property; only emit the
+    // Why: the cascade stamps domainConfigurationId onto the child's {Strip(parent)}Id property; only emit the
     // typed assignment when the child actually declares a public-settable Guid property of that name.
     private static bool ChildHasFkSetter(ITypeSymbol childType, string fkName)
     {

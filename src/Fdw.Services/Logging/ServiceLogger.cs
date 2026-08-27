@@ -115,8 +115,8 @@ public static partial class ServiceLogger
     /// Logs when a parent-provider lookup by Id misses; the caller will fall back to a
     /// name-based lookup. Surfaced to FDW013-style failure-path coverage.
     /// </summary>
-    [MessageLogging(EventId = 11021, Level = LogLevel.Debug, Message = "Configuration lookup by Id missed for '{identifier}' (parentId={parentId}); falling back to name lookup")]
-    public static partial IGenericMessage ConfigurationLookupByIdMissed(ILogger logger, string identifier, Guid parentId);
+    [MessageLogging(EventId = 11021, Level = LogLevel.Debug, Message = "Configuration lookup by Id missed for '{identifier}' (domainConfigurationId={domainConfigurationId}); falling back to name lookup")]
+    public static partial IGenericMessage ConfigurationLookupByIdMissed(ILogger logger, string identifier, Guid domainConfigurationId);
 
     /// <summary>
     /// Logs when a service cast fails.
@@ -224,13 +224,19 @@ public static partial class ServiceLogger
     /// Logs when no parent provider is registered and a service lookup is attempted.
     /// </summary>
     [MessageLogging(EventId = 61004, Level = LogLevel.Error, Message = "No parent configuration provider registered — cannot resolve '{identifier}'")]
-    public static partial IGenericMessage NoParentProviderRegistered(ILogger logger, string identifier);
+    public static partial IGenericMessage NoDomainConfigurationProviderRegistered(ILogger logger, string identifier);
+
+    /// <summary>
+    /// Logs when no configuration provider is registered for a resolved ServiceOptionType.
+    /// </summary>
+    [MessageLogging(EventId = 61005, Level = LogLevel.Error, Message = "No configuration provider registered for ServiceOptionType '{serviceOptionType}' — cannot resolve '{identifier}'")]
+    public static partial IGenericMessage NoConfigurationProviderRegistered(ILogger logger, string identifier, string serviceOptionType);
 
     /// <summary>
     /// Logs when a parent configuration provider is registered.
     /// </summary>
     [MessageLogging(EventId = 11033, Level = LogLevel.Debug, Message = "Parent configuration provider registered")]
-    public static partial IGenericMessage ParentProviderRegistered(ILogger logger);
+    public static partial IGenericMessage DomainConfigurationProviderRegistered(ILogger logger);
 
     /// <summary>
     /// Logs when a configuration entry has no ServiceOptionType set.
@@ -241,11 +247,11 @@ public static partial class ServiceLogger
     /// <summary>
     /// Logs the inputs to a typed-configuration lookup before it runs.
     /// </summary>
-    // Why: parentId is the discriminator between the two ways this lookup fails — "the parent record
+    // Why: domainConfigurationId is the discriminator between the two ways this lookup fails — "the parent record
     // carried no Id" (mapper problem) versus "the parent had an Id but the child query matched no rows"
     // (data/tenant problem). Without it in the trace the two are indistinguishable from the outside.
-    [MessageLogging(EventId = 11038, Level = LogLevel.Trace, Message = "Creating '{name}' from typed configuration: ServiceOptionType='{serviceOptionType}', parentId={parentId}")]
-    public static partial IGenericMessage CreatingFromTypedConfiguration(ILogger logger, string name, string serviceOptionType, Guid parentId);
+    [MessageLogging(EventId = 11038, Level = LogLevel.Trace, Message = "Creating '{name}' from typed configuration: ServiceOptionType='{serviceOptionType}', domainConfigurationId={domainConfigurationId}")]
+    public static partial IGenericMessage CreatingFromTypedConfiguration(ILogger logger, string name, string serviceOptionType, Guid domainConfigurationId);
 
     /// <summary>
     /// Logs when the provider was constructed without the container it resolves factories from.

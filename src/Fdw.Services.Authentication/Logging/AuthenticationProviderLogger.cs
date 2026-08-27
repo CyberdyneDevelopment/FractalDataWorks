@@ -212,7 +212,7 @@ public static partial class AuthenticationProviderLogger
         EventId = 61008,
         Level = LogLevel.Error,
         Message = "Failed to register parent configuration provider: {error}")]
-    public static partial IGenericMessage ParentProviderRegistrationFailed(
+    public static partial IGenericMessage DomainConfigurationProviderRegistrationFailed(
         ILogger logger,
         string error);
 }

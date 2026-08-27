@@ -17,7 +17,7 @@ namespace Fdw.Services.Connections.Sqlite;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "Sqlite")]
-public partial class SqliteConnectionConfiguration : IConnectionConfiguration
+public partial class SqliteConnectionConfiguration : IConnectionImplementationConfiguration
 {
     // ========================================
     // IGenericConfiguration — typed body identity

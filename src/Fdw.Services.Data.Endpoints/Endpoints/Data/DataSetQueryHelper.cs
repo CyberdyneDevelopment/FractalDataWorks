@@ -69,14 +69,14 @@ internal static class DataSetQueryHelper
     };
 
     /// <summary>Builds filter for child records by parent FK + active.</summary>
-    internal static FilterExpression ByParentIdFilter(string fkPropertyName, Guid parentId) => new()
+    internal static FilterExpression ByParentIdFilter(string fkPropertyName, Guid domainConfigurationId) => new()
     {
         Root = new FilterGroup
         {
             Operator = LogicalOperator.And,
             Nodes =
             [
-                new FilterCondition { PropertyName = fkPropertyName, Operator = EqualOperator, Value = parentId },
+                new FilterCondition { PropertyName = fkPropertyName, Operator = EqualOperator, Value = domainConfigurationId },
                 new FilterCondition { PropertyName = "IsCurrent", Operator = EqualOperator, Value = true },
                 new FilterCondition { PropertyName = "IsDeleted", Operator = EqualOperator, Value = false }
             ]

@@ -27,7 +27,7 @@ namespace Fdw.Services.Connections.Http;
 /// and <c>ServiceType = "Http"</c>.
 /// </para>
 /// </remarks>
-public abstract class HttpConnectionConfigurationBase : IConnectionConfiguration
+public abstract class HttpConnectionConfigurationBase : IConnectionImplementationConfiguration
 {
     // ========================================
     // IGenericConfiguration — typed body identity

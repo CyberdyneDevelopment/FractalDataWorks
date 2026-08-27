@@ -51,7 +51,7 @@ public sealed class DefaultDataVaultProvider
     // Why: the ServiceTypeCollection generator constructs this provider with logger ONLY
     // (new DefaultDataVaultProvider(providerLogger)); it cannot inject these. They are wired ONCE
     // during the phase-3 RegisterFactory hook (CredentialVaultType.RegisterFactory), which receives
-    // the built IServiceProvider — exactly like RegisterParentProvider. They are immutable thereafter.
+    // the built IServiceProvider — exactly like RegisterDomainConfigurationProvider. They are immutable thereafter.
     private IDataConnectionProvider? _connectionProvider;
     private IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>? _secretManagerProvider;
 
@@ -109,12 +109,9 @@ public sealed class DefaultDataVaultProvider
     /// <inheritdoc />
     public override async Task<IGenericResult<IDataVault>> Get(Guid id, CancellationToken cancellationToken = default)
     {
-        if (ParentProvider is null)
-            return GenericResult<IDataVault>.Failure(DataVaultLog.ResolutionProvidersNotConfigured(_logger, id.ToString()));
-
         // Why: resolve the header by id first to obtain the vault Name — the cache (and every other
         // Get overload) is keyed by name, so an id and a name for the same vault share one entry.
-        var configResult = await ParentProvider.Get(id, cancellationToken).ConfigureAwait(false);
+        var configResult = await ResolveConfiguration(id, cancellationToken).ConfigureAwait(false);
         if (!configResult.IsSuccess || configResult.Value is null)
             return configResult.ToNewResult<IDataVault>();
 
@@ -138,13 +135,7 @@ public sealed class DefaultDataVaultProvider
     // Why: resolves the composed vault configuration (header + typed body) by name via the parent
     // provider, which runs PopulateTypedBody. Used as the cache factory's config source for Get(name).
     private Task<IGenericResult<DataVaultConfiguration>> ResolveConfigByName(string name, CancellationToken cancellationToken)
-    {
-        if (ParentProvider is null)
-            return Task.FromResult(GenericResult<DataVaultConfiguration>.Failure(
-                DataVaultLog.ResolutionProvidersNotConfigured(_logger, name)));
-
-        return ParentProvider.Get(name, cancellationToken);
-    }
+        => ResolveConfiguration(name, cancellationToken);
 
     // Why: single cache entry point. The Lazy<Task<...>> guarantees one resolution per name. On any
     // failure the entry is evicted so the next caller re-attempts rather than being served a cached

@@ -1,3 +1,4 @@
+using System;
 using Bunit;
 using Bunit.ComponentFactories;
 using Fdw.Agents.Clients.Models;
@@ -29,7 +30,7 @@ public sealed class AgentActionsPageContentTests : IDisposable
 
     private static AgentActionPayload Action(int id = 1, string method = "POST", string status = "Pending") => new()
     {
-        AgentActionId = id,
+        Id = Guid.Parse($"{id:D8}-0000-0000-0000-000000000000"),
         AgentLabel = "GptAgent",
         UserId = "u1",
         Route = "/api/x",

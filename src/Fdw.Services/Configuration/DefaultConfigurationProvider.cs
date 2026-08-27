@@ -27,7 +27,7 @@ namespace Fdw.Services.Configuration;
 /// <typeparam name="TConfig">The configuration POCO type.</typeparam>
 /// <typeparam name="TCommand">The configuration command TypeOption for this domain.</typeparam>
 public class DefaultConfigurationProvider<TConfig, TCommand>
-    : IServiceConfigurationProvider<TConfig>, IServiceConfigurationProvider
+    : IServiceConfigurationProvider<TConfig>, IServiceConfigurationProvider, IDomainConfigurationProvider
     where TConfig : class, IGenericConfiguration
     where TCommand : ConfigurationCommandBase<TConfig>
 {
@@ -93,8 +93,12 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
     /// provider) never registers any, so its registry stays empty — that emptiness is how
     /// <c>ComposeTypedBody</c> distinguishes a header provider from a leaf.
     /// </summary>
-    protected ConcurrentDictionary<string, IServiceConfigurationProvider> TypedProviders { get; }
+    protected ConcurrentDictionary<string, IServiceConfigurationProvider> ImplementationProviders { get; }
         = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <inheritdoc />
+    IReadOnlyDictionary<string, IServiceConfigurationProvider> IDomainConfigurationProvider.ImplementationProviders
+        => ImplementationProviders;
 
     /// <summary>
     /// Registers a typed-body configuration provider for a specific <c>ServiceOptionType</c> discriminator.
@@ -106,7 +110,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
     /// <param name="provider">The typed-body configuration provider for that discriminator.</param>
     public void Register(string serviceOptionType, IServiceConfigurationProvider provider)
     {
-        TypedProviders[serviceOptionType] = provider;
+        ImplementationProviders[serviceOptionType] = provider;
         DefaultConfigurationProviderLog.TypedProviderRegistered(_logger, typeof(TConfig).Name, serviceOptionType);
     }
 
@@ -119,6 +123,14 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
     async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
     {
         var result = await Get(id, ct).ConfigureAwait(false);
+        return result.IsSuccess
+            ? result.ToNewResult<IGenericConfiguration>(result.Value!)
+            : result.ToNewResult<IGenericConfiguration>();
+    }
+
+    async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(string name, CancellationToken ct)
+    {
+        var result = await Get(name, ct).ConfigureAwait(false);
         return result.IsSuccess
             ? result.ToNewResult<IGenericConfiguration>(result.Value!)
             : result.ToNewResult<IGenericConfiguration>();
@@ -152,7 +164,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
     /// <inheritdoc/>
     // Why: reads the header row by name, then composes the polymorphic typed body uniformly via
     // ComposeTypedBody — the read mirror of CascadeChildSave's typed-body save. Leaf/child providers
-    // (empty TypedProviders) pass through ComposeTypedBody unchanged; header providers attach the body.
+    // (no implementation providers) pass through ComposeTypedBody unchanged; header providers attach the body.
     public virtual async Task<IGenericResult<TConfig>> Get(string name, CancellationToken ct = default)
     {
         var headerResult = await GetHeaderByName(name, null, ct).ConfigureAwait(false);
@@ -293,7 +305,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
     /// <summary>
     /// Reads the header row by id WITHOUT composing the typed body. This is also the read used when a
     /// header provider dispatches to a typed-body provider: the typed provider JOINs child→parent on the
-    /// FK and filters by the parent's durable Id, then returns its row unchanged (empty TypedProviders).
+    /// FK and filters by the parent's durable Id, then returns its row unchanged (no implementation providers).
     /// </summary>
     /// <param name="id">The configuration's durable logical Id.</param>
     /// <param name="ct">The cancellation token.</param>
@@ -347,7 +359,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
         // typed body and carries its own ServiceOptionType (e.g. MsSqlConnectionConfiguration => "MsSql")
         // — has an empty registry and MUST return its row unchanged. This emptiness check is what keeps
         // the dispatch from recursing into a typed provider trying to compose its own (non-existent) body.
-        if (TypedProviders.IsEmpty)
+        if (ImplementationProviders.IsEmpty)
             return GenericResult<TConfig>.Success(header);
 
         if (string.IsNullOrEmpty(header.ServiceOptionType))
@@ -358,7 +370,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
             return GenericResult<TConfig>.Success(header);
         }
 
-        if (!TypedProviders.TryGetValue(header.ServiceOptionType, out var typedProvider))
+        if (!ImplementationProviders.TryGetValue(header.ServiceOptionType, out var typedProvider))
             return OnNoTypedProvider(header);
 
         DefaultConfigurationProviderLog.LoadingTypedBody(_logger, typeof(TConfig).Name, header.Name, header.ServiceOptionType);
@@ -914,7 +926,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
     private IGenericResult RequireCompleteAggregate(TConfig record)
     {
         if (string.IsNullOrEmpty(record.ServiceOptionType)
-            || !TypedProviders.ContainsKey(record.ServiceOptionType))
+            || !ImplementationProviders.ContainsKey(record.ServiceOptionType))
             return GenericResult.Success();
 
         var mapper = PocoMapperCollection.ByName(record.GetType().Name);
@@ -980,7 +992,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
                 bodyMapper.SetValue(typedBody, StripConfigurationSuffix(owner.GetType().Name) + "Id", owner.Id);
 
             // Why: WRITE MIRRORS READ. ComposeTypedBody resolves the typed body through
-            // TypedProviders[ServiceOptionType]; the write resolves it the SAME way, so the discriminator
+            // ImplementationProviders[ServiceOptionType]; the write resolves it the SAME way, so the discriminator
             // SELECTS the writer and cannot disagree with the body being written. Before this, the write
             // ignored the discriminator entirely and persisted whatever body the caller attached — which is
             // how POST /connections with ServiceType="Http" wrote a conn.MsSqlConnection row under a
@@ -990,7 +1002,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
             // is a leaf or a nested body: the same header-vs-leaf distinction ComposeTypedBody already makes
             // at the read side, not a fallback.
             if (!string.IsNullOrEmpty(owner.ServiceOptionType)
-                && TypedProviders.TryGetValue(owner.ServiceOptionType, out var typedProvider))
+                && ImplementationProviders.TryGetValue(owner.ServiceOptionType, out var typedProvider))
             {
                 var delegated = await typedProvider.Save(typedBody, ct).ConfigureAwait(false);
                 if (!delegated.IsSuccess) return delegated;
@@ -1169,7 +1181,7 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
         // it. Passing the body's own id instead would resolve nothing, because a typed-body provider reads
         // Get(Guid) as the PARENT's id.
         if (!string.IsNullOrEmpty(owner.ServiceOptionType)
-            && TypedProviders.TryGetValue(owner.ServiceOptionType, out var typedProvider))
+            && ImplementationProviders.TryGetValue(owner.ServiceOptionType, out var typedProvider))
             return await typedProvider.Delete(owner.Id, ct).ConfigureAwait(false);
 
         // No registered provider: this owner is a leaf, or a nested body the recursion already

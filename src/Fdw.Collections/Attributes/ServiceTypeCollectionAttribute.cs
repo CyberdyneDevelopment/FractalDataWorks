@@ -89,15 +89,8 @@ public sealed class ServiceTypeCollectionAttribute : Attribute
 
     /// <summary>
     /// The configuration interface type used by services in this collection.
-    /// Supply this or ConfigurationType when ProviderType is specified.
     /// </summary>
     public Type? ConfigurationInterface { get; set; }
-
-    /// <summary>
-    /// The concrete configuration type the domain's provider is registered over.
-    /// Supply this or ConfigurationInterface when ProviderType is specified.
-    /// </summary>
-    public Type? ConfigurationType { get; set; }
 
     /// <summary>
     /// The concrete provider type to use in Register (e.g., typeof(DefaultConnectionProvider)).

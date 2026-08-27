@@ -31,7 +31,7 @@ namespace Fdw.Services.Connections.MsSql;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "MsSql")]
-public partial class MsSqlConnectionConfiguration : IConnectionConfiguration
+public partial class MsSqlConnectionConfiguration : IConnectionImplementationConfiguration
 {
     // ========================================
     // IGenericConfiguration — typed body identity

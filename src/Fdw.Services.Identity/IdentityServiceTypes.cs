@@ -30,7 +30,6 @@ namespace Fdw.Services.Identity;
     typeof(IIdentityServiceType),
     typeof(IdentityServiceTypes),
     ServiceInterface = typeof(IIdentityService),
-    ConfigurationType = typeof(IdentityServiceConfiguration),
     ProviderType = typeof(DefaultServiceProvider<IIdentityService, IdentityServiceConfiguration, IIdentityServiceFactory<IIdentityService, IdentityServiceConfiguration>, IServiceConfigurationProvider<IdentityServiceConfiguration>>),
     ProviderInterface = typeof(IPlatformServiceProvider<IIdentityService, IdentityServiceConfiguration>),
     ServiceCategory = "Identity")]
@@ -101,11 +100,11 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
                     {
                         // Why the result is read: a provider that did not take its parent still
                         // constructs, and every later read silently misses.
-                        var parentResult = provider.Register(cfgProvider);
-                        if (parentResult.IsSuccess)
+                        var domainResult = provider.Register(cfgProvider);
+                        if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(IdentityServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(IdentityServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(IdentityServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {

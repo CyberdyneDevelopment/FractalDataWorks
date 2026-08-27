@@ -30,9 +30,4 @@ internal readonly record struct ServiceTypeCollectionModel(
     /// Returns true if this collection is a child of another collection.
     /// </summary>
     public bool IsChildCollection => ParentCollectionMatchKey != null;
-
-    /// <summary>
-    /// Returns true if an explicit provider type is specified (use mini-IoC pattern).
-    /// </summary>
-    public bool HasExplicitProviderType => ProviderTypeName != null && ProviderInterfaceTypeName != null;
 }

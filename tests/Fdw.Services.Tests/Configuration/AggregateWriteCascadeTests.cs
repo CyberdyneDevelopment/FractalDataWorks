@@ -270,7 +270,7 @@ public sealed class AggregateWriteCascadeTests
     [Trait("Category", "Cascade")]
     public async Task DeleteRetiresByRowsOwnIdNotTheArgumentPassedToFindIt()
     {
-        var parentId = Guid.NewGuid();
+        var domainConfigurationId = Guid.NewGuid();
         var body = new TestBodyConfiguration { Id = Guid.NewGuid(), Name = "Body" };
 
         // The gateway always answers a TestBodyConfiguration header read with `body`, regardless of the
@@ -283,14 +283,14 @@ public sealed class AggregateWriteCascadeTests
             "ConfigurationDb",
             "pipe");
 
-        var result = await bodyProvider.Delete(parentId, TestContext.Current.CancellationToken);
+        var result = await bodyProvider.Delete(domainConfigurationId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
 
         var headerDelete = (ConfigurationDeleteCommand)gateway.AllCommands
             .Single(c => c.Command is ConfigurationDeleteCommand).Command;
         headerDelete.Data.ShouldBe(body.Id);
-        headerDelete.Data.ShouldNotBe(parentId);
+        headerDelete.Data.ShouldNotBe(domainConfigurationId);
     }
 
     // ========================================================================

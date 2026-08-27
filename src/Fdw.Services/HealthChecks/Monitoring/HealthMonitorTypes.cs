@@ -40,7 +40,6 @@ namespace Fdw.Services.HealthChecks.Monitoring;
     typeof(IHealthMonitorType),
     typeof(HealthMonitorTypes),
     ServiceInterface = typeof(IHealthMonitorService),
-    ConfigurationType = typeof(HealthMonitorConfiguration),
     // Why: the concrete domain provider + domain-named interface, exactly like ConnectionTypes
     // (DefaultConnectionProvider/IConnectionProvider) — consumers inject IHealthMonitorProvider,
     // so the generated Register must bind THAT interface, not the generic IPlatformServiceProvider<,>.
@@ -117,11 +116,11 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
-                        var parentResult = provider.Register(cfgProvider);
-                        if (parentResult.IsSuccess)
+                        var domainResult = provider.Register(cfgProvider);
+                        if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(HealthMonitorTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(HealthMonitorTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(HealthMonitorTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {

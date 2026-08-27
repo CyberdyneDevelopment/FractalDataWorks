@@ -27,7 +27,7 @@ namespace Fdw.Services.Connections.Endpoints;
 /// because only the endpoint's own generic argument decided what got written.
 /// </remarks>
 public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpointBase<CreateConnectionRequest, ConnectionDetailDto>
-    where TConfig : class, IConnectionConfiguration
+    where TConfig : class, IConnectionImplementationConfiguration
 {
     // Why: the connection provider writes the whole aggregate — the conn.Connection header row AND, by
     // dispatch, the per-type body row (conn.MsSqlConnection etc.) with its authentication/limits children.

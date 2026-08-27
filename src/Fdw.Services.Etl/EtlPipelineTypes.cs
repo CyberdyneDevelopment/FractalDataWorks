@@ -47,7 +47,6 @@ namespace Fdw.Services.Etl;
     // typed bodies and downcasts in the factory. ConfigurationType therefore is the header config —
     // it drives the generated parent-provider lookup + IOptions binding. The ENGINE type-options
     // (BatchCopy/Streaming) keep EtlPipelineConfiguration as their base config (positional arg above).
-    ConfigurationType = typeof(PipelineConfiguration),
     ProviderType = typeof(DefaultServiceProvider<IEtlPipeline, PipelineConfiguration, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, IServiceConfigurationProvider<PipelineConfiguration>>),
     ProviderInterface = typeof(IPlatformServiceProvider<IEtlPipeline, PipelineConfiguration>),
     ServiceCategory = "Pipeline")]
@@ -172,11 +171,11 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
-                        var parentResult = provider.Register(cfgProvider);
-                        if (parentResult.IsSuccess)
+                        var domainResult = provider.Register(cfgProvider);
+                        if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(EtlPipelineTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(EtlPipelineTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(EtlPipelineTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {

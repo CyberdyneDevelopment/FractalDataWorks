@@ -15,7 +15,7 @@ namespace Fdw.Services.Scheduling;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Scheduler")]
-public partial class SchedulerConfiguration : IGenericConfiguration
+public partial class SchedulerConfiguration : ISchedulerConfiguration
 {
     /// <summary>
     /// Gets or sets the unique identifier for this scheduler.

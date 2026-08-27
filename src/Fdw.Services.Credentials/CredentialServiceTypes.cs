@@ -38,7 +38,6 @@ namespace Fdw.Services.Credentials;
     typeof(ICredentialServiceType),
     typeof(CredentialServiceTypes),
     ServiceInterface = typeof(ICredentialService),
-    ConfigurationType = typeof(CredentialServiceConfiguration),
     ProviderType = typeof(CredentialServiceProvider),
     ProviderInterface = typeof(ICredentialServiceProvider),
     ServiceCategory = "CredentialService",
@@ -120,11 +119,11 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
-                        var parentResult = provider.Register(cfgProvider);
-                        if (parentResult.IsSuccess)
+                        var domainResult = provider.Register(cfgProvider);
+                        if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(CredentialServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(CredentialServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(CredentialServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {

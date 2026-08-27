@@ -59,6 +59,15 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     // Why MD5: deterministic hashing for a stable id, not security.
 #pragma warning disable CA5351, SCS0006, CA1850
     protected static Guid DeriveId(string name) => OptionId.Derive(name);
+
+    private Guid? _id;
+
+    /// <inheritdoc />
+    // Why the fully-qualified type name and not the option's name: Id is global across every
+    // collection, and a bare name is not. Fifteen collections each declare an option named "Default",
+    // and MD5 over the name alone hands all fifteen the same Guid; "MsSql", "Sqlite", "Http", "Sql" and
+    // "OpenIddict" collide across two apiece. A type's FQN is unique by construction, so the id is too.
+    public override Guid Id => _id ??= OptionId.Derive(GetType().FullName ?? Name);
 #pragma warning restore CA5351, SCS0006, CA1850
 
     /// <summary>Gets the name of this service type — its discriminator within the collection.</summary>

@@ -88,6 +88,14 @@ public sealed class DeclaredSecretManagerConfigurationProvider
             : result.ToNewResult<IGenericConfiguration>();
     }
 
+    async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(string name, CancellationToken ct)
+    {
+        var result = await Get(name, ct).ConfigureAwait(false);
+        return result.IsSuccess && result.Value is not null
+            ? GenericResult<IGenericConfiguration>.Success(result.Value)
+            : result.ToNewResult<IGenericConfiguration>();
+    }
+
     /// <inheritdoc />
     public Task<IGenericResult<SecretManagerConfiguration>> Save(SecretManagerConfiguration record, CancellationToken ct = default)
         => Task.FromResult<IGenericResult<SecretManagerConfiguration>>(

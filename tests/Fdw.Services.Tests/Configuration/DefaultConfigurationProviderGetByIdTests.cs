@@ -53,8 +53,8 @@ public class DefaultConfigurationProviderGetByIdTests
             "ConfigurationDb",
             "sec");
 
-        var parentId = Guid.NewGuid();
-        await provider.Get(parentId, TestContext.Current.CancellationToken);
+        var domainConfigurationId = Guid.NewGuid();
+        await provider.Get(domainConfigurationId, TestContext.Current.CancellationToken);
 
         // Assert: the FK join filters by the PARENT's durable Logical key ("SecretManager.Id"); the
         // caller passes the parent's Id as the value. The join column itself (SecretManagerRowId →
@@ -65,7 +65,7 @@ public class DefaultConfigurationProviderGetByIdTests
         var filterNode = ExtractKeyPredicate(qc.Filter);
         filterNode.ShouldNotBeNull();
         filterNode!.PropertyName.ShouldBe("SecretManager.Id");
-        filterNode.Value.ShouldBe(parentId);
+        filterNode.Value.ShouldBe(domainConfigurationId);
     }
 
     // ========================================================================

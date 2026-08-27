@@ -8,6 +8,8 @@ using Microsoft.Extensions.Logging;
 using Shouldly;
 using Xunit;
 
+using Fdw.Configuration;
+
 namespace Fdw.Services.ExternalIdentityProviders.Tests;
 
 /// <summary>
@@ -35,7 +37,7 @@ public sealed class ProvisionerFactoryResolutionCycleTests
 {
     // Why: the exact provider service type whose realization the factory must NOT re-enter.
     private static readonly Type ProviderServiceType =
-        typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>);
+        typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>);
 
     [Fact]
     [Trait("Priority", "P0")]

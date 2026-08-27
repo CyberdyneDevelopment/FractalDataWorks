@@ -256,7 +256,6 @@ public class CollectionAttributeTests
         attr.RestrictToCurrentCompilation.ShouldBeFalse();
         attr.ServiceInterface.ShouldBeNull();
         attr.ConfigurationInterface.ShouldBeNull();
-        attr.ConfigurationType.ShouldBeNull();
         attr.ProviderType.ShouldBeNull();
         attr.ProviderInterface.ShouldBeNull();
         attr.ServiceCategory.ShouldBeNull();
@@ -272,7 +271,6 @@ public class CollectionAttributeTests
             RestrictToCurrentCompilation = true,
             ServiceInterface = typeof(TestBase),
             ConfigurationInterface = typeof(TestReturn),
-            ConfigurationType = typeof(TestCollection),
             ProviderType = typeof(TestParent),
             ProviderInterface = typeof(TestReturn),
             ServiceCategory = "Connection"
@@ -281,7 +279,6 @@ public class CollectionAttributeTests
         attr.RestrictToCurrentCompilation.ShouldBeTrue();
         attr.ServiceInterface.ShouldBe(typeof(TestBase));
         attr.ConfigurationInterface.ShouldBe(typeof(TestReturn));
-        attr.ConfigurationType.ShouldBe(typeof(TestCollection));
         attr.ProviderType.ShouldBe(typeof(TestParent));
         attr.ProviderInterface.ShouldBe(typeof(TestReturn));
         attr.ServiceCategory.ShouldBe("Connection");

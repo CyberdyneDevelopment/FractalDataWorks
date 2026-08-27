@@ -56,7 +56,7 @@ public partial class SecretManagerConfiguration : IGenericConfiguration
     /// Gets or sets the durable logical identifier (matches sec.SecretManager.Id).
     /// </summary>
     // Why: NO Guid.NewGuid() default — DB owns identity assignment. A random default
-    // here would silently propagate to child Get(parentId) lookups when the mapper
+    // here would silently propagate to child Get(domainConfigurationId) lookups when the mapper
     // failed to bind Id, returning ConfigurationNotFound for valid records.
     public Guid Id { get; set; }
 

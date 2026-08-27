@@ -40,7 +40,6 @@ namespace Fdw.Services.Notifications;
     typeof(NotificationTypes),
     ServiceInterface = typeof(IPlatformNotification),
     ConfigurationInterface = typeof(NotificationConfiguration),
-    ConfigurationType = typeof(NotificationConfiguration),
     ProviderType = typeof(NotificationServiceProvider),
     ProviderInterface = typeof(INotificationServiceProvider),
     ServiceCategory = "Notification")]
@@ -130,11 +129,11 @@ public partial class NotificationTypes
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
-                        var parentResult = provider.Register(cfgProvider);
-                        if (parentResult.IsSuccess)
+                        var domainResult = provider.Register(cfgProvider);
+                        if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(NotificationTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(NotificationTypes), provider.GetType().Name, cfgProvider.GetType().Name, parentResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(NotificationTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {

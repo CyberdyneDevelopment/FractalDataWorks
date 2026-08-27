@@ -25,7 +25,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "ExternalIdentityProvisioner")]
-public partial class ExternalIdentityProvisionerConfiguration : IGenericConfiguration
+public partial class ExternalIdentityProvisionerConfiguration : IPlatformServiceConfiguration<IExternalIdentityProvisionerConfiguration>
 {
     /// <inheritdoc />
     // Why: get-only — [GenerateMapper] does not map a property with no public setter, so this is

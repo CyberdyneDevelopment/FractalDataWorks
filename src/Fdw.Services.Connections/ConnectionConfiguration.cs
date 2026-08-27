@@ -27,7 +27,7 @@ namespace Fdw.Services.Connections;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Connection")]
-public partial class ConnectionConfiguration : IGenericConfiguration
+public partial class ConnectionConfiguration : IConnectionConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionConfiguration"/> class.
@@ -56,7 +56,7 @@ public partial class ConnectionConfiguration : IGenericConfiguration
     /// Gets or sets the durable logical identifier (matches conn.Connection.Id).
     /// </summary>
     // Why: NO Guid.NewGuid() default — DB owns identity assignment. A random default propagates
-    // to child Get(parentId) lookups when the mapper/IOptions binder fails to populate Id,
+    // to child Get(domainConfigurationId) lookups when the mapper/IOptions binder fails to populate Id,
     // causing the typed-body picker to fall through to broken WHERE [Name] queries.
     public Guid Id { get; set; }
 
@@ -147,5 +147,5 @@ public partial class ConnectionConfiguration : IGenericConfiguration
     /// by dispatching on ServiceOptionType to the appropriate typed provider.
     /// </remarks>
     [NotMapped]
-    public IConnectionConfiguration? Configuration { get; set; }
+    public IConnectionImplementationConfiguration? Configuration { get; set; }
 }

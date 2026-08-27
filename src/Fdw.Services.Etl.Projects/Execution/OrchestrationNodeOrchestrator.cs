@@ -161,7 +161,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
             var childItemResult = await _tracker.CreateItem(
                 ExecutionItemTypes.ByName(nodeType.Name),
                 child.Name,
-                parentId: parentExecutionItemId,
+                domainConfigurationId: parentExecutionItemId,
                 correlationId: parentExecutionItemId.ToString("N"),
                 triggerSource: $"Node:{node.Name}",
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -288,7 +288,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
             var childItemResult = await _tracker.CreateItem(
                 ExecutionItemTypes.ByName("Task"),
                 $"Pipeline:{pipelineId}",
-                parentId: parentExecutionItemId,
+                domainConfigurationId: parentExecutionItemId,
                 correlationId: parentExecutionItemId.ToString("N"),
                 triggerSource: $"Node:{node.Name}",
                 cancellationToken: ct).ConfigureAwait(false);

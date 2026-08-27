@@ -135,10 +135,10 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// </summary>
     // Why: protected — only DefaultConfigurationProvider.Get(id) calls this when dispatching on the
     // registered parentKeyType=Logical. Not a public sidecar — column name comes from registration.
-    protected internal virtual IDataCommand GetByParent(string dataStoreName, string pathName, string parentIdColumn, Guid parentId, DateTimeOffset? asOf = null)
+    protected internal virtual IDataCommand GetByParent(string dataStoreName, string pathName, string parentIdColumn, Guid domainConfigurationId, DateTimeOffset? asOf = null)
     {
         return ApplyVersionFilter(
-                new QueryCommandBuilder<TConfig>(dataStoreName, pathName, TableName).Where(parentIdColumn, parentId),
+                new QueryCommandBuilder<TConfig>(dataStoreName, pathName, TableName).Where(parentIdColumn, domainConfigurationId),
                 asOf)
             .Build().Command;
     }

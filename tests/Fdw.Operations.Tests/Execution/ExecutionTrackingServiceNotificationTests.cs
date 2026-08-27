@@ -177,9 +177,9 @@ public sealed class ExecutionTrackingServiceNotificationTests
     {
         // Arrange
         var itemId = Guid.NewGuid();
-        var parentId = Guid.NewGuid();
+        var domainConfigurationId = Guid.NewGuid();
         var item = BuildRunningRootItem(itemId);
-        item.ParentExecutionItemId = parentId; // make it a child
+        item.ParentExecutionItemId = domainConfigurationId; // make it a child
 
         SetupGatewayForComplete(item);
 

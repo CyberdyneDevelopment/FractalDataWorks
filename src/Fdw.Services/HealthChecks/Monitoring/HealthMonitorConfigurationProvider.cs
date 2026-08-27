@@ -96,6 +96,14 @@ public sealed class HealthMonitorConfigurationProvider : IServiceConfigurationPr
             : result.ToNewResult<IGenericConfiguration>();
     }
 
+    async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(string name, CancellationToken ct)
+    {
+        var result = await Get(name, ct).ConfigureAwait(false);
+        return result.IsSuccess
+            ? result.ToNewResult<IGenericConfiguration>(result.Value!)
+            : result.ToNewResult<IGenericConfiguration>();
+    }
+
     async Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
     {
         if (record is not HealthMonitorConfiguration typed)

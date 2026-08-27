@@ -52,7 +52,7 @@ public sealed class ConnectionConfigurationJsonConverter : JsonConverter<Connect
         var innerOptions = GetInnerOptions(options);
 
         // Build the parent-only JSON (everything EXCEPT the typed Configuration child).
-        // Why: STJ refuses to deserialize the IConnectionConfiguration interface property in one
+        // Why: STJ refuses to deserialize the IConnectionImplementationConfiguration interface property in one
         // pass — the concrete type isn't known until we resolve it via the ServiceOptionType
         // discriminator. Strip Configuration here and re-attach manually below.
         using var stream = new System.IO.MemoryStream();
@@ -89,15 +89,15 @@ public sealed class ConnectionConfigurationJsonConverter : JsonConverter<Connect
             }
 
             var settingsType = connectionType.ConfigurationType;
-            if (settingsType is null || !typeof(IConnectionConfiguration).IsAssignableFrom(settingsType))
+            if (settingsType is null || !typeof(IConnectionImplementationConfiguration).IsAssignableFrom(settingsType))
             {
                 throw new JsonException(
                     $"Connection '{connection.Name}' resolved ServiceOptionType '{connection.ServiceOptionType}' "
                     + $"to configuration type '{settingsType?.FullName ?? "(null)"}', which does not implement "
-                    + $"{nameof(IConnectionConfiguration)}.");
+                    + $"{nameof(IConnectionImplementationConfiguration)}.");
             }
 
-            connection.Configuration = (IConnectionConfiguration?)JsonSerializer.Deserialize(
+            connection.Configuration = (IConnectionImplementationConfiguration?)JsonSerializer.Deserialize(
                 settingsElement.GetRawText(), settingsType, innerOptions);
         }
 

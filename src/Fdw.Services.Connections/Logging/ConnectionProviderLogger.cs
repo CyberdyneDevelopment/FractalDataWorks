@@ -669,7 +669,7 @@ public static partial class ConnectionProviderLogger
         EventId = 61007,
         Level = LogLevel.Error,
         Message = "Failed to register parent configuration provider: {error}")]
-    public static partial IGenericMessage ParentProviderRegistrationFailed(
+    public static partial IGenericMessage DomainConfigurationProviderRegistrationFailed(
         ILogger<DefaultConnectionProvider> logger,
         string error);
 
@@ -791,8 +791,8 @@ public static partial class ConnectionProviderLogger
     [MessageLogging(
         EventId = 71008,
         Level = LogLevel.Error,
-        Message = "Cannot resolve connection '{identifier}' — no header configuration provider registered (RegisterParentProvider has not run)")]
-    public static partial IGenericMessage ParentProviderNotRegistered(
+        Message = "Cannot resolve connection '{identifier}' — no header configuration provider registered (RegisterDomainConfigurationProvider has not run)")]
+    public static partial IGenericMessage DomainConfigurationProviderNotRegistered(
         ILogger<DefaultConnectionProvider> logger,
         string identifier);
 

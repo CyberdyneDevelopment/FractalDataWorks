@@ -139,8 +139,8 @@ public class ServiceProviderLifetimeTests
 
         // Why: DefaultServiceProvider.Get(name/id) now requires a parent provider for
         // O(1) name-to-type resolution via ServiceOptionType.
-        public new IGenericResult Register(IServiceConfigurationProvider<TestServiceConfiguration> parentProvider)
-            => base.Register(parentProvider);
+        public new IGenericResult Register(IServiceConfigurationProvider<TestServiceConfiguration> domainConfigurationProvider)
+            => base.Register(domainConfigurationProvider);
     }
 
     /// <summary>
@@ -193,6 +193,14 @@ public class ServiceProviderLifetimeTests
         async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
         {
             var result = await Get(id, ct).ConfigureAwait(false);
+            return result.IsSuccess
+                ? result.ToNewResult<IGenericConfiguration>(result.Value!)
+                : result.ToNewResult<IGenericConfiguration>();
+        }
+
+        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(string name, CancellationToken ct)
+        {
+            var result = await Get(name, ct).ConfigureAwait(false);
             return result.IsSuccess
                 ? result.ToNewResult<IGenericConfiguration>(result.Value!)
                 : result.ToNewResult<IGenericConfiguration>();
@@ -267,6 +275,14 @@ public class ServiceProviderLifetimeTests
         async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
         {
             var result = await Get(id, ct).ConfigureAwait(false);
+            return result.IsSuccess
+                ? result.ToNewResult<IGenericConfiguration>(result.Value!)
+                : result.ToNewResult<IGenericConfiguration>();
+        }
+
+        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(string name, CancellationToken ct)
+        {
+            var result = await Get(name, ct).ConfigureAwait(false);
             return result.IsSuccess
                 ? result.ToNewResult<IGenericConfiguration>(result.Value!)
                 : result.ToNewResult<IGenericConfiguration>();

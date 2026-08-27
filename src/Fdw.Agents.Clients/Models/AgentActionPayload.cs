@@ -8,7 +8,10 @@ namespace Fdw.Agents.Clients.Models;
 public sealed class AgentActionPayload
 {
     /// <summary>Gets or sets the unique action identifier.</summary>
-    public int AgentActionId { get; set; }
+    public int RowId { get; set; }
+
+    /// <summary>Gets or sets the logical identity of the action.</summary>
+    public Guid Id { get; set; }
 
     /// <summary>Gets or sets the agent key identifier.</summary>
     public int AgentKeyId { get; set; }

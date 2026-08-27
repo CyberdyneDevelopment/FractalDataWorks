@@ -31,7 +31,7 @@ public sealed class ReviewAgentActionPageContentTests : IDisposable
         string status = "Pending", string? body = null,
         DateTimeOffset? reviewedAt = null, string? reviewedBy = null) => new()
         {
-            AgentActionId = 7,
+            Id = Guid.CreateVersion7(),
             AgentLabel = "GptAgent",
             Route = "/api/x",
             Method = "POST",
