@@ -23,8 +23,8 @@ namespace Fdw.Services.Data;
 /// <see cref="Configuration.ConfigurationSchema"/> singleton.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(DataGatewayTypes), "ConfigGateway")]
-public sealed class ConfigurationGatewayServiceType : DataGatewayTypeBase<IGenericService, IConfigurationGatewayFactory>
+[ServiceTypeOption(typeof(ConfigurationGatewayTypes), "ConfigGateway")]
+public sealed class ConfigurationGatewayServiceType : ConfigurationGatewayTypeBase<IGenericService, IConfigurationGatewayFactory>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ConfigurationGatewayServiceType"/> class.
