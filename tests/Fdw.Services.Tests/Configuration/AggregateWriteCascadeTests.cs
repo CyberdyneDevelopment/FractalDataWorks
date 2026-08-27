@@ -46,9 +46,9 @@ namespace Fdw.Services.Tests.Configuration;
 [Collection(nameof(ServicesTestCollection))]
 public sealed class AggregateWriteCascadeTests
 {
-    private static DefaultConfigurationProvider<TestRootConfiguration, TestRootCommand> MakeProvider(RecordingGateway gateway)
+    private static ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand> MakeProvider(RecordingGateway gateway)
         => new(
-            NullLogger<DefaultConfigurationProvider<TestRootConfiguration, TestRootCommand>>.Instance,
+            NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => gateway),
             "ConfigurationDb",
             "pipe");
@@ -132,8 +132,8 @@ public sealed class AggregateWriteCascadeTests
         var provider = MakeProvider(gateway);
         provider.Register(
             "Default",
-            new DefaultConfigurationProvider<TestBodyConfiguration, TestBodyCommand>(
-                NullLogger<DefaultConfigurationProvider<TestBodyConfiguration, TestBodyCommand>>.Instance,
+            new ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>(
+                NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>>.Instance,
                 new Lazy<IConfigurationGateway>(() => gateway),
                 "ConfigurationDb",
                 "pipe"));
@@ -261,7 +261,7 @@ public sealed class AggregateWriteCascadeTests
     // ========================================================================
 
     // Why: a typed-body provider resolves Get(Guid) by the PARENT's durable Id (see
-    // DefaultConfigurationProvider.Get(Guid)) — the row it returns carries its OWN distinct Id. Passing
+    // ImplementationConfigurationProviderBase.Get(Guid)) — the row it returns carries its OWN distinct Id. Passing
     // the caller's id straight through to the delete command targets [Id]=<the argument>, which matches
     // nothing on the child table and silently retires no row. The delete command must carry the resolved
     // row's own Id.
@@ -277,8 +277,8 @@ public sealed class AggregateWriteCascadeTests
         // id used to look it up — simulating a parent-join read (caller passes the PARENT's id) that
         // resolves to a row with its own distinct durable Id.
         var gateway = new RecordingGateway { BodyHeader = body };
-        var bodyProvider = new DefaultConfigurationProvider<TestBodyConfiguration, TestBodyCommand>(
-            NullLogger<DefaultConfigurationProvider<TestBodyConfiguration, TestBodyCommand>>.Instance,
+        var bodyProvider = new ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => gateway),
             "ConfigurationDb",
             "pipe");

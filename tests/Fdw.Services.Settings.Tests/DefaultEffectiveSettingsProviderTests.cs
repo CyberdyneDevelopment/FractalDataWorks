@@ -26,34 +26,34 @@ public sealed class DefaultEffectiveSettingsProviderTests
 
     private static readonly Guid TenantA = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
 
-    // Why: Creates a minimal DefaultConfigurationProvider<T, TCommand> for SettingsConfigurationProvider
+    // Why: Creates a minimal ImplementationConfigurationProviderBase<T, TCommand> for SettingsConfigurationProvider
     // constructor. Moq invokes the real constructor even with CallBase=false, so we need valid
     // non-null arguments. Uses IConfigurationGateway (the marker subinterface required by the provider).
-    private static DefaultConfigurationProvider<ServerSettingConfiguration, ServerSettingConfigurationCommand> MakeServerProvider()
+    private static ImplementationConfigurationProviderBase<ServerSettingConfiguration, ServerSettingConfigurationCommand> MakeServerProvider()
     {
         var lazyGateway = new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>());
-        return new DefaultConfigurationProvider<ServerSettingConfiguration, ServerSettingConfigurationCommand>(
-            NullLogger<DefaultConfigurationProvider<ServerSettingConfiguration, ServerSettingConfigurationCommand>>.Instance,
+        return new ImplementationConfigurationProviderBase<ServerSettingConfiguration, ServerSettingConfigurationCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<ServerSettingConfiguration, ServerSettingConfigurationCommand>>.Instance,
             lazyGateway,
             "TestStore",
             "settings");
     }
 
-    private static DefaultConfigurationProvider<TenantSettingConfiguration, TenantSettingConfigurationCommand> MakeTenantProvider()
+    private static ImplementationConfigurationProviderBase<TenantSettingConfiguration, TenantSettingConfigurationCommand> MakeTenantProvider()
     {
         var lazyGateway = new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>());
-        return new DefaultConfigurationProvider<TenantSettingConfiguration, TenantSettingConfigurationCommand>(
-            NullLogger<DefaultConfigurationProvider<TenantSettingConfiguration, TenantSettingConfigurationCommand>>.Instance,
+        return new ImplementationConfigurationProviderBase<TenantSettingConfiguration, TenantSettingConfigurationCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TenantSettingConfiguration, TenantSettingConfigurationCommand>>.Instance,
             lazyGateway,
             "TestStore",
             "settings");
     }
 
-    private static DefaultConfigurationProvider<RoleSettingConfiguration, RoleSettingConfigurationCommand> MakeRoleProvider()
+    private static ImplementationConfigurationProviderBase<RoleSettingConfiguration, RoleSettingConfigurationCommand> MakeRoleProvider()
     {
         var lazyGateway = new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>());
-        return new DefaultConfigurationProvider<RoleSettingConfiguration, RoleSettingConfigurationCommand>(
-            NullLogger<DefaultConfigurationProvider<RoleSettingConfiguration, RoleSettingConfigurationCommand>>.Instance,
+        return new ImplementationConfigurationProviderBase<RoleSettingConfiguration, RoleSettingConfigurationCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<RoleSettingConfiguration, RoleSettingConfigurationCommand>>.Instance,
             lazyGateway,
             "TestStore",
             "settings");

@@ -71,22 +71,6 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
     /// Registers a factory for a service option type.
     /// </summary>
     IGenericResult Register(string serviceOptionType, IServiceFactory<TService> factory);
-
-    /// <summary>
-    /// Registers a configuration provider for a service option type.
-    /// </summary>
-    /// The configuration provider's own closed type — inferred at the call site, never written.
-    /// </typeparam>
-    // Why the type parameter follows the CONFIGURATION and not the provider: every configuration
-    // provider is a ImplementationConfigurationProviderBase<TConfig, TCommand>, which implements
-    // IServiceConfigurationProvider<TConfig> closed over its CONCRETE class. That interface is
-    // invariant by C# rule — Save takes TConfig and Get returns it — so a parameter typed
-    // IServiceConfigurationProvider<TConfiguration> could never accept one, whatever TConfiguration
-    // is renamed to. Binding TConcrete to the concrete class and carrying the relationship in the
-    // constraint converts directly, with no adapter and no variance change. The previous exact-typed
-    IGenericResult Register<TConcrete>(string serviceOptionType, IServiceConfigurationProvider<TConcrete> configurationProvider)
-        where TConcrete : class, TConfiguration;
-
     /// <summary>
     /// Registers a parent configuration provider for direct name-to-type resolution.
     /// The parent provider holds ALL configurations across all service option types,

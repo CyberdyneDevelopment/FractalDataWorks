@@ -41,7 +41,7 @@ public class TestService : IGenericService
 /// <summary>
 /// Test configuration for unit testing.
 /// </summary>
-public sealed class TestConfiguration : IGenericConfiguration
+public sealed class TestConfiguration : IImplementationConfiguration
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "test-config";

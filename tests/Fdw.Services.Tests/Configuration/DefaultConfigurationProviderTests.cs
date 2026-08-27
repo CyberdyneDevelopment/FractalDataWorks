@@ -24,7 +24,7 @@ namespace Fdw.Services.Tests.Configuration;
 [Collection(nameof(ServicesTestCollection))]
 public class DefaultConfigurationProviderTests
 {
-    private static DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand> MakeProvider(
+    private static ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand> MakeProvider(
         TestDualConfig[] systemConfigs,
         TestDualConfig[] userConfigs)
     {
@@ -40,8 +40,8 @@ public class DefaultConfigurationProviderTests
 
         var lazyGateway = new Lazy<IConfigurationGateway>(() => mockGateway.Object);
 
-        return new DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>(
-            NullLogger<DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>>.Instance,
+        return new ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand>>.Instance,
             lazyGateway,
             "TestStore",
             "cfg");
@@ -206,8 +206,8 @@ public class DefaultConfigurationProviderTests
                 new TestContainerFieldConfiguration { Id = Guid.NewGuid(), Name = "Beta", TypeId = "Int32" },
             }));
 
-        var provider = new DefaultConfigurationProvider<TestContainerConfiguration, TestContainerCommand>(
-            NullLogger<DefaultConfigurationProvider<TestContainerConfiguration, TestContainerCommand>>.Instance,
+        var provider = new ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => mockGateway.Object),
             "ConfigurationDb",
             "data");
@@ -248,8 +248,8 @@ public class DefaultConfigurationProviderTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IEnumerable<object>>.Success(System.Array.Empty<object>()));
 
-        var provider = new DefaultConfigurationProvider<TestContainerConfiguration, TestContainerCommand>(
-            NullLogger<DefaultConfigurationProvider<TestContainerConfiguration, TestContainerCommand>>.Instance,
+        var provider = new ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => mockGateway.Object),
             "ConfigurationDb",
             "data");
@@ -364,8 +364,8 @@ public class DefaultConfigurationProviderTests
         var mockGateway = new Mock<IConfigurationGateway>();
         mockGateway.Setup(g => g.DataStores).Returns(Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
-        var provider = new DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>(
-            NullLogger<DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>>.Instance,
+        var provider = new ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => mockGateway.Object),
             "TestStore",
             "cfg");
@@ -388,8 +388,8 @@ public class DefaultConfigurationProviderTests
         var mockGateway = new Mock<IConfigurationGateway>();
         mockGateway.Setup(g => g.DataStores).Returns(Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
-        new DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>(
-            NullLogger<DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>>.Instance,
+        new ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => mockGateway.Object),
             "TestStore",
             "cfg").InvalidateCache();
@@ -465,8 +465,8 @@ public class DefaultConfigurationProviderTests
                 return Task.FromResult<IGenericResult>(GenericResult.Success());
             });
 
-        var provider = new DefaultConfigurationProvider<TestKvpConfiguration, TestKvpCommand>(
-            NullLogger<DefaultConfigurationProvider<TestKvpConfiguration, TestKvpCommand>>.Instance,
+        var provider = new ImplementationConfigurationProviderBase<TestKvpConfiguration, TestKvpCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TestKvpConfiguration, TestKvpCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => mockGateway.Object),
             "ConfigurationDb",
             "conn");
@@ -533,8 +533,8 @@ public class DefaultConfigurationProviderTests
                 return Task.FromResult<IGenericResult>(GenericResult.Success());
             });
 
-        var provider = new DefaultConfigurationProvider<TestContainerConfiguration, TestContainerCommand>(
-            NullLogger<DefaultConfigurationProvider<TestContainerConfiguration, TestContainerCommand>>.Instance,
+        var provider = new ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => mockGateway.Object),
             "ConfigurationDb",
             "data");
@@ -567,7 +567,7 @@ public class DefaultConfigurationProviderTests
     }
 
     // Why: ConfigurationCommands is a TypeCollection — TestConfigurationCommand must be registered
-    // via [TypeOption] so that DefaultConfigurationProvider<TestDualConfig, TestConfigurationCommand>
+    // via [TypeOption] so that ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand>
     // can resolve Commands() from ConfigurationCommands.All().OfType<TestConfigurationCommand>().Single().
     [TypeOption(typeof(ConfigurationCommands), "TestDualConfig")]
     public sealed class TestConfigurationCommand : ConfigurationCommandBase<TestDualConfig>

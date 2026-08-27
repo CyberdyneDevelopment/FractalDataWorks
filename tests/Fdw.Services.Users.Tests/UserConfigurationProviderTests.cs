@@ -353,7 +353,7 @@ public class UserConfigurationProviderTests
           .ReturnsAsync(GenericResult<IEnumerable<UserConfiguration>>.Success(
               Enumerable.Empty<UserConfiguration>()));
 
-        // Why: DefaultConfigurationProvider.Save() executes the insert via Execute<TConfig>
+        // Why: ImplementationConfigurationProviderBase.Save() executes the insert via Execute<TConfig>
         // (not Execute<int>). Return the record passed in so the save round-trips successfully.
         gw.Setup(g => g.Execute<UserConfiguration>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))

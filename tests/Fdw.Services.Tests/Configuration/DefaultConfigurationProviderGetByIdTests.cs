@@ -21,7 +21,7 @@ using Moq;
 namespace Fdw.Services.Tests.Configuration;
 
 /// <summary>
-/// Smoke test for <see cref="DefaultConfigurationProvider{TConfig,TCommand}.Get(Guid, CancellationToken)"/>
+/// Smoke test for <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}.Get(Guid, CancellationToken)"/>
 /// verifying that when the container has a Foreign key (no Primary key), the emitted command
 /// uses the FK column rather than [Id].
 /// </summary>
@@ -47,8 +47,8 @@ public class DefaultConfigurationProviderGetByIdTests
             fkColumn: "SecretManagerId");
 
 
-        var provider = new DefaultConfigurationProvider<TestChildConfig, TestChildCommand>(
-            NullLogger<DefaultConfigurationProvider<TestChildConfig, TestChildCommand>>.Instance,
+        var provider = new ImplementationConfigurationProviderBase<TestChildConfig, TestChildCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TestChildConfig, TestChildCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => fakeGateway),
             "ConfigurationDb",
             "sec");

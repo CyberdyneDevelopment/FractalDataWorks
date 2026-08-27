@@ -18,7 +18,7 @@ namespace Fdw.Services.Quality.Tests;
 /// <summary>
 /// Tests for <see cref="PromotionService"/> - environment promotion request lifecycle logic.
 /// Only <see cref="IConfigurationGateway"/> is faked; <see cref="QualityConfigurationProvider"/>
-/// and the underlying <c>DefaultConfigurationProvider</c> run for real, matching how production
+/// and the underlying <c>ImplementationConfigurationProviderBase</c> run for real, matching how production
 /// wires them. An empty <see cref="IConfigurationGateway.DataStores"/> tree means every header
 /// lookup resolves as a root (no-parent) table and no child cascade is attempted - exactly what
 /// PromotionService needs (it only reads Environment headers).

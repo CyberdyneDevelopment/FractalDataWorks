@@ -98,8 +98,8 @@ public sealed class RecursiveCascadeSaveTests
         // Arrange — header row carries ServiceOptionType "Default" (TestRoot's discriminator).
         var header = new TestRootConfiguration { Id = Guid.NewGuid(), Name = "Root" };
         var gateway = new HeaderReturningGateway(header);
-        var provider = new DefaultConfigurationProvider<TestRootConfiguration, TestRootCommand>(
-            NullLogger<DefaultConfigurationProvider<TestRootConfiguration, TestRootCommand>>.Instance,
+        var provider = new ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => gateway),
             "ConfigurationDb",
             "pipe");
@@ -108,8 +108,8 @@ public sealed class RecursiveCascadeSaveTests
         // provider, not a leaf) yet cannot resolve "Default" — the missing-provider condition.
         provider.Register(
             "SomeOtherKind",
-            new DefaultConfigurationProvider<TestBodyConfiguration, TestBodyCommand>(
-                NullLogger<DefaultConfigurationProvider<TestBodyConfiguration, TestBodyCommand>>.Instance,
+            new ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>(
+                NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>>.Instance,
                 new Lazy<IConfigurationGateway>(() => gateway),
                 "ConfigurationDb",
                 "pipe"));
@@ -121,11 +121,11 @@ public sealed class RecursiveCascadeSaveTests
         result.IsSuccess.ShouldBeFalse();
     }
 
-    private static DefaultConfigurationProvider<TestRootConfiguration, TestRootCommand> MakeProvider(RecordingGateway gateway)
+    private static ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand> MakeProvider(RecordingGateway gateway)
     {
 
-        return new DefaultConfigurationProvider<TestRootConfiguration, TestRootCommand>(
-            NullLogger<DefaultConfigurationProvider<TestRootConfiguration, TestRootCommand>>.Instance,
+        return new ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => gateway),
             "ConfigurationDb",
             "pipe");

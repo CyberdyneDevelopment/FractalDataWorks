@@ -113,7 +113,7 @@ public sealed class ConnectionHealthMonitorWorkerTests
 
     // Why this exact shape: it mirrors what DataStore.Path builds when the store registers no 'conn'
     // path — the typed code chained over the node's own navigation message — which ConfigurationGateway
-    // and DefaultConfigurationProvider then propagate with ToNewResult (Code/InnerResult preserved).
+    // and ImplementationConfigurationProviderBase then propagate with ToNewResult (Code/InnerResult preserved).
     private static IGenericResult<IReadOnlyList<ConnectionConfiguration>> PathNotRegistered() =>
         GenericResult<IReadOnlyList<ConnectionConfiguration>>.Chain(
             DataStoresResultCodes.DataPathNotFound,

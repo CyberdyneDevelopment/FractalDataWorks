@@ -191,9 +191,9 @@ public sealed class EffectivePermissionResolverTests
     public async Task Resolve_RoleProviderFails_ReturnsFailure()
     {
         // Arrange: role provider returns failure — fail-closed
-        var roleProviderMock = new Mock<DefaultConfigurationProvider<RoleConfiguration, RoleConfigurationCommand>>(
+        var roleProviderMock = new Mock<ImplementationConfigurationProviderBase<RoleConfiguration, RoleConfigurationCommand>>(
             MockBehavior.Loose,
-            NullLogger<DefaultConfigurationProvider<RoleConfiguration, RoleConfigurationCommand>>.Instance,
+            NullLogger<ImplementationConfigurationProviderBase<RoleConfiguration, RoleConfigurationCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
             "TestStore", "cfg");
         roleProviderMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
@@ -444,14 +444,14 @@ public sealed class EffectivePermissionResolverTests
 
     // ----- Mock helpers -----
 
-    private static Mock<DefaultConfigurationProvider<TConfig, TCommand>> MockCatalogProvider<TConfig, TCommand>(
+    private static Mock<ImplementationConfigurationProviderBase<TConfig, TCommand>> MockCatalogProvider<TConfig, TCommand>(
         IEnumerable<TConfig> items)
         where TConfig : class, Fdw.Configuration.IGenericConfiguration
         where TCommand : ConfigurationCommandBase<TConfig>
     {
-        var mock = new Mock<DefaultConfigurationProvider<TConfig, TCommand>>(
+        var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, TCommand>>(
             MockBehavior.Loose,
-            NullLogger<DefaultConfigurationProvider<TConfig, TCommand>>.Instance,
+            NullLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
             "TestStore", "cfg");
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))

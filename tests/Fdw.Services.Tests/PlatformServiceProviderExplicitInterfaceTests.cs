@@ -18,24 +18,24 @@ using Xunit;
 namespace Fdw.Services.Tests;
 
 /// <summary>
-/// Tests for DefaultServiceProvider explicit IPlatformServiceProvider interface implementations
+/// Tests for PlatformServiceProviderBase explicit IPlatformServiceProvider interface implementations
 /// that are not covered by the typed generic Get&lt;T&gt; tests.
 /// </summary>
 [Collection(nameof(ServicesTestCollection))]
 public class DefaultServiceProviderExplicitInterfaceTests
 {
-    private readonly DefaultServiceProvider<IGenericService, TestConfiguration, IServiceFactory<IGenericService>, IServiceConfigurationProvider<TestConfiguration>> _provider;
-    private readonly Mock<IServiceConfigurationProvider<TestConfiguration>> _mockConfigProvider;
+    private readonly TestServiceProvider _provider;
+    private readonly Mock<IDomainConfigurationProvider<TestConfiguration>> _mockConfigProvider;
     private readonly Mock<IServiceFactory<IGenericService>> _mockFactory;
 
     public DefaultServiceProviderExplicitInterfaceTests()
     {
-        var logger = NullLogger<DefaultServiceProvider<IGenericService, TestConfiguration, IServiceFactory<IGenericService>, IServiceConfigurationProvider<TestConfiguration>>>.Instance;
-        _provider = new DefaultServiceProvider<IGenericService, TestConfiguration, IServiceFactory<IGenericService>, IServiceConfigurationProvider<TestConfiguration>>(new ServiceCollection().BuildServiceProvider(), logger);
-        _mockConfigProvider = new Mock<IServiceConfigurationProvider<TestConfiguration>>();
+        var logger = NullLogger<PlatformServiceProviderBase<IGenericService, TestConfiguration, IServiceFactory<IGenericService>, IDomainConfigurationProvider<TestConfiguration>>>.Instance;
+        _provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), logger);
+        _mockConfigProvider = new Mock<IDomainConfigurationProvider<TestConfiguration>>();
         _mockFactory = new Mock<IServiceFactory<IGenericService>>();
 
-        // Why: DefaultServiceProvider.Get(name/id) now requires a parent provider for
+        // Why: PlatformServiceProviderBase.Get(name/id) now requires a parent provider for
         // O(1) name-to-type resolution. Register _mockConfigProvider as the parent.
         _provider.Register(_mockConfigProvider.Object);
     }
@@ -61,7 +61,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
         mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
             .Returns(GenericResult<IGenericService>.Success(testService));
 
-        _provider.Register("TestType", _mockConfigProvider.Object);
+        _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", mockFactory.Object);
 
         var result = await explicitProvider.Get<TestService>("MyService", TestContext.Current.CancellationToken);
@@ -88,7 +88,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
         _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
             .Returns(GenericResult<IGenericService>.Success(mockService.Object));
 
-        _provider.Register("TestType", _mockConfigProvider.Object);
+        _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", _mockFactory.Object);
 
         var result = await explicitProvider.Get<TestService>("MyService", TestContext.Current.CancellationToken);
@@ -108,7 +108,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
         // Why: CreateFromType calls Get(Guid) first; catch-all prevents NRE from unmocked async.
         _mockConfigProvider.Setup(cp => cp.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
-        _provider.Register("TestType", _mockConfigProvider.Object);
+        _provider.Register(_mockConfigProvider.Object);
 
         var result = await explicitProvider.Get<TestService>("NonExistent", TestContext.Current.CancellationToken);
 
@@ -135,7 +135,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
         mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
             .Returns(GenericResult<IGenericService>.Success(testService));
 
-        _provider.Register("TestType", _mockConfigProvider.Object);
+        _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", mockFactory.Object);
 
         var result = await explicitProvider.Get<TestService>(id, TestContext.Current.CancellationToken);
@@ -162,7 +162,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
         _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
             .Returns(GenericResult<IGenericService>.Success(mockService.Object));
 
-        _provider.Register("TestType", _mockConfigProvider.Object);
+        _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", _mockFactory.Object);
 
         var result = await explicitProvider.Get<TestService>(id, TestContext.Current.CancellationToken);
@@ -179,7 +179,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
 
         _mockConfigProvider.Setup(cp => cp.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
-        _provider.Register("TestType", _mockConfigProvider.Object);
+        _provider.Register(_mockConfigProvider.Object);
 
         var result = await explicitProvider.Get<TestService>(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
@@ -205,7 +205,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
         _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
             .Returns(GenericResult<IGenericService>.Success(mockService.Object));
 
-        _provider.Register("TestType", _mockConfigProvider.Object);
+        _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", _mockFactory.Object);
 
         var result = await _provider.Get(id, TestContext.Current.CancellationToken);
@@ -227,7 +227,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
         _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
             .Returns(GenericResult<IGenericService>.Failure(new GenericMessage("Creation failed due to X")));
 
-        _provider.Register("TestType", _mockConfigProvider.Object);
+        _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", _mockFactory.Object);
 
         var result = await _provider.Get("MyService", TestContext.Current.CancellationToken);
@@ -250,7 +250,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
         _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
             .Returns(GenericResult<IGenericService>.Failure(new GenericMessage("Creation failed due to X")));
 
-        _provider.Register("TestType", _mockConfigProvider.Object);
+        _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", _mockFactory.Object);
 
         var result = await _provider.Get(id, TestContext.Current.CancellationToken);
@@ -268,7 +268,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
         // Why: CreateFromType calls Get(Guid) first; catch-all prevents NRE from unmocked async.
         _mockConfigProvider.Setup(cp => cp.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
-        _provider.Register("TestType", _mockConfigProvider.Object);
+        _provider.Register(_mockConfigProvider.Object);
 
         var result = await ((IPlatformServiceProvider)_provider).Get<TestService>("Missing", TestContext.Current.CancellationToken);
 
@@ -282,7 +282,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
     {
         _mockConfigProvider.Setup(cp => cp.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
-        _provider.Register("TestType", _mockConfigProvider.Object);
+        _provider.Register(_mockConfigProvider.Object);
 
         var result = await ((IPlatformServiceProvider)_provider).Get<TestService>(Guid.NewGuid(), TestContext.Current.CancellationToken);
 

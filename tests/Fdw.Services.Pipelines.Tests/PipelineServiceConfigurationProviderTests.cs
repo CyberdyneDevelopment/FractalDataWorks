@@ -12,10 +12,10 @@ namespace Fdw.Services.Pipelines.Tests;
 /// <summary>
 /// Covers <see cref="PipelineServiceConfigurationProvider.RegisterDomainConfiguration"/>: the header
 /// provider must be resolvable under all three contracts it registers itself against (concrete type,
-/// the open <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> base, and
+/// the open <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> base, and
 /// <see cref="IServiceConfigurationProvider{T}"/>) as the very same singleton instance, targeting this
 /// domain's own default DataStore/path (no arguments — <see cref="RegisterDomainConfiguration"/> is
-/// parameterless; overriding the location is <see cref="DefaultConfigurationProvider{TConfig,TCommand}.SetConfiguration"/>
+/// parameterless; overriding the location is <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}.SetConfiguration"/>
 /// on the resolved instance, not a registration-time argument).
 /// </summary>
 [Trait("Category", "Configuration")]
@@ -39,7 +39,7 @@ public sealed class PipelineServiceConfigurationProviderTests
         // Assert
         using var provider = services.BuildServiceProvider();
         var concrete = provider.GetRequiredService<PipelineServiceConfigurationProvider>();
-        var asBase = provider.GetRequiredService<DefaultConfigurationProvider<PipelineConfiguration, PipelineConfigurationCommand>>();
+        var asBase = provider.GetRequiredService<ImplementationConfigurationProviderBase<PipelineConfiguration, PipelineConfigurationCommand>>();
         var asInterface = provider.GetRequiredService<IServiceConfigurationProvider<PipelineConfiguration>>();
 
         asBase.ShouldBeSameAs(concrete);

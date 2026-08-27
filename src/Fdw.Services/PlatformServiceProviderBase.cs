@@ -169,18 +169,6 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
         ServiceLogger.ProviderFactoryRegistered(_logger, serviceOptionType);
         return GenericResult.Success();
     }
-
-    /// <inheritdoc />
-    public IGenericResult Register<TConcrete>(string serviceOptionType, IServiceConfigurationProvider<TConcrete> configurationProvider)
-        where TConcrete : class, TConfiguration
-    {
-        var erased = Erase(configurationProvider);
-        _configurationProviders[serviceOptionType] = erased;
-        _registeredConfigurationProviders[serviceOptionType] = erased;
-        ServiceLogger.ProviderConfigurationRegistered(_logger, serviceOptionType);
-        return GenericResult.Success();
-    }
-
     /// <inheritdoc />
     public IGenericResult Register(IDomainConfigurationProvider<TConfiguration> domainConfigurationProvider)
     {

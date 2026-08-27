@@ -382,16 +382,16 @@ public sealed class DefaultAuthorizationServiceTests
         return mock.Object;
     }
 
-    // Why: DefaultConfigurationProvider<T, TCommand> has 10 constructor params (params 7-10 are optional).
+    // Why: ImplementationConfigurationProviderBase<T, TCommand> has 10 constructor params (params 7-10 are optional).
     // All must be passed explicitly to Moq — Castle DynamicProxy uses reflection-based instantiation
     // and cannot resolve C# optional parameter defaults.
-    private static DefaultConfigurationProvider<T, TCommand> CreateProviderMock<T, TCommand>()
+    private static ImplementationConfigurationProviderBase<T, TCommand> CreateProviderMock<T, TCommand>()
         where T : class, Fdw.Configuration.IGenericConfiguration
         where TCommand : Fdw.Services.Configuration.ConfigurationCommandBase<T>
     {
-        return new Mock<DefaultConfigurationProvider<T, TCommand>>(
+        return new Mock<ImplementationConfigurationProviderBase<T, TCommand>>(
             MockBehavior.Loose,
-            NullLogger<DefaultConfigurationProvider<T, TCommand>>.Instance,
+            NullLogger<ImplementationConfigurationProviderBase<T, TCommand>>.Instance,
             new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>(
                 g => g.DataStores == (System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>())),
             "TestStore",
