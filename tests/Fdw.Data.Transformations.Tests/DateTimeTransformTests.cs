@@ -84,10 +84,11 @@ public sealed class DateTimeTransformTests
     }
 
     [Fact]
-    public async Task FallbackFromFieldTakesAnotherFieldAndAddsTheDuration()
+    public async Task AddDurationToFieldTakesAnotherFieldAndAddsTheDuration()
     {
-        // Not a plain fallback despite the name: it reads the named field AND applies amount/unit.
-        var result = await new FallbackFromFieldFieldTransformer().Transform(
+        // The name now says it: reads the named field AND adds the duration. Subtraction is a
+        // negative amount, so there is no second transformer for it.
+        var result = await new AddDurationToFieldFieldTransformer().Transform(
             null,
             TransformTestContext.With(
                 TransformTestContext.Row(("kickoff", new DateTimeOffset(2026, 8, 26, 17, 0, 0, TimeSpan.Zero))),
@@ -100,10 +101,10 @@ public sealed class DateTimeTransformTests
     }
 
     [Fact]
-    public async Task FallbackFromFieldKeepsAValueThatIsAlreadyThere()
+    public async Task AddDurationToFieldKeepsAValueThatIsAlreadyThere()
     {
         var present = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-        var result = await new FallbackFromFieldFieldTransformer().Transform(
+        var result = await new AddDurationToFieldFieldTransformer().Transform(
             present,
             TransformTestContext.With(
                 TransformTestContext.Row(("kickoff", new DateTimeOffset(2026, 8, 26, 17, 0, 0, TimeSpan.Zero))),

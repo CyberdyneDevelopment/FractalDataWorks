@@ -39,12 +39,25 @@ public sealed class InjectionTransformTests
     }
 
     [Fact]
-    public async Task ParameterYieldsNullForAnyOtherName()
+    public async Task ParameterFailsLoudForAnyOtherName()
     {
+        // Why this changed: it used to return null, which reached the row as an empty column with
+        // nothing saying why. The ETL caller reports a failed transform and keeps the original value.
         var result = await new ParameterFieldTransformer().Transform(
             null, TransformTestContext.With(("name", "season")), TestContext.Current.CancellationToken);
 
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldBeNull();
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[0].Message.ShouldContain("season");
+        result.Messages[0].Message.ShouldContain("operatingDate");
+    }
+
+    [Fact]
+    public async Task ParameterFailsLoudWhenNoNameIsSupplied()
+    {
+        var result = await new ParameterFieldTransformer().Transform(
+            null, TransformTestContext.With(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[0].Message.ShouldContain("'name'");
     }
 }

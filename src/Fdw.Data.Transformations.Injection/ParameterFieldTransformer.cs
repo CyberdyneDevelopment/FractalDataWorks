@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,9 +45,13 @@ public sealed class ParameterFieldTransformer : FieldTransformationBase
         TransformationContext context,
         CancellationToken cancellationToken = default)
     {
-        if (!context.Parameters.TryGetValue("name", out var name))
+        // Why a failure and not a null: a null here reaches the row as an empty column and nothing
+        // says why. The ETL caller already reports a failed transform against the field and keeps the
+        // original value, so failing loud costs a message rather than a run.
+        if (!context.Parameters.TryGetValue("name", out var name) || string.IsNullOrWhiteSpace(name))
         {
-            return Task.FromResult(GenericResult<object?>.Success(null));
+            return Task.FromResult(GenericResult<object?>.Failure(
+                FieldTransformerLog.ParameterNameMissing(NullLogger.Instance)));
         }
 
         if (string.Equals(name, "operatingDate", StringComparison.OrdinalIgnoreCase))
@@ -59,6 +64,10 @@ public sealed class ParameterFieldTransformer : FieldTransformationBase
             return Task.FromResult(GenericResult<object?>.Success((object)context.ExecutionTimestamp));
         }
 
-        return Task.FromResult(GenericResult<object?>.Success(null));
+        // Why the valid names are named in the message: "operatingDate" mistyped as "operatingdate"
+        // works (the comparison ignores case) but "operating_date" does not, and the difference was
+        // previously invisible.
+        return Task.FromResult(GenericResult<object?>.Failure(
+            FieldTransformerLog.ParameterNameUnknown(NullLogger.Instance, name)));
     }
 }

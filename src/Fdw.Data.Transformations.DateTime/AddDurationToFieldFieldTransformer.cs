@@ -14,16 +14,16 @@ namespace Fdw.Data.Transformations;
 /// When the input is null, reads a source field from the current record and adds a duration.
 /// When the input is not null, passes it through unchanged.
 /// </summary>
-[TypeOption(typeof(TransformationTypes), "FallbackFromField")]
-public sealed class FallbackFromFieldFieldTransformer : FieldTransformationBase
+[TypeOption(typeof(TransformationTypes), "AddDurationToField")]
+public sealed class AddDurationToFieldFieldTransformer : FieldTransformationBase
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="FallbackFromFieldFieldTransformer"/> class.
+    /// Initializes a new instance of the <see cref="AddDurationToFieldFieldTransformer"/> class.
     /// </summary>
-    public FallbackFromFieldFieldTransformer()
+    public AddDurationToFieldFieldTransformer()
         : base(
             id: 105,
-            name: "FallbackFromField",
+            name: "AddDurationToField",
             displayName: "Fallback From Field",
             description: "When input is null, reads a source field from the current record and adds a duration. Passes non-null input through unchanged.",
             category: "DateTime",
@@ -69,7 +69,7 @@ public sealed class FallbackFromFieldFieldTransformer : FieldTransformationBase
         if (!context.Parameters.TryGetValue("sourceField", out var sourceField) ||
             string.IsNullOrWhiteSpace(sourceField))
         {
-            throw new InvalidOperationException("FallbackFromField requires a 'sourceField' parameter.");
+            throw new InvalidOperationException("AddDurationToField requires a 'sourceField' parameter.");
         }
 
         if (!context.CurrentRecord.TryGetValue(sourceField, out var sourceValue) || sourceValue is null)
@@ -84,7 +84,7 @@ public sealed class FallbackFromFieldFieldTransformer : FieldTransformationBase
             DateTimeOffset dto => GenericResult<object?>.Success(dto.Add(duration)),
             DateTime dt => GenericResult<object?>.Success(dt.Add(duration)),
             _ => throw new InvalidOperationException(
-                $"FallbackFromField source field '{sourceField}' has type '{sourceValue.GetType().Name}'. Expected DateTime or DateTimeOffset.")
+                $"AddDurationToField source field '{sourceField}' has type '{sourceValue.GetType().Name}'. Expected DateTime or DateTimeOffset.")
         });
     }
 
@@ -93,13 +93,13 @@ public sealed class FallbackFromFieldFieldTransformer : FieldTransformationBase
         if (!parameters.TryGetValue("amount", out var amountStr) ||
             !double.TryParse(amountStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var amount))
         {
-            throw new InvalidOperationException("FallbackFromField requires a valid numeric 'amount' parameter.");
+            throw new InvalidOperationException("AddDurationToField requires a valid numeric 'amount' parameter.");
         }
 
         if (!parameters.TryGetValue("unit", out var unit) ||
             string.IsNullOrWhiteSpace(unit))
         {
-            throw new InvalidOperationException("FallbackFromField requires a 'unit' parameter.");
+            throw new InvalidOperationException("AddDurationToField requires a 'unit' parameter.");
         }
 
         var unitType = DurationUnitTypes.ByName(unit);

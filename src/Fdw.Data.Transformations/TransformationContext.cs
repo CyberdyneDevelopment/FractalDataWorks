@@ -22,7 +22,7 @@ public sealed class TransformationContext
 
     /// <summary>
     /// Gets the current record's field values, keyed by logical field name.
-    /// Transforms that reference other fields (e.g., FallbackFromField, ConditionalDivide)
+    /// Transforms that reference other fields (e.g., AddDurationToField, ConditionalDivide)
     /// read sibling values from this dictionary.
     /// </summary>
     public IReadOnlyDictionary<string, object?> CurrentRecord { get; init; } = new Dictionary<string, object?>(StringComparer.Ordinal);
