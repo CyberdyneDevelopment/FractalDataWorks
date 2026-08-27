@@ -258,9 +258,17 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
         // Why the async overload wins when the factory offers one: a domain whose creation resolves a
         // secret cannot do it in the sync Create, and reaching it any other way would need a provider
         // of its own.
-        return factory is IAsyncServiceFactory<TService> asyncFactory
+        var created = factory is IAsyncServiceFactory<TService> asyncFactory
             ? await asyncFactory.Create(configuration, cancellationToken).ConfigureAwait(false)
             : Create(factory, configuration);
+
+        // Why a null result is caught here: a factory registered under a ServiceOptionType it cannot
+        // actually build returns nothing at all, and handing that back gives the caller a null where a
+        // result belongs — the failure then surfaces far from the factory that caused it.
+        return created ?? GenericResult<TService>.Failure(
+            ServicesResultCodes.ByName("InvalidFactoryType"),
+            ResultDetails.Create("ServiceOptionType", serviceOptionType,
+                                 "FactoryType", factory.GetType().Name));
     }
 
     // ── Typed views ─────────────────────────────────────────────────────────

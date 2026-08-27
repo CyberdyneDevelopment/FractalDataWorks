@@ -114,7 +114,7 @@ public class ServiceProviderInjectionAnalyzerTests
 
                 public class EtlPipeline : IEtlPipeline
                 {
-                    public EtlPipeline(ISecretManagerProvider secretManagerProvider)
+                    public EtlPipeline(IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration> secretManagerProvider)
                     {
                     }
                 }

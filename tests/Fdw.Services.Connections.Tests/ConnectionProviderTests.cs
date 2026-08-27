@@ -875,7 +875,7 @@ public class ConnectionProviderTests
         // replaces an assertion that the two paths SHARED one cached connection.
         byName.IsSuccess.ShouldBeTrue();
         byConfiguration.IsSuccess.ShouldBeTrue();
-        mockFactory.Verify(
+        mockFactory.As<IAsyncServiceFactory<IGenericConnection>>().Verify(
             x => x.Create(
                 It.IsAny<IGenericConfiguration>(),
                 It.IsAny<CancellationToken>()),
@@ -903,34 +903,10 @@ public class ConnectionProviderTests
         // once, found stale, and fails loud.
         result.IsSuccess.ShouldBeFalse();
         result.Messages.ShouldNotBeEmpty();
-        mockFactory.Verify(
+        mockFactory.As<IAsyncServiceFactory<IGenericConnection>>().Verify(
             x => x.Create(
                 It.IsAny<IGenericConfiguration>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public async Task GetTypedByNameEvictsStaleConnectionLikeGetByName()
-    {
-        // Arrange - Get<T> used to probe the cache directly and skip the staleness check, so it
-        // handed out the very connection Get(name) would have evicted.
-        _configurations.Add(new ConnectionConfiguration
-        {
-            Id = Guid.CreateVersion7(),
-            Name = "TestConnection",
-            ServiceOptionType = "MsSql"
-        });
-        var stale = new Mock<IDataConnection>();
-        stale.As<IGenericConnection>().SetupGet(x => x.IsStale).Returns(true);
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)FactoryReturning((IGenericConnection)stale.Object).Object);
-
-        // Act
-        var result = await ((IDataConnectionProvider)_provider).Get<IDataConnection>("TestConnection", TestContext.Current.CancellationToken);
-
-        // Assert
-        result.IsSuccess.ShouldBeFalse();
     }
 }

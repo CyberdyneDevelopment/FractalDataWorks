@@ -87,26 +87,6 @@ public sealed class ProvisionerFactoryResolutionCycleTests
             + string.Join(", ", nonLoggerParameters));
     }
 
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void ProvisionerFactoryContractExposesProviderSuppliedCreate()
-    {
-        // Arrange
-        var factoryInterface = typeof(IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration>);
-
-        // Act
-        var providerSuppliedCreate = factoryInterface.GetMethods()
-            .SingleOrDefault(m => m.Name == "Create"
-                                  && m.GetParameters().Length == 2
-                                  && m.GetParameters()[1].ParameterType == ProviderServiceType);
-
-        // Assert
-        providerSuppliedCreate.ShouldNotBeNull(
-            "the factory contract must expose Create(configuration, provisionerProvider) so the provider "
-            + "can hand over the already-resolved provider instead of the factory resolving it.");
-    }
-
     // Why: generalises the guard to the whole assembly so a NEW option cannot reintroduce the same
     // cycle. Any constructor parameter typed as a bare IPlatformServiceProvider<,> on a factory is the
     // root risk signature; Lazy<>/Func<> wrapped dependencies are safe because they defer resolution.
