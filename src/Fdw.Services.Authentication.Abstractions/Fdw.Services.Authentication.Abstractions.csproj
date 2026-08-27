@@ -29,4 +29,13 @@
     <Folder Include="Messages\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Why exactly one assembly: AchievedMethods and AchievedAcr are internal so no step can name
+         its own authentication method or raise its own assurance level. The runner is the only
+         legitimate writer, and it lives here. A step package is a separate assembly and stays shut
+         out, which is the point. -->
+    <InternalsVisibleTo Include="Fdw.Services.Authentication" />
+    <InternalsVisibleTo Include="Fdw.Services.Authentication.Tests" />
+  </ItemGroup>
+
 </Project>
