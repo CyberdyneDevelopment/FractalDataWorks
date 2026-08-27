@@ -138,7 +138,7 @@ public sealed class RecursiveCascadeSaveTests
     /// <summary>
     /// Marker interface for the test's typed body. Why: the generated mapper detects a typed-body
     /// "Configuration" property only when its type is a config interface that *derives from*
-    /// IGenericConfiguration (the production pattern — IConnectionImplementationConfiguration, ISecretManagerConfiguration).
+    /// IGenericConfiguration (the production pattern — IConnectionImplementationConfiguration, ISecretManagerImplementationConfiguration).
     /// A property typed as the bare IGenericConfiguration is treated as a scalar, so a derived interface
     /// is required for GetTypedBody to return the body.
     /// </summary>

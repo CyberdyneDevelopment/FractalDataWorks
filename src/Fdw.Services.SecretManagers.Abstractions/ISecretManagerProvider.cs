@@ -10,6 +10,6 @@ namespace Fdw.Services.SecretManagers.Abstractions;
 // Why: SecretManager types previously used generic IPlatformServiceProvider with ugly casting.
 // A proper domain interface provides type safety and discoverability, matching the
 // patterns established by IConnectionProvider and IAuthServerProvider.
-public interface ISecretManagerProvider : IPlatformServiceProvider<ISecretManager>
+public interface ISecretManagerProvider : IPlatformServiceProvider<ISecretManager, ISecretManagerImplementationConfiguration>
 {
 }

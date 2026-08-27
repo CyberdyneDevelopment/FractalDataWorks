@@ -30,20 +30,21 @@ namespace Fdw.Services.SecretManagers;
 /// concrete typed CLR type (for endpoint deserialization) and a reflection-free factory (for default-body
 /// creation on Save), and registers typed providers via the inherited <c>Register</c>.
 /// </summary>
-public class SecretManagerConfigurationProvider : ImplementationConfigurationProviderBase<SecretManagerConfiguration, SecretManagerConfigurationCommand>
+public class SecretManagerConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          SecretManagerConfiguration,
+          ISecretManagerImplementationConfiguration,
+          SecretManagerConfigurationCommand>,
+      ISecretManagerConfigurationProvider
 {
 
     // Why: tracks the concrete typed-body CLR type for each discriminator. Endpoints
     // deserialize the incoming JSON Configuration body into the correct strongly-typed
     // object before save; the header provider also uses this for cascade-save when the
     // caller didn't supply Configuration on a Create request.
-    private readonly ConcurrentDictionary<string, Type> _typedConfigTypes
-        = new(StringComparer.OrdinalIgnoreCase);
 
     // Why: captured parameterless factory per discriminator — reflection-free replacement for
     // Activator.CreateInstance(typedType) when building a default typed body on Create.
-    private readonly ConcurrentDictionary<string, Func<ISecretManagerConfiguration>> _typedConfigFactories
-        = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly ILogger<SecretManagerConfigurationProvider> _logger;
 
@@ -61,74 +62,6 @@ public class SecretManagerConfigurationProvider : ImplementationConfigurationPro
     {
         _logger = logger ?? NullLogger<SecretManagerConfigurationProvider>.Instance;
     }
-
-    /// <summary>
-    /// Registers a typed child provider for a specific ServiceOptionType using a typed body configuration type.
-    /// Forwards the provider registration to the base (which composes the typed body on read) and additionally
-    /// captures the concrete CLR type + a parameterless factory for this domain's deserialize/default-body paths.
-    /// </summary>
-    /// <typeparam name="TDerived">A configuration type that implements <see cref="ISecretManagerConfiguration"/>.</typeparam>
-    /// <param name="serviceOptionType">The service option type key (e.g., "AzureKeyVault").</param>
-    /// <param name="provider">The typed configuration provider for that service option.</param>
-    // Why: a generic overload of the base's Register, so this domain can ALSO capture the typed CLR type
-    // (GetTypedConfigType, used by endpoints) and a reflection-free ctor (Save's default body). The actual
-    // typed-provider registration + read composition lives in the base; this only adds the two
-    // domain-specific captures and then delegates. Constraint adds new() for the factory capture.
-    //
-    // Why the parameter is the erased provider while TDerived stays explicit: the registry stores typed
-    // bodies erased, and IServiceConfigurationProvider{TDerived} does not imply that view -- the two
-    // interfaces are separate, so a provider held only by its typed interface cannot be registered.
-    // TDerived is what this method captures, not what it forwards, so it is named rather than inferred.
-    public void Register<TDerived>(string serviceOptionType, IServiceConfigurationProvider provider)
-        where TDerived : class, ISecretManagerConfiguration, new()
-    {
-        base.Register(serviceOptionType, provider);
-        _typedConfigTypes[serviceOptionType] = typeof(TDerived);
-        // Why: capture the closed-generic ctor here so Save() can build a default typed body without
-        // Activator/reflection (TDerived is statically known at the registration call site).
-        _typedConfigFactories[serviceOptionType] = static () => new TDerived();
-        SecretManagerConfigurationProviderLog.TypedCacheRegistered(_logger, serviceOptionType);
-    }
-
-    /// <summary>
-    /// Returns the registered typed-body CLR type for a given discriminator, or null when
-    /// no typed provider is registered for that discriminator. Used by endpoints to
-    /// deserialize an inbound JSON Configuration body into the matching strongly-typed
-    /// configuration before save.
-    /// </summary>
-    public Type? GetTypedConfigType(string serviceOptionType)
-        => _typedConfigTypes.TryGetValue(serviceOptionType, out var t) ? t : null;
-
-    /// <summary>
-    /// Persists the SecretManager record. When the caller didn't supply
-    /// <see cref="SecretManagerConfiguration.Configuration"/>, builds a default typed-body
-    /// instance for the configured <c>ServiceOptionType</c> so the parent + typed-body rows
-    /// stay in sync on initial INSERT.
-    /// </summary>
-    // Why: SM Create endpoints accept just {name, secretManagerType, description} — the typed
-    // body has all-optional fields with defaults. Persisting a default child row on Create lets
-    // subsequent Get/Update/Delete operations find a complete SM record. Without this, the
-    // parent row exists but typed-body lookups during Get return failure.
-    public override Task<IGenericResult<SecretManagerConfiguration>> Save(
-        SecretManagerConfiguration record, CancellationToken ct = default)
-    {
-        if (record.Configuration is null
-            && !string.IsNullOrEmpty(record.ServiceOptionType)
-            && _typedConfigFactories.TryGetValue(record.ServiceOptionType, out var factory))
-        {
-            var instance = factory();
-            if (instance.Id == Guid.Empty)
-                instance.Id = Guid.CreateVersion7();
-
-            // Why: stamp the logical FK to the parent header — SecretManagerId is declared on
-            // ISecretManagerConfiguration, so it is set directly with no reflection.
-            instance.SecretManagerId = record.Id;
-            record.Configuration = instance;
-        }
-
-        return base.Save(record, ct);
-    }
-
     /// <summary>
     /// Loads the parent header row without dispatching to a typed provider. Use for management
     /// flows (Delete, exists-check) that don't need the typed body and shouldn't fail if no
@@ -137,4 +70,16 @@ public class SecretManagerConfigurationProvider : ImplementationConfigurationPro
     /// </summary>
     public Task<IGenericResult<SecretManagerConfiguration>> GetHeader(string name, CancellationToken ct = default)
         => GetHeaderByName(name, ct);
+
+    /// <inheritdoc />
+    protected override SecretManagerConfiguration Compose<T>(
+        string serviceOptionType,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            ServiceOptionType = serviceOptionType,
+            Configuration = implementationConfiguration,
+        };
 }

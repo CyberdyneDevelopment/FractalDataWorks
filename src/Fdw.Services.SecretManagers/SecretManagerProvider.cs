@@ -18,16 +18,20 @@ namespace Fdw.Services.SecretManagers;
 /// FDW045 forbids in a factory constructor. Mirrors <c>ConnectionProvider</c>, which is the
 /// same one-line specialisation for the Connections domain.
 /// </remarks>
-public sealed class DefaultSecretManagerProvider
-    : PlatformServiceProviderBase<ISecretManager, SecretManagerConfiguration, ISecretManagerServiceFactory<ISecretManager, SecretManagerConfiguration>, IServiceConfigurationProvider<SecretManagerConfiguration>>,
+public sealed class SecretManagerProvider
+    : PlatformServiceProviderBase<
+          ISecretManager,
+          ISecretManagerImplementationConfiguration,
+          ISecretManagerServiceFactory<ISecretManager, ISecretManagerImplementationConfiguration>,
+          ISecretManagerConfigurationProvider>,
       ISecretManagerProvider
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="DefaultSecretManagerProvider"/> class.
+    /// Initializes a new instance of the <see cref="SecretManagerProvider"/> class.
     /// </summary>
     /// <param name="services">The container this provider resolves factories from.</param>
     /// <param name="logger">The logger instance.</param>
-    public DefaultSecretManagerProvider(IServiceProvider services, ILogger<DefaultSecretManagerProvider> logger)
+    public SecretManagerProvider(IServiceProvider services, ILogger<SecretManagerProvider> logger)
         : base(services, logger)
     {
     }

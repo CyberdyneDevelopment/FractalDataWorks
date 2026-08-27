@@ -27,7 +27,7 @@ namespace Fdw.Services.SecretManagers;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "SecretManager")]
-public partial class SecretManagerConfiguration : IGenericConfiguration
+public partial class SecretManagerConfiguration : ISecretManagerConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SecretManagerConfiguration"/> class.
@@ -105,5 +105,5 @@ public partial class SecretManagerConfiguration : IGenericConfiguration
     // Why: [NotMapped] — not a column on sec.SecretManager. Written separately via typed provider.
     // Read path populates by dispatching on ServiceOptionType to the appropriate typed provider.
     [NotMapped]
-    public ISecretManagerConfiguration? Configuration { get; set; }
+    public ISecretManagerImplementationConfiguration? Configuration { get; set; }
 }

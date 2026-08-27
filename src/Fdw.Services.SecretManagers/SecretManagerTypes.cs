@@ -32,17 +32,22 @@ namespace Fdw.Services.SecretManagers;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(SecretManagerTypeBase<ISecretManager, ISecretManagerServiceFactory<ISecretManager, SecretManagerConfiguration>, SecretManagerConfiguration>),
+    typeof(SecretManagerTypeBase<ISecretManager, ISecretManagerServiceFactory<ISecretManager, ISecretManagerImplementationConfiguration>, ISecretManagerImplementationConfiguration>),
     typeof(ISecretManagerType),
     typeof(SecretManagerTypes),
     ServiceInterface = typeof(ISecretManager),
-    ProviderType = typeof(DefaultSecretManagerProvider),
-    ProviderInterface = typeof(IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>),
+    ProviderType = typeof(SecretManagerProvider),
+    ProviderInterface = typeof(ISecretManagerProvider),
     ServiceCategory = "SecretManager")]
 public partial class SecretManagerTypes : ServiceTypeCollectionBase<
-    SecretManagerTypeBase<ISecretManager, ISecretManagerServiceFactory<ISecretManager, SecretManagerConfiguration>, SecretManagerConfiguration>,
-    ISecretManagerType<ISecretManager, ISecretManagerServiceFactory<ISecretManager, SecretManagerConfiguration>, SecretManagerConfiguration>>
+    SecretManagerTypeBase<ISecretManager, ISecretManagerServiceFactory<ISecretManager, ISecretManagerImplementationConfiguration>, ISecretManagerImplementationConfiguration>,
+    ISecretManagerType<ISecretManager, ISecretManagerServiceFactory<ISecretManager, ISecretManagerImplementationConfiguration>, ISecretManagerImplementationConfiguration>>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
     // Configure(), Register() and Initialize() are source-generated
 
     /// <summary>
@@ -61,7 +66,7 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>).ToString();
+        var providerService = typeof(ISecretManagerProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -92,24 +97,18 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
             // provider under IPlatformServiceProvider<,>, which no factory may take by constructor (FDW045).
             // Consumers — the connection factories above all — depend on ISecretManagerProvider instead, and
             // this forward hands them the SAME instance, so its factory registrations and cache are shared.
-            // The cast is deliberate and fail-loud: the generator constructs DefaultSecretManagerProvider,
-            // and if anything ever replaces that registration with a type that is not the domain provider,
-            // the composition root must break loudly rather than resolve a second, empty provider.
-            builder.Services.TryAddSingleton<ISecretManagerProvider>(
-                sp => (ISecretManagerProvider)sp.GetRequiredService<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>());
-
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
 
             ServiceTypeLog.DomainOptionsCollected(log, nameof(SecretManagerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(SecretManagerTypes), providerService);
 
-            builder.Services.AddScoped<IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>>(sp =>
+            builder.Services.AddScoped<ISecretManagerProvider>(sp =>
             {
-                var provider = new DefaultSecretManagerProvider(
+                var provider = new SecretManagerProvider(
                     sp,
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultSecretManagerProvider>()
-                    ?? NullLogger<DefaultSecretManagerProvider>.Instance);
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<SecretManagerProvider>()
+                    ?? NullLogger<SecretManagerProvider>.Instance);
 
                 // Why ILogger<SecretManagerTypes> and not CreateLogger("SecretManagerTypes"): SourceContext then
                 // carries the namespace-qualified collection, and the category cannot drift from the
@@ -120,7 +119,7 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(SecretManagerTypes), provider.GetType().Name);
                 try
                 {
-                    if (sp.GetService<IServiceConfigurationProvider<SecretManagerConfiguration>>() is { } cfgProvider)
+                    if (sp.GetService<ISecretManagerConfigurationProvider>() is { } cfgProvider)
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
