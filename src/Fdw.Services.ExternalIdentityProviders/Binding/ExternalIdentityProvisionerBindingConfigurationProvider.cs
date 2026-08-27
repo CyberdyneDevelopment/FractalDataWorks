@@ -27,25 +27,6 @@ public class ExternalIdentityProvisionerBindingConfigurationProvider
 {
     private readonly ILogger _logger;
 
-    /// <summary>
-    /// Registers the ExternalIdentityProvisionerBindingConfigurationProvider and interface forwardings
-    /// with DI, targeting this domain's own default location. To override, call
-    /// <c>SetConfiguration</c> on the resolved singleton.
-    /// </summary>
-    public static void RegisterDomainServices(IServiceCollection services)
-    {
-        services.TryAddSingleton<ExternalIdentityProvisionerBindingConfigurationProvider>(sp =>
-            new ExternalIdentityProvisionerBindingConfigurationProvider(
-                sp.GetService<ILogger<ExternalIdentityProvisionerBindingConfigurationProvider>>()!,
-                sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ExternalIdentityProvisionerTypes.ConfigurationConnection));
-
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>>(
-            sp => sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
-
-        services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProvisionerBindingConfiguration>>(sp =>
-            sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
-    }
 
     /// <summary>Initializes a new instance of the <see cref="ExternalIdentityProvisionerBindingConfigurationProvider"/> class.</summary>
     public ExternalIdentityProvisionerBindingConfigurationProvider(

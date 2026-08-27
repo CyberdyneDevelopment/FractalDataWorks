@@ -83,16 +83,16 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
             return new DataSetProvider(logger, configProvider);
         });
 
-        // Why: IDataSetFactory builds live IDataSet runtimes from DataSetConfiguration records.
+        // Why: IDataSetBuilder builds live IDataSet runtimes from DataSetConfiguration records.
         // Field mappings are composed by DataSetConfigurationProvider.Get — no resolver needed.
-        services.TryAddSingleton<IDataSetFactory>(sp =>
-            new DataSetFactory(sp.GetService<ILogger<DataSetFactory>>()));
+        services.TryAddSingleton<IDataSetBuilder>(sp =>
+            new DataSetBuilder(sp.GetService<ILogger<DataSetBuilder>>()));
 
-        // Why: IDataSetProvider (NEW — returns IDataSet) wraps IDataSetConfigurationProvider + IDataSetFactory.
+        // Why: IDataSetProvider (NEW — returns IDataSet) wraps IDataSetConfigurationProvider + IDataSetBuilder.
         services.TryAddSingleton<IDataSetProvider>(sp =>
             new DataSetRuntimeProvider(
                 sp.GetRequiredService<IDataSetConfigurationProvider>(),
-                sp.GetRequiredService<IDataSetFactory>(),
+                sp.GetRequiredService<IDataSetBuilder>(),
                 sp.GetService<ILogger<DataSetRuntimeProvider>>()));
 
         // Why: IStatSetService was previously registered ad-hoc in application Program.cs files.

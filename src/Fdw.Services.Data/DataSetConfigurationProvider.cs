@@ -37,14 +37,12 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
         // Why named here rather than defaulted on the constructor: a defaulted connection is one a
         // caller inherits without saying so, and this provider is registered directly rather than by
         // a collection that would otherwise name it.
-        const string dataStoreName = "PlatformConfiguration";
-        const string pathName = "data";
 
         services.TryAddSingleton<DataSetConfigurationProvider>(sp =>
             new DataSetConfigurationProvider(
                 sp.GetService<ILogger<DataSetConfigurationProvider>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                dataStoreName, pathName));
+                DataStoreTypes.ConfigurationConnection, "data"));
         services.TryAddSingleton<ImplementationConfigurationProviderBase<DataSetConfiguration, DataSetConfigurationCommand>>(
             sp => sp.GetRequiredService<DataSetConfigurationProvider>());
         services.TryAddSingleton<IServiceConfigurationProvider<DataSetConfiguration>>(

@@ -27,25 +27,6 @@ public class UserRoleConfigurationProvider : ImplementationConfigurationProvider
 {
     private readonly ILogger _logger;
 
-    /// <summary>
-    /// Registers this provider (and its interface forwards) as the domain's canonical singletons,
-    /// targeting this domain's own default location. To override, call <c>SetConfiguration</c> on
-    /// the resolved singleton — never register a second time with different arguments.
-    /// </summary>
-    /// <remarks>Same cascade rationale as <see cref="RoleConfigurationProvider.RegisterDomainConfiguration"/>.</remarks>
-    public static IServiceCollection RegisterDomainConfiguration(IServiceCollection services)
-    {
-        services.TryAddSingleton<UserRoleConfigurationProvider>(sp =>
-            new UserRoleConfigurationProvider(
-                sp.GetService<ILogger<UserRoleConfigurationProvider>>(),
-                sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    AuthorizationTypes.ConfigurationConnection));
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<UserRoleConfiguration, Fdw.Services.Authorization.Commands.UserRoleConfigurationCommand>>(
-            sp => sp.GetRequiredService<UserRoleConfigurationProvider>());
-        services.TryAddSingleton<IServiceConfigurationProvider<UserRoleConfiguration>>(
-            sp => sp.GetRequiredService<UserRoleConfigurationProvider>());
-        return services;
-    }
 
     /// <summary>Initializes a new instance of the <see cref="UserRoleConfigurationProvider"/> class.</summary>
     public UserRoleConfigurationProvider(

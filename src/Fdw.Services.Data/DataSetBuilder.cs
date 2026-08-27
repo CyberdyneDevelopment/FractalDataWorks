@@ -14,39 +14,55 @@ using DataFieldConfiguration = Fdw.Data.DataSets.Abstractions.DataFieldConfigura
 using DataSetCompositionTypes = Fdw.Data.Abstractions.DataSetCompositionTypes;
 using DataSetConfiguration = Fdw.Data.DataSets.Abstractions.DataSetConfiguration;
 using DataSetSourceConfiguration = Fdw.Data.DataSets.Abstractions.DataSetSourceConfiguration;
-using IDataSetFactory = Fdw.Data.DataSets.Abstractions.IDataSetFactory;
+using IDataSetBuilder = Fdw.Data.DataSets.Abstractions.IDataSetBuilder;
 using JoinConfiguration = Fdw.Data.DataSets.Abstractions.JoinConfiguration;
 
 namespace Fdw.Services.Data;
 
 /// <summary>
-/// Default implementation of <see cref="IDataSetFactory"/>.
+/// Default implementation of <see cref="IDataSetBuilder"/>.
 /// Builds live <see cref="IDataSet"/> runtime instances from <see cref="DataSetConfiguration"/> records.
 /// </summary>
-public sealed class DataSetFactory : IDataSetFactory
+public sealed class DataSetBuilder : IDataSetBuilder
 {
-    private readonly ILogger<DataSetFactory> _logger;
+    private readonly ILogger<DataSetBuilder> _logger;
 
     /// <summary>
-    /// Initializes a new instance of <see cref="DataSetFactory"/>.
+    /// Initializes a new instance of <see cref="DataSetBuilder"/>.
     /// </summary>
     /// <param name="logger">Optional logger instance.</param>
-    public DataSetFactory(ILogger<DataSetFactory>? logger = null)
+    public DataSetBuilder(ILogger<DataSetBuilder>? logger = null)
     {
-        _logger = logger ?? NullLogger<DataSetFactory>.Instance;
+        _logger = logger ?? NullLogger<DataSetBuilder>.Instance;
     }
 
     /// <inheritdoc />
-    public IGenericResult<IDataSet> Create(DataSetConfiguration config)
-    {
-        ArgumentNullException.ThrowIfNull(config);
+    private DataSetConfiguration? _config;
 
-        DataSetFactoryLog.TraceCreate(_logger, config.Name);
+    /// <inheritdoc />
+    public IGenericResult Configure(DataSetConfiguration dataSetConfig)
+    {
+        ArgumentNullException.ThrowIfNull(dataSetConfig);
+        _config = dataSetConfig;
+        return GenericResult.Success();
+    }
+
+    /// <inheritdoc />
+    public Task<IGenericResult<IDataSet>> Build(CancellationToken cancellationToken = default)
+        => Task.FromResult(BuildInternal());
+
+    private IGenericResult<IDataSet> BuildInternal()
+    {
+        if (_config is null)
+            return GenericResult<IDataSet>.Failure(DataSetBuilderLog.NotConfigured(_logger));
+
+        var config = _config;
+        DataSetBuilderLog.TraceCreate(_logger, config.Name);
 
         if (string.IsNullOrWhiteSpace(config.Name))
         {
             return GenericResult<IDataSet>.Failure(
-                DataSetFactoryLog.ConfigurationNameRequired(_logger));
+                DataSetBuilderLog.ConfigurationNameRequired(_logger));
         }
 
         // Resolve the composition strategy from the TypeCollection.
@@ -87,7 +103,7 @@ public sealed class DataSetFactory : IDataSetFactory
                 catch (ArgumentException ex)
                 {
                     return GenericResult<IDataSet>.Failure(
-                        DataSetFactoryLog.JoinBuildFailed(_logger, config.Name, ex.Message));
+                        DataSetBuilderLog.JoinBuildFailed(_logger, config.Name, ex.Message));
                 }
             }
             joins = joinList.AsReadOnly();
@@ -117,7 +133,7 @@ public sealed class DataSetFactory : IDataSetFactory
             fields,
             keys);
 
-        DataSetFactoryLog.Created(_logger, config.Name, sources.Count, fields.Count);
+        DataSetBuilderLog.Created(_logger, config.Name, sources.Count, fields.Count);
         return GenericResult<IDataSet>.Success(dataSet);
     }
 

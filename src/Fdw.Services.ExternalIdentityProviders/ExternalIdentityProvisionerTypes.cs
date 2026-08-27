@@ -18,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.ExternalIdentityProviders.Commands;
+using Fdw.Services.ExternalIdentityProviders.Binding;
 
 namespace Fdw.Services.ExternalIdentityProviders;
 
@@ -86,6 +87,20 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
 
             ServiceTypeLog.DomainOptionsCollected(log, nameof(ExternalIdentityProvisionerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(ExternalIdentityProvisionerTypes), providerService);
+
+            // Why here: the collection owns what there is one of per domain. A provider that
+            // registers itself is a second place to look and a second thing to keep in step.
+            builder.Services.TryAddSingleton<ExternalIdentityProvisionerBindingConfigurationProvider>(sp =>
+                new ExternalIdentityProvisionerBindingConfigurationProvider(
+                    sp.GetService<ILogger<ExternalIdentityProvisionerBindingConfigurationProvider>>()!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                        ExternalIdentityProvisionerTypes.ConfigurationConnection));
+
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>>(
+                sp => sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
+
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProvisionerBindingConfiguration>>(sp =>
+                sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
 
             // Why the domain interface and not only the concrete class: this collection resolves
             // IExternalIdentityProvisionerConfigurationProvider to attach it to the domain provider, and a registration of

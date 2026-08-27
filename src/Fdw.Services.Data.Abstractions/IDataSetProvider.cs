@@ -15,7 +15,7 @@ namespace Fdw.Services.Data.Abstractions;
 /// For configuration records, use <c>IDataSetConfigurationProvider</c> (defined in
 /// <c>Fdw.Data.DataSets.Abstractions</c>).
 /// Internally calls <c>IDataSetConfigurationProvider</c> to load the configuration,
-/// then <c>IDataSetFactory</c> to build the live <see cref="IDataSet"/> runtime.
+/// then <c>IDataSetBuilder</c> to build the live <see cref="IDataSet"/> runtime.
 /// </remarks>
 public interface IDataSetProvider
 {

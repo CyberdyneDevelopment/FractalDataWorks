@@ -27,36 +27,6 @@ public class RoleConfigurationProvider : ImplementationConfigurationProviderBase
 {
     private readonly ILogger _logger;
 
-    /// <summary>
-    /// Registers this provider (and its interface forwards) as the domain's canonical singletons,
-    /// targeting this domain's own default location. To override, call <c>SetConfiguration</c> on
-    /// the resolved singleton.
-    /// </summary>
-    /// <remarks>
-    /// Why: any option whose services depend on role configuration calls THIS cascade instead of
-    /// re-registering the provider itself. A second registration site with a different lifetime or
-    /// a bare ctor registration (DI filling the dataStoreName/pathName defaults) made the runtime
-    /// lifetime depend on option discovery order and silently substituted default store names —
-    /// both are the exact defect class this cascade pattern exists to prevent. Idempotent (TryAdd).
-    /// This method is now parameterless for the same reason: a second registration call is never
-    /// the legal way to change the location — <c>SetConfiguration</c> on the already-resolved
-    /// singleton is.
-    /// </remarks>
-    public static IServiceCollection RegisterDomainConfiguration(IServiceCollection services)
-    {
-        services.TryAddSingleton<RoleConfigurationProvider>(sp =>
-            new RoleConfigurationProvider(
-                sp.GetService<ILogger<RoleConfigurationProvider>>(),
-                sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    AuthorizationTypes.ConfigurationConnection));
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<RoleConfiguration, RoleConfigurationCommand>>(
-            sp => sp.GetRequiredService<RoleConfigurationProvider>());
-        services.TryAddSingleton<IAuthorizationProvider>(sp =>
-            sp.GetRequiredService<RoleConfigurationProvider>());
-        services.TryAddSingleton<IServiceConfigurationProvider<RoleConfiguration>>(sp =>
-            sp.GetRequiredService<RoleConfigurationProvider>());
-        return services;
-    }
 
     /// <summary>Initializes a new instance of the <see cref="RoleConfigurationProvider"/> class.</summary>
     public RoleConfigurationProvider(
