@@ -46,7 +46,8 @@ public class OrchestrationNodeConfigurationProvider
         services.TryAddSingleton<OrchestrationNodeConfigurationProvider>(sp =>
             new OrchestrationNodeConfigurationProvider(
                 sp.GetService<ILogger<OrchestrationNodeConfigurationProvider>>(),
-                sp.GetRequiredService<IConfigurationGatewayProvider>()));
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    EtlPipelineTypes.ConfigurationConnection));
         services.TryAddSingleton<ImplementationConfigurationProviderBase<OrchestrationNodeConfiguration, OrchestrationNodeConfigurationCommand>>(
             sp => sp.GetRequiredService<OrchestrationNodeConfigurationProvider>());
         services.TryAddSingleton<IOrchestrationNodeConfigurationProvider>(
@@ -57,7 +58,7 @@ public class OrchestrationNodeConfigurationProvider
     public OrchestrationNodeConfigurationProvider(
         ILogger<OrchestrationNodeConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "pipe")
         : base(
             logger ?? NullLogger<OrchestrationNodeConfigurationProvider>.Instance,

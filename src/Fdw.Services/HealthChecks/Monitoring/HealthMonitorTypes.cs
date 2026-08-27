@@ -69,7 +69,7 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
     /// to <c>ServerConfiguration</c> — the store for boot-time and near-static server values — where a
     /// domain whose rows are shared defaults to <c>PlatformConfiguration</c>.
     /// </remarks>
-    public static string ConfigurationConnection { get; set; } = "ServerConfiguration";
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
 
     static HealthMonitorTypes()
     {

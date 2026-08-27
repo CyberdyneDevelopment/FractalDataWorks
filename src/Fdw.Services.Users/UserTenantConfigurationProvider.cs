@@ -35,7 +35,7 @@ public class UserTenantConfigurationProvider : ImplementationConfigurationProvid
     public UserTenantConfigurationProvider(
         ILogger<UserTenantConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "tenant")
         : base(logger ?? NullLogger<UserTenantConfigurationProvider>.Instance,
                gatewayProvider,

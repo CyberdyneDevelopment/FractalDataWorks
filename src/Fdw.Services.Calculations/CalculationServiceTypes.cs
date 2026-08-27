@@ -15,4 +15,9 @@ namespace Fdw.Services.Calculations;
     RestrictToCurrentCompilation = true)]
 public partial class CalculationServiceTypes : ServiceTypeCollectionBase<CalculationServiceTypeBase, ICalculationServiceType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
 }

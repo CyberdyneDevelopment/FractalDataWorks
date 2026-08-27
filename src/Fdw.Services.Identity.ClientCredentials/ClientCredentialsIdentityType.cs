@@ -63,7 +63,8 @@ public sealed class ClientCredentialsIdentityType
             // provider has to exist first.
             builder.Services.TryAddSingleton(sp => new ClientCredentialsConfigurationProvider(
                 sp.GetService<ILogger<ClientCredentialsConfigurationProvider>>()!,
-                sp.GetRequiredService<IConfigurationGatewayProvider>()));
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    IdentityServiceTypes.ConfigurationConnection));
 
             IdentityHttpClient.Register(builder.Services);
 

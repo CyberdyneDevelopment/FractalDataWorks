@@ -34,7 +34,7 @@ public class IdentityServiceConfigurationProvider
     public IdentityServiceConfigurationProvider(
         ILogger<IdentityServiceConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "sec")
         : base(logger ?? NullLogger<IdentityServiceConfigurationProvider>.Instance,
                gatewayProvider,

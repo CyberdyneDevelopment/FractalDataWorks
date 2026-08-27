@@ -53,7 +53,7 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
         // Why literal: the child-type providers below are plain ImplementationConfigurationProviderBase<,>
         // instances (not domain-specific subclasses), so there is no per-domain constructor default
         // to fall back on — this is the domain's own default location.
-        const string dataStoreName = "ConfigurationDb";
+        const string dataStoreName = "PlatformConfiguration";
         const string pathName = "data";
 
         services.TryAddSingleton<DataStoreConfigurationProvider>(sp =>
@@ -61,7 +61,8 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
                 sp.GetService<ILogger<DataStoreConfigurationProvider>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 new Lazy<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>(
-                    () => sp.GetRequiredService<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>())));
+                    () => sp.GetRequiredService<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>()),
+                dataStoreName, pathName));
         services.TryAddSingleton<ImplementationConfigurationProviderBase<DataStoreConfiguration, DataStoreConfigurationCommand>>(
             sp => sp.GetRequiredService<DataStoreConfigurationProvider>());
         services.TryAddSingleton<IServiceConfigurationProvider<DataStoreConfiguration>>(
@@ -116,7 +117,7 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
         ILogger<DataStoreConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
         Lazy<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>> containerProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "data")
         : base(logger ?? NullLogger<DataStoreConfigurationProvider>.Instance,
                gatewayProvider,

@@ -18,4 +18,9 @@ public partial class AuthorizationTypes : ServiceTypeCollectionBase<
     AuthorizationTypeBase<IGenericService, IAuthorizationFactory>,
     IAuthorizationType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
 }

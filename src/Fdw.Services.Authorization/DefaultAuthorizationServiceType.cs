@@ -133,7 +133,8 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             // Registered as singleton — it holds no per-request state.
             builder.Services.TryAddSingleton<TenantOrgAccessConfigurationProvider>(sp =>
                 new TenantOrgAccessConfigurationProvider(
-                    sp.GetRequiredService<IConfigurationGateway>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>()
+                        .Get(AuthorizationTypes.ConfigurationConnection).Value!,
                     sp.GetService<ILogger<TenantOrgAccessConfigurationProvider>>()));
 
             // Why: IOrgAccessProvider reads org-tier grants via TenantOrgAccessConfigurationProvider

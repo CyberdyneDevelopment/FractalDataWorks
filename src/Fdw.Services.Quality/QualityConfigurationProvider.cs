@@ -42,7 +42,7 @@ public class QualityConfigurationProvider
     public QualityConfigurationProvider(
         ILogger<QualityConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb")
+        string dataStoreName)
     #pragma warning restore MA0051
     {
         // Why: ILogger<T> is invariant — the QualityConfigurationProvider logger can't be passed

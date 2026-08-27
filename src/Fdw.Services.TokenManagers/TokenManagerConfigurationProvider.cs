@@ -30,7 +30,7 @@ public class TokenManagerConfigurationProvider
     public TokenManagerConfigurationProvider(
         ILogger<TokenManagerConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "auth")
         : base(logger ?? NullLogger<TokenManagerConfigurationProvider>.Instance,
                gatewayProvider,

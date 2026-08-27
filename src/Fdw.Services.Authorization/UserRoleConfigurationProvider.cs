@@ -38,7 +38,8 @@ public class UserRoleConfigurationProvider : ImplementationConfigurationProvider
         services.TryAddSingleton<UserRoleConfigurationProvider>(sp =>
             new UserRoleConfigurationProvider(
                 sp.GetService<ILogger<UserRoleConfigurationProvider>>(),
-                sp.GetRequiredService<IConfigurationGatewayProvider>()));
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    AuthorizationTypes.ConfigurationConnection));
         services.TryAddSingleton<ImplementationConfigurationProviderBase<UserRoleConfiguration, Fdw.Services.Authorization.Commands.UserRoleConfigurationCommand>>(
             sp => sp.GetRequiredService<UserRoleConfigurationProvider>());
         services.TryAddSingleton<IServiceConfigurationProvider<UserRoleConfiguration>>(
@@ -50,7 +51,7 @@ public class UserRoleConfigurationProvider : ImplementationConfigurationProvider
     public UserRoleConfigurationProvider(
         ILogger<UserRoleConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "authz")
         : base(logger ?? NullLogger<UserRoleConfigurationProvider>.Instance,
                gatewayProvider,

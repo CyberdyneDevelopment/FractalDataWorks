@@ -26,7 +26,7 @@ public class ThemeConfigurationProvider : ImplementationConfigurationProviderBas
     public ThemeConfigurationProvider(
         ILogger<ThemeConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "settings")
         : base(logger ?? NullLogger<ThemeConfigurationProvider>.Instance,
                gatewayProvider,

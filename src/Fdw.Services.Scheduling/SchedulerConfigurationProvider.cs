@@ -32,7 +32,7 @@ public class SchedulerConfigurationProvider
     public SchedulerConfigurationProvider(
         ILogger<SchedulerConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "sched")
         : base(logger ?? NullLogger<SchedulerConfigurationProvider>.Instance,
                gatewayProvider,

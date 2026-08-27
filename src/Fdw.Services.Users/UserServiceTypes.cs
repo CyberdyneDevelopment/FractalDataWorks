@@ -19,4 +19,9 @@ namespace Fdw.Services.Users;
     RestrictToCurrentCompilation = true)]
 public partial class UserServiceTypes : ServiceTypeCollectionBase<UserServiceTypeBase, IUserServiceType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
 }

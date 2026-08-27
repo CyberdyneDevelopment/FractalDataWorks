@@ -31,7 +31,7 @@ public class ClientCredentialsConfigurationProvider
     public ClientCredentialsConfigurationProvider(
         ILogger<ClientCredentialsConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "sec")
         : base(logger ?? NullLogger<ClientCredentialsConfigurationProvider>.Instance,
                gatewayProvider,

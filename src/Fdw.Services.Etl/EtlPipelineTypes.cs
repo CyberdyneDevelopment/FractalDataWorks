@@ -55,6 +55,11 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
     EtlPipelineTypeBase<IEtlPipeline, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, EtlPipelineConfiguration>,
     IEtlPipelineType<IEtlPipeline, EtlPipelineConfiguration, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>>>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
     // Configure(), Register() and Initialize() are source-generated.
     // Each pipeline type (BatchCopy, Streaming) registers its own configuration via its ServiceTypeOption.
 
@@ -140,7 +145,8 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<EtlPipelineConfigurationProvider>(sp =>
                 new EtlPipelineConfigurationProvider(
                     sp.GetService<ILogger<EtlPipelineConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                        EtlPipelineTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<EtlPipelineConfiguration, EtlPipelineConfigurationCommand>>(
                 sp => sp.GetRequiredService<EtlPipelineConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<EtlPipelineConfiguration>>(
