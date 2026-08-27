@@ -15,47 +15,47 @@ namespace Fdw.Services.TokenManagers.Abstractions;
 /// service resolves the active token manager and delegates to these four operations — it never
 /// knows which provider is behind the interface.
 /// </summary>
-public interface ITokenManager : IServiceOption
+/// <summary>
+/// A token scheme — the thing that mints, checks and revokes tokens of one kind.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Composes the three capabilities rather than declaring five loose methods, so a consumer depends
+/// on the narrow interface it actually needs. A resource server takes <see cref="ITokenValidator"/>
+/// and never sees <c>Issue</c>; a login flow takes <see cref="ITokenIssuer"/> and never sees
+/// revocation. The same instance is registered under all four.
+/// </para>
+/// <para>
+/// An implementation of a scheme legitimately does all three — OpenIddict mints and checks and
+/// revokes. What was wrong before was making every <em>consumer</em> see all of it.
+/// </para>
+/// </remarks>
+public interface ITokenManager : IServiceOption, ITokenIssuer, ITokenValidator, ISessionManager
 {
-    /// <summary>
-    /// Issues a token for the grant described by <paramref name="request"/>. Credential validation
-    /// for first-party grants (password/agent_key) happens upstream via <c>IUserCredentialService</c>;
-    /// provider-specific validation (e.g. client_credentials secret check) happens inside this method.
-    /// Returns the thin <see cref="ClaimsPrincipal"/> the provider will use to mint the actual token
-    /// (e.g. via an OpenIddict SignIn) — not the serialized token string itself.
-    /// </summary>
-    /// <param name="request">The token issuance request describing the grant.</param>
-    /// <param name="cancellationToken">Propagated cancellation token.</param>
-    Task<IGenericResult<ClaimsPrincipal>> Issue(TokenIssuanceRequest request, CancellationToken cancellationToken = default);
+    /// <summary>Authenticates and mints in one call, dispatching on the request's grant type.</summary>
+    /// <param name="request">The grant request.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <remarks>
+    /// This is what the step pipeline replaces. Each grant type it switches on — password, agent
+    /// key, external identity, client credentials — is a sequence of steps expressed here as a
+    /// branch, which is why adding a fifth means editing this method rather than adding a
+    /// configuration row.
+    /// <para>
+    /// It stays until flows cover the same ground, because the token endpoint calls it today.
+    /// Nothing new should take a dependency on it.
+    /// </para>
+    /// </remarks>
+    Task<IGenericResult<ClaimsPrincipal>> AuthenticateAndIssue(
+        TokenIssuanceRequest request, CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Validates a bearer token (signature, expiry, and any provider-specific invalidation check,
-    /// e.g. a revocation-list lookup) and returns the principal it carries.
-    /// </summary>
-    /// <param name="token">The bearer token to validate.</param>
-    /// <param name="cancellationToken">Propagated cancellation token.</param>
-    Task<IGenericResult<ClaimsPrincipal>> Validate(string token, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Invalidates a previously issued token so subsequent <see cref="Validate"/> calls reject it.
-    /// </summary>
-    /// <param name="token">The bearer token to invalidate.</param>
-    /// <param name="cancellationToken">Propagated cancellation token.</param>
-    Task<IGenericResult> Invalidate(string token, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Extracts the identity/claims carried by an already-validated token.
-    /// </summary>
-    /// <param name="token">The bearer token to extract claims from.</param>
-    /// <param name="cancellationToken">Propagated cancellation token.</param>
-    Task<IGenericResult<ClaimsPrincipal>> ExtractClaims(string token, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Revokes every active server-side session/authorization for <paramref name="subjectId"/> (e.g. an
-    /// OpenIddict authorization and its refresh tokens). Distinct from <see cref="Invalidate"/>, which
-    /// only deny-lists a single presented token — this tears down ALL of the subject's sessions.
-    /// </summary>
-    /// <param name="subjectId">The subject (user/service principal) identifier whose sessions are revoked.</param>
-    /// <param name="cancellationToken">Propagated cancellation token.</param>
-    Task<IGenericResult> Logout(string subjectId, CancellationToken cancellationToken = default);
+    /// <summary>Reads a token's claims without asserting the token is currently valid.</summary>
+    /// <param name="token">The token.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <remarks>
+    /// Separate from <see cref="ITokenValidator.Validate"/> and deliberately weaker: this parses,
+    /// that verifies. A caller wanting to know whether a token is good must use the validator —
+    /// reading claims from an unverified token is how forged tokens get trusted.
+    /// </remarks>
+    Task<IGenericResult<ClaimsPrincipal>> ExtractClaims(
+        string token, CancellationToken cancellationToken = default);
 }

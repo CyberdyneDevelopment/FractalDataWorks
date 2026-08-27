@@ -101,7 +101,7 @@ public sealed class AuthenticationService : IAuthenticationService
         if (!tokenManagerResult.IsSuccess)
             return tokenManagerResult.ToNewResult<ClaimsPrincipal>();
 
-        var issueResult = await tokenManagerResult.Value!.Issue(request, cancellationToken).ConfigureAwait(false); // Why: IsSuccess guarantees Value is non-null.
+        var issueResult = await tokenManagerResult.Value!.AuthenticateAndIssue(request, cancellationToken).ConfigureAwait(false); // Why: IsSuccess guarantees Value is non-null.
         if (!issueResult.IsSuccess)
         {
             TokenManagerLog.IssuanceFailed(_logger, request.GrantType);
@@ -131,7 +131,7 @@ public sealed class AuthenticationService : IAuthenticationService
         if (!validateResult.IsSuccess)
         {
             TokenManagerLog.ValidationFailed(_logger);
-            return validateResult;
+            return validateResult.ToNewResult<ClaimsPrincipal>();
         }
 
         var claimsResult = await tokenManager.ExtractClaims(token, cancellationToken).ConfigureAwait(false);
@@ -173,14 +173,19 @@ public sealed class AuthenticationService : IAuthenticationService
         if (string.IsNullOrEmpty(subjectId))
             return GenericResult.Failure(TokenManagerLog.LogoutSubjectMissing(_logger));
 
-        var logoutResult = await tokenManager.Logout(subjectId, cancellationToken).ConfigureAwait(false);
+        // Why parsed rather than passed through: Logout takes the principal it ends sessions for,
+        // and a subject claim that is not one identifies nobody here.
+        if (!Guid.TryParse(subjectId, out var principalId))
+            return GenericResult.Failure(TokenManagerLog.LogoutSubjectMissing(_logger));
+
+        var logoutResult = await tokenManager.Logout(principalId, cancellationToken).ConfigureAwait(false);
         if (!logoutResult.IsSuccess)
         {
             TokenManagerLog.LogoutFailed(_logger, subjectId);
             return logoutResult;
         }
 
-        var invalidateResult = await tokenManager.Invalidate(token, cancellationToken).ConfigureAwait(false);
+        var invalidateResult = await tokenManager.Revoke(token, cancellationToken).ConfigureAwait(false);
         if (!invalidateResult.IsSuccess)
         {
             TokenManagerLog.LogoutFailed(_logger, subjectId);

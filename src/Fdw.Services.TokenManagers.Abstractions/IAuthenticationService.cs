@@ -36,8 +36,8 @@ public interface IAuthenticationService
     /// <summary>
     /// Fully logs out the bearer of <paramref name="token"/>: resolves the active
     /// <see cref="ITokenManager"/>, extracts the token's subject, revokes every server-side
-    /// session/authorization for that subject (<see cref="ITokenManager.Logout"/>), then deny-lists the
-    /// presented token itself (<see cref="ITokenManager.Invalidate"/>) so it is rejected immediately.
+    /// session/authorization for that subject (<see cref="ISessionManager.Logout"/>), then deny-lists the
+    /// presented token itself (<see cref="ISessionManager.Revoke"/>) so it is rejected immediately.
     /// </summary>
     /// <param name="token">The bearer token presented for logout.</param>
     /// <param name="cancellationToken">Propagated cancellation token.</param>

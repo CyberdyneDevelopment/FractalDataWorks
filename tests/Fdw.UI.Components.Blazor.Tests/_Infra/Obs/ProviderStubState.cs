@@ -1,3 +1,4 @@
+using System.Threading;
 namespace Fdw.UI.Components.Blazor.Tests.ObsInfra;
 
 /// <summary>
@@ -7,7 +8,13 @@ namespace Fdw.UI.Components.Blazor.Tests.ObsInfra;
 /// </summary>
 internal static class ProviderStubState
 {
-    private static readonly Dictionary<Type, object?> Pending = [];
+    // Why AsyncLocal and not a lock: xUnit runs collections in parallel, and a shared dictionary
+    // corrupts under concurrent writes. A lock would fix the corruption and leave the real bug —
+    // one collection seeing another's seeded context. Flowing the state per async context gives
+    // each test its own.
+    private static readonly AsyncLocal<Dictionary<Type, object?>> PendingState = new();
+
+    private static Dictionary<Type, object?> Pending => PendingState.Value ??= [];
 
     internal static void Set<TContext>(TContext? value) =>
         Pending[typeof(TContext)] = value;
