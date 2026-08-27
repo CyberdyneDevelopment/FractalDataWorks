@@ -23,7 +23,7 @@ namespace Fdw.Services.DataVault;
 /// <remarks>
 /// <para>
 /// The connection and the pepper are resolved ONCE, in system context, by
-/// <see cref="DefaultDataVaultProvider"/> during cache population, then handed to the vault
+/// <see cref="DataVaultProvider"/> during cache population, then handed to the vault
 /// constructor. A vault is therefore fully resolved AT CONSTRUCTION and immutable — there is no
 /// init method and no per-call re-check. <see cref="Query{T}"/>/<see cref="NonQuery"/> are
 /// DB-specific and abstract here; a connection-type-specific base (e.g. <c>MsSqlDataVaultBase</c>)
@@ -53,7 +53,7 @@ public abstract class DataVaultBase : IDataVault, IDisposable
     /// <param name="logger">Optional logger; falls back to <see cref="NullLogger"/>.</param>
     protected DataVaultBase(
         string vaultName,
-        // Why: connection is resolved once by DefaultDataVaultProvider in system context and handed
+        // Why: connection is resolved once by DataVaultProvider in system context and handed
         // in here — the vault is immutable at construction, not a live service-locator dependency.
         [ServiceOptionDependency] IDataConnection connection,
         byte[] pepper,

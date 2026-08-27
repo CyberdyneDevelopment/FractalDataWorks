@@ -16,16 +16,16 @@ namespace Fdw.Services.DataVault;
 /// Instantiation logic belongs in factories — this class carries metadata only.
 /// </remarks>
 public abstract class DataVaultTypeBase<TService, TFactory, TConfiguration> :
-    // Why: DefaultDataVaultProvider (concrete) is the TProvider parameter, not IDataVaultProvider.
+    // Why: DataVaultProvider (concrete) is the TProvider parameter, not IDataVaultProvider.
     // This matches the ConnectionTypeBase pattern where ConnectionProvider is used so that
     // RegisterFactory implementations can call provider.Register(...) without casting.
     ServiceTypeBase<TService, TFactory, TConfiguration>,
     IDataVaultType<TService, TFactory, TConfiguration>
     where TService : IDataVault
     where TFactory : IDataVaultFactory<TService, TConfiguration>
-    // Why: TConfiguration is constrained to IGenericConfiguration (not IDataVaultConfiguration)
+    // Why: TConfiguration is constrained to IGenericConfiguration (not IDataVaultImplementationConfiguration)
     // because DataVaultServiceTypes registers the root provider with DataVaultConfiguration (the header)
-    // as the type parameter. The header implements IGenericConfiguration but not IDataVaultConfiguration.
+    // as the type parameter. The header implements IGenericConfiguration but not IDataVaultImplementationConfiguration.
     // Factory-level runtime checks enforce typed body correctness.
     where TConfiguration : class, IGenericConfiguration
 {

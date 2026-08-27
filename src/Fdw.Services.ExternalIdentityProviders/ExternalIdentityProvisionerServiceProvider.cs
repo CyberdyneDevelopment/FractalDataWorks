@@ -26,7 +26,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// <para>
 /// Overriding <see cref="PlatformServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}.Create"/>
 /// removes the container from the picture entirely: the provider passes <c>this</c> — a value it
-/// already holds — as a plain method argument. Mirrors <c>DefaultDataVaultProvider</c>, which hands the
+/// already holds — as a plain method argument. Mirrors <c>DataVaultProvider</c>, which hands the
 /// factory an already-resolved connection and pepper.
 /// </para>
 /// </remarks>

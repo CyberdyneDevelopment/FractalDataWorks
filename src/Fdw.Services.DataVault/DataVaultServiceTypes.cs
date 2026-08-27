@@ -25,17 +25,22 @@ namespace Fdw.Services.DataVault;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(DataVaultTypeBase<IDataVault, IDataVaultFactory<IDataVault, DataVaultConfiguration>, DataVaultConfiguration>),
+    typeof(DataVaultTypeBase<IDataVault, IDataVaultFactory<IDataVault, IDataVaultImplementationConfiguration>, IDataVaultImplementationConfiguration>),
     typeof(IDataVaultType),
     typeof(DataVaultServiceTypes),
     ServiceInterface = typeof(IDataVault),
-    ProviderType = typeof(DefaultDataVaultProvider),
+    ProviderType = typeof(DataVaultProvider),
     ProviderInterface = typeof(IDataVaultProvider),
     ServiceCategory = "DataVault")]
 public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
-    DataVaultTypeBase<IDataVault, IDataVaultFactory<IDataVault, DataVaultConfiguration>, DataVaultConfiguration>,
-    IDataVaultType<IDataVault, IDataVaultFactory<IDataVault, DataVaultConfiguration>, DataVaultConfiguration>>
+    DataVaultTypeBase<IDataVault, IDataVaultFactory<IDataVault, IDataVaultImplementationConfiguration>, IDataVaultImplementationConfiguration>,
+    IDataVaultType<IDataVault, IDataVaultFactory<IDataVault, IDataVaultImplementationConfiguration>, IDataVaultImplementationConfiguration>>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
     // Configure(), Register() and Initialize() are source-generated
 
     /// <summary>
@@ -92,10 +97,10 @@ public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
 
             builder.Services.AddScoped<IDataVaultProvider>(sp =>
             {
-                var provider = new DefaultDataVaultProvider(
+                var provider = new DataVaultProvider(
                     sp,
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultDataVaultProvider>()
-                    ?? NullLogger<DefaultDataVaultProvider>.Instance);
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<DataVaultProvider>()
+                    ?? NullLogger<DataVaultProvider>.Instance);
 
                 // Why ILogger<DataVaultServiceTypes> and not CreateLogger("DataVaultServiceTypes"): SourceContext then
                 // carries the namespace-qualified collection, and the category cannot drift from the
@@ -106,7 +111,7 @@ public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(DataVaultServiceTypes), provider.GetType().Name);
                 try
                 {
-                    if (sp.GetService<IServiceConfigurationProvider<DataVaultConfiguration>>() is { } cfgProvider)
+                    if (sp.GetService<IDataVaultConfigurationProvider>() is { } cfgProvider)
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.

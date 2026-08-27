@@ -34,11 +34,15 @@ namespace Fdw.Services.DataVault;
 /// cache forever.
 /// </para>
 /// </remarks>
-public sealed class DefaultDataVaultProvider
-    : PlatformServiceProviderBase<IDataVault, DataVaultConfiguration, IDataVaultFactory<IDataVault, DataVaultConfiguration>, IServiceConfigurationProvider<DataVaultConfiguration>>,
+public sealed class DataVaultProvider
+    : PlatformServiceProviderBase<
+          IDataVault,
+          IDataVaultImplementationConfiguration,
+          IDataVaultFactory<IDataVault, IDataVaultImplementationConfiguration>,
+          IDataVaultConfigurationProvider>,
       IDataVaultProvider
 {
-    private readonly ILogger<DefaultDataVaultProvider> _logger;
+    private readonly ILogger<DataVaultProvider> _logger;
 
     // Why: vault instances are expensive to build (resolve + cache a connection and pepper) so we
     // cache them by name. ConcurrentDictionary<string, Lazy<...>> mirrors ConnectionProvider —
@@ -49,21 +53,21 @@ public sealed class DefaultDataVaultProvider
         = new(StringComparer.OrdinalIgnoreCase);
 
     // Why: the ServiceTypeCollection generator constructs this provider with logger ONLY
-    // (new DefaultDataVaultProvider(providerLogger)); it cannot inject these. They are wired ONCE
+    // (new DataVaultProvider(providerLogger)); it cannot inject these. They are wired ONCE
     // during the phase-3 RegisterFactory hook (CredentialVaultType.RegisterFactory), which receives
     // the built IServiceProvider — exactly like RegisterDomainConfigurationProvider. They are immutable thereafter.
     private IDataConnectionProvider? _connectionProvider;
-    private IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration>? _secretManagerProvider;
+    private ISecretManagerProvider? _secretManagerProvider;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DefaultDataVaultProvider"/> class.
+    /// Initializes a new instance of the <see cref="DataVaultProvider"/> class.
     /// </summary>
     /// <param name="logger">Logger instance.</param>
     /// <param name="services">The container this provider resolves factories from.</param>
-    public DefaultDataVaultProvider(IServiceProvider services, ILogger<DefaultDataVaultProvider> logger)
-        : base(services, logger ?? NullLogger<DefaultDataVaultProvider>.Instance)
+    public DataVaultProvider(IServiceProvider services, ILogger<DataVaultProvider> logger)
+        : base(services, logger ?? NullLogger<DataVaultProvider>.Instance)
     {
-        _logger = logger ?? NullLogger<DefaultDataVaultProvider>.Instance;
+        _logger = logger ?? NullLogger<DataVaultProvider>.Instance;
     }
 
     /// <summary>
@@ -76,7 +80,7 @@ public sealed class DefaultDataVaultProvider
     /// <param name="secretManagerProvider">Resolves the secret manager that holds the pepper.</param>
     public void ConfigureResolution(
         IDataConnectionProvider connectionProvider,
-        IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration> secretManagerProvider)
+        ISecretManagerProvider secretManagerProvider)
     {
         _connectionProvider = connectionProvider ?? throw new ArgumentNullException(nameof(connectionProvider));
         _secretManagerProvider = secretManagerProvider ?? throw new ArgumentNullException(nameof(secretManagerProvider));
@@ -95,114 +99,30 @@ public sealed class DefaultDataVaultProvider
         return Get(request.Name!, cancellationToken);
     }
 
-    /// <inheritdoc />
-    public override Task<IGenericResult<IDataVault>> Get(string name, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            return Task.FromResult(GenericResult<IDataVault>.Failure(DataVaultLog.EmptyVaultRequest(_logger)));
-
-        // Why: cache key is the vault name; the cache factory resolves the composed configuration
-        // (header + typed body) via the parent provider, then resolves connection + pepper once.
-        return GetCached(name, ResolveConfigByName);
-    }
-
-    /// <inheritdoc />
-    public override async Task<IGenericResult<IDataVault>> Get(Guid id, CancellationToken cancellationToken = default)
-    {
-        // Why: resolve the header by id first to obtain the vault Name — the cache (and every other
-        // Get overload) is keyed by name, so an id and a name for the same vault share one entry.
-        var configResult = await ResolveConfiguration(id, cancellationToken).ConfigureAwait(false);
-        if (!configResult.IsSuccess || configResult.Value is null)
-            return configResult.ToNewResult<IDataVault>();
-
-        var config = configResult.Value;
-        return await GetCached(config.Name, (_, _) => Task.FromResult(GenericResult<DataVaultConfiguration>.Success(config))).ConfigureAwait(false);
-    }
-
-    /// <inheritdoc />
-    // Why: the caller already holds the composed configuration (e.g. an admin UI path) — use it
-    // directly; do NOT re-resolve it by name. It still routes through the resolve-once-then-cache
-    // path keyed by name, so it shares the cache with the by-name/by-id overloads.
-    public override Task<IGenericResult<IDataVault>> Get(DataVaultConfiguration configuration, CancellationToken cancellationToken = default)
-    {
-        if (configuration is null)
-            return Task.FromResult(GenericResult<IDataVault>.Failure(DataVaultLog.EmptyVaultRequest(_logger)));
-
-        return GetCached(configuration.Name,
-            (_, _) => Task.FromResult(GenericResult<DataVaultConfiguration>.Success(configuration)));
-    }
-
-    // Why: resolves the composed vault configuration (header + typed body) by name via the parent
-    // provider, which runs PopulateTypedBody. Used as the cache factory's config source for Get(name).
-    private Task<IGenericResult<DataVaultConfiguration>> ResolveConfigByName(string name, CancellationToken cancellationToken)
-        => ResolveConfiguration(name, cancellationToken);
-
-    // Why: single cache entry point. The Lazy<Task<...>> guarantees one resolution per name. On any
-    // failure the entry is evicted so the next caller re-attempts rather than being served a cached
-    // failure forever.
-    private Task<IGenericResult<IDataVault>> GetCached(
-        string cacheKey,
-        Func<string, CancellationToken, Task<IGenericResult<DataVaultConfiguration>>> configFactory)
-    {
-        // Why: VSTHRD011/VSTHRD002 fire on Lazy<Task<T>> value factories; the Lazy stores the Task
-        // (not the result), so .Value just returns the Task without blocking. ExecutionAndPublication
-        // ensures a single Task per name.
-#pragma warning disable VSTHRD011, VSTHRD002
-        var lazy = _cache.GetOrAdd(cacheKey, key =>
-            new Lazy<Task<IGenericResult<IDataVault>>>(
-                () => BuildVault(key, configFactory),
-                LazyThreadSafetyMode.ExecutionAndPublication));
-#pragma warning restore VSTHRD011, VSTHRD002
-
-        return lazy.Value;
-    }
-
-    private async Task<IGenericResult<IDataVault>> BuildVault(
-        string cacheKey,
-        Func<string, CancellationToken, Task<IGenericResult<DataVaultConfiguration>>> configFactory)
-    {
-        // Why: vaults are long-lived system objects; resolution must not be cancelled by a single
-        // caller's token (matches ConnectionProvider, which resolves under None inside the Lazy).
-        var configResult = await configFactory(cacheKey, CancellationToken.None).ConfigureAwait(false);
-        if (!configResult.IsSuccess || configResult.Value is null)
-        {
-            _cache.TryRemove(cacheKey, out _);
-            return configResult.ToNewResult<IDataVault>();
-        }
-
-        var vaultResult = await ResolveVault(configResult.Value, CancellationToken.None).ConfigureAwait(false);
-        if (!vaultResult.IsSuccess)
-            _cache.TryRemove(cacheKey, out _);
-
-        return vaultResult;
-    }
-
     // Why: THE single resolve-once path. Validates the providers + typed body, resolves the
     // connection + pepper (delegated to keep this under the complexity gate), then hands both to the
     // registered factory — a pure constructor. The pepper bytes never touch the cache key or any log.
-    private async Task<IGenericResult<IDataVault>> ResolveVault(DataVaultConfiguration config, CancellationToken cancellationToken)
+    private async Task<IGenericResult<IDataVault>> ResolveVault(
+        IDataVaultImplementationConfiguration body, CancellationToken cancellationToken)
     {
-        var vaultName = config.Name;
+        var vaultName = body.Name;
 
         if (_connectionProvider is null || _secretManagerProvider is null)
             return GenericResult<IDataVault>.Failure(DataVaultLog.ResolutionProvidersNotConfigured(_logger, vaultName));
-
-        if (config.Configuration is not IDataVaultConfiguration body)
-            return GenericResult<IDataVault>.Failure(DataVaultLog.FactoryConfigurationInvalid(_logger, vaultName));
 
         var resolved = await ResolveConnectionAndPepper(body, vaultName, cancellationToken).ConfigureAwait(false);
         if (!resolved.IsSuccess)
             return resolved.ToNewResult<IDataVault>();
 
-        if (string.IsNullOrWhiteSpace(config.ServiceOptionType))
+        if (string.IsNullOrWhiteSpace(body.ServiceOptionType))
             return GenericResult<IDataVault>.Failure(DataVaultLog.NoServiceOptionType(_logger, vaultName));
 
-        if (!Factories.TryGetValue(config.ServiceOptionType, out var factory)
-            || factory is not IDataVaultFactory<IDataVault, DataVaultConfiguration> vaultFactory)
+        if (!Factories.TryGetValue(body.ServiceOptionType, out var factory)
+            || factory is not IDataVaultFactory<IDataVault, IDataVaultImplementationConfiguration> vaultFactory)
             return GenericResult<IDataVault>.Failure(
-                DataVaultLog.NoTypedProviderForServiceOptionType(_logger, config.ServiceOptionType, vaultName));
+                DataVaultLog.NoTypedProviderForServiceOptionType(_logger, body.ServiceOptionType, vaultName));
 
-        var createResult = vaultFactory.Create(config, resolved.Value.Connection, resolved.Value.Pepper);
+        var createResult = vaultFactory.Create(body, resolved.Value.Connection, resolved.Value.Pepper);
         if (createResult.IsSuccess)
             DataVaultLog.VaultInitialized(_logger, vaultName, body.ConnectionName);
 
@@ -213,7 +133,7 @@ public sealed class DefaultDataVaultProvider
     // context, fail-loud on every missing input. The pepper bytes never leave this method except into
     // the vault the factory builds.
     private async Task<IGenericResult<(IDataConnection Connection, byte[] Pepper)>> ResolveConnectionAndPepper(
-        IDataVaultConfiguration body, string vaultName, CancellationToken cancellationToken)
+        IDataVaultImplementationConfiguration body, string vaultName, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(body.ConnectionName))
             return GenericResult<(IDataConnection, byte[])>.Failure(DataVaultLog.ConnectionNameMissing(_logger, vaultName));

@@ -8,8 +8,8 @@ namespace Fdw.Services.DataVault;
 /// Produces IDataCommand instances against the DefaultDataVault configuration table.
 /// </summary>
 [TypeOption(typeof(ConfigurationCommands), "DefaultDataVault")]
-public sealed class DefaultDataVaultConfigurationCommand : ConfigurationCommandBase<DefaultDataVaultConfiguration>
+public sealed class SqlDataVaultConfigurationCommand : ConfigurationCommandBase<SqlDataVaultConfiguration>
 {
     /// <inheritdoc/>
-    public DefaultDataVaultConfigurationCommand() : base("DefaultDataVault") { }
+    public SqlDataVaultConfigurationCommand() : base("DefaultDataVault") { }
 }

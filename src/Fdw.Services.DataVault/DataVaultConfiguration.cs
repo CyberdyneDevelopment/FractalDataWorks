@@ -25,7 +25,7 @@ namespace Fdw.Services.DataVault;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "DataVault")]
-public partial class DataVaultConfiguration : IGenericConfiguration
+public partial class DataVaultConfiguration : IDataVaultConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DataVaultConfiguration"/> class.
@@ -105,5 +105,5 @@ public partial class DataVaultConfiguration : IGenericConfiguration
     // Why: [NotMapped] — not a column on sec.DataVault. Written separately via typed provider.
     // Read path populates by dispatching on ServiceOptionType to the appropriate typed provider.
     [NotMapped]
-    public IDataVaultConfiguration? Configuration { get; set; }
+    public IDataVaultImplementationConfiguration? Configuration { get; set; }
 }

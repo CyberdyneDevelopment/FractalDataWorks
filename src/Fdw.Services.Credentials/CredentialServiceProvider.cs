@@ -30,7 +30,7 @@ public sealed class CredentialServiceProvider
 
     // Why: credential service instances cache their resolved vault, so we cache the services
     // by name. ConcurrentDictionary<string, Lazy<...>> mirrors the pattern used by
-    // DefaultDataVaultProvider — the Lazy ensures a single initialization per name even under
+    // DataVaultProvider — the Lazy ensures a single initialization per name even under
     // concurrent first-access. No stale-eviction: services are long-lived system objects;
     // configuration changes restart the host.
     private readonly ConcurrentDictionary<string, Lazy<Task<IGenericResult<ICredentialService>>>> _cache

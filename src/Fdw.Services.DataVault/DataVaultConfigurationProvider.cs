@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Fdw.Configuration;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
+using Fdw.Services.DataVault.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -19,7 +20,12 @@ namespace Fdw.Services.DataVault;
 /// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>; typed providers are registered via the
 /// inherited <c>Register</c>.
 /// </summary>
-public class DataVaultConfigurationProvider : ImplementationConfigurationProviderBase<DataVaultConfiguration, DataVaultConfigurationCommand>
+public class DataVaultConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          DataVaultConfiguration,
+          IDataVaultImplementationConfiguration,
+          DataVaultConfigurationCommand>,
+      IDataVaultConfigurationProvider
 {
 
     /// <summary>
@@ -35,4 +41,16 @@ public class DataVaultConfigurationProvider : ImplementationConfigurationProvide
                dataStoreName, pathName)
     {
     }
+
+    /// <inheritdoc />
+    protected override DataVaultConfiguration Compose<T>(
+        string serviceOptionType,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            ServiceOptionType = serviceOptionType,
+            Configuration = implementationConfiguration,
+        };
 }

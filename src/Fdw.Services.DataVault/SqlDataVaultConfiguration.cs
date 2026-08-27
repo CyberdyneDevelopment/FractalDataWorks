@@ -16,13 +16,13 @@ namespace Fdw.Services.DataVault;
 /// Carries pointers only (never a secret): the <see cref="ConnectionName"/> the vault rides, the
 /// <see cref="SecretManagerName"/> that holds the pepper, and the <see cref="PepperSecretName"/>.
 /// The connection and pepper are resolved once in system context (never re-resolved per request)
-/// by <c>DefaultDataVaultProvider</c>'s by-name cache-factory and handed to the ready vault.
+/// by <c>DataVaultProvider</c>'s by-name cache-factory and handed to the ready vault.
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "DataVault", ServiceType = "Default")]
-public partial class DefaultDataVaultConfiguration : IDataVaultConfiguration
+public partial class SqlDataVaultConfiguration : IDataVaultImplementationConfiguration
 {
     // ========================================
     // IGenericConfiguration — typed body identity
@@ -60,7 +60,7 @@ public partial class DefaultDataVaultConfiguration : IDataVaultConfiguration
     string? IGenericConfiguration.ServiceOptionType => "Default";
 
     // ========================================
-    // IDataVaultConfiguration
+    // IDataVaultImplementationConfiguration
     // ========================================
 
     /// <summary>
@@ -79,7 +79,7 @@ public partial class DefaultDataVaultConfiguration : IDataVaultConfiguration
     /// Resolved once in system context during vault resolution — never re-resolved per request.
     /// </summary>
     // Why: NO default — a missing ConnectionName is a configuration error that fails loud during
-    // vault resolution (DefaultDataVaultProvider), never a silent fallback.
+    // vault resolution (DataVaultProvider), never a silent fallback.
     public string ConnectionName { get; set; } = string.Empty;
 
     /// <summary>
