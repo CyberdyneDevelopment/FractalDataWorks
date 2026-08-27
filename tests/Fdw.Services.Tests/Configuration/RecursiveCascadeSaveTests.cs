@@ -87,9 +87,9 @@ public sealed class RecursiveCascadeSaveTests
         mapping.TestOpId.ShouldBe(operation.Id);
     }
 
-    // Why: the read mirror of the no-fallback guarantee — a header carrying a KIND/engine discriminator
-    // for which NO typed provider is registered must FAIL LOUD (OnNoTypedProvider), never silently return
-    // the bare header. This is the multi-level pipeline case "Get a pipeline whose kind has no provider".
+    // Why: the read mirror of the no-fallback guarantee — a domain record naming a ServiceOptionType
+    // for which no implementation configuration provider is registered must FAIL LOUD, never silently
+    // return the bare record. This is the pipeline case "Get a pipeline whose kind has no provider".
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Cascade")]
@@ -300,10 +300,9 @@ public sealed class RecursiveCascadeSaveTests
     }
 
     /// <summary>
-    /// Gateway test double that returns a single supplied <see cref="TestRootConfiguration"/> header on
-    /// the by-name header read (so Get(name) composes the typed body), and empty for every other read.
-    /// Used to exercise the fail-loud OnNoTypedProvider path without a mock schema tree (Get(name) does
-    /// not resolve a parent join).
+    /// Gateway test double that returns a single supplied <see cref="TestRootConfiguration"/> on the
+    /// by-name read (so Get(name) composes the implementation configuration), and empty for every other
+    /// read. Exercises the fail-loud missing-provider path without a mock schema tree.
     /// </summary>
     private sealed class HeaderReturningGateway : IConfigurationGateway
     {
