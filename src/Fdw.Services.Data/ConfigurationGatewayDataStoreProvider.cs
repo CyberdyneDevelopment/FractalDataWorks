@@ -116,7 +116,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         // no dependency back on ConfigurationGatewayDataStoreProvider (verified: ConfigurationGateway takes
         // IConnectionFactory, ConfigurationSchema, ILogger, DataGatewayResultCache?, IOptions<DataGatewayOptions>?
         // — nothing from this domain). It is kept because IConfigurationGateway is registered by the app's own
-        // AddConfigurationGateway<TConnectionFactory>() call (opt-in per app), so Lazy defers that dependency
+        // configuration gateway (built per declared connection), so the provider defers that dependency
         // to first actual store read (Get/Load) rather than requiring it to be registered at construction time.
         // Why: factory lambda registered for BOTH IDataStoreProvider and concrete ConfigurationGatewayDataStoreProvider
         // so that DataGatewayService can inject the concrete type for the Lazy<IReadOnlyList<IDataStore>> tree

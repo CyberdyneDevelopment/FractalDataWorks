@@ -98,7 +98,7 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
 
         // Why: which Multitenancy option a host runs is per-host topology, declared once in
         // configurationSchema.json (ConfigurationSchema.Multitenancy) — not a shared ConfigurationDb row.
-        // AddConfigurationGateway registers the deserialized ConfigurationSchema as a direct singleton
+        // ConfigurationGatewayTypes registers the deserialized ConfigurationSchema as a direct singleton
         // INSTANCE (TryAddSingleton(schema)), so it is resolvable straight off the pre-Build service
         // descriptor — no factory invocation, no partially-built ServiceProvider required.
         var schema = builder.Services

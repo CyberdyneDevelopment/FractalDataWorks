@@ -31,7 +31,7 @@ public static class AegisHostRegistration
 {
     // Why: the same three discriminator-dispatch converters ConfigurationGatewayExtensions uses —
     // Aegis.McpServer deserializes its own aegisSchema.json directly via STJ (bypassing IConfiguration
-    // binding) rather than calling AddConfigurationGateway, which would additionally register
+    // binding) rather than letting ConfigurationGatewayTypes build them, which would additionally register
     // IConnectionFactory/IConfigurationGateway against a real ConfigurationDb this host never touches.
     private static readonly JsonSerializerOptions SchemaJsonOptions = new(JsonSerializerDefaults.Web)
     {

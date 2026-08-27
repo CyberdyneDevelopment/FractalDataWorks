@@ -46,7 +46,7 @@ public static class Program
 
         // Why: aegisSchema.json is the entire "directory" this standalone host needs — the
         // declared connections, secret managers, and commands. There is no ConfigurationDb
-        // connection here (NEVER AddConfigurationGateway) — see AegisHostRegistration.Register.
+        // connection here — see AegisHostRegistration.Register.
         var schema = AegisHostRegistration.LoadSchema("aegisSchema.json");
 
         // Phase 1a/1b (before Build). Why the results are checked: a phase that fails returns a

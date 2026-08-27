@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
@@ -12,7 +11,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.Data;
 
 /// <summary>
-/// Holds the configuration gateways by the connection each operates on.
+/// Holds the configuration gateways by the connection each one opened.
 /// </summary>
 public sealed class ConfigurationGatewayProvider : IConfigurationGatewayProvider
 {
@@ -22,20 +21,9 @@ public sealed class ConfigurationGatewayProvider : IConfigurationGatewayProvider
     private readonly ILogger<ConfigurationGatewayProvider> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ConfigurationGatewayProvider"/> class.</summary>
-    /// <param name="gateways">The registered configuration gateways.</param>
     /// <param name="logger">The logger.</param>
-    // Why the gateways are indexed by the name each one carries rather than by a name supplied
-    // alongside: a gateway knows the connection it opened, so anything holding one can say which it
-    // has, and the two can never disagree.
-    public ConfigurationGatewayProvider(
-        IEnumerable<IConfigurationGateway> gateways,
-        ILogger<ConfigurationGatewayProvider>? logger = null)
-    {
-        _logger = logger ?? NullLogger<ConfigurationGatewayProvider>.Instance;
-
-        foreach (var gateway in gateways ?? [])
-            Register(gateway.ConnectionName, gateway);
-    }
+    public ConfigurationGatewayProvider(ILogger<ConfigurationGatewayProvider>? logger = null)
+        => _logger = logger ?? NullLogger<ConfigurationGatewayProvider>.Instance;
 
     /// <inheritdoc />
     public IGenericResult<IConfigurationGateway> Get(string connectionName)
@@ -44,33 +32,38 @@ public sealed class ConfigurationGatewayProvider : IConfigurationGatewayProvider
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionNameMissing(_logger));
 
-        if (_gateways.TryGetValue(connectionName, out var gateway))
-            return GenericResult<IConfigurationGateway>.Success(gateway);
+        return _gateways.TryGetValue(connectionName, out var gateway)
+            ? GenericResult<IConfigurationGateway>.Success(gateway)
 
-        // Why the registered names are in the failure: the caller named a connection its collection
-        // holds, so the miss is a wiring question — which gateways did come up — not a lookup question.
-        return GenericResult<IConfigurationGateway>.Failure(
-            DataServiceResultCodes.ByName("NoConfigurationGateway"),
-            ResultDetails.Create(
-                "ConnectionName", connectionName,
-                "Registered", _gateways.IsEmpty ? "(none)" : string.Join(", ", _gateways.Keys.OrderBy(k => k, StringComparer.Ordinal))));
+            // Why the held connections are in the failure: the caller named the connection its
+            // collection declares, so a miss is a question about which gateways came up, not about
+            // whether the name was spelled right.
+            : GenericResult<IConfigurationGateway>.Failure(
+                DataServiceResultCodes.ByName("NoConfigurationGateway"),
+                ResultDetails.Create("ConnectionName", connectionName, "Registered", Held()));
     }
 
     /// <inheritdoc />
-    public IGenericResult Register(string connectionName, IConfigurationGateway gateway)
+    public IGenericResult Register(IConfigurationGateway gateway)
     {
-        if (string.IsNullOrWhiteSpace(connectionName))
-            return GenericResult.Failure(ConfigurationGatewayProviderLog.ConnectionNameMissing(_logger));
-
         if (gateway is null)
-            return GenericResult.Failure(ConfigurationGatewayProviderLog.GatewayNull(_logger, connectionName));
+            return GenericResult.Failure(ConfigurationGatewayProviderLog.GatewayNull(_logger));
 
-        if (!_gateways.TryAdd(connectionName, gateway))
+        if (string.IsNullOrWhiteSpace(gateway.ConnectionName))
+            return GenericResult.Failure(
+                ConfigurationGatewayProviderLog.GatewayNamesNoConnection(_logger, gateway.GetType().Name));
+
+        if (!_gateways.TryAdd(gateway.ConnectionName, gateway))
             return GenericResult.Failure(
                 DataServiceResultCodes.ByName("ConfigurationGatewayAlreadyRegistered"),
-                ResultDetails.Create("ConnectionName", connectionName));
+                ResultDetails.Create("ConnectionName", gateway.ConnectionName));
 
-        ConfigurationGatewayProviderLog.GatewayRegistered(_logger, connectionName, gateway.GetType().Name);
+        ConfigurationGatewayProviderLog.GatewayRegistered(_logger, gateway.ConnectionName, gateway.GetType().Name);
         return GenericResult.Success();
     }
+
+    private string Held()
+        => _gateways.IsEmpty
+            ? "(none)"
+            : string.Join(", ", _gateways.Keys.OrderBy(k => k, StringComparer.Ordinal));
 }

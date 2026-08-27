@@ -99,7 +99,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     /// <param name="schema">
     /// Deserialized <see cref="ConfigurationSchema"/> from <c>configurationSchema.json</c>.
     /// Registered as a singleton via
-    /// <c>AddConfigurationGateway&lt;TFactory&gt;(services, jsonFilePath)</c>.
+    /// <see cref="ConfigurationGatewayTypes"/>, one per connection declared in the schema.
     /// </param>
     /// <param name="logger">Logger (optional — falls back to NullLogger).</param>
     /// <param name="cache">Optional process-wide result cache. When null caching is disabled.</param>
@@ -654,7 +654,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         }
 
         // Why: hand the gateway's own _secretManager (registered alongside it by
-        // AddConfigurationGateway<TFactory, TSecretManager>) to the factory so secret resolution
+        // resolved from the container) to the factory so secret resolution
         // happens here, in-flight, instead of routing through a separate secret-manager service
         // provider whose config provider would re-enter ConfigurationGateway via gateway.Execute
         // and trigger Lazy reentrancy on _connectionLazy.
