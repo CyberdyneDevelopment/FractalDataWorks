@@ -27,6 +27,24 @@ internal static partial class IssuerLog
     internal static partial IGenericMessage Issued(
         ILogger<JwtTokenIssuer> logger, string audience, Guid principalId, string acr);
 
+    /// <summary>The signing key was fetched.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="keyName">Its name in the secret manager.</param>
+    [MessageLogging(EventId = 91183, Level = LogLevel.Debug,
+        Message = "Loaded signing key '{keyName}'")]
+    internal static partial IGenericMessage SigningKeyLoaded(
+        ILogger<SecretManagerSigningCredentialProvider> logger, string keyName);
+
+    /// <summary>The signing key could not be parsed.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="keyName">Its name in the secret manager.</param>
+    // Why Error and why the parse failure is not quoted: nothing can be minted until this is fixed,
+    // and the exception text can contain the key material it failed to read.
+    [MessageLogging(EventId = 91184, Level = LogLevel.Error,
+        Message = "Signing key '{keyName}' is not a readable PEM private key")]
+    internal static partial IGenericMessage SigningKeyUnreadable(
+        ILogger<SecretManagerSigningCredentialProvider> logger, string keyName);
+
     /// <summary>No request was supplied.</summary>
     /// <param name="logger">The logger.</param>
     [MessageLogging(EventId = 91181, Level = LogLevel.Error,
