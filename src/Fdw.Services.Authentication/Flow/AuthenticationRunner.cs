@@ -83,6 +83,8 @@ public sealed class AuthenticationRunner
             return GenericResult<FlowResult>.Failure(
                 RunnerLog.ExecutionFlowMismatch(_logger, record.Id, record.FlowName, flow.Name));
 
+        RunnerLog.FlowResuming(_logger, flow.Name, record.Id, record.CurrentStepIndex);
+
         return await Execute(flow, record.Context, record.CurrentStepIndex, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -90,6 +92,9 @@ public sealed class AuthenticationRunner
     private async Task<IGenericResult<FlowResult>> Execute(
         AuthenticationFlow flow, AuthenticationContext context, int startAt, CancellationToken cancellationToken)
     {
+        if (startAt == 0)
+            RunnerLog.FlowStarting(_logger, flow.Name, flow.Steps.Count);
+
         for (var i = startAt; i < flow.Steps.Count; i++)
         {
             var resolved = _steps.Resolve(flow.Steps[i]);
@@ -97,6 +102,7 @@ public sealed class AuthenticationRunner
                 return resolved.ToNewResult<FlowResult>();
 
             var step = resolved.Value!;
+            RunnerLog.StepExecuting(_logger, flow.Name, flow.Steps[i], i);
 
             // I3 — enforced here and not only when the configuration loaded, because a step that
             // returned NotApplicable contributed nothing however valid the declared order was.
@@ -113,6 +119,8 @@ public sealed class AuthenticationRunner
             {
                 case StepOutcome.Contributed contributed:
                     context = Merge(context, contributed.Contribution, step, flow.Steps[i]);
+                    RunnerLog.StepContributed(_logger, flow.Steps[i],
+                        string.Join(", ", contributed.Contribution.Present()));
                     break;
 
                 case StepOutcome.Challenge challenge:
@@ -145,10 +153,15 @@ public sealed class AuthenticationRunner
             // I2 — recorded from the step's declared method, and only once it has actually
             // succeeded. A step never names its own method at execution time.
             if (step.AuthenticationMethod is { Length: > 0 } method)
+            {
                 context = context with { AchievedMethods = [.. context.AchievedMethods, method] };
+                RunnerLog.MethodRecorded(_logger, flow.Steps[i], method);
+            }
         }
 
         context = context with { AchievedAcr = _acrPolicy.Evaluate(context.AchievedMethods) };
+        RunnerLog.AssuranceEvaluated(_logger,
+            string.Join(", ", context.AchievedMethods), context.AchievedAcr ?? "none");
 
         return await Terminal(flow, context, cancellationToken).ConfigureAwait(false);
     }
@@ -179,7 +192,10 @@ public sealed class AuthenticationRunner
 
     private async Task<IGenericResult<string>> Suspend(
         AuthenticationFlow flow, AuthenticationContext context, int stepIndex, CancellationToken cancellationToken)
-        => await _executions.Suspend(
+    {
+        RunnerLog.FlowSuspended(_logger, flow.Name, flow.Steps[stepIndex]);
+
+        return await _executions.Suspend(
             new ExecutionRecord
             {
                 Id = Guid.NewGuid(),
@@ -189,6 +205,7 @@ public sealed class AuthenticationRunner
                 ExpiresAt = DateTimeOffset.UtcNow.Add(_executionLifetime),
             },
             cancellationToken).ConfigureAwait(false);
+    }
 
     // I4 — the terminal check. Not a step, so a flow cannot be configured to omit it.
     private async Task<IGenericResult<FlowResult>> Terminal(
@@ -207,6 +224,8 @@ public sealed class AuthenticationRunner
         if (!_acrPolicy.Meets(context.AchievedAcr, flow.MinimumAcr))
             return GenericResult<FlowResult>.Failure(RunnerLog.InsufficientAssurance(
                 _logger, flow.Name, context.AchievedAcr ?? "none", flow.MinimumAcr ?? "none"));
+
+        RunnerLog.TerminalPassed(_logger, flow.Name, flow.Audience);
 
         var issued = await _issuer.Issue(
             new IssuanceRequest
@@ -227,8 +246,12 @@ public sealed class AuthenticationRunner
             },
             cancellationToken).ConfigureAwait(false);
 
-        return issued.IsFailure
-            ? issued.ToNewResult<FlowResult>()
-            : GenericResult<FlowResult>.Success(new FlowResult.Completed(issued.Value!));
+        if (issued.IsFailure)
+            return issued.ToNewResult<FlowResult>();
+
+        RunnerLog.FlowCompleted(_logger, flow.Name,
+            string.Join(", ", context.AchievedMethods), context.AchievedAcr ?? "none");
+
+        return GenericResult<FlowResult>.Success(new FlowResult.Completed(issued.Value!));
     }
 }
