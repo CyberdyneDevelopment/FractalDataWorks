@@ -16,7 +16,7 @@ namespace Fdw.Services.Notifications;
 /// needs different behaviour overrides the virtual member here rather than reaching into the base.
 /// </remarks>
 /// <remarks>
-/// Closed over <see cref="INotificationConfiguration"/> rather than the configuration class:
+/// Closed over <see cref="INotificationImplementationConfiguration"/> rather than the configuration class:
 /// <c>IServiceConfigurationProvider&lt;T&gt;</c> is invariant, so a base closed over the class cannot
 /// satisfy an interface closed over the contract. The concrete class is named at the option and
 /// factory level, where the typed body actually matters.
@@ -24,9 +24,9 @@ namespace Fdw.Services.Notifications;
 public sealed class NotificationServiceProvider
     : PlatformServiceProviderBase<
         IPlatformNotification,
-        INotificationConfiguration,
-        INotificationFactory<IPlatformNotification, INotificationConfiguration>,
-        IServiceConfigurationProvider<INotificationConfiguration>>,
+        INotificationImplementationConfiguration,
+        INotificationFactory<IPlatformNotification, INotificationImplementationConfiguration>,
+        INotificationConfigurationProvider>,
       INotificationServiceProvider
 {
     /// <summary>

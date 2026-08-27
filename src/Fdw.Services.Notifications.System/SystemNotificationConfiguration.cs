@@ -1,8 +1,11 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Notifications;
+
+using Fdw.Services.Notifications.Abstractions;
 
 namespace Fdw.Services.Notifications.System;
 
@@ -14,14 +17,29 @@ namespace Fdw.Services.Notifications.System;
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Notification",
     ServiceType = "System")]
-public sealed partial class SystemNotificationConfiguration : NotificationConfiguration
+public sealed partial class SystemNotificationConfiguration : INotificationImplementationConfiguration
 {
+    /// <inheritdoc/>
+    public Guid Id { get; set; }
+
+    /// <inheritdoc/>
+    public string Name { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    public string SectionName => "Notifications:System";
+
+    /// <inheritdoc/>
+    public string ServiceType => "Notification";
+
+    /// <inheritdoc/>
+    public string? ServiceOptionType { get; set; }
+
+    /// <summary>Gets or sets the owning notification's durable id.</summary>
+    public Guid NotificationId { get; set; }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SystemNotificationConfiguration"/> class.
     /// </summary>
-    public SystemNotificationConfiguration() : base("Notification", "System", "Notifications:System")
-    {
-    }
 
     // ========================================
     // Runtime fields (not on parent header)

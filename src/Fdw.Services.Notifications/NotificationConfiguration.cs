@@ -88,4 +88,6 @@ public partial class NotificationConfiguration : INotificationConfiguration
     /// </summary>
     public string? Description { get; set; }
 
+    /// <inheritdoc/>
+    public INotificationImplementationConfiguration? Configuration { get; set; }
 }

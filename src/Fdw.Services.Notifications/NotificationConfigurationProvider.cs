@@ -22,7 +22,12 @@ namespace Fdw.Services.Notifications;
 /// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>. Also registers the
 /// NotificationRule sub-provider (separate config category, same domain).
 /// </summary>
-public class NotificationConfigurationProvider : ImplementationConfigurationProviderBase<NotificationConfiguration, NotificationConfigurationCommand>
+public class NotificationConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          NotificationConfiguration,
+          INotificationImplementationConfiguration,
+          NotificationConfigurationCommand>,
+      INotificationConfigurationProvider
 {
 
     /// <summary>Initializes a new instance of the <see cref="NotificationConfigurationProvider"/> class.</summary>
@@ -36,4 +41,16 @@ public class NotificationConfigurationProvider : ImplementationConfigurationProv
                dataStoreName, pathName)
     {
     }
+
+    /// <inheritdoc />
+    protected override NotificationConfiguration Compose<T>(
+        string serviceOptionType,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            ServiceOptionType = serviceOptionType,
+            Configuration = implementationConfiguration,
+        };
 }

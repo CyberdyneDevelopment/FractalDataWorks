@@ -18,7 +18,7 @@ public abstract class NotificationTypeBase<TService, TFactory, TConfiguration>
       INotificationType
     where TService : IPlatformNotification
     where TFactory : INotificationFactory<TService, TConfiguration>
-    where TConfiguration : NotificationConfiguration
+    where TConfiguration : class, INotificationImplementationConfiguration
 {
     private readonly string _channelName;
 

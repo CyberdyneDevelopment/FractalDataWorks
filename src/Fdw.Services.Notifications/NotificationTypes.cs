@@ -35,7 +35,7 @@ namespace Fdw.Services.Notifications;
 /// Use <c>NotificationTypes.ByName("Email")</c> to look up specific types.
 /// </remarks>
 [ServiceTypeCollection(
-    typeof(NotificationTypeBase<IPlatformNotification, INotificationFactory<IPlatformNotification, NotificationConfiguration>, NotificationConfiguration>),
+    typeof(NotificationTypeBase<IPlatformNotification, INotificationFactory<IPlatformNotification, INotificationImplementationConfiguration>, INotificationImplementationConfiguration>),
     typeof(INotificationType),
     typeof(NotificationTypes),
     ServiceInterface = typeof(IPlatformNotification),
@@ -45,9 +45,14 @@ namespace Fdw.Services.Notifications;
     ServiceCategory = "Notification")]
 public partial class NotificationTypes
     : ServiceTypeCollectionBase<
-        NotificationTypeBase<IPlatformNotification, INotificationFactory<IPlatformNotification, NotificationConfiguration>, NotificationConfiguration>,
+        NotificationTypeBase<IPlatformNotification, INotificationFactory<IPlatformNotification, INotificationImplementationConfiguration>, INotificationImplementationConfiguration>,
         INotificationType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
     // Configure(), Register() and Initialize() are source-generated
 
     /// <summary>
@@ -66,7 +71,7 @@ public partial class NotificationTypes
         // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
         // three points below — the deferred declaration, the milestone, and the zero-option warning.
         // Written out three times it is three chances for them to disagree.
-        var providerService = typeof(IPlatformServiceProvider<IPlatformNotification, NotificationConfiguration>).ToString();
+        var providerService = typeof(INotificationServiceProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -109,12 +114,12 @@ public partial class NotificationTypes
             ServiceTypeLog.DomainOptionsCollected(log, nameof(NotificationTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(NotificationTypes), providerService);
 
-            builder.Services.AddScoped<IPlatformServiceProvider<IPlatformNotification, NotificationConfiguration>>(sp =>
+            builder.Services.AddScoped<INotificationServiceProvider>(sp =>
             {
-                var provider = new DefaultServiceProvider<IPlatformNotification, NotificationConfiguration, INotificationFactory<IPlatformNotification, NotificationConfiguration>, IServiceConfigurationProvider<NotificationConfiguration>>(
+                var provider = new NotificationServiceProvider(
                     sp,
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultServiceProvider<IPlatformNotification, NotificationConfiguration, INotificationFactory<IPlatformNotification, NotificationConfiguration>, IServiceConfigurationProvider<NotificationConfiguration>>>()
-                    ?? NullLogger<DefaultServiceProvider<IPlatformNotification, NotificationConfiguration, INotificationFactory<IPlatformNotification, NotificationConfiguration>, IServiceConfigurationProvider<NotificationConfiguration>>>.Instance);
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<NotificationServiceProvider>()
+                    ?? NullLogger<NotificationServiceProvider>.Instance);
 
                 // Why ILogger<NotificationTypes> and not CreateLogger("NotificationTypes"): SourceContext then
                 // carries the namespace-qualified collection, and the category cannot drift from the
@@ -125,7 +130,7 @@ public partial class NotificationTypes
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(NotificationTypes), provider.GetType().Name);
                 try
                 {
-                    if (sp.GetService<IServiceConfigurationProvider<NotificationConfiguration>>() is { } cfgProvider)
+                    if (sp.GetService<INotificationConfigurationProvider>() is { } cfgProvider)
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.
