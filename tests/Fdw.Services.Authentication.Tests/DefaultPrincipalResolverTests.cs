@@ -13,6 +13,7 @@ using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Users;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Authentication.Tests;
 
@@ -26,7 +27,9 @@ namespace Fdw.Services.Authentication.Tests;
 /// </summary>
 public sealed class DefaultPrincipalResolverTests
 {
-    private static Lazy<IConfigurationGateway> NullGateway() => new(() => null!);
+    // Why an empty provider rather than a fake gateway: these providers are mocked at their virtual
+    // members and never reach a gateway, so holding none states that rather than implying one exists.
+    private static IConfigurationGatewayProvider NullGateway() => new ConfigurationGatewayProvider();
 
     private static Mock<UserTenantConfigurationProvider> CreateTenantProviderMock() => new(
         MockBehavior.Strict,

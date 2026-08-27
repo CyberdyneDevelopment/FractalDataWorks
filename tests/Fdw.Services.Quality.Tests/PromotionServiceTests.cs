@@ -12,6 +12,8 @@ using Fdw.Services.Quality.Configuration;
 using Fdw.Services.Quality.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Data;
+using Moq;
 
 namespace Fdw.Services.Quality.Tests;
 
@@ -30,7 +32,7 @@ public sealed class PromotionServiceTests
         var gatewayMock = new Mock<IConfigurationGateway>(MockBehavior.Loose);
         gatewayMock.SetupGet(g => g.DataStores).Returns(new List<IDataStore>());
 
-        var lazyGateway = new Lazy<IConfigurationGateway>(() => gatewayMock.Object);
+        var lazyGateway = GatewayProviderFor(gatewayMock.Object);
         var qualityProvider = new QualityConfigurationProvider(
             NullLogger<QualityConfigurationProvider>.Instance,
             lazyGateway,
@@ -430,4 +432,25 @@ public sealed class PromotionServiceTests
         result.IsFailure.ShouldBeTrue();
         result.Messages.ShouldContain(m => m.Code == "QUALITY-91001");
     }
+
+    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
+    // connection it was told its rows live on, so the fake has to answer to that name to be found.
+    // Why a double rather than the real provider: these tests exercise what a configuration provider
+    // does with its gateway, not which gateway it selects, so the double answers for whatever
+    // connection is asked. Selection itself is covered where the real provider is under test.
+    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+        => new AnyConnectionGateways(gateway);
+
+    private sealed class AnyConnectionGateways : IConfigurationGatewayProvider
+    {
+        private readonly IConfigurationGateway _gateway;
+
+        public AnyConnectionGateways(IConfigurationGateway gateway) => _gateway = gateway;
+
+        public IGenericResult<IConfigurationGateway> Get(string connectionName)
+            => GenericResult<IConfigurationGateway>.Success(_gateway);
+
+        public IGenericResult Register(IConfigurationGateway gateway) => GenericResult.Success();
+    }
+
 }

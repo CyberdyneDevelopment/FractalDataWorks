@@ -28,6 +28,7 @@
     <ProjectReference Include="..\..\src\Fdw.Messages\Fdw.Messages.csproj" />
     <!-- Module-initializer registration of [TypeOption]s (ConfigurationCommands) for the test (entry-point role) -->
     <ProjectReference Include="..\..\src\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Data\Fdw.Services.Data.csproj" />
   </ItemGroup>
 
 </Project>

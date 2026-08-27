@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Identity.Tests;
 
@@ -45,8 +46,9 @@ public sealed class IdentityHostBootTests
         // The prerequisites a real entry-point app supplies before any domain registers. Named here
         // rather than mocked away, because discovering exactly this list is the point of the test.
         builder.Services.AddHttpClient();
-        builder.Services.AddSingleton(new Lazy<IConfigurationGateway>(() =>
-            throw new InvalidOperationException("No gateway is needed to register the domain; a read would need one.")));
+        // Why the interface and not the concrete type: the collections resolve
+        // IConfigurationGatewayProvider, which ConfigurationGatewayTypes would normally supply.
+        builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
 
         return builder;
     }

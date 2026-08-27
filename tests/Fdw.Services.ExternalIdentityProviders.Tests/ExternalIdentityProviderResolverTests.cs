@@ -8,6 +8,7 @@ using Fdw.Services.ExternalIdentityProviders.Abstractions;
 using Fdw.ServiceTypes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.ExternalIdentityProviders.Tests;
 
@@ -29,7 +30,7 @@ public sealed class ExternalIdentityProviderResolverTests
     private static Mock<ExternalIdentityProviderConfigurationProvider> ConfigProvider()
         => new(
             NullLogger<ExternalIdentityProviderConfigurationProvider>.Instance,
-            new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
+            new ConfigurationGatewayProvider(),
             "ConfigurationDb", "auth");
 
     private static ExternalIdentityProviderResolver Resolver(

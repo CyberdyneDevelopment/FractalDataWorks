@@ -17,6 +17,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
 using Xunit;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Tests.Configuration;
 
@@ -100,7 +101,7 @@ public sealed class RecursiveCascadeSaveTests
         var gateway = new HeaderReturningGateway(header);
         var provider = new ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => gateway),
+            GatewayProviderFor(gateway),
             "ConfigurationDb",
             "pipe");
 
@@ -110,7 +111,7 @@ public sealed class RecursiveCascadeSaveTests
             "SomeOtherKind",
             new ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>(
                 NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>>.Instance,
-                new Lazy<IConfigurationGateway>(() => gateway),
+                GatewayProviderFor(gateway),
                 "ConfigurationDb",
                 "pipe"));
 
@@ -126,7 +127,7 @@ public sealed class RecursiveCascadeSaveTests
 
         return new ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => gateway),
+            GatewayProviderFor(gateway),
             "ConfigurationDb",
             "pipe");
     }
@@ -246,6 +247,9 @@ public sealed class RecursiveCascadeSaveTests
     /// </summary>
     private sealed class RecordingGateway : IConfigurationGateway
     {
+        /// <summary>The connection this fake stands in for.</summary>
+        public string ConnectionName => "PlatformConfiguration";
+
         /// <summary>Targets this fake was asked to invalidate, in call order.</summary>
         public List<DataStoreTarget> Invalidated { get; } = [];
 
@@ -306,6 +310,9 @@ public sealed class RecursiveCascadeSaveTests
     /// </summary>
     private sealed class HeaderReturningGateway : IConfigurationGateway
     {
+        /// <summary>The connection this fake stands in for.</summary>
+        public string ConnectionName => "PlatformConfiguration";
+
         /// <summary>Targets this fake was asked to invalidate, in call order.</summary>
         public List<DataStoreTarget> Invalidated { get; } = [];
 
@@ -352,4 +359,25 @@ public sealed class RecursiveCascadeSaveTests
         public Task<IGenericResult<IDataGatewayTransaction>> BeginTransaction(string connectionName, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<IDataGatewayTransaction>.Failure(new GenericMessage("Transactions not supported in test double")));
     }
+
+    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
+    // connection it was told its rows live on, so the fake has to answer to that name to be found.
+    // Why a double rather than the real provider: these tests exercise what a configuration provider
+    // does with its gateway, not which gateway it selects, so the double answers for whatever
+    // connection is asked. Selection itself is covered where the real provider is under test.
+    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+        => new AnyConnectionGateways(gateway);
+
+    private sealed class AnyConnectionGateways : IConfigurationGatewayProvider
+    {
+        private readonly IConfigurationGateway _gateway;
+
+        public AnyConnectionGateways(IConfigurationGateway gateway) => _gateway = gateway;
+
+        public IGenericResult<IConfigurationGateway> Get(string connectionName)
+            => GenericResult<IConfigurationGateway>.Success(_gateway);
+
+        public IGenericResult Register(IConfigurationGateway gateway) => GenericResult.Success();
+    }
+
 }

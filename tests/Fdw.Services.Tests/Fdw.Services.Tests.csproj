@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\src\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\..\src\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Data\Fdw.Services.Data.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration" />

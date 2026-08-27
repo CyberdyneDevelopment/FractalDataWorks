@@ -17,5 +17,6 @@
          Without it ConfigurationCommands is empty in-test and any real Get() throws. Mirrors the
          working Fdw.Services.Tests / Fdw.Services.Users.Tests test projects. -->
     <ProjectReference Include="..\..\src\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Data\Fdw.Services.Data.csproj" />
   </ItemGroup>
 </Project>

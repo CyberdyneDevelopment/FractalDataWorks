@@ -18,6 +18,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
 using Xunit;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Tests.Configuration;
 
@@ -28,7 +29,7 @@ public class DefaultConfigurationProviderTests
         TestDualConfig[] systemConfigs,
         TestDualConfig[] userConfigs)
     {
-        // Why: The two-arity constructor requires Lazy<IConfigurationGateway>, dataStoreName,
+        // Why: The two-arity constructor requires IConfigurationGatewayProvider, dataStoreName,
         // and pathName. The TCommand generic arg replaces IConfigurationType — the command encodes
         // the table name. We wire up a mock gateway that returns userConfigs for any IDataCommand.
         var mockGateway = new Mock<IConfigurationGateway>();
@@ -38,11 +39,11 @@ public class DefaultConfigurationProviderTests
             .Setup(g => g.Execute<IEnumerable<TestDualConfig>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IEnumerable<TestDualConfig>>.Success(userConfigs));
 
-        var lazyGateway = new Lazy<IConfigurationGateway>(() => mockGateway.Object);
+        var gatewayProvider = GatewayProviderFor(mockGateway.Object);
 
         return new ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand>>.Instance,
-            lazyGateway,
+            gatewayProvider,
             "TestStore",
             "cfg");
     }
@@ -208,7 +209,7 @@ public class DefaultConfigurationProviderTests
 
         var provider = new ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => mockGateway.Object),
+            GatewayProviderFor(mockGateway.Object),
             "ConfigurationDb",
             "data");
 
@@ -250,7 +251,7 @@ public class DefaultConfigurationProviderTests
 
         var provider = new ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => mockGateway.Object),
+            GatewayProviderFor(mockGateway.Object),
             "ConfigurationDb",
             "data");
 
@@ -366,7 +367,7 @@ public class DefaultConfigurationProviderTests
 
         var provider = new ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => mockGateway.Object),
+            GatewayProviderFor(mockGateway.Object),
             "TestStore",
             "cfg");
 
@@ -390,7 +391,7 @@ public class DefaultConfigurationProviderTests
 
         new ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => mockGateway.Object),
+            GatewayProviderFor(mockGateway.Object),
             "TestStore",
             "cfg").InvalidateCache();
 
@@ -467,7 +468,7 @@ public class DefaultConfigurationProviderTests
 
         var provider = new ImplementationConfigurationProviderBase<TestKvpConfiguration, TestKvpCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestKvpConfiguration, TestKvpCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => mockGateway.Object),
+            GatewayProviderFor(mockGateway.Object),
             "ConfigurationDb",
             "conn");
 
@@ -535,7 +536,7 @@ public class DefaultConfigurationProviderTests
 
         var provider = new ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => mockGateway.Object),
+            GatewayProviderFor(mockGateway.Object),
             "ConfigurationDb",
             "data");
 
@@ -636,4 +637,25 @@ public class DefaultConfigurationProviderTests
     {
         public TestContainerFieldCommand() : base("TestContainerField") { }
     }
+
+    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
+    // connection it was told its rows live on, so the fake has to answer to that name to be found.
+    // Why a double rather than the real provider: these tests exercise what a configuration provider
+    // does with its gateway, not which gateway it selects, so the double answers for whatever
+    // connection is asked. Selection itself is covered where the real provider is under test.
+    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+        => new AnyConnectionGateways(gateway);
+
+    private sealed class AnyConnectionGateways : IConfigurationGatewayProvider
+    {
+        private readonly IConfigurationGateway _gateway;
+
+        public AnyConnectionGateways(IConfigurationGateway gateway) => _gateway = gateway;
+
+        public IGenericResult<IConfigurationGateway> Get(string connectionName)
+            => GenericResult<IConfigurationGateway>.Success(_gateway);
+
+        public IGenericResult Register(IConfigurationGateway gateway) => GenericResult.Success();
+    }
+
 }

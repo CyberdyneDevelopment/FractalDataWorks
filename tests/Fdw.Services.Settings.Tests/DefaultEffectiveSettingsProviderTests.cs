@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
 using Xunit;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Settings.Tests;
 
@@ -31,7 +32,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     // non-null arguments. Uses IConfigurationGateway (the marker subinterface required by the provider).
     private static ImplementationConfigurationProviderBase<ServerSettingConfiguration, ServerSettingConfigurationCommand> MakeServerProvider()
     {
-        var lazyGateway = new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>());
+        var lazyGateway = new ConfigurationGatewayProvider();
         return new ImplementationConfigurationProviderBase<ServerSettingConfiguration, ServerSettingConfigurationCommand>(
             NullLogger<ImplementationConfigurationProviderBase<ServerSettingConfiguration, ServerSettingConfigurationCommand>>.Instance,
             lazyGateway,
@@ -41,7 +42,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
 
     private static ImplementationConfigurationProviderBase<TenantSettingConfiguration, TenantSettingConfigurationCommand> MakeTenantProvider()
     {
-        var lazyGateway = new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>());
+        var lazyGateway = new ConfigurationGatewayProvider();
         return new ImplementationConfigurationProviderBase<TenantSettingConfiguration, TenantSettingConfigurationCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TenantSettingConfiguration, TenantSettingConfigurationCommand>>.Instance,
             lazyGateway,
@@ -51,7 +52,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
 
     private static ImplementationConfigurationProviderBase<RoleSettingConfiguration, RoleSettingConfigurationCommand> MakeRoleProvider()
     {
-        var lazyGateway = new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>());
+        var lazyGateway = new ConfigurationGatewayProvider();
         return new ImplementationConfigurationProviderBase<RoleSettingConfiguration, RoleSettingConfigurationCommand>(
             NullLogger<ImplementationConfigurationProviderBase<RoleSettingConfiguration, RoleSettingConfigurationCommand>>.Instance,
             lazyGateway,

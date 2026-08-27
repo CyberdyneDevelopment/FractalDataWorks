@@ -9,6 +9,7 @@ using Fdw.Services.Pipelines.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 using Xunit;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Pipelines.Tests;
 
@@ -34,8 +35,9 @@ public sealed class PipelineServiceConfigurationProviderTests
         builder.Services.AddLogging();
         // Why: the gateway is never dereferenced by this test - PipelineServiceConfigurationProvider's
         // constructor only stores the Lazy<T>, it does not resolve .Value.
-        builder.Services.AddSingleton(new Lazy<IConfigurationGateway>(() =>
-            throw new InvalidOperationException("gateway should not be dereferenced by DI resolution alone.")));
+        // Why the interface and not the concrete type: the collections resolve
+        // IConfigurationGatewayProvider, which ConfigurationGatewayTypes would normally supply.
+        builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
 
         // Act
         PipelineServiceTypes.Register(builder, NullLoggerFactory.Instance, force: true);

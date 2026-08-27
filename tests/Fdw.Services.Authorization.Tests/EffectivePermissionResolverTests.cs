@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Authorization.Tests;
 
@@ -194,7 +195,7 @@ public sealed class EffectivePermissionResolverTests
         var roleProviderMock = new Mock<ImplementationConfigurationProviderBase<RoleConfiguration, RoleConfigurationCommand>>(
             MockBehavior.Loose,
             NullLogger<ImplementationConfigurationProviderBase<RoleConfiguration, RoleConfigurationCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
+            new ConfigurationGatewayProvider(),
             "TestStore", "cfg");
         roleProviderMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<RoleConfiguration>>.Failure(new GenericMessage("Role query failed")));
@@ -330,7 +331,7 @@ public sealed class EffectivePermissionResolverTests
         var userRoleProviderMock = new Mock<UserRoleConfigurationProvider>(
             MockBehavior.Loose,
             NullLogger<UserRoleConfigurationProvider>.Instance,
-            new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
+            new ConfigurationGatewayProvider(),
             "TestStore", "authz");
         // Why: CallBase = true lets GetByUser() run its real body (calls Get() → Failure).
         // Without it, Loose mock returns null for the virtual GetByUser() call.
@@ -452,7 +453,7 @@ public sealed class EffectivePermissionResolverTests
         var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, TCommand>>(
             MockBehavior.Loose,
             NullLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
+            new ConfigurationGatewayProvider(),
             "TestStore", "cfg");
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<TConfig>>.Success(new List<TConfig>(items)));
@@ -466,7 +467,7 @@ public sealed class EffectivePermissionResolverTests
         var mock = new Mock<UserRoleConfigurationProvider>(
             MockBehavior.Loose,
             NullLogger<UserRoleConfigurationProvider>.Instance,
-            new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
+            new ConfigurationGatewayProvider(),
             "TestStore", "authz");
         // Why: CallBase = true lets GetByUser() delegate to its real body, which calls Get().
         // Get() is mocked to return the seeded list so GetByUser() filters by userId as normal.

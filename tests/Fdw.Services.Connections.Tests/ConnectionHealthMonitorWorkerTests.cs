@@ -9,6 +9,7 @@ using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Connections.Tests;
 
@@ -39,8 +40,7 @@ public sealed class ConnectionHealthMonitorWorkerTests
         public StubConnectionConfigurationProvider(IGenericResult<IReadOnlyList<ConnectionConfiguration>> result)
             : base(
                 NullLogger<ConnectionConfigurationProvider>.Instance,
-                new Lazy<IConfigurationGateway>(static () => throw new InvalidOperationException(
-                    "The stub provider overrides Get, so the gateway must never be resolved.")))
+                new ConfigurationGatewayProvider())
         {
             _result = result;
         }

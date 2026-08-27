@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
 using Xunit;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Authorization.Tests;
 
@@ -50,7 +51,7 @@ public class UserRoleConfigurationProviderGetByUserTests
 
         return new UserRoleConfigurationProvider(
             NullLogger<UserRoleConfigurationProvider>.Instance,
-            new Lazy<IConfigurationGateway>(() => gateway.Object));
+            GatewayProviderFor(gateway.Object));
     }
 
     private static UserRoleConfiguration Assignment(string userId)
@@ -139,4 +140,25 @@ public class UserRoleConfigurationProviderGetByUserTests
         result.Value.ShouldNotBeNull();
         result.Value.ShouldBeEmpty();
     }
+
+    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
+    // connection it was told its rows live on, so the fake has to answer to that name to be found.
+    // Why a double rather than the real provider: these tests exercise what a configuration provider
+    // does with its gateway, not which gateway it selects, so the double answers for whatever
+    // connection is asked. Selection itself is covered where the real provider is under test.
+    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+        => new AnyConnectionGateways(gateway);
+
+    private sealed class AnyConnectionGateways : IConfigurationGatewayProvider
+    {
+        private readonly IConfigurationGateway _gateway;
+
+        public AnyConnectionGateways(IConfigurationGateway gateway) => _gateway = gateway;
+
+        public IGenericResult<IConfigurationGateway> Get(string connectionName)
+            => GenericResult<IConfigurationGateway>.Success(_gateway);
+
+        public IGenericResult Register(IConfigurationGateway gateway) => GenericResult.Success();
+    }
+
 }

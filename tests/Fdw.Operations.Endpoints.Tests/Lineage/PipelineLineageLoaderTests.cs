@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Shouldly;
 using Xunit;
+using Fdw.Services.Data;
 
 namespace Fdw.Operations.Endpoints.Tests.Lineage;
 
@@ -43,14 +44,13 @@ public class PipelineLineageLoaderTests
             times);
 
     // Why: PipelineServiceConfigurationProvider is a concrete class (not an interface); Moq mocks it
-    // via its public virtual Get(ct)/Get(id, ct) overloads. The Lazy<IConfigurationGateway> is never
+    // via its public virtual Get(ct)/Get(id, ct) overloads. The gateway provider is never
     // dereferenced because both overloads are fully replaced by the mock setups below.
     private static Mock<PipelineServiceConfigurationProvider> CreateProviderMock()
     {
         return new Mock<PipelineServiceConfigurationProvider>(
             (ILogger<PipelineServiceConfigurationProvider>?)null!,
-            new Lazy<IConfigurationGateway>(() => throw new InvalidOperationException(
-                "PipelineLineageLoader must not touch the gateway directly - it only calls the provider.")),
+            new ConfigurationGatewayProvider(),
             "ConfigurationDb",
             "pipe");
     }

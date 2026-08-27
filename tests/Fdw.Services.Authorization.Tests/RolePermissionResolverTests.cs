@@ -13,6 +13,7 @@ using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Shouldly;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Authorization.Tests;
 
@@ -145,7 +146,7 @@ public sealed class RolePermissionResolverTests
         var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, TCommand>>(
             MockBehavior.Loose,
             NullLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>.Instance,
-            new Lazy<IConfigurationGateway>(() => Mock.Of<IConfigurationGateway>()),
+            new ConfigurationGatewayProvider(),
             "TestStore", "authz");
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<TConfig>>.Success(new List<TConfig>(items)));
