@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 
@@ -10,16 +9,22 @@ namespace Fdw.UI.Components.Blazor.Tests.DataInfra;
 /// </summary>
 internal static class ProviderStubState
 {
-    // Why concurrent: xUnit runs test collections in parallel and bUnit instantiates components on
-    // its own renderer thread, so Set and Take genuinely interleave across threads. A plain
-    // Dictionary corrupts its buckets under that access and throws from an unrelated test.
-    private static readonly ConcurrentDictionary<Type, object?> s_pending = new();
+    // Why AsyncLocal: xUnit runs test collections in parallel, so a single static store is shared by
+    // tests running at the same moment - one test's Set is taken by another's Take, and both render
+    // the wrong context. AsyncLocal flows the pending value into the render call's own execution
+    // context and nowhere else, so each test hands off only to itself.
+    private static readonly AsyncLocal<Dictionary<Type, object?>?> s_pending = new();
 
-    internal static void Set<TContext>(TContext? value) =>
-        s_pending[typeof(TContext)] = value;
+    internal static void Set<TContext>(TContext? value)
+        => (s_pending.Value ??= [])[typeof(TContext)] = value;
 
-    internal static TContext? Take<TContext>() where TContext : new() =>
-        s_pending.TryRemove(typeof(TContext), out var value) ? (TContext?)value : default;
+    internal static TContext? Take<TContext>() where TContext : new()
+    {
+        var pending = s_pending.Value;
+        if (pending is null || !pending.Remove(typeof(TContext), out var value))
+            return default;
+        return (TContext?)value;
+    }
 }
 
 /// <summary>
