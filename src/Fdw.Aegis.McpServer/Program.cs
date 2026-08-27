@@ -83,7 +83,7 @@ public static class Program
         var app = builder.Build();
 
         // Phase 2 (after Build).
-        var initialized = AegisHostRegistration.Initialize(app, schema, loggerFactory: null);
+        var initialized = AegisHostRegistration.Initialize(app, loggerFactory: null);
         if (initialized.IsFailure)
         {
             // Why stderr and not a logger: this mirrors the Serilog guard above — stdout is the
