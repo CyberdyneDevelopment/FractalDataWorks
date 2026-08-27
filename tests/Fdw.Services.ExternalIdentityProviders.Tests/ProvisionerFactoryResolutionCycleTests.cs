@@ -37,7 +37,7 @@ public sealed class ProvisionerFactoryResolutionCycleTests
 {
     // Why: the exact provider service type whose realization the factory must NOT re-enter.
     private static readonly Type ProviderServiceType =
-        typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>);
+        typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>);
 
     [Fact]
     [Trait("Priority", "P0")]

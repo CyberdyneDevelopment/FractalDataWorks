@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Services.ExternalIdentityProviders.Abstractions;
+
 namespace Fdw.Services.ExternalIdentityProviders;
 
 /// <summary>
@@ -17,7 +19,12 @@ namespace Fdw.Services.ExternalIdentityProviders;
 // Why: ExternalIdentityProviderConfiguration is loaded from ConfigurationDb at runtime via
 // Lazy<IConfigurationGateway>, not through BindConfiguration("ExternalIdentityProviders:..."). Mirrors
 // TokenManagerConfigurationProvider exactly.
-public class ExternalIdentityProviderConfigurationProvider : ImplementationConfigurationProviderBase<ExternalIdentityProviderConfiguration, ExternalIdentityProviderConfigurationCommand>
+public class ExternalIdentityProviderConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          ExternalIdentityProviderConfiguration,
+          IExternalIdentityProviderImplementationConfiguration,
+          ExternalIdentityProviderConfigurationCommand>,
+      IExternalIdentityProviderConfigurationProvider
 {
     /// <summary>
     /// Registers the ExternalIdentityProviderConfigurationProvider and interface forwardings with DI,
@@ -49,4 +56,16 @@ public class ExternalIdentityProviderConfigurationProvider : ImplementationConfi
                dataStoreName, pathName)
     {
     }
+
+    /// <inheritdoc />
+    protected override ExternalIdentityProviderConfiguration Compose<T>(
+        string serviceOptionType,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            ServiceOptionType = serviceOptionType,
+            Configuration = implementationConfiguration,
+        };
 }

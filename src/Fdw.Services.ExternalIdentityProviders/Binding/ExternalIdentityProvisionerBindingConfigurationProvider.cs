@@ -12,6 +12,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Services.ExternalIdentityProviders.Abstractions;
+
 namespace Fdw.Services.ExternalIdentityProviders.Binding;
 
 /// <summary>

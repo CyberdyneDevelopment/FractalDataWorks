@@ -12,7 +12,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 
 /// <summary>
 /// Factory that builds <see cref="ChainedExternalIdentityProvisioner"/> instances from a resolved
-/// <see cref="IExternalIdentityProvisionerConfiguration"/> header (whose <c>Configuration</c> property
+/// <see cref="IExternalIdentityProvisionerImplementationConfiguration"/> header (whose <c>Configuration</c> property
 /// carries the composed <see cref="ChainedExternalIdentityProvisionerConfiguration"/> typed body).
 /// A PURE constructor: it holds no providers and resolves nothing. The provisioner provider needed for
 /// Provision-time sibling lookup is supplied by the provider itself, as an argument to
@@ -22,7 +22,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// <para>
 /// <strong>Do not ctor-inject a provider here.</strong> This factory is resolved from inside the
 /// source-generated scoped resolver lambda for
-/// <c>IPlatformServiceProvider&lt;IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration&gt;</c>.
+/// <c>IPlatformServiceProvider&lt;IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration&gt;</c>.
 /// Taking that provider as a constructor dependency made resolving the factory re-enter the same lambda —
 /// whose cache entry is not published yet — producing unbounded recursion. MEDI's StackGuard migrates it
 /// onto fresh stacks instead of throwing, so the host HANGS SILENTLY (no exception, no log) until it is
@@ -31,7 +31,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// </para>
 /// </remarks>
 internal sealed class ChainedExternalIdentityProvisionerFactory
-    : IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>
+    : IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ChainedExternalIdentityProvisionerFactory> _logger;
@@ -47,7 +47,7 @@ internal sealed class ChainedExternalIdentityProvisionerFactory
     // Why: the parameterless-provider overload cannot build a working Chained provisioner — a chain
     // MUST be able to resolve its steps' sibling provisioners at Provision time. Fail loud rather than
     // hand back a provisioner with a null provider that would NRE at the first Provision call.
-    public IGenericResult<IExternalIdentityProvisioner> Create(IExternalIdentityProvisionerConfiguration configuration)
+    public IGenericResult<IExternalIdentityProvisioner> Create(IExternalIdentityProvisionerImplementationConfiguration configuration)
         => GenericResult<IExternalIdentityProvisioner>.Failure(
             ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.Name ?? "(null)",
                 "a Chained provisioner requires the provisioner provider for sibling lookup; it must be created "
@@ -56,8 +56,8 @@ internal sealed class ChainedExternalIdentityProvisionerFactory
 
     /// <inheritdoc />
     public IGenericResult<IExternalIdentityProvisioner> Create(
-        IExternalIdentityProvisionerConfiguration configuration,
-        IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration> provisionerProvider)
+        IExternalIdentityProvisionerImplementationConfiguration configuration,
+        IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration> provisionerProvider)
     {
         if (configuration is null)
             return GenericResult<IExternalIdentityProvisioner>.Failure(
@@ -67,13 +67,13 @@ internal sealed class ChainedExternalIdentityProvisionerFactory
             return GenericResult<IExternalIdentityProvisioner>.Failure(
                 ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration.Name, "provisionerProvider was null."));
 
-        if (configuration.Configuration is not ChainedExternalIdentityProvisionerConfiguration typed)
+        if (configuration is not ChainedExternalIdentityProvisionerConfiguration typed)
             return GenericResult<IExternalIdentityProvisioner>.Failure(
                 ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration.Name,
-                    "no composed ChainedExternalIdentityProvisionerConfiguration typed body — the header's ServiceOptionType must be 'Chained' and the typed provider must be registered."));
+                    "the configuration is not a ChainedExternalIdentityProvisionerConfiguration."));
 
         var provisioner = new ChainedExternalIdentityProvisioner(
-            configuration, typed, provisionerProvider, _loggerFactory.CreateLogger<ChainedExternalIdentityProvisioner>());
+            typed, provisionerProvider, _loggerFactory.CreateLogger<ChainedExternalIdentityProvisioner>());
 
         return GenericResult<IExternalIdentityProvisioner>.Success(provisioner);
     }
@@ -81,12 +81,12 @@ internal sealed class ChainedExternalIdentityProvisionerFactory
     /// <inheritdoc />
     public IGenericResult<IExternalIdentityProvisioner> Create(IGenericConfiguration configuration)
     {
-        if (configuration is IExternalIdentityProvisionerConfiguration typed)
+        if (configuration is IExternalIdentityProvisionerImplementationConfiguration typed)
             return Create(typed);
 
         return GenericResult<IExternalIdentityProvisioner>.Failure(
             ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.Name ?? "(null)",
-                $"expected IExternalIdentityProvisionerConfiguration but received '{configuration?.GetType().FullName ?? "null"}'."));
+                $"expected IExternalIdentityProvisionerImplementationConfiguration but received '{configuration?.GetType().FullName ?? "null"}'."));
     }
 
     /// <inheritdoc />

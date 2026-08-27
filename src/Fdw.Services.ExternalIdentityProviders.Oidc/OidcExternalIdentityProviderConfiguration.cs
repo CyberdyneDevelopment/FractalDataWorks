@@ -29,7 +29,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Oidc;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "ExternalIdentityProvider", ServiceType = "Oidc")]
-public sealed partial class OidcExternalIdentityProviderConfiguration : IExternalIdentityProviderConfiguration
+public sealed partial class OidcExternalIdentityProviderConfiguration : IExternalIdentityProviderImplementationConfiguration
 {
     // ========================================
     // IGenericConfiguration (typed-body identity)

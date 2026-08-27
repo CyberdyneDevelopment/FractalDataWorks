@@ -3,6 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
 
+using Fdw.Services.ExternalIdentityProviders.Abstractions;
+
 namespace Fdw.Services.ExternalIdentityProviders.Binding;
 
 /// <summary>

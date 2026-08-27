@@ -15,27 +15,16 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// look up sibling provisioners by name at <c>Provision</c> time.
 /// </summary>
 /// <remarks>
-/// <para>
-/// This exists to keep provisioner factories PURE. A factory that ctor-injected
-/// <c>IPlatformServiceProvider&lt;IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration&gt;</c>
-/// was resolved from inside that provider's own generated scoped resolver lambda, so resolving it
-/// re-entered the lambda — whose cache entry is not published yet — and recursed without bound. MEDI's
-/// StackGuard migrates that recursion onto fresh stacks instead of throwing, so the host hung SILENTLY
-/// until it was killed (FDW-615).
-/// </para>
-/// <para>
-/// Overriding <see cref="PlatformServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}.Create"/>
-/// removes the container from the picture entirely: the provider passes <c>this</c> — a value it
-/// already holds — as a plain method argument. Mirrors <c>DataVaultProvider</c>, which hands the
-/// factory an already-resolved connection and pepper.
-/// </para>
+/// A chained provisioner needs the provider to resolve its sibling steps at Provision time. It is
+/// given that provider when its factory is constructed, so nothing resolves it from the container at
+/// create time — which is what recursed without bound when it did (FDW-615).
 /// </remarks>
 public class ExternalIdentityProvisionerServiceProvider
     : PlatformServiceProviderBase<
         IExternalIdentityProvisioner,
-        IExternalIdentityProvisionerConfiguration,
-        IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>,
-        IServiceConfigurationProvider<IExternalIdentityProvisionerConfiguration>>,
+        IExternalIdentityProvisionerImplementationConfiguration,
+        IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>,
+        IExternalIdentityProvisionerConfigurationProvider>,
       IExternalIdentityProvisionerServiceProvider
 {
     /// <summary>
@@ -47,14 +36,14 @@ public class ExternalIdentityProvisionerServiceProvider
         IServiceProvider services,
         ILogger<PlatformServiceProviderBase<
             IExternalIdentityProvisioner,
-            IExternalIdentityProvisionerConfiguration,
-            IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>,
-            IServiceConfigurationProvider<IExternalIdentityProvisionerConfiguration>>> logger)
+            IExternalIdentityProvisionerImplementationConfiguration,
+            IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>,
+            IExternalIdentityProvisionerConfigurationProvider>> logger)
         : base(services, logger ?? NullLogger<PlatformServiceProviderBase<
             IExternalIdentityProvisioner,
-            IExternalIdentityProvisionerConfiguration,
-            IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>,
-            IServiceConfigurationProvider<IExternalIdentityProvisionerConfiguration>>>.Instance)
+            IExternalIdentityProvisionerImplementationConfiguration,
+            IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>,
+            IExternalIdentityProvisionerConfigurationProvider>>.Instance)
     {
     }
 }

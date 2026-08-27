@@ -9,12 +9,12 @@ namespace Fdw.Services.ExternalIdentityProviders.Abstractions;
 /// </summary>
 /// <remarks>
 /// The domain's name for the platform contract, rather than a bare
-/// <c>IPlatformServiceProvider&lt;IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration&gt;</c>
+/// <c>IPlatformServiceProvider&lt;IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration&gt;</c>
 /// at every injection site. Narrowing at the configuration arity keeps the registration and
 /// typed-configuration overloads reachable through it — an arity-1 interface hides them even though the
 /// concrete provider implements them.
 /// </remarks>
 public interface IExternalIdentityProvisionerServiceProvider
-    : IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>
+    : IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>
 {
 }

@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Services.ExternalIdentityProviders.Abstractions;
+
 namespace Fdw.Services.ExternalIdentityProviders;
 
 /// <summary>
@@ -18,7 +20,12 @@ namespace Fdw.Services.ExternalIdentityProviders;
 // Why: ExternalIdentityProvisionerConfiguration is loaded from ConfigurationDb at runtime via
 // Lazy<IConfigurationGateway>, not through BindConfiguration("ExternalIdentityProvisioners:..."). Mirrors
 // ExternalIdentityProviderConfigurationProvider exactly, targeting sec instead of auth.
-public class ExternalIdentityProvisionerConfigurationProvider : ImplementationConfigurationProviderBase<ExternalIdentityProvisionerConfiguration, ExternalIdentityProvisionerConfigurationCommand>
+public class ExternalIdentityProvisionerConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          ExternalIdentityProvisionerConfiguration,
+          IExternalIdentityProvisionerImplementationConfiguration,
+          ExternalIdentityProvisionerConfigurationCommand>,
+      IExternalIdentityProvisionerConfigurationProvider
 {
     /// <summary>
     /// Registers the ExternalIdentityProvisionerConfigurationProvider and interface forwardings with
@@ -50,4 +57,16 @@ public class ExternalIdentityProvisionerConfigurationProvider : ImplementationCo
                dataStoreName, pathName)
     {
     }
+
+    /// <inheritdoc />
+    protected override ExternalIdentityProvisionerConfiguration Compose<T>(
+        string serviceOptionType,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            ServiceOptionType = serviceOptionType,
+            Configuration = implementationConfiguration,
+        };
 }

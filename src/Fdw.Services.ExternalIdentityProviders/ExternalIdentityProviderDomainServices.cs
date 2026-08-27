@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 
+using Fdw.Services.ExternalIdentityProviders.Abstractions;
+
 namespace Fdw.Services.ExternalIdentityProviders;
 
 /// <summary>

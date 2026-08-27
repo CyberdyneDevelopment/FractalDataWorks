@@ -25,7 +25,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "ExternalIdentityProvisioner")]
-public partial class ExternalIdentityProvisionerConfiguration : IPlatformServiceConfiguration<IExternalIdentityProvisionerConfiguration>
+public partial class ExternalIdentityProvisionerConfiguration : IExternalIdentityProvisionerConfiguration
 {
     /// <inheritdoc />
     // Why: get-only — [GenerateMapper] does not map a property with no public setter, so this is
@@ -64,7 +64,7 @@ public partial class ExternalIdentityProvisionerConfiguration : IPlatformService
     // path saves the typed body independently via its own provider. The read path populates this by
     // dispatching on ServiceOptionType to the appropriate typed provider.
     [NotMapped]
-    public IExternalIdentityProvisionerConfiguration? Configuration { get; set; }
+    public IExternalIdentityProvisionerImplementationConfiguration? Configuration { get; set; }
 
     // ── Tenant / visibility / audit ──────────────────────────────────────────
     // Why: no value defaults — a missing tenant/visibility/audit value must read as its

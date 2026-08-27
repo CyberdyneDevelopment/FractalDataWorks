@@ -4,6 +4,8 @@ using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Services.ExternalIdentityProviders.Abstractions;
+
 namespace Fdw.Services.ExternalIdentityProviders.Chained;
 
 /// <summary>
@@ -20,7 +22,10 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// Mirrors <c>OidcExternalIdentityProviderConfigurationProvider</c> from the ExternalIdentityProviders domain.
 /// </remarks>
 public class ChainedExternalIdentityProvisionerConfigurationProvider
-    : ImplementationConfigurationProviderBase<ChainedExternalIdentityProvisionerConfiguration, ChainedExternalIdentityProvisionerConfigurationCommand>
+    : ImplementationConfigurationProvider<
+          IExternalIdentityProvisionerImplementationConfiguration,
+          ChainedExternalIdentityProvisionerConfiguration,
+          ChainedExternalIdentityProvisionerConfigurationCommand>
 {
     /// <summary>
     /// Initializes a new instance of the

@@ -26,7 +26,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "ExternalIdentityProvisioner", ServiceType = "Chained")]
-public sealed partial class ChainedExternalIdentityProvisionerConfiguration : IExternalIdentityProvisionerConfiguration
+public sealed partial class ChainedExternalIdentityProvisionerConfiguration : IExternalIdentityProvisionerImplementationConfiguration
 {
     // ========================================
     // IGenericConfiguration (typed-body identity)
@@ -63,6 +63,10 @@ public sealed partial class ChainedExternalIdentityProvisionerConfiguration : IE
     /// Gets or sets the durable logical FK to <c>sec.ExternalIdentityProvisioner.Id</c> (the parent header).
     /// </summary>
     public Guid ExternalIdentityProvisionerId { get; set; }
+
+    /// <inheritdoc/>
+    public string Name { get; set; } = string.Empty;
+
 
     // ========================================
     // Ordered children
