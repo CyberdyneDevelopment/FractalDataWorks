@@ -25,11 +25,11 @@ public class ThemeConfigurationProvider : ImplementationConfigurationProviderBas
     /// <summary>Initializes a new instance of the <see cref="ThemeConfigurationProvider"/> class.</summary>
     public ThemeConfigurationProvider(
         ILogger<ThemeConfigurationProvider>? logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "settings")
         : base(logger ?? NullLogger<ThemeConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<ThemeConfigurationProvider>.Instance;

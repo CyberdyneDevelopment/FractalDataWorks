@@ -20,16 +20,16 @@ public sealed class LocalHealthMonitorConfigurationProvider
     /// Initializes a new instance of the <see cref="LocalHealthMonitorConfigurationProvider"/> class.
     /// </summary>
     /// <param name="logger">The logger for this provider.</param>
-    /// <param name="lazyGateway">The gateway this implementation's rows are read through.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
     /// <param name="dataStoreName">The connection the rows live in.</param>
     /// <param name="pathName">The schema the rows live in.</param>
     public LocalHealthMonitorConfigurationProvider(
         ILogger<LocalHealthMonitorConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ServerConfiguration",
         string pathName = "settings")
         : base(logger ?? NullLogger<LocalHealthMonitorConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName,
                pathName)
     {

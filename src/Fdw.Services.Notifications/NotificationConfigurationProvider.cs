@@ -33,11 +33,11 @@ public class NotificationConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="NotificationConfigurationProvider"/> class.</summary>
     public NotificationConfigurationProvider(
         ILogger<NotificationConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "notify")
         : base(logger ?? NullLogger<NotificationConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

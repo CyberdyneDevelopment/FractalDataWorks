@@ -25,11 +25,11 @@ public class EscalationConfigurationProvider : ImplementationConfigurationProvid
     /// <summary>Initializes a new instance of the <see cref="EscalationConfigurationProvider"/> class.</summary>
     public EscalationConfigurationProvider(
         ILogger<EscalationConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "workflow")
         : base(logger ?? NullLogger<EscalationConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }
@@ -51,7 +51,7 @@ public class EscalationConfigurationProvider : ImplementationConfigurationProvid
             .WithCaching()
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<EscalationLevelConfiguration>>(
+        var result = await Execute<IEnumerable<EscalationLevelConfiguration>>(
             command, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
     }
@@ -66,7 +66,7 @@ public class EscalationConfigurationProvider : ImplementationConfigurationProvid
             .WithCaching()
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<EscalationLevelRecipientConfiguration>>(
+        var result = await Execute<IEnumerable<EscalationLevelRecipientConfiguration>>(
             command, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
     }
@@ -81,7 +81,7 @@ public class EscalationConfigurationProvider : ImplementationConfigurationProvid
             .Where("IsDeleted", false)
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<EscalationLevelConfiguration>>(
+        var result = await Execute<IEnumerable<EscalationLevelConfiguration>>(
             command, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.FirstOrDefault() : null;
     }
@@ -96,7 +96,7 @@ public class EscalationConfigurationProvider : ImplementationConfigurationProvid
             .Where("IsDeleted", false)
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<EscalationLevelConfiguration>>(
+        var result = await Execute<IEnumerable<EscalationLevelConfiguration>>(
             command, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.FirstOrDefault() : null;
     }
@@ -111,7 +111,7 @@ public class EscalationConfigurationProvider : ImplementationConfigurationProvid
             .Where("IsDeleted", false)
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<EscalationLevelRecipientConfiguration>>(
+        var result = await Execute<IEnumerable<EscalationLevelRecipientConfiguration>>(
             command, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.FirstOrDefault() : null;
     }
@@ -126,7 +126,7 @@ public class EscalationConfigurationProvider : ImplementationConfigurationProvid
             .Where("IsDeleted", false)
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<EscalationLevelRecipientConfiguration>>(
+        var result = await Execute<IEnumerable<EscalationLevelRecipientConfiguration>>(
             command, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.FirstOrDefault() : null;
     }

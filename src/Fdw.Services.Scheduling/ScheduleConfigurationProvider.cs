@@ -21,11 +21,11 @@ public class ScheduleConfigurationProvider : ImplementationConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="ScheduleConfigurationProvider"/> class.</summary>
     public ScheduleConfigurationProvider(
         ILogger<ScheduleConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sched")
         : base(logger ?? NullLogger<ScheduleConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

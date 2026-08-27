@@ -32,7 +32,7 @@ namespace Fdw.Services.Data;
 /// <remarks>
 /// The hierarchy assembly that previously lived here (<c>AssembleHierarchy</c>) was removed
 /// in Phase 6.M — it caused the ConfigurationGateway/DataStoreLoader cycle by making
-/// gateway round-trips for every DataStore lookup. The IDataStore tree is now assembled
+/// gatewayProvider round-trips for every DataStore lookup. The IDataStore tree is now assembled
 /// in memory by the per-transport <c>DataStoreBuilderBase</c> from the nested store configuration
 /// (the same builder mechanism ConfigurationGateway and ConfigurationGatewayDataStoreProvider.Load feed).
 /// </remarks>
@@ -59,7 +59,7 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
         services.TryAddSingleton<DataStoreConfigurationProvider>(sp =>
             new DataStoreConfigurationProvider(
                 sp.GetService<ILogger<DataStoreConfigurationProvider>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 new Lazy<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>(
                     () => sp.GetRequiredService<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>())));
         services.TryAddSingleton<ImplementationConfigurationProviderBase<DataStoreConfiguration, DataStoreConfigurationCommand>>(
@@ -73,21 +73,21 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
             new ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand>(
                 sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand>>()
                     ?? NullLogger<ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 dataStoreName, pathName));
 
         services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>(sp =>
             new ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>(
                 sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>()
                     ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 dataStoreName, pathName));
 
         services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>>(sp =>
             new ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>(
                 sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>>()
                     ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 dataStoreName, pathName));
 
         RegisterContainerKeyProviders(services, dataStoreName, pathName);
@@ -100,26 +100,26 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
             new ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>(
                 sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>>()
                     ?? NullLogger<ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 dataStoreName, pathName));
 
         services.TryAddSingleton<ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>>(sp =>
             new ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>(
                 sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>>()
                     ?? NullLogger<ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 dataStoreName, pathName));
     }
 
     /// <summary>Initializes a new instance of the <see cref="DataStoreConfigurationProvider"/> class.</summary>
     public DataStoreConfigurationProvider(
         ILogger<DataStoreConfigurationProvider>? logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         Lazy<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>> containerProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "data")
         : base(logger ?? NullLogger<DataStoreConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<DataStoreConfigurationProvider>.Instance;
@@ -233,14 +233,14 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
             new ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>(
                 sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>()
                     ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 dataStoreName, pathName));
 
         services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>(sp =>
             new ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>(
                 sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>()
                     ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 dataStoreName, pathName));
     }
 

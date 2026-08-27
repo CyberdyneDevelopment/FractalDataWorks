@@ -112,7 +112,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<IConnectionConfigurationProvider>(sp =>
                 new ConnectionConfigurationProvider(
                     sp.GetService<ILogger<ConnectionConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     ConfigurationConnection));
 
             // Why one health checkable for the domain rather than one per connection: conn.Connection
@@ -121,7 +121,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                 ServiceDescriptor.Singleton<IHealthCheckable, ConnectionsHealthCheckable>());
 
             // Why Scoped: ConnectionHealthService depends on the Scoped IDataGateway, and a Singleton
-            // would pin the first-resolved scope's gateway forever.
+            // would pin the first-resolved scope's gatewayProvider forever.
             builder.Services.TryAddScoped<IConnectionHealthService, ConnectionHealthService>();
 
             builder.Services.AddHostedService<ConnectionHealthMonitorWorker>();

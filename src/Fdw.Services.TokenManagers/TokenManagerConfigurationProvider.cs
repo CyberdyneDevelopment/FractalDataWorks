@@ -29,11 +29,11 @@ public class TokenManagerConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="TokenManagerConfigurationProvider"/> class.</summary>
     public TokenManagerConfigurationProvider(
         ILogger<TokenManagerConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "auth")
         : base(logger ?? NullLogger<TokenManagerConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

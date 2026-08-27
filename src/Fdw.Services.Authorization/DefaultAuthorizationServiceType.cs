@@ -115,7 +115,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>>(sp =>
                 new ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>(
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, pathNameAuthz));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<PermissionConfiguration>>(sp =>
                 sp.GetRequiredService<ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>>());
@@ -124,12 +124,12 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand>>(sp =>
                 new ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand>(
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, pathNameAuthz));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<RolePermissionConfiguration>>(sp =>
                 sp.GetRequiredService<ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand>>());
 
-            // Why: TenantOrgAccessConfigurationProvider is the domain-owned gateway path for TenantOrgAccess.
+            // Why: TenantOrgAccessConfigurationProvider is the domain-owned gatewayProvider path for TenantOrgAccess.
             // Registered as singleton — it holds no per-request state.
             builder.Services.TryAddSingleton<TenantOrgAccessConfigurationProvider>(sp =>
                 new TenantOrgAccessConfigurationProvider(

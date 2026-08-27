@@ -34,15 +34,15 @@ public abstract class ImplementationConfigurationProvider<TContract, TConfig, TC
     /// <see cref="ImplementationConfigurationProvider{TContract, TConfig, TCommand}"/> class.
     /// </summary>
     /// <param name="logger">The logger for this provider.</param>
-    /// <param name="gateway">The gateway this implementation's rows are read through.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
     /// <param name="dataStoreName">The connection the rows live in.</param>
     /// <param name="pathName">The schema the rows live in.</param>
     protected ImplementationConfigurationProvider(
         ILogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>? logger,
-        Lazy<IConfigurationGateway> gateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
         string pathName)
-        : base(logger, gateway, dataStoreName, pathName)
+        : base(logger, gatewayProvider, dataStoreName, pathName)
     {
     }
 

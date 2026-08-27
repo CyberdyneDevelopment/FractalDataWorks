@@ -88,7 +88,7 @@ public partial class TokenManagerTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<ITokenManagerConfigurationProvider>(sp =>
                 new TokenManagerConfigurationProvider(
                     sp.GetService<ILogger<TokenManagerConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<TokenManagerConfigurationProvider>(
                 sp => (TokenManagerConfigurationProvider)sp.GetRequiredService<ITokenManagerConfigurationProvider>());

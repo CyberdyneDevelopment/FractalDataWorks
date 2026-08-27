@@ -49,6 +49,7 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
             // the container is built, which is before a host has had the chance to change it.
             builder.Services.TryAddSingleton<IConfigurationGatewayProvider>(sp =>
                 new ConfigurationGatewayProvider(
+                    sp.GetServices<IConfigurationGateway>(),
                     sp.GetService<ILogger<ConfigurationGatewayProvider>>()));
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);

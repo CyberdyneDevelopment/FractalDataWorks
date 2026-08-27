@@ -31,11 +31,11 @@ public class ExternalIdentityProvisionerConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="ExternalIdentityProvisionerConfigurationProvider"/> class.</summary>
     public ExternalIdentityProvisionerConfigurationProvider(
         ILogger<ExternalIdentityProvisionerConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sec")
         : base(logger ?? NullLogger<ExternalIdentityProvisionerConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

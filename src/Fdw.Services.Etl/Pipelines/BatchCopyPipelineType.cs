@@ -156,7 +156,7 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
             // DataStore flows from TypeCollection.Configure() so "ConfigurationDb" is never hardcoded here.
             builder.Services.AddSingleton(sp => new ImplementationConfigurationProviderBase<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>(
                 sp.GetRequiredService<ILoggerFactory>().CreateLogger<ImplementationConfigurationProviderBase<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 DataStore,
                 PathName));
 

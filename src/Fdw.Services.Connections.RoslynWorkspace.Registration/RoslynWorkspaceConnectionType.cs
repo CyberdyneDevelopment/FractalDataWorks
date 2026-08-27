@@ -84,7 +84,7 @@ public sealed class RoslynWorkspaceConnectionType
                 new RoslynWorkspaceConnectionConfigurationProvider(
                     sp.GetService<ILogger<RoslynWorkspaceConnectionConfigurationProvider>>()
                         ?? NullLogger<RoslynWorkspaceConnectionConfigurationProvider>.Instance,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore,
                     PathName));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<RoslynWorkspaceConnectionConfiguration>>(

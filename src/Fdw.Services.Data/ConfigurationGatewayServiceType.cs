@@ -18,7 +18,7 @@ namespace Fdw.Services.Data;
 /// ServiceTypeOption that registers <c>Lazy&lt;IConfigurationGateway&gt;</c> and
 /// <see cref="IConfigurationContainerLookup"/>.
 /// <see cref="IConfigurationGateway"/> itself is registered externally via
-/// <see cref="ConfigurationGatewayExtensions.AddConfigurationGateway{TConnectionFactory}(Microsoft.Extensions.DependencyInjection.IServiceCollection, string)"/>
+/// <see cref="ConfigurationGatewayExtensions.AddConfigurationGateway{TConnectionFactory}(Microsoft.Extensions.DependencyInjection.IServiceCollection, string, string)"/>
 /// which loads <c>configurationSchema.json</c> via STJ and registers the resulting
 /// <see cref="Configuration.ConfigurationSchema"/> singleton.
 /// </summary>

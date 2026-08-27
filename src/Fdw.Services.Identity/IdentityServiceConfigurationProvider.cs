@@ -28,16 +28,16 @@ public class IdentityServiceConfigurationProvider
 
     /// <summary>Initializes a new instance of the <see cref="IdentityServiceConfigurationProvider"/> class.</summary>
     /// <param name="logger">The logger for this provider.</param>
-    /// <param name="lazyGateway">Deferred configuration gateway, resolved on the first configuration read.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
     /// <param name="dataStoreName">The data store holding the configuration.</param>
     /// <param name="pathName">The schema holding the configuration.</param>
     public IdentityServiceConfigurationProvider(
         ILogger<IdentityServiceConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sec")
         : base(logger ?? NullLogger<IdentityServiceConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

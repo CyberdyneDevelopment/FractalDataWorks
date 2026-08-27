@@ -46,7 +46,7 @@ public class OrchestrationNodeConfigurationProvider
         services.TryAddSingleton<OrchestrationNodeConfigurationProvider>(sp =>
             new OrchestrationNodeConfigurationProvider(
                 sp.GetService<ILogger<OrchestrationNodeConfigurationProvider>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
+                sp.GetRequiredService<IConfigurationGatewayProvider>()));
         services.TryAddSingleton<ImplementationConfigurationProviderBase<OrchestrationNodeConfiguration, OrchestrationNodeConfigurationCommand>>(
             sp => sp.GetRequiredService<OrchestrationNodeConfigurationProvider>());
         services.TryAddSingleton<IOrchestrationNodeConfigurationProvider>(
@@ -56,12 +56,12 @@ public class OrchestrationNodeConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="OrchestrationNodeConfigurationProvider"/> class.</summary>
     public OrchestrationNodeConfigurationProvider(
         ILogger<OrchestrationNodeConfigurationProvider>? logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "pipe")
         : base(
             logger ?? NullLogger<OrchestrationNodeConfigurationProvider>.Instance,
-            lazyGateway,
+            gatewayProvider,
             dataStoreName,
             pathName)
     {

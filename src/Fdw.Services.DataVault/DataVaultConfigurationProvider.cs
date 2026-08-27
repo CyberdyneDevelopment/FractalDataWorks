@@ -33,11 +33,11 @@ public class DataVaultConfigurationProvider
     /// </summary>
     public DataVaultConfigurationProvider(
         ILogger<DataVaultConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sec")
         : base(logger ?? NullLogger<DataVaultConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

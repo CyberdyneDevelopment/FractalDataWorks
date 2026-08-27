@@ -30,11 +30,11 @@ public class ExternalIdentityProviderConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="ExternalIdentityProviderConfigurationProvider"/> class.</summary>
     public ExternalIdentityProviderConfigurationProvider(
         ILogger<ExternalIdentityProviderConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "auth")
         : base(logger ?? NullLogger<ExternalIdentityProviderConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

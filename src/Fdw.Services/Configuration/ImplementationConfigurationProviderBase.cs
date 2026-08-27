@@ -35,7 +35,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     // ConfigurationGatewayDataStoreProvider → DataStoreConfigurationProvider, which constructs a
     // provider again — the StackGuard deadlocks on the singleton lock. Deferring to first use breaks
     // the cycle, and invalidation goes through this same Lazy so it inherits the same protection.
-    private readonly Lazy<IConfigurationGateway> _gateway;
+    private readonly IConfigurationGatewayProvider _gatewayProvider;
     private readonly ILogger _logger;
     private readonly AsyncLocal<bool> _isQuerying = new();
 
@@ -66,24 +66,25 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
 
     /// <summary>Initializes the provider.</summary>
     /// <param name="logger">Logger for this provider instance.</param>
-    /// <param name="gateway">Lazy gateway for configuration queries.</param>
-    /// <param name="dataStoreName">DataStore name (e.g. "ConfigurationDb").</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto <paramref name="dataStoreName"/>.</param>
+    /// <param name="dataStoreName">The configuration connection this domain's rows live on.</param>
     /// <param name="pathName">Schema/path name (e.g. "conn", "sec").</param>
-    // Why: configuration is single-source ConfigurationDb — all reads go through the gateway. The retired
-    // ctrl+cfg dual-source IOptionsMonitor first-look (and its UseOptionsMonitor toggle) has been removed;
-    // the ctrl/cfg-tier distinction now lives entirely in dataStoreName/pathName + the app's declared
-    // configurationSchema connections, not in a runtime options merge.
+    // Why the provider and not a gateway: the connection a domain reads is named by its collection's
+    // ConfigurationConnection and is settable by a host, so which gateway serves this provider is not
+    // known when the container is built. Resolving per call keeps that name authoritative.
     public ImplementationConfigurationProviderBase(
         ILogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>? logger,
-        Lazy<IConfigurationGateway> gateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
         string pathName)
     {
         _logger = logger ?? NullLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>.Instance;
-        _gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
+        _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
         DataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
         PathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
     }
+
+
 
     /// <summary>
     /// Per-discriminator registry of typed-body providers, keyed by the framework-level
@@ -264,7 +265,10 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
                     _logger, typeof(TConfig).Name, Commands().TableName, name));
 
         var cmd = Commands().Get(DataStoreName, PathName, name, asOf);
-        var result = await _gateway.Value.Execute<IEnumerable<TConfig>>(cmd, Target, ct).ConfigureAwait(false);
+        var gateway = Gateway();
+        if (gateway.IsFailure) return gateway.ToNewResult<TConfig>();
+
+        var result = await gateway.Value!.Execute<IEnumerable<TConfig>>(cmd, Target, ct).ConfigureAwait(false);
         if (!result.IsSuccess) return result.ToNewResult<TConfig>();
         return GenericResult<TConfig>.Success(result.Value?.FirstOrDefault()!);
     }
@@ -337,7 +341,10 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
                 join.ParentJoinColumn, join.ParentKeyColumn, id, asOf)
             : Commands().Get(DataStoreName, PathName, id, asOf);
 
-        var result = await _gateway.Value.Execute<IEnumerable<TConfig>>(cmd, Target, ct).ConfigureAwait(false);
+        var gateway = Gateway();
+        if (gateway.IsFailure) return gateway.ToNewResult<TConfig>();
+
+        var result = await gateway.Value!.Execute<IEnumerable<TConfig>>(cmd, Target, ct).ConfigureAwait(false);
         if (!result.IsSuccess) return result.ToNewResult<TConfig>();
         return GenericResult<TConfig>.Success(result.Value?.FirstOrDefault()!);
     }
@@ -484,7 +491,11 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
 
         var cmd = BuildChildJoinQuery(descriptor.ChildContainerName, fkColumn, ownerContainer, ownerPhysicalCol, ownerLogicalCol, ownerId, asOf);
         var target = new DataStoreTarget(DataStoreName, PathName, descriptor.ChildContainerName);
-        var kvpResult = await _gateway.Value.Execute<IEnumerable<KeyValueRow>>(cmd, target, ct).ConfigureAwait(false);
+        var gateway = Gateway();
+        if (gateway.IsFailure)
+            return;
+
+        var kvpResult = await gateway.Value!.Execute<IEnumerable<KeyValueRow>>(cmd, target, ct).ConfigureAwait(false);
         if (!kvpResult.IsSuccess || kvpResult.Value is null)
             return;
 
@@ -544,7 +555,11 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
 
         var cmd = BuildChildJoinQuery(command.ContainerName, fkColumn, ownerContainer, ownerPhysicalCol, ownerLogicalCol, ownerId, asOf);
         var target = new DataStoreTarget(DataStoreName, PathName, command.ContainerName);
-        var rowsResult = await _gateway.Value.Execute(cmd, target, descriptor.ChildType, ct).ConfigureAwait(false);
+        var gateway = Gateway();
+        if (gateway.IsFailure)
+            return;
+
+        var rowsResult = await gateway.Value!.Execute(cmd, target, descriptor.ChildType, ct).ConfigureAwait(false);
         if (!rowsResult.IsSuccess || rowsResult.Value is null)
             return;
 
@@ -613,7 +628,11 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         if (string.IsNullOrEmpty(fkColumn))
             return false;
 
-        var stores = _gateway.Value.DataStores;
+        var gateway = Gateway();
+        if (gateway.IsFailure)
+            return false;
+
+        var stores = gateway.Value!.DataStores;
         IDataStore? store = null;
         for (var i = 0; i < stores.Count; i++)
         {
@@ -648,7 +667,11 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
 
     private (string Physical, string Logical)? ResolveOwnerKeyColumns(string containerName)
     {
-        var stores = _gateway.Value.DataStores;
+        var gateway = Gateway();
+        if (gateway.IsFailure)
+            return null;
+
+        var stores = gateway.Value!.DataStores;
         IDataStore? store = null;
         for (var i = 0; i < stores.Count; i++)
         {
@@ -724,7 +747,10 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// </remarks>
     protected virtual IGenericResult<ParentJoinInfo> ResolveParentJoin()
     {
-        var stores = _gateway.Value.DataStores;
+        var gateway = Gateway();
+        if (gateway.IsFailure) return gateway.ToNewResult<ParentJoinInfo>();
+
+        var stores = gateway.Value!.DataStores;
         IDataStore? store = null;
         for (var i = 0; i < stores.Count; i++)
         {
@@ -844,7 +870,10 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     public virtual async Task<IGenericResult<IReadOnlyList<TConfig>>> Get(CancellationToken ct = default)
     {
         var cmd = Commands().List(DataStoreName, PathName);
-        var result = await _gateway.Value.Execute<IEnumerable<TConfig>>(cmd, Target, ct).ConfigureAwait(false);
+        var gateway = Gateway();
+        if (gateway.IsFailure) return gateway.ToNewResult<IReadOnlyList<TConfig>>();
+
+        var result = await gateway.Value!.Execute<IEnumerable<TConfig>>(cmd, Target, ct).ConfigureAwait(false);
         if (!result.IsSuccess) return result.ToNewResult<IReadOnlyList<TConfig>>();
         return GenericResult<IReadOnlyList<TConfig>>.Success(result.Value?.ToList() ?? []);
     }
@@ -884,7 +913,10 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         // matched and typed bodies only ever took the version-on-write path. Headers took the other one, so
         // a header kept a single row forever while its own body versioned underneath it. Header and body now
         // use the identical machinery, which is the entire point of the mechanism.
-        var result = await _gateway.Value.Execute<TConfig>(
+        var gatewayForSave = Gateway();
+        if (gatewayForSave.IsFailure) return gatewayForSave.ToNewResult<TConfig>();
+
+        var result = await gatewayForSave.Value!.Execute<TConfig>(
             Commands().Create(DataStoreName, PathName, record), Target, ct).ConfigureAwait(false);
         if (!result.IsSuccess) return result;
 
@@ -1099,7 +1131,10 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
 
         // Non-generic IConfigurationGateway.Execute — the child INSERT returns no materialized value and
         // its type is only known at runtime, so it cannot close Execute<T> without reflection.
-        return await _gateway.Value.Execute(saveCmd, childTarget, ct).ConfigureAwait(false);
+        var gateway = Gateway();
+        if (gateway.IsFailure) return gateway;
+
+        return await gateway.Value!.Execute(saveCmd, childTarget, ct).ConfigureAwait(false);
     }
 
     // Why: KVP property-collection children (e.g. conn.MsSqlConnectionAuthentication) are not typed
@@ -1129,7 +1164,10 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         {
             var saveCmd = new ConfigurationSaveCommand<KeyValueRow>(
                 new KeyValueRow { Name = entry.Key, Value = entry.Value }, fk);
-            var result = await _gateway.Value.Execute(saveCmd, target, ct).ConfigureAwait(false);
+            var gateway = Gateway();
+            if (gateway.IsFailure) return gateway;
+
+            var result = await gateway.Value!.Execute(saveCmd, target, ct).ConfigureAwait(false);
             if (!result.IsSuccess) return result;
         }
 
@@ -1232,7 +1270,10 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
                 DefaultConfigurationProviderLog.NoChildCommandForType(
                     _logger, typeof(TConfig).Name, childType.Name));
 
-        return await _gateway.Value.Execute(
+        var gateway = Gateway();
+        if (gateway.IsFailure) return gateway;
+
+        return await gateway.Value!.Execute(
             command.Delete(DataStoreName, PathName, childCfg.Id),
             new DataStoreTarget(DataStoreName, PathName, command.ContainerName),
             ct).ConfigureAwait(false);
@@ -1256,7 +1297,10 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         if (bag is null || bag.Count == 0)
             return GenericResult.Success();
 
-        return await _gateway.Value.Execute(
+        var gateway = Gateway();
+        if (gateway.IsFailure) return gateway;
+
+        return await gateway.Value!.Execute(
             new ConfigurationDeleteCommand(fkValue, fkName),
             new DataStoreTarget(DataStoreName, PathName, descriptor.ChildContainerName),
             ct).ConfigureAwait(false);
@@ -1305,7 +1349,10 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         // Passing the caller's id straight through made the delete command target [Id]=<parent's id> on the
         // child table, which matches nothing and silently retired no row.
         var cmd = Commands().Delete(DataStoreName, PathName, existing.Value.Id);
-        var result = await _gateway.Value.Execute<TConfig>(cmd, Target, ct).ConfigureAwait(false);
+        var gatewayForDelete = Gateway();
+        if (gatewayForDelete.IsFailure) return gatewayForDelete;
+
+        var result = await gatewayForDelete.Value!.Execute<TConfig>(cmd, Target, ct).ConfigureAwait(false);
         if (!result.IsSuccess) return result;
 
         return GenericResult.Success();
@@ -1390,9 +1437,33 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     // is the thing that can drop entries. Every non-transactional write is already invalidated by
     // the gateway when the command runs, which is why this is the only invalidation a provider
     // still initiates - and why the provider no longer takes an ICacheInvalidator at all.
-    public void InvalidateCache() => Gateway.InvalidateCachedResults(Target);
+    public void InvalidateCache()
+    {
+        var gateway = Gateway();
+        if (gateway.IsSuccess)
+            gateway.Value!.InvalidateCachedResults(Target);
+    }
 
-    /// <summary>Gateway used for cfg queries (resolves on first access).</summary>
-    protected IConfigurationGateway Gateway => _gateway.Value;
+    /// <summary>Gets the gateway onto this provider's configuration connection.</summary>
+    /// <returns>The gateway, or a failure naming the connection no gateway serves.</returns>
+    protected IGenericResult<IConfigurationGateway> Gateway() => _gatewayProvider.Get(DataStoreName);
+
+    /// <summary>Runs <paramref name="call"/> against this provider's configuration gateway.</summary>
+    /// <typeparam name="T">The result type the call materialises.</typeparam>
+    /// <param name="call">The command and the container it targets.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The gateway's result, or the failure naming the connection no gateway serves.</returns>
+    /// <remarks>
+    /// Every provider reaches its store the same way, so resolving the gateway and failing when none
+    /// serves the connection belongs here once rather than at each call site.
+    /// </remarks>
+    protected async Task<IGenericResult<T>> Execute<T>(
+        DataGatewayCall call, CancellationToken cancellationToken = default)
+    {
+        var gateway = Gateway();
+        return gateway.IsFailure
+            ? gateway.ToNewResult<T>()
+            : await gateway.Value!.Execute<T>(call, cancellationToken).ConfigureAwait(false);
+    }
 
 }

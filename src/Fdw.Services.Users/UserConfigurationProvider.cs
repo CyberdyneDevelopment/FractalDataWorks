@@ -20,7 +20,7 @@ using Microsoft.Extensions.Options;
 namespace Fdw.Services.Users;
 
 /// <summary>
-/// Domain configuration provider for users. Sole owner of <c>usr.Users</c> gateway access.
+/// Domain configuration provider for users. Sole owner of <c>usr.Users</c> gatewayProvider access.
 /// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with
 /// by-id, by-username, and CRUD convenience methods.
 /// </summary>
@@ -36,11 +36,11 @@ public class UserConfigurationProvider : ImplementationConfigurationProviderBase
     /// <summary>Initializes a new instance of the <see cref="UserConfigurationProvider"/> class.</summary>
     public UserConfigurationProvider(
         ILogger<UserConfigurationProvider>? logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "usr")
         : base(logger ?? NullLogger<UserConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<UserConfigurationProvider>.Instance;
@@ -77,7 +77,7 @@ public class UserConfigurationProvider : ImplementationConfigurationProviderBase
             .Where("IsCurrent", true)
             .Where("IsDeleted", false)
             .Build();
-        var result = await Gateway.Execute<IEnumerable<UserConfiguration>>(cmd, cancellationToken).ConfigureAwait(false);
+        var result = await Execute<IEnumerable<UserConfiguration>>(cmd, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
             return GenericResult<UserConfiguration?>.Failure(
                 UserConfigurationProviderLog.GatewayQueryFailed(_logger));

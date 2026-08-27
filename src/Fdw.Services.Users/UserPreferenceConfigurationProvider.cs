@@ -18,12 +18,12 @@ using Microsoft.Extensions.Options;
 namespace Fdw.Services.Users;
 
 /// <summary>
-/// Domain configuration provider for user preferences. Sole owner of <c>usr.UserPreferences</c> gateway access.
+/// Domain configuration provider for user preferences. Sole owner of <c>usr.UserPreferences</c> gatewayProvider access.
 /// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with a by-userId query.
 /// </summary>
 /// <remarks>
 /// All reads and writes go through <see cref="IConfigurationGateway"/>. No <see cref="Fdw.Services.Data.Abstractions.IDataGateway"/>
-/// usage — usr.UserPreferences is ConfigurationDb data accessed through the config gateway, same as usr.Users.
+/// usage — usr.UserPreferences is ConfigurationDb data accessed through the config gatewayProvider, same as usr.Users.
 /// </remarks>
 public class UserPreferenceConfigurationProvider
     : ImplementationConfigurationProviderBase<UserPreferencesConfiguration, UserPreferenceConfigurationCommand>
@@ -33,11 +33,11 @@ public class UserPreferenceConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="UserPreferenceConfigurationProvider"/> class.</summary>
     public UserPreferenceConfigurationProvider(
         ILogger<UserPreferenceConfigurationProvider>? logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "usr")
         : base(logger ?? NullLogger<UserPreferenceConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<UserPreferenceConfigurationProvider>.Instance;
@@ -59,7 +59,7 @@ public class UserPreferenceConfigurationProvider
             .Where(nameof(UserPreferencesConfiguration.IsDeleted), false)
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<UserPreferencesConfiguration>>(command, cancellationToken).ConfigureAwait(false);
+        var result = await Execute<IEnumerable<UserPreferencesConfiguration>>(command, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             UserConfigurationProviderLog.LoadPreferencesFailed(_logger, userId);

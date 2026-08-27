@@ -16,6 +16,15 @@ namespace Fdw.Services.Data.Abstractions;
 /// </summary>
 public interface IConfigurationGateway : IDataGateway
 {
+    /// <summary>Gets the configuration connection this gateway reads and writes.</summary>
+    /// <remarks>
+    /// A gateway carries its own identity so a holder can say which one it has. An endpoint or any
+    /// other consumer handed a gateway can name the connection it is on without tracking that
+    /// separately from the instance, and <c>IConfigurationGatewayProvider</c> registers by this rather
+    /// than by a name a caller supplies alongside.
+    /// </remarks>
+    string ConnectionName { get; }
+
     /// <summary>
     /// Gets the IDataStore tree built from the bound <c>ConfigurationSchema</c>.
     /// The configuration-tier tree — containers, fields, and keys are resolved from the JSON

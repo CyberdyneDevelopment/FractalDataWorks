@@ -96,7 +96,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
 
         // Why: register the pure core's own dependencies — the transport builder-selector and the
         // connection-agnostic ConfiguredDataStoreProvider itself — so this server-side provider can
-        // delegate all non-gateway store composition/build to it instead of duplicating the
+        // delegate all non-gatewayProvider store composition/build to it instead of duplicating the
         // builder-selection + Configure/Build sequence here. Both are safe as Singletons: the selector
         // only dispatches to the (module-init populated) DataStoreTypes collection, and
         // ConfiguredDataStoreProvider's own dependencies (DataStoreConfigurationProvider, the selector)
@@ -128,8 +128,8 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
             var providerLogger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<ConfigurationGatewayDataStoreProvider>();
             var coreProvider = sp.GetRequiredService<ConfiguredDataStoreProvider>();
             var configProvider = sp.GetRequiredService<DataStoreConfigurationProvider>();
-            var lazyGateway = sp.GetRequiredService<Lazy<IConfigurationGateway>>();
-            return new ConfigurationGatewayDataStoreProvider(providerLogger, coreProvider, configProvider, lazyGateway);
+            var gatewayProvider = sp.GetRequiredService<IConfigurationGatewayProvider>();
+            return new ConfigurationGatewayDataStoreProvider(providerLogger, coreProvider, configProvider, gatewayProvider);
         });
         // Why: forward IDataStoreProvider → same per-scope ConfigurationGatewayDataStoreProvider instance.
         services.AddScoped<IDataStoreProvider>(sp => sp.GetRequiredService<ConfigurationGatewayDataStoreProvider>());
@@ -281,7 +281,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
 
     private readonly ILogger<ConfigurationGatewayDataStoreProvider> _logger;
 
-    // Why: all non-gateway composition/build (builder selection, Configure/Build, dot-walk assembly)
+    // Why: all non-gatewayProvider composition/build (builder selection, Configure/Build, dot-walk assembly)
     // delegates to the connection-agnostic core — see the class remarks.
     private readonly ConfiguredDataStoreProvider _coreProvider;
 
@@ -292,7 +292,12 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     // Why: Lazy to break DI cycle — ConfigurationGateway → ConfigurationGatewayDataStoreProvider →
     // ConfigurationGateway would deadlock without the deferred resolution. Gateway resolves only on
     // first store read.
-    private readonly Lazy<IConfigurationGateway>? _gateway;
+    // Why the name is a constant here and not a collection's ConfigurationConnection: this provider
+    // supplies the DataStores that configuration itself describes, so it reads the platform store
+    // rather than any one domain's.
+    private const string ConfigurationConnectionName = "PlatformConfiguration";
+
+    private readonly IConfigurationGatewayProvider? _gatewayProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConfigurationGatewayDataStoreProvider"/> class.
@@ -301,12 +306,12 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         ILogger<ConfigurationGatewayDataStoreProvider> logger,
         ConfiguredDataStoreProvider coreProvider,
         DataStoreConfigurationProvider dataStoreConfigProvider,
-        Lazy<IConfigurationGateway>? gateway = null)
+        IConfigurationGatewayProvider? gatewayProvider = null)
     {
         _logger = logger ?? NullLogger<ConfigurationGatewayDataStoreProvider>.Instance;
         _coreProvider = coreProvider ?? throw new ArgumentNullException(nameof(coreProvider));
         _dataStoreConfigProvider = dataStoreConfigProvider ?? throw new ArgumentNullException(nameof(dataStoreConfigProvider));
-        _gateway = gateway;
+        _gatewayProvider = gatewayProvider;
     }
 
     /// <inheritdoc/>
@@ -314,13 +319,16 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     {
         DataStoreProviderLog.TraceGetDataStoreEntry(_logger, name);
 
-        // Why: ConfigurationDb (and any store the configuration gateway owns) is the bounded schema tree
+        // Why: ConfigurationDb (and any store the configuration gatewayProvider owns) is the bounded schema tree
         // built from configurationSchema.json — return it directly, NOT a DB cascade (that would recurse).
-        // Coherence comes from the config gateway (cached on api, cacheless on etl/scheduler) — no
+        // Coherence comes from the config gatewayProvider (cached on api, cacheless on etl/scheduler) — no
         // per-provider cache layer needed here.
-        if (_gateway is not null)
+        if (_gatewayProvider is not null)
         {
-            var gwStore = _gateway.Value.DataStores.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));
+            var gw = _gatewayProvider.Get(ConfigurationConnectionName);
+            var gwStore = gw.IsSuccess
+                ? gw.Value!.DataStores.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase))
+                : null;
             if (gwStore is not null)
             {
                 DataStoreProviderLog.DataStoreRetrieved(_logger, name);
@@ -357,7 +365,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
                 ResultDetails.Create().With("DataStoreId", id));
         }
         // Why: resolve id → name via the DB-backed config provider, then reuse the LOCAL Get(name) (not
-        // the core's) so a ConfigurationDb-owned store found by id still returns through the gateway
+        // the core's) so a ConfigurationDb-owned store found by id still returns through the gatewayProvider
         // shortcut above.
         return await Get(cfgResult.Value.Name, cancellationToken).ConfigureAwait(false);
     }
@@ -403,7 +411,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
 
     /// <summary>
     /// Loads all DataStores and builds the <see cref="Fdw.Data.Abstractions.IDataStore"/> tree: every
-    /// non-gateway store is composed and built by the connection-agnostic core, then ConfigurationDb's
+    /// non-gatewayProvider store is composed and built by the connection-agnostic core, then ConfigurationDb's
     /// own gateway-owned stores are merged in.
     /// </summary>
     /// <param name="ct">Cancellation token.</param>
@@ -414,7 +422,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
 
         // Why: composition (shallow→cascaded config) and per-transport build now live entirely in the
         // connection-agnostic core (ConfiguredDataStoreProvider.Get(ct)) — this class only adds the
-        // ConfigurationDb-owned stores the core cannot see (it has no gateway dependency).
+        // ConfigurationDb-owned stores the core cannot see (it has no gatewayProvider dependency).
         var coreResult = await _coreProvider.Get(ct).ConfigureAwait(false);
         if (!coreResult.IsSuccess)
         {
@@ -435,7 +443,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         return result;
     }
 
-    // Why: ConfigurationDb has its own set of DataStores, owned by the configuration gateway
+    // Why: ConfigurationDb has its own set of DataStores, owned by the configuration gatewayProvider
     // (IConfigurationGateway.DataStores — the conn/auth/sec/data paths inside ConfigurationDb).
     // Merge that set into the runtime tree. Without this, DataGatewayService.ResolveContainer only
     // sees DataStores loaded from data.DataStore in the database; ConfigurationDb's own stores are
@@ -446,12 +454,14 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     // Extracted from Load to keep that method under the FDW006/FDW007 complexity thresholds.
     private void MergeConfigurationGatewayDataStores(List<Fdw.Data.Abstractions.IDataStore> result)
     {
-        if (_gateway is null) return;
+        if (_gatewayProvider is null) return;
 
         IReadOnlyList<Fdw.Data.Abstractions.IDataStore> configDbStores;
         try
         {
-            configDbStores = _gateway.Value.DataStores ?? [];
+            var gw = _gatewayProvider.Get(ConfigurationConnectionName);
+            if (gw.IsFailure) return;
+            configDbStores = gw.Value!.DataStores ?? [];
         }
         catch (Exception ex)
         {

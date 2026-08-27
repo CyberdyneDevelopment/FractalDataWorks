@@ -42,7 +42,8 @@ namespace Fdw.Services.Data;
 /// </remarks>
 public sealed class ConfigurationGateway : IConfigurationGateway
 {
-    private const string ConfigurationDbConnectionName = "ConfigurationDb";
+    /// <inheritdoc />
+    public string ConnectionName { get; }
     private const string ConnectionTypeMsSql = "MsSql";
     private const string ConnectionTypePostgreSql = "PostgreSql";
 
@@ -93,6 +94,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     /// Initializes a new instance of <see cref="ConfigurationGateway"/> without a secret manager.
     /// Use when the ConfigurationDb connection uses integrated auth or does not need secret resolution.
     /// </summary>
+    /// <param name="connectionName">The configuration connection this gateway reads and writes.</param>
     /// <param name="connectionFactory">Factory used to open a connection to ConfigurationDb.</param>
     /// <param name="schema">
     /// Deserialized <see cref="ConfigurationSchema"/> from <c>configurationSchema.json</c>.
@@ -107,19 +109,21 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     /// visibility scope their session reads under.
     /// </param>
     public ConfigurationGateway(
+        string connectionName,
         IConnectionFactory connectionFactory,
         ConfigurationSchema schema,
         ILogger<ConfigurationGateway>? logger = null,
         DataGatewayResultCache? cache = null,
         IOptions<DataGatewayOptions>? options = null,
         IAuthenticationContextAccessor? authenticationContextAccessor = null)
-        : this(connectionFactory, secretManager: null, schema, logger, cache, options, authenticationContextAccessor)
+        : this(connectionName, connectionFactory, secretManager: null, schema, logger, cache, options, authenticationContextAccessor)
     {
     }
 
     /// <summary>
     /// Initializes a new instance of <see cref="ConfigurationGateway"/> with an optional secret manager.
     /// </summary>
+    /// <param name="connectionName">The configuration connection this gateway reads and writes.</param>
     /// <param name="connectionFactory">Factory used to open a connection to ConfigurationDb.</param>
     /// <param name="secretManager">
     /// Optional secret manager. When non-null and the ConfigurationDb connection references a secret,
@@ -139,6 +143,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     /// scheme must govern, so the partition still names exactly what the session will apply.
     /// </param>
     public ConfigurationGateway(
+        string connectionName,
         IConnectionFactory connectionFactory,
         ISecretManager? secretManager,
         ConfigurationSchema schema,
@@ -147,6 +152,9 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         IOptions<DataGatewayOptions>? options = null,
         IAuthenticationContextAccessor? authenticationContextAccessor = null)
     {
+        ConnectionName = string.IsNullOrWhiteSpace(connectionName)
+            ? throw new ArgumentNullException(nameof(connectionName))
+            : connectionName;
         _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
         _secretManager = secretManager;
         _schema = schema ?? throw new ArgumentNullException(nameof(schema));
@@ -179,7 +187,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
             () => BuildFromSchema(_schema, _logger),
             LazyThreadSafetyMode.ExecutionAndPublication);
 
-        ConfigurationGatewayLog.Initialised(_logger, ConfigurationDbConnectionName);
+        ConfigurationGatewayLog.Initialised(_logger, ConnectionName);
     }
 
     /// <summary>
@@ -593,14 +601,14 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     {
         for (var i = 0; i < _schema.Connections.Count; i++)
         {
-            if (!string.Equals(_schema.Connections[i].Name, ConfigurationDbConnectionName, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(_schema.Connections[i].Name, ConnectionName, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             if (string.IsNullOrWhiteSpace(_schema.Connections[i].ServiceOptionType))
             {
                 return GenericResult<IConnectionType>.Failure(
                     DataGatewayCacheLog.CachePartitionUnavailable(
-                        _logger, ConfigurationDbConnectionName, "the connection declares no ServiceOptionType"));
+                        _logger, ConnectionName, "the connection declares no ServiceOptionType"));
             }
 
             // Why fail loud on NotFound rather than partitioning under some placeholder: an
@@ -611,7 +619,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
                 return GenericResult<IConnectionType>.Failure(
                     DataGatewayCacheLog.CachePartitionUnavailable(
                         _logger,
-                        ConfigurationDbConnectionName,
+                        ConnectionName,
                         $"connection type '{_schema.Connections[i].ServiceOptionType}' is not registered"));
             }
 
@@ -621,18 +629,18 @@ public sealed class ConfigurationGateway : IConfigurationGateway
 
         return GenericResult<IConnectionType>.Failure(
             DataGatewayCacheLog.CachePartitionUnavailable(
-                _logger, ConfigurationDbConnectionName, "the connection is not declared in configurationSchema.json"));
+                _logger, ConnectionName, "the connection is not declared in configurationSchema.json"));
     }
 
     private async Task<IGenericResult<IDataConnection>> BuildConnection(CancellationToken cancellationToken)
     {
-        ConfigurationGatewayLog.BuildConnectionEntry(_logger, ConfigurationDbConnectionName);
+        ConfigurationGatewayLog.BuildConnectionEntry(_logger, ConnectionName);
 
         ConnectionConfiguration? configDbEntry = null;
 
         for (var i = 0; i < _schema.Connections.Count; i++)
         {
-            if (string.Equals(_schema.Connections[i].Name, ConfigurationDbConnectionName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(_schema.Connections[i].Name, ConnectionName, StringComparison.OrdinalIgnoreCase))
             {
                 configDbEntry = _schema.Connections[i];
                 break;
@@ -642,7 +650,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         if (configDbEntry is null)
         {
             return GenericResult<IDataConnection>.Failure(
-                ConfigurationGatewayLog.ConnectionNotFound(_logger, ConfigurationDbConnectionName));
+                ConfigurationGatewayLog.ConnectionNotFound(_logger, ConnectionName));
         }
 
         // Why: hand the gateway's own _secretManager (registered alongside it by
@@ -657,7 +665,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         {
             var reason = factoryResult.CurrentMessage?.ToString() ?? "factory returned failure";
             return GenericResult<IDataConnection>.Failure(
-                ConfigurationGatewayLog.ConnectionCreationFailed(_logger, ConfigurationDbConnectionName, reason));
+                ConfigurationGatewayLog.ConnectionCreationFailed(_logger, ConnectionName, reason));
         }
 
         if (factoryResult.Value is not IDataConnection dataConnection)
@@ -665,11 +673,11 @@ public sealed class ConfigurationGateway : IConfigurationGateway
             return GenericResult<IDataConnection>.Failure(
                 ConfigurationGatewayLog.ConnectionCreationFailed(
                     _logger,
-                    ConfigurationDbConnectionName,
+                    ConnectionName,
                     $"factory returned {factoryResult.Value.GetType().Name} which does not implement IDataConnection"));
         }
 
-        ConfigurationGatewayLog.BuildConnectionExit(_logger, ConfigurationDbConnectionName, success: true);
+        ConfigurationGatewayLog.BuildConnectionExit(_logger, ConnectionName, success: true);
         return GenericResult<IDataConnection>.Success(dataConnection);
     }
 

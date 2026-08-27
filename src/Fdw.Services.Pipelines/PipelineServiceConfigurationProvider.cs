@@ -30,11 +30,11 @@ public class PipelineServiceConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="PipelineServiceConfigurationProvider"/> class.</summary>
     public PipelineServiceConfigurationProvider(
         ILogger<PipelineServiceConfigurationProvider>? logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "pipe")
         : base(logger ?? NullLogger<PipelineServiceConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

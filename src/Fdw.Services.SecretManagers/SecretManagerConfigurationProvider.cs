@@ -53,11 +53,11 @@ public class SecretManagerConfigurationProvider
     /// </summary>
     public SecretManagerConfigurationProvider(
         ILogger<SecretManagerConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sec")
         : base(logger ?? NullLogger<SecretManagerConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<SecretManagerConfigurationProvider>.Instance;

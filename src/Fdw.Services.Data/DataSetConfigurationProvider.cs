@@ -37,7 +37,7 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
         services.TryAddSingleton<DataSetConfigurationProvider>(sp =>
             new DataSetConfigurationProvider(
                 sp.GetService<ILogger<DataSetConfigurationProvider>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
+                sp.GetRequiredService<IConfigurationGatewayProvider>()));
         services.TryAddSingleton<ImplementationConfigurationProviderBase<DataSetConfiguration, DataSetConfigurationCommand>>(
             sp => sp.GetRequiredService<DataSetConfigurationProvider>());
         services.TryAddSingleton<IServiceConfigurationProvider<DataSetConfiguration>>(
@@ -49,11 +49,11 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
     /// <summary>Initializes a new instance of the <see cref="DataSetConfigurationProvider"/> class.</summary>
     public DataSetConfigurationProvider(
         ILogger<DataSetConfigurationProvider>? logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "data")
         : base(logger ?? NullLogger<DataSetConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<DataSetConfigurationProvider>.Instance;
@@ -122,7 +122,7 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
     /// Queries DataSetFieldMapping rows for each source in the config and populates
     /// <see cref="DataSetSourceConfiguration.FieldMappings"/> and
     /// <see cref="DataSetSourceConfiguration.FieldMappingIds"/> in-place.
-    /// Returns a failure result if any gateway query fails — the caller propagates this so the
+    /// Returns a failure result if any gatewayProvider query fails — the caller propagates this so the
     /// composed DataSet config is never returned with silently empty field mappings.
     /// </summary>
     private async Task<IGenericResult<bool>> PopulateFieldMappings(DataSetConfiguration config, CancellationToken ct)
@@ -140,11 +140,14 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
                 .Where("IsDeleted", false)
                 .Build();
 
-            var result = await Gateway.Execute<IEnumerable<DataSetFieldMappingConfiguration>>(command, ct).ConfigureAwait(false);
+            var gateway = Gateway();
+            if (gateway.IsFailure) return gateway.ToNewResult<bool>();
+
+            var result = await gateway.Value!.Execute<IEnumerable<DataSetFieldMappingConfiguration>>(command, ct).ConfigureAwait(false);
             if (!result.IsSuccess)
             {
                 // Why: fail loud — returning a composed config with silently empty FieldMappings would
-                // mask a gateway error. The caller's Get override propagates this failure so the
+                // mask a gatewayProvider error. The caller's Get override propagates this failure so the
                 // caller receives a non-success result rather than a partially-composed DataSet.
                 return GenericResult<bool>.Failure(
                     DataSetConfigurationProviderLog.FieldMappingQueryFailed(
@@ -193,7 +196,10 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
             .OrderBy("Ordinal")
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<DataFieldConfiguration>>(command, cancellationToken)
+        var gateway = Gateway();
+        if (gateway.IsFailure) return gateway.ToNewResult<IReadOnlyList<DataSetFieldDefinition>>();
+
+        var result = await gateway.Value!.Execute<IEnumerable<DataFieldConfiguration>>(command, cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)
@@ -244,7 +250,10 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
             .Where("IsDeleted", false)
             .Value(new DataFieldConfiguration { DataSetId = dataSetId, IsCurrent = false });
 
-        var retireResult = await Gateway.Execute<int>(retireCommand, cancellationToken)
+        var gatewayForSave = Gateway();
+        if (gatewayForSave.IsFailure) return gatewayForSave;
+
+        var retireResult = await gatewayForSave.Value!.Execute<int>(retireCommand, cancellationToken)
             .ConfigureAwait(false);
 
         if (!retireResult.IsSuccess)
@@ -281,7 +290,7 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
                 IsCurrent = true,
                 IsDeleted = false
             };
-            var insertResult = await Gateway.Execute<int>(
+            var insertResult = await gatewayForSave.Value!.Execute<int>(
                 new ConfigurationSaveCommand<DataFieldConfiguration>(record),
                 new DataStoreTarget(DataStoreName, PathName, FieldContainer), cancellationToken)
                 .ConfigureAwait(false);

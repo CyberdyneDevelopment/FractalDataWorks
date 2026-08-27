@@ -37,7 +37,7 @@ public class ExternalIdentityProvisionerBindingConfigurationProvider
         services.TryAddSingleton<ExternalIdentityProvisionerBindingConfigurationProvider>(sp =>
             new ExternalIdentityProvisionerBindingConfigurationProvider(
                 sp.GetService<ILogger<ExternalIdentityProvisionerBindingConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
+                sp.GetRequiredService<IConfigurationGatewayProvider>()));
 
         services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>>(
             sp => sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
@@ -49,11 +49,11 @@ public class ExternalIdentityProvisionerBindingConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="ExternalIdentityProvisionerBindingConfigurationProvider"/> class.</summary>
     public ExternalIdentityProvisionerBindingConfigurationProvider(
         ILogger<ExternalIdentityProvisionerBindingConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sec")
         : base(logger ?? NullLogger<ExternalIdentityProvisionerBindingConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
         // Why: the base class's own ILogger field is private — this provider's extra

@@ -28,11 +28,11 @@ public class EtlPipelineConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="EtlPipelineConfigurationProvider"/> class.</summary>
     public EtlPipelineConfigurationProvider(
         ILogger<EtlPipelineConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "pipe")
         : base(logger ?? NullLogger<EtlPipelineConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

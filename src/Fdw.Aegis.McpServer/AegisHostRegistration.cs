@@ -156,7 +156,7 @@ public static class AegisHostRegistration
         // purely to satisfy the shared FDW registration machinery; this host never resolves it.
         // AegisInjector resolves secret managers via ISecretManagerProvider.Get(name), whose parent
         // configuration provider is the in-memory DeclaredSecretManagerConfigurationProvider wired in
-        // Initialize — so name resolution never touches this gateway either. Mirrors the exact
+        // Initialize — so name resolution never touches this gatewayProvider either. Mirrors the exact
         // registration line ConfigurationGatewayServiceType uses (Fdw.Services.Data); IConfigurationGateway
         // itself is deliberately never registered here — any accidental use fails loud with a normal DI
         // resolution exception instead of silently reaching a real ConfigurationDb.

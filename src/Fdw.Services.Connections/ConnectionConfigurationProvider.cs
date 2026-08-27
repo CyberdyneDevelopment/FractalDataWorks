@@ -28,16 +28,16 @@ public class ConnectionConfigurationProvider
     /// Initializes a new instance of the <see cref="ConnectionConfigurationProvider"/> class.
     /// </summary>
     /// <param name="logger">The logger for this provider.</param>
-    /// <param name="lazyGateway">The gateway this domain's rows are read through.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
     /// <param name="dataStoreName">The connection the domain's rows live in.</param>
     /// <param name="pathName">The schema the domain's rows live in.</param>
     public ConnectionConfigurationProvider(
         ILogger<ConnectionConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "PlatformConfiguration",
         string pathName = "conn")
         : base(logger ?? NullLogger<ConnectionConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName,
                pathName)
     {

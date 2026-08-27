@@ -19,13 +19,13 @@ using CmdBuilders = Fdw.Commands.Data.Extensions;
 namespace Fdw.Services.Users;
 
 /// <summary>
-/// Domain configuration provider for user-tenant memberships. Sole owner of <c>tenant.UserTenants</c> gateway access.
+/// Domain configuration provider for user-tenant memberships. Sole owner of <c>tenant.UserTenants</c> gatewayProvider access.
 /// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with
 /// tenant-membership query and mutation methods.
 /// </summary>
 /// <remarks>
 /// All reads and writes go through <see cref="IConfigurationGateway"/>. No <see cref="Fdw.Services.Data.Abstractions.IDataGateway"/>
-/// usage — tenant.UserTenants is ConfigurationDb data accessed through the config gateway, same as usr.Users.
+/// usage — tenant.UserTenants is ConfigurationDb data accessed through the config gatewayProvider, same as usr.Users.
 /// </remarks>
 public class UserTenantConfigurationProvider : ImplementationConfigurationProviderBase<UserTenantConfiguration, UserTenantConfigurationCommand>
 {
@@ -34,11 +34,11 @@ public class UserTenantConfigurationProvider : ImplementationConfigurationProvid
     /// <summary>Initializes a new instance of the <see cref="UserTenantConfigurationProvider"/> class.</summary>
     public UserTenantConfigurationProvider(
         ILogger<UserTenantConfigurationProvider>? logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "tenant")
         : base(logger ?? NullLogger<UserTenantConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<UserTenantConfigurationProvider>.Instance;
@@ -60,7 +60,7 @@ public class UserTenantConfigurationProvider : ImplementationConfigurationProvid
             .Where(nameof(UserTenantConfiguration.IsDeleted), false)
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<UserTenantConfiguration>>(command, cancellationToken).ConfigureAwait(false);
+        var result = await Execute<IEnumerable<UserTenantConfiguration>>(command, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess || result.Value is null)
         {
             UserConfigurationProviderLog.LoadTenantsFailed(_logger, userId);
@@ -92,7 +92,7 @@ public class UserTenantConfigurationProvider : ImplementationConfigurationProvid
             .Where(nameof(UserTenantConfiguration.IsDeleted), false)
             .Build();
 
-        var result = await Gateway.Execute<IEnumerable<UserTenantConfiguration>>(command, cancellationToken).ConfigureAwait(false);
+        var result = await Execute<IEnumerable<UserTenantConfiguration>>(command, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             UserConfigurationProviderLog.LoadDefaultTenantFailed(_logger, userId);
@@ -130,7 +130,7 @@ public class UserTenantConfigurationProvider : ImplementationConfigurationProvid
             .DataStore(DataStoreName).Path(PathName)
             .Value(record);
 
-        var result = await Gateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
+        var result = await Execute<int>(command, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
             return result.Messages.Any()
                 ? (IGenericResult)result
@@ -154,7 +154,7 @@ public class UserTenantConfigurationProvider : ImplementationConfigurationProvid
             .Where(nameof(UserTenantConfiguration.TenantId), tenantId)
             .Build();
 
-        var result = await Gateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
+        var result = await Execute<int>(command, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
             return result.Messages.Any()
                 ? (IGenericResult)result
@@ -179,7 +179,7 @@ public class UserTenantConfigurationProvider : ImplementationConfigurationProvid
             .Where(nameof(UserTenantConfiguration.IsDeleted), false)
             .Build();
 
-        var queryResult = await Gateway.Execute<IEnumerable<UserTenantConfiguration>>(queryCommand, cancellationToken).ConfigureAwait(false);
+        var queryResult = await Execute<IEnumerable<UserTenantConfiguration>>(queryCommand, cancellationToken).ConfigureAwait(false);
         if (!queryResult.IsSuccess)
         {
             UserConfigurationProviderLog.SetDefaultFailed(_logger, tenantId, userId);
@@ -213,7 +213,7 @@ public class UserTenantConfigurationProvider : ImplementationConfigurationProvid
                     IsDeleted = row.IsDeleted,
                 });
 
-            var updateResult = await Gateway.Execute<int>(updateCommand, cancellationToken).ConfigureAwait(false);
+            var updateResult = await Execute<int>(updateCommand, cancellationToken).ConfigureAwait(false);
             if (!updateResult.IsSuccess)
                 return updateResult.Messages.Any()
                     ? (IGenericResult)updateResult

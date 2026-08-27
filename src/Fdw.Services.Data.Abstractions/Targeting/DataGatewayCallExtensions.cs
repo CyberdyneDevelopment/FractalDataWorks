@@ -14,7 +14,7 @@ public static class DataGatewayCallExtensions
     /// Executes a <see cref="DataGatewayCall"/> against the gateway, returning a typed result.
     /// </summary>
     /// <typeparam name="T">The result type.</typeparam>
-    /// <param name="gateway">The data gateway.</param>
+    /// <param name="gateway">The gateway to execute against.</param>
     /// <param name="call">The bundled command and target.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The execution result.</returns>

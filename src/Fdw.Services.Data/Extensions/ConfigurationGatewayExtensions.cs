@@ -55,6 +55,7 @@ public static partial class ConfigurationGatewayExtensions
     /// Concrete connection factory type. Must implement <see cref="IConnectionFactory"/>.
     /// </typeparam>
     /// <param name="services">The service collection.</param>
+    /// <param name="connectionName">The configuration connection the gateway serves.</param>
     /// <param name="jsonFilePath">
     /// Absolute or relative path to the <c>configurationSchema.json</c> file.
     /// Relative paths are resolved from the current working directory (the application content root
@@ -66,6 +67,7 @@ public static partial class ConfigurationGatewayExtensions
     /// </exception>
     public static IServiceCollection AddConfigurationGateway<TConnectionFactory>(
         this IServiceCollection services,
+        string connectionName,
         string jsonFilePath)
         where TConnectionFactory : class, IConnectionFactory
     {
@@ -79,6 +81,7 @@ public static partial class ConfigurationGatewayExtensions
         // AddConfigurationGateway before DefaultDataGatewayServiceType.Register).
         services.TryAddSingleton<IConfigurationGateway>(sp =>
             new ConfigurationGateway(
+                connectionName,
                 sp.GetRequiredService<IConnectionFactory>(),
                 sp.GetRequiredService<ConfigurationSchema>(),
                 sp.GetService<ILogger<ConfigurationGateway>>(),
@@ -99,6 +102,7 @@ public static partial class ConfigurationGatewayExtensions
     /// Concrete connection factory type. Must implement <see cref="IConnectionFactory"/>.
     /// </typeparam>
     /// <param name="services">The service collection.</param>
+    /// <param name="connectionName">The configuration connection the gateway serves.</param>
     /// <param name="jsonFilePath">
     /// Absolute or relative path to the <c>configurationSchema.json</c> file.
     /// </param>
@@ -116,6 +120,7 @@ public static partial class ConfigurationGatewayExtensions
     /// </exception>
     public static IServiceCollection AddConfigurationGateway<TConnectionFactory>(
         this IServiceCollection services,
+        string connectionName,
         string jsonFilePath,
         Func<IServiceProvider, string, ISecretManager> createSecretManager)
         where TConnectionFactory : class, IConnectionFactory
@@ -174,6 +179,7 @@ public static partial class ConfigurationGatewayExtensions
         // via GetService<T>() so the gateway degrades gracefully when they are not registered.
         services.TryAddSingleton<IConfigurationGateway>(sp =>
             new ConfigurationGateway(
+                connectionName,
                 sp.GetRequiredService<IConnectionFactory>(),
                 sp.GetRequiredService<ISecretManager>(),
                 sp.GetRequiredService<ConfigurationSchema>(),

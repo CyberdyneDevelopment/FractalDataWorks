@@ -33,11 +33,11 @@ public class CalculationConfigurationProvider : ImplementationConfigurationProvi
     /// <summary>Initializes a new instance of the <see cref="CalculationConfigurationProvider"/> class.</summary>
     public CalculationConfigurationProvider(
         ILogger<CalculationConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "calc")
         : base(logger ?? NullLogger<CalculationConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

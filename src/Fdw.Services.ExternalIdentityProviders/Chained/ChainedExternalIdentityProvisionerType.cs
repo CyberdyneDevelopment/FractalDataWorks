@@ -75,7 +75,7 @@ public sealed class ChainedExternalIdentityProvisionerType
             builder.Services.TryAddSingleton<ChainedExternalIdentityProvisionerConfigurationProvider>(sp =>
                 new ChainedExternalIdentityProvisionerConfigurationProvider(
                     sp.GetService<ILogger<ChainedExternalIdentityProvisionerConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore,
                     PathName));
 

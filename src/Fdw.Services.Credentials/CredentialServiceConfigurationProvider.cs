@@ -32,11 +32,11 @@ public class CredentialServiceConfigurationProvider
     /// </summary>
     public CredentialServiceConfigurationProvider(
         ILogger<CredentialServiceConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sec")
         : base(logger ?? NullLogger<CredentialServiceConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

@@ -89,7 +89,7 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<ISecretManagerConfigurationProvider>(sp =>
                 new SecretManagerConfigurationProvider(
                     sp.GetService<ILogger<SecretManagerConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<SecretManagerConfigurationProvider>(
                 sp => (SecretManagerConfigurationProvider)sp.GetRequiredService<ISecretManagerConfigurationProvider>());

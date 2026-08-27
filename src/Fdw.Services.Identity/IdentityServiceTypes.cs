@@ -84,7 +84,7 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<IIdentityServiceConfigurationProvider>(sp =>
                 new IdentityServiceConfigurationProvider(
                     sp.GetService<ILogger<IdentityServiceConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<IdentityServiceConfigurationProvider>(
                 sp => (IdentityServiceConfigurationProvider)sp.GetRequiredService<IIdentityServiceConfigurationProvider>());

@@ -55,7 +55,7 @@ public sealed class LocalHealthMonitorType
             builder.Services.TryAddSingleton<LocalHealthMonitorConfigurationProvider>(sp =>
                 new LocalHealthMonitorConfigurationProvider(
                     sp.GetService<ILogger<LocalHealthMonitorConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     HealthMonitorTypes.ConfigurationConnection));
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

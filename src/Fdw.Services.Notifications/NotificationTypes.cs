@@ -98,7 +98,7 @@ public partial class NotificationTypes
             builder.Services.TryAddSingleton<INotificationConfigurationProvider>(sp =>
                 new NotificationConfigurationProvider(
                     sp.GetService<ILogger<NotificationConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<NotificationConfigurationProvider>(
                 sp => (NotificationConfigurationProvider)sp.GetRequiredService<INotificationConfigurationProvider>());
@@ -113,7 +113,7 @@ public partial class NotificationTypes
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<NotificationRuleConfiguration>>(sp =>
                 new ImplementationConfigurationProviderBase<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>(
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     "ConfigurationDb", "notify"));
 
             var declaredOptions = Options;

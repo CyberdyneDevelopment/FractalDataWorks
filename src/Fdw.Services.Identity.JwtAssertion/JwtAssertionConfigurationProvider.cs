@@ -17,16 +17,16 @@ public class JwtAssertionConfigurationProvider
 {
     /// <summary>Initializes a new instance of the class.</summary>
     /// <param name="logger">The logger.</param>
-    /// <param name="lazyGateway">The configuration gateway.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
     /// <param name="dataStoreName">The store holding the table.</param>
     /// <param name="pathName">The schema the table lives in.</param>
     public JwtAssertionConfigurationProvider(
         ILogger<JwtAssertionConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sec")
         : base(logger ?? NullLogger<JwtAssertionConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

@@ -26,11 +26,11 @@ public class RoslynWorkspaceConnectionConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="RoslynWorkspaceConnectionConfigurationProvider"/> class.</summary>
     public RoslynWorkspaceConnectionConfigurationProvider(
         ILogger<RoslynWorkspaceConnectionConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "conn")
         : base(logger ?? NullLogger<RoslynWorkspaceConnectionConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

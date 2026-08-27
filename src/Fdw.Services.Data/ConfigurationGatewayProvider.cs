@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
@@ -21,9 +22,20 @@ public sealed class ConfigurationGatewayProvider : IConfigurationGatewayProvider
     private readonly ILogger<ConfigurationGatewayProvider> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ConfigurationGatewayProvider"/> class.</summary>
+    /// <param name="gateways">The registered configuration gateways.</param>
     /// <param name="logger">The logger.</param>
-    public ConfigurationGatewayProvider(ILogger<ConfigurationGatewayProvider>? logger = null)
-        => _logger = logger ?? NullLogger<ConfigurationGatewayProvider>.Instance;
+    // Why the gateways are indexed by the name each one carries rather than by a name supplied
+    // alongside: a gateway knows the connection it opened, so anything holding one can say which it
+    // has, and the two can never disagree.
+    public ConfigurationGatewayProvider(
+        IEnumerable<IConfigurationGateway> gateways,
+        ILogger<ConfigurationGatewayProvider>? logger = null)
+    {
+        _logger = logger ?? NullLogger<ConfigurationGatewayProvider>.Instance;
+
+        foreach (var gateway in gateways ?? [])
+            Register(gateway.ConnectionName, gateway);
+    }
 
     /// <inheritdoc />
     public IGenericResult<IConfigurationGateway> Get(string connectionName)

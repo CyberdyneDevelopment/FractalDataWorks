@@ -72,7 +72,7 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
             new ImplementationConfigurationProviderBase<TConfig, TCommand>(
                 sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>()
                     ?? NullLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>.Instance,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 "ConfigurationDb",
                 "settings"));
         services.TryAddSingleton<IServiceConfigurationProvider<TConfig>>(sp =>

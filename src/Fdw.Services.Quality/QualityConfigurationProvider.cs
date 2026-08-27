@@ -41,7 +41,7 @@ public class QualityConfigurationProvider
     #pragma warning disable MA0051
     public QualityConfigurationProvider(
         ILogger<QualityConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb")
     #pragma warning restore MA0051
     {
@@ -52,15 +52,15 @@ public class QualityConfigurationProvider
 
         // Why: All quality/catalog providers are cfg-tier — cfg-tier; loaded from ConfigurationDb at runtime.
         _qualityRuleProvider = new ImplementationConfigurationProviderBase<QualityRuleConfiguration, QualityRuleConfigurationCommand>(
-            logger: null, lazyGateway, dataStoreName, "quality");
+            logger: null, gatewayProvider, dataStoreName, "quality");
         _annotationProvider = new ImplementationConfigurationProviderBase<DataSetAnnotationConfiguration, DataSetAnnotationConfigurationCommand>(
-            logger: null, lazyGateway, dataStoreName, "catalog");
+            logger: null, gatewayProvider, dataStoreName, "catalog");
         _environmentProvider = new ImplementationConfigurationProviderBase<EnvironmentConfiguration, EnvironmentConfigurationCommand>(
-            logger: null, lazyGateway, dataStoreName, "quality");
+            logger: null, gatewayProvider, dataStoreName, "quality");
         _promotionRequestProvider = new ImplementationConfigurationProviderBase<PromotionRequestConfiguration, PromotionRequestConfigurationCommand>(
-            logger: null, lazyGateway, dataStoreName, "quality");
+            logger: null, gatewayProvider, dataStoreName, "quality");
         _glossaryTermProvider = new ImplementationConfigurationProviderBase<GlossaryTermConfiguration, GlossaryTermConfigurationCommand>(
-            logger: null, lazyGateway, dataStoreName, "catalog");
+            logger: null, gatewayProvider, dataStoreName, "catalog");
     }
 
     /// <summary>Gets a quality rule configuration by name.</summary>

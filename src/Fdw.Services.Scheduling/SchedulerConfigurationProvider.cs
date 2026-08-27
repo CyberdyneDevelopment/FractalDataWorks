@@ -31,11 +31,11 @@ public class SchedulerConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="SchedulerConfigurationProvider"/> class.</summary>
     public SchedulerConfigurationProvider(
         ILogger<SchedulerConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sched")
         : base(logger ?? NullLogger<SchedulerConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

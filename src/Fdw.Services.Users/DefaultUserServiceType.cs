@@ -54,43 +54,43 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
             // Why: IOptionsMonitor<List<T>> is required by ImplementationConfigurationProviderBase<T,TCommand>.
             // AddOptions without BindConfiguration registers the IOptionsMonitor service so the
             // provider constructor resolves correctly. means the snapshot
-            // is always empty — the gateway is the authoritative source at runtime.
+            // is always empty — the gatewayProvider is the authoritative source at runtime.
     
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory) =>
         {
-            // Why: UserConfigurationProvider is the sole owner of usr.Users gateway access. Registered
+            // Why: UserConfigurationProvider is the sole owner of usr.Users gatewayProvider access. Registered
             // as a singleton so the underlying ImplementationConfigurationProviderBase cache is shared across requests.
             builder.Services.TryAddSingleton<UserConfigurationProvider>(sp =>
                 new UserConfigurationProvider(
                     sp.GetService<ILogger<UserConfigurationProvider>>(),
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, "usr"));
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<UserConfiguration, UserConfigurationCommand>>(
                 sp => sp.GetRequiredService<UserConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<UserConfiguration>>(
                 sp => sp.GetRequiredService<UserConfigurationProvider>());
 
-            // Why: UserTenantConfigurationProvider is the sole owner of tenant.UserTenants gateway access.
+            // Why: UserTenantConfigurationProvider is the sole owner of tenant.UserTenants gatewayProvider access.
             builder.Services.TryAddSingleton<UserTenantConfigurationProvider>(sp =>
                 new UserTenantConfigurationProvider(
                     sp.GetService<ILogger<UserTenantConfigurationProvider>>(),
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, "tenant"));
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<UserTenantConfiguration, UserTenantConfigurationCommand>>(
                 sp => sp.GetRequiredService<UserTenantConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<UserTenantConfiguration>>(
                 sp => sp.GetRequiredService<UserTenantConfigurationProvider>());
 
-            // Why: UserPreferenceConfigurationProvider is the sole owner of usr.UserPreferences gateway
+            // Why: UserPreferenceConfigurationProvider is the sole owner of usr.UserPreferences gatewayProvider
             // access. Registered as a singleton so the underlying ImplementationConfigurationProviderBase cache is
             // shared across requests.
             builder.Services.TryAddSingleton<UserPreferenceConfigurationProvider>(sp =>
                 new UserPreferenceConfigurationProvider(
                     sp.GetService<ILogger<UserPreferenceConfigurationProvider>>(),
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, "usr"));
 
             // Why: the credential edge hashes-on-arrival and forwards derived hashes to the password

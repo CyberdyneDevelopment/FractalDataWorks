@@ -10,7 +10,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 
 /// <summary>
 /// Typed-body configuration provider for <c>sec.ChainedExternalIdentityProvisioner</c> rows.
-/// Extends <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> — all reads go to the gateway
+/// Extends <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> — all reads go to the gatewayProvider
 /// against ConfigurationDb.
 ///
 /// <c>Get(Guid id)</c> accepts the parent <c>sec.ExternalIdentityProvisioner.Id</c> (the durable
@@ -33,11 +33,11 @@ public class ChainedExternalIdentityProvisionerConfigurationProvider
     /// </summary>
     public ChainedExternalIdentityProvisionerConfigurationProvider(
         ILogger<ChainedExternalIdentityProvisionerConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sec")
         : base(logger ?? NullLogger<ChainedExternalIdentityProvisionerConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }

@@ -38,15 +38,15 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
     /// <see cref="ServiceConfigurationProviderBase{TDomainConfiguration, TImplementationConfiguration, TCommand}"/> class.
     /// </summary>
     /// <param name="logger">The logger for this provider.</param>
-    /// <param name="gateway">The configuration gateway this domain reads from.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
     /// <param name="dataStoreName">The store the domain's rows live in.</param>
     /// <param name="pathName">The schema the domain's rows live in.</param>
     protected ServiceConfigurationProviderBase(
         ILogger<ImplementationConfigurationProviderBase<TDomainConfiguration, TCommand>>? logger,
-        Lazy<IConfigurationGateway> gateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
         string pathName)
-        : base(logger, gateway, dataStoreName, pathName)
+        : base(logger, gatewayProvider, dataStoreName, pathName)
         => _log = (ILogger?)logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
 
     /// <inheritdoc />

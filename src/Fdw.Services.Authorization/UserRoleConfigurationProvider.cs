@@ -38,7 +38,7 @@ public class UserRoleConfigurationProvider : ImplementationConfigurationProvider
         services.TryAddSingleton<UserRoleConfigurationProvider>(sp =>
             new UserRoleConfigurationProvider(
                 sp.GetService<ILogger<UserRoleConfigurationProvider>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
+                sp.GetRequiredService<IConfigurationGatewayProvider>()));
         services.TryAddSingleton<ImplementationConfigurationProviderBase<UserRoleConfiguration, Fdw.Services.Authorization.Commands.UserRoleConfigurationCommand>>(
             sp => sp.GetRequiredService<UserRoleConfigurationProvider>());
         services.TryAddSingleton<IServiceConfigurationProvider<UserRoleConfiguration>>(
@@ -49,11 +49,11 @@ public class UserRoleConfigurationProvider : ImplementationConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="UserRoleConfigurationProvider"/> class.</summary>
     public UserRoleConfigurationProvider(
         ILogger<UserRoleConfigurationProvider>? logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "authz")
         : base(logger ?? NullLogger<UserRoleConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
         _logger = logger ?? NullLogger<UserRoleConfigurationProvider>.Instance;

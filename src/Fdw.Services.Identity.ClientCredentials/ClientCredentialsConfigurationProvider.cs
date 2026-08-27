@@ -25,16 +25,16 @@ public class ClientCredentialsConfigurationProvider
 {
     /// <summary>Initializes a new instance of the class.</summary>
     /// <param name="logger">The logger.</param>
-    /// <param name="lazyGateway">The configuration gateway.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
     /// <param name="dataStoreName">The store holding the table.</param>
     /// <param name="pathName">The schema the table lives in.</param>
     public ClientCredentialsConfigurationProvider(
         ILogger<ClientCredentialsConfigurationProvider> logger,
-        Lazy<IConfigurationGateway> lazyGateway,
+        IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ConfigurationDb",
         string pathName = "sec")
         : base(logger ?? NullLogger<ClientCredentialsConfigurationProvider>.Instance,
-               lazyGateway,
+               gatewayProvider,
                dataStoreName, pathName)
     {
     }
