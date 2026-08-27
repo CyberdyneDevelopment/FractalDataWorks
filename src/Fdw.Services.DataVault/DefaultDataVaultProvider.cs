@@ -41,7 +41,7 @@ public sealed class DefaultDataVaultProvider
     private readonly ILogger<DefaultDataVaultProvider> _logger;
 
     // Why: vault instances are expensive to build (resolve + cache a connection and pepper) so we
-    // cache them by name. ConcurrentDictionary<string, Lazy<...>> mirrors DefaultConnectionProvider —
+    // cache them by name. ConcurrentDictionary<string, Lazy<...>> mirrors ConnectionProvider —
     // the Lazy ensures a single resolution per name even under concurrent first-access. The Lazy
     // stores the Task itself, so .Value returns the Task without blocking. Entries are evicted on
     // failure so a transient/misconfig error is re-attempted on the next Get.
@@ -162,7 +162,7 @@ public sealed class DefaultDataVaultProvider
         Func<string, CancellationToken, Task<IGenericResult<DataVaultConfiguration>>> configFactory)
     {
         // Why: vaults are long-lived system objects; resolution must not be cancelled by a single
-        // caller's token (matches DefaultConnectionProvider, which resolves under None inside the Lazy).
+        // caller's token (matches ConnectionProvider, which resolves under None inside the Lazy).
         var configResult = await configFactory(cacheKey, CancellationToken.None).ConfigureAwait(false);
         if (!configResult.IsSuccess || configResult.Value is null)
         {

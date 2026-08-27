@@ -93,7 +93,7 @@ public sealed class ServiceTypeCollectionAttribute : Attribute
     public Type? ConfigurationInterface { get; set; }
 
     /// <summary>
-    /// The concrete provider type to use in Register (e.g., typeof(DefaultConnectionProvider)).
+    /// The concrete provider type to use in Register (e.g., typeof(ConnectionProvider)).
     /// When specified, the generator will create this provider and register factories with it.
     /// </summary>
     public Type? ProviderType { get; set; }

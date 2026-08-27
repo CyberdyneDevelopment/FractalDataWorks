@@ -17,7 +17,7 @@ namespace Fdw.Services.DataVault;
 /// </remarks>
 public abstract class DataVaultTypeBase<TService, TFactory, TConfiguration> :
     // Why: DefaultDataVaultProvider (concrete) is the TProvider parameter, not IDataVaultProvider.
-    // This matches the ConnectionTypeBase pattern where DefaultConnectionProvider is used so that
+    // This matches the ConnectionTypeBase pattern where ConnectionProvider is used so that
     // RegisterFactory implementations can call provider.Register(...) without casting.
     ServiceTypeBase<TService, TFactory, TConfiguration>,
     IDataVaultType<TService, TFactory, TConfiguration>

@@ -25,7 +25,7 @@ namespace Fdw.Services.Connections;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Unlike <see cref="DefaultConnectionProvider"/>, this provider does not use IOptionsMonitor
+/// Unlike <see cref="ConnectionProvider"/>, this provider does not use IOptionsMonitor
 /// because framework connections are stable for the process lifetime — they are established
 /// once during bootstrap before the configuration system is fully initialised.
 /// </para>
@@ -35,20 +35,20 @@ namespace Fdw.Services.Connections;
 /// Attempting to register the same name twice emits a Warning and is a no-op.
 /// </para>
 /// </remarks>
-public sealed class DefaultServiceConnectionProvider : IServiceConnectionProvider, IDisposable
+public sealed class ServiceConnectionProvider : IServiceConnectionProvider, IDisposable
 {
-    private readonly ILogger<DefaultServiceConnectionProvider> _logger;
+    private readonly ILogger<ServiceConnectionProvider> _logger;
     private readonly ConcurrentDictionary<string, IGenericConnection> _registry =
         new(StringComparer.OrdinalIgnoreCase);
     private volatile bool _disposed;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DefaultServiceConnectionProvider"/> class.
+    /// Initializes a new instance of the <see cref="ServiceConnectionProvider"/> class.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
-    public DefaultServiceConnectionProvider(ILogger<DefaultServiceConnectionProvider>? logger = null)
+    public ServiceConnectionProvider(ILogger<ServiceConnectionProvider>? logger = null)
     {
-        _logger = logger ?? NullLogger<DefaultServiceConnectionProvider>.Instance;
+        _logger = logger ?? NullLogger<ServiceConnectionProvider>.Instance;
     }
 
     /// <summary>

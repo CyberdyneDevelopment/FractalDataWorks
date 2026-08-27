@@ -42,18 +42,9 @@ public sealed partial class HealthMonitorConfiguration : IHealthMonitorConfigura
     /// <inheritdoc/>
     public string? ServiceOptionType { get; set; }
 
-    /// <summary>
-    /// Gets or sets the interval between health checks in seconds.
-    /// </summary>
-    public int CheckIntervalSeconds { get; set; }
+    /// <inheritdoc/>
+    public string? Description { get; set; }
 
-    /// <summary>
-    /// Gets or sets the history retention period in minutes.
-    /// </summary>
-    public int HistoryRetentionMinutes { get; set; }
-
-    /// <summary>
-    /// Gets or sets the throughput window size in seconds.
-    /// </summary>
-    public int ThroughputWindowSeconds { get; set; }
+    /// <inheritdoc/>
+    public IHealthMonitorImplementationConfiguration? Configuration { get; set; }
 }

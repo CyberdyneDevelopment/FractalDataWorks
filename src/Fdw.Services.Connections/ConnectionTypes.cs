@@ -44,7 +44,7 @@ namespace Fdw.Services.Connections;
     typeof(IConnectionType),
     typeof(ConnectionTypes),
     ServiceInterface = typeof(IGenericConnection),
-    ProviderType = typeof(DefaultConnectionProvider),
+    ProviderType = typeof(ConnectionProvider),
     ProviderInterface = typeof(IConnectionProvider),
     ServiceCategory = "Connection")]
 public partial class ConnectionTypes : ServiceTypeCollectionBase<
@@ -126,14 +126,14 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
 
             builder.Services.AddHostedService<ConnectionHealthMonitorWorker>();
 
-            // Why an alias and why Scoped: DefaultConnectionProvider implements both interfaces, and
+            // Why an alias and why Scoped: ConnectionProvider implements both interfaces, and
             // IConnectionProvider is generated Scoped, so a Singleton alias over it would be a captive
             // dependency that throws under ValidateScopes.
             builder.Services.TryAddScoped<IDataConnectionProvider>(sp =>
                 (IDataConnectionProvider)sp.GetRequiredService<IConnectionProvider>());
 
             // Why: IServiceConnectionProvider serves framework-internal connections such as PlatformConfiguration.
-            builder.Services.TryAddSingleton<IServiceConnectionProvider, DefaultServiceConnectionProvider>();
+            builder.Services.TryAddSingleton<IServiceConnectionProvider, ServiceConnectionProvider>();
 
             // Why the result is read: this replacement calls the func it captured, and discarding
             // what that returned meant an option that failed to register was followed by this body
@@ -148,7 +148,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(ConnectionTypes), declaredOptions.Length, optionNames);
 
             // Why the collection registers every option's factory, and ConnectionTypeBase no longer does:
-            // DefaultConnectionProvider resolves a connection through its own factory registry, and the
+            // ConnectionProvider resolves a connection through its own factory registry, and the
             // need is identical for every connection kind. The collection already holds the option set and
             // each option already names its factory type, so this is one loop over what is in hand rather
             // than the same line repeated in six option bodies, where one of them can silently omit it -
@@ -171,7 +171,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                 // provider's constructor, and capturing the loop variable's member access would re-read it
                 // there rather than at the point the option was known.
                 var factoryType = serviceType.FactoryType;
-                DefaultConnectionProvider.Register(
+                ConnectionProvider.Register(
                     option.Name,
                     sp => (IServiceFactory<IGenericConnection>)sp.GetRequiredService(factoryType));
 
@@ -181,10 +181,10 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
 
             builder.Services.AddScoped<IConnectionProvider>(sp =>
             {
-                var provider = new DefaultConnectionProvider(
+                var provider = new ConnectionProvider(
                     sp,
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConnectionProvider>()
-                    ?? NullLogger<DefaultConnectionProvider>.Instance);
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ConnectionProvider>()
+                    ?? NullLogger<ConnectionProvider>.Instance);
 
                 // Why ILogger<ConnectionTypes> and not CreateLogger("ConnectionTypes"): SourceContext then
                 // carries the namespace-qualified collection, and the category cannot drift from the

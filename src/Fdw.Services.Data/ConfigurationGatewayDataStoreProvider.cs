@@ -110,7 +110,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         // Why: DataStoreConfigurationProvider (dual-source) merges system (ctrl) and user (cfg) DataStore configs.
         // Why: owner ruling (2026-07-02) — DataStore config rows are tenant-scoped (TenantId/VisibilityGroupId
         // RLS via the scoped IDataGateway session context), so ConfigurationGatewayDataStoreProvider must be
-        // per-scope like DefaultConnectionProvider — a root singleton would serve one context's datastore view
+        // per-scope like ConnectionProvider — a root singleton would serve one context's datastore view
         // to every tenant.
         // Why: Lazy<IConfigurationGateway> is NOT a DI-cycle break — IConfigurationGateway's constructor has
         // no dependency back on ConfigurationGatewayDataStoreProvider (verified: ConfigurationGateway takes

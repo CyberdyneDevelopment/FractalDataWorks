@@ -196,7 +196,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     /// <param name="factory">The factory registered for the configuration's ServiceOptionType.</param>
     /// <param name="configuration">The resolved (composed) configuration.</param>
     /// <returns>The created service, or a structured failure.</returns>
-    private IGenericResult<TService> Create(IServiceFactory<TService> factory, TConfiguration configuration)
+    private static IGenericResult<TService> Create(IServiceFactory<TService> factory, TConfiguration configuration)
         => factory.Create(configuration);
 
     // ── Get by name ─────────────────────────────────────────────────────────

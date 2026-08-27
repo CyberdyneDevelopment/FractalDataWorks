@@ -11,6 +11,6 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// option a distinct auto-generated Id. Options sharing the domain factory interface in the
 /// closure collide and the second one never registers.
 /// </remarks>
-public interface ILocalHealthMonitorFactory : IHealthMonitorFactory<IHealthMonitorService, HealthMonitorConfiguration>
+public interface ILocalHealthMonitorFactory : IHealthMonitorFactory<IHealthMonitorService, LocalHealthMonitorConfiguration>
 {
 }

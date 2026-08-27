@@ -23,22 +23,22 @@ namespace Fdw.Services.Connections.Tests;
 
 #pragma warning disable xUnit1051 // Sync Get overloads don't accept CancellationToken; async sibling triggers false positive
 
-public class DefaultConnectionProviderTests
+public class ConnectionProviderTests
 {
-    private readonly Mock<ILogger<DefaultConnectionProvider>> _mockLogger;
-    private readonly DefaultConnectionProvider _provider;
+    private readonly Mock<ILogger<ConnectionProvider>> _mockLogger;
+    private readonly ConnectionProvider _provider;
     private readonly List<ConnectionConfiguration> _configurations;
     private readonly TestConnectionConfigurationProvider _configProvider;
 
-    public DefaultConnectionProviderTests()
+    public ConnectionProviderTests()
     {
-        _mockLogger = new Mock<ILogger<DefaultConnectionProvider>>();
+        _mockLogger = new Mock<ILogger<ConnectionProvider>>();
         _configurations = [];
         _configProvider = new TestConnectionConfigurationProvider(_configurations);
 
-        _provider = new DefaultConnectionProvider(new ServiceCollection().BuildServiceProvider(), _mockLogger.Object);
+        _provider = new ConnectionProvider(new ServiceCollection().BuildServiceProvider(), _mockLogger.Object);
         // Why: the header provider is the provider's ONLY configuration source — it composes the
-        // aggregate (header + typed body) and DefaultConnectionProvider dispatches straight off it.
+        // aggregate (header + typed body) and ConnectionProvider dispatches straight off it.
         _provider.Register(_configProvider);
     }
 
@@ -74,7 +74,7 @@ public class DefaultConnectionProviderTests
     }
 
     /// <summary>
-    /// Minimal IConnectionImplementationConfiguration stub — DefaultConnectionProvider.CreateFromHeader
+    /// Minimal IConnectionImplementationConfiguration stub — ConnectionProvider.CreateFromHeader
     /// requires a non-null Configuration on the parent header before it dispatches to the
     /// registered factory, so the test config provider attaches one of these to every match.
     /// </summary>
@@ -104,7 +104,7 @@ public class DefaultConnectionProviderTests
         {
             // Why: Real header providers populate Configuration via PopulateTypedBody on read.
             // The test provider stores plain configs, so attach a stub here so the factory-dispatch
-            // path in DefaultConnectionProvider.CreateFromHeader sees a non-null Configuration.
+            // path in ConnectionProvider.CreateFromHeader sees a non-null Configuration.
             if (cfg.Configuration is null)
                 cfg.Configuration = new StubConnectionConfiguration { Id = cfg.Id, Name = cfg.Name, ServiceOptionType = cfg.ServiceOptionType };
             return cfg;
@@ -172,7 +172,7 @@ public class DefaultConnectionProviderTests
     public void ConstructorWithValidParametersCreatesInstance()
     {
         // Arrange & Act
-        var provider = new DefaultConnectionProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<DefaultConnectionProvider>.Instance);
+        var provider = new ConnectionProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<ConnectionProvider>.Instance);
 
         // Assert
         provider.ShouldNotBeNull();
@@ -752,7 +752,7 @@ public class DefaultConnectionProviderTests
     public async Task GetByNameWithNoParentProviderReturnsFailure()
     {
         // Arrange - a provider whose phase-3 wiring never ran has no configuration source
-        var unwired = new DefaultConnectionProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<DefaultConnectionProvider>.Instance);
+        var unwired = new ConnectionProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<ConnectionProvider>.Instance);
 
         // Act
         var result = await unwired.Get("TestConnection");

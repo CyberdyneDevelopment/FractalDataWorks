@@ -52,7 +52,7 @@ public sealed class LocalHealthMonitorFactory : ILocalHealthMonitorFactory
     }
 
     /// <inheritdoc/>
-    public IGenericResult<IHealthMonitorService> Create(HealthMonitorConfiguration configuration)
+    public IGenericResult<IHealthMonitorService> Create(LocalHealthMonitorConfiguration configuration)
     {
         if (configuration is null)
             throw new ArgumentNullException(nameof(configuration));

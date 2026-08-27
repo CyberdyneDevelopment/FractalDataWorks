@@ -9,6 +9,6 @@ namespace Fdw.Services.Abstractions.Health.Monitoring;
 /// </summary>
 // Why: mirrors IConnectionProvider — the provider interface carries only the service generic so
 // consumer packages depend on abstractions alone; the configuration type stays in the domain core.
-public interface IHealthMonitorProvider : IPlatformServiceProvider<IHealthMonitorService, IHealthMonitorConfiguration>
+public interface IHealthMonitorProvider : IPlatformServiceProvider<IHealthMonitorService, IHealthMonitorImplementationConfiguration>
 {
 }
