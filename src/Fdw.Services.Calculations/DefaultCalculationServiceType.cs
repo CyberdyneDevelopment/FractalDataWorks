@@ -95,7 +95,8 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
             builder.Services.TryAddSingleton<CalculationConfigurationProvider>(sp =>
                 new CalculationConfigurationProvider(
                     sp.GetService<ILogger<CalculationConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                        CalculationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<CalculationEntityConfiguration, CalculationEntityConfigurationCommand>>(
                 sp => sp.GetRequiredService<CalculationConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<CalculationEntityConfiguration>>(

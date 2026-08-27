@@ -34,7 +34,7 @@ public class NotificationConfigurationProvider
     public NotificationConfigurationProvider(
         ILogger<NotificationConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "notify")
         : base(logger ?? NullLogger<NotificationConfigurationProvider>.Instance,
                gatewayProvider,

@@ -15,4 +15,9 @@ namespace Fdw.Services.Quality;
     RestrictToCurrentCompilation = true)]
 public partial class QualityServiceTypes : ServiceTypeCollectionBase<QualityServiceTypeBase, IQualityServiceType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
 }

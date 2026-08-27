@@ -54,7 +54,7 @@ public class SecretManagerConfigurationProvider
     public SecretManagerConfigurationProvider(
         ILogger<SecretManagerConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "sec")
         : base(logger ?? NullLogger<SecretManagerConfigurationProvider>.Instance,
                gatewayProvider,

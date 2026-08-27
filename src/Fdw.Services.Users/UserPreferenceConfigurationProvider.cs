@@ -34,7 +34,7 @@ public class UserPreferenceConfigurationProvider
     public UserPreferenceConfigurationProvider(
         ILogger<UserPreferenceConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "usr")
         : base(logger ?? NullLogger<UserPreferenceConfigurationProvider>.Instance,
                gatewayProvider,

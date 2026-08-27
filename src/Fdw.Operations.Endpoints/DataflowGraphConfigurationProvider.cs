@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Etl;
 
 namespace Fdw.Operations.Endpoints;
 
@@ -32,7 +33,8 @@ public class DataflowGraphConfigurationProvider
         // but accessed via a factory so the singleton wrapper remains safe.
         services.TryAddSingleton<DataflowGraphConfigurationProvider>(sp =>
             new DataflowGraphConfigurationProvider(
-                sp.GetRequiredService<IConfigurationGateway>(),
+                sp.GetRequiredService<IConfigurationGatewayProvider>()
+                    .Get(EtlPipelineTypes.ConfigurationConnection).Value!,
                 sp.GetService<ILogger<DataflowGraphConfigurationProvider>>()));
         return services;
     }

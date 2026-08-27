@@ -31,7 +31,7 @@ public class PipelineServiceConfigurationProvider
     public PipelineServiceConfigurationProvider(
         ILogger<PipelineServiceConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "pipe")
         : base(logger ?? NullLogger<PipelineServiceConfigurationProvider>.Instance,
                gatewayProvider,

@@ -34,7 +34,7 @@ public class CalculationConfigurationProvider : ImplementationConfigurationProvi
     public CalculationConfigurationProvider(
         ILogger<CalculationConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "calc")
         : base(logger ?? NullLogger<CalculationConfigurationProvider>.Instance,
                gatewayProvider,

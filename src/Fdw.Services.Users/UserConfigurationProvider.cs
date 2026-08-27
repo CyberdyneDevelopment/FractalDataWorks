@@ -37,7 +37,7 @@ public class UserConfigurationProvider : ImplementationConfigurationProviderBase
     public UserConfigurationProvider(
         ILogger<UserConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "usr")
         : base(logger ?? NullLogger<UserConfigurationProvider>.Instance,
                gatewayProvider,

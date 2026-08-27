@@ -42,7 +42,8 @@ public class UserTenantConfigurationProviderTests
 
         return new UserTenantConfigurationProvider(
             NullLogger<UserTenantConfigurationProvider>.Instance,
-            GatewayProviderFor(gw.Object));
+            GatewayProviderFor(gw.Object),
+            "PlatformConfiguration", "tenant");
     }
 
     private static UserTenantConfiguration Membership(

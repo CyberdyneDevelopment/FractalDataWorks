@@ -33,7 +33,7 @@ public class CredentialServiceConfigurationProvider
     public CredentialServiceConfigurationProvider(
         ILogger<CredentialServiceConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "sec")
         : base(logger ?? NullLogger<CredentialServiceConfigurationProvider>.Instance,
                gatewayProvider,

@@ -35,7 +35,8 @@ public sealed class ExternalIdentityProvisionerBindingConfigurationProviderTests
 
         return new ExternalIdentityProvisionerBindingConfigurationProvider(
             NullLogger<ExternalIdentityProvisionerBindingConfigurationProvider>.Instance,
-            GatewayProviderFor(gatewayMock.Object));
+            GatewayProviderFor(gatewayMock.Object),
+            "PlatformConfiguration", "sec");
     }
 
     [Fact]

@@ -29,7 +29,7 @@ public class EtlPipelineConfigurationProvider
     public EtlPipelineConfigurationProvider(
         ILogger<EtlPipelineConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "pipe")
         : base(logger ?? NullLogger<EtlPipelineConfigurationProvider>.Instance,
                gatewayProvider,

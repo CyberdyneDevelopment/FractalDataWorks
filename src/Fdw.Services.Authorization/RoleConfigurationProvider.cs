@@ -47,7 +47,8 @@ public class RoleConfigurationProvider : ImplementationConfigurationProviderBase
         services.TryAddSingleton<RoleConfigurationProvider>(sp =>
             new RoleConfigurationProvider(
                 sp.GetService<ILogger<RoleConfigurationProvider>>(),
-                sp.GetRequiredService<IConfigurationGatewayProvider>()));
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    AuthorizationTypes.ConfigurationConnection));
         services.TryAddSingleton<ImplementationConfigurationProviderBase<RoleConfiguration, RoleConfigurationCommand>>(
             sp => sp.GetRequiredService<RoleConfigurationProvider>());
         services.TryAddSingleton<IAuthorizationProvider>(sp =>
@@ -61,7 +62,7 @@ public class RoleConfigurationProvider : ImplementationConfigurationProviderBase
     public RoleConfigurationProvider(
         ILogger<RoleConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "authz")
         : base(logger ?? NullLogger<RoleConfigurationProvider>.Instance,
                gatewayProvider,

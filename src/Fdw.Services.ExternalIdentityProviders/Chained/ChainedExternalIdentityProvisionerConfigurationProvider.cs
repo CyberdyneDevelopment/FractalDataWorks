@@ -34,7 +34,7 @@ public class ChainedExternalIdentityProvisionerConfigurationProvider
     public ChainedExternalIdentityProvisionerConfigurationProvider(
         ILogger<ChainedExternalIdentityProvisionerConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "sec")
         : base(logger ?? NullLogger<ChainedExternalIdentityProvisionerConfigurationProvider>.Instance,
                gatewayProvider,

@@ -26,7 +26,7 @@ public class EscalationConfigurationProvider : ImplementationConfigurationProvid
     public EscalationConfigurationProvider(
         ILogger<EscalationConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "workflow")
         : base(logger ?? NullLogger<EscalationConfigurationProvider>.Instance,
                gatewayProvider,

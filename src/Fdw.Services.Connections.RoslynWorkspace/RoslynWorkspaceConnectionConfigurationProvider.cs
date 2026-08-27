@@ -27,7 +27,7 @@ public class RoslynWorkspaceConnectionConfigurationProvider
     public RoslynWorkspaceConnectionConfigurationProvider(
         ILogger<RoslynWorkspaceConnectionConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "conn")
         : base(logger ?? NullLogger<RoslynWorkspaceConnectionConfigurationProvider>.Instance,
                gatewayProvider,

@@ -40,7 +40,8 @@ public sealed class ConnectionHealthMonitorWorkerTests
         public StubConnectionConfigurationProvider(IGenericResult<IReadOnlyList<ConnectionConfiguration>> result)
             : base(
                 NullLogger<ConnectionConfigurationProvider>.Instance,
-                new ConfigurationGatewayProvider())
+                new ConfigurationGatewayProvider(),
+            "PlatformConfiguration", "conn")
         {
             _result = result;
         }

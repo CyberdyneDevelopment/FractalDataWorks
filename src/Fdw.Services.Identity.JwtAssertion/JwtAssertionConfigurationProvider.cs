@@ -23,7 +23,7 @@ public class JwtAssertionConfigurationProvider
     public JwtAssertionConfigurationProvider(
         ILogger<JwtAssertionConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "sec")
         : base(logger ?? NullLogger<JwtAssertionConfigurationProvider>.Instance,
                gatewayProvider,

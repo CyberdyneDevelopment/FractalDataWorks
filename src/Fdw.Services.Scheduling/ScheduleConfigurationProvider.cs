@@ -22,7 +22,7 @@ public class ScheduleConfigurationProvider : ImplementationConfigurationProvider
     public ScheduleConfigurationProvider(
         ILogger<ScheduleConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "sched")
         : base(logger ?? NullLogger<ScheduleConfigurationProvider>.Instance,
                gatewayProvider,

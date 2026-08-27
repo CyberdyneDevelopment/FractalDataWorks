@@ -34,7 +34,7 @@ public class ConnectionConfigurationProvider
     public ConnectionConfigurationProvider(
         ILogger<ConnectionConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "PlatformConfiguration",
+        string dataStoreName,
         string pathName = "conn")
         : base(logger ?? NullLogger<ConnectionConfigurationProvider>.Instance,
                gatewayProvider,

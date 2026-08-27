@@ -32,7 +32,7 @@ public class ExternalIdentityProvisionerConfigurationProvider
     public ExternalIdentityProvisionerConfigurationProvider(
         ILogger<ExternalIdentityProvisionerConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "sec")
         : base(logger ?? NullLogger<ExternalIdentityProvisionerConfigurationProvider>.Instance,
                gatewayProvider,

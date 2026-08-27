@@ -56,7 +56,8 @@ public sealed class JwtAssertionIdentityType
 
                 sp.GetService<ILogger<JwtAssertionConfigurationProvider>>()!,
 
-                sp.GetRequiredService<IConfigurationGatewayProvider>()));
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    IdentityServiceTypes.ConfigurationConnection));
 
 
             IdentityLog.MechanismRegistered(log, Name);

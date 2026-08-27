@@ -37,7 +37,8 @@ public class ExternalIdentityProvisionerBindingConfigurationProvider
         services.TryAddSingleton<ExternalIdentityProvisionerBindingConfigurationProvider>(sp =>
             new ExternalIdentityProvisionerBindingConfigurationProvider(
                 sp.GetService<ILogger<ExternalIdentityProvisionerBindingConfigurationProvider>>()!,
-                sp.GetRequiredService<IConfigurationGatewayProvider>()));
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ExternalIdentityProvisionerTypes.ConfigurationConnection));
 
         services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>>(
             sp => sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
@@ -50,7 +51,7 @@ public class ExternalIdentityProvisionerBindingConfigurationProvider
     public ExternalIdentityProvisionerBindingConfigurationProvider(
         ILogger<ExternalIdentityProvisionerBindingConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "sec")
         : base(logger ?? NullLogger<ExternalIdentityProvisionerBindingConfigurationProvider>.Instance,
                gatewayProvider,

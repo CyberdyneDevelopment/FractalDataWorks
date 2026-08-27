@@ -31,7 +31,7 @@ public class ExternalIdentityProviderConfigurationProvider
     public ExternalIdentityProviderConfigurationProvider(
         ILogger<ExternalIdentityProviderConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName,
         string pathName = "auth")
         : base(logger ?? NullLogger<ExternalIdentityProviderConfigurationProvider>.Instance,
                gatewayProvider,
