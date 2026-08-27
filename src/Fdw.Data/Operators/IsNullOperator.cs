@@ -1,3 +1,4 @@
+using System;
 using Fdw.Collections.Attributes;
 
 namespace Fdw.Data;
@@ -31,4 +32,8 @@ public sealed class IsNullOperator : FilterOperatorBase
     /// Returns empty string since OData handles "eq null" without formatting.
     /// </summary>
     public override string FormatODataValue(object? value) => string.Empty;
+
+    /// <inheritdoc />
+    public override bool Matches(object? left, object? right)
+        => left is null;
 }

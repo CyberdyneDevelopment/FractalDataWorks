@@ -45,4 +45,8 @@ public sealed class ContainsOperator : FilterOperatorBase
             _ => $"'{value}'"
         };
     }
+
+    /// <inheritdoc />
+    public override bool Matches(object? left, object? right)
+        => FilterValueComparer.AsText(left).Contains(FilterValueComparer.AsText(right), StringComparison.OrdinalIgnoreCase);
 }

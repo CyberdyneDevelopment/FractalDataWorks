@@ -45,4 +45,8 @@ public sealed class EqualOperator : FilterOperatorBase
             _ => $"'{value}'"
         };
     }
+
+    /// <inheritdoc />
+    public override bool Matches(object? left, object? right)
+        => FilterValueComparer.AreEqual(left, right);
 }

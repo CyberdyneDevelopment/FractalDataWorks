@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Linq;
 using Fdw.Collections.Attributes;
@@ -55,4 +56,8 @@ public sealed class InOperator : FilterOperatorBase
 
         return $"('{value}')";
     }
+
+    /// <inheritdoc />
+    public override bool Matches(object? left, object? right)
+        => FilterValueComparer.IsIn(left, right);
 }

@@ -40,4 +40,8 @@ public sealed class StartsWithOperator : FilterOperatorBase
     {
         return $"'{value?.ToString()?.Replace("'", "''")}'";
     }
+
+    /// <inheritdoc />
+    public override bool Matches(object? left, object? right)
+        => FilterValueComparer.AsText(left).StartsWith(FilterValueComparer.AsText(right), StringComparison.OrdinalIgnoreCase);
 }

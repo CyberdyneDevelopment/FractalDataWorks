@@ -78,4 +78,16 @@ public abstract class FilterOperatorBase : TypeOptionBase<int, FilterOperatorBas
     /// <param name="value">The value to format.</param>
     /// <returns>The formatted OData value string.</returns>
     public abstract string FormatODataValue(object? value);
+
+    /// <summary>Whether <paramref name="left"/> satisfies this operator against <paramref name="right"/>.</summary>
+    /// <remarks>
+    /// Why the operator evaluates rather than a switch somewhere else: the operator IS the
+    /// comparison, and a source that cannot express the filter natively has to apply the same
+    /// comparison in memory. One definition, two places it can run — otherwise the CSV path and the
+    /// SQL path drift and the same filter means two things.
+    /// </remarks>
+    /// <param name="left">The value from the row.</param>
+    /// <param name="right">The value from the filter.</param>
+    /// <returns><see langword="true"/> when the row value satisfies this operator.</returns>
+    public abstract bool Matches(object? left, object? right);
 }

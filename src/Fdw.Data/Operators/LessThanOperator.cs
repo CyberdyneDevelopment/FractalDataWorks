@@ -37,4 +37,8 @@ public sealed class LessThanOperator : FilterOperatorBase
             _ => $"'{value}'"
         };
     }
+
+    /// <inheritdoc />
+    public override bool Matches(object? left, object? right)
+        => FilterValueComparer.Compare(left, right) < 0;
 }
