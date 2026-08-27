@@ -39,7 +39,7 @@ public partial class MsSqlConnectionConfiguration : IConnectionImplementationCon
 
     /// <summary>
     /// Gets or sets the unique identifier for this typed body row (conn.MsSqlConnection.Id).
-    /// Minted by <see cref="Fdw.Services.Configuration.DefaultConfigurationProvider{TConfig,TCommand}"/>
+    /// Minted by <see cref="Fdw.Services.Configuration.ImplementationConfigurationProviderBase{TConfig,TCommand}"/>
     /// via <see cref="Guid.CreateVersion7()"/> when <see cref="Guid.Empty"/>.
     /// </summary>
     // Why: NO Guid.NewGuid() default — DB owns no identity; the provider mints this before INSERT.

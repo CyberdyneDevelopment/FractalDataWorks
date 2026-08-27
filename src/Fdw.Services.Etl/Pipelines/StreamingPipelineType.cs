@@ -101,7 +101,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             // Not registered with the runtime IPlatformServiceProvider (typed to the ETL-kind EtlPipelineConfiguration,
             // resolved from DI by the generated resolver) — the engine config is a distinct typed body reached
             // through the kind body's .Configuration, attached below.
-            var configProvider = services.GetRequiredService<DefaultConfigurationProvider<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>>();
+            var configProvider = services.GetRequiredService<ImplementationConfigurationProviderBase<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>>();
 
             // Why: wire the two-level configuration typed-body chain (Pipeline → Etl → engine). (1) Attach this
             // engine's body provider to the ETL-kind provider keyed by the engine discriminator ("Streaming");
@@ -153,8 +153,8 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             // Why: Lazy<IConfigurationGateway> defers cfg resolution until first runtime query, avoiding
             // circular dependency with the DataGateway that hasn't been built yet at registration time.
             // DataStore flows from TypeCollection.Configure() so "ConfigurationDb" is never hardcoded here.
-            builder.Services.AddSingleton(sp => new DefaultConfigurationProvider<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>(
-                sp.GetRequiredService<ILoggerFactory>().CreateLogger<DefaultConfigurationProvider<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>>(),
+            builder.Services.AddSingleton(sp => new ImplementationConfigurationProviderBase<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>(
+                sp.GetRequiredService<ILoggerFactory>().CreateLogger<ImplementationConfigurationProviderBase<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>>(),
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
                 DataStore,
                 PathName));

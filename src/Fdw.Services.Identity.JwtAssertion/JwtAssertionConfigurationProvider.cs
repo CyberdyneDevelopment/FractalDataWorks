@@ -9,7 +9,7 @@ namespace Fdw.Services.Identity.JwtAssertion;
 
 /// <summary>Reads and writes the <c>sec.JwtAssertionIdentity</c> typed body.</summary>
 public class JwtAssertionConfigurationProvider
-    : DefaultConfigurationProvider<JwtAssertionConfiguration, JwtAssertionConfigurationCommand>
+    : ImplementationConfigurationProviderBase<JwtAssertionConfiguration, JwtAssertionConfigurationCommand>
 {
     /// <summary>Initializes a new instance of the class.</summary>
     /// <param name="logger">The logger.</param>

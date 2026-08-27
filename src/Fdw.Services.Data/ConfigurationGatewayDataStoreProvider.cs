@@ -143,7 +143,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         // Why: the eager full-tree singleton (RefreshableDataStoreTree + the
         // Lazy<IReadOnlyList<IDataStore>> wrapper) is deleted. FK-aware Get(Guid id) resolution now
         // reads the bounded ConfigurationDb schema set on demand via IConfigurationGateway.DataStores
-        // inside DefaultConfigurationProvider — the only set FK resolution ever needs, since these
+        // inside ImplementationConfigurationProviderBase — the only set FK resolution ever needs, since these
         // typed-body providers always target DataStoreName = "ConfigurationDb". Runtime-created
         // containers stay queryable because on-demand reads go through DataGatewayService (caching
         // built in, tag-invalidated on write, tenant-keyed) — no separate CachingDataGateway needed.

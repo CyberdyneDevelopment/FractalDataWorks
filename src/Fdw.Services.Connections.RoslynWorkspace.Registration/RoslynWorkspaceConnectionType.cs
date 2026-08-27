@@ -54,7 +54,6 @@ public sealed class RoslynWorkspaceConnectionType
             // reachable by discriminator dispatch, exactly as every other connection type does. This was the
             // only ConnectionTypes option missing the call, and its absence was not inert: a live
             // conn.Connection row with ServiceOptionType 'RoslynWorkspace' could not be read (ComposeTypedBody
-            // hit OnNoTypedProvider) and its body row could never be retired.
             services.GetRequiredService<ConnectionConfigurationProvider>()
                 .Register(
                     Name, services.GetRequiredService<RoslynWorkspaceConnectionConfigurationProvider>());

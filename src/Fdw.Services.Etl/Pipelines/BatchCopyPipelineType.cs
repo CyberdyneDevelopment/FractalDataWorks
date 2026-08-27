@@ -100,7 +100,7 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
             // Not registered with the runtime IPlatformServiceProvider (which is typed to the ETL-kind
             // EtlPipelineConfiguration, resolved from DI by the generated resolver) — the engine config is a
             // distinct typed body reached through the kind body's .Configuration, attached below.
-            var configProvider = services.GetRequiredService<DefaultConfigurationProvider<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>>();
+            var configProvider = services.GetRequiredService<ImplementationConfigurationProviderBase<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>>();
 
             // Why: wire the two-level configuration typed-body chain (Pipeline → Etl → engine), mirroring the
             // Calculation precedent but across packages. (1) Attach this engine's body provider to the ETL-kind
@@ -155,8 +155,8 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
             // Why: Lazy<IConfigurationGateway> defers cfg resolution until first runtime query, avoiding
             // circular dependency with the DataGateway that hasn't been built yet at registration time.
             // DataStore flows from TypeCollection.Configure() so "ConfigurationDb" is never hardcoded here.
-            builder.Services.AddSingleton(sp => new DefaultConfigurationProvider<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>(
-                sp.GetRequiredService<ILoggerFactory>().CreateLogger<DefaultConfigurationProvider<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>>(),
+            builder.Services.AddSingleton(sp => new ImplementationConfigurationProviderBase<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>(
+                sp.GetRequiredService<ILoggerFactory>().CreateLogger<ImplementationConfigurationProviderBase<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>>(),
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
                 DataStore,
                 PathName));

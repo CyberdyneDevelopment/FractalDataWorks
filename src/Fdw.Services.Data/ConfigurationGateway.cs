@@ -378,7 +378,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         var container = containerResult.Value;
 
         // Why: the gateway no longer composes child collections/KVP. Aggregate composition (typed body +
-        // child collections + KVP) now lives entirely in DefaultConfigurationProvider.Get, mirroring the
+        // child collections + KVP) now lives entirely in ImplementationConfigurationProviderBase.Get, mirroring the
         // write path — the gateway is a single-row/single-query executor again. The provider drives child
         // loads through the by-type Execute overload below.
         try

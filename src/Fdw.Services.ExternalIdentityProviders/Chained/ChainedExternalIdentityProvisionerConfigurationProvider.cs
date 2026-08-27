@@ -8,7 +8,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 
 /// <summary>
 /// Typed-body configuration provider for <c>sec.ChainedExternalIdentityProvisioner</c> rows.
-/// Extends <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> — all reads go to the gateway
+/// Extends <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> — all reads go to the gateway
 /// against ConfigurationDb.
 ///
 /// <c>Get(Guid id)</c> accepts the parent <c>sec.ExternalIdentityProvisioner.Id</c> (the durable
@@ -20,7 +20,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// Mirrors <c>OidcExternalIdentityProviderConfigurationProvider</c> from the ExternalIdentityProviders domain.
 /// </remarks>
 public class ChainedExternalIdentityProvisionerConfigurationProvider
-    : DefaultConfigurationProvider<ChainedExternalIdentityProvisionerConfiguration, ChainedExternalIdentityProvisionerConfigurationCommand>
+    : ImplementationConfigurationProviderBase<ChainedExternalIdentityProvisionerConfiguration, ChainedExternalIdentityProvisionerConfigurationCommand>
 {
     /// <summary>
     /// Initializes a new instance of the

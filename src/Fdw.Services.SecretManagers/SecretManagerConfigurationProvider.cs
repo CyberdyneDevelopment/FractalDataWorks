@@ -26,11 +26,11 @@ namespace Fdw.Services.SecretManagers;
 /// <see cref="Fdw.Configuration.IGenericConfiguration.ServiceOptionType"/>, e.g.
 /// "EnvironmentVariable"/"AzureKeyVault", to load the typed body row and attach it to
 /// <see cref="SecretManagerConfiguration.Configuration"/>) is composed uniformly by
-/// <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>. This subclass additionally captures the
+/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>. This subclass additionally captures the
 /// concrete typed CLR type (for endpoint deserialization) and a reflection-free factory (for default-body
 /// creation on Save), and registers typed providers via the inherited <c>Register</c>.
 /// </summary>
-public class SecretManagerConfigurationProvider : DefaultConfigurationProvider<SecretManagerConfiguration, SecretManagerConfigurationCommand>
+public class SecretManagerConfigurationProvider : ImplementationConfigurationProviderBase<SecretManagerConfiguration, SecretManagerConfigurationCommand>
 {
 
     // Why: tracks the concrete typed-body CLR type for each discriminator. Endpoints

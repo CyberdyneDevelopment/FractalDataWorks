@@ -48,12 +48,6 @@ public interface IPlatformServiceProvider<TService> : IPlatformServiceProvider
     /// structured failure, never a fallback.
     /// </summary>
     Task<IGenericResult<TService>> Get(IGenericConfiguration configuration, CancellationToken cancellationToken = default);
-
-    /// <summary>Evicts a cached service instance by name so the next Get() recreates it.</summary>
-    void Evict(string name);
-
-    /// <summary>Evicts a cached service instance by ID so the next Get() recreates it.</summary>
-    void Evict(Guid id);
 }
 
 /// <summary>
@@ -84,7 +78,7 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
     /// The configuration provider's own closed type — inferred at the call site, never written.
     /// </typeparam>
     // Why the type parameter follows the CONFIGURATION and not the provider: every configuration
-    // provider is a DefaultConfigurationProvider<TConfig, TCommand>, which implements
+    // provider is a ImplementationConfigurationProviderBase<TConfig, TCommand>, which implements
     // IServiceConfigurationProvider<TConfig> closed over its CONCRETE class. That interface is
     // invariant by C# rule — Save takes TConfig and Get returns it — so a parameter typed
     // IServiceConfigurationProvider<TConfiguration> could never accept one, whatever TConfiguration

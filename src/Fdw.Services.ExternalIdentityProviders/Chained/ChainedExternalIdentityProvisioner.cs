@@ -27,7 +27,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// <para>
 /// Algorithm (<see cref="Provision"/>): sort <see cref="ChainedExternalIdentityProvisionerConfiguration.Steps"/>
 /// by <c>ExecutionOrder</c> ascending in memory — the read cascade
-/// (<c>DefaultConfigurationProvider.ComposeChildren</c>) does not order children. For each step:
+/// (<c>ImplementationConfigurationProviderBase.ComposeChildren</c>) does not order children. For each step:
 /// </para>
 /// <list type="number">
 ///   <item><description>Resolve the sibling provisioner by name. A resolution failure propagates immediately (hard error).</description></item>

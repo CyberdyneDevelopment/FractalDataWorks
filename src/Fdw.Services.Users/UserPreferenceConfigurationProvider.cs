@@ -19,14 +19,14 @@ namespace Fdw.Services.Users;
 
 /// <summary>
 /// Domain configuration provider for user preferences. Sole owner of <c>usr.UserPreferences</c> gateway access.
-/// Thin wrapper over <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> with a by-userId query.
+/// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with a by-userId query.
 /// </summary>
 /// <remarks>
 /// All reads and writes go through <see cref="IConfigurationGateway"/>. No <see cref="Fdw.Services.Data.Abstractions.IDataGateway"/>
 /// usage — usr.UserPreferences is ConfigurationDb data accessed through the config gateway, same as usr.Users.
 /// </remarks>
 public class UserPreferenceConfigurationProvider
-    : DefaultConfigurationProvider<UserPreferencesConfiguration, UserPreferenceConfigurationCommand>
+    : ImplementationConfigurationProviderBase<UserPreferencesConfiguration, UserPreferenceConfigurationCommand>
 {
     private readonly ILogger _logger;
 

@@ -32,9 +32,9 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
     // Why: DataStoreConfigurationProvider provides the full DataStore -> Path -> Container -> Field
     // hierarchy, eliminating the need to scan all configurations and filter by parent ID.
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
-    private readonly DefaultConfigurationProvider<DataPathConfiguration, DataPathConfigurationCommand> _dataPathProvider;
-    private readonly DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand> _containerProvider;
-    private readonly DefaultConfigurationProvider<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand> _fieldProvider;
+    private readonly ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand> _dataPathProvider;
+    private readonly ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand> _containerProvider;
+    private readonly ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand> _fieldProvider;
     // Why: the DOMAIN provider, because it composes the whole Connection aggregate — header, MsSql
     // typed body, and the auth/limit KVP children. Versioning itself is not a provider behaviour:
     // ConfigurationSaveCommand IS version-on-write, and every row takes that same path. What the
@@ -47,9 +47,9 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
     /// <summary>Initializes a new instance of the <see cref="MsSqlSchemaImportPersister"/> class.</summary>
     public MsSqlSchemaImportPersister(
         DataStoreConfigurationProvider dataStoreProvider,
-        DefaultConfigurationProvider<DataPathConfiguration, DataPathConfigurationCommand> dataPathProvider,
-        DefaultConfigurationProvider<DataContainerConfiguration, DataContainerConfigurationCommand> containerProvider,
-        DefaultConfigurationProvider<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand> fieldProvider,
+        ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand> dataPathProvider,
+        ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand> containerProvider,
+        ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand> fieldProvider,
         ConnectionConfigurationProvider connectionProvider,
         ILogger<MsSqlSchemaImportPersister> logger)
     {

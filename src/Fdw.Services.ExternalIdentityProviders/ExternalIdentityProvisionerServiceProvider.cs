@@ -57,18 +57,4 @@ public class ExternalIdentityProvisionerServiceProvider
             IServiceConfigurationProvider<IExternalIdentityProvisionerConfiguration>>>.Instance)
     {
     }
-
-    /// <inheritdoc />
-    // Why: hand the factory the provider it needs for Provision-time sibling lookup. `this` is a value
-    // we already hold — no container resolution, so the FDW-615 re-entrancy cannot occur. A factory that
-    // does not implement the domain overload still works via the base pure-construction path.
-    protected override IGenericResult<IExternalIdentityProvisioner> Create(
-        IServiceFactory<IExternalIdentityProvisioner> factory,
-        IExternalIdentityProvisionerConfiguration configuration)
-    {
-        if (factory is IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration> provisionerFactory)
-            return provisionerFactory.Create(configuration, this);
-
-        return base.Create(factory, configuration);
-    }
 }

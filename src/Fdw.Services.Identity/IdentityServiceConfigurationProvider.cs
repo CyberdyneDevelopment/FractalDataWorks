@@ -17,7 +17,7 @@ namespace Fdw.Services.Identity;
 // Why: IdentityServiceConfiguration is loaded from ConfigurationDb at runtime via
 // Lazy<IConfigurationGateway>, not through BindConfiguration("Identities:..."). Mirrors
 // TokenManagerConfigurationProvider / SecretManagerConfigurationProvider exactly.
-public class IdentityServiceConfigurationProvider : DefaultConfigurationProvider<IdentityServiceConfiguration, IdentityServiceConfigurationCommand>
+public class IdentityServiceConfigurationProvider : ImplementationConfigurationProviderBase<IdentityServiceConfiguration, IdentityServiceConfigurationCommand>
 {
     /// <summary>
     /// Registers the IdentityServiceConfigurationProvider and interface forwardings with DI,
@@ -32,7 +32,7 @@ public class IdentityServiceConfigurationProvider : DefaultConfigurationProvider
                 sp.GetService<ILogger<IdentityServiceConfigurationProvider>>()!,
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
 
-        services.TryAddSingleton<DefaultConfigurationProvider<IdentityServiceConfiguration, IdentityServiceConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<IdentityServiceConfiguration, IdentityServiceConfigurationCommand>>(
             sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
 
         services.TryAddSingleton<IServiceConfigurationProvider<IdentityServiceConfiguration>>(sp =>

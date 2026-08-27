@@ -21,9 +21,9 @@ namespace Fdw.Services.Authorization;
 
 /// <summary>
 /// Domain configuration provider for user-role assignments.
-/// Thin wrapper over <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> with a by-user convenience method.
+/// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with a by-user convenience method.
 /// </summary>
-public class UserRoleConfigurationProvider : DefaultConfigurationProvider<UserRoleConfiguration, UserRoleConfigurationCommand>
+public class UserRoleConfigurationProvider : ImplementationConfigurationProviderBase<UserRoleConfiguration, UserRoleConfigurationCommand>
 {
     private readonly ILogger _logger;
 
@@ -39,7 +39,7 @@ public class UserRoleConfigurationProvider : DefaultConfigurationProvider<UserRo
             new UserRoleConfigurationProvider(
                 sp.GetService<ILogger<UserRoleConfigurationProvider>>(),
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-        services.TryAddSingleton<DefaultConfigurationProvider<UserRoleConfiguration, Fdw.Services.Authorization.Commands.UserRoleConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<UserRoleConfiguration, Fdw.Services.Authorization.Commands.UserRoleConfigurationCommand>>(
             sp => sp.GetRequiredService<UserRoleConfigurationProvider>());
         services.TryAddSingleton<IServiceConfigurationProvider<UserRoleConfiguration>>(
             sp => sp.GetRequiredService<UserRoleConfigurationProvider>());

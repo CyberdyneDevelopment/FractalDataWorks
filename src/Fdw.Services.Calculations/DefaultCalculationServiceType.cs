@@ -52,11 +52,11 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
 
             header.Register(
                 "Formula",
-                services.GetRequiredService<DefaultConfigurationProvider<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>>());
+                services.GetRequiredService<ImplementationConfigurationProviderBase<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>>());
 
             header.Register(
                 "Windowed",
-                services.GetRequiredService<DefaultConfigurationProvider<WindowedCalculationConfiguration, WindowedCalculationConfigurationCommand>>());
+                services.GetRequiredService<ImplementationConfigurationProviderBase<WindowedCalculationConfiguration, WindowedCalculationConfigurationCommand>>());
     
             return GenericResult<IHost>.Success(host);
         });
@@ -96,13 +96,13 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
                 new CalculationConfigurationProvider(
                     sp.GetService<ILogger<CalculationConfigurationProvider>>()!,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-            builder.Services.TryAddSingleton<DefaultConfigurationProvider<CalculationEntityConfiguration, CalculationEntityConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<CalculationEntityConfiguration, CalculationEntityConfigurationCommand>>(
                 sp => sp.GetRequiredService<CalculationConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<CalculationEntityConfiguration>>(
                 sp => sp.GetRequiredService<CalculationConfigurationProvider>());
 
             // Why: the polymorphic typed body (Formula/Windowed) is composed by the keystone base dictionary —
-            // register one plain DefaultConfigurationProvider per typed body so RegisterFactory can attach it
+            // register one plain ImplementationConfigurationProviderBase per typed body so RegisterFactory can attach it
             // to the header provider via Register (read dispatch on ServiceOptionType).
             RegisterTypedBodyProvider<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>(builder.Services);
             RegisterTypedBodyProvider<WindowedCalculationConfiguration, WindowedCalculationConfigurationCommand>(builder.Services);
@@ -123,9 +123,9 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
         where TCommand : ConfigurationCommandBase<TConfig>
     {
         services.AddOptions<List<TConfig>>();
-        services.TryAddSingleton<DefaultConfigurationProvider<TConfig, TCommand>>(sp =>
-            new DefaultConfigurationProvider<TConfig, TCommand>(
-                sp.GetService<ILogger<DefaultConfigurationProvider<TConfig, TCommand>>>(),
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<TConfig, TCommand>>(sp =>
+            new ImplementationConfigurationProviderBase<TConfig, TCommand>(
+                sp.GetService<ILogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>>(),
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
                 "ConfigurationDb",
                 "calc"));

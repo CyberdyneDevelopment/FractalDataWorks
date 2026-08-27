@@ -17,7 +17,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
 // Why: ExternalIdentityProviderConfiguration is loaded from ConfigurationDb at runtime via
 // Lazy<IConfigurationGateway>, not through BindConfiguration("ExternalIdentityProviders:..."). Mirrors
 // TokenManagerConfigurationProvider exactly.
-public class ExternalIdentityProviderConfigurationProvider : DefaultConfigurationProvider<ExternalIdentityProviderConfiguration, ExternalIdentityProviderConfigurationCommand>
+public class ExternalIdentityProviderConfigurationProvider : ImplementationConfigurationProviderBase<ExternalIdentityProviderConfiguration, ExternalIdentityProviderConfigurationCommand>
 {
     /// <summary>
     /// Registers the ExternalIdentityProviderConfigurationProvider and interface forwardings with DI,
@@ -31,7 +31,7 @@ public class ExternalIdentityProviderConfigurationProvider : DefaultConfiguratio
                 sp.GetService<ILogger<ExternalIdentityProviderConfigurationProvider>>()!,
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
 
-        services.TryAddSingleton<DefaultConfigurationProvider<ExternalIdentityProviderConfiguration, ExternalIdentityProviderConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProviderConfiguration, ExternalIdentityProviderConfigurationCommand>>(
             sp => sp.GetRequiredService<ExternalIdentityProviderConfigurationProvider>());
 
         services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProviderConfiguration>>(sp =>

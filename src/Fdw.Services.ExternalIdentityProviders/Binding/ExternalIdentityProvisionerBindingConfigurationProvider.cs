@@ -21,7 +21,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Binding;
 /// <c>OpenIdTokenManager</c>) use to pick a named provisioner for a (tenant, external provider) pair.
 /// </summary>
 public class ExternalIdentityProvisionerBindingConfigurationProvider
-    : DefaultConfigurationProvider<ExternalIdentityProvisionerBindingConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>
+    : ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>
 {
     private readonly ILogger _logger;
 
@@ -37,7 +37,7 @@ public class ExternalIdentityProvisionerBindingConfigurationProvider
                 sp.GetService<ILogger<ExternalIdentityProvisionerBindingConfigurationProvider>>()!,
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
 
-        services.TryAddSingleton<DefaultConfigurationProvider<ExternalIdentityProvisionerBindingConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>>(
             sp => sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
 
         services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProvisionerBindingConfiguration>>(sp =>

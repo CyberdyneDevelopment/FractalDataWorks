@@ -23,7 +23,7 @@ namespace Fdw.Services.Etl.Projects.Providers;
 /// </summary>
 /// <remarks>
 /// Why: OrchestrationNode is a self-FK tree (node.ParentRowId → the same table). The keystone base
-/// <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> ComposeChildren cannot express its
+/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> ComposeChildren cannot express its
 /// semantics — a depth-limited Get(id,depth) and a single load-all-then-walk-in-memory pass (instead of
 /// the base's per-relationship child queries, which for a self-tree would be query-per-node and lose the
 /// depth bound). So the tree overloads (Get(name,domainConfigurationId), Get(id,depth), GetRoots, GetChildren) plus
@@ -32,7 +32,7 @@ namespace Fdw.Services.Etl.Projects.Providers;
 /// Delete) are inherited from the base unchanged — no per-domain override.
 /// </remarks>
 public class OrchestrationNodeConfigurationProvider
-    : DefaultConfigurationProvider<OrchestrationNodeConfiguration, OrchestrationNodeConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<OrchestrationNodeConfiguration, OrchestrationNodeConfigurationCommand>,
       IOrchestrationNodeConfigurationProvider
 {
     private readonly ILogger _logger;
@@ -47,7 +47,7 @@ public class OrchestrationNodeConfigurationProvider
             new OrchestrationNodeConfigurationProvider(
                 sp.GetService<ILogger<OrchestrationNodeConfigurationProvider>>(),
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-        services.TryAddSingleton<DefaultConfigurationProvider<OrchestrationNodeConfiguration, OrchestrationNodeConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<OrchestrationNodeConfiguration, OrchestrationNodeConfigurationCommand>>(
             sp => sp.GetRequiredService<OrchestrationNodeConfigurationProvider>());
         services.TryAddSingleton<IOrchestrationNodeConfigurationProvider>(
             sp => sp.GetRequiredService<OrchestrationNodeConfigurationProvider>());
@@ -103,7 +103,7 @@ public class OrchestrationNodeConfigurationProvider
     {
         // Why: Load all nodes once and build the tree in-memory to avoid N+1 queries.
         // For large deployments, a recursive CTE query would be preferred, but the base
-        // DefaultConfigurationProvider only supports flat list queries. Subtree size for
+        // ImplementationConfigurationProviderBase only supports flat list queries. Subtree size for
         // orchestration hierarchies is bounded and manageable in-memory.
         var allResult = await Get(cancellationToken).ConfigureAwait(false);
         if (!allResult.IsSuccess)

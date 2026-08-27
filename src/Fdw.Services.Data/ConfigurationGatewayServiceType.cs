@@ -57,7 +57,7 @@ public sealed class ConfigurationGatewayServiceType : DataGatewayTypeBase<IGener
             // 3-phase needing to know the concrete types. This is the explicit exception to the
             // no-extension-methods rule, approved by the user.
 
-            // Why: DefaultConfigurationProvider<TConfig, TCommand> consumes Lazy<IConfigurationGateway>
+            // Why: ImplementationConfigurationProviderBase<TConfig, TCommand> consumes Lazy<IConfigurationGateway>
             // so the gateway resolves on first cfg query, not at domain-registration time.
             builder.Services.TryAddSingleton(sp => new Lazy<IConfigurationGateway>(
                 () => sp.GetRequiredService<IConfigurationGateway>()));

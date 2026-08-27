@@ -107,29 +107,6 @@ public sealed class DefaultConnectionProvider
     // bypassed the staleness check, so Get<T> could hand out a connection Get(name) would reject.
     async Task<IGenericResult<T>> IDataConnectionProvider.Get<T>(string name, CancellationToken cancellationToken)
         => Cast<T>(await Get(name, cancellationToken).ConfigureAwait(false));
-
-
-    // Why no cache: the provider is a name -> service lookup and holds no state. The connection object
-    // it hands back wraps a driver that already pools underneath, so caching one above it bought nothing
-    // and cost a disposal lifecycle, an eviction API and a staleness dance. Every call creates.
-    //
-    // Why the stale check stays: a connection that is stale straight out of the factory is a factory or
-    // configuration defect, so it fails loud rather than being handed to a caller.
-    /// <inheritdoc />
-    // Why: a connection can come back already stale — the factory succeeded but what it produced is
-    // unusable. Every creation path goes through here, so the check cannot be skipped by adding one.
-    protected override IGenericResult<IGenericConnection> Create(
-        IServiceFactory<IGenericConnection> factory,
-        IConnectionImplementationConfiguration configuration)
-    {
-        var result = base.Create(factory, configuration);
-        if (!result.IsSuccess || !result.Value!.IsStale)
-            return result;
-
-        return GenericResult<IGenericConnection>.Failure(
-            ConnectionProviderLogger.ConnectionStaleOnCreation(_logger, configuration.Name));
-    }
-
     private async Task<IGenericResult<IGenericConnection>> CreateChecked(
         string name,
         Func<CancellationToken, Task<IGenericResult<IGenericConnection>>> create,

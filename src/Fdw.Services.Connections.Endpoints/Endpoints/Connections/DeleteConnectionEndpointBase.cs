@@ -61,8 +61,6 @@ public abstract class DeleteConnectionEndpointBase : CrudDeleteEndpointBase<Conn
         var deleteResult = await _connectionProvider.Delete(request.Name, ct).ConfigureAwait(false);
         if (deleteResult.IsFailure) return deleteResult;
 
-        _connectionLookupProvider.Evict(request.Name);
-
         return deleteResult;
     }
 }

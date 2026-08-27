@@ -54,7 +54,7 @@ public abstract class UpdateDataSetAnnotationEndpointBase : Endpoint<DataSetAnno
         var config = QualityConfigurationProvider.MapAnnotationFromDto(
             req.DataSetName, req.Owner, req.Steward, req.Classification, req.Tags);
 
-        // Why: Carry forward the existing Id so DefaultConfigurationProvider.Save routes to UPDATE.
+        // Why: Carry forward the existing Id so ImplementationConfigurationProviderBase.Save routes to UPDATE.
         if (getResult.Value is not null)
             config.Id = getResult.Value.Id;
 

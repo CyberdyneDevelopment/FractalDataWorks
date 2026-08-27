@@ -56,7 +56,7 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
             FlattenSeparator = request.FlattenSeparator,
             // Why: without caller-supplied fields the container persists with zero data.DataContainerField
             // rows and bulk-insert later fails "Container X has no insertable fields" (FDW-548). Id and the
-            // DataContainerId FK are left unset — DefaultConfigurationProvider.Save's cascade mints each
+            // DataContainerId FK are left unset — ImplementationConfigurationProviderBase.Save's cascade mints each
             // child's Id and stamps the FK, mirroring CreateDataSetEndpointBase.MapFields.
             Fields = request.Fields.Select(f => new DataContainerFieldConfiguration
             {

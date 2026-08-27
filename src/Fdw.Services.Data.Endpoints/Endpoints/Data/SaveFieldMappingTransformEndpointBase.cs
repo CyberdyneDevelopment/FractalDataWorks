@@ -106,7 +106,7 @@ public abstract class SaveFieldMappingTransformEndpointBase : CrudCreateEndpoint
 
         var config = new FieldMappingTransformConfiguration
         {
-            // Why minted here: the UUIDv7 is assigned by DefaultConfigurationProvider, on the
+            // Why minted here: the UUIDv7 is assigned by ImplementationConfigurationProviderBase, on the
             // Save/cascade path. A child record written straight through IDataGateway with
             // ConfigurationSaveCommand never reaches that code, so Id = default was not "signals
             // INSERT" — it persisted literally. Every row in transform.FieldMappingTransform carried

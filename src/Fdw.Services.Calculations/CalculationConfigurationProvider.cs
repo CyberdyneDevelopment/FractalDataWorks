@@ -20,11 +20,11 @@ namespace Fdw.Services.Calculations;
 /// <summary>
 /// Header configuration provider for the calculation domain. The full aggregate — Inputs, Steps→{Fields,
 /// Operands}, and the polymorphic Formula/Windowed typed body — is composed on read and cascade-saved on
-/// write entirely by the keystone <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>; there is no
+/// write entirely by the keystone <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>; there is no
 /// per-domain hand-assembly. Typed providers are registered with this header via the inherited
 /// <c>Register</c> in <see cref="DefaultCalculationServiceType"/> (dispatch on ServiceOptionType).
 /// </summary>
-public class CalculationConfigurationProvider : DefaultConfigurationProvider<CalculationEntityConfiguration, CalculationEntityConfigurationCommand>
+public class CalculationConfigurationProvider : ImplementationConfigurationProviderBase<CalculationEntityConfiguration, CalculationEntityConfigurationCommand>
 {
     /// <summary>
     /// Registers the CalculationConfigurationProvider with DI, targeting this domain's own default

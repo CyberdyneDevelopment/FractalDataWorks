@@ -51,7 +51,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
             // unusable (e.g. an unknown hash algorithm, or a lockout threshold with no duration).
             builder.Services.Configure<PasswordPolicyOptions>(builder.Configuration.GetSection("Users:PasswordPolicy"));
 
-            // Why: IOptionsMonitor<List<T>> is required by DefaultConfigurationProvider<T,TCommand>.
+            // Why: IOptionsMonitor<List<T>> is required by ImplementationConfigurationProviderBase<T,TCommand>.
             // AddOptions without BindConfiguration registers the IOptionsMonitor service so the
             // provider constructor resolves correctly. means the snapshot
             // is always empty — the gateway is the authoritative source at runtime.
@@ -62,13 +62,13 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
         Registration((builder, loggerFactory) =>
         {
             // Why: UserConfigurationProvider is the sole owner of usr.Users gateway access. Registered
-            // as a singleton so the underlying DefaultConfigurationProvider cache is shared across requests.
+            // as a singleton so the underlying ImplementationConfigurationProviderBase cache is shared across requests.
             builder.Services.TryAddSingleton<UserConfigurationProvider>(sp =>
                 new UserConfigurationProvider(
                     sp.GetService<ILogger<UserConfigurationProvider>>(),
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
                     DataStore, "usr"));
-            builder.Services.TryAddSingleton<DefaultConfigurationProvider<UserConfiguration, UserConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<UserConfiguration, UserConfigurationCommand>>(
                 sp => sp.GetRequiredService<UserConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<UserConfiguration>>(
                 sp => sp.GetRequiredService<UserConfigurationProvider>());
@@ -79,13 +79,13 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
                     sp.GetService<ILogger<UserTenantConfigurationProvider>>(),
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
                     DataStore, "tenant"));
-            builder.Services.TryAddSingleton<DefaultConfigurationProvider<UserTenantConfiguration, UserTenantConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<UserTenantConfiguration, UserTenantConfigurationCommand>>(
                 sp => sp.GetRequiredService<UserTenantConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<UserTenantConfiguration>>(
                 sp => sp.GetRequiredService<UserTenantConfigurationProvider>());
 
             // Why: UserPreferenceConfigurationProvider is the sole owner of usr.UserPreferences gateway
-            // access. Registered as a singleton so the underlying DefaultConfigurationProvider cache is
+            // access. Registered as a singleton so the underlying ImplementationConfigurationProviderBase cache is
             // shared across requests.
             builder.Services.TryAddSingleton<UserPreferenceConfigurationProvider>(sp =>
                 new UserPreferenceConfigurationProvider(

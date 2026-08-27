@@ -21,9 +21,9 @@ namespace Fdw.Services.Authorization;
 
 /// <summary>
 /// Domain configuration provider for roles. Thin wrapper over
-/// <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> with permission-aggregation helpers.
+/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with permission-aggregation helpers.
 /// </summary>
-public class RoleConfigurationProvider : DefaultConfigurationProvider<RoleConfiguration, RoleConfigurationCommand>, IAuthorizationProvider
+public class RoleConfigurationProvider : ImplementationConfigurationProviderBase<RoleConfiguration, RoleConfigurationCommand>, IAuthorizationProvider
 {
     private readonly ILogger _logger;
 
@@ -48,7 +48,7 @@ public class RoleConfigurationProvider : DefaultConfigurationProvider<RoleConfig
             new RoleConfigurationProvider(
                 sp.GetService<ILogger<RoleConfigurationProvider>>(),
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-        services.TryAddSingleton<DefaultConfigurationProvider<RoleConfiguration, RoleConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<RoleConfiguration, RoleConfigurationCommand>>(
             sp => sp.GetRequiredService<RoleConfigurationProvider>());
         services.TryAddSingleton<IAuthorizationProvider>(sp =>
             sp.GetRequiredService<RoleConfigurationProvider>());

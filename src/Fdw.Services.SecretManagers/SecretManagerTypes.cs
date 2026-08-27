@@ -80,9 +80,9 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
                 new SecretManagerConfigurationProvider(
                     sp.GetService<ILogger<SecretManagerConfigurationProvider>>()!,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-            // Why: Consumers inject DefaultConfigurationProvider<TConfig, TCommand> (the new base) —
+            // Why: Consumers inject ImplementationConfigurationProviderBase<TConfig, TCommand> (the new base) —
             // forward to the concrete subclass.
-            builder.Services.TryAddSingleton<DefaultConfigurationProvider<SecretManagerConfiguration, SecretManagerConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<SecretManagerConfiguration, SecretManagerConfigurationCommand>>(
                 sp => sp.GetRequiredService<SecretManagerConfigurationProvider>());
             // Why: Generated Initialize() links IServiceConfigurationProvider<T> as the parent on the
             // domain provider (SecretManagerProvider); this forward lets that lookup succeed.

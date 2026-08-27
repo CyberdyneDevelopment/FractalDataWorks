@@ -20,14 +20,14 @@ namespace Fdw.Services.Users;
 
 /// <summary>
 /// Domain configuration provider for user-tenant memberships. Sole owner of <c>tenant.UserTenants</c> gateway access.
-/// Thin wrapper over <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> with
+/// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with
 /// tenant-membership query and mutation methods.
 /// </summary>
 /// <remarks>
 /// All reads and writes go through <see cref="IConfigurationGateway"/>. No <see cref="Fdw.Services.Data.Abstractions.IDataGateway"/>
 /// usage — tenant.UserTenants is ConfigurationDb data accessed through the config gateway, same as usr.Users.
 /// </remarks>
-public class UserTenantConfigurationProvider : DefaultConfigurationProvider<UserTenantConfiguration, UserTenantConfigurationCommand>
+public class UserTenantConfigurationProvider : ImplementationConfigurationProviderBase<UserTenantConfiguration, UserTenantConfigurationCommand>
 {
     private readonly ILogger _logger;
 

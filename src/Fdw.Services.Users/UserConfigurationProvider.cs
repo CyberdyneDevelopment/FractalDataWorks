@@ -21,7 +21,7 @@ namespace Fdw.Services.Users;
 
 /// <summary>
 /// Domain configuration provider for users. Sole owner of <c>usr.Users</c> gateway access.
-/// Thin wrapper over <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> with
+/// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with
 /// by-id, by-username, and CRUD convenience methods.
 /// </summary>
 /// <remarks>
@@ -29,7 +29,7 @@ namespace Fdw.Services.Users;
 /// usage — usr.Users is ConfigurationDb data, and the schema-built ConfigurationDb store has no ConnectionId,
 /// so routing through IDataGateway produces "DataStore 'ConfigurationDb' has no ConnectionId".
 /// </remarks>
-public class UserConfigurationProvider : DefaultConfigurationProvider<UserConfiguration, UserConfigurationCommand>
+public class UserConfigurationProvider : ImplementationConfigurationProviderBase<UserConfiguration, UserConfigurationCommand>
 {
     private readonly ILogger _logger;
 

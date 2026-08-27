@@ -151,7 +151,7 @@ public static class AegisHostRegistration
         }
 
         // Why: every SecretManager-kind [ServiceTypeOption]'s Register (and the shared
-        // SecretManagerConfigurationProvider it registers) constructs a DefaultConfigurationProvider
+        // SecretManagerConfigurationProvider it registers) constructs a ImplementationConfigurationProviderBase
         // that takes a Lazy<IConfigurationGateway> constructor dependency — that dependency exists
         // purely to satisfy the shared FDW registration machinery; this host never resolves it.
         // AegisInjector resolves secret managers via ISecretManagerProvider.Get(name), whose parent

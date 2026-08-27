@@ -14,10 +14,10 @@ namespace Fdw.Services.Etl;
 
 /// <summary>
 /// Domain-specific configuration provider for ETL pipeline configurations.
-/// Thin wrapper over <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/> for the EtlPipeline domain.
+/// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> for the EtlPipeline domain.
 /// Typed child configs (BatchCopy, Streaming) are resolved per ServiceTypeOption.
 /// </summary>
-public class EtlPipelineConfigurationProvider : DefaultConfigurationProvider<EtlPipelineConfiguration, EtlPipelineConfigurationCommand>
+public class EtlPipelineConfigurationProvider : ImplementationConfigurationProviderBase<EtlPipelineConfiguration, EtlPipelineConfigurationCommand>
 {
 
     /// <summary>Initializes a new instance of the <see cref="EtlPipelineConfigurationProvider"/> class.</summary>

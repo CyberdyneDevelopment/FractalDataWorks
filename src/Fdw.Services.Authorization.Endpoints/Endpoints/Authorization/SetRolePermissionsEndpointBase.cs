@@ -23,7 +23,7 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissionsRequest, List<PermissionSummaryDto>>
 {
-    private readonly DefaultConfigurationProvider<RolePermissionConfiguration, RolePermissionConfigurationCommand> _rolePermissionProvider;
+    private readonly ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand> _rolePermissionProvider;
     // Why: RoleConfigurationProvider replaces 3x IOptionsMonitor<List<T>> with a single dual-source
     // provider that handles roles, permissions, and role-permission assembly.
     private readonly RoleConfigurationProvider _roleProvider;
@@ -42,7 +42,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 
     /// <inheritdoc />
     protected SetRolePermissionsEndpointBase(
-        DefaultConfigurationProvider<RolePermissionConfiguration, RolePermissionConfigurationCommand> rolePermissionProvider,
+        ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand> rolePermissionProvider,
         RoleConfigurationProvider roleProvider,
         IConfigurationGateway configurationGateway,
         ISystemRoleConfiguration systemRoleConfiguration)

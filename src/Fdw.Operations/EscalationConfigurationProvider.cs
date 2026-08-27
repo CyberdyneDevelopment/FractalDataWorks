@@ -20,7 +20,7 @@ using Microsoft.Extensions.Options;
 namespace Fdw.Operations;
 
 /// <summary>Configuration provider for escalation policy configurations.</summary>
-public class EscalationConfigurationProvider : DefaultConfigurationProvider<EscalationPolicyConfiguration, EscalationPolicyConfigurationCommand>
+public class EscalationConfigurationProvider : ImplementationConfigurationProviderBase<EscalationPolicyConfiguration, EscalationPolicyConfigurationCommand>
 {
     /// <summary>Initializes a new instance of the <see cref="EscalationConfigurationProvider"/> class.</summary>
     public EscalationConfigurationProvider(
@@ -35,7 +35,7 @@ public class EscalationConfigurationProvider : DefaultConfigurationProvider<Esca
     }
 
     // Why: Get(string)/Get(Guid) no longer override to assemble the Policy→Levels→Recipients tree.
-    // DefaultConfigurationProvider.Get composes that nested 1:N hierarchy uniformly via ComposeChildren
+    // ImplementationConfigurationProviderBase.Get composes that nested 1:N hierarchy uniformly via ComposeChildren
     // (the read mirror of the save cascade), driven by the EscalationPolicy container's inbound-FK
     // metadata — EscalationLevel (FK EscalationPolicyRowId) then EscalationLevelRecipient (FK
     // EscalationLevelRowId). The old hand-rolled AssembleHierarchy is deleted.

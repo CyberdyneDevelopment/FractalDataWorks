@@ -121,7 +121,7 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     public virtual IDataCommand Get(string dataStoreName, string pathName, string name, DateTimeOffset? asOf = null)
     {
         // Why: Build() returns DataGatewayCall; .Command extracts the address-free command.
-        // The provider pairs it with Target via DefaultConfigurationProvider.Target.
+        // The provider pairs it with Target via ImplementationConfigurationProviderBase.Target.
         return ApplyVersionFilter(
                 new QueryCommandBuilder<TConfig>(dataStoreName, pathName, TableName).Where(NameColumn, name),
                 asOf)
@@ -133,7 +133,7 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// Logical FK columns reference the parent's durable Id (e.g. ConnectionId → Connection.Id).
     /// IsCurrent filter is mandatory because the same logical Id can appear in multiple version rows.
     /// </summary>
-    // Why: protected — only DefaultConfigurationProvider.Get(id) calls this when dispatching on the
+    // Why: protected — only ImplementationConfigurationProviderBase.Get(id) calls this when dispatching on the
     // registered parentKeyType=Logical. Not a public sidecar — column name comes from registration.
     protected internal virtual IDataCommand GetByParent(string dataStoreName, string pathName, string parentIdColumn, Guid domainConfigurationId, DateTimeOffset? asOf = null)
     {
@@ -148,7 +148,7 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// Physical FK columns reference the parent's version-specific RowId (e.g. ConnectionRowId → Connection.RowId).
     /// No IsCurrent filter — RowId is unique per version row, so the predicate is already version-specific.
     /// </summary>
-    // Why: protected — only DefaultConfigurationProvider.Get(id) calls this when dispatching on the
+    // Why: protected — only ImplementationConfigurationProviderBase.Get(id) calls this when dispatching on the
     // registered parentKeyType=Physical. Not a public sidecar.
     protected internal virtual IDataCommand GetByPhysicalParent(string dataStoreName, string pathName, string parentRowIdColumn, Guid parentRowId)
     {

@@ -26,7 +26,7 @@ namespace Fdw.Services.Data;
 /// Overrides Get/GetAll to assemble the DataSet → DataSetSource/Field/KeyField hierarchy
 /// after base resolution, and composes FieldMappings onto each source.
 /// </summary>
-public class DataSetConfigurationProvider : DefaultConfigurationProvider<DataSetConfiguration, DataSetConfigurationCommand>
+public class DataSetConfigurationProvider : ImplementationConfigurationProviderBase<DataSetConfiguration, DataSetConfigurationCommand>
 {
     /// <summary>
     /// Registers the DataSetConfigurationProvider with DI, targeting this domain's own default
@@ -38,7 +38,7 @@ public class DataSetConfigurationProvider : DefaultConfigurationProvider<DataSet
             new DataSetConfigurationProvider(
                 sp.GetService<ILogger<DataSetConfigurationProvider>>(),
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-        services.TryAddSingleton<DefaultConfigurationProvider<DataSetConfiguration, DataSetConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<DataSetConfiguration, DataSetConfigurationCommand>>(
             sp => sp.GetRequiredService<DataSetConfigurationProvider>());
         services.TryAddSingleton<IServiceConfigurationProvider<DataSetConfiguration>>(
             sp => sp.GetRequiredService<DataSetConfigurationProvider>());

@@ -18,7 +18,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
 // Why: ExternalIdentityProvisionerConfiguration is loaded from ConfigurationDb at runtime via
 // Lazy<IConfigurationGateway>, not through BindConfiguration("ExternalIdentityProvisioners:..."). Mirrors
 // ExternalIdentityProviderConfigurationProvider exactly, targeting sec instead of auth.
-public class ExternalIdentityProvisionerConfigurationProvider : DefaultConfigurationProvider<ExternalIdentityProvisionerConfiguration, ExternalIdentityProvisionerConfigurationCommand>
+public class ExternalIdentityProvisionerConfigurationProvider : ImplementationConfigurationProviderBase<ExternalIdentityProvisionerConfiguration, ExternalIdentityProvisionerConfigurationCommand>
 {
     /// <summary>
     /// Registers the ExternalIdentityProvisionerConfigurationProvider and interface forwardings with
@@ -32,7 +32,7 @@ public class ExternalIdentityProvisionerConfigurationProvider : DefaultConfigura
                 sp.GetService<ILogger<ExternalIdentityProvisionerConfigurationProvider>>()!,
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
 
-        services.TryAddSingleton<DefaultConfigurationProvider<ExternalIdentityProvisionerConfiguration, ExternalIdentityProvisionerConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerConfiguration, ExternalIdentityProvisionerConfigurationCommand>>(
             sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
 
         services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProvisionerConfiguration>>(sp =>

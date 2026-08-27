@@ -1,42 +1,57 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using Fdw.Configuration;
-using Fdw.Services.Abstractions;
-using Fdw.Services.Abstractions.Health;
 using Fdw.Services.Configuration;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Commands;
-using Fdw.Services.Connections.Logging;
 using Fdw.Services.Data.Abstractions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace Fdw.Services.Connections;
 
 /// <summary>
-/// Domain-specific configuration provider for connections.
-/// The polymorphic typed-body read (dispatch on <c>ServiceOptionType</c> to load the typed body row,
-/// e.g. <c>conn.MsSqlConnection</c>, and attach it to <see cref="ConnectionConfiguration.Configuration"/>)
-/// is composed uniformly by <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>; typed providers
-/// are registered via the inherited <c>Register</c>.
+/// The connection domain's configuration provider.
 /// </summary>
-public class ConnectionConfigurationProvider : DefaultConfigurationProvider<ConnectionConfiguration, ConnectionConfigurationCommand>
+/// <remarks>
+/// It reads <c>conn.Connection</c> to find a configured connection by name or id, takes the
+/// <c>ServiceOptionType</c> that row names, and hands the request to the implementation provider
+/// registered under it — <c>MsSql</c> to <c>conn.MsSqlConnection</c>, <c>Sqlite</c> to
+/// <c>conn.SqliteConnection</c>. What comes back is that implementation's own configuration.
+/// </remarks>
+public class ConnectionConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          ConnectionConfiguration,
+          IConnectionImplementationConfiguration,
+          ConnectionConfigurationCommand>,
+      IConnectionConfigurationProvider
 {
-
-    /// <summary>Initializes a new instance of the <see cref="ConnectionConfigurationProvider"/> class.</summary>
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConnectionConfigurationProvider"/> class.
+    /// </summary>
+    /// <param name="logger">The logger for this provider.</param>
+    /// <param name="lazyGateway">The gateway this domain's rows are read through.</param>
+    /// <param name="dataStoreName">The connection the domain's rows live in.</param>
+    /// <param name="pathName">The schema the domain's rows live in.</param>
     public ConnectionConfigurationProvider(
         ILogger<ConnectionConfigurationProvider> logger,
         Lazy<IConfigurationGateway> lazyGateway,
-        string dataStoreName = "ConfigurationDb",
+        string dataStoreName = "PlatformConfiguration",
         string pathName = "conn")
         : base(logger ?? NullLogger<ConnectionConfigurationProvider>.Instance,
                lazyGateway,
-               dataStoreName, pathName)
+               dataStoreName,
+               pathName)
     {
     }
+
+    /// <inheritdoc />
+    protected override ConnectionConfiguration Compose<T>(
+        string serviceOptionType,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            ServiceOptionType = serviceOptionType,
+            Configuration = implementationConfiguration,
+        };
 }

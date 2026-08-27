@@ -79,9 +79,9 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILogger<CredentialServiceConfigurationProvider>>()!,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
 
-            // Why the forwards: consumers inject the base DefaultConfigurationProvider<TConfig, TCommand>,
+            // Why the forwards: consumers inject the base ImplementationConfigurationProviderBase<TConfig, TCommand>,
             // and the generated provider wiring looks the domain provider up as IServiceConfigurationProvider<T>.
-            builder.Services.TryAddSingleton<DefaultConfigurationProvider<CredentialServiceConfiguration, CredentialServiceConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<CredentialServiceConfiguration, CredentialServiceConfigurationCommand>>(
                 sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<CredentialServiceConfiguration>>(
                 sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());

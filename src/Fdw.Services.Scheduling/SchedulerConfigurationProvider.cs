@@ -19,7 +19,7 @@ namespace Fdw.Services.Scheduling;
 // Why: SchedulerConfiguration is loaded from ConfigurationDb at runtime via Lazy<IConfigurationGateway>,
 // not through BindConfiguration("Schedulers:..."). The empty IOptionsMonitor passed to the base class
 // means the provider's gateway-backed query path is the only source.
-public class SchedulerConfigurationProvider : DefaultConfigurationProvider<SchedulerConfiguration, SchedulerConfigurationCommand>
+public class SchedulerConfigurationProvider : ImplementationConfigurationProviderBase<SchedulerConfiguration, SchedulerConfigurationCommand>
 {
 
     /// <summary>Initializes a new instance of the <see cref="SchedulerConfigurationProvider"/> class.</summary>

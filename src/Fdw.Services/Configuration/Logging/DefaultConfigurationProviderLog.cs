@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Configuration.Logging;
 
 /// <summary>
-/// MessageLogging for DefaultConfigurationProvider operations.
+/// MessageLogging for ImplementationConfigurationProviderBase operations.
 /// EventId range: 9360-9388 (plus 9350)
 /// </summary>
 [MessageLoggingTypeCode("SERVICES")]
@@ -311,6 +311,15 @@ public static partial class DefaultConfigurationProviderLog
     [MessageLogging(EventId = 11010, Level = LogLevel.Debug,
         Message = "Header {typeName} '{name}' has no ServiceOptionType — typed body not composed")]
     public static partial IGenericMessage NoServiceOptionTypeForTypedBody(ILogger logger, string typeName, string name);
+
+    /// <summary>Logs that no implementation configuration provider is registered for a ServiceOptionType.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="name">The configuration's name.</param>
+    /// <param name="serviceOptionType">The ServiceOptionType the record names.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 61006, Level = LogLevel.Error,
+        Message = "No implementation configuration provider registered for ServiceOptionType '{serviceOptionType}' — cannot compose '{name}'")]
+    public static partial IGenericMessage NoImplementationProvider(ILogger logger, string name, string serviceOptionType);
 
     /// <summary>
     /// Logs that no POCO mapper was found for a header type, so the loaded typed body was left unattached.

@@ -26,7 +26,7 @@ namespace Fdw.Services.Configuration;
 /// </summary>
 /// <typeparam name="TConfig">The configuration POCO type.</typeparam>
 /// <typeparam name="TCommand">The configuration command TypeOption for this domain.</typeparam>
-public class DefaultConfigurationProvider<TConfig, TCommand>
+public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     : IServiceConfigurationProvider<TConfig>, IServiceConfigurationProvider
     where TConfig : class, IGenericConfiguration
     where TCommand : ConfigurationCommandBase<TConfig>
@@ -73,13 +73,13 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
     // ctrl+cfg dual-source IOptionsMonitor first-look (and its UseOptionsMonitor toggle) has been removed;
     // the ctrl/cfg-tier distinction now lives entirely in dataStoreName/pathName + the app's declared
     // configurationSchema connections, not in a runtime options merge.
-    public DefaultConfigurationProvider(
-        ILogger<DefaultConfigurationProvider<TConfig, TCommand>>? logger,
+    public ImplementationConfigurationProviderBase(
+        ILogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>? logger,
         Lazy<IConfigurationGateway> gateway,
         string dataStoreName,
         string pathName)
     {
-        _logger = logger ?? NullLogger<DefaultConfigurationProvider<TConfig, TCommand>>.Instance;
+        _logger = logger ?? NullLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>.Instance;
         _gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
         DataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
         PathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
@@ -367,7 +367,11 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
         }
 
         if (!ImplementationProviders.TryGetValue(header.ServiceOptionType, out var typedProvider))
-            return OnNoTypedProvider(header);
+        {
+            return GenericResult<TConfig>.Failure(
+                DefaultConfigurationProviderLog.NoImplementationProvider(
+                    _logger, header.Name, header.ServiceOptionType));
+        }
 
         DefaultConfigurationProviderLog.LoadingTypedBody(_logger, typeof(TConfig).Name, header.Name, header.ServiceOptionType);
 
@@ -396,24 +400,6 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
         DefaultConfigurationProviderLog.TypedBodyLoaded(_logger, typeof(TConfig).Name, header.Name, header.ServiceOptionType);
         return GenericResult<TConfig>.Success(header);
     }
-
-    /// <summary>
-    /// Decides the outcome when a header carries a <c>ServiceOptionType</c> for which no typed provider
-    /// is registered. The default rule is to FAIL LOUD — a typed configuration whose body provider is
-    /// missing is a defect. A domain MAY override this when "no typed provider" is a legitimate, well
-    /// defined state for that domain (e.g. a transport whose store carries no extra typed-body columns
-    /// is complete on the header alone). This is a domain rule, NOT a value fallback.
-    /// </summary>
-    /// <param name="header">The header whose discriminator has no registered typed provider.</param>
-    // Why: ComposeTypedBody only reaches OnNoTypedProvider after asserting ServiceOptionType is
-    // non-empty, so the null-forgiving operator is a compile-time assertion here, not a value fallback.
-    protected virtual IGenericResult<TConfig> OnNoTypedProvider(TConfig header)
-        => GenericResult<TConfig>.Failure(
-            DefaultConfigurationProviderLog.NoTypedProviderForServiceOptionType(
-                _logger, typeof(TConfig).Name, header.ServiceOptionType!, header.Name));
-
-    // Why: the read mirror of CascadeOwnerChildren's child-collection walk, driven ENTIRELY by the
-    // generated mapper's CascadeChildren FK metadata — NO IConfigurationGateway.DataStores / schema-tree
     // lookup. Each descriptor carries the physical {Owner}RowId FK column; children are queried via the
     // gateway keyed on the owner's RowId and recursed, so any N-level aggregate composes from data rows
     // alone (DataStore→Paths→Containers→Fields, Connection→typed body→auth/limits, DataSet→Fields,
@@ -917,7 +903,6 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
     // missing; leaf rows and nested bodies have no entry and pass straight through. A discriminator with no
     // registered provider is deliberately NOT treated as incomplete here: that is the same header-vs-leaf
     // distinction ComposeTypedBody makes on the read side, and domains that legitimately allow it (see
-    // DataStoreConfigurationProvider) say so by overriding OnNoTypedProvider rather than by being
     // special-cased in the writer.
     private IGenericResult RequireCompleteAggregate(TConfig record)
     {
@@ -1290,7 +1275,6 @@ public class DefaultConfigurationProvider<TConfig, TCommand>
         //
         // Why the header + children compose rather than Get: Get also composes the TYPED BODY, and that
         // step is allowed to fail loud when the discriminator has no registered typed provider
-        // (OnNoTypedProvider). Routing delete through it made "I cannot compose this" mean "I cannot
         // delete this" — so a header with an unregistered discriminator became permanently undeletable,
         // and, because exactly one domain overrides that hook, deletable in one domain and not in
         // another for the identical situation. Delete does not need the body materialized: a registered

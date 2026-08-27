@@ -74,9 +74,9 @@ public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILogger<DataVaultConfigurationProvider>>()!,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
 
-            // Why: consumers inject DefaultConfigurationProvider<TConfig, TCommand> — forward to the
+            // Why: consumers inject ImplementationConfigurationProviderBase<TConfig, TCommand> — forward to the
             // concrete subclass so injection by base type succeeds.
-            builder.Services.TryAddSingleton<DefaultConfigurationProvider<DataVaultConfiguration, DataVaultConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataVaultConfiguration, DataVaultConfigurationCommand>>(
                 sp => sp.GetRequiredService<DataVaultConfigurationProvider>());
 
             // Why: generated Initialize() links IServiceConfigurationProvider<T> as the parent on the

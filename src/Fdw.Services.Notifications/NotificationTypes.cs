@@ -89,17 +89,17 @@ public partial class NotificationTypes
                 new NotificationConfigurationProvider(
                     sp.GetService<ILogger<NotificationConfigurationProvider>>()!,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-            builder.Services.TryAddSingleton<DefaultConfigurationProvider<NotificationConfiguration, NotificationConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<NotificationConfiguration, NotificationConfigurationCommand>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<NotificationConfiguration>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
 
             // Why literal "ConfigurationDb"/"notify": this child rule provider is a plain
-            // DefaultConfigurationProvider<,> instance (not a domain-specific subclass), so there is no
+            // ImplementationConfigurationProviderBase<,> instance (not a domain-specific subclass), so there is no
             // per-domain constructor default to fall back on — this is the domain's own default location.
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<NotificationRuleConfiguration>>(sp =>
-                new DefaultConfigurationProvider<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<DefaultConfigurationProvider<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>>()!,
+                new ImplementationConfigurationProviderBase<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>>()!,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
                     "ConfigurationDb", "notify"));
 

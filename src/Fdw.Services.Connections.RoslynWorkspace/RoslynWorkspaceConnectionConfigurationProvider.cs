@@ -16,7 +16,7 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 /// Connection's logical Id and routes to <c>WHERE [ConnectionId]=@p0 AND IsCurrent=1</c>
 /// via the container FK key discovered from the IDataStore tree.
 /// </remarks>
-public class RoslynWorkspaceConnectionConfigurationProvider : DefaultConfigurationProvider<RoslynWorkspaceConnectionConfiguration, RoslynWorkspaceConnectionConfigurationCommand>
+public class RoslynWorkspaceConnectionConfigurationProvider : ImplementationConfigurationProviderBase<RoslynWorkspaceConnectionConfiguration, RoslynWorkspaceConnectionConfigurationCommand>
 {
     /// <summary>Initializes a new instance of the <see cref="RoslynWorkspaceConnectionConfigurationProvider"/> class.</summary>
     public RoslynWorkspaceConnectionConfigurationProvider(

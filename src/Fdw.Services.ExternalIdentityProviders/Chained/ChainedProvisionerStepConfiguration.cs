@@ -9,7 +9,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// Ordered child of <see cref="ChainedExternalIdentityProvisionerConfiguration"/> — one row per
 /// sibling <c>sec.ExternalIdentityProvisioner</c> the chain delegates <c>Provision</c> to, in
 /// <see cref="ExecutionOrder"/>. Mirrors <c>Fdw.Operations.Configuration.EscalationLevelConfiguration</c>'s
-/// ordered-child shape: the read cascade (<c>DefaultConfigurationProvider.ComposeChildren</c>) does NOT
+/// ordered-child shape: the read cascade (<c>ImplementationConfigurationProviderBase.ComposeChildren</c>) does NOT
 /// apply an ORDER BY, so <see cref="Chained.ChainedExternalIdentityProvisioner"/> sorts
 /// <see cref="ExecutionOrder"/> ascending itself before walking the steps.
 /// </summary>

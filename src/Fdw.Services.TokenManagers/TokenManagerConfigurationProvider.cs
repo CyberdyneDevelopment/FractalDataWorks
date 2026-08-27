@@ -17,7 +17,7 @@ namespace Fdw.Services.TokenManagers;
 // Why: TokenManagerConfiguration is loaded from ConfigurationDb at runtime via
 // Lazy<IConfigurationGateway>, not through BindConfiguration("TokenManagers:..."). Mirrors
 // SchedulerConfigurationProvider/AuthenticationServiceConfigurationProvider exactly.
-public class TokenManagerConfigurationProvider : DefaultConfigurationProvider<TokenManagerConfiguration, TokenManagerConfigurationCommand>
+public class TokenManagerConfigurationProvider : ImplementationConfigurationProviderBase<TokenManagerConfiguration, TokenManagerConfigurationCommand>
 {
     /// <summary>
     /// Registers the TokenManagerConfigurationProvider and interface forwardings with DI, targeting
@@ -31,7 +31,7 @@ public class TokenManagerConfigurationProvider : DefaultConfigurationProvider<To
                 sp.GetService<ILogger<TokenManagerConfigurationProvider>>()!,
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
 
-        services.TryAddSingleton<DefaultConfigurationProvider<TokenManagerConfiguration, TokenManagerConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<TokenManagerConfiguration, TokenManagerConfigurationCommand>>(
             sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
 
         services.TryAddSingleton<IServiceConfigurationProvider<TokenManagerConfiguration>>(sp =>

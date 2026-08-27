@@ -110,7 +110,7 @@ public sealed class DefaultSchedulerType
                 new SchedulerConfigurationProvider(
                     sp.GetService<ILogger<SchedulerConfigurationProvider>>()!,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-            builder.Services.TryAddSingleton<DefaultConfigurationProvider<SchedulerConfiguration, SchedulerConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<SchedulerConfiguration, SchedulerConfigurationCommand>>(
                 sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<SchedulerConfiguration>>(
                 sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
@@ -119,7 +119,7 @@ public sealed class DefaultSchedulerType
                 new ScheduleConfigurationProvider(
                     sp.GetService<ILogger<ScheduleConfigurationProvider>>()!,
                     sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-            builder.Services.TryAddSingleton<DefaultConfigurationProvider<ScheduleConfiguration, ScheduleConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ScheduleConfiguration, ScheduleConfigurationCommand>>(
                 sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<ScheduleConfiguration>>(
                 sp => sp.GetRequiredService<ScheduleConfigurationProvider>());

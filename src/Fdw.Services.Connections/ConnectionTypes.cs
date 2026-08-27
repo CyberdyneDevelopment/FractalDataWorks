@@ -73,6 +73,17 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
     /// it also removes <c>beforefieldinit</c>, so initialization is precise rather than merely eventual.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    /// <remarks>
+    /// Defaulted here and public so a host can point the whole domain at a different configuration
+    /// store before registration runs. Every implementation of a connection lives in the same store as
+    /// the connection row that owns it — the foreign key is declared on that row and cannot span
+    /// connections — so this one value settles the domain and its implementations together.
+    /// </remarks>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
     static ConnectionTypes()
     {
         var collectOptions = RegisterFunc;
@@ -86,27 +97,23 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
         {
             var log = loggerFactory?.CreateLogger<ConnectionTypes>() ?? NullLogger<ConnectionTypes>.Instance;
 
-            // Why the collection registers the parent provider and does it before the options run:
-            // the owner of a registration is the type that knows the thing exists. This collection
-            // ships beside ConnectionConfigurationProvider, so it knows; a connection-kind option knows
-            // only itself and registers its own component INTO this provider, so the provider has to
-            // exist first. It used to exist because all six option types called a static on the provider
-            // and leaned on TryAdd to make six calls behave like one.
+            // Why the collection registers the domain provider, and before the options run: the owner
+            // of a registration is the type that knows the thing exists. This collection ships beside
+            // ConnectionConfigurationProvider, so it knows. An implementation provider is registered
+            // INTO the domain provider, so the domain provider has to exist first.
             ConnectionProviderLogger.DomainConfigurationRegistering(
                 loggerFactory?.CreateLogger<ConnectionConfigurationProvider>()
                 ?? NullLogger<ConnectionConfigurationProvider>.Instance,
                 nameof(ConnectionConfigurationProvider));
 
-            builder.Services.TryAddSingleton<ConnectionConfigurationProvider>(sp =>
+            // Why the connection name is spoken here and nowhere else: it is the one place that knows
+            // which store this domain's rows live in, and ConfigurationConnection is what a host changes
+            // to move the whole domain somewhere else.
+            builder.Services.TryAddSingleton<IConnectionConfigurationProvider>(sp =>
                 new ConnectionConfigurationProvider(
                     sp.GetService<ILogger<ConnectionConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-
-            builder.Services.TryAddSingleton<DefaultConfigurationProvider<ConnectionConfiguration, ConnectionConfigurationCommand>>(
-                sp => sp.GetRequiredService<ConnectionConfigurationProvider>());
-
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ConnectionConfiguration>>(
-                sp => sp.GetRequiredService<ConnectionConfigurationProvider>());
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    ConfigurationConnection));
 
             // Why one health checkable for the domain rather than one per connection: conn.Connection
             // rows are runtime data enumerated at check time, never per-row DI registrations.
@@ -125,7 +132,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddScoped<IDataConnectionProvider>(sp =>
                 (IDataConnectionProvider)sp.GetRequiredService<IConnectionProvider>());
 
-            // Why: IServiceConnectionProvider serves framework-internal connections such as ConfigurationDb.
+            // Why: IServiceConnectionProvider serves framework-internal connections such as PlatformConfiguration.
             builder.Services.TryAddSingleton<IServiceConnectionProvider, DefaultServiceConnectionProvider>();
 
             // Why the result is read: this replacement calls the func it captured, and discarding

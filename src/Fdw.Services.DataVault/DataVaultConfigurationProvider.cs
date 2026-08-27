@@ -16,10 +16,10 @@ namespace Fdw.Services.DataVault;
 /// Domain-specific configuration provider for data vaults.
 /// The polymorphic typed-body read (dispatch on <c>ServiceOptionType</c> to load the typed body row and
 /// attach it to <see cref="DataVaultConfiguration.Configuration"/>) is composed uniformly by
-/// <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>; typed providers are registered via the
+/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>; typed providers are registered via the
 /// inherited <c>Register</c>.
 /// </summary>
-public class DataVaultConfigurationProvider : DefaultConfigurationProvider<DataVaultConfiguration, DataVaultConfigurationCommand>
+public class DataVaultConfigurationProvider : ImplementationConfigurationProviderBase<DataVaultConfiguration, DataVaultConfigurationCommand>
 {
 
     /// <summary>

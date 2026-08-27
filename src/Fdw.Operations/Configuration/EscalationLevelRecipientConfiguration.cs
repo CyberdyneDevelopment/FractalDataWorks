@@ -28,7 +28,7 @@ namespace Fdw.Operations.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Operations")]
-// Why: IGenericConfiguration is required by DefaultConfigurationProvider<T> for child data pattern
+// Why: IGenericConfiguration is required by ImplementationConfigurationProviderBase<T> for child data pattern
 // in EscalationConfigurationProvider.
 public sealed partial class EscalationLevelRecipientConfiguration : IGenericConfiguration
 {

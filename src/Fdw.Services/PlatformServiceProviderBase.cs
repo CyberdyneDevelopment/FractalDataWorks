@@ -119,7 +119,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
 
     // Why an adapter rather than a checked cast: IServiceConfigurationProvider<T> does NOT inherit the
     // erased IServiceConfigurationProvider — they are two independent interfaces that
-    // DefaultConfigurationProvider happens to implement both of. Register accepts the typed one in its
+    // ImplementationConfigurationProviderBase happens to implement both of. Register accepts the typed one in its
     // signature, so refusing an argument that satisfies that signature makes the signature a lie, and
     // the refusal lands at start-up on something the compiler already accepted. Erasing it here means
     // every value the signature admits actually works.
@@ -196,7 +196,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     /// <param name="factory">The factory registered for the configuration's ServiceOptionType.</param>
     /// <param name="configuration">The resolved (composed) configuration.</param>
     /// <returns>The created service, or a structured failure.</returns>
-    protected virtual IGenericResult<TService> Create(IServiceFactory<TService> factory, TConfiguration configuration)
+    private IGenericResult<TService> Create(IServiceFactory<TService> factory, TConfiguration configuration)
         => factory.Create(configuration);
 
     // ── Get by name ─────────────────────────────────────────────────────────
@@ -354,15 +354,6 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
 
         return Task.FromResult(result);
     }
-
-    // ── Evict ───────────────────────────────────────────────────────────────
-
-    /// <inheritdoc />
-    public virtual void Evict(string name) { }
-
-    /// <inheritdoc />
-    public virtual void Evict(Guid id) { }
-
     // ── Generic casts (IPlatformServiceProvider base) ────────────────────────────
 
     async Task<IGenericResult<T>> IPlatformServiceProvider.Get<T>(string name, CancellationToken cancellationToken)

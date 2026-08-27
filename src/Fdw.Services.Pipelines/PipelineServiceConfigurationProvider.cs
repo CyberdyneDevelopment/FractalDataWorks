@@ -14,11 +14,11 @@ namespace Fdw.Services.Pipelines;
 /// The general pipeline header provider over <c>pipe.Pipeline</c>. The full aggregate — the
 /// ETL-kind typed body (pipe.EtlPipeline), its engine typed body (pipe.BatchCopyPipeline /
 /// pipe.StreamingPipeline), and the kind body's Transforms — is composed on read and cascade-saved on
-/// write entirely by the keystone <see cref="DefaultConfigurationProvider{TConfig,TCommand}"/>. The "Etl"
+/// write entirely by the keystone <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>. The "Etl"
 /// kind typed provider is attached to this header from the Services.Etl side (the ETL domain the general header
 /// consumes), mirroring the connections→secret-managers consumer-injects-provider pattern.
 /// </summary>
-public class PipelineServiceConfigurationProvider : DefaultConfigurationProvider<PipelineConfiguration, PipelineConfigurationCommand>
+public class PipelineServiceConfigurationProvider : ImplementationConfigurationProviderBase<PipelineConfiguration, PipelineConfigurationCommand>
 {
     /// <summary>
     /// Registers the PipelineServiceConfigurationProvider with DI, targeting this domain's own default
@@ -30,7 +30,7 @@ public class PipelineServiceConfigurationProvider : DefaultConfigurationProvider
             new PipelineServiceConfigurationProvider(
                 sp.GetService<ILogger<PipelineServiceConfigurationProvider>>(),
                 sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-        services.TryAddSingleton<DefaultConfigurationProvider<PipelineConfiguration, PipelineConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<PipelineConfiguration, PipelineConfigurationCommand>>(
             sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
         services.TryAddSingleton<IServiceConfigurationProvider<PipelineConfiguration>>(
             sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
