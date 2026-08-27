@@ -90,10 +90,18 @@ public partial class NotificationTypes
             // read/written via the standard DataGateway — this replaces the no-op echo endpoints.
             builder.Services.TryAddScoped<IUserNotificationPreferenceService, SqlUserNotificationPreferenceService>();
 
-            builder.Services.TryAddSingleton<NotificationConfigurationProvider>(sp =>
+            // Why the domain interface and not only the concrete class: this collection resolves
+            // INotificationConfigurationProvider to attach it to the domain provider, and a registration
+            // of the concrete type alone leaves that lookup empty — the domain then fails every
+            // lookup by name for the life of the scope. ConfigurationConnection is the one place that
+            // names which store these rows live in.
+            builder.Services.TryAddSingleton<INotificationConfigurationProvider>(sp =>
                 new NotificationConfigurationProvider(
                     sp.GetService<ILogger<NotificationConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<NotificationConfigurationProvider>(
+                sp => (NotificationConfigurationProvider)sp.GetRequiredService<INotificationConfigurationProvider>());
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<NotificationConfiguration, NotificationConfigurationCommand>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<NotificationConfiguration>>(

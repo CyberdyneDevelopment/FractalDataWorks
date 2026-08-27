@@ -13,6 +13,10 @@ using System;
 using System.Linq;
 using Fdw.Results;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.TokenManagers.Commands;
 
 namespace Fdw.Services.TokenManagers;
 
@@ -77,6 +81,22 @@ public partial class TokenManagerTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(TokenManagerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(TokenManagerTypes), providerService);
 
+            // Why the domain interface and not only the concrete class: this collection resolves it to
+            // attach it to the domain provider, and a registration of the concrete type alone leaves that
+            // lookup empty — the domain then fails every lookup by name for the life of the scope.
+            // ConfigurationConnection is the one place that names which store these rows live in.
+            builder.Services.TryAddSingleton<ITokenManagerConfigurationProvider>(sp =>
+                new TokenManagerConfigurationProvider(
+                    sp.GetService<ILogger<TokenManagerConfigurationProvider>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<TokenManagerConfigurationProvider>(
+                sp => (TokenManagerConfigurationProvider)sp.GetRequiredService<ITokenManagerConfigurationProvider>());
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<TokenManagerConfiguration, TokenManagerConfigurationCommand>>(
+                sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<TokenManagerConfiguration>>(
+                sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
+
             builder.Services.AddScoped<ITokenManagerProvider>(sp =>
             {
                 var provider = new TokenManagerProvider(
@@ -93,7 +113,7 @@ public partial class TokenManagerTypes : ServiceTypeCollectionBase<
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(TokenManagerTypes), provider.GetType().Name);
                 try
                 {
-                    if (sp.GetService<TokenManagerConfigurationProvider>() is { } cfgProvider)
+                    if (sp.GetService<ITokenManagerConfigurationProvider>() is { } cfgProvider)
                     {
                         // Why the result is read: a provider that did not take its parent still constructs, and
                         // every later read silently misses. The failure has to be said out loud here or nowhere.

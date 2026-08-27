@@ -14,6 +14,10 @@ using Fdw.Results;
 using Microsoft.Extensions.Hosting;
 
 using Fdw.Configuration;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.ExternalIdentityProviders.Commands;
 
 namespace Fdw.Services.ExternalIdentityProviders;
 
@@ -82,6 +86,23 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
 
             ServiceTypeLog.DomainOptionsCollected(log, nameof(ExternalIdentityProvisionerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(ExternalIdentityProvisionerTypes), providerService);
+
+            // Why the domain interface and not only the concrete class: this collection resolves
+            // IExternalIdentityProvisionerConfigurationProvider to attach it to the domain provider, and a registration of
+            // the concrete type alone leaves that lookup empty — the domain then fails every lookup by
+            // name for the life of the scope. ConfigurationConnection is the one place that names which
+            // store these rows live in.
+            builder.Services.TryAddSingleton<IExternalIdentityProvisionerConfigurationProvider>(sp =>
+                new ExternalIdentityProvisionerConfigurationProvider(
+                    sp.GetService<ILogger<ExternalIdentityProvisionerConfigurationProvider>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<ExternalIdentityProvisionerConfigurationProvider>(
+                sp => (ExternalIdentityProvisionerConfigurationProvider)sp.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>());
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerConfiguration, ExternalIdentityProvisionerConfigurationCommand>>(
+                sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProvisionerConfiguration>>(
+                sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
 
             builder.Services.AddScoped<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(sp =>
             {

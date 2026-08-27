@@ -26,24 +26,6 @@ public class ExternalIdentityProviderConfigurationProvider
           ExternalIdentityProviderConfigurationCommand>,
       IExternalIdentityProviderConfigurationProvider
 {
-    /// <summary>
-    /// Registers the ExternalIdentityProviderConfigurationProvider and interface forwardings with DI,
-    /// targeting this domain's own default location. To override, call <c>SetConfiguration</c> on the
-    /// resolved singleton.
-    /// </summary>
-    public static void RegisterDomainServices(IServiceCollection services)
-    {
-        services.TryAddSingleton<ExternalIdentityProviderConfigurationProvider>(sp =>
-            new ExternalIdentityProviderConfigurationProvider(
-                sp.GetService<ILogger<ExternalIdentityProviderConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProviderConfiguration, ExternalIdentityProviderConfigurationCommand>>(
-            sp => sp.GetRequiredService<ExternalIdentityProviderConfigurationProvider>());
-
-        services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProviderConfiguration>>(sp =>
-            sp.GetRequiredService<ExternalIdentityProviderConfigurationProvider>());
-    }
 
     /// <summary>Initializes a new instance of the <see cref="ExternalIdentityProviderConfigurationProvider"/> class.</summary>
     public ExternalIdentityProviderConfigurationProvider(

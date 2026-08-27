@@ -79,10 +79,18 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
             // owner of a registration is the type that knows the thing exists, and this collection ships
             // beside it. It goes before the collect because each option registers itself against this
             // provider, so it has to be there when the member cycle runs.
-            builder.Services.TryAddSingleton<CredentialServiceConfigurationProvider>(sp =>
+            // Why the domain interface and not only the concrete class: this collection resolves
+            // ICredentialServiceConfigurationProvider to attach it to the domain provider, and a registration
+            // of the concrete type alone leaves that lookup empty — the domain then fails every
+            // lookup by name for the life of the scope. ConfigurationConnection is the one place that
+            // names which store these rows live in.
+            builder.Services.TryAddSingleton<ICredentialServiceConfigurationProvider>(sp =>
                 new CredentialServiceConfigurationProvider(
                     sp.GetService<ILogger<CredentialServiceConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<CredentialServiceConfigurationProvider>(
+                sp => (CredentialServiceConfigurationProvider)sp.GetRequiredService<ICredentialServiceConfigurationProvider>());
 
             // Why the forwards: consumers inject the base ImplementationConfigurationProviderBase<TConfig, TCommand>,
             // and the generated provider wiring looks the domain provider up as IServiceConfigurationProvider<T>.

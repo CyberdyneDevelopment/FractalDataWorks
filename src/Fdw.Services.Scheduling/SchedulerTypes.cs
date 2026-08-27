@@ -5,9 +5,14 @@ using Fdw.Configuration;
 using Fdw.Services;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Scheduling.Abstractions;
+using Fdw.Services.Scheduling.Abstractions.Configuration;
+using Fdw.Services.Scheduling.Commands;
 using Fdw.ServiceTypes.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
@@ -75,6 +80,32 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
 
             ServiceTypeLog.DomainOptionsCollected(log, nameof(SchedulerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(SchedulerTypes), providerService);
+
+            // Why the collection registers the configuration providers, and under the domain interface:
+            // this collection is what resolves ISchedulerConfigurationProvider to attach it, and the
+            // owner of a registration is the type that knows the thing exists. Registered on an option
+            // instead, the whole domain loses name resolution whenever that option is not referenced.
+            // ConfigurationConnection is the one place that names which store these rows live in.
+            builder.Services.TryAddSingleton<ISchedulerConfigurationProvider>(sp =>
+                new SchedulerConfigurationProvider(
+                    sp.GetService<ILogger<SchedulerConfigurationProvider>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<SchedulerConfigurationProvider>(
+                sp => (SchedulerConfigurationProvider)sp.GetRequiredService<ISchedulerConfigurationProvider>());
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<SchedulerConfiguration, SchedulerConfigurationCommand>>(
+                sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<SchedulerConfiguration>>(
+                sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
+
+            builder.Services.TryAddSingleton<ScheduleConfigurationProvider>(sp =>
+                new ScheduleConfigurationProvider(
+                    sp.GetService<ILogger<ScheduleConfigurationProvider>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ScheduleConfiguration, ScheduleConfigurationCommand>>(
+                sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ScheduleConfiguration>>(
+                sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
 
             builder.Services.AddScoped<ISchedulerServiceProvider>(sp =>
             {

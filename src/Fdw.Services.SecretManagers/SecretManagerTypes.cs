@@ -81,10 +81,18 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
             // SecretManager configuration, registered once for the domain here rather
             // than by every caller that needs it.
 
-            builder.Services.TryAddSingleton<SecretManagerConfigurationProvider>(sp =>
+            // Why the domain interface and not only the concrete class: this collection resolves
+            // ISecretManagerConfigurationProvider to attach it to the domain provider, and a registration
+            // of the concrete type alone leaves that lookup empty — the domain then fails every lookup by
+            // name for the life of the scope. ConfigurationConnection is the one place that names which
+            // store these rows live in.
+            builder.Services.TryAddSingleton<ISecretManagerConfigurationProvider>(sp =>
                 new SecretManagerConfigurationProvider(
                     sp.GetService<ILogger<SecretManagerConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<SecretManagerConfigurationProvider>(
+                sp => (SecretManagerConfigurationProvider)sp.GetRequiredService<ISecretManagerConfigurationProvider>());
             // Why: Consumers inject ImplementationConfigurationProviderBase<TConfig, TCommand> (the new base) —
             // forward to the concrete subclass.
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<SecretManagerConfiguration, SecretManagerConfigurationCommand>>(

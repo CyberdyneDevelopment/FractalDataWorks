@@ -72,10 +72,6 @@ public sealed class ChainedExternalIdentityProvisionerType
         Registration((builder, loggerFactory) =>
         {
 
-            // Why: registers the header (ExternalIdentityProvisionerConfigurationProvider) config provider
-            // this option depends on — idempotent (TryAdd*), safe for every sibling option to call.
-            ExternalIdentityProvisionerConfigurationProvider.RegisterDomainServices(builder.Services);
-
             builder.Services.TryAddSingleton<ChainedExternalIdentityProvisionerConfigurationProvider>(sp =>
                 new ChainedExternalIdentityProvisionerConfigurationProvider(
                     sp.GetService<ILogger<ChainedExternalIdentityProvisionerConfigurationProvider>>()!,

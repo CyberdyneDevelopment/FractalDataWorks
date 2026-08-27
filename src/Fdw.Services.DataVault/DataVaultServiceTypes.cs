@@ -74,10 +74,18 @@ public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
 
             // The configuration provider for this domain, registered once here rather than by every
             // caller that happens to need it.
-            builder.Services.TryAddSingleton<DataVaultConfigurationProvider>(sp =>
+            // Why the domain interface and not only the concrete class: this collection resolves
+            // IDataVaultConfigurationProvider to attach it to the domain provider, and a registration
+            // of the concrete type alone leaves that lookup empty — the domain then fails every
+            // lookup by name for the life of the scope. ConfigurationConnection is the one place that
+            // names which store these rows live in.
+            builder.Services.TryAddSingleton<IDataVaultConfigurationProvider>(sp =>
                 new DataVaultConfigurationProvider(
                     sp.GetService<ILogger<DataVaultConfigurationProvider>>()!,
-                    sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<DataVaultConfigurationProvider>(
+                sp => (DataVaultConfigurationProvider)sp.GetRequiredService<IDataVaultConfigurationProvider>());
 
             // Why: consumers inject ImplementationConfigurationProviderBase<TConfig, TCommand> — forward to the
             // concrete subclass so injection by base type succeeds.

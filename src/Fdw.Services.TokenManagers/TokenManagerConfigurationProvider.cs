@@ -25,24 +25,6 @@ public class TokenManagerConfigurationProvider
           TokenManagerConfigurationCommand>,
       ITokenManagerConfigurationProvider
 {
-    /// <summary>
-    /// Registers the TokenManagerConfigurationProvider and interface forwardings with DI, targeting
-    /// this domain's own default location. To override, call <c>SetConfiguration</c> on the resolved
-    /// singleton.
-    /// </summary>
-    public static void RegisterDomainServices(IServiceCollection services)
-    {
-        services.TryAddSingleton<TokenManagerConfigurationProvider>(sp =>
-            new TokenManagerConfigurationProvider(
-                sp.GetService<ILogger<TokenManagerConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<TokenManagerConfiguration, TokenManagerConfigurationCommand>>(
-            sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
-
-        services.TryAddSingleton<IServiceConfigurationProvider<TokenManagerConfiguration>>(sp =>
-            sp.GetRequiredService<TokenManagerConfigurationProvider>());
-    }
 
     /// <summary>Initializes a new instance of the <see cref="TokenManagerConfigurationProvider"/> class.</summary>
     public TokenManagerConfigurationProvider(

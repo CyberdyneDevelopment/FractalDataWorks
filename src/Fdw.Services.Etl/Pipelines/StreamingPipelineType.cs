@@ -133,7 +133,6 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             // Why: ETL is a KIND the general Pipeline header consumes. Register the general header provider
             // (idempotent TryAdd) here too so the "Etl" typed-provider attachment in RegisterFactory never
             // depends on cross-collection registration ordering (PipelineServiceTypes vs EtlPipelineTypes).
-            PipelineServiceConfigurationProvider.RegisterDomainConfiguration(builder.Services);
 
             // Factory - DI handles all constructor dependencies
             // Why Scoped: the factory optionally consumes IDataGateway (scoped). EtlPipelineTypes'

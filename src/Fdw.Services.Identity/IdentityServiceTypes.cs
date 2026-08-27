@@ -11,6 +11,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Identity.Commands;
 
 namespace Fdw.Services.Identity;
 
@@ -72,7 +76,22 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
             if (registered.IsFailure)
                 return registered;
 
-            IdentityServiceConfigurationProvider.RegisterDomainServices(builder.Services);
+            // Why the domain interface and not only the concrete class: this collection resolves
+            // IIdentityServiceConfigurationProvider to attach it to the domain provider, and a registration of the
+            // concrete type alone leaves that lookup empty — the domain then fails every lookup by name
+            // for the life of the scope. ConfigurationConnection is the one place that names which store
+            // these rows live in.
+            builder.Services.TryAddSingleton<IIdentityServiceConfigurationProvider>(sp =>
+                new IdentityServiceConfigurationProvider(
+                    sp.GetService<ILogger<IdentityServiceConfigurationProvider>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<IdentityServiceConfigurationProvider>(
+                sp => (IdentityServiceConfigurationProvider)sp.GetRequiredService<IIdentityServiceConfigurationProvider>());
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IdentityServiceConfiguration, IdentityServiceConfigurationCommand>>(
+                sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<IdentityServiceConfiguration>>(
+                sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
 
             // Why singleton: the cache's whole purpose is that one live token is reused across every
             // outbound call in the process. A scoped cache would acquire a new token per scope, which

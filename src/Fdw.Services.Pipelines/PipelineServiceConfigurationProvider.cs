@@ -26,21 +26,6 @@ public class PipelineServiceConfigurationProvider
           PipelineConfigurationCommand>,
       IPipelineConfigurationProvider
 {
-    /// <summary>
-    /// Registers the PipelineServiceConfigurationProvider with DI, targeting this domain's own default
-    /// location. To override, call <c>SetConfiguration</c> on the resolved singleton.
-    /// </summary>
-    public static void RegisterDomainConfiguration(IServiceCollection services)
-    {
-        services.TryAddSingleton<PipelineServiceConfigurationProvider>(sp =>
-            new PipelineServiceConfigurationProvider(
-                sp.GetService<ILogger<PipelineServiceConfigurationProvider>>(),
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<PipelineConfiguration, PipelineConfigurationCommand>>(
-            sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
-        services.TryAddSingleton<IServiceConfigurationProvider<PipelineConfiguration>>(
-            sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
-    }
 
     /// <summary>Initializes a new instance of the <see cref="PipelineServiceConfigurationProvider"/> class.</summary>
     public PipelineServiceConfigurationProvider(

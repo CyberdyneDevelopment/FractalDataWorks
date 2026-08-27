@@ -25,25 +25,6 @@ public class IdentityServiceConfigurationProvider
           IdentityServiceConfigurationCommand>,
       IIdentityServiceConfigurationProvider
 {
-    /// <summary>
-    /// Registers the IdentityServiceConfigurationProvider and interface forwardings with DI,
-    /// targeting this domain's own default location. To override, call <c>SetConfiguration</c> on
-    /// the resolved singleton.
-    /// </summary>
-    /// <param name="services">The service collection to register into.</param>
-    public static void RegisterDomainServices(IServiceCollection services)
-    {
-        services.TryAddSingleton<IdentityServiceConfigurationProvider>(sp =>
-            new IdentityServiceConfigurationProvider(
-                sp.GetService<ILogger<IdentityServiceConfigurationProvider>>()!,
-                sp.GetRequiredService<Lazy<IConfigurationGateway>>()));
-
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<IdentityServiceConfiguration, IdentityServiceConfigurationCommand>>(
-            sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
-
-        services.TryAddSingleton<IServiceConfigurationProvider<IdentityServiceConfiguration>>(sp =>
-            sp.GetRequiredService<IdentityServiceConfigurationProvider>());
-    }
 
     /// <summary>Initializes a new instance of the <see cref="IdentityServiceConfigurationProvider"/> class.</summary>
     /// <param name="logger">The logger for this provider.</param>

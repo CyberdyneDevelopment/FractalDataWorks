@@ -12,6 +12,10 @@ using System;
 using System.Linq;
 using Fdw.Results;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.ExternalIdentityProviders.Commands;
 
 namespace Fdw.Services.ExternalIdentityProviders;
 
@@ -77,6 +81,28 @@ public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
 
             ServiceTypeLog.DomainOptionsCollected(log, nameof(ExternalIdentityProviderTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(ExternalIdentityProviderTypes), providerService);
+
+            // Why the domain interface and not only the concrete class: this collection resolves
+            // IExternalIdentityProviderConfigurationProvider to attach it to the domain provider, and a registration of
+            // the concrete type alone leaves that lookup empty — the domain then fails every lookup by
+            // name for the life of the scope. ConfigurationConnection is the one place that names which
+            // store these rows live in.
+            builder.Services.TryAddSingleton<IExternalIdentityProviderConfigurationProvider>(sp =>
+                new ExternalIdentityProviderConfigurationProvider(
+                    sp.GetService<ILogger<ExternalIdentityProviderConfigurationProvider>>()!,
+                    sp.GetRequiredService<Lazy<IConfigurationGateway>>(),
+                    ConfigurationConnection));
+            builder.Services.TryAddSingleton<ExternalIdentityProviderConfigurationProvider>(
+                sp => (ExternalIdentityProviderConfigurationProvider)sp.GetRequiredService<IExternalIdentityProviderConfigurationProvider>());
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProviderConfiguration, ExternalIdentityProviderConfigurationCommand>>(
+                sp => sp.GetRequiredService<ExternalIdentityProviderConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProviderConfiguration>>(
+                sp => sp.GetRequiredService<ExternalIdentityProviderConfigurationProvider>());
+
+            // Why the resolver is registered by the domain and not by an option: ConnectTokenEndpointBase
+            // takes it as a required dependency, so registering it from one concrete option makes the
+            // core token endpoint unresolvable — password grant included — whenever that option is absent.
+            ExternalIdentityProviderResolver.RegisterDomainServices(builder.Services);
 
             builder.Services.AddScoped<IPlatformServiceProvider<IExternalIdentityProvider, IExternalIdentityProviderImplementationConfiguration>>(sp =>
             {
