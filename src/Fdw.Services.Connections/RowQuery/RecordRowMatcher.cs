@@ -126,7 +126,23 @@ public static class RecordRowMatcher
             return false;
 
         row.TryGetValue(columnName, out var actual);
-        return ValuesEqual(actual, condition.Value);
+
+        // Why the operator decides: this compared with ValuesEqual regardless of what the condition
+        // asked for, so GreaterThan, Contains, In, IsNull and the other eight all behaved as
+        // equality — a file-backed "wins > 8" matched only rows where wins was exactly 8. The
+        // operator owns the comparison; ValuesEqual remains the equality it always was.
+        // Why equality keeps ValuesEqual rather than delegating: this row path carries SQL semantics
+        // the generic comparer does not have — "x = NULL" never matches, and a decoded bit column
+        // arriving as the string "0" must compare equal to a native false without throwing. Both are
+        // pinned by tests here. Every OTHER operator was collapsing to equality, which is the bug:
+        // GreaterThan, Contains, In and IsNull now decide for themselves.
+        return condition.Operator switch
+        {
+            EqualOperator => ValuesEqual(actual, condition.Value),
+            NotEqualOperator => !ValuesEqual(actual, condition.Value),
+            FilterOperatorBase op => op.Matches(actual, condition.Value),
+            _ => ValuesEqual(actual, condition.Value),
+        };
     }
 
     // Why: strip the "Container." qualifier to the bare column, matching the SQL translators'

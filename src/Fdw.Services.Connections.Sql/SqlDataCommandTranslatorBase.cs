@@ -30,7 +30,7 @@ namespace Fdw.Services.Connections.Sql;
 /// The dialect is always derived from the path — never defaulted.
 /// </para>
 /// </remarks>
-public abstract class SqlDataCommandTranslatorBase<TCommand> : DataCommandTranslatorBase<TCommand>
+public abstract class SqlDataCommandTranslatorBase<TCommand> : DataCommandTranslatorBase<TCommand>, IQueryCapability
 {
     /// <summary>
     /// Initializes a new instance of <see cref="SqlDataCommandTranslatorBase{TCommand}"/>.
@@ -360,4 +360,18 @@ public abstract class SqlDataCommandTranslatorBase<TCommand> : DataCommandTransl
         var logicalOp = group.Operator == LogicalOperator.Or ? " OR " : " AND ";
         return $"({string.Join(logicalOp, clauses)})"; // Always wrap groups in parentheses for precedence
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// SQL expresses all three: the filter becomes WHERE, the ordering ORDER BY, and the page the
+    /// dialect's own paging clause — OFFSET/FETCH on SQL Server, LIMIT elsewhere. Every operator in
+    /// FilterOperators carries a SqlOperator, so there is no condition this cannot put in a WHERE.
+    /// </remarks>
+    public virtual bool CanExpressFilter(IFilterExpression filter) => true;
+
+    /// <inheritdoc />
+    public virtual bool CanExpressOrdering(IOrderingExpression ordering) => true;
+
+    /// <inheritdoc />
+    public virtual bool CanExpressPaging(IPagingExpression paging) => true;
 }
