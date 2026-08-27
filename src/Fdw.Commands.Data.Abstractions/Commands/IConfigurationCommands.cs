@@ -1,5 +1,6 @@
 using System;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Collections;
 using Fdw.Configuration;
 
 namespace Fdw.Commands.Data.Abstractions
@@ -11,7 +12,7 @@ namespace Fdw.Commands.Data.Abstractions
 /// TypeCollection can enumerate all registered command types regardless of their
 /// closed generic parameter.
 /// </summary>
-public interface IConfigurationCommands
+public interface IConfigurationCommands : ITypeOption
 {
     /// <summary>
     /// Gets the physical table name this command targets.

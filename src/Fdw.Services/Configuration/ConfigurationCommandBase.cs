@@ -31,6 +31,17 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     public string ContainerName => TableName;
 
     /// <inheritdoc />
+    // Why the table name: a configuration command is identified by the table it targets, which is
+    // exactly what the collection keys it on.
+    public string Name => TableName;
+
+    /// <inheritdoc />
+    public object Id => TableName;
+
+    /// <inheritdoc />
+    public string Category => "ConfigurationCommand";
+
+    /// <inheritdoc />
     public Type ConfigType => typeof(TConfig);
 
     /// <inheritdoc />
@@ -53,6 +64,11 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// override when the identity column differs (e.g. catalog.DataSetAnnotation keys on "DataSetName").
     /// </summary>
     protected virtual string NameColumn => "Name";
+
+    /// <summary>
+    /// The column that holds this configuration's durable id.
+    /// </summary>
+    protected virtual string IdColumn => "Id";
 
     /// <summary>Creates a configuration save command (version-on-write transaction with FK subquery resolution).</summary>
     /// <remarks>
@@ -219,7 +235,7 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     public virtual IDataCommand Get(string dataStoreName, string pathName, Guid id, DateTimeOffset? asOf = null)
     {
         return ApplyVersionFilter(
-                new QueryCommandBuilder<TConfig>(dataStoreName, pathName, TableName).Where("Id", id),
+                new QueryCommandBuilder<TConfig>(dataStoreName, pathName, TableName).Where(IdColumn, id),
                 asOf)
             .Build().Command;
     }
@@ -258,7 +274,7 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// <summary>Builds a query returning all versions of a configuration record in descending order.</summary>
     public virtual IDataCommand ViewHistory(string dataStoreName, string pathName, Guid id)
         => new QueryCommandBuilder<TConfig>(dataStoreName, pathName, TableName)
-            .Where("Id", id)
+            .Where(IdColumn, id)
             .OrderByDescending("ModifyDate")
             .Build()
             .Command;
@@ -266,7 +282,7 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// <summary>Builds a query that checks whether a current record with the given Id exists.</summary>
     public virtual IDataCommand Validate(string dataStoreName, string pathName, TConfig record)
         => new QueryCommandBuilder<TConfig>(dataStoreName, pathName, TableName)
-            .Where("Id", record.Id)
+            .Where(IdColumn, record.Id)
             .Where("IsCurrent", true)
             .Where("IsDeleted", false)
             .Build()
