@@ -45,6 +45,13 @@ public static partial class ConfigurationGatewayProviderLog
         Message = "configurationSchema.json declares connection '{connectionName}' with no ServiceOptionType, so no connection factory can be chosen for it")]
     public static partial IGenericMessage ConnectionDeclaresNoKind(ILogger logger, string connectionName);
 
+    /// <summary>A caller asked for a connection the schema does not declare.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="connectionName">The connection asked for.</param>
+    [MessageLogging(EventId = 61027, Level = LogLevel.Error,
+        Message = "configurationSchema.json declares no connection named '{connectionName}', so no configuration gateway can be built for it")]
+    public static partial IGenericMessage ConnectionNotDeclared(ILogger logger, string connectionName);
+
     /// <summary>A declared connection names a kind no connection option registered.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="connectionName">The connection as declared.</param>

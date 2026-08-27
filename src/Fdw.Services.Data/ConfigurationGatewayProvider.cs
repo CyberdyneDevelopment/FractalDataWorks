@@ -19,11 +19,24 @@ public sealed class ConfigurationGatewayProvider : IConfigurationGatewayProvider
         new(StringComparer.OrdinalIgnoreCase);
 
     private readonly ILogger<ConfigurationGatewayProvider> _logger;
+    private readonly Func<string, IGenericResult<IConfigurationGateway>>? _build;
 
     /// <summary>Initializes a new instance of the <see cref="ConfigurationGatewayProvider"/> class.</summary>
+    /// <param name="build">Builds the gateway for a declared connection, on first request.</param>
     /// <param name="logger">The logger.</param>
-    public ConfigurationGatewayProvider(ILogger<ConfigurationGatewayProvider>? logger = null)
-        => _logger = logger ?? NullLogger<ConfigurationGatewayProvider>.Instance;
+    /// <remarks>
+    /// Why the gateways are built on first request rather than when the domain registers: a gateway
+    /// needs its connection's factory, and the registration sweep runs collections in category order,
+    /// which puts ConfigurationGateway ahead of Connection. Building on demand means the whole sweep
+    /// has finished before any gateway is needed, so no host has to know that order.
+    /// </remarks>
+    public ConfigurationGatewayProvider(
+        Func<string, IGenericResult<IConfigurationGateway>>? build = null,
+        ILogger<ConfigurationGatewayProvider>? logger = null)
+    {
+        _build = build;
+        _logger = logger ?? NullLogger<ConfigurationGatewayProvider>.Instance;
+    }
 
     /// <inheritdoc />
     public IGenericResult<IConfigurationGateway> Get(string connectionName)
@@ -32,13 +45,27 @@ public sealed class ConfigurationGatewayProvider : IConfigurationGatewayProvider
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionNameMissing(_logger));
 
-        return _gateways.TryGetValue(connectionName, out var gateway)
-            ? GenericResult<IConfigurationGateway>.Success(gateway)
+        if (_gateways.TryGetValue(connectionName, out var gateway))
+            return GenericResult<IConfigurationGateway>.Success(gateway);
 
+        if (_build is not null)
+        {
+            var built = _build(connectionName);
+            if (built.IsSuccess && built.Value is not null)
+            {
+                _gateways.TryAdd(connectionName, built.Value);
+                return GenericResult<IConfigurationGateway>.Success(_gateways[connectionName]);
+            }
+
+            if (built.IsFailure)
+                return built;
+        }
+
+        return
             // Why the held connections are in the failure: the caller named the connection its
             // collection declares, so a miss is a question about which gateways came up, not about
             // whether the name was spelled right.
-            : GenericResult<IConfigurationGateway>.Failure(
+            GenericResult<IConfigurationGateway>.Failure(
                 DataServiceResultCodes.ByName("NoConfigurationGateway"),
                 ResultDetails.Create("ConnectionName", connectionName, "Registered", Held()));
     }

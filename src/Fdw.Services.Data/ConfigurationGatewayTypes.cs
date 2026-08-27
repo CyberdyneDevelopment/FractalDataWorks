@@ -68,26 +68,14 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
             // on and asks for the gateway onto it, and that name is settable by a host through
             // PlatformServices.<Domain>.ConfigurationConnectionName. A DI key would fix the choice when
             // the container is built, which is before a host has had the chance to change it.
+            // Why the provider and not the gateway itself: a domain names the connection its rows live
+            // on and asks for the gateway onto it, and that name is settable by a host through
+            // PlatformServices.<Domain>.ConfigurationConnectionName. A DI key would fix the choice when
+            // the container is built, which is before a host has had the chance to change it.
             builder.Services.TryAddSingleton<IConfigurationGatewayProvider>(sp =>
-            {
-                var log = sp.GetService<ILogger<ConfigurationGatewayProvider>>();
-                var provider = new ConfigurationGatewayProvider(log);
-                var schema = sp.GetRequiredService<ConfigurationSchema>();
-
-                // Why every declared connection gets one: configurationSchema.json declares exactly the
-                // stores an app must reach before it can read a row, and a configuration gateway differs
-                // from its siblings only by which of them it opened.
-                foreach (var connection in schema.Connections)
-                {
-                    var gateway = Build(sp, connection.Name, connection.ServiceOptionType, schema, loggerFactory);
-                    if (gateway.IsFailure)
-                        return provider;
-
-                    provider.Register(gateway.Value!);
-                }
-
-                return provider;
-            });
+                new ConfigurationGatewayProvider(
+                    connectionName => Build(sp, connectionName, loggerFactory),
+                    sp.GetService<ILogger<ConfigurationGatewayProvider>>()));
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
@@ -97,23 +85,33 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
     // host: the schema already says which kind each connection is, and the option for that kind names
     // the factory type it registered. This is what requires connections to register before
     // configuration gateways — the factory must already be in the container when this runs.
+    // Why the factory comes from the connection's own declared kind rather than from the host: the
+    // schema already says which kind each connection is, and the option for that kind names the
+    // factory type it registered.
     private static IGenericResult<IConfigurationGateway> Build(
         System.IServiceProvider services,
         string connectionName,
-        string? serviceOptionType,
-        ConfigurationSchema schema,
         ILoggerFactory? loggerFactory)
     {
         var log = loggerFactory?.CreateLogger<ConfigurationGatewayTypes>()
             ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationGatewayTypes>.Instance;
 
-        if (string.IsNullOrWhiteSpace(serviceOptionType))
+        var schema = services.GetRequiredService<ConfigurationSchema>();
+        var declared = schema.Connections.FirstOrDefault(
+            c => string.Equals(c.Name, connectionName, StringComparison.OrdinalIgnoreCase));
+
+        if (declared is null)
+            return GenericResult<IConfigurationGateway>.Failure(
+                ConfigurationGatewayProviderLog.ConnectionNotDeclared(log, connectionName));
+
+        if (string.IsNullOrWhiteSpace(declared.ServiceOptionType))
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionDeclaresNoKind(log, connectionName));
 
-        if (ConnectionTypes.ByName(serviceOptionType) is not IServiceType connectionType)
+        if (ConnectionTypes.ByName(declared.ServiceOptionType) is not IServiceType connectionType)
             return GenericResult<IConfigurationGateway>.Failure(
-                ConfigurationGatewayProviderLog.ConnectionKindNotRegistered(log, connectionName, serviceOptionType));
+                ConfigurationGatewayProviderLog.ConnectionKindNotRegistered(
+                    log, connectionName, declared.ServiceOptionType));
 
         return services.GetService(connectionType.FactoryType) is not IConnectionFactory factory
             ? GenericResult<IConfigurationGateway>.Failure(
