@@ -286,9 +286,21 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     /// <returns>The narrowed service, or the original failure.</returns>
     protected static IGenericResult<T> Cast<T>(IGenericResult<TService> result)
         where T : IGenericService
-        => result.IsSuccess && result.Value is T typed
-            ? GenericResult<T>.Success(typed)
-            : result.ToNewResult<T>();
+    {
+        if (result.IsSuccess)
+        {
+            // Why a failure and not a widened success: the caller asked for a T, and a service that is
+            // not one cannot be returned as one. Carrying the success forward would hand back a null.
+            return result.Value is T typed
+                ? GenericResult<T>.Success(typed)
+                : GenericResult<T>.Failure(
+                    ServicesResultCodes.ByName("ServiceCastFailed"),
+                    ResultDetails.Create("ExpectedType", typeof(T).Name,
+                                         "ActualType", result.Value?.GetType().Name ?? "(null)"));
+        }
+
+        return result.ToNewResult<T>();
+    }
 
     /// <inheritdoc />
     // Why empty rather than enumerating: a domain's members are configuration rows, and listing every

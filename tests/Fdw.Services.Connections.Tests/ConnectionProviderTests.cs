@@ -49,10 +49,15 @@ public class ConnectionProviderTests
     /// </summary>
     // Why: a bare IServiceFactory<IGenericConnection> mock is rejected by design
     // (FactoryNotConnectionFactory) — the async Create overload is the domain's only creation path.
+    // Why the mock also wears IAsyncServiceFactory: a real connection factory implements
+    // IConnectionFactory<,>, which carries it, and that is the surface the provider prefers.
     private static Mock<IConnectionFactory> FactoryReturning(IGenericConnection connection)
     {
         var factory = new Mock<IConnectionFactory>();
         factory.As<IServiceFactory<IGenericConnection>>();
+        factory.As<IAsyncServiceFactory<IGenericConnection>>()
+            .Setup(x => x.Create(It.IsAny<IGenericConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IGenericConnection>.Success(connection));
         factory
             .Setup(x => x.Create(
                 It.IsAny<IGenericConfiguration>(),
@@ -65,6 +70,9 @@ public class ConnectionProviderTests
     {
         var factory = new Mock<IConnectionFactory>();
         factory.As<IServiceFactory<IGenericConnection>>();
+        factory.As<IAsyncServiceFactory<IGenericConnection>>()
+            .Setup(x => x.Create(It.IsAny<IGenericConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IGenericConnection>.Failure());
         factory
             .Setup(x => x.Create(
                 It.IsAny<IGenericConfiguration>(),
@@ -172,7 +180,7 @@ public class ConnectionProviderTests
             var result = await Get(name, ct).ConfigureAwait(false);
             return result.IsSuccess && result.Value?.Configuration is { } implementation
                 ? GenericResult<IConnectionImplementationConfiguration>.Success(implementation)
-                : result.ToNewResult<IConnectionImplementationConfiguration>();
+                : GenericResult<IConnectionImplementationConfiguration>.Failure();
         }
 
         async Task<IGenericResult<IConnectionImplementationConfiguration>> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Get(
@@ -181,7 +189,7 @@ public class ConnectionProviderTests
             var result = await Get(id, ct).ConfigureAwait(false);
             return result.IsSuccess && result.Value?.Configuration is { } implementation
                 ? GenericResult<IConnectionImplementationConfiguration>.Success(implementation)
-                : result.ToNewResult<IConnectionImplementationConfiguration>();
+                : GenericResult<IConnectionImplementationConfiguration>.Failure();
         }
 
         Task<IGenericResult> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Save<T>(
@@ -857,9 +865,11 @@ public class ConnectionProviderTests
         var mockFactory = FactoryReturning(new Mock<IGenericConnection>().Object);
         _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
 
-        // Act - the name path and the already-resolved-configuration path
+        // Act - the name path and the already-resolved-configuration path. The configuration path
+        // takes the IMPLEMENTATION configuration, which is what the domain provider hands back.
         var byName = await _provider.Get("TestConnection");
-        var byConfiguration = await _provider.Get(config);
+        var byConfiguration = await _provider.Get(
+            new StubConnectionConfiguration { Id = config.Id, Name = config.Name, ServiceOptionType = config.ServiceOptionType });
 
         // Assert - the provider no longer caches connections, so each Get calls the factory. This
         // replaces an assertion that the two paths SHARED one cached connection.
