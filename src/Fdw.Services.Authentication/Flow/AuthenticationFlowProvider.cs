@@ -55,7 +55,10 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
             return GenericResult<AuthenticationFlow>.Failure(FlowProviderLog.NameMissing(_logger));
 
         if (_cache.TryGetValue(flowName, out var cached))
+        {
+            FlowProviderLog.FlowServed(_logger, flowName);
             return GenericResult<AuthenticationFlow>.Success(cached);
+        }
 
         var loaded = await LoadAndValidate(cancellationToken).ConfigureAwait(false);
         if (loaded.IsFailure)
@@ -85,9 +88,6 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
                 .OrderBy(s => s.StepOrder)
                 .ToList();
 
-            // Why refused rather than skipped: a flow with no steps proves nothing, so it would
-            // reach the terminal check with no subject and fail there — several layers from the
-            // configuration that is actually wrong.
             if (ordered.Count == 0)
                 return GenericResult.Failure(FlowProviderLog.FlowHasNoSteps(_logger, row.Name));
 
@@ -104,6 +104,7 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
                 return valid;
 
             _cache[row.Name] = flow;
+            FlowProviderLog.FlowAssembled(_logger, row.Name, ordered.Count);
         }
 
         FlowProviderLog.FlowsLoaded(_logger, _cache.Count);

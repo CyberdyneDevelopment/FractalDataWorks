@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.TokenManagers.Abstractions;
 using Fdw.Services.TokenManagers.Logging;
 using Microsoft.Extensions.Logging;
@@ -60,8 +61,13 @@ public sealed class JwtTokenIssuer : ITokenIssuer
 
         var claims = new Dictionary<string, object>(StringComparer.Ordinal)
         {
-            ["sub"] = request.PrincipalId.ToString(),
-            ["tid"] = request.TenantId.ToString(),
+            [ClaimDefinitions.sub.Name] = request.PrincipalId.ToString(),
+
+            // ClaimDefinitions rather than a literal: the RLS path reads the tenant through the
+            // same definition, and a token minting "tid" while the session-context builder looks
+            // for "tenantId" produces a request that reaches the database with no tenant scoping
+            // at all. One place decides what a claim is called.
+            [ClaimDefinitions.tenantId.Name] = request.TenantId.ToString(),
 
             // RFC 9068 §2.2 — a JWT access token is typed, so a resource server can refuse an
             // id_token presented in its place rather than accepting one that happens to verify.
@@ -76,6 +82,8 @@ public sealed class JwtTokenIssuer : ITokenIssuer
 
         foreach (var (type, value) in request.Claims)
             claims.TryAdd(type, value);
+
+        IssuerLog.Minting(_logger, request.Audience, claims.Count);
 
         var token = new JsonWebTokenHandler
         {

@@ -36,9 +36,20 @@ public sealed class InMemoryAuthorizationRequestStore : IAuthorizationRequestSto
         if (request is null)
             return GenericResult.Failure(RequestStoreLog.RequestMissing(_logger));
 
-        return _requests.TryAdd(state, request)
-            ? GenericResult.Success()
-            : GenericResult.Failure(RequestStoreLog.StateReused(_logger));
+        if (!_requests.TryAdd(state, request))
+            return GenericResult.Failure(RequestStoreLog.StateReused(_logger));
+
+        RequestStoreLog.Stored(_logger, request.Issuer);
+        return GenericResult.Success();
+    }
+
+    private IGenericResult<AuthorizationRequest> Consume(string state)
+    {
+        if (!_requests.TryRemove(state, out var request))
+            return GenericResult<AuthorizationRequest>.Failure(RequestStoreLog.NoSuchRequest(_logger));
+
+        RequestStoreLog.Consumed(_logger, request.Issuer);
+        return GenericResult<AuthorizationRequest>.Success(request);
     }
 
     /// <inheritdoc />
@@ -47,7 +58,5 @@ public sealed class InMemoryAuthorizationRequestStore : IAuthorizationRequestSto
             ? GenericResult<AuthorizationRequest>.Failure(RequestStoreLog.StateMissing(_logger))
             // TryRemove, so consuming is one operation. A check-then-act pair is a window two
             // concurrent callbacks both pass through, which is the replay this prevents.
-            : _requests.TryRemove(state, out var request)
-                ? GenericResult<AuthorizationRequest>.Success(request)
-                : GenericResult<AuthorizationRequest>.Failure(RequestStoreLog.NoSuchRequest(_logger));
+            : Consume(state);
 }

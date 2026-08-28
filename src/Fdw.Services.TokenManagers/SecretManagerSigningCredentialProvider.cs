@@ -59,13 +59,14 @@ public sealed class SecretManagerSigningCredentialProvider : ISigningCredentialP
     public async Task<IGenericResult<SigningCredentials>> Current(CancellationToken cancellationToken = default)
     {
         if (_cached is not null && _cachedAt.Add(_cacheLifetime) > DateTimeOffset.UtcNow)
+        {
+            IssuerLog.SigningKeyReused(_logger, _keyName);
             return GenericResult<SigningCredentials>.Success(_cached);
+        }
 
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            // Why checked again inside the gate: several requests arriving at once would otherwise
-            // each fetch, and a key vault charges per call and rate-limits.
             if (_cached is not null && _cachedAt.Add(_cacheLifetime) > DateTimeOffset.UtcNow)
                 return GenericResult<SigningCredentials>.Success(_cached);
 
@@ -83,10 +84,6 @@ public sealed class SecretManagerSigningCredentialProvider : ISigningCredentialP
             RSA rsa;
             try
             {
-                // Why AccessStringValue: it scopes the material to the callback and clears it after,
-                // so the private key is never a string this method holds. The parse throws from
-                // inside, which is why the catch is here rather than in the callback — an exception
-                // swallowed in a lambda is one the caller never learns about.
                 rsa = secret.Value!.AccessStringValue(pem =>
                 {
                     var created = RSA.Create();

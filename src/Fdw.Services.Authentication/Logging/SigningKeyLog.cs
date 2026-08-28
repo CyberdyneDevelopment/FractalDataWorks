@@ -21,11 +21,17 @@ internal static partial class SigningKeyLog
     internal static partial IGenericMessage Fetched(
         ILogger<CachingSigningKeyProvider> logger, string jwksUri, int keyCount);
 
+    /// <summary>Cached keys satisfied the request without a fetch.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="jwksUri">The key document.</param>
+    [MessageLogging(EventId = 91175, Level = LogLevel.Trace,
+        Message = "Served cached signing keys for {jwksUri}")]
+    internal static partial IGenericMessage ServedFromCache(
+        ILogger<CachingSigningKeyProvider> logger, string jwksUri);
+
     /// <summary>A forced refresh was declined because one happened recently.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="jwksUri">The key document.</param>
-    // Why Debug and not Warning: throttling is the mechanism working. Seeing it constantly means
-    // tokens are arriving signed by a key that does not exist, which the rejections already say.
     [MessageLogging(EventId = 91171, Level = LogLevel.Debug,
         Message = "A refresh of {jwksUri} was throttled; the cached keys were returned")]
     internal static partial IGenericMessage RefreshThrottled(
@@ -34,9 +40,9 @@ internal static partial class SigningKeyLog
     /// <summary>The authority published no usable signing keys.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="jwksUri">The key document.</param>
-    // Why Error: an authority publishing no keys cannot have anything verified against it, and no
-    // token from it will ever be accepted until that is fixed.
-    [MessageLogging(EventId = 91172, Level = LogLevel.Error,
+    // Critical, not Error: An authority publishing no keys can have nothing verified against it. The service is running and cannot do the
+    // one thing it exists for.
+    [MessageLogging(EventId = 91172, Level = LogLevel.Critical,
         Message = "{jwksUri} published no usable signing keys")]
     internal static partial IGenericMessage NoKeysPublished(
         ILogger<CachingSigningKeyProvider> logger, string jwksUri);
@@ -45,8 +51,6 @@ internal static partial class SigningKeyLog
     /// <param name="logger">The logger.</param>
     /// <param name="jwksUri">The key document.</param>
     /// <param name="failure">The kind of failure.</param>
-    // Why Error: the identity provider is unreachable, so every login through it fails until it is
-    // not. Expected operationally, still an outage.
     [MessageLogging(EventId = 91173, Level = LogLevel.Error,
         Message = "Could not fetch signing keys from {jwksUri}: {failure}")]
     internal static partial IGenericMessage FetchFailed(

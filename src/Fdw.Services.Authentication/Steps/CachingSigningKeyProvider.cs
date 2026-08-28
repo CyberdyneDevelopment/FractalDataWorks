@@ -58,7 +58,10 @@ public sealed class CachingSigningKeyProvider : ISigningKeyProvider
                 SigningKeyLog.UriMissing(_logger));
 
         if (_cache.TryGetValue(jwksUri, out var entry) && entry.FetchedAt.Add(_lifetime) > DateTimeOffset.UtcNow)
+        {
+            SigningKeyLog.ServedFromCache(_logger, jwksUri.ToString());
             return GenericResult<IReadOnlyCollection<SecurityKey>>.Success(entry.Keys);
+        }
 
         return await Fetch(jwksUri, cancellationToken).ConfigureAwait(false);
     }
@@ -103,9 +106,6 @@ public sealed class CachingSigningKeyProvider : ISigningKeyProvider
         }
         catch (HttpRequestException ex)
         {
-            // Why caught rather than propagated: the identity provider being unreachable is an
-            // expected operational condition, and a login should fail as a login rather than as an
-            // unhandled exception several layers up.
             return GenericResult<IReadOnlyCollection<SecurityKey>>.Failure(
                 SigningKeyLog.FetchFailed(_logger, jwksUri.ToString(), ex.GetType().Name));
         }

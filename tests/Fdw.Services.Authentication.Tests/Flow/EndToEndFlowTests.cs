@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Execution;
@@ -126,8 +127,12 @@ public sealed class EndToEndFlowTests
         validated.IsValid.ShouldBeTrue();
 
         var claims = validated.ClaimsIdentity.Claims.ToLookup(c => c.Type, c => c.Value);
-        claims["sub"].ShouldContain(PrincipalId.ToString());
-        claims["tid"].ShouldContain(TenantId.ToString());
+        claims[ClaimDefinitions.sub.Name].ShouldContain(PrincipalId.ToString());
+
+        // asserted through the definition, not a literal: a token minting one name while the
+        // session-context builder reads another is how a request reaches the database with no
+        // tenant scoping, and a literal here would let that pass
+        claims[ClaimDefinitions.tenantId.Name].ShouldContain(TenantId.ToString());
         claims["acr"].ShouldContain(StandardAcrPolicy.MultiFactor);
         claims["amr"].ShouldBe(["pwd", "otp"], ignoreOrder: true);
 

@@ -36,11 +36,9 @@ public sealed class RequestTenantInfo : IRequestTenantInfo
             if (user == null)
                 return null;
 
-            var tenantClaim = user.FindFirst(ClaimDefinitions.tenantId.Name)
-                ?? user.FindFirst("TenantId")
-                ?? user.FindFirst("tid");
+            var tenantClaim = user.FindFirst(ClaimDefinitions.tenantId.Name)?.Value ?? string.Empty;
 
-            if (tenantClaim != null && Guid.TryParse(tenantClaim.Value, out var tenantId))
+            if (Guid.TryParse(tenantClaim, out var tenantId))
                 return tenantId;
 
             return null;
@@ -56,9 +54,6 @@ public sealed class RequestTenantInfo : IRequestTenantInfo
             if (user == null)
                 return false;
 
-            // Why: delegate to ISystemRoleConfiguration so the admin role name is resolved from
-            // deployment configuration rather than hardcoded. IsInRole uses the principal's
-            // RoleClaimType which the FDW token validator sets to ClaimDefinitions.roles.Name.
             return _systemRoleConfiguration.IsInRole(user, _systemRoleConfiguration.AdminRoleName);
         }
     }

@@ -12,6 +12,22 @@ namespace Fdw.Services.Authentication.Logging;
 [MessageLoggingTypeCode("AUTHENTICATION")]
 internal static partial class RequestStoreLog
 {
+    /// <summary>An authorization request was stored against its state.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="issuer">The provider the request was made to.</param>
+    [MessageLogging(EventId = 91224, Level = LogLevel.Trace,
+        Message = "Stored a pending authorization request for '{issuer}'")]
+    internal static partial IGenericMessage Stored(
+        ILogger<InMemoryAuthorizationRequestStore> logger, string issuer);
+
+    /// <summary>A pending request was consumed and its flow continues.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="issuer">The provider it was made to.</param>
+    [MessageLogging(EventId = 91225, Level = LogLevel.Trace,
+        Message = "Consumed the pending authorization request for '{issuer}'")]
+    internal static partial IGenericMessage Consumed(
+        ILogger<InMemoryAuthorizationRequestStore> logger, string issuer);
+
     /// <summary>No state was supplied.</summary>
     /// <param name="logger">The logger.</param>
     [MessageLogging(EventId = 91220, Level = LogLevel.Error,
@@ -28,8 +44,6 @@ internal static partial class RequestStoreLog
 
     /// <summary>A state value was already in use.</summary>
     /// <param name="logger">The logger.</param>
-    // Why Error: state comes from the CSPRNG, so a collision means either it is not random or
-    // something is replaying. Neither is survivable quietly.
     [MessageLogging(EventId = 91222, Level = LogLevel.Error,
         Message = "A state value was reused; refusing to overwrite the pending request")]
     internal static partial IGenericMessage StateReused(
@@ -37,8 +51,6 @@ internal static partial class RequestStoreLog
 
     /// <summary>Nothing was pending under the state presented.</summary>
     /// <param name="logger">The logger.</param>
-    // Why Warning: unknown, already consumed, or from an instance that no longer holds it. All
-    // refused, and the last is the load-balancer case worth noticing.
     [MessageLogging(EventId = 91223, Level = LogLevel.Warning,
         Message = "No pending authorization request matches the state presented")]
     internal static partial IGenericMessage NoSuchRequest(
