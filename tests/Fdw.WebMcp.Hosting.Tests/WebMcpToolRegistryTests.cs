@@ -28,7 +28,7 @@ public class WebMcpToolRegistryTests
         RouteTable routes)
     {
         var registry = new WebMcpToolRegistry();
-        registry.Resolve(declarations, routes, NullLogger.Instance);
+        registry.Resolve(declarations, routes.Endpoints, NullLogger.Instance);
         return registry.Tools;
     }
 

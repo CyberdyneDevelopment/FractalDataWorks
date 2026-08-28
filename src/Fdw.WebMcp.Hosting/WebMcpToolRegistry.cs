@@ -34,7 +34,7 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
     /// Resolves declared tools against the application's route table.
     /// </summary>
     /// <param name="declarations">What the endpoint options declared.</param>
-    /// <param name="endpointDataSource">The application's endpoints, after routing is built.</param>
+    /// <param name="endpoints">The application's endpoints, after routing is built.</param>
     /// <param name="logger">The logger.</param>
     /// <remarks>
     /// The declarations are passed in rather than read from <see cref="DeclaredWebMcpTools"/> here.
@@ -43,10 +43,10 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
     /// </remarks>
     internal void Resolve(
         IReadOnlyList<WebMcpToolDeclaration> declarations,
-        EndpointDataSource endpointDataSource,
+        IEnumerable<Endpoint> endpoints,
         ILogger logger)
     {
-        var routesByEndpointType = MapRoutesByEndpointType(endpointDataSource);
+        var routesByEndpointType = MapRoutesByEndpointType(endpoints);
 
         foreach (var declaration in declarations)
         {
@@ -121,11 +121,11 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
     /// rather than by type, so this package keeps no hard dependency on a particular FastEndpoints
     /// version — the same stance the rest of this package takes toward it.
     /// </remarks>
-    private static Dictionary<Type, List<RouteCandidate>> MapRoutesByEndpointType(EndpointDataSource endpointDataSource)
+    private static Dictionary<Type, List<RouteCandidate>> MapRoutesByEndpointType(IEnumerable<Endpoint> endpoints)
     {
         var map = new Dictionary<Type, List<RouteCandidate>>();
 
-        foreach (var endpoint in endpointDataSource.Endpoints)
+        foreach (var endpoint in endpoints)
         {
             if (endpoint is not RouteEndpoint routeEndpoint)
             {
