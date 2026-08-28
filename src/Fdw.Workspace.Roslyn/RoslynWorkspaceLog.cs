@@ -238,7 +238,7 @@ public static partial class RoslynWorkspaceLog
     public static partial IGenericMessage WorkspaceAwakened(ILogger logger, string workspaceId, int projectCount);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // SessionManager Events (9030-9049)
+    // RoslynSessionManager Events (9030-9049)
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>

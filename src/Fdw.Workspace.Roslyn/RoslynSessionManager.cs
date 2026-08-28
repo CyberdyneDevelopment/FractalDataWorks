@@ -18,12 +18,12 @@ namespace Fdw.Workspace.Roslyn;
 /// persistence, sleep/wake functionality, and conversation tracking.
 /// </summary>
 [ExcludeFromCodeCoverage] // Excluded: requires Roslyn MSBuildWorkspace
-public sealed class SessionManager : ISessionManager
+public sealed class RoslynSessionManager : IRoslynSessionManager
 {
     private readonly IRoslynWorkspaceFactory _workspaceFactory;
     private readonly ISessionStore _sessionStore;
     private readonly IProjectIndexStore _projectIndexStore;
-    private readonly ILogger<SessionManager> _logger;
+    private readonly ILogger<RoslynSessionManager> _logger;
     private readonly ConcurrentDictionary<Guid, ManagedSessionState> _sessions = new();
     private readonly Timer _sleepTimer;
     private readonly Lock _activeLock = new();
@@ -37,24 +37,24 @@ public sealed class SessionManager : ISessionManager
     public static readonly TimeSpan DefaultSleepTimeout = TimeSpan.FromMinutes(5);
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SessionManager"/> class.
+    /// Initializes a new instance of the <see cref="RoslynSessionManager"/> class.
     /// </summary>
     /// <param name="workspaceFactory">Factory for creating workspaces.</param>
     /// <param name="sessionStore">Store for persisting sessions.</param>
     /// <param name="projectIndexStore">Store for project session indices.</param>
     /// <param name="logger">Optional logger.</param>
     /// <param name="sleepTimeout">Optional sleep timeout. Defaults to 5 minutes.</param>
-    public SessionManager(
+    public RoslynSessionManager(
         IRoslynWorkspaceFactory workspaceFactory,
         ISessionStore sessionStore,
         IProjectIndexStore projectIndexStore,
-        ILogger<SessionManager>? logger = null,
+        ILogger<RoslynSessionManager>? logger = null,
         TimeSpan? sleepTimeout = null)
     {
         _workspaceFactory = workspaceFactory ?? throw new ArgumentNullException(nameof(workspaceFactory));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
         _projectIndexStore = projectIndexStore ?? throw new ArgumentNullException(nameof(projectIndexStore));
-        _logger = logger ?? NullLogger<SessionManager>.Instance;
+        _logger = logger ?? NullLogger<RoslynSessionManager>.Instance;
         SleepTimeout = sleepTimeout ?? DefaultSleepTimeout;
 
         // Start the sleep check timer - runs every minute

@@ -14,7 +14,7 @@ namespace Fdw.Roslyn.Commands.Tests.Workspace;
 /// </summary>
 /// <remarks>
 /// <para>
-/// A second <see cref="SessionManager"/> over the same store stands in for a restarted process:
+/// A second <see cref="RoslynSessionManager"/> over the same store stands in for a restarted process:
 /// nothing is shared but the store on disk, which is exactly the situation a reconnecting MCP client
 /// creates. Testing it within one manager would prove nothing, because the in-memory dictionary
 /// answers every lookup and the persisted path — the one that was broken — never runs.
@@ -33,7 +33,7 @@ public sealed class SessionReattachTests : IDisposable
     private FileBasedSessionStore NewStore() =>
         new(NullLogger<FileBasedSessionStore>.Instance, _storePath);
 
-    private static SessionManager NewManager(FileBasedSessionStore store) =>
+    private static RoslynSessionManager NewManager(FileBasedSessionStore store) =>
         new(new RoslynWorkspaceFactory(), store, store, logger: null, sleepTimeout: TimeSpan.MaxValue);
 
     private static PersistedSession NewPersisted(Guid id, string conversationId) => new()

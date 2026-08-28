@@ -28,7 +28,7 @@ namespace Fdw.Workspace.Roslyn;
 /// </list>
 /// </para>
 /// </remarks>
-public interface ISessionManager : IDisposable
+public interface IRoslynSessionManager : IDisposable
 {
     /// <summary>
     /// Gets the ID of the currently active session, or null if none.

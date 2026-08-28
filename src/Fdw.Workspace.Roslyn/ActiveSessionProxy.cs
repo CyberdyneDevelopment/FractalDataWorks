@@ -29,7 +29,7 @@ namespace Fdw.Workspace.Roslyn;
 [ExcludeFromCodeCoverage] // Excluded: requires Roslyn MSBuildWorkspace
 public sealed class ActiveSessionProxy : IRoslynWorkspace
 {
-    private readonly ISessionManager _sessionManager;
+    private readonly IRoslynSessionManager _sessionManager;
     private readonly ILogger<ActiveSessionProxy> _logger;
 
     /// <summary>
@@ -38,7 +38,7 @@ public sealed class ActiveSessionProxy : IRoslynWorkspace
     /// <param name="sessionManager">The session manager providing workspace access.</param>
     /// <param name="logger">Optional logger for diagnostic messages.</param>
     public ActiveSessionProxy(
-        ISessionManager sessionManager,
+        IRoslynSessionManager sessionManager,
         ILogger<ActiveSessionProxy>? logger = null)
     {
         _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
