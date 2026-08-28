@@ -135,7 +135,7 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
 
         try
         {
-            var command = DataQuery.From<SearchablePipelineRecord>("ConfigurationDb", "pipe", "Pipeline").Build();
+            var command = DataQuery.From<SearchablePipelineRecord>("PlatformConfiguration", "pipe", "Pipeline").Build();
 
             var dbResult = await _dataGateway.Execute<IEnumerable<SearchablePipelineRecord>>(command, ct).ConfigureAwait(false);
             if (dbResult.IsSuccess && dbResult.Value != null)
@@ -208,7 +208,7 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
 
         try
         {
-            var command = DataQuery.From<SearchableDataSetRecord>("ConfigurationDb", "data", "DataSet").Build();
+            var command = DataQuery.From<SearchableDataSetRecord>("PlatformConfiguration", "data", "DataSet").Build();
 
             var dbResult = await _dataGateway.Execute<IEnumerable<SearchableDataSetRecord>>(command, ct).ConfigureAwait(false);
             if (dbResult.IsSuccess && dbResult.Value != null)
@@ -248,7 +248,7 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
 
         try
         {
-            var command = DataQuery.From<SearchableScheduleRecord>("ConfigurationDb", "sched", "Schedule")
+            var command = DataQuery.From<SearchableScheduleRecord>("PlatformConfiguration", "sched", "Schedule")
                 .Where("IsDeleted", false)
                 .Build();
 

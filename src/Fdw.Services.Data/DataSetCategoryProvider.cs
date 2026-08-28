@@ -24,7 +24,7 @@ namespace Fdw.Services.Data;
 /// </summary>
 public sealed class DataSetCategoryProvider
 {
-    private const string DataStoreName = "ConfigurationDb";
+    private const string DataStoreName = "PlatformConfiguration";
     private const string PathName = "data";
     private const string ContainerName = "DataSetCategory";
 

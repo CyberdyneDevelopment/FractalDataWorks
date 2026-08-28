@@ -32,7 +32,7 @@ public abstract class AuthorizationTypeBase<TService, TFactory> :
         string category = "Authorization",
         string defaultContainerName = "")
         : base(name, sectionName, displayName, description, category,
-               defaultDataStoreName: "ConfigurationDb",
+               defaultDataStoreName: "PlatformConfiguration",
                defaultPathName: "authz",
                defaultContainerName: defaultContainerName)
     {

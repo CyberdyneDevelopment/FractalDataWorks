@@ -47,7 +47,7 @@ public class FindEndpoint : Endpoint<FindRequest, FindResponse>
             s.Description = "Searches within a container's string fields using LIKE matching. Returns matched records with which fields matched.";
             s.ExampleRequest = new FindRequest
             {
-                DataStoreName = "ConfigurationDb",
+                DataStoreName = "PlatformConfiguration",
                 PathName = "data",
                 ContainerName = "Connection",
                 SearchTerm = "Nfl",

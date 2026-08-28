@@ -25,7 +25,7 @@ public static class DataSetLookup
     {
         if (string.IsNullOrEmpty(name)) return true;
 
-        var cmd = DataQuery.From<Dictionary<string, object?>>("ConfigurationDb", "data", "DataSet")
+        var cmd = DataQuery.From<Dictionary<string, object?>>("PlatformConfiguration", "data", "DataSet")
             .Where("Name", name)
             .Build();
         var result = await configGateway.Execute<IEnumerable<Dictionary<string, object?>>>(cmd, ct).ConfigureAwait(false);

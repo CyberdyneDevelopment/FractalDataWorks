@@ -41,7 +41,7 @@ public class GetDataSetLineageDownstreamConsumersTests
         return new Mock<PipelineServiceConfigurationProvider>(
             (ILogger<PipelineServiceConfigurationProvider>?)null!,
             new ConfigurationGatewayProvider(),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "pipe");
     }
 

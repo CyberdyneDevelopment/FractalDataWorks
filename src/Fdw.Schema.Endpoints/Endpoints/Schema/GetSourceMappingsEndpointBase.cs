@@ -122,7 +122,7 @@ public abstract class GetSourceMappingsEndpointBase : Endpoint<GetSourceMappings
         };
 
         var result = await _dataGateway.Execute<IEnumerable<DataSetRecord>>(
-            command, new DataStoreTarget("ConfigurationDb", "data", "DataSet"), ct).ConfigureAwait(false);
+            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSet"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             return result.ToNewResult<DataSetRecord?>();
@@ -161,7 +161,7 @@ public abstract class GetSourceMappingsEndpointBase : Endpoint<GetSourceMappings
         };
 
         var result = await _dataGateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
-            command, new DataStoreTarget("ConfigurationDb", "data", "DataSetSource"), ct).ConfigureAwait(false);
+            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetSource"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             return result.ToNewResult<DataSetSourceConfiguration?>();
@@ -200,7 +200,7 @@ public abstract class GetSourceMappingsEndpointBase : Endpoint<GetSourceMappings
         };
 
         var result = await _dataGateway.Execute<IEnumerable<FieldMappingDbRecord>>(
-            command, new DataStoreTarget("ConfigurationDb", "data", "DataSetFieldMapping"), ct).ConfigureAwait(false);
+            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetFieldMapping"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             return result.ToNewResult<IList<FieldMappingDbRecord>>();

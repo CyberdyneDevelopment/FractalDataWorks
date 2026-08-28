@@ -20,5 +20,5 @@ public sealed class DefaultConfigurationConnectionNameProvider : IConfigurationC
     }
 
     /// <inheritdoc />
-    public string ConnectionName => _options.CurrentValue.ConnectionName ?? "ConfigurationDb";
+    public string ConnectionName => _options.CurrentValue.ConnectionName ?? "PlatformConfiguration";
 }

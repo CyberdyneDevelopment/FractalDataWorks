@@ -99,7 +99,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
         };
 
         var result = await _configurationGateway.Execute<IEnumerable<DataSetRecord>>(
-            command, new DataStoreTarget("ConfigurationDb", "data", "DataSet"), ct).ConfigureAwait(false);
+            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSet"), ct).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.FirstOrDefault() : null;
     }
 
@@ -124,7 +124,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
         };
 
         var result = await _configurationGateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
-            command, new DataStoreTarget("ConfigurationDb", "data", "DataSetSource"), ct).ConfigureAwait(false);
+            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetSource"), ct).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
     }
 
@@ -187,7 +187,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
             };
 
             var mappingsResult = await _configurationGateway.Execute<IEnumerable<DataSetFieldMappingRecord>>(
-                mappingsCommand, new DataStoreTarget("ConfigurationDb", "data", "DataSetFieldMapping"), ct).ConfigureAwait(false);
+                mappingsCommand, new DataStoreTarget("PlatformConfiguration", "data", "DataSetFieldMapping"), ct).ConfigureAwait(false);
             var mappings = mappingsResult.IsSuccess ? mappingsResult.Value?.ToList() ?? [] : [];
 
             foreach (var mapping in mappings)

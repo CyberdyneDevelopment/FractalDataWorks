@@ -90,7 +90,7 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
     {
         foreach (var container in containers)
         {
-            var command = DataQuery.From<Dictionary<string, object?>>("ConfigurationDb", container.Parent.Name, container.Name)
+            var command = DataQuery.From<Dictionary<string, object?>>("PlatformConfiguration", container.Parent.Name, container.Name)
                 .Where("Name", req.Name)
                 .Build();
 

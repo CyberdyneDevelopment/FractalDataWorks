@@ -37,7 +37,7 @@ public abstract class DataVaultTypeBase<TService, TFactory, TConfiguration> :
         string description,
         string category = "DataVault")
         : base(name, sectionName, displayName, description, category,
-               defaultDataStoreName: "ConfigurationDb",
+               defaultDataStoreName: "PlatformConfiguration",
                defaultPathName: "sec",
                defaultContainerName: "DataVault")
     {

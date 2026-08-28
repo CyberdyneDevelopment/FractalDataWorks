@@ -298,7 +298,7 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
             }
         };
         var dsResult = await _configurationGateway.Execute<IEnumerable<DataSetRecord>>(
-            dsCommand, new DataStoreTarget("ConfigurationDb", "data", "DataSet"), ct).ConfigureAwait(false);
+            dsCommand, new DataStoreTarget("PlatformConfiguration", "data", "DataSet"), ct).ConfigureAwait(false);
         var dataSet = dsResult.IsSuccess ? dsResult.Value?.FirstOrDefault() : null;
         if (dataSet == null) return [];
 
@@ -315,7 +315,7 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
             }
         };
         var srcResult = await _configurationGateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
-            srcCommand, new DataStoreTarget("ConfigurationDb", "data", "DataSetSource"), ct).ConfigureAwait(false);
+            srcCommand, new DataStoreTarget("PlatformConfiguration", "data", "DataSetSource"), ct).ConfigureAwait(false);
         var dsSources = srcResult.IsSuccess ? srcResult.Value?.ToList() ?? [] : [];
 
         var allMappings = new List<DataSetFieldMappingRecord>();
@@ -334,7 +334,7 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
                 }
             };
             var fmResult = await _configurationGateway.Execute<IEnumerable<DataSetFieldMappingRecord>>(
-                fmCommand, new DataStoreTarget("ConfigurationDb", "data", "DataSetFieldMapping"), ct).ConfigureAwait(false);
+                fmCommand, new DataStoreTarget("PlatformConfiguration", "data", "DataSetFieldMapping"), ct).ConfigureAwait(false);
             if (fmResult.IsSuccess && fmResult.Value != null)
                 allMappings.AddRange(fmResult.Value);
         }
@@ -361,7 +361,7 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
                 }
             };
             var result = await _configurationGateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
-                command, new DataStoreTarget("ConfigurationDb", "data", "DataSetSource"), ct).ConfigureAwait(false);
+                command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetSource"), ct).ConfigureAwait(false);
             if (result.IsSuccess && result.Value != null)
                 results.AddRange(result.Value);
         }
@@ -373,7 +373,7 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
     {
         var command = new QueryCommand<T>();
         var result = await _configurationGateway.Execute<IEnumerable<T>>(
-            command, new DataStoreTarget("ConfigurationDb", "data", containerName), ct).ConfigureAwait(false);
+            command, new DataStoreTarget("PlatformConfiguration", "data", containerName), ct).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
     }
 }

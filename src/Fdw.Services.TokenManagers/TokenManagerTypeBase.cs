@@ -42,7 +42,7 @@ public abstract class TokenManagerTypeBase<TService, TConfiguration, TFactory> :
         string? category = null,
         string defaultContainerName = "")
         : base(name, $"TokenManagers:{name}", $"{name} Token Manager", $"Token manager service using {name}", category ?? "TokenManager",
-               defaultDataStoreName: "ConfigurationDb",
+               defaultDataStoreName: "PlatformConfiguration",
                defaultPathName: "auth",
                defaultContainerName: defaultContainerName)
     {

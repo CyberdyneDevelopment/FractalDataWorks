@@ -285,7 +285,7 @@ public abstract class GetLineageImpactEndpointBase : Endpoint<LineageImpactReque
     {
         var command = new QueryCommand<T>();
         var result = await _configurationGateway.Execute<IEnumerable<T>>(
-            command, new DataStoreTarget("ConfigurationDb", "data", containerName), ct).ConfigureAwait(false);
+            command, new DataStoreTarget("PlatformConfiguration", "data", containerName), ct).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
     }
 }

@@ -29,7 +29,7 @@ public sealed class ExternalIdentityProviderResolverTests
         => new(
             NullLogger<ExternalIdentityProviderConfigurationProvider>.Instance,
             new ConfigurationGatewayProvider(),
-            "ConfigurationDb", "auth");
+            "PlatformConfiguration", "auth");
 
     private static ExternalIdentityProviderResolver Resolver(
         Mock<IExternalIdentityProviderServiceProvider> serviceProvider,

@@ -38,7 +38,7 @@ public class DataflowGraphConfigurationProvider
     }
 
 
-    private const string DataStoreName = "ConfigurationDb";
+    private const string DataStoreName = "PlatformConfiguration";
     private const string DataPath = "data";
     private const string PipePath = "pipe";
 

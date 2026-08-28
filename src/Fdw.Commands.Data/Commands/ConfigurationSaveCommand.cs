@@ -34,7 +34,7 @@ namespace Fdw.Commands.Data;
 /// <code>
 /// var call = new DataGatewayCall(
 ///     new ConfigurationSaveCommand&lt;DataSetConfiguration&gt;(config),
-///     new DataStoreTarget("ConfigurationDb", "cfg", "DataSet"));
+///     new DataStoreTarget("PlatformConfiguration", "cfg", "DataSet"));
 /// var result = await gateway.Execute&lt;int&gt;(call, ct);
 /// </code>
 /// </para>

@@ -25,7 +25,7 @@ public class ConfigurationConnectionOptions
     /// <remarks>
     /// Can be overridden via environment variable: FdwHost__Configuration__ConnectionName
     /// </remarks>
-    public string? ConnectionName { get; set; } = "ConfigurationDb";
+    public string? ConnectionName { get; set; } = "PlatformConfiguration";
 
     /// <summary>
     /// Gets or sets whether to automatically initialize the configuration schema on startup.

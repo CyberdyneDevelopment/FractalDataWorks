@@ -98,7 +98,7 @@ public partial class NotificationTypes
                 new ImplementationConfigurationProviderBase<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>(
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    "ConfigurationDb", "notify"));
+                    "PlatformConfiguration", "notify"));
 
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));

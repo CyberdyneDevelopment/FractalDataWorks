@@ -50,7 +50,7 @@ public abstract class AuthenticationServiceTypeBase
                displayName,
                description,
                category: "Authentication",
-               defaultDataStoreName: "ConfigurationDb",
+               defaultDataStoreName: "PlatformConfiguration",
                defaultPathName: "auth",
                defaultContainerName: "Authentication")
     {

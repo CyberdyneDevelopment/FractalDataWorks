@@ -27,7 +27,7 @@ namespace Fdw.Services.Connections;
 /// </remarks>
 public sealed class ConnectionHealthService : IConnectionHealthService
 {
-    private const string DataStoreName = "ConfigurationDb";
+    private const string DataStoreName = "PlatformConfiguration";
     private const string PathName = "conn";
     private const string Container = "ConnectionHealthCheck";
 

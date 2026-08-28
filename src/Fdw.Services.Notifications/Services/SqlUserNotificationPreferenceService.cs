@@ -26,7 +26,7 @@ namespace Fdw.Services.Notifications.Services;
 /// </remarks>
 public sealed class SqlUserNotificationPreferenceService : IUserNotificationPreferenceService
 {
-    private const string DataStoreName = "ConfigurationDb";
+    private const string DataStoreName = "PlatformConfiguration";
     private const string PathName = "notify";
     private const string ContainerName = "UserNotificationPreference";
     private const string SystemActor = "system";

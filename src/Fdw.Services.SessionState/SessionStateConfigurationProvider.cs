@@ -24,7 +24,7 @@ namespace Fdw.Services.SessionState;
 /// </remarks>
 public class SessionStateConfigurationProvider
 {
-    private const string DataStoreName = "ConfigurationDb";
+    private const string DataStoreName = "PlatformConfiguration";
     private const string PathName = "settings";
     private const string ContainerName = "SessionState";
 

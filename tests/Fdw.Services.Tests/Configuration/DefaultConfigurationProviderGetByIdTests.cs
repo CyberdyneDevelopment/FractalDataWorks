@@ -42,7 +42,7 @@ public class DefaultConfigurationProviderGetByIdTests
         // sec.AzureKeyVaultSecretManager case — the physical FK column (SecretManagerRowId)
         // is returned directly from the metadata; the caller passes the parent's RowId.
         var fakeGateway = BuildChildConfigFixture(
-            storeName: "ConfigurationDb",
+            storeName: "PlatformConfiguration",
             pathName: "sec",
             containerName: "AzureKeyVaultSecretManager",
             fkColumn: "SecretManagerId");
@@ -51,7 +51,7 @@ public class DefaultConfigurationProviderGetByIdTests
         var provider = new ImplementationConfigurationProviderBase<TestChildConfig, TestChildCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestChildConfig, TestChildCommand>>.Instance,
             GatewayProviderFor(fakeGateway),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "sec");
 
         var domainConfigurationId = Guid.NewGuid();

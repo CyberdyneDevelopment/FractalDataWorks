@@ -46,7 +46,7 @@ public abstract class EtlPipelineTypeBase<TPipeline, TFactory, TConfiguration> :
         string? category = null,
         string defaultContainerName = "")
         : base(name, sectionName, displayName, description, category ?? "Pipeline",
-               defaultDataStoreName: "ConfigurationDb",
+               defaultDataStoreName: "PlatformConfiguration",
                defaultPathName: "pipe",
                defaultContainerName: defaultContainerName)
     {

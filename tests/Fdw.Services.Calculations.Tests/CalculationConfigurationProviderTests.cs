@@ -41,14 +41,14 @@ public class CalculationConfigurationProviderTests
         var provider = new CalculationConfigurationProvider(
             NullLogger<CalculationConfigurationProvider>.Instance,
             GatewayProviderFor(gateway),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "calc");
 
         // Register the Formula typed provider exactly as DefaultCalculationServiceType.RegisterFactory does.
         var formulaProvider = new ImplementationConfigurationProviderBase<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>(
             NullLogger<ImplementationConfigurationProviderBase<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>>.Instance,
             GatewayProviderFor(gateway),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "calc");
         provider.Register("Formula", formulaProvider);
 
@@ -67,7 +67,7 @@ public class CalculationConfigurationProviderTests
     private sealed class AggregateGateway : IConfigurationGateway
     {
         /// <summary>The connection this fake stands in for.</summary>
-        public string ConnectionName => "ConfigurationDb";
+        public string ConnectionName => "PlatformConfiguration";
 
         /// <summary>Targets this fake was asked to invalidate, in call order.</summary>
         public List<DataStoreTarget> Invalidated { get; } = [];
@@ -181,7 +181,7 @@ public class CalculationConfigurationProviderTests
                 Mock.Get(c).Setup(x => x.Parent).Returns(path.Object);
 
             var store = new Mock<IDataStore>();
-            store.Setup(s => s.Name).Returns("ConfigurationDb");
+            store.Setup(s => s.Name).Returns("PlatformConfiguration");
             store.Setup(s => s.Paths).Returns(new List<IDataNodePath> { path.Object });
             store.Setup(s => s.Path(It.IsAny<string>())).Returns((string n) =>
                 string.Equals(n, "calc", StringComparison.Ordinal)

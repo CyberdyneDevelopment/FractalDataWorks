@@ -196,7 +196,7 @@ public abstract class SecretManagerTypeBase<TService, TFactory, TConfiguration> 
         string? category = null,
         string defaultContainerName = "")
         : base(name, sectionName, displayName, description, category ?? "Secret Management",
-               defaultDataStoreName: "ConfigurationDb",
+               defaultDataStoreName: "PlatformConfiguration",
                defaultPathName: "sec",
                defaultContainerName: defaultContainerName)
     {

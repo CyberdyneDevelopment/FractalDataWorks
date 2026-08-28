@@ -40,7 +40,7 @@ public sealed class AgentActionService : IAgentActionService
     {
         AgentActionLog.ListingAgentActions(_logger, status ?? "all");
 
-        var builder = DataQuery.From<AgentActionRecord>("ConfigurationDb", "agent", "AgentAction");
+        var builder = DataQuery.From<AgentActionRecord>("PlatformConfiguration", "agent", "AgentAction");
 
         if (!string.IsNullOrWhiteSpace(status))
         {
@@ -69,7 +69,7 @@ public sealed class AgentActionService : IAgentActionService
     {
         AgentActionLog.FetchingAgentAction(_logger, actionId);
 
-        var command = DataQuery.From<AgentActionRecord>("ConfigurationDb", "agent", "AgentAction")
+        var command = DataQuery.From<AgentActionRecord>("PlatformConfiguration", "agent", "AgentAction")
             .Where("Id", actionId)
             .Build();
 
@@ -138,7 +138,7 @@ public sealed class AgentActionService : IAgentActionService
         existing.ReviewedBy = reviewedBy;
 
         var updateCommand = new UpdateCommandBuilder<AgentActionRecord>("AgentAction")
-            .DataStore("ConfigurationDb")
+            .DataStore("PlatformConfiguration")
             .Path("agent")
             .Where("Id", actionId)
             .Value(existing);

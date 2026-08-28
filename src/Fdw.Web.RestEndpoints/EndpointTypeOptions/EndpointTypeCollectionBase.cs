@@ -95,7 +95,7 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// <summary>Gets the data store this collection's configuration rows live in.</summary>
     /// <remarks>Virtual so a resource that lives elsewhere says so, rather than the framework
     /// guessing from a name.</remarks>
-    public virtual string DataStore => "ConfigurationDb";
+    public virtual string DataStore => "PlatformConfiguration";
 
     /// <summary>Gets the schema within that store.</summary>
     public virtual string PathName => "web";

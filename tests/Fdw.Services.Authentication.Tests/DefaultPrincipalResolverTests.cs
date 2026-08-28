@@ -33,21 +33,21 @@ public sealed class DefaultPrincipalResolverTests
         MockBehavior.Strict,
         NullLogger<UserTenantConfigurationProvider>.Instance,
         NullGateway(),
-        "ConfigurationDb",
+        "PlatformConfiguration",
         "tenant");
 
     private static Mock<UserRoleConfigurationProvider> CreateUserRoleProviderMock() => new(
         MockBehavior.Strict,
         NullLogger<UserRoleConfigurationProvider>.Instance,
         NullGateway(),
-        "ConfigurationDb",
+        "PlatformConfiguration",
         "authz");
 
     private static Mock<RoleConfigurationProvider> CreateRoleProviderMock() => new(
         MockBehavior.Strict,
         NullLogger<RoleConfigurationProvider>.Instance,
         NullGateway(),
-        "ConfigurationDb",
+        "PlatformConfiguration",
         "authz");
 
     private sealed class Fixture

@@ -107,7 +107,7 @@ public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisReq
         };
 
         var result = await _configurationGateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
-            command, new DataStoreTarget("ConfigurationDb", "data", "DataSetSource"), ct).ConfigureAwait(false);
+            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetSource"), ct).ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
     }
 
@@ -133,7 +133,7 @@ public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisReq
             };
 
             var dsResult = await _configurationGateway.Execute<IEnumerable<DataSetRecord>>(
-                dsCommand, new DataStoreTarget("ConfigurationDb", "data", "DataSet"), ct).ConfigureAwait(false);
+                dsCommand, new DataStoreTarget("PlatformConfiguration", "data", "DataSet"), ct).ConfigureAwait(false);
             var ds = dsResult.IsSuccess ? dsResult.Value?.FirstOrDefault() : null;
 
             if (ds != null)

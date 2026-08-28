@@ -19,11 +19,11 @@ public static class TypesSchemaExtensions
     /// Ensures the types schema and tables exist in the database.
     /// </summary>
     /// <param name="host">The application host.</param>
-    /// <param name="connectionStringName">Name of the connection string in configuration (default: "ConfigurationDb").</param>
+    /// <param name="connectionStringName">Name of the connection string in configuration (default: "PlatformConfiguration").</param>
     /// <returns>The host for method chaining.</returns>
     public static async Task<IHost> EnsureTypesSchema(
         this IHost host,
-        string connectionStringName = "ConfigurationDb")
+        string connectionStringName = "PlatformConfiguration")
     {
         if (host == null)
         {

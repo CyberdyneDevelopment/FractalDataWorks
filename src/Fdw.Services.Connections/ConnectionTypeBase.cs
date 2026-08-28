@@ -57,7 +57,7 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
         string? category = null,
         string defaultContainerName = "")
         : base(name, sectionName, displayName, description, category ?? "Connection",
-               defaultDataStoreName: "ConfigurationDb",
+               defaultDataStoreName: "PlatformConfiguration",
                defaultPathName: "conn",
                defaultContainerName: defaultContainerName)
     {

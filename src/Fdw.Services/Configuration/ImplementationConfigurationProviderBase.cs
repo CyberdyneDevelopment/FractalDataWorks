@@ -36,7 +36,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     private readonly AsyncLocal<bool> _isQuerying = new();
 
     /// <summary>
-    /// DataStore name this provider targets (e.g. "ConfigurationDb"). Set at construction (the
+    /// DataStore name this provider targets (e.g. "PlatformConfiguration"). Set at construction (the
     /// derived provider's own constructor default) or via <see cref="SetConfiguration"/> — never
     /// publicly settable directly, since nothing outside the provider has a legitimate reason to
     /// change where it reads from.

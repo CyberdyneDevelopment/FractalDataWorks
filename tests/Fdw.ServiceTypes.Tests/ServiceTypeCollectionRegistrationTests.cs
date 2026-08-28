@@ -44,7 +44,7 @@ public class ServiceTypeCollectionRegistrationTests
         public string DisplayName => Name;
         public string Description => Name;
         public string Category => "NotCategorized";
-        public string DataStore => "ConfigurationDb";
+        public string DataStore => "PlatformConfiguration";
         public string PathName => "cfg";
         public string Container => Name;
 

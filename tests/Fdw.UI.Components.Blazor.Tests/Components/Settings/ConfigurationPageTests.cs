@@ -102,12 +102,12 @@ public sealed class ConfigurationPageTests : IDisposable
         Swap(new ConfigurationContext
         {
             Types = [Type("Connections")],
-            Instances = [Instance("ConfigurationDb"), Instance("AuthDb")],
+            Instances = [Instance("PlatformConfiguration"), Instance("AuthDb")],
         });
         var cut = _ctx.Render<ConfigurationPage>();
         // Select the category so the instance pane shows.
         cut.FindAll("button").First(b => b.TextContent.Contains("Connections", StringComparison.Ordinal)).Click();
-        cut.Markup.ShouldContain("ConfigurationDb");
+        cut.Markup.ShouldContain("PlatformConfiguration");
         cut.Markup.ShouldContain("AuthDb");
     }
 
@@ -117,7 +117,7 @@ public sealed class ConfigurationPageTests : IDisposable
         Swap(new ConfigurationContext
         {
             Types = [],
-            Instances = [Instance("ConfigurationDb")],
+            Instances = [Instance("PlatformConfiguration")],
         });
         var cut = _ctx.Render<ConfigurationPage>();
         cut.Markup.ShouldContain("No configuration types found");

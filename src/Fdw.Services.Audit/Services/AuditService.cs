@@ -209,7 +209,7 @@ public sealed class AuditService : IAuditService
 
         var result = await _gateway.Execute<IEnumerable<AuditQueryRecord>>(
             command,
-            new DataStoreTarget("ConfigurationDb", "audit", "ConfigurationAudit"),
+            new DataStoreTarget("PlatformConfiguration", "audit", "ConfigurationAudit"),
             cancellationToken).ConfigureAwait(false);
 
         if (!result.IsSuccess)
@@ -314,7 +314,7 @@ public sealed class AuditService : IAuditService
 
         var result = await _gateway.Execute<IEnumerable<AuditQueryRecord>>(
             command,
-            new DataStoreTarget("ConfigurationDb", "audit", "ConfigurationAudit"),
+            new DataStoreTarget("PlatformConfiguration", "audit", "ConfigurationAudit"),
             cancellationToken).ConfigureAwait(false);
 
         if (!result.IsSuccess)
@@ -343,7 +343,7 @@ public sealed class AuditService : IAuditService
         var command = new InsertCommand<AuditInsertRecord>(record);
         var result = await _gateway.Execute<int>(
             command,
-            new DataStoreTarget("ConfigurationDb", "audit", "ConfigurationAudit"),
+            new DataStoreTarget("PlatformConfiguration", "audit", "ConfigurationAudit"),
             cancellationToken).ConfigureAwait(false);
         return result.IsSuccess
             ? GenericResult.Success()

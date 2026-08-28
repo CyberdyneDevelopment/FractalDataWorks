@@ -9,7 +9,7 @@ public static class DataStores
     /// <summary>
     /// Select a data store to query from (required).
     /// </summary>
-    /// <param name="dataStoreName">The data store name (e.g., "AuthDb", "ConfigurationDb", "CRM").</param>
+    /// <param name="dataStoreName">The data store name (e.g., "AuthDb", "PlatformConfiguration", "CRM").</param>
     /// <returns>A builder for selecting paths within this data store.</returns>
     /// <example>
     /// <code>
@@ -21,7 +21,7 @@ public static class DataStores
     ///     .Build();
     ///
     /// // Query from ConfigurationDb
-    /// var command = DataStores.For("ConfigurationDb")
+    /// var command = DataStores.For("PlatformConfiguration")
     ///     .Path("cfg")
     ///     .Container&lt;Connection&gt;("Connections")
     ///     .Where("IsActive", true)

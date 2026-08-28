@@ -116,13 +116,13 @@ public sealed class ConnectionHealthMonitorWorkerTests
         GenericResult<IReadOnlyList<ConnectionConfiguration>>.Chain(
             DataStoresResultCodes.DataPathNotFound,
             GenericResult.Failure(new GenericMessage("Path 'conn' not found in DataStore 'ConfigurationDb'")),
-            ResultDetails.Create("PathName", "conn", "DataStoreName", "ConfigurationDb"));
+            ResultDetails.Create("PathName", "conn", "DataStoreName", "PlatformConfiguration"));
 
     private static IGenericResult<IReadOnlyList<ConnectionConfiguration>> ContainerNotRegistered() =>
         GenericResult<IReadOnlyList<ConnectionConfiguration>>.Chain(
             DataStoresResultCodes.ContainerNotFoundInPath,
             GenericResult.Failure(new GenericMessage("Container 'Connection' not found in path 'conn'")),
-            ResultDetails.Create("ContainerName", "Connection", "PathName", "conn", "DataStoreName", "ConfigurationDb"));
+            ResultDetails.Create("ContainerName", "Connection", "PathName", "conn", "DataStoreName", "PlatformConfiguration"));
 
     private static IGenericResult<IReadOnlyList<ConnectionConfiguration>> TransientFailure() =>
         GenericResult<IReadOnlyList<ConnectionConfiguration>>.Failure(

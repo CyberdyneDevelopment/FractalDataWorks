@@ -131,7 +131,7 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
                dataSetName.Equals("Teams", StringComparison.OrdinalIgnoreCase) ||
                dataSetName.Equals("Players", StringComparison.OrdinalIgnoreCase)
             ? "NflStats"
-            : "ConfigurationDb";
+            : "PlatformConfiguration";
     }
 
     /// <summary>Executes a single quality rule against the provided data and returns the result.</summary>
