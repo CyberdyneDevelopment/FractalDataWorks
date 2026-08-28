@@ -337,6 +337,8 @@
     <Project Path="src/Fdw.Services.Settings.Components/Fdw.Services.Settings.Components.csproj" />
     <Project Path="src/Fdw.Services.Settings.Endpoints/Fdw.Services.Settings.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Settings/Fdw.Services.Settings.csproj" />
+    <Project Path="src/Fdw.Services.Telemetry.Abstractions/Fdw.Services.Telemetry.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Telemetry/Fdw.Services.Telemetry.csproj" />
     <Project Path="src/Fdw.Services.Terminal.Abstractions/Fdw.Services.Terminal.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Terminal.Components/Fdw.Services.Terminal.Components.csproj" />
     <Project Path="src/Fdw.Services.Terminal.UI.Pages/Fdw.Services.Terminal.UI.Pages.csproj" />
