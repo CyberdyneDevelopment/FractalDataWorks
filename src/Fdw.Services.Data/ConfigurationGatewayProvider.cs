@@ -26,8 +26,8 @@ public sealed class ConfigurationGatewayProvider : IConfigurationGatewayProvider
     /// <param name="logger">The logger.</param>
     /// <remarks>
     /// Why the gateways are built on first request rather than when the domain registers: a gateway
-    /// needs its connection's factory, and the registration sweep runs collections in category order,
-    /// which puts ConfigurationGateway ahead of Connection. Building on demand means the whole sweep
+    /// needs its connection's factory, and registration runs collections in category order,
+    /// which puts ConfigurationGateway ahead of Connection. Building on demand means registration
     /// has finished before any gateway is needed, so no host has to know that order.
     /// </remarks>
     public ConfigurationGatewayProvider(

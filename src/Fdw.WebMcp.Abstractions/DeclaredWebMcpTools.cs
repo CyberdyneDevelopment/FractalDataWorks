@@ -9,7 +9,7 @@ namespace Fdw.WebMcp.Abstractions;
 /// <remarks>
 /// The WebMCP counterpart of <c>DeclaredEndpoints</c>, and deliberately the same shape: an option
 /// adds itself as it registers, and the host reads the collection afterwards. Tools are GATHERED
-/// from options that attached themselves — never swept out of an assembly list, which is what the
+/// from options that attached themselves — never scraped out of an assembly list, which is what the
 /// discovery this replaced did and why it found nothing: the routes it needed are declared inside
 /// FastEndpoints <c>Configure()</c> bodies, which no assembly scan can read.
 ///

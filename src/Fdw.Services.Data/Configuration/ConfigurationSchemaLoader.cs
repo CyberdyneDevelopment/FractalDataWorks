@@ -28,7 +28,7 @@ namespace Fdw.Services.Data;
 /// </summary>
 /// <remarks>
 /// Public because a host that builds its own gateway - a test fixture, or an app that does not run
-/// the registration sweep - still has to read the same schema the sweep would have read.
+/// registration - still has to read the same schema registration would have read.
 /// </remarks>
 public static partial class ConfigurationSchemaLoader
 {
