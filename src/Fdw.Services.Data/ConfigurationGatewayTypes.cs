@@ -104,69 +104,20 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
                 ConfigurationGatewayProviderLog.ConnectionFactoryUnavailable(
                     log, connectionName, connectionType.FactoryType.Name));
 
-        ISecretManager? secretManager = null;
-        if (schema.SecretManagers.Count > 0)
-        {
-            var resolved = ResolveSecretManager(services, schema, connectionName, log);
-            if (resolved.IsFailure)
-                return resolved.ToNewResult<IConfigurationGateway>();
-
-            secretManager = resolved.Value;
-        }
-
+        // Why null rather than a manager chosen here: the factory resolves the secret manager BY NAME
+        // from the connection's own declaration, through the provider it was constructed with. Choosing
+        // one at this level means choosing without reading that declaration - and the factory already
+        // refuses a manager the connection did not name, so a choice made here is either redundant or
+        // wrong.
         return GenericResult<IConfigurationGateway>.Success(
             new ConfigurationGateway(
                 connectionName,
                 factory,
-                secretManager,
+                null,
                 schema,
                 services.GetService<ILogger<ConfigurationGateway>>(),
                 services.GetService<DataGatewayResultCache>(),
                 services.GetService<IOptions<DataGatewayOptions>>(),
                 services.GetService<IAuthenticationContextAccessor>()));
-    }
-
-    /// <summary>
-    /// Builds the secret manager the schema declares, through the same option-to-factory route
-    /// <see cref="Build"/> uses for the connection. Called only when the schema declares at least one.
-    /// </summary>
-    private static IGenericResult<ISecretManager> ResolveSecretManager(
-        System.IServiceProvider services,
-        ConfigurationSchema schema,
-        string connectionName,
-        ILogger log)
-    {
-        // Why fail rather than pick: a connection does not name its secret manager, so with more than
-        // one declared there is no non-arbitrary choice. Taking the first would resolve secrets from a
-        // manager nobody selected, and a wrong secret reads as an authentication failure somewhere else.
-        if (schema.SecretManagers.Count > 1)
-            return GenericResult<ISecretManager>.Failure(
-                ConfigurationGatewayProviderLog.SecretManagerAmbiguous(
-                    log, connectionName, schema.SecretManagers.Count));
-
-        var declared = schema.SecretManagers[0];
-
-        if (string.IsNullOrWhiteSpace(declared.ServiceOptionType))
-            return GenericResult<ISecretManager>.Failure(
-                ConfigurationGatewayProviderLog.SecretManagerDeclaresNoKind(log, declared.Name));
-
-        if (SecretManagerTypes.ByName(declared.ServiceOptionType) is not IServiceType secretManagerType)
-            return GenericResult<ISecretManager>.Failure(
-                ConfigurationGatewayProviderLog.SecretManagerKindNotRegistered(
-                    log, declared.Name, declared.ServiceOptionType));
-
-        if (services.GetService(secretManagerType.FactoryType) is not IServiceFactory<ISecretManager> factory)
-            return GenericResult<ISecretManager>.Failure(
-                ConfigurationGatewayProviderLog.SecretManagerFactoryUnavailable(
-                    log, declared.Name, secretManagerType.FactoryType.Name));
-
-        // Why the header and not declared.Configuration: the factory reads the typed body AND the name
-        // off the header, and the name is what the secret manager reports about itself.
-        var created = factory.Create(declared);
-        return created.IsSuccess && created.Value is not null
-            ? created
-            : GenericResult<ISecretManager>.Failure(
-                ConfigurationGatewayProviderLog.SecretManagerCreateFailed(
-                    log, declared.Name, created.CurrentMessage?.ToString() ?? "factory returned no secret manager"));
     }
 }
