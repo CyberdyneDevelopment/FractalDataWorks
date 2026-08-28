@@ -4,9 +4,9 @@ namespace Fdw.Services.Abstractions;
 /// Whether one lifecycle phase of a service type or collection still has to run.
 /// </summary>
 /// <remarks>
-/// Three states rather than a bool because a sweep and an explicit call read them differently:
-/// both skip <see cref="Deferred"/> and <see cref="Ran"/>, but an explicit call RUNS a deferred
-/// phase and no-ops a completed one. That distinction is the whole point — it is what lets a host
+/// Three states rather than a bool because PlatformServices and an explicit call read them
+/// differently: both skip <see cref="Deferred"/> and <see cref="Ran"/>, but an explicit call RUNS
+/// a deferred phase and no-ops a completed one. That distinction is the whole point — it lets a host
 /// take one domain out of the collect, let the collect finish, and then run that domain itself.
 /// </remarks>
 public enum PhaseState
