@@ -76,6 +76,34 @@ public sealed class MessageServiceTests
             .Setup(g => g.Execute<IEnumerable<MessagePayload>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(result);
 
+    // ── GetMessages ordering pushdown ───────────────────────────────────────
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task GetMessagesPutsTheOrderingOnTheCommandRatherThanSortingInMemory()
+    {
+        // Why assert the command and not the returned order: the gateway is a mock returning a fixed
+        // list, so an assertion on the result order passes whether the ordering was pushed down or
+        // applied in the host afterwards. Only the command carries the difference. SQL translators
+        // declare CanExpressOrdering, so an ordering set here becomes ORDER BY in the generated SQL.
+        var fixture = CreateService();
+        IDataCommand? captured = null;
+        fixture.Gateway
+            .Setup(g => g.Execute<IEnumerable<MessagePayload>>(
+                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+            .Callback((IDataCommand c, DataStoreTarget _, CancellationToken __) => captured = c)
+            .ReturnsAsync(GenericResult<IEnumerable<MessagePayload>>.Success([]));
+
+        await fixture.Service.GetMessages(new MessageQuery(), TestContext.Current.CancellationToken);
+
+        var query = captured.ShouldBeAssignableTo<IQueryCommand>();
+        query.Ordering.ShouldNotBeNull();
+        query.Ordering!.OrderedFields.Select(f => f.PropertyName)
+            .ShouldBe([nameof(MessagePayload.CreatedAt), nameof(MessagePayload.Id)]);
+        query.Ordering.OrderedFields.ShouldAllBe(f => f.Direction.Name == "Ascending");
+    }
+
     // ── CreateMessage ───────────────────────────────────────────────────────
 
     [Fact]
@@ -92,7 +120,7 @@ public sealed class MessageServiceTests
         result.IsSuccess.ShouldBeTrue();
         result.Value!.RecipientUserId.ShouldBe(recipientId);
         fixture.TargetedGroups.ShouldContain(recipientId.ToString("D"));
-        fixture.Client.Verify(c => c.NewMessage(It.IsAny<Guid>()), Times.Once);
+        fixture.Client.Verify(c => c.NewMessage(It.IsAny<MessagePayload>()), Times.Once);
         fixture.Client.Verify(c => c.UnreadCountChanged(), Times.Once);
     }
 
@@ -108,7 +136,7 @@ public sealed class MessageServiceTests
 
         result.IsSuccess.ShouldBeTrue();
         fixture.TargetedGroups.ShouldBeEmpty();
-        fixture.Client.Verify(c => c.NewMessage(It.IsAny<Guid>()), Times.Never);
+        fixture.Client.Verify(c => c.NewMessage(It.IsAny<MessagePayload>()), Times.Never);
     }
 
     [Fact]
@@ -169,7 +197,7 @@ public sealed class MessageServiceTests
         var result = await fixture.Service.CreateMessage(MakeRequest(Guid.NewGuid()), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        fixture.Client.Verify(c => c.NewMessage(It.IsAny<Guid>()), Times.Once);
+        fixture.Client.Verify(c => c.NewMessage(It.IsAny<MessagePayload>()), Times.Once);
     }
 
     // ── GetMessages ─────────────────────────────────────────────────────────

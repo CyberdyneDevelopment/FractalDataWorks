@@ -127,7 +127,18 @@ public sealed class MessageService : IMessageService
                 builder = builder.Where(m => m.ReferenceId).Equal(query.ReferenceId);
             }
 
-            var command = builder.Build();
+            // Why ordered on the command rather than on the results: SqlDataCommandTranslatorBase
+            // declares CanExpressOrdering, so this becomes ORDER BY in the generated SQL and uses
+            // the (CreatedAt, Id) index instead of sorting the whole set in the host.
+            //
+            // (CreatedAt, Id) rather than CreatedAt alone because a burst written in one transaction
+            // shares a timestamp, and a tie with no second key has no defined order. Note Id is
+            // Guid.NewGuid() — random, so the tiebreak is stable but NOT insertion order. Minting
+            // with Guid.CreateVersion7() would make it both.
+            var command = builder
+                .OrderBy(m => m.CreatedAt)
+                .OrderBy(m => m.Id)
+                .Build();
 
             var result = await _dataGateway.Execute<IEnumerable<MessagePayload>>(command, cancellationToken)
                 .ConfigureAwait(false);
@@ -146,18 +157,12 @@ public sealed class MessageService : IMessageService
                     MessagingLog.MessageQueryFailed(_logger, "Query returned null value"));
             }
 
-            // Why ordered here rather than in the command: the query builder exposes no ordering
-            // surface yet — IOrderingExpression exists, the fluent method does not — and an
-            // unordered read is a correctness bug for a conversation, not just untidy: turns come
-            // back in whatever order the store happened to return them.
-            //
-            // (CreatedAt, Id) rather than CreatedAt alone because a burst written in one
-            // transaction shares a timestamp, and a tie with no second key has no defined order.
-            // Note Id is Guid.NewGuid() — random, so the tiebreak is stable but NOT insertion
-            // order. Switching minting to Guid.CreateVersion7() would make it both.
-            var paged = ApplyPaging(
-                [.. result.Value.OrderBy(m => m.CreatedAt).ThenBy(m => m.Id)],
-                query);
+            // Why paging is still applied here: After/Before are keyset cursors that locate a row by
+            // Id within the ordered set and fail loud when it is absent. Pushing that down needs a
+            // tuple predicate on (CreatedAt, Id) built from the cursor row's own values, which means
+            // reading that row first — a different shape, not a fluent call. Tracked separately.
+            // The rows arrive ordered from the store, so no host-side sort remains.
+            var paged = ApplyPaging([.. result.Value], query);
 
             if (paged.IsFailure)
             {
