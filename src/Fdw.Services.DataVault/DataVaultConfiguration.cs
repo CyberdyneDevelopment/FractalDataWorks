@@ -73,7 +73,7 @@ public partial class DataVaultConfiguration : IDataVaultConfiguration
     /// <summary>
     /// Gets or sets the service option type (e.g., "Default").
     /// </summary>
-    [ValuesFrom(typeof(DataVaultServiceTypes))]
+    [ValuesFrom(typeof(DataVaultTypes))]
     public string? ServiceOptionType { get; set; }
 
     /// <summary>

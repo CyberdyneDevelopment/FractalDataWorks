@@ -12,9 +12,9 @@ namespace Fdw.Services.Authorization;
 [ServiceTypeCollection(
     typeof(AuthorizationTypeBase<IGenericService, IAuthorizationFactory>),
     typeof(IAuthorizationType),
-    typeof(AuthorizationTypes),
+    typeof(AuthorizationServiceTypes),
     ServiceCategory = "Authorization")]
-public partial class AuthorizationTypes : ServiceTypeCollectionBase<
+public partial class AuthorizationServiceTypes : ServiceTypeCollectionBase<
     AuthorizationTypeBase<IGenericService, IAuthorizationFactory>,
     IAuthorizationType>
 {

@@ -10,10 +10,10 @@ namespace Fdw.Operations;
 [ServiceTypeCollection(
     typeof(OperationsServiceTypeBase),
     typeof(IOperationsServiceType),
-    typeof(OperationsTypes),
+    typeof(OperationsServiceTypes),
     ServiceCategory = "Operations",
     RestrictToCurrentCompilation = true)]
-public partial class OperationsTypes : ServiceTypeCollectionBase<OperationsServiceTypeBase, IOperationsServiceType>
+public partial class OperationsServiceTypes : ServiceTypeCollectionBase<OperationsServiceTypeBase, IOperationsServiceType>
 {
     /// <summary>
     /// The connection this domain's configuration rows are read from and written to.
