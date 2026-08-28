@@ -12,10 +12,11 @@ namespace Fdw.Services.TokenManagers.Abstractions;
 /// Neither flow-time nor request-time — revocation and logout happen on their own occasions, and
 /// bundling them with issuance meant a resource server inherited the ability to revoke.
 /// <para>
-/// Named for revocation rather than for sessions. <c>Fdw.Workspace.Roslyn</c> already has an
-/// <c>ISessionManager</c> that manages Roslyn workspace sessions, and two unrelated interfaces
-/// sharing a name in one solution is a reader having to check the namespace every time. This one
-/// does not manage anything — it ends things.
+/// Named for revocation rather than for sessions. <c>Fdw.Workspace.Roslyn</c> held the
+/// <c>ISessionManager</c> name for workspace sessions — since renamed to
+/// <c>IRoslynSessionManager</c> — and two unrelated interfaces sharing a name in one solution is a
+/// reader checking the namespace every time to find out which concept they are looking at. This one
+/// does not manage anything in any case: it ends things.
 /// </para>
 /// </remarks>
 public interface ITokenRevoker
