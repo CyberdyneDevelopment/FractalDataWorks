@@ -35,6 +35,7 @@
     <ProjectReference Include="..\Fdw.Data.Transformations.Injection\Fdw.Data.Transformations.Injection.csproj" />
     <ProjectReference Include="..\Fdw.Data.Transformations.Numeric\Fdw.Data.Transformations.Numeric.csproj" />
     <ProjectReference Include="..\Fdw.Data.Transformations.Text\Fdw.Data.Transformations.Text.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Universes.Abstractions\Fdw.Services.Universes.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -344,6 +344,8 @@
     <Project Path="src/Fdw.Services.Terminal.UI.Pages/Fdw.Services.Terminal.UI.Pages.csproj" />
     <Project Path="src/Fdw.Services.TokenManagers.Abstractions/Fdw.Services.TokenManagers.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.TokenManagers/Fdw.Services.TokenManagers.csproj" />
+    <Project Path="src/Fdw.Services.Universes.Abstractions/Fdw.Services.Universes.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Universes/Fdw.Services.Universes.csproj" />
     <Project Path="src/Fdw.Services.Users.Abstractions/Fdw.Services.Users.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Users.Endpoints/Fdw.Services.Users.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Users/Fdw.Services.Users.csproj" />
