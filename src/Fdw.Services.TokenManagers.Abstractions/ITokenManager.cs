@@ -26,11 +26,19 @@ namespace Fdw.Services.TokenManagers.Abstractions;
 /// revocation. The same instance is registered under all four.
 /// </para>
 /// <para>
-/// An implementation of a scheme legitimately does all three — OpenIddict mints and checks and
-/// revokes. What was wrong before was making every <em>consumer</em> see all of it.
+/// Issuance is deliberately not among them. OpenIddict the library mints, but the implementation
+/// here does not: it hands a <c>ClaimsPrincipal</c> to OpenIddict's sign-in pipeline, because that
+/// is where the tenant, org, role and permission claims are baked. Minting directly would skip that
+/// handler and produce a token that verifies and carries no authorization. A scheme that checks and
+/// revokes therefore does not necessarily mint, and promising otherwise puts a capability in the
+/// interface that an implementation can only satisfy by doing the wrong thing.
+/// </para>
+/// <para>
+/// A component that mints implements <see cref="ITokenIssuer"/> directly — <c>JwtTokenIssuer</c>
+/// is one.
 /// </para>
 /// </remarks>
-public interface ITokenManager : IServiceOption, ITokenIssuer, ITokenValidator, ITokenRevoker
+public interface ITokenManager : IServiceOption, ITokenValidator, ITokenRevoker
 {
     /// <summary>Authenticates and mints in one call, dispatching on the request's grant type.</summary>
     /// <param name="request">The grant request.</param>
