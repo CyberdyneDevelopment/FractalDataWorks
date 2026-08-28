@@ -120,6 +120,11 @@ public sealed class MessageService : IMessageService
                 builder = builder.Where(m => m.Status).Equal(query.Status);
             }
 
+            if (!string.IsNullOrEmpty(query.ReferenceId))
+            {
+                builder = builder.Where(m => m.ReferenceId).Equal(query.ReferenceId);
+            }
+
             var command = builder.Build();
 
             var result = await _dataGateway.Execute<IEnumerable<MessagePayload>>(command, cancellationToken)

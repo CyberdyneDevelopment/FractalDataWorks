@@ -26,6 +26,13 @@ public class ListMessagesRequest
     public string? Status { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional thread filter. Returns only the messages sharing this reference,
+    /// which is how one side of an agent conversation reads the thread back.
+    /// </summary>
+    [QueryParam]
+    public string? ReferenceId { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of items to skip. Default is 0.
     /// </summary>
     [QueryParam]

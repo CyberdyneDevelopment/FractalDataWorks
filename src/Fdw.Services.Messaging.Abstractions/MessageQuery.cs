@@ -22,6 +22,16 @@ public sealed class MessageQuery
     /// <summary>Gets or sets an optional status filter.</summary>
     public string? Status { get; set; }
 
+    /// <summary>
+    /// Gets or sets an optional thread filter, matched against <see cref="MessagePayload.ReferenceId"/>.
+    /// </summary>
+    /// <remarks>
+    /// A conversation between a person and an agent is a set of messages sharing one ReferenceId.
+    /// Filtering on it is what lets a participant read back the thread it is part of rather than
+    /// the whole inbox, and <c>msg.Message</c> already carries a filtered index over the column.
+    /// </remarks>
+    public string? ReferenceId { get; set; }
+
     /// <summary>Gets or sets the number of records to skip.</summary>
     public int Skip { get; set; }
 
