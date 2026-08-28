@@ -59,7 +59,6 @@ public sealed class InMemoryExecutionStore : IAuthenticationExecutionStore
         // exactly the replay this method exists to prevent.
         if (!_records.TryRemove(resumeToken, out var record))
         {
-            ExecutionStoreLog.NotResumable(_logger);
             return Task.FromResult(GenericResult<ExecutionRecord>.Failure(
                 ExecutionStoreLog.NotResumable(_logger)));
         }
