@@ -32,18 +32,18 @@ namespace Fdw.Services.Notifications;
 /// </summary>
 /// <remarks>
 /// PlatformServices runs Register(services), which invokes each option's Register phase.
-/// Use <c>NotificationTypes.ByName("Email")</c> to look up specific types.
+/// Use <c>NotificationServiceTypes.ByName("Email")</c> to look up specific types.
 /// </remarks>
 [ServiceTypeCollection(
     typeof(NotificationTypeBase<IPlatformNotification, INotificationFactory<IPlatformNotification, INotificationImplementationConfiguration>, INotificationImplementationConfiguration>),
     typeof(INotificationType),
-    typeof(NotificationTypes),
+    typeof(NotificationServiceTypes),
     ServiceInterface = typeof(IPlatformNotification),
     ConfigurationInterface = typeof(NotificationConfiguration),
     ProviderType = typeof(NotificationServiceProvider),
     ProviderInterface = typeof(INotificationServiceProvider),
     ServiceCategory = "Notification")]
-public partial class NotificationTypes
+public partial class NotificationServiceTypes
     : ServiceTypeCollectionBase<
         NotificationTypeBase<IPlatformNotification, INotificationFactory<IPlatformNotification, INotificationImplementationConfiguration>, INotificationImplementationConfiguration>,
         INotificationType>
@@ -64,7 +64,7 @@ public partial class NotificationTypes
     /// body is what makes it replaceable: an application calling <c>Registration(...)</c> replaces the
     /// collect and this registration together, which is the correct semantic for a host taking over phase 2.
     /// </remarks>
-    static NotificationTypes()
+    static NotificationServiceTypes()
     {
         var collectOptions = RegisterFunc;
 
@@ -72,7 +72,7 @@ public partial class NotificationTypes
 
         Registration((builder, loggerFactory) =>
         {
-            var log = loggerFactory?.CreateLogger<NotificationTypes>() ?? NullLogger<NotificationTypes>.Instance;
+            var log = loggerFactory?.CreateLogger<NotificationServiceTypes>() ?? NullLogger<NotificationServiceTypes>.Instance;
 
             var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
@@ -103,8 +103,8 @@ public partial class NotificationTypes
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
 
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(NotificationTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(NotificationTypes), providerService);
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(NotificationServiceTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(NotificationServiceTypes), providerService);
 
             builder.Services.AddScoped<INotificationServiceProvider>(sp =>
             {
@@ -113,40 +113,40 @@ public partial class NotificationTypes
                     sp.GetService<ILoggerFactory>()?.CreateLogger<NotificationServiceProvider>()
                     ?? NullLogger<NotificationServiceProvider>.Instance);
 
-                var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<NotificationTypes>()
-                    ?? NullLogger<NotificationTypes>.Instance;
-                ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(NotificationTypes), provider.GetType().Name);
+                var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<NotificationServiceTypes>()
+                    ?? NullLogger<NotificationServiceTypes>.Instance;
+                ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(NotificationServiceTypes), provider.GetType().Name);
                 try
                 {
                     if (sp.GetService<INotificationConfigurationProvider>() is { } cfgProvider)
                     {
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
-                            ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(NotificationTypes), provider.GetType().Name, cfgProvider.GetType().Name);
+                            ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(NotificationServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(NotificationTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(NotificationServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {
                         ServiceTypeLog.DomainHasNoConfigurationSource(
                             stLogger,
-                            nameof(NotificationTypes),
+                            nameof(NotificationServiceTypes),
                             provider.GetType().Name,
                             typeof(IServiceConfigurationProvider<NotificationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)
                 {
-                    ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(NotificationTypes));
+                    ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(NotificationServiceTypes));
                     throw;
                 }
                 return provider;
             });
 
             if (declaredOptions.Length == 0)
-                ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(NotificationTypes), providerService);
+                ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(NotificationServiceTypes), providerService);
             else
-                ServiceTypeLog.DomainRegistered(log, nameof(NotificationTypes), declaredOptions.Length, optionNames, providerService);
+                ServiceTypeLog.DomainRegistered(log, nameof(NotificationServiceTypes), declaredOptions.Length, optionNames, providerService);
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

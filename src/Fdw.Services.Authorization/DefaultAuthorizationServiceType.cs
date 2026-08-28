@@ -33,7 +33,7 @@ namespace Fdw.Services.Authorization;
 /// and ASP.NET Core authorization bridge components with the dependency injection container.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(AuthorizationTypes), "Default")]
+[ServiceTypeOption(typeof(AuthorizationServiceTypes), "Default")]
 public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGenericService, IAuthorizationFactory>
 {
     /// <summary>
@@ -99,7 +99,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             builder.Services.TryAddSingleton<TenantOrgAccessConfigurationProvider>(sp =>
                 new TenantOrgAccessConfigurationProvider(
                     sp.GetRequiredService<IConfigurationGatewayProvider>()
-                        .Get(AuthorizationTypes.ConfigurationConnection).Value!,
+                        .Get(AuthorizationServiceTypes.ConfigurationConnection).Value!,
                     sp.GetService<ILogger<TenantOrgAccessConfigurationProvider>>()));
 
             builder.Services.TryAddScoped<IOrgAccessProvider>(sp =>

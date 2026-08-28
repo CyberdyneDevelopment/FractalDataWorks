@@ -27,12 +27,12 @@ namespace Fdw.Services.DataVault;
 [ServiceTypeCollection(
     typeof(DataVaultTypeBase<IDataVault, IDataVaultFactory<IDataVault, IDataVaultImplementationConfiguration>, IDataVaultImplementationConfiguration>),
     typeof(IDataVaultType),
-    typeof(DataVaultServiceTypes),
+    typeof(DataVaultTypes),
     ServiceInterface = typeof(IDataVault),
     ProviderType = typeof(DataVaultProvider),
     ProviderInterface = typeof(IDataVaultProvider),
     ServiceCategory = "DataVault")]
-public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
+public partial class DataVaultTypes : ServiceTypeCollectionBase<
     DataVaultTypeBase<IDataVault, IDataVaultFactory<IDataVault, IDataVaultImplementationConfiguration>, IDataVaultImplementationConfiguration>,
     IDataVaultType<IDataVault, IDataVaultFactory<IDataVault, IDataVaultImplementationConfiguration>, IDataVaultImplementationConfiguration>>
 {
@@ -52,7 +52,7 @@ public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
     /// body is what makes it replaceable: an application calling <c>Registration(...)</c> replaces the
     /// collect and this registration together, which is the correct semantic for a host taking over phase 2.
     /// </remarks>
-    static DataVaultServiceTypes()
+    static DataVaultTypes()
     {
         var collectOptions = RegisterFunc;
 
@@ -60,7 +60,7 @@ public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
 
         Registration((builder, loggerFactory) =>
         {
-            var log = loggerFactory?.CreateLogger<DataVaultServiceTypes>() ?? NullLogger<DataVaultServiceTypes>.Instance;
+            var log = loggerFactory?.CreateLogger<DataVaultTypes>() ?? NullLogger<DataVaultTypes>.Instance;
 
             var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
@@ -85,8 +85,8 @@ public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
 
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(DataVaultServiceTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(DataVaultServiceTypes), providerService);
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(DataVaultTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(DataVaultTypes), providerService);
 
             builder.Services.AddScoped<IDataVaultProvider>(sp =>
             {
@@ -95,40 +95,40 @@ public partial class DataVaultServiceTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILoggerFactory>()?.CreateLogger<DataVaultProvider>()
                     ?? NullLogger<DataVaultProvider>.Instance);
 
-                var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<DataVaultServiceTypes>()
-                    ?? NullLogger<DataVaultServiceTypes>.Instance;
-                ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(DataVaultServiceTypes), provider.GetType().Name);
+                var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<DataVaultTypes>()
+                    ?? NullLogger<DataVaultTypes>.Instance;
+                ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(DataVaultTypes), provider.GetType().Name);
                 try
                 {
                     if (sp.GetService<IDataVaultConfigurationProvider>() is { } cfgProvider)
                     {
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
-                            ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(DataVaultServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name);
+                            ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(DataVaultTypes), provider.GetType().Name, cfgProvider.GetType().Name);
                         else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(DataVaultServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
+                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(DataVaultTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
                     }
                     else
                     {
                         ServiceTypeLog.DomainHasNoConfigurationSource(
                             stLogger,
-                            nameof(DataVaultServiceTypes),
+                            nameof(DataVaultTypes),
                             provider.GetType().Name,
                             typeof(IServiceConfigurationProvider<DataVaultConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)
                 {
-                    ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(DataVaultServiceTypes));
+                    ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(DataVaultTypes));
                     throw;
                 }
                 return provider;
             });
 
             if (declaredOptions.Length == 0)
-                ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(DataVaultServiceTypes), providerService);
+                ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(DataVaultTypes), providerService);
             else
-                ServiceTypeLog.DomainRegistered(log, nameof(DataVaultServiceTypes), declaredOptions.Length, optionNames, providerService);
+                ServiceTypeLog.DomainRegistered(log, nameof(DataVaultTypes), declaredOptions.Length, optionNames, providerService);
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

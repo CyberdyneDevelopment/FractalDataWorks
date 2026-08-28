@@ -29,7 +29,7 @@ namespace Fdw.Operations;
 /// escalation (IEscalationService), and the gateway-backed EscalationConfigurationProvider.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(OperationsTypes), "Default")]
+[ServiceTypeOption(typeof(OperationsServiceTypes), "Default")]
 public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
 {
     /// <summary>
@@ -48,7 +48,7 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
                 new EscalationConfigurationProvider(
                     sp.GetService<ILogger<EscalationConfigurationProvider>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                        OperationsTypes.ConfigurationConnection));
+                        OperationsServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<EscalationPolicyConfiguration, EscalationPolicyConfigurationCommand>>(
                 sp => sp.GetRequiredService<EscalationConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<EscalationPolicyConfiguration>>(
