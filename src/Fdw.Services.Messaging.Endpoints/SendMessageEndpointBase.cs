@@ -134,9 +134,14 @@ public abstract class SendMessageEndpointBase : Endpoint<SendMessageRequest, Mes
         // Direction is DERIVED, never taken from the body. A caller that could name its own side
         // could post as the other one, and a transcript that lets the sender choose how it is
         // attributed is a transcript that can lie about who said something.
+        //
+        // The agent claim is the signal, not the authentication scheme: an agent acts on behalf of
+        // its owner, so sub is identical for both sides and only this claim separates them. Reading
+        // the scheme instead — as this did before the claim existed — attributed a person scripting
+        // with their own PAT to the agent.
         var derivedType = string.Equals(
-            HttpContext.User.Identity?.AuthenticationType,
-            AuthenticationSchemes.PatBearer,
+            HttpContext.User.FindFirst(ClaimDefinitions.agent.Name)?.Value,
+            "true",
             StringComparison.Ordinal)
                 ? AgentMessageType
                 : UserReplyType;

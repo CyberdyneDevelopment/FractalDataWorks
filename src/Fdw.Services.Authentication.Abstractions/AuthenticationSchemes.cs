@@ -20,4 +20,15 @@ public static class AuthenticationSchemes
     /// apart.
     /// </remarks>
     public const string PatBearer = "PATBearer";
+
+    /// <summary>
+    /// The scheme stamped on a principal authenticated by an agent key.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="PatBearer"/> even though both arrive as <c>Bearer fdx_*</c>: a
+    /// person scripting with their own PAT is not an agent, and a scheme shared between the two
+    /// would make them indistinguishable again. The agent claims are the reliable signal; this
+    /// records which credential minted the identity.
+    /// </remarks>
+    public const string AgentKey = "AgentKey";
 }
