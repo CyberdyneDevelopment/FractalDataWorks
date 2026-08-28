@@ -54,10 +54,6 @@ public sealed class DefaultQualityServiceType : QualityServiceTypeBase
 
             builder.Services.TryAddScoped<IQualityService, QualityService>();
             builder.Services.TryAddScoped<ICatalogService, CatalogService>();
-            // Why: PromotionService keeps an in-memory request list (stub before DB-backed
-            // persistence lands). Scoped meant the list reset per HTTP request, so Create
-            // → Get always 404'd. Singleton keeps the list alive across requests until a
-            // real DataGateway-backed implementation replaces it.
             builder.Services.TryAddSingleton<IPromotionService, PromotionService>();
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

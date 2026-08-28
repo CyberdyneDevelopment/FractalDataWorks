@@ -27,10 +27,6 @@ internal static class CompilationHelper
             MetadataReference.CreateFromFile(typeof(System.Runtime.CompilerServices.ModuleInitializerAttribute).Assembly.Location),
             MetadataReference.CreateFromFile(Assembly.Load("System.Runtime").Location),
             MetadataReference.CreateFromFile(Assembly.Load("netstandard").Location),
-            // Why: IServiceProvider is type-forwarded to System.ComponentModel on .NET 10. Without this
-            // reference any generated code that must BIND IServiceProvider (rather than just name it in a
-            // method group) fails with CS0012. Only surfaces in tests that actually inspect
-            // compilation.GetDiagnostics() — the string-assertion tests never bound it.
             MetadataReference.CreateFromFile(Assembly.Load("System.ComponentModel").Location),
 
             MetadataReference.CreateFromFile(typeof(Fdw.Collections.ServiceTypeCollectionAttribute).Assembly.Location),

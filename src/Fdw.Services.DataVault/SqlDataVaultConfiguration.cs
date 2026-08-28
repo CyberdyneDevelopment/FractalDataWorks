@@ -31,8 +31,6 @@ public partial class SqlDataVaultConfiguration : IDataVaultImplementationConfigu
     /// <summary>
     /// Gets or sets the unique identifier for this typed body row (sec.DefaultDataVault.Id).
     /// </summary>
-    // Why: NO Guid.NewGuid() default — the provider mints this before INSERT.
-    // A random default would bypass the provider's Id-mint logic and create orphaned rows.
     public Guid Id { get; set; }
 
 
@@ -46,9 +44,6 @@ public partial class SqlDataVaultConfiguration : IDataVaultImplementationConfigu
     /// </summary>
     public bool IsDeleted { get; set; }
 
-    // Why: IGenericConfiguration members below satisfy the interface contract.
-    // Name, SectionName, ServiceType, ServiceOptionType are not meaningful on the typed
-    // body — the canonical identity lives on the parent DataVaultConfiguration header.
     string IGenericConfiguration.Name
     {
         get => string.Empty;
@@ -66,8 +61,6 @@ public partial class SqlDataVaultConfiguration : IDataVaultImplementationConfigu
     /// <summary>
     /// Gets or sets the FK to <c>sec.DataVault.Id</c> (the parent header row).
     /// </summary>
-    // Why: DataVaultId links this typed body back to its sec.DataVault parent row.
-    // No Guid.NewGuid() default — the caller must explicitly supply the parent's Id.
     public Guid DataVaultId { get; set; }
 
     // ========================================
@@ -78,20 +71,16 @@ public partial class SqlDataVaultConfiguration : IDataVaultImplementationConfigu
     /// Gets or sets the name of the configurationSchema-declared connection this vault rides.
     /// Resolved once in system context during vault resolution — never re-resolved per request.
     /// </summary>
-    // Why: NO default — a missing ConnectionName is a configuration error that fails loud during
-    // vault resolution (DataVaultProvider), never a silent fallback.
     public string ConnectionName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the name of the secret manager that holds the vault's pepper (HMAC key).
     /// </summary>
-    // Why: NO default — a missing SecretManagerName fails loud during vault resolution.
     public string SecretManagerName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the secret key under which the pepper (HMAC key) is stored in the secret manager.
     /// The pepper itself is NEVER stored here — only the pointer to it.
     /// </summary>
-    // Why: NO default — a missing PepperSecretName fails loud during vault resolution.
     public string PepperSecretName { get; set; } = string.Empty;
 }

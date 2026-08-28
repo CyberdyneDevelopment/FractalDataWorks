@@ -4,7 +4,6 @@ namespace Fdw.Services.Connections.Abstractions;
 /// Canonical values for <see cref="ConfigurationFieldDescriptor.InputKind"/>.
 /// Consumers should compare with <c>StringComparison.Ordinal</c>.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static class ConfigurationFieldKinds
 {

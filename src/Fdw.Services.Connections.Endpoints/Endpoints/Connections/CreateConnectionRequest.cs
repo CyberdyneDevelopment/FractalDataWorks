@@ -66,10 +66,6 @@ public class CreateConnectionRequest : ResourceCreateRequest
     /// <summary>Whether to use mutual TLS (client certificate).</summary>
     public bool UseMtls { get; set; }
 
-    // Why: these three carry the opt-in check-settings columns on conn.Connection through to
-    // creation. No defaults — an unset HealthCheckEnabled/OnStartup is false (not checked) and an
-    // unset HealthCheckIntervalSeconds is null (no periodic interval), matching
-    // ConnectionConfiguration's own no-fallback semantics.
 
     /// <summary>Gets or sets whether the automated Connections domain health check probes this connection.</summary>
     public bool HealthCheckEnabled { get; set; }

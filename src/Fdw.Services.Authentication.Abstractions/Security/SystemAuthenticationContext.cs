@@ -38,54 +38,36 @@ namespace Fdw.Services.Authentication.Abstractions.Security;
 public sealed class SystemAuthenticationContext : IAuthenticationContext
 {
     /// <inheritdoc/>
-    // Why: "system" mirrors the existing SystemAuditContextAccessor convention for non-user callers.
-    // This value is never parsed as a Guid — SetUserSessionContext dispatches on IsSystemContext
-    // BEFORE it would attempt Guid.TryParse(UserId, ...), so the non-Guid value is never a problem.
     public string UserId => "system";
 
     /// <inheritdoc/>
     public string Username => UserId;
 
     /// <inheritdoc/>
-    // Why: system elevation carries no claims bag — it is not sourced from a token.
     public IDictionary<string, object> Claims { get; } = new Dictionary<string, object>(StringComparer.Ordinal);
 
     /// <inheritdoc/>
-    // Why: system elevation is not subject to role-based checks — it bypasses RLS visibility
-    // entirely via Mode 1, which is a stronger grant than any role could provide.
     public IEnumerable<string> Roles { get; } = [];
 
     /// <inheritdoc/>
-    // Why: system elevation carries no baked permission set — it is not subject to the
-    // effective-permission authorization path that HTTP requests go through.
     public IEnumerable<string> Permissions { get; } = [];
 
     /// <inheritdoc/>
-    // Why: system elevation is, by construction, always a valid authenticated context.
     public bool IsAuthenticated => true;
 
     /// <inheritdoc/>
-    // Why: "None" (no interactive authentication scheme) — mirrors WorkAuthenticationContext;
-    // there is no dedicated "System" SecurityMethodBase option in the framework today.
     public SecurityMethodBase AuthenticationMethod => (SecurityMethodBase)SecurityMethods.ByName("None");
 
     /// <inheritdoc/>
-    // Why: system elevation is not token-based, so there is no expiry to track.
     public DateTimeOffset? ExpiresAt => null;
 
     /// <inheritdoc/>
-    // Why: system elevation is not scoped to any single tenant — Mode 1 grants visibility across
-    // every tenant, so there is no "active" tenant to report.
     public Guid? ActiveTenantId => null;
 
     /// <inheritdoc/>
-    // Why: system elevation carries no org scoping concept.
     public Guid? ActiveOrgId => null;
 
     /// <inheritdoc/>
-    // Why: cross-tenant mode (Mode 2) is a narrower, per-tenant-membership grant checked against
-    // TenantOrgAccess; system elevation (Mode 1) is the broader, unconditional grant and does not
-    // need or use the cross-tenant mechanism.
     public bool IsCrossTenant => false;
 
     /// <inheritdoc/>

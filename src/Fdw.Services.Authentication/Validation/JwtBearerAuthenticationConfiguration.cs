@@ -66,9 +66,6 @@ public sealed class JwtBearerAuthenticationConfiguration
             .Select(v => v!)
             .ToList();
 
-        // Why a failure rather than an empty grant: a scheme that authenticates a caller and confers
-        // nothing produces a 403 on every route it guards, and reads as a missing permission grant
-        // rather than the empty declaration it is.
         if (roles.Count == 0)
             return GenericResult<JwtBearerAuthenticationConfiguration>.Failure(
                 AuthenticationValidationLog.JwtBearerMissingRoles(logger, serviceName));

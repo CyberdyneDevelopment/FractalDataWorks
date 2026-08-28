@@ -7,7 +7,6 @@ namespace Fdw.Services.Scheduling.Abstractions.Messages;
 /// <summary>
 /// Error message indicating that a process configuration is null.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [Message("ProcessConfigurationNull")]
 [MessageOption(typeof(SchedulingMessageCollectionBase))]

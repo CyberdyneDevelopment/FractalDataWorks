@@ -17,9 +17,6 @@ namespace Fdw.Data.DataSets;
 [TypeOption(typeof(DataSetSourceMapperTypes), "DataSet")]
 public sealed class DataSetSourceMapper : DataSetSourceMapperTypeBase
 {
-    // Why: TypeOptions are singletons discovered by source generation — they have no DI-injected logger.
-    // NullLogger ensures MessageLogging methods can create IGenericMessage instances for results.
-    // The message content is still returned in the IGenericResult for the caller to observe.
     private static readonly ILogger Logger = NullLogger.Instance;
 
     /// <summary>
@@ -40,10 +37,6 @@ public sealed class DataSetSourceMapper : DataSetSourceMapperTypeBase
         DataSetSourceMapperContext context,
         CancellationToken cancellationToken = default)
     {
-        // Why: DataSet mapper resolves via compound/federated join. The runtime expects this
-        // to return rows from the source DataSet; actual data resolution happens at composition time.
-        // This is a placeholder — the compound execution engine calls the upstream DataSet
-        // and extracts matching rows based on join predicates configured on the parent DataSetSource.
         return Task.FromResult<IGenericResult<IReadOnlyList<Dictionary<string, object?>>>>(
             GenericResult<IReadOnlyList<Dictionary<string, object?>>>.Failure(
                 DataSetSourceMapperLog.DataSetMapperNotYetImplemented(Logger, Name)));

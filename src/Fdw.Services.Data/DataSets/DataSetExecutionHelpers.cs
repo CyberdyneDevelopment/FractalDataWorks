@@ -17,9 +17,6 @@ namespace Fdw.Services.Data;
 /// Centralizes physical→logical field rename, calculated field application, and dictionary-to-type
 /// conversion so no strategy duplicates them.
 /// </summary>
-// Why: extracted from SimpleDataSetType so CompoundDataSetType can apply the same post-query
-// transforms (calculated fields) without code duplication. The helpers are internal so they remain
-// invisible outside the Fdw.Services.Data assembly.
 internal static class DataSetExecutionHelpers
 {
     /// <summary>
@@ -51,8 +48,6 @@ internal static class DataSetExecutionHelpers
         if (!sourceResult.IsSuccess || sourceResult.Value == null)
             return sourceResult;
 
-        // Why: string is IEnumerable<char> so exclude it before the IEnumerable check; any other
-        // non-enumerable passes through unchanged — rename applies only to row collections.
         if (sourceResult.Value is string)
             return sourceResult;
         if (sourceResult.Value is not System.Collections.IEnumerable enumerable)
@@ -75,8 +70,6 @@ internal static class DataSetExecutionHelpers
             var renamed = new Dictionary<string, object?>(original.Count, StringComparer.OrdinalIgnoreCase);
             foreach (var kvp in original)
             {
-                // Why: an unmapped physical key passes through with its original name (not a fallback —
-                // unmapped columns are intentionally kept verbatim).
                 var logicalKey = physicalToLogical.TryGetValue(kvp.Key, out var lk) ? lk : kvp.Key;
                 renamed[logicalKey] = kvp.Value;
             }
@@ -153,12 +146,8 @@ internal static class DataSetExecutionHelpers
         return enrichedResults;
     }
 
-    // Why: a generic dictionary row copies directly; a POCO projects through its generated mapper
-    // (column-keyed). An unmapped POCO fails loud — no reflection fallback.
     internal static IGenericResult<Dictionary<string, object?>> ObjectToDictionary(object obj)
     {
-        // Why first: IDataRow is the row shape the query path produces, so this is the common case,
-        // and it already knows how to present itself as name→value without a mapper.
         if (obj is IDataRow row)
             return GenericResult<Dictionary<string, object?>>.Success(
                 new Dictionary<string, object?>(row.AsDictionary(), StringComparer.OrdinalIgnoreCase));
@@ -177,8 +166,6 @@ internal static class DataSetExecutionHelpers
             new Dictionary<string, object?>(mapper.MapToParameters(obj), StringComparer.OrdinalIgnoreCase));
     }
 
-    // Why this delegates rather than building rows here: DataRow.FromDictionaries lives beside the type
-    // it builds and is the same construction the HTTP connection uses, so the two cannot drift.
     internal static IReadOnlyList<IDataRow> DictionariesToRows(List<Dictionary<string, object?>> dictionaries)
         => DataRow.FromDictionaries(dictionaries.ConvertAll(d => (IDictionary<string, object?>)d));
 
@@ -205,10 +192,6 @@ internal static class DataSetExecutionHelpers
 
         var itemType = targetType.GetGenericArguments()[0];
 
-        // Why: IDataRow is the framework's row — schema-backed, ordinal-addressable, and the shape
-        // ICalculationPipeline already consumes. Rows arriving here have been flattened to dictionaries
-        // by the calculated-field pass, so they are rebuilt onto one shared schema derived from the
-        // first row; an empty result needs no schema and yields an empty list.
         if (itemType == typeof(IDataRow) || itemType == typeof(DataRow))
             return GenericResult<T>.Success((T)(object)DictionariesToRows(dictionaries));
 
@@ -216,8 +199,6 @@ internal static class DataSetExecutionHelpers
             return GenericResult<T>.Success((T)(object)dictionaries);
 
         if (itemType == typeof(object))
-            // Why: dictionary rows ARE object rows — IEnumerable<Dictionary<string,object?>> covariantly
-            // satisfies IEnumerable<object>, and serializes identically to JSON. No ExpandoObject/DLR.
             return GenericResult<T>.Success((T)(object)dictionaries.AsEnumerable());
 
         return ConvertToPocos<T>(dictionaries, itemType);

@@ -95,8 +95,6 @@ public sealed class ExecutionDetailPageTests : IDisposable
     [Fact]
     public void StateBadgeMapsFailedToFailClass()
     {
-        // Why: GetStateClasses maps "Failed" -> "b-fail" (the CURRENT markup; the old reference-ui
-        // test asserted a stale "text-red-400" class that the page no longer emits).
         var cut = RenderWith(new ExecutionDetailContext { Execution = Exec("p", "Failed") });
         cut.FindAll("span").ShouldContain(s => s.ClassList.Contains("b-fail"));
     }

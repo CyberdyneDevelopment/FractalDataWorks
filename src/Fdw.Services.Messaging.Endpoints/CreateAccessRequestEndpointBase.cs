@@ -45,10 +45,6 @@ public abstract class CreateAccessRequestEndpointBase : Endpoint<CreateAccessReq
     public override void Configure()
     {
         Post("/access-requests");
-        // Why: self-service — any user with at least :read on access-requests can submit
-        // a request to elevate their own access. The :create permission was Admin/Operator-
-        // only, which prevented the Viewer role from making the very requests this endpoint
-        // exists to receive.
         Policies("access-requests:read");
         Summary(s => s.Summary = "Create an access request");
         ConfigureEndpoint();
@@ -71,8 +67,6 @@ public abstract class CreateAccessRequestEndpointBase : Endpoint<CreateAccessReq
     /// <inheritdoc/>
     public override async Task HandleAsync(CreateAccessRequestEndpointRequest req, CancellationToken ct)
     {
-        // Why: MapInboundClaims = false on JWT bearer keeps "sub" as-is; ClaimTypes.NameIdentifier
-        // is the WS-Federation URI only present when claim mapping is enabled. Check "sub" first.
         var userIdClaim = HttpContext.User.FindFirst("sub")?.Value
             ?? HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))

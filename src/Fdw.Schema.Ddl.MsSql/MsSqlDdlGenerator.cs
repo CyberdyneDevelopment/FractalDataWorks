@@ -80,7 +80,6 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
                 Precision = MsSqlTypeMapper.GetPrecision(property),
                 Scale = MsSqlTypeMapper.GetScale(property),
                 IsNullable = !property.IsRequired,
-                // Why: IsPrimaryKey removed from DdlColumnDefinition — PK identity now in KeyField tables.
                 IsUnique = false,
                 DefaultValue = GetDefaultValueFromMetadata(property.Metadata)
             };
@@ -310,7 +309,6 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
         }
 
         // Unique constraints
-        // Why: IsPrimaryKey removed from DdlColumnDefinition — filter only on IsUnique.
         var uniqueColumns = command.Columns.Where(c => c.IsUnique).ToList();
         foreach (var column in uniqueColumns)
         {

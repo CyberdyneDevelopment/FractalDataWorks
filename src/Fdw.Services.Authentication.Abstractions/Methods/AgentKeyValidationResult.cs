@@ -3,7 +3,6 @@ using System;
 namespace Fdw.Services.Authentication.Abstractions.Methods;
 
 /// <summary>Result of validating an agent key.</summary>
-// Why: pure result POCO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class AgentKeyValidationResult
 {

@@ -47,8 +47,6 @@ public readonly struct DataRecord : IEquatable<DataRecord>
         _values = values ?? throw new ArgumentNullException(nameof(values));
         if (values.Length != schema.FieldCount)
         {
-            // Why: a record must align 1:1 with the flyweight schema. Mismatched length is a producer
-            // defect — fail loud rather than read past/short the schema (NO FALLBACKS).
             throw new ArgumentException(
                 $"Value count ({values.Length}) does not match schema field count ({schema.FieldCount}).",
                 nameof(values));
@@ -105,9 +103,6 @@ public readonly struct DataRecord : IEquatable<DataRecord>
     }
 
     /// <inheritdoc />
-    // Why: identity is reference-equality of the shared schema + the backing value array — two
-    // DataRecords are equal only when they view the same buffer through the same schema. Values are not
-    // compared element-wise (records are large, transient windows; structural compare is not the contract).
     public bool Equals(DataRecord other)
         => ReferenceEquals(_schema, other._schema) && ReferenceEquals(_values, other._values);
 

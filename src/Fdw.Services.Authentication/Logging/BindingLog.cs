@@ -29,8 +29,6 @@ internal static partial class BindingLog
     /// <summary>No binding exists for an authenticated subject.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="issuer">The authority that asserted them.</param>
-    // Why Debug and not Warning: the step that called this decides what an unbound subject means —
-    // provision them, or refuse. Logging it as a problem here would double-count whichever it does.
     [MessageLogging(EventId = 91191, Level = LogLevel.Debug,
         Message = "A subject from '{issuer}' has no active binding")]
     internal static partial IGenericMessage Unbound(
@@ -40,9 +38,6 @@ internal static partial class BindingLog
     /// <param name="logger">The logger.</param>
     /// <param name="issuer">The authority that asserted them.</param>
     /// <param name="count">How many rows matched.</param>
-    // Why Error and refused rather than first-wins: two rows mean someone could be authenticated as
-    // either user, decided by row order. That is an account-takeover shaped bug, not an ambiguity to
-    // resolve quietly.
     [MessageLogging(EventId = 91192, Level = LogLevel.Error,
         Message = "A subject from '{issuer}' is bound to {count} users; refusing rather than choosing")]
     internal static partial IGenericMessage Ambiguous(
@@ -51,8 +46,6 @@ internal static partial class BindingLog
     /// <summary>A user's tenant could not be determined.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="userId">The user.</param>
-    // Why Error rather than falling back to a default tenant: a user authenticated into whichever
-    // tenant a default named is a cross-tenant leak with a plausible-looking cause.
     [MessageLogging(EventId = 91194, Level = LogLevel.Error,
         Message = "User {userId} has no tenant; refusing rather than assuming one")]
     internal static partial IGenericMessage TenantUnknown(

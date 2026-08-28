@@ -107,8 +107,6 @@ public sealed class ChangeLedger : IChangeLedger
         string? sectionTitle,
         CancellationToken cancellationToken = default)
     {
-        // Why: an existing guide is a committed record. Replacing it silently would destroy every prior
-        // section, so a fresh write has to be asked for explicitly and appending is what happens by default.
         if (overwrite) return WriteMarkdown(outputPath, solutionName, cancellationToken);
 
         var entries = Entries;
@@ -117,8 +115,6 @@ public sealed class ChangeLedger : IChangeLedger
             entries,
             DateTimeOffset.Now);
 
-        // Why: a first append against a missing file still needs the document header, or the guide
-        // starts mid-stream with no title.
         return WriteText(
             outputPath,
             File.Exists(outputPath)

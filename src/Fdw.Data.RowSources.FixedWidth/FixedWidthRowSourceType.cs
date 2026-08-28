@@ -39,14 +39,10 @@ public sealed class FixedWidthRowSourceType : RecordSourceTypeBase
     public override string Format => "FixedWidth";
 
     /// <inheritdoc />
-    // Why: the format-driven read seam. Downcast to FixedWidthRowSourceOptions when supplied; field
-    // definitions are required, so the reader fails loud when none are configured (NO FALLBACKS).
     public override IRowSourceReader CreateReader(Stream content, RowSourceOptions? options)
         => new FixedWidthStreamRowSource(content, options as FixedWidthRowSourceOptions);
 
     /// <inheritdoc />
-    // Why: fixed-width is ROW-oriented — build a RowCursorRecordSource (an IRowSource) over the
-    // container's field schema.
     public override IRecordSource<DataRecord> Create(RecordSourceContext context)
         => CreateRowSource(context);
 }

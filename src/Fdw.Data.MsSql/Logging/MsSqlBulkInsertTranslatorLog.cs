@@ -27,14 +27,12 @@ public static partial class MsSqlBulkInsertTranslatorLog
         string container,
         int rowCount);
 
-    // Why: reuses MsSqlDataResultCodes.ContainerNull's number (20000).
     [MessageLogging(
         EventId = 20000,
         Level = LogLevel.Error,
         Message = "MsSqlBulkInsertTranslator received a null container")]
     public static partial IGenericMessage ContainerNull(ILogger logger);
 
-    // Why: reuses MsSqlDataResultCodes.InvalidContainerPath's number (20001).
     [MessageLogging(
         EventId = 20001,
         Level = LogLevel.Error,
@@ -43,7 +41,6 @@ public static partial class MsSqlBulkInsertTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses MsSqlDataResultCodes.MissingInputData's number (21001).
     [MessageLogging(
         EventId = 21001,
         Level = LogLevel.Error,
@@ -53,7 +50,6 @@ public static partial class MsSqlBulkInsertTranslatorLog
         string commandType,
         string container);
 
-    // Why: reuses MsSqlDataResultCodes.InvalidDataType's number (21005).
     [MessageLogging(
         EventId = 21005,
         Level = LogLevel.Error,
@@ -74,7 +70,6 @@ public static partial class MsSqlBulkInsertTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses MsSqlDataResultCodes.BulkInsertTranslationFailed's number (91001).
     [MessageLogging(
         EventId = 91001,
         Level = LogLevel.Error,

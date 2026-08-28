@@ -14,7 +14,6 @@ public interface IPipeline : IDisposable, IGenericService
     /// <summary>
     /// Gets the unique identifier for this pipeline instance.
     /// </summary>
-    // Why: shadows IGenericService.Id (string) with the pipeline's durable Guid identity.
     new Guid Id { get; }
 
     /// <summary>

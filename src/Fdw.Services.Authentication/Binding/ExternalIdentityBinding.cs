@@ -66,9 +66,6 @@ public sealed class ExternalIdentityBinding : IPrincipalBinding
 
         if (matches.Count > 1)
         {
-            // Why fail rather than take the first: two rows binding one external subject to two
-            // users means someone could be authenticated as either, and which one would depend on
-            // row order. There is no safe pick, so there is no pick.
             return GenericResult<Principal?>.Failure(
                 BindingLog.Ambiguous(_logger, issuer, matches.Count));
         }

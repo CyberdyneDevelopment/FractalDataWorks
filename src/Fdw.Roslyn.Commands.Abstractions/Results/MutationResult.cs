@@ -107,7 +107,6 @@ public class MutationResult : IRoslynCommandResult
 /// Represents a typed mutation result with additional data.
 /// </summary>
 /// <typeparam name="T">The type of additional data.</typeparam>
-// Why: pure result/warning POCO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class MutationResult<T> : MutationResult
 {

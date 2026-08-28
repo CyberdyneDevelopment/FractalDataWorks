@@ -39,7 +39,6 @@ public sealed class ClientsDataStoreConfigurationProvider : IServiceConfiguratio
         ILogger<ClientsDataStoreConfigurationProvider>? logger,
         DataStoreApiClient apiClient)
     {
-        // Why: NullLogger<T>.Instance is the only sanctioned ?? fallback (functional without DI logging).
         _logger = logger ?? NullLogger<ClientsDataStoreConfigurationProvider>.Instance;
         ArgumentNullException.ThrowIfNull(apiClient);
         _apiClient = apiClient;
@@ -51,8 +50,6 @@ public sealed class ClientsDataStoreConfigurationProvider : IServiceConfiguratio
         DataStoreProviderLog.TraceGetByNameEntry(_logger, name);
 
         var dtoResult = await _apiClient.GetDataStore(name, ct).ConfigureAwait(false);
-        // Why: DataStoreApiClient (ApiClientBase.Get<T>) already MessageLogging-instruments HTTP/deserialization
-        // failures — propagate rather than re-log (no double-logging), mirroring ConfiguredDataStoreProvider.
         if (!dtoResult.IsSuccess)
             return dtoResult.ToNewResult<DataStoreConfiguration>();
 
@@ -69,9 +66,6 @@ public sealed class ClientsDataStoreConfigurationProvider : IServiceConfiguratio
     {
         DataStoreProviderLog.TraceGetByIdEntry(_logger, id);
 
-        // Why: DataStoreApiClient exposes no get-by-id endpoint (only the list and the by-name detail
-        // routes) — resolve the name from the summary list, then delegate to Get(name) for the full
-        // detail, mirroring ConfiguredDataStoreProvider.Get(Guid)'s id->name->Get(name) delegation.
         var listResult = await _apiClient.GetDataStores(ct).ConfigureAwait(false);
         if (!listResult.IsSuccess)
             return listResult.ToNewResult<DataStoreConfiguration>();
@@ -98,10 +92,6 @@ public sealed class ClientsDataStoreConfigurationProvider : IServiceConfiguratio
     }
 
     /// <inheritdoc/>
-    // Why: this provider composes the READ-ONLY display tree ConfiguredDataStoreProvider builds for
-    // UI navigation. DataStore mutations already have a domain write path — DataStoreApiClient's
-    // CreateDataStore/UpdateDataStore/DeleteDataStore, invoked directly by DataStoreContext — so Save
-    // fails loud rather than silently no-op'ing or duplicating that path.
     public Task<IGenericResult<DataStoreConfiguration>> Save(DataStoreConfiguration record, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -117,22 +107,6 @@ public sealed class ClientsDataStoreConfigurationProvider : IServiceConfiguratio
     public Task<IGenericResult> Delete(string name, CancellationToken ct = default)
         => Task.FromResult(GenericResult.Failure(DataStoreProviderLog.DeleteByNameNotSupported(_logger, name)));
 
-    // Why (NO FALLBACKS): fields the DTOs do not carry are left at the configuration POCOs' own
-    // defaults, never invented. Known gaps in the display DTOs (DataStoreDetailPayload/DataStorePathPayload/
-    // DataStoreContainerPayload/DataStoreFieldPayload) vs the full configuration model:
-    //  - DataStoreConfiguration.ConnectionId — the DTO carries ConnectionName (display) only, no
-    //    connection Guid; ConnectionId stays Guid.Empty.
-    //  - DataContainerConfiguration.Keys / SurrogateKeyFields / NaturalKeyFields — no FK/key graph is
-    //    exposed by the display DTO; Keys stays empty ([NotMapped], resolved by DataStoreBuilderBase's
-    //    FK-direct pass only when present).
-    //  - DataContainerConfiguration.Format / RecordSelector / FlattenNestedObjects / FlattenSeparator —
-    //    no format/row-shaping discriminator is exposed per-container; these stay null/unset, so
-    //    ContainerComposition.ResolveFormat falls through to GenericBuilderSelector's default format.
-    //  - DataStoreContainerPayload.PhysicalName / SourceDescription and DataStoreFieldPayload.IsKey/MaxLength/
-    //    Precision/Scale have no destination property on DataContainerConfiguration/
-    //    DataContainerFieldConfiguration (those live on typed-body records like MsSqlDataContainerField,
-    //    not surfaced by this display DTO) — left unmapped.
-    // These are display-tree limitations of the current API surface, not oversights; gaps filed.
 
     private static DataStoreConfiguration MapDetail(DataStoreDetailPayload dto)
     {
@@ -176,8 +150,6 @@ public sealed class ClientsDataStoreConfigurationProvider : IServiceConfiguratio
         if (dto.ModifiedAt.HasValue)
             configuration.ModifyDate = dto.ModifiedAt.Value;
 
-        // Why: shallow header only — Paths stays at its [] POCO default. ConfiguredDataStoreProvider.Get()
-        // composes the full aggregate per store via Get(name), which maps the detail endpoint's Paths.
         return configuration;
     }
 
@@ -226,8 +198,6 @@ public sealed class ClientsDataStoreConfigurationProvider : IServiceConfiguratio
     }
 
     // ── Type-erased surface ─────────────────────────────────────────────────
-    // Why explicit: only a parent provider calls these, and it holds this provider as the non-generic
-    // IServiceConfigurationProvider. Delegating keeps one implementation of each operation.
 
     async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
     {

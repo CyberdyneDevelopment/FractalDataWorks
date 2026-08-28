@@ -7,7 +7,6 @@ namespace Fdw.UI.Themes.Components.Theme;
 /// Theme configuration for UI components.
 /// Cascades through component tree via CascadingValue.
 /// </summary>
-// Why: pure theme descriptor — properties + literal preset values, no logic.
 [ExcludeFromCodeCoverage]
 public class UiThemeConfiguration
 {

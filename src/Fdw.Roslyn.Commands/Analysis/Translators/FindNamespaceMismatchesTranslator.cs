@@ -115,10 +115,6 @@ public sealed class FindNamespaceMismatchesTranslator
             || (document.FilePath?.Contains(scope!, StringComparison.OrdinalIgnoreCase) ?? false);
     }
 
-    // Why: the two kinds are mutually exclusive by construction. If the current project does not own the
-    // namespace the project is wrong, and judging the folder separately would report a path "error" for a
-    // file that is about to move anyway. "Both" is therefore a FILTER value meaning "include both kinds",
-    // never an emitted finding — which is what makes the default (include everything) non-narrowing.
     private static NamespaceMismatch? Evaluate(
         Solution solution,
         Project project,
@@ -246,10 +242,6 @@ public sealed class FindNamespaceMismatchesTranslator
         };
     }
 
-    // Why: "move it to the project its namespace names" is only actionable when such a project EXISTS.
-    // When it does not, silently pointing at the nearest ancestor project would send the caller to a
-    // destination nobody chose. The honest answer is to name the two real options — rename the namespace
-    // to match where the types already live, or create the project — and say which types are affected.
     private static NamespaceMismatchGroup BuildGroup(
         string namespaceName,
         string currentProject,

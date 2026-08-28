@@ -26,7 +26,6 @@ public sealed class MessageProviderStub : ComponentBase
 
     protected override void OnInitialized()
     {
-        // Why: Take<T> removes the seed from the shared store, so capture all three ONCE here.
         _list = ProviderStubState.Take<MessageListContext>() ?? new MessageListContext();
         _detail = ProviderStubState.Take<MessageDetailContext>() ?? new MessageDetailContext();
         _access = ProviderStubState.Take<AccessRequestListContext>() ?? new AccessRequestListContext();

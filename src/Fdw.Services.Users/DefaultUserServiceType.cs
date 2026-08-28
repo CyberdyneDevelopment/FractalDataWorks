@@ -41,28 +41,16 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
     {
         Configuration(builder =>
         {
-            // Why: Bind UsersServiceOptions from the "Users" section so CredentialServiceName is available
-            // to UserCredentialService at resolution time. Missing CredentialServiceName surfaces as a
-            // Critical MessageLogging failure on first credential operation, not at startup.
             builder.Services.Configure<UsersServiceOptions>(builder.Configuration.GetSection("Users"));
 
-            // Why: Bind PasswordPolicyOptions (KDF algorithm name, password max-age, lockout threshold +
-            // duration) from "Users:PasswordPolicy". The edge fails loud if a required policy input is
-            // unusable (e.g. an unknown hash algorithm, or a lockout threshold with no duration).
             builder.Services.Configure<PasswordPolicyOptions>(builder.Configuration.GetSection("Users:PasswordPolicy"));
 
-            // Why: IOptionsMonitor<List<T>> is required by ImplementationConfigurationProviderBase<T,TCommand>.
-            // AddOptions without BindConfiguration registers the IOptionsMonitor service so the
-            // provider constructor resolves correctly. means the snapshot
-            // is always empty — the gatewayProvider is the authoritative source at runtime.
     
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory) =>
         {
-            // Why: UserConfigurationProvider is the sole owner of usr.Users gatewayProvider access. Registered
-            // as a singleton so the underlying ImplementationConfigurationProviderBase cache is shared across requests.
             builder.Services.TryAddSingleton<UserConfigurationProvider>(sp =>
                 new UserConfigurationProvider(
                     sp.GetService<ILogger<UserConfigurationProvider>>(),
@@ -73,7 +61,6 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<UserConfiguration>>(
                 sp => sp.GetRequiredService<UserConfigurationProvider>());
 
-            // Why: UserTenantConfigurationProvider is the sole owner of tenant.UserTenants gatewayProvider access.
             builder.Services.TryAddSingleton<UserTenantConfigurationProvider>(sp =>
                 new UserTenantConfigurationProvider(
                     sp.GetService<ILogger<UserTenantConfigurationProvider>>(),
@@ -84,17 +71,12 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<UserTenantConfiguration>>(
                 sp => sp.GetRequiredService<UserTenantConfigurationProvider>());
 
-            // Why: UserPreferenceConfigurationProvider is the sole owner of usr.UserPreferences gatewayProvider
-            // access. Registered as a singleton so the underlying ImplementationConfigurationProviderBase cache is
-            // shared across requests.
             builder.Services.TryAddSingleton<UserPreferenceConfigurationProvider>(sp =>
                 new UserPreferenceConfigurationProvider(
                     sp.GetService<ILogger<UserPreferenceConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, "usr"));
 
-            // Why: the credential edge hashes-on-arrival and forwards derived hashes to the password
-            // credential service (the vault peppers + compares). No command façade — the verbs are the surface.
             builder.Services.TryAddScoped<IUserCredentialService, UserCredentialService>();
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

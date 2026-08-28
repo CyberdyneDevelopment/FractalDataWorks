@@ -49,9 +49,6 @@ public abstract class ListGlossaryTermsEndpointBase : EndpointWithoutRequest<Lis
             return;
         }
 
-        // Why: Both the list and the search UI calls hit this same endpoint.
-        // The UI client sends "query" as the query-string key; read it case-insensitively
-        // so consumers that use "q" or "Query" also work without a separate search route.
         var query = HttpContext.Request.Query["query"].FirstOrDefault()
             ?? HttpContext.Request.Query["q"].FirstOrDefault();
 
@@ -59,8 +56,6 @@ public abstract class ListGlossaryTermsEndpointBase : EndpointWithoutRequest<Lis
 
         if (!string.IsNullOrWhiteSpace(query))
         {
-            // Why: Case-insensitive substring match on Name and Definition —
-            // consistent with how the client-side search input behaves.
             terms = terms
                 .Where(t =>
                     t.Name.Contains(query, System.StringComparison.OrdinalIgnoreCase) ||

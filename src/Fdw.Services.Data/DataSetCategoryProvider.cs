@@ -40,8 +40,6 @@ public sealed class DataSetCategoryProvider
     /// <param name="loggerFactory">Optional logger factory for startup diagnostics.</param>
     public static void Configure(IServiceCollection services, ILoggerFactory? loggerFactory = null)
     {
-        // Why: No IOptions binding — DataSetCategory values are runtime-only (DB-backed).
-        // Compile-time defaults come from [TypeOption] declarations in downstream packages.
     }
 
     /// <summary>
@@ -65,8 +63,6 @@ public sealed class DataSetCategoryProvider
     public static void Initialize(IServiceProvider services, ILoggerFactory? loggerFactory = null)
     {
         var provider = services.GetRequiredService<DataSetCategoryProvider>();
-        // Why: Synchronous Initialize is required by the three-phase contract.
-        // CancellationToken.None is safe here — startup is not cancellable.
 #pragma warning disable VSTHRD002 // three-phase Initialize is sync-by-contract; the gatewayProvider query is a one-shot startup load
         provider.LoadAndRegister(CancellationToken.None).GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
@@ -89,7 +85,6 @@ public sealed class DataSetCategoryProvider
         ILogger<DataSetCategoryProvider>? logger)
     {
         _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
-        // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions.
         _logger = logger ?? NullLogger<DataSetCategoryProvider>.Instance;
     }
 
@@ -149,8 +144,6 @@ public sealed class DataSetCategoryProvider
                 continue;
             }
 
-            // Why: Idempotent guard — compile-time [TypeOption] categories are already in the collection.
-            // ByName returns the NotFound sentinel (not null) when absent.
             var existing = DataSetCategories.ByName(row.Name);
             if (!ReferenceEquals(existing, DataSetCategories.NotFound))
             {

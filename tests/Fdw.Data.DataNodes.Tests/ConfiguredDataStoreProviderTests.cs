@@ -623,9 +623,6 @@ public sealed class ConfiguredDataStoreProviderTests
     // Test helpers
     // ====================================================================
 
-    // Why: wires the full config->selector->configure->build pipeline to succeed and return the
-    // supplied IDataStore, so the dot-walk overloads under test can exercise their Path/Container
-    // delegation against a controlled built tree.
     private void SetupSuccessfulBuild(string storeName, IDataStore builtStore)
     {
         var cfg = new DataStoreConfiguration { Name = storeName };

@@ -37,8 +37,6 @@ public sealed class BlazorRenderContext : IRenderContext
     public object? Theme { get; }
 
     /// <inheritdoc />
-    // Why: the neutral contract carries console-flavored dimension members; a Blazor surface
-    // has no fixed character grid, so these are null by construction rather than guessed.
     public int? ConsoleWidth => null;
 
     /// <inheritdoc />

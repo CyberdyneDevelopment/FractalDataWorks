@@ -28,14 +28,12 @@ public static partial class MsSqlBatchInsertTranslatorLog
         int batchCount,
         int rowCount);
 
-    // Why: reuses MsSqlDataResultCodes.ContainerNull's number (20000).
     [MessageLogging(
         EventId = 20000,
         Level = LogLevel.Error,
         Message = "MsSqlBatchInsertTranslator received a null container")]
     public static partial IGenericMessage ContainerNull(ILogger logger);
 
-    // Why: reuses MsSqlDataResultCodes.InvalidContainerPath's number (20001).
     [MessageLogging(
         EventId = 20001,
         Level = LogLevel.Error,
@@ -44,7 +42,6 @@ public static partial class MsSqlBatchInsertTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses MsSqlDataResultCodes.MissingInputData's number (21001).
     [MessageLogging(
         EventId = 21001,
         Level = LogLevel.Error,
@@ -54,7 +51,6 @@ public static partial class MsSqlBatchInsertTranslatorLog
         string commandType,
         string container);
 
-    // Why: reuses MsSqlDataResultCodes.InvalidDataType's number (21005).
     [MessageLogging(
         EventId = 21005,
         Level = LogLevel.Error,
@@ -86,7 +82,6 @@ public static partial class MsSqlBatchInsertTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses MsSqlDataResultCodes.BatchInsertTranslationFailed's number (91000).
     [MessageLogging(
         EventId = 91000,
         Level = LogLevel.Error,

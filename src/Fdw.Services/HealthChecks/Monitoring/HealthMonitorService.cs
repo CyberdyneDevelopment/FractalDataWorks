@@ -73,8 +73,6 @@ public sealed class HealthMonitorService : IHealthMonitorService
     public bool IsAvailable => true;
 
     /// <inheritdoc/>
-    // Why: the health monitor domain is query-only — commands fail loud with a structured message,
-    // never a silent no-op (NO FALLBACKS).
     public Task<IGenericResult<T>> Execute<T>(IGenericCommand command, CancellationToken cancellationToken = default)
         => Task.FromResult(GenericResult<T>.Failure(HealthMonitorLog.CommandsNotSupported(_logger, Id)));
 
@@ -115,8 +113,6 @@ public sealed class HealthMonitorService : IHealthMonitorService
             Timestamp = DateTimeOffset.UtcNow
         };
 
-        // Why (FDW-583): branch on outcome, not on whether anything threw — an Unhealthy overall
-        // status must print at Error; only the Healthy case is a routine Information breadcrumb.
         if (worstStatus.IsHealthy)
             HealthMonitorLog.SystemHealthCheckCompleted(_logger, worstStatus.Name);
         else
@@ -243,9 +239,6 @@ public sealed class HealthMonitorService : IHealthMonitorService
             {
                 status = UnhealthyState;
                 details = result.CurrentMessage;
-                // Why (FDW-583): the non-exception failure branch previously logged nothing — the
-                // reason was discarded into the snapshot's Details field only. This is the
-                // non-exception twin of ServiceHealthCheckFailed below.
                 HealthMonitorLog.ServiceHealthCheckReturnedFailure(_logger, serviceName, details);
             }
         }
@@ -259,8 +252,6 @@ public sealed class HealthMonitorService : IHealthMonitorService
 
         var responseTimeMs = stopwatch.Elapsed.TotalMilliseconds;
 
-        // Why (FDW-583): branch on outcome, not on whether anything threw — a non-Healthy status must
-        // print at Error even when CheckHealth returned cleanly instead of throwing.
         if (status.IsHealthy)
             HealthMonitorLog.ServiceHealthCheckCompleted(_logger, serviceName, status.Name, responseTimeMs);
         else

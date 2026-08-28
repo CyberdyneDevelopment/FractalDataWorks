@@ -18,8 +18,6 @@ public class CursorRecordSourceTests
         return list;
     }
 
-    // Why: exercises the cancellable async Read overload (the recommended path) and materializes its
-    // records; T is inferred (IGenericResult<DataRecord>) so this helper needs no Results import.
     private static async Task<List<T>> ReadAllAsync<T>(IAsyncEnumerable<T> source, CancellationToken cancellationToken)
     {
         var list = new List<T>();
@@ -67,7 +65,6 @@ public class CursorRecordSourceTests
 
         var records = await ReadAllAsync(sut.Read(TestContext.Current.CancellationToken), TestContext.Current.CancellationToken);
 
-        // Why: the flyweight contract — every record references the source's one shared schema.
         ReferenceEquals(records[0].Value.Schema, sut.Schema).ShouldBeTrue();
         ReferenceEquals(records[1].Value.Schema, sut.Schema).ShouldBeTrue();
     }
@@ -103,8 +100,6 @@ public class CursorRecordSourceTests
         ReferenceEquals(sut.Cursor, cursor).ShouldBeTrue();
     }
 
-    // Why: an in-memory IRowSourceReader test double over a list of value arrays; the source under test
-    // advances it and projects each position. Field order in the cursor matches the schema order.
     private sealed class FakeCursor : IRowSourceReader
     {
         private readonly IReadOnlyList<object?[]> _rows;

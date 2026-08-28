@@ -27,8 +27,6 @@ public sealed class PipelineBuilderPageTests : IDisposable
 
     public PipelineBuilderPageTests()
     {
-        // Why: GetTaskTypes is invoked unconditionally on first render; default it to an empty
-        // success so the palette renders without a configured stub in every test.
         _designer
             .Setup(d => d.GetTaskTypes(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<TaskTypeInfo>>.Success([]));
@@ -38,11 +36,6 @@ public sealed class PipelineBuilderPageTests : IDisposable
     {
         _ctx.RegisterPageInfrastructure();
         _ctx.Services.AddSingleton(_designer.Object);
-        // Why: PipelineBuilderProvider takes IPipelineClient by [Inject] and awaits List() and
-        // GetPipelineTypes() during its initial load. A bare Mock returns null for those Tasks, so
-        // the await throws, the load never completes and IsLoading stays true forever — which is why
-        // the empty-canvas hint (rendered only when !IsLoading) timed out rather than failing an
-        // assertion. Returning empty successes lets the provider reach its loaded, empty state.
         var pipelineApi = new Mock<IPipelineClient>();
         pipelineApi.Setup(c => c.List(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<PipelineSummaryResponse>>.Success([]));
@@ -57,12 +50,6 @@ public sealed class PipelineBuilderPageTests : IDisposable
     {
         var cut = RenderReal();
 
-        // Why this no longer asserts "Drag tasks from the palette": that hint renders only when
-        // CanvasModel is null. PipelineBuilderProvider now seeds a blank PipelineCanvasModel for a
-        // brand-new pipeline on purpose — its own comment records that leaving it null made
-        // OnCanvasDrop's `CanvasModel?.EditContext` guard silently no-op every drop. So on a fresh
-        // builder the canvas branch is taken and the hint is unreachable by design. The old
-        // assertion encoded the pre-change behaviour and could never pass again.
         cut.WaitForAssertion(() => cut.FindAll(".canvas").Count.ShouldBe(1));
         cut.Markup.ShouldNotContain("Drag tasks from the palette", Case.Sensitive);
     }
@@ -73,10 +60,6 @@ public sealed class PipelineBuilderPageTests : IDisposable
         var cut = RenderReal();
         cut.WaitForAssertion(() =>
         {
-            // Why: the old test asserted a "PIPELINE BUILDER" / "Filter" / "Aggregate" / "Trash"
-            // palette header set. The current palette header is "Nodes" with category groups
-            // Source/Transform/Destination/Control/Diagnostics; Filter/Aggregate are Transform
-            // tasks and Trash is a Diagnostics task. Assert the real current labels.
             cut.Markup.ShouldContain("Nodes");
             cut.Markup.ShouldContain("Source");
             cut.Markup.ShouldContain("Transform");
@@ -90,8 +73,6 @@ public sealed class PipelineBuilderPageTests : IDisposable
     public void RendersEmptyInspectorPrompt()
     {
         var cut = RenderReal();
-        // Why: properties-panel empty prompt is unchanged: "Select a node to edit its properties."
-        // (the panel header itself is now "Inspector", not "Properties").
         cut.WaitForAssertion(() =>
             cut.Markup.ShouldContain("Select a node to edit its properties."));
     }

@@ -86,8 +86,6 @@ public static class MigrationGuideReader
 
         if (fullName.Length == 0 || oldAssembly.Length == 0 || newAssembly.Length == 0) return null;
 
-        // Why: the guide records a MOVE, so the fully-qualified name is unchanged on both sides — that is
-        // precisely why a consumer needs a reference rather than a code edit.
         return new SymbolChange(
             fullName,
             fullName,

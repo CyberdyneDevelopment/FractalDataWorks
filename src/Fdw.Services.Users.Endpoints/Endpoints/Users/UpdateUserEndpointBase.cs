@@ -35,18 +35,11 @@ public abstract class UpdateUserEndpointBase<TRequest> : Endpoint<TRequest>
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "users:write".
     /// </summary>
-    // Why: the standard CRUD tier for this resource. This endpoint previously required ":delete"
-    // as an ad-hoc "Admin-only" tier, because the seeded Operator role is granted ":write" on
-    // every resource by a blanket rule and would otherwise have inherited user administration.
-    // The grant was the wrong thing to work around: user/role admin is now carved out of
-    // Operator in the seed, so these permissions can mean exactly what they say (FDW-634).
     protected virtual string WritePolicy => "users:write";
 
     /// <inheritdoc />
     public override void Configure()
     {
-        // Why: callers identify users by name in the URL; binding {Name} as string avoids the
-        // Guid binder rejecting "/users/admin" with HTTP 400 before any auth/handler runs.
         Patch("/users/{Name}");
         Policies(WritePolicy);
         ConfigureEndpoint();

@@ -51,8 +51,6 @@ public abstract class SecretManagerCommandHandlerBase<TCommand, TResult>
     public override Delegate ExecuteFunc { get; }
 
     /// <inheritdoc />
-    // Why: TResult is statically known here, so the typed Execute is called directly and its value
-    // boxed — replacing the manager's DynamicInvoke(ExecuteFunc) + reflection-await on Result/Value.
     public override async Task<IGenericResult<object?>> InvokeBoxed(
         ISecretManagerCommand command,
         ISecretManagerExecutionContext context,

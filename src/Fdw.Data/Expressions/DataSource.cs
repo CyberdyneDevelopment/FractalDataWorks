@@ -5,7 +5,6 @@ namespace Fdw.Data;
 /// <summary>
 /// Implementation of IDataSource for federated queries.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class DataSource : IDataSource
 {

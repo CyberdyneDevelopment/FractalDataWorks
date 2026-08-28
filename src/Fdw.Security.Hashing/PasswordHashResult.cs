@@ -19,8 +19,6 @@ public sealed class PasswordHashResult
     /// <summary>
     /// Gets the algorithm name used to produce this hash.
     /// </summary>
-    // Why: Stored alongside the hash so the correct algorithm can be used
-    // for verification even after the system default changes.
     public string AlgorithmName { get; }
 
     /// <summary>

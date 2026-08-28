@@ -36,8 +36,6 @@ public abstract class ResultCategoryBase : TypeOptionBase<int, ResultCategoryBas
     }
 
     /// <inheritdoc />
-    // Why: the category Id (1..9) is the leading digit of every code's number, so the band base is
-    // just Id * 10000 — derived, never stored, so it cannot drift from the Id.
     public int RangeBase => Id * 10000;
 
     /// <inheritdoc />

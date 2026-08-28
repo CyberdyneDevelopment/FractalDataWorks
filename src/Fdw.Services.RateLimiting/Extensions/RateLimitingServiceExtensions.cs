@@ -173,11 +173,6 @@ public static class RateLimitingServiceExtensions
     /// </remarks>
     private static void RegisterPolicy(RateLimiterOptions options, IRateLimitPolicy policy)
     {
-        // Why the algorithm builds its own limiter: policy.Algorithm is a resolved TypeOption, so it
-        // can be asked what it is rather than interrogated for its Name. This replaced a four-case
-        // switch on that string which had no default — an algorithm it did not recognise registered
-        // nothing, and the named policy every endpoint asks for by RateLimitPolicyName simply did not
-        // exist. Adding a fifth algorithm is now a new TypeOption and no edit here.
         options.AddPolicy(policy.Name, _ =>
             RateLimitPartition.Get(policy.Name, _ => policy.Algorithm.CreateLimiter(policy)));
     }

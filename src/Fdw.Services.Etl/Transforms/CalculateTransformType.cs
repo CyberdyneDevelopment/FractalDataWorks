@@ -54,8 +54,6 @@ public sealed class CalculateTransformType : TransformTypeBase
     }
 
     /// <inheritdoc />
-    // Why: expression evaluation is pure in-memory arithmetic/string work (no I/O); Task.FromResult is
-    // honest sync-returning-Task — the contract is async so future I/O-backed calculators are first-class.
     public override Task<IGenericResult<IDictionary<string, object?>>> Transform(
         IDictionary<string, object?> input,
         IGenericConfiguration configuration,
@@ -93,10 +91,6 @@ public sealed class CalculateTransformType : TransformTypeBase
     }
 
     /// <inheritdoc />
-    // Why: structural preconditions (config type, non-empty Calculations, resolvable FormulaLanguage,
-    // an available engine for non-Builtin languages) are checked ONCE up front and fail the whole step
-    // loudly — a per-record expression-evaluation exception is a data problem, not a config problem, so
-    // it is reported via context.ReportError and that single record is excluded from the output set.
     public override async Task<IGenericResult<IEnumerable<IDictionary<string, object?>>>> TransformBatch(
         IEnumerable<IDictionary<string, object?>> inputs,
         IGenericConfiguration configuration,

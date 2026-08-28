@@ -44,37 +44,15 @@ public sealed class DataGatewayService : IDataGateway
 {
     private readonly ILogger<DataGatewayService> _logger;
     private readonly IDataConnectionProvider _connectionProvider;
-    // Why: IDataSetConfigurationProvider (not IDataSetProvider) is used here because ExecuteDataSet
-    // needs DataSetConfiguration records for query construction — not the live IDataSet runtime.
-    // Lazy<T> breaks the circular DI: DataGatewayService → DataSetProvider → DataGatewayService.
-    // Why: field mappings are now composed by DataSetConfigurationProvider.Get — no IDataSetSourceResolver needed.
     private readonly Lazy<IDataSetConfigurationProvider> _dataSetProvider;
-    // Why: DataStoreConfigurationProvider (dual-source) merges system (ctrl) and user (cfg) DataStore
-    // configs. Routing reads the store's ConnectionId from its config record on demand.
     private readonly DataStoreConfigurationProvider _dataStoreConfigProvider;
-    // Why: the eager full-tree singleton is deleted; container routing resolves the unified container
-    // on demand via IDataStoreProvider.GetContainer(...) (returns IDataContainer). The INTERFACE (not
-    // the concrete ConfigurationGatewayDataStoreProvider) is injected so the gateway depends on the
-    // abstraction and stays unit-testable. Nullable for the bootstrap/test paths that never route
-    // container commands.
     private readonly IDataStoreProvider? _dataStoreProvider;
     private readonly PredicatePushdownAnalyzer _predicatePushdown;
-    // Why: RBAC enforcement is deferred until RequiredPermission is added to the IDataNode tree
-    // (follow-up to Phase 7). Optional because DataGateway also runs in non-HTTP contexts.
     private readonly IFrameworkAuthorizationService? _authorizationService;
 
-    // Why this accessor and not IHttpContextAccessor: the connection selects its session context from
-    // IAuthenticationContextAccessor.Current, so reading the same source is what makes the cache
-    // partition name the principal the session is actually opened under. A principal established off
-    // the request thread — background jobs, ETL, boot elevation — has an authentication context and no
-    // HttpContext, so an HTTP-sourced key cannot see it and collapses every such caller together.
     private readonly IAuthenticationContextAccessor? _authenticationContextAccessor;
 
-    // Why: the cache partition is declared by the connection kind, and the kind is named by the
-    // connection configuration the target's DataStore points at.
     private readonly ConnectionConfigurationProvider? _connectionConfigProvider;
-    // Why: cache + options are injected by DI in production; null in test constructors that
-    // don't wire caching — a null cache means caching is disabled for that instance.
     private readonly DataGatewayResultCache? _cache;
     private readonly IOptions<DataGatewayOptions>? _options;
 
@@ -171,41 +149,19 @@ public sealed class DataGatewayService : IDataGateway
 
     /// <inheritdoc/>
     public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
-        // Why: Default cacheable-read path — delegates to the useCache overload with cache reads enabled.
-        // All existing callers (LimitEnforcementDataGateway, tests) that call the no-useCache overload
-        // automatically get caching via this forwarding, so no call site changes are needed.
         => Execute<T>(command, target, useCache: true, cancellationToken);
 
     /// <inheritdoc/>
     public async Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, bool useCache, CancellationToken cancellationToken = default)
     {
-        // Why the command kind gates everything below: a cache serves REPEATED READS of the same
-        // question. A write is not a question - it is not idempotent, and its result describes what
-        // one execution did. Caching it is wrong twice over: the entry is stale the moment a later
-        // write lands, and, because ComputeCacheKey only varies by filter/ordering/paging (fields a
-        // write does not have), two different writes to the same container compute the SAME key. With
-        // caching on, the second write would be answered from the first one's cached result and never
-        // execute at all. Reads cache; writes invalidate and are never read from cache.
         bool isQuery = command is IQueryCommand;
 
-        // Why the command must ALSO opt in on this gateway but not for invalidation: a data command
-        // says whether its result is worth keeping, so a read caches only when it asked to. A write
-        // never asks - CachePolicy.IsEnabled is false for every insert/update/delete - so gating
-        // invalidation on it would mean no write ever evicted anything. Invalidation follows the
-        // infrastructure being on; caching follows the command opting in.
         bool cacheEnabled = CacheEnabled && CachePolicy.IsEnabled(command) && isQuery;
 
         string? cacheKey = null;
-        // Why the ceiling is captured here rather than the kind: these are the only two things the
-        // write below needs, and taking them together binds both to the one resolution that produced
-        // the key. TimeSpan.MaxValue is the identity for the minimum CachePolicy applies, so it is the
-        // correct starting value for the paths that never consult a kind at all.
         var cacheCeiling = TimeSpan.MaxValue;
         if (cacheEnabled)
         {
-            // Why the read fails instead of proceeding uncached: without a partition the gateway cannot
-            // tell which callers may share a result, so continuing would either poison the cache for
-            // other principals or serve this caller a result from a different visibility scope.
             var connectionTypeResult = await ResolveConnectionType(target, cancellationToken).ConfigureAwait(false);
             if (!connectionTypeResult.IsSuccess || connectionTypeResult.Value is null)
                 return connectionTypeResult.ToNewResult<T>();
@@ -215,10 +171,6 @@ public sealed class DataGatewayService : IDataGateway
 
             try
             {
-                // Why: key = the caller's visibility scope + query shape (target + command semantics) +
-                // result type. A cached row is visible only to callers reading under the same scope, so
-                // the scope is part of the entry's identity; typeof(T).FullName prevents type mismatches
-                // across generic invocations with the same query shape.
                 cacheKey = string.Concat(
                     partition, "|",
                     CacheKeyBuilder.ComputeCacheKey(command, target), ":", typeof(T).FullName);
@@ -229,8 +181,6 @@ public sealed class DataGatewayService : IDataGateway
                     DataGatewayCacheLog.KeyComputationFailed(_logger, command.CommandType, target.Container, ex.Message));
             }
 
-            // Why: Only read from cache when useCache=true (the default). useCache=false is a force-refresh:
-            // skip the cache read so the fresh result replaces the stale cache entry when written below.
             if (useCache && _cache!.TryGet<T>(cacheKey, out var cached) && cached is not null)
                 return cached;
         }
@@ -254,21 +204,8 @@ public sealed class DataGatewayService : IDataGateway
         _cache!.InvalidateByTag(CacheKeyBuilder.TagFor(target));
     }
 
-    // Why a single property rather than the expression repeated: both the read path and the outcome
-    // path must agree on whether caching is on. If they can disagree, a write invalidates a cache
-    // that reads never populate, or worse the reverse.
     private bool CacheEnabled => _cache is not null && _options is not null && _options.Value.EnableCache;
 
-    // Why this is its own method: it is the whole of what caching DOES with an execution's outcome,
-    // and Execute is already carrying connection resolution, key computation and dispatch. Reading
-    // it in one place is also what makes the read/write asymmetry legible - the same result object
-    // is either stored under a key or used as the signal to drop keys.
-    //
-    // Why the write path invalidates here and providers no longer carry an ICacheInvalidator: this
-    // gateway is the ONLY thing that persists a change, so it is the only place that can know a
-    // change happened. Threading an invalidator through every provider asked 61 call sites to
-    // remember to announce a write they did not perform - and the tags they passed were the same
-    // "{path}.{container}" this computes from the command it just ran.
     private void ApplyCacheOutcome<T>(
         IDataCommand command,
         DataStoreTarget target,
@@ -294,29 +231,16 @@ public sealed class DataGatewayService : IDataGateway
             return;
         }
 
-        // Why every tag and not just the container: GetInvalidationTags honours a command's own
-        // CacheInvalidationTags metadata, which is how a write that touches rows another container
-        // projects declares the blast radius of what it changed.
         _cache!.InvalidateByTags(CacheKeyBuilder.GetInvalidationTags(command, target));
     }
 
-    // Why: ExecuteCore is the raw fresh-execution path — container resolution → connection lookup → execute.
-    // It runs on every cache miss and on the useCache=false force-refresh path. No caching here.
     private async Task<IGenericResult<T>> ExecuteCore<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken)
     {
-        // Why: Every DataGateway command targets a container, and every container is reached
-        // via a DataStore. A command without target.DataStore is malformed — fail loud.
         if (string.IsNullOrWhiteSpace(target.DataStore))
             return GenericResult<T>.Failure(DataServiceResultCodes.ByName("DataStoreNameRequired"));
 
         DataGatewayLogger.ExecuteContainerEntering(_logger, target.DataStore, target.Path, target.Container);
 
-        // Why: container resolution is on demand through ConfigurationGatewayDataStoreProvider.GetContainer
-        // — it builds the one unified container (IDataContainer) from ConfigurationDb via the cached,
-        // tag-invalidated gateway, replacing the deleted eager full-tree singleton. No IDataStoreProvider
-        // = container routing cannot run; fail loud.
-        // Why (FDW-583): propagate ResolveContainerResult's own message instead of re-deriving a generic
-        // one here — it already names the real cause (missing store/path/container).
         var containerResult = await ResolveContainerResult(target, cancellationToken).ConfigureAwait(false);
         if (!containerResult.IsSuccess)
             return containerResult.ToNewResult<T>();
@@ -325,10 +249,6 @@ public sealed class DataGatewayService : IDataGateway
         if (dataContainer is null)
             return GenericResult<T>.Failure(DataGatewayLogger.ContainerNotFound(_logger, target.Container));
 
-        // Why: Connection is resolved from the DataStore's ConnectionId, not from command.ConnectionName.
-        // "Address by DataStore, connection invisible" — the caller sets DataStoreName (via target); the
-        // gateway reads the DataStore config record on demand (dual-source, gateway-cached) to find the
-        // physical connection.
         var storeResult = await _dataStoreConfigProvider.Get(target.DataStore, cancellationToken).ConfigureAwait(false);
         if (!storeResult.IsSuccess || storeResult.Value is null)
         {
@@ -367,10 +287,6 @@ public sealed class DataGatewayService : IDataGateway
         return result;
     }
 
-    // Why the connection kind decides this and not the gateway: what a caller may see is settled at the
-    // connection, by the session context its scheme applies. The gateway holds the token and compares it;
-    // it never parses it and learns nothing about the kind from it. A kind that declares no session-context
-    // concept returns a constant, so its results keep caching globally.
     private async Task<IGenericResult<IConnectionType>> ResolveConnectionType(
         DataStoreTarget target,
         CancellationToken cancellationToken)
@@ -406,8 +322,6 @@ public sealed class DataGatewayService : IDataGateway
                     _logger, target.DataStore, "the connection declares no ServiceOptionType"));
         }
 
-        // Why fail loud on NotFound: an unregistered kind means we cannot know what its sessions would
-        // show, and a guessed partition would let callers with different visibility share cached rows.
         if (ReferenceEquals(ConnectionTypes.ByName(connectionResult.Value.ServiceOptionType), ConnectionTypes.NotFound))
         {
             return GenericResult<IConnectionType>.Failure(
@@ -425,15 +339,11 @@ public sealed class DataGatewayService : IDataGateway
     public async Task<IGenericResult<IRecordSource<DataRecord>>> OpenRecordSource(
         IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
     {
-        // Why: every record-source cursor targets a container reached via a DataStore — a missing
-        // DataStore is a malformed request, fail loud (mirrors the Execute<T> DataStoreTarget guard).
         if (string.IsNullOrWhiteSpace(target.DataStore))
             return GenericResult<IRecordSource<DataRecord>>.Failure(DataServiceResultCodes.ByName("DataStoreNameRequired"));
 
         DataGatewayLogger.OpeningRecordSource(_logger, target.DataStore, target.Container);
 
-        // Why (FDW-583): propagate ResolveContainerResult's own message instead of re-deriving a
-        // generic one here — see ExecuteCore's identical fix above.
         var containerResult = await ResolveContainerResult(target, cancellationToken).ConfigureAwait(false);
         if (!containerResult.IsSuccess)
             return containerResult.ToNewResult<IRecordSource<DataRecord>>();
@@ -455,9 +365,6 @@ public sealed class DataGatewayService : IDataGateway
             return GenericResult<IRecordSource<DataRecord>>.Failure(
                 DataGatewayLogger.DataStoreConnectionNotResolved(_logger, target.DataStore, store.ConnectionId.ToString(), connectionResult.CurrentMessage ?? "Unknown error"));
 
-        // Why: streaming is an OPTIONAL connection capability — netstandard2.0 has no default interface
-        // methods, so it lives on IRecordSourceConnection, not IDataConnection. Feature-detect it; a
-        // connection that cannot stream fails loud here so the caller can fall back to materializing Execute.
         if (connectionResult.Value is not IRecordSourceConnection recordSourceConnection)
             return GenericResult<IRecordSource<DataRecord>>.Failure(
                 DataGatewayLogger.RecordSourceNotSupported(_logger, target.DataStore));
@@ -472,15 +379,8 @@ public sealed class DataGatewayService : IDataGateway
     /// <inheritdoc/>
     public async Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
     {
-        // Why: a DataSet NAME is an INSTANCE, resolved live from the configuration provider — not a
-        // member of DataSetTypes (which holds the strategy KINDS: Simple/Compound/Federated). Resolve
-        // the composed instance config (its Sources are populated by the provider's Get(name)), then
-        // dispatch on the AUTHORED type discriminator (config.ServiceOptionType) to the matching
-        // strategy. Fail loud at every missing input — no fallback.
         var cfgResult = await _dataSetProvider.Value.Get(target.DataSet, cancellationToken).ConfigureAwait(false);
         if (!cfgResult.IsSuccess)
-            // Why: the provider already logged the specific failure; propagate its messages rather
-            // than re-logging with a ?? fallback literal (NO FALLBACKS rule).
             return cfgResult.ToNewResult<T>();
         if (cfgResult.Value is null)
             return GenericResult<T>.Failure(
@@ -488,8 +388,6 @@ public sealed class DataGatewayService : IDataGateway
 
         var config = cfgResult.Value;
 
-        // Why: the strategies resolve containers/connections through IDataStoreProvider; in the
-        // bootstrap/test paths it is null. Fail loud rather than NRE — no silent skip.
         if (_dataStoreProvider is null)
             return GenericResult<T>.Failure(
                 DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, "IDataStoreProvider is not available; cannot execute a DataSet"));
@@ -509,22 +407,8 @@ public sealed class DataGatewayService : IDataGateway
         return await strategy.Execute<T>(context, command, cancellationToken).ConfigureAwait(false);
     }
 
-    // Why: ExecuteCascadeSave was removed in Wave C5. ParentTableName was deleted from
-    // IConfigurationType (which is also deleted) in FDW-395 Phase 6. All ConfigurationSaveCommands
-    // follow the flat single-table path. IDataNode owns parent-child structure for future cascade work.
 
 
-    // Why: container resolution is on demand through ConfigurationGatewayDataStoreProvider.GetContainer —
-    // it builds the one unified container (IDataContainer) from ConfigurationDb via the cached,
-    // tag-invalidated gateway, replacing the deleted eager full-tree singleton. The provider's 3-arg
-    // overload itself falls back to the path-agnostic scan when target.Path is empty, so addressing
-    // stays explicit and complete.
-    // Why (FDW-583): the previous nullable-returning ResolveContainer discarded containerResult's
-    // IGenericMessage on failure (returning null), so both call sites below re-derived a generic
-    // "Container not found in configuration" that never named the real cause. This overload propagates
-    // the provider's own result — which, after the addressed-lookup logging added to
-    // ConfigurationGatewayDataStoreProvider.Get(store, path, container, ct), already names the missing
-    // store/path/container — straight to the caller.
     private async Task<IGenericResult<IDataContainer>> ResolveContainerResult(DataStoreTarget target, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(target.Container))

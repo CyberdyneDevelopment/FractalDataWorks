@@ -5,9 +5,6 @@ namespace Fdw.UI.Navigation;
 /// <summary>
 /// A page declaration with no behaviour of its own — the shape almost every page uses.
 /// </summary>
-// Why: a concrete PageBase so a page type declares its pages inline as constructor arguments instead of
-// each page needing its own class. A page that DOES need behaviour (a computed access rule, a conditional
-// nav entry) derives from PageBase directly.
 public sealed class Page : PageBase
 {
     /// <summary>

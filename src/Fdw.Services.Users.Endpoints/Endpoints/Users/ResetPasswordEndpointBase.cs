@@ -83,8 +83,6 @@ public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
 
             var userId = userResult.Value.Id;
 
-            // Why: Admin reset — store new password directly via IUserCredentialService without
-            // verifying the old one. Hashing happens at the service boundary.
             var storeResult = await _credentialService.Store(userId, "Password", req.NewPassword, ct).ConfigureAwait(false);
             if (!storeResult.IsSuccess)
             {

@@ -6,7 +6,6 @@ namespace Fdw.UI.Web.Abstractions;
 /// <summary>
 /// Base class for component types.
 /// </summary>
-// Why: pure TypeOption base — constructor only assigns properties, no logic to test.
 [ExcludeFromCodeCoverage]
 public abstract class ComponentTypeBase : TypeOptionBase<int, ComponentTypeBase>, IComponentType
 {

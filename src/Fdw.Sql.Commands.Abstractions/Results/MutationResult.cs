@@ -27,7 +27,6 @@ public class MutationResult : ISqlCommandResult
 }
 
 /// <summary>Mutation result with an additional typed payload (e.g. the new object metadata).</summary>
-// Why: pure result/warning POCO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class MutationResult<T> : MutationResult
 {

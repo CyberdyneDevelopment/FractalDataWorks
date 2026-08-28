@@ -6,8 +6,6 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// <summary>Response DTO for permissions grouped by domain.</summary>
 public class PermissionGroupResponse
 {
-    // Why: Renamed from Resource to Domain to match the GroupBy key (p.Domain),
-    // which is the high-level service domain, not the sub-resource.
     /// <summary>Gets or sets the domain name (e.g., "connections", "datasets").</summary>
     public string Domain { get; set; } = string.Empty;
 

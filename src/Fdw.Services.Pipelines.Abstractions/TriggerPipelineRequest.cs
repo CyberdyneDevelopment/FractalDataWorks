@@ -10,11 +10,6 @@ public class TriggerPipelineRequest
     /// <summary>
     /// Gets or sets the name of the item (pipeline) to execute.
     /// </summary>
-    // Why: this request is POSTed to the ETL server's canonical UnifiedTriggerEndpoint, whose
-    // UnifiedTriggerRequest binds the item identity from a "name" field (it serves any execution type:
-    // pipeline/project/stage/...). The property is named Name (serializes as "name") so the unified
-    // endpoint resolves it; the previous "PipelineName" serialized as "pipelineName", arrived as a null
-    // Name, and the endpoint 400'd with "Either 'id' or 'name' must be provided".
     public string Name { get; set; } = string.Empty;
 
     /// <summary>

@@ -64,10 +64,6 @@ public sealed class SqlAuthConfiguration : MsSqlAuthenticationConfiguration
     }
 
     /// <inheritdoc/>
-    // Why: SqlAuth owns the SecretKeyName key — this method extracts it from `values`, calls
-    // secretManager.Execute to resolve the password, then builds the fragment. The factory
-    // never touches SecretKeyName/SecretManagerName/Username keys: the auth TypeOption holds
-    // them as its declared `Expected`/`Required` properties (lines 16–17).
     public override async Task<IGenericResult<string>> BuildAuthFragment(
         IReadOnlyDictionary<string, string?> values,
         ISecretManager? secretManager,

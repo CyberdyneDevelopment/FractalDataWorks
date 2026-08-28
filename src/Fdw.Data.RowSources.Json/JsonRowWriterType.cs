@@ -27,8 +27,6 @@ public sealed class JsonRowWriterType : RecordWriterTypeBase
     public override string Format => "Json";
 
     /// <inheritdoc />
-    // Why: JSON is an ITEM writer — JsonStreamRowWriter implements IRecordWriter<DataRecord> (not
-    // IRowWriter). The base Create() delegates here, so the config-driven surface reuses this.
     public override IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions? options)
         => new JsonStreamRowWriter(target, options as JsonRowWriterOptions);
 }

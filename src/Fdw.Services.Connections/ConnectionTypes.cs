@@ -88,56 +88,35 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
     {
         var collectOptions = RegisterFunc;
 
-        // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
-        // three points below — the deferred declaration, the milestone, and the zero-option warning.
-        // Written out three times it is three chances for them to disagree.
         var providerService = typeof(IConnectionProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<ConnectionTypes>() ?? NullLogger<ConnectionTypes>.Instance;
 
-            // Why the collection registers the domain provider, and before the options run: the owner
-            // of a registration is the type that knows the thing exists. This collection ships beside
-            // ConnectionConfigurationProvider, so it knows. An implementation provider is registered
-            // INTO the domain provider, so the domain provider has to exist first.
             ConnectionProviderLogger.DomainConfigurationRegistering(
                 loggerFactory?.CreateLogger<ConnectionConfigurationProvider>()
                 ?? NullLogger<ConnectionConfigurationProvider>.Instance,
                 nameof(ConnectionConfigurationProvider));
 
-            // Why the connection name is spoken here and nowhere else: it is the one place that knows
-            // which store this domain's rows live in, and ConfigurationConnection is what a host changes
-            // to move the whole domain somewhere else.
             builder.Services.TryAddSingleton<IConnectionConfigurationProvider>(sp =>
                 new ConnectionConfigurationProvider(
                     sp.GetService<ILogger<ConnectionConfigurationProvider>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     ConfigurationConnection));
 
-            // Why one health checkable for the domain rather than one per connection: conn.Connection
-            // rows are runtime data enumerated at check time, never per-row DI registrations.
             builder.Services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IHealthCheckable, ConnectionsHealthCheckable>());
 
-            // Why Scoped: ConnectionHealthService depends on the Scoped IDataGateway, and a Singleton
-            // would pin the first-resolved scope's gatewayProvider forever.
             builder.Services.TryAddScoped<IConnectionHealthService, ConnectionHealthService>();
 
             builder.Services.AddHostedService<ConnectionHealthMonitorWorker>();
 
-            // Why an alias and why Scoped: ConnectionProvider implements both interfaces, and
-            // IConnectionProvider is generated Scoped, so a Singleton alias over it would be a captive
-            // dependency that throws under ValidateScopes.
             builder.Services.TryAddScoped<IDataConnectionProvider>(sp =>
                 (IDataConnectionProvider)sp.GetRequiredService<IConnectionProvider>());
 
-            // Why: IServiceConnectionProvider serves framework-internal connections such as PlatformConfiguration.
             builder.Services.TryAddSingleton<IServiceConnectionProvider, ServiceConnectionProvider>();
 
-            // Why the result is read: this replacement calls the func it captured, and discarding
-            // what that returned meant an option that failed to register was followed by this body
-            // registering the provider anyway and reporting success.
             var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
                 return registered;
@@ -147,19 +126,8 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
 
             ServiceTypeLog.DomainOptionsCollected(log, nameof(ConnectionTypes), declaredOptions.Length, optionNames);
 
-            // Why the collection registers every option's factory, and ConnectionTypeBase no longer does:
-            // ConnectionProvider resolves a connection through its own factory registry, and the
-            // need is identical for every connection kind. The collection already holds the option set and
-            // each option already names its factory type, so this is one loop over what is in hand rather
-            // than the same line repeated in six option bodies, where one of them can silently omit it -
-            // which is what happened, and every connection create failed with "No factory registered".
             foreach (var option in declaredOptions)
             {
-                // Why this fails loud rather than skipping: Options is IServiceTypeRegistration[], which
-                // component and endpoint collections implement without ever naming a factory. A connection
-                // option that cannot name one leaves its kind uncreatable, and skipping it would surface
-                // much later as "No registered service type matches ServiceOptionType" on the first
-                // authenticated request, where it reads as a row-level-security failure instead.
                 if (option is not IServiceType serviceType)
                     return GenericResult<IHostApplicationBuilder>.Failure(
                         ServiceTypeLog.FactoryRegistrationFailed(
@@ -167,9 +135,6 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                             option.Name,
                             FormattableString.Invariant($"'{option.GetType().Name}' does not implement IServiceType, so it cannot name a factory type")));
 
-                // Why the type is read into a local before the closure: the func is deferred to the
-                // provider's constructor, and capturing the loop variable's member access would re-read it
-                // there rather than at the point the option was known.
                 var factoryType = serviceType.FactoryType;
                 ConnectionProvider.Register(
                     option.Name,
@@ -186,10 +151,6 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ConnectionProvider>()
                     ?? NullLogger<ConnectionProvider>.Instance);
 
-                // Why ILogger<ConnectionTypes> and not CreateLogger("ConnectionTypes"): SourceContext then
-                // carries the namespace-qualified collection, and the category cannot drift from the
-                // type it claims to name. The provider logs its own lines under its own type, so the
-                // two layers read base-then-derived rather than collapsing onto one category.
                 var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<ConnectionTypes>()
                     ?? NullLogger<ConnectionTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(ConnectionTypes), provider.GetType().Name);
@@ -197,8 +158,6 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                 {
                     if (sp.GetService<IConnectionConfigurationProvider>() is { } cfgProvider)
                     {
-                        // Why the result is read: a provider that did not take its parent still constructs, and
-                        // every later read silently misses. The failure has to be said out loud here or nowhere.
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(ConnectionTypes), provider.GetType().Name, cfgProvider.GetType().Name);
@@ -207,11 +166,6 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                     }
                     else
                     {
-                        // Why Critical, and why the collection says it rather than the provider: from
-                        // inside the provider a null parent is indistinguishable from a domain that needs
-                        // none. This is the one place that knows one was meant to arrive, and without it
-                        // the domain fails every lookup by name for the life of the scope with nothing
-                        // pointing back here.
                         ServiceTypeLog.DomainHasNoConfigurationSource(
                             stLogger,
                             nameof(ConnectionTypes),
@@ -221,16 +175,12 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                 }
                 catch (Exception ex)
                 {
-                    // Why rethrow: a throw here was previously silent, and a provider that failed to take
-                    // its parent is unusable in a way that only surfaces much later.
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(ConnectionTypes));
                     throw;
                 }
                 return provider;
             });
 
-            // Why the milestone comes after the registration and not before: it states that the domain
-            // finished phase 2, which is only true once the provider is actually in the container.
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(ConnectionTypes), providerService);
             else

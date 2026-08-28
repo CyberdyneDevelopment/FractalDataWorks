@@ -98,9 +98,6 @@ public sealed class OidcRedirectStep : IAuthenticationStep
         if (stored.IsFailure)
             return stored.ToNewResult<StepOutcome>();
 
-        // Why S256 and not plain: the plain method sends the verifier itself, so anyone who can see
-        // the authorization request can complete the exchange. RFC 7636 permits plain; RFC 9700
-        // does not.
         var challenge = Base64Url(SHA256.HashData(Encoding.ASCII.GetBytes(verifier)));
 
         var destination = new UriBuilder(_configuration.AuthorizationEndpoint)
@@ -128,14 +125,10 @@ public sealed class OidcRedirectStep : IAuthenticationStep
         if (_callback.State is not { Length: > 0 } state)
             return GenericResult<StepOutcome>.Failure(OidcLog.StateMissing(_logger, _configuration.Issuer));
 
-        // Why consumed rather than read: state is single-use. A returned authorization code that can
-        // be presented twice is a code that can be replayed.
         var request = _requests.TryConsume(state);
         if (request.IsFailure)
             return request.ToNewResult<StepOutcome>();
 
-        // Why the issuer is checked here: with several providers configured, a code from one could
-        // otherwise be exchanged at another's token endpoint. RFC 9207 exists for this.
         if (!string.Equals(request.Value!.Issuer, _configuration.Issuer, StringComparison.Ordinal))
             return GenericResult<StepOutcome>.Failure(
                 OidcLog.IssuerMismatch(_logger, _configuration.Issuer, request.Value!.Issuer));
@@ -166,8 +159,6 @@ public sealed class OidcRedirectStep : IAuthenticationStep
             return GenericResult<StepOutcome>.Failure(OidcLog.TokenRejected(
                 _logger, _configuration.Issuer, validated.Exception?.GetType().Name ?? "unknown"));
 
-        // Why the nonce is checked and not merely sent: it binds the token to the request this
-        // platform made. Without the check, a token minted for a different session replays here.
         var nonce = validated.ClaimsIdentity.FindFirst("nonce")?.Value;
         if (!string.Equals(nonce, request.Value!.Nonce, StringComparison.Ordinal))
             return GenericResult<StepOutcome>.Failure(OidcLog.NonceMismatch(_logger, _configuration.Issuer));
@@ -181,11 +172,6 @@ public sealed class OidcRedirectStep : IAuthenticationStep
 
         return GenericResult<StepOutcome>.Success(new StepOutcome.Contributed(new ContextContribution
         {
-            // Why read rather than assume: the provider is the only authority on how someone proved
-            // themselves to it. A configured value is a guess that survives a user switching to a
-            // passkey, or the provider starting to enforce a second factor, and quietly understates
-            // or overstates every assurance decision downstream. The runner intersects this with
-            // AssertableMethods, so reading it cannot inflate anything.
             ObservedMethods = [.. validated.ClaimsIdentity.FindAll("amr").Select(c => c.Value)],
 
             Subject = new Subject

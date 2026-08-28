@@ -10,13 +10,6 @@ namespace Fdw.ServiceTypes.Analyzers;
 /// static Configure/Register/Initialize phase methods that PlatformServicesRegistrationGenerator emits a
 /// method group for.
 /// </summary>
-// Why this exists: PlatformServicesRegistrationGenerator documents that "every discovered class is
-// guaranteed to declare the required static ... shape before this generator ever runs — the
-// ServiceTypeCollectionPhaseMethodsAnalyzer (FDW024) enforces it as a build ERROR", and on that basis it
-// deliberately performs NO existence check and emits `{Collection}.Configure, .Register, .Initialize`
-// unconditionally. That analyzer did not exist. A collection missing a phase method therefore failed as a
-// CS-level error inside generated code the author cannot open, naming a file they did not write, instead
-// of pointing at the declaration that is actually wrong.
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class ServiceTypeCollectionPhaseMethodsAnalyzer : DiagnosticAnalyzer
 {
@@ -46,16 +39,10 @@ public sealed class ServiceTypeCollectionPhaseMethodsAnalyzer : DiagnosticAnalyz
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
-    // Why: the three shapes are the ServiceTypeCollectionDescriptor constructor parameters verbatim
-    // (ServiceTypeCollectionDescriptor.cs) — the method group must be convertible to that delegate, so the
-    // parameter and return types are checked, not just the name.
     private const string HostApplicationBuilder = "Microsoft.Extensions.Hosting.IHostApplicationBuilder";
     private const string LoggerFactory = "Microsoft.Extensions.Logging.ILoggerFactory";
     private const string Host = "Microsoft.Extensions.Hosting.IHost";
 
-    // Why the return types are spelled separately from the parameter types: a phase takes a builder or
-    // host and hands back a RESULT carrying it, so the two are no longer the same symbol and checking
-    // "returns what it took" would now reject every correct phase.
     private const string BuilderResult = "Fdw.Results.IGenericResult<Microsoft.Extensions.Hosting.IHostApplicationBuilder>";
     private const string HostResult = "Fdw.Results.IGenericResult<Microsoft.Extensions.Hosting.IHost>";
 
@@ -76,8 +63,6 @@ public sealed class ServiceTypeCollectionPhaseMethodsAnalyzer : DiagnosticAnalyz
         if (!IsRegisteredIntoPlatformServices(type))
             return;
 
-        // Why: partial classes and the generated half both contribute members, and the generator emits the
-        // phase methods for the common case. Only report what is genuinely absent from the merged symbol.
         RequirePhase(context, type, "Configure", HostApplicationBuilder, BuilderResult);
         RequirePhase(context, type, "Register", HostApplicationBuilder, BuilderResult);
         RequirePhase(context, type, "Initialize", Host, HostResult);
@@ -106,13 +91,6 @@ public sealed class ServiceTypeCollectionPhaseMethodsAnalyzer : DiagnosticAnalyz
         string firstParameterType,
         string returnType)
     {
-        // Why walk the base chain: the phase methods are INHERITED statics on ServiceTypeCollectionBase,
-        // not redeclared per collection — a C# static is reachable through the derived type name, so
-        // `HealthMonitorTypes.Configure` binds to the base and the generator's method group is valid.
-        // GetMembers sees only declared members, so checking the type alone reports every correct
-        // collection in the solution. The generator additionally emits an override on some collections
-        // (Register, when the collection names a ProviderType), which is why a declared-only check failed
-        // inconsistently rather than uniformly.
         for (var current = type; current is not null; current = current.BaseType)
         {
             var matched = current.GetMembers(phaseName)
@@ -123,8 +101,6 @@ public sealed class ServiceTypeCollectionPhaseMethodsAnalyzer : DiagnosticAnalyz
                 return;
         }
 
-        // Why: report on the declaration itself. Locations[0] is the class identifier, which is where the
-        // author has to add the method — not the generated file that would otherwise fail to compile.
         context.ReportDiagnostic(Diagnostic.Create(
             Rule,
             type.Locations.Length > 0 ? type.Locations[0] : Location.None,
@@ -143,9 +119,6 @@ public sealed class ServiceTypeCollectionPhaseMethodsAnalyzer : DiagnosticAnalyz
 
         return Is(method.Parameters[0].Type, firstParameterType)
             && Is(method.Parameters[1].Type, LoggerFactory)
-            // Why the trailing flags are optional to the shape: they are `force` and `defer`, both
-            // bool, both defaulted. A collection that predates either still satisfies the contract the
-            // generator emits a method group against.
             && method.Parameters.Skip(2).All(p => p.Type.SpecialType == SpecialType.System_Boolean)
             && Is(method.ReturnType, returnType);
     }
@@ -158,10 +131,6 @@ public sealed class ServiceTypeCollectionPhaseMethodsAnalyzer : DiagnosticAnalyz
             fullyQualifiedName,
             System.StringComparison.Ordinal);
 
-    // Why this shortens each part rather than taking the tail after the last dot: the return types are
-    // now generic, so "…IGenericResult<…IHostApplicationBuilder>" has its last dot INSIDE the type
-    // argument. Taking the tail produced "IHostApplicationBuilder>" — a diagnostic telling the author
-    // to declare a method whose return type does not parse.
     private static string Short(string fullyQualifiedName)
     {
         var open = fullyQualifiedName.IndexOf('<');

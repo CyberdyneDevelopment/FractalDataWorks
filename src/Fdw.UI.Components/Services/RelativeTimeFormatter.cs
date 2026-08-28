@@ -17,9 +17,6 @@ public static class RelativeTimeFormatter
     /// <param name="timestamp">The timestamp to format.</param>
     /// <param name="logger">Optional logger. Falls back to <see cref="NullLogger.Instance"/> when not supplied.</param>
     /// <returns>A human-readable relative time string.</returns>
-    // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions; this static
-    // helper has no DI-constructed instance to hold a logger, so it is threaded through as an
-    // optional trailing parameter instead, mirroring the EntityPicker/ObjectPicker component pattern.
     public static string Format(DateTimeOffset? timestamp, ILogger? logger = null)
     {
         if (!timestamp.HasValue)

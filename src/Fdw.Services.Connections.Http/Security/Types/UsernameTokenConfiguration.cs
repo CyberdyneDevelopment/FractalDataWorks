@@ -10,8 +10,6 @@ namespace Fdw.Services.Connections.Http.Security.Types;
 [TypeOption(typeof(HttpAuthenticationTypes), "UsernameToken")]
 public sealed class UsernameTokenConfiguration : HttpAuthenticationConfiguration
 {
-    // Why: SecretManagerName is a key THIS secret-backed method owns and requires (it resolves the
-    // username/password secret names). It is NOT on the base — non-secret methods declare no such key.
     private static readonly string[] ExpectedList = ["SecretManagerName", "UsernameSecretName", "PasswordSecretName"];
     private static readonly string[] RequiredList = ["SecretManagerName", "UsernameSecretName", "PasswordSecretName"];
 

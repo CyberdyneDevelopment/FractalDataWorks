@@ -372,14 +372,6 @@ public sealed class MapTransformTypeTests
     [Trait("Category", "DataIntegrity")]
     public async Task TransformDateTimeConversionOfZSuffixedIsoStringIsDeterministicUtcRegardlessOfHostTimeZone()
     {
-        // Why: regression guard for the fixed ConvertToDateTime arm ordering (MapTransformType.cs
-        // ~289-310). The exact 'Z'-suffixed `TryParseExact(..., "yyyy-MM-ddTHH:mm:ssZ", ...,
-        // DateTimeStyles.AdjustToUniversal, ...)` arm is now checked BEFORE the generic
-        // `DateTime.TryParse(..., DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, ...)`
-        // fallback, so a "Z"-suffixed timestamp always yields the same wall-clock value with Kind=Utc —
-        // never the host-local, non-deterministic Kind that a plain DateTimeStyles.None parse would
-        // produce. This host runs America/Chicago (CDT, -05:00); asserting both the value AND
-        // DateTimeKind.Utc here would fail under the old bug on this very host.
         var input = new Dictionary<string, object?> { ["z"] = "2024-03-15T10:30:00Z" };
         var config = CreateConfig(CreateMapping("z", "dZ", targetType: "datetime"));
 

@@ -22,8 +22,6 @@ public abstract class CreateRoleRequestValidator : FdwEndpointValidator<CreateRo
                 .WithMessage("DisplayName must not exceed 200 characters");
         });
 
-        // Why: authz.Role.Description is nvarchar(500). 1000 let an over-long description past
-        // validation only to fail at the database.
         When(x => x.Description is not null, () =>
         {
             RuleFor(x => x.Description!)

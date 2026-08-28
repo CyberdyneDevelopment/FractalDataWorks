@@ -133,7 +133,6 @@ public sealed class ODataDeleteTranslator : ODataCommandTranslatorBase
             return null;
         }
 
-        // Why: IsPrimaryKey removed from IField — use GetPrimaryKeyFieldName() to locate the PK field.
         var pkFieldName = container.GetPrimaryKeyFieldName();
 
         // Recursively search for the ID condition

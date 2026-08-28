@@ -8,16 +8,11 @@ namespace Fdw.Services.Abstractions;
 /// Default implementation of <see cref="IRequestContext"/>.
 /// Populated by middleware from the authentication context per-request.
 /// </summary>
-// Why: Replaces ConfigurationScopes (System/User/Merged) with identity-driven visibility.
-// The caller's tenant, org membership, and roles determine what they can see —
-// not a scope enum that any caller can set to "Merged" and bypass isolation.
 public sealed class RequestContext : IRequestContext
 {
     /// <summary>
     /// Context for unauthenticated or anonymous requests.
     /// </summary>
-    // Why: Static instance avoids allocation on every anonymous request.
-    // Empty roles means IsSystemAdmin=false, so no system config access.
     public static readonly RequestContext GuestContext = new(Guid.Empty, [], []);
 
     /// <summary>
@@ -43,8 +38,5 @@ public sealed class RequestContext : IRequestContext
     public IReadOnlyList<string> Roles { get; }
 
     /// <inheritdoc />
-    // Why: Derived from Roles rather than stored separately so it can't diverge
-    // from the actual role list. Uses OrdinalIgnoreCase because role names are
-    // case-insensitive identifiers, not display strings.
     public bool IsSystemAdmin => Roles.Contains("system-admin", StringComparer.OrdinalIgnoreCase);
 }

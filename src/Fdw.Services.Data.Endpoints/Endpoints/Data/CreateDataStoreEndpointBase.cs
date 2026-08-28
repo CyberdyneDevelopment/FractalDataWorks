@@ -21,11 +21,7 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointBase<CreateDataStoreRequest, DataStoreDetailResponse>
     where TConfig : DataStoreConfiguration
 {
-    // Why: DataStoreConfigurationProvider provides dual-source (ctrl + cfg) merging
-    // with full hierarchy assembly (DataStore -> DataPath -> DataContainer -> Field).
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
-    // Why: ConnectionConfigurationProvider replaces IOptionsMonitor<List<ConnectionConfiguration>>
-    // for resolving ConnectionName -> ConnectionId.
     private readonly ConnectionConfigurationProvider _connectionProvider;
 
     /// <inheritdoc />
@@ -63,14 +59,8 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
         var connection = connectionResult.Value;
         var config = CreateConfiguration(request, connection.Id);
 
-        // Why here rather than in CreateConfiguration: each store type implements that for its own
-        // typed body, and a store's paths are the same shape whichever type it is.
         ApplyPaths(config, request.Paths);
 
-        // Why: a DataStore's transport IS its connection's transport — never a client-supplied StoreType.
-        // The connection already carries ServiceOptionType (e.g. "MsSql", "Http", "FileSystem") which
-        // is the authoritative transport identifier. Copying it here ensures ServiceOptionType is always
-        // set to the connection's transport regardless of what (if anything) the subclass puts there.
         config.ServiceOptionType = connection.ServiceOptionType;
 
         var saveResult = await _dataStoreProvider.Save(config, ct).ConfigureAwait(false);
@@ -79,8 +69,6 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
             return saveResult.ToNewResult<DataStoreDetailResponse>();
         }
 
-        // Why: Reload from provider to get the full hierarchy (DataPaths, DataContainers, DataContainerFields).
-        // The in-memory config object has Paths=[] because hierarchy is only populated by the cache.
         var loadResult = await _dataStoreProvider.Get(config.Name, ct).ConfigureAwait(false);
         if (loadResult.IsSuccess && loadResult.Value != null)
         {
@@ -88,8 +76,6 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
         }
         else
         {
-            // Why: Cache reload failed -- DataStore was saved but we can't populate Paths.
-            // Return success anyway since the create succeeded; Paths will be empty in the response.
             DataStoreEndpointLog.CacheReloadFailed(Logger, config.Name);
         }
 

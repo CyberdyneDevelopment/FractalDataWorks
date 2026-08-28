@@ -71,9 +71,6 @@ public abstract class GetTypeCollectionValueDetailEndpointBase
     private static IReadOnlyList<ConfigurationPropertyInfoDto> FindPropertyMetadata(
         string collectionName, string typeName)
     {
-        // Why: IConfigurationType.Type (CLR type for reflection) is removed in Wave C4.
-        // IDataContainer does not yet carry the CLR Type — pending Wave A6 typed-body promotion.
-        // Return empty list until Wave A6 exposes the CLR type via IDataContainer.
         return [];
     }
 }

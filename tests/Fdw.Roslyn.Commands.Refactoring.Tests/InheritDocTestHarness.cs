@@ -26,8 +26,6 @@ public static class InheritDocTestHarness
     /// <summary>The name of the single project under test.</summary>
     public const string ProjectName = "TestProj";
 
-    // Why: resolving the trusted-platform-assembly set once keeps each test from re-opening ~150 metadata
-    // files; the references are immutable so a single shared list is safe across tests.
     private static readonly Lazy<IReadOnlyList<MetadataReference>> References = new(() =>
         ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
             .Split(Path.PathSeparator)

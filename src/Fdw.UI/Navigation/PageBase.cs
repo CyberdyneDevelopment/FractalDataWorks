@@ -5,10 +5,6 @@ namespace Fdw.UI.Navigation;
 /// <summary>
 /// Base class for a page declaration. Values arrive through the constructor.
 /// </summary>
-// Why: constructor arguments, not settable or overridable properties — the same way every other FDW
-// option carries its values. No parameter has a default, so a page author states "no nav entry" with
-// NavItem.Empty and states who may reach the page with a PageAccess form, deliberately in both cases
-// rather than inheriting either by omission.
 public abstract class PageBase : IPage
 {
     /// <summary>
@@ -26,15 +22,8 @@ public abstract class PageBase : IPage
             throw new ArgumentException("A page requires a name.", nameof(name));
 
         Name = name;
-        // Why: the renderer resolves the page's address from this type, so a null component yields a nav
-        // entry that cannot navigate anywhere. Reject it here rather than at first click.
         Component = component ?? throw new ArgumentNullException(nameof(component));
-        // Why: absence is NavItem.Empty, never null — a null here means the author skipped the decision
-        // rather than declaring "not in navigation", so it is rejected instead of silently substituted.
         NavItem = navItem ?? throw new ArgumentNullException(nameof(navItem));
-        // Why: every page has an answer — PageAccess.Anonymous is one, and so is Authenticated. A null here
-        // means the author skipped the decision rather than declaring one, exactly as with navItem, so it is
-        // rejected instead of being silently read as either the open or the closed answer.
         Access = access ?? throw new ArgumentNullException(nameof(access));
     }
 

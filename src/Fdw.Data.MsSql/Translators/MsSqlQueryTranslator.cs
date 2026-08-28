@@ -98,16 +98,10 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("InvalidContainerPath")));
             }
 
-            // Why: MsSqlQueryTranslator requires IDataContainer.Keys (for the PK-ordering fallback).
-            // IDataContainer : IStorageContainer — downcast from generic storage to structured data.
             if (container is not IDataContainer dataContainer)
                 return Task.FromResult(GenericResult<SqlCommand>.Failure(
                     MsSqlTranslatorLog.ContainerNotDataContainer(NullLogger<MsSqlQueryTranslator>.Instance, container.Name)));
 
-            // Why: field names come from the materialized Schema.Fields. The execute seam fetched the
-            // container's fields (IDataNode.GetFields) once and built the synchronous schema, so the
-            // translator reads names without any async fetch. (Schema.Fields and the typed field list
-            // carry the same field names — Schema.Fields is the decoupled, sync source of truth.)
             List<string>? containerFieldNames = null;
             var schemaFields = container.Schema.Fields;
             if (schemaFields.Count > 0)
@@ -118,10 +112,6 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
                 containerFieldNames = names;
             }
 
-            // Why: refuse to emit SELECT *. If the container has no schema fields, no
-            // projection on the command, and no metadata field-name lists, fail loud so the
-            // call site can be fixed (typically: AdaptContainer wasn't given a populated
-            // IDataContainer). NO FALLBACKS.
             if (command.Projection?.PropertyNames?.Any() != true
                 && container.Schema.Fields.Count == 0
                 && (containerFieldNames is null || containerFieldNames.Count == 0))
@@ -138,9 +128,6 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
             SqlCommand sqlCommand;
             if (command.Aggregation is not null)
             {
-                // Why: query-time GROUP BY pushdown for aggregate datasets (DataSetConfiguration.Aggregates).
-                // v1 supports single-source aggregation only; combining a JOIN with aggregation (a compound
-                // grouped dataset) is not yet translated — fail loud rather than emit a silently wrong statement.
                 if (command.Joins is { Count: > 0 })
                 {
                     return Task.FromResult(GenericResult<SqlCommand>.Failure(
@@ -152,8 +139,6 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
             }
             else if (command.Joins is { Count: > 0 })
             {
-                // Why: a JOIN read (typed-body config: child joined to parent on the FK) qualifies all
-                // columns by table name to avoid ambiguity across the joined tables.
                 sqlCommand = BuildJoinedSelectStatement(
                     container, dbPath, dialect, command.Joins, command.Filter, command.Projection, containerFieldNames);
             }
@@ -230,16 +215,11 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
 
             if (fields.Count > 0)
             {
-                // Why: read PK field name from structured IDataContainer.Keys (IsPrimaryKey flag)
-                // rather than Metadata["SurrogateKeyField"]. Cast is safe — MsSqlDataContainer
-                // implements both interfaces.
                 var pkName = ((IDataContainer)container).GetPrimaryKeyFieldName();
                 orderByField = pkName ?? fields[0].Name;
             }
             else if (containerFieldNames is { Count: > 0 })
             {
-                // Why: when Schema.Fields is empty, containerFieldNames (from dataContainer.Fields)
-                // provides the column list.
                 orderByField = containerFieldNames[0];
             }
 
@@ -272,9 +252,6 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
         IProjectionExpression? projection,
         List<string>? containerFieldNames)
     {
-        // Why: with a JOIN every column must be table-qualified to avoid ambiguity. The primary
-        // (child) table's bare name is the qualifier — SQL Server resolves [Table].[Col] against the
-        // un-aliased FROM/JOIN tables because the joined table names differ.
         var primaryTable = dbPath.ObjectName;
 
         var sql = new StringBuilder();
@@ -320,8 +297,6 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
         // the parent table (how the caller filters on the parent's durable Id).
         if (filter?.Root != null)
         {
-            // Why: 4-arg overload (explicit parameterPrefix) — passing primaryTable as the 3rd of
-            // three args would bind to the parameterPrefix overload instead of the qualifier one.
             var whereClause = BuildWhereClause(filter, dialect, (n, v) => AddParameter(command, n, v), primaryTable);
             command.CommandText += $" WHERE {whereClause}";
         }
@@ -416,8 +391,6 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
             return $"SELECT {string.Join(", ", containerFieldNames.Select(Col))}";
         }
 
-        // Why: this branch is unreachable — caller validates at least one source of column
-        // names exists before calling BuildSelectStatement. Defensive throw.
         throw new InvalidOperationException(
             $"Cannot build SELECT for container '{container.Name}': no columns available.");
     }
@@ -496,8 +469,6 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
             command.CommandText += $" GROUP BY {string.Join(", ", aggregation.GroupByFields.Select(dialect.QuoteIdentifier))}";
         }
 
-        // Why: ORDER BY is restricted to the group-by columns — ordering by a computed aggregate alias
-        // is dialect-specific and not needed for v1. Only emit it when every ordered field is a group key.
         if (ordering?.OrderedFields?.Any() == true
             && ordering.OrderedFields.All(o => aggregation.GroupByFields.Contains(o.PropertyName, StringComparer.OrdinalIgnoreCase)))
         {

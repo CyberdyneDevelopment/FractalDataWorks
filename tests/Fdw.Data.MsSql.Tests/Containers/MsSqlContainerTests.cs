@@ -8,11 +8,6 @@ using Xunit;
 
 namespace Fdw.Data.MsSql.Tests.Containers;
 
-// Why (foundational redesign): the old ContainerBase-derived TableContainer/ViewContainer/
-// StoredProcedureContainer (built from a pre-materialised IContainerSchema) were deleted. The runtime
-// containers are now MsSqlTableContainer/MsSqlViewContainer — unified DataContainer subclasses whose
-// Schema is a synchronous projection over their IMsSqlDataField child nodes. These tests assert the
-// new contract: container type, physical path, supported operations, and schema projection.
 [Collection(nameof(DataMsSqlTestCollection))]
 public sealed class MsSqlContainerTests
 {

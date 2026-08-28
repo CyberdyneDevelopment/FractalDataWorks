@@ -5,7 +5,6 @@ namespace Fdw.Roslyn.Commands.Abstractions;
 /// <summary>
 /// Command category for workspace management operations.
 /// </summary>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(RoslynCommandCategories), "Workspace", RestrictToCurrentCompilation = true)]
 public sealed class WorkspaceCommandCategory : RoslynCommandCategoryBase

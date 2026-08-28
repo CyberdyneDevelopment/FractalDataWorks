@@ -34,11 +34,6 @@ public class EscalationConfigurationProvider : ImplementationConfigurationProvid
     {
     }
 
-    // Why: Get(string)/Get(Guid) no longer override to assemble the Policy→Levels→Recipients tree.
-    // ImplementationConfigurationProviderBase.Get composes that nested 1:N hierarchy uniformly via ComposeChildren
-    // (the read mirror of the save cascade), driven by the EscalationPolicy container's inbound-FK
-    // metadata — EscalationLevel (FK EscalationPolicyRowId) then EscalationLevelRecipient (FK
-    // EscalationLevelRowId). The old hand-rolled AssembleHierarchy is deleted.
 
     /// <summary>Gets all escalation level configurations.</summary>
     public async Task<IReadOnlyList<EscalationLevelConfiguration>> GetAllLevels(CancellationToken cancellationToken = default)

@@ -78,9 +78,6 @@ public class DataSetApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the preview data with columns and rows.</returns>
     public virtual Task<IGenericResult<DataPreviewResponsePayload>> PreviewDataSet(string name, DataPreviewRequestPayload request, CancellationToken ct = default)
-        // Why: the server route PreviewDataSetEndpointBase is a CrudGetEndpointBase (GET), binding the
-        // dataset name from the route and MaxRows from the query string. The client previously POSTed
-        // a body (405). Issue a GET and carry MaxRows as a query parameter.
         => Get<DataPreviewResponsePayload>($"datasets/{name}/preview?maxRows={request.MaxRows}", ct);
 
     /// <summary>

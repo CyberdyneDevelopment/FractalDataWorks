@@ -82,11 +82,6 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
 
         var existing = loadResult.Value;
 
-        // Why: ServiceOptionType/FederationStrategy are nullable request fields — omitted (null) keeps
-        // the existing value, matching the Description/Category partial-update convention below.
-        // Validation re-runs against the MERGED (post-update) values so switching ServiceOptionType to
-        // "Federated" without also supplying federationStrategy in the same request fails loud here,
-        // rather than persisting a dataset that would fail loud later at execution time.
         var mergedServiceOptionType = request.ServiceOptionType ?? existing.ServiceOptionType;
         if (string.IsNullOrWhiteSpace(mergedServiceOptionType)
             || ReferenceEquals(DataSetTypes.ByName(mergedServiceOptionType), DataSetTypes.NotFound))
@@ -126,22 +121,13 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
         return GenericResult<DataSetDetailResponse>.Success(DataSetQueryHelper.MapToDetail(existing));
     }
 
-    // Why: an omitted aggregates collection is not an empty one — there is nothing to validate when
-    // the caller never mentioned it, and ValidateAggregates takes a non-nullable list.
     private IGenericResult<bool> ValidateRequestedAggregates(UpdateDataSetRequest request)
         => request.Aggregates is null
             ? GenericResult<bool>.Success(true)
             : DataSetQueryHelper.ValidateAggregates(request.Aggregates, request.Name, Logger);
 
-    // Why: separated from SaveUpdatedDataSet purely to keep that method under the FDW007
-    // cyclomatic-complexity threshold — these seven presence checks are one cohesive step.
     private static void ApplyRequestedChildren(DataSetConfiguration existing, UpdateDataSetRequest request)
     {
-            // Why: PATCH semantics — an absent collection means "leave it as it is", not "delete it".
-            // Every one of these is nullable so those two cases stay distinguishable. Defaulting them to
-            // [] made omitting "sources" identical to sending "sources": [], so a caller editing only a
-            // description silently destroyed every source binding the dataset had. To clear a collection,
-            // send an explicit empty array.
             if (request.KeyFields is not null)
             {
                 existing.KeyFields = request.KeyFields

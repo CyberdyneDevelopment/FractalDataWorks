@@ -17,15 +17,9 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, UserRolesResponse>
 {
-    // Why: RoleConfigurationProvider replaces IOptionsMonitor<List<RoleConfiguration>> for role lookups.
     private readonly RoleConfigurationProvider _roleProvider;
-    // Why: UserRoleConfigurationProvider replaces IOptionsMonitor<List<UserRoleConfiguration>>
-    // for dual-source (ctrl + cfg) user-role queries.
     private readonly UserRoleConfigurationProvider _userRoleProvider;
 
-    // Why: route binds {Name}, so we resolve user by name to get the underlying Guid for
-    // UserRoleConfigurationProvider.GetByUser which keys on the user ID string.
-    // Why: UserConfigurationProvider (Singleton) replaces the deleted IUserService wrapper.
     private readonly UserConfigurationProvider _userProvider;
 
     /// <summary>
@@ -62,8 +56,6 @@ public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, U
     /// <inheritdoc />
     public override void Configure()
     {
-        // Why: callers identify users by name in the URL; binding {Name} as string avoids the
-        // route binder rejecting "/users/admin/roles" with a Guid parse error.
         Get("/users/{IdOrName}/roles");
         Policies(ReadPolicy);
         ConfigureEndpoint();
@@ -93,8 +85,6 @@ public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, U
             var allRoles = await _roleProvider.GetAllRoles(ct).ConfigureAwait(false);
 
             var userRolesResult = await _userRoleProvider.GetByUser(userIdString, ct).ConfigureAwait(false);
-            // Why: FDW-532 — GetByUser now returns IGenericResult; fail-closed: if it fails
-            // we cannot return the user's roles without risking serving stale/wrong data.
             if (!userRolesResult.IsSuccess || userRolesResult.Value is null)
             {
                 await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);

@@ -51,10 +51,6 @@ public sealed partial class DataSetFieldMappingConfiguration : IGenericConfigura
     /// <c>"DataSet"</c> (a field on another DataSet via SourceDataSetId — compound/federated),
     /// <c>"Calculation"</c> (a CalculationEntity produces the value — derived field).
     /// </summary>
-    // Why: A logical DataSet field can resolve from any of three kinds of upstream, not just
-    // physical source columns. A single LogicalFieldName may have multiple mapping rows (multi-source
-    // binding); when mappings share a LogicalFieldName, TransformationTypeName on each row declares
-    // how those inputs combine.
     public string SourceKind { get; set; } = "DataStore";
 
     /// <summary>

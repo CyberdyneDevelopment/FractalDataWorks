@@ -110,10 +110,6 @@ public static class PipelinePaletteNodeMap
         }
     }
 
-    // Why: a registered CanvasNodeTypes member ("DataSet"/"Transform") going missing is a
-    // configuration/deployment error (the type collection lost a seeded member), not a user-facing
-    // unknown-palette-name case — fail loud with its own message rather than reusing
-    // UnknownDragNodeType, which describes a different failure (the palette name itself).
     private static IGenericResult<(ICanvasNodeType NodeType, IReadOnlyDictionary<string, string> Metadata)> Unregistered(
         ILogger log, string nodeTypeName) =>
         GenericResult<(ICanvasNodeType NodeType, IReadOnlyDictionary<string, string> Metadata)>.Failure(

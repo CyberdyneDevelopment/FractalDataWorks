@@ -8,7 +8,6 @@ namespace Fdw.Services.Pipelines.Components.Dashboard;
 /// <summary>
 /// Immutable context for the pipeline dashboard widget.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class PipelineDashboardContext : ProviderContextBase
 {

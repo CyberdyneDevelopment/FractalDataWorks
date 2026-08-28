@@ -27,6 +27,5 @@ public sealed class ProjectExecutionStatusNode
     public string RollupState { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the child nodes (Stages under Project, Steps under Stage, Pipelines under Step).</summary>
-    // Why: IList<T> for mutability during recursive tree construction; consumers receive the sealed class.
     public IList<ProjectExecutionStatusNode> Children { get; set; } = new List<ProjectExecutionStatusNode>();
 }

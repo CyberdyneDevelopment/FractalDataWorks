@@ -20,10 +20,6 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TransformationTypes), "FromUnixMilliseconds")]
 public sealed class FromUnixMillisecondsFieldTransformer : FieldTransformationBase
 {
-    // Why: TypeOptions are singletons discovered by source generation — they have no DI-injected logger.
-    // NullLogger allows MessageLogging methods to produce IGenericMessage instances whose Message property
-    // carries the failure text back to the caller. The message content is still returned in the
-    // IGenericResult regardless of whether a real logger is wired up.
     private static readonly ILogger Logger = NullLogger.Instance;
 
     /// <summary>
@@ -41,8 +37,6 @@ public sealed class FromUnixMillisecondsFieldTransformer : FieldTransformationBa
     }
 
     /// <inheritdoc/>
-    // Why: epoch-ms -> DateTimeOffset is a pure CPU conversion (no I/O); Task.FromResult is honest
-    // sync-returning-Task — the contract is async so future I/O-backed transformers are first-class.
     public override Task<IGenericResult<object?>> Transform(
         object? input,
         TransformationContext context,
@@ -53,10 +47,6 @@ public sealed class FromUnixMillisecondsFieldTransformer : FieldTransformationBa
             return Task.FromResult(GenericResult<object?>.Failure(FieldTransformerLog.InputIsNull(Logger)));
         }
 
-        // Why: accept long directly (most common from JSON numeric fields), or a string
-        // representation of a long (e.g. from a CSV or API that serialises numbers as strings).
-        // short/int widen safely to long. Any other type (bool, double, object) is an unambiguous
-        // caller error — fail loud so the misconfiguration is surfaced immediately.
         long epochMs;
         switch (input)
         {

@@ -102,8 +102,6 @@ public class CalculationApiClient : ApiClientBase, ICalculationApiClient
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the formula validation response.</returns>
     public virtual Task<IGenericResult<PreviewFormulaResponse>> ValidateFormula(ValidateFormulaPayload request, CancellationToken ct = default)
-        // Why: server route is ValidateFormulaEndpointBase at "calculation-entities/validate-formula";
-        // the client previously POSTed "calculations/validate" (404). Align to the server contract.
         => Post<ValidateFormulaPayload, PreviewFormulaResponse>("calculation-entities/validate-formula", request, ct);
 
     /// <summary>

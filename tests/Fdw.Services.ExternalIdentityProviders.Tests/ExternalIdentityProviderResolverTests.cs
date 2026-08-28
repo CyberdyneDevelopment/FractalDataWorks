@@ -25,8 +25,6 @@ public sealed class ExternalIdentityProviderResolverTests
     private static Mock<IExternalIdentityProviderServiceProvider> ServiceProvider()
         => new();
 
-    // Why: the resolver depends on the concrete configuration provider (its Get(ct) is virtual). Mock it
-    // over a dummy gateway Lazy that is never dereferenced because Get is stubbed.
     private static Mock<ExternalIdentityProviderConfigurationProvider> ConfigProvider()
         => new(
             NullLogger<ExternalIdentityProviderConfigurationProvider>.Instance,

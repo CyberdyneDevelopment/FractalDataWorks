@@ -23,8 +23,6 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
     private readonly ILogger<BatchCopyPipelineFactory> _logger;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IDataGateway? _dataGateway;
-    // Why: Lazy so the factory stays pure (FDW045). Cross-collection connection provider, used only at
-    // Create() time; Lazy defers resolution past construction (see StreamingPipelineFactory).
     private readonly Lazy<IConnectionProvider>? _connectionProvider;
     private readonly IDataStoreProvider? _dataStoreProvider;
 
@@ -85,10 +83,6 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
                 EtlLog.PipelineCreationFailed(_logger, "unknown", "Configuration is null"));
         }
 
-        // Why: the runtime service provider composes and hands the ROOT header
-        // (PipelineConfiguration → .Configuration EtlPipelineConfiguration → .Configuration
-        // BatchCopyPipelineConfiguration). Unwrap to the engine body the pipeline consumes.
-        // A bare engine body (test/system-context caller) is accepted directly.
         var engine = UnwrapEngineBody(configuration);
         if (engine is BatchCopyPipelineConfiguration batchConfig)
         {
@@ -100,16 +94,6 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
                 $"Invalid configuration type. Expected BatchCopyPipelineConfiguration, got {configuration.GetType().Name}"));
     }
 
-    // Why: peel the typed-body chain by declared marker properties — header.Configuration is the
-    // ETL-kind body (EtlPipelineConfiguration), whose .Configuration is the engine body. Returns the
-    // deepest non-null typed body, or the input when it is already an engine body.
-    // Transforms are a KIND-level child collection (FK EtlPipelineId) composed onto
-    // EtlPipelineConfiguration; the engine body exposes a [NotMapped] Transforms the runtime pipeline
-    // reads. Carry the composed transforms across the kind→engine seam (the engine cannot load them via
-    // its own FK), else the pipeline runs with "0 transforms" and the Map step is a silent passthrough.
-    // SourceKind / DestinationKind are also [NotMapped] discriminators populated here from whichever
-    // of the two mutually-exclusive fields (DataSet vs ConnectionName) is non-empty. Fail loud if both
-    // or neither are set — no fallback, no guess.
     private IGenericConfiguration UnwrapEngineBody(IGenericConfiguration configuration)
     {
         var kind = configuration switch
@@ -131,19 +115,12 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
                 EtlLog.TransformsTransferredKindToEngine(_logger, batch.Name, kind.Transforms.Count);
             }
 
-            // Why: SourceKind and DestinationKind are runtime discriminators; they are NOT persisted
-            // as DB columns ([NotMapped]). The factory is the authoritative place to resolve them from
-            // the mutually-exclusive configuration fields (SourceDataSet vs SourceConnectionName).
-            // Any other logic that needs to branch on Kind can rely on these being set here.
             ResolveKinds(batch);
         }
 
         return engine;
     }
 
-    // Why: separated from UnwrapEngineBody so the logic is readable and independently testable.
-    // No return value — mutates the [NotMapped] Kind properties on the configuration object
-    // (they are intentionally not persisted; this factory is the single writer).
     private void ResolveKinds(BatchCopyPipelineConfiguration batch)
     {
         var hasSourceDataSet = !string.IsNullOrWhiteSpace(batch.SourceDataSet);
@@ -151,9 +128,6 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
 
         if (hasSourceDataSet && hasSourceConnection)
         {
-            // Why: both fields being populated is a configuration authoring error — the factory
-            // cannot guess which the caller intended. Fail loud: leave Kind null so the executor
-            // surfaces a SourceKindRequired failure rather than silently picking one.
             EtlLog.PipelineCreationFailed(_logger, batch.Name,
                 "Both SourceDataSet and SourceConnectionName are set; exactly one is required");
         }
@@ -165,8 +139,6 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
         {
             batch.SourceKind = DataSourceKinds.ByName("Connection");
         }
-        // Why: if neither is set, leave SourceKind null — the executor's SourceKindRequired check
-        // surfaces the failure with the pipeline name in context (better error locality).
 
         var hasDestDataSet = !string.IsNullOrWhiteSpace(batch.DestinationDataSet);
         var hasDestConnection = !string.IsNullOrWhiteSpace(batch.DestinationConnectionName);

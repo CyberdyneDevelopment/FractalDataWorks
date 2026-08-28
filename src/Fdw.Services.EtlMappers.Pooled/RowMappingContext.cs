@@ -62,8 +62,6 @@ public sealed class RowMappingContext
             }
             catch (IndexOutOfRangeException ex)
             {
-                // Why: field absent from result set is a known outcome; ordinal -1 signals skip.
-                // No logger is available on this static factory; ex is observed via discard.
                 _ = ex;
                 ordinals[i] = -1;
             }

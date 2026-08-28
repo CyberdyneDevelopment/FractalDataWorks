@@ -93,12 +93,6 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
 
         var baseConstructorParams = ExtractBaseConstructorParameters(baseType);
 
-        // Why no more manual-method detection: Configure/Register/Initialize are now ALWAYS generated as
-        // swappable static delegate fields (ConfigurationMethod/RegistrationMethod/InitializeMethod) with
-        // a runtime setter (Configuration/Registration/Initialization) — a domain that needs custom phase
-        // behavior (e.g. Multitenancy's self-selecting Configure) overrides the field via an explicit
-        // static constructor instead of hand-writing the method, so there is nothing left to detect or
-        // skip. See MultitenancyTypes for the reference pattern.
 
         return new ServiceTypeCollectionModel(
             ClassName: classSymbol.Name,
@@ -183,7 +177,6 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         var (collections, allOptions) = source.Data;
         var compilation = source.Compilation;
 
-        // Why: Build replacement map to filter out replaced ServiceTypeOptions from static constructor registration.
         var replacementMap = ReplacesDiscovery.BuildReplacementMap(compilation, context);
 
         foreach (var collection in collections)
@@ -192,7 +185,6 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
                 .Where(o => string.Equals(o.CollectionMatchKey, collection.MatchKey, StringComparison.Ordinal))
                 .ToImmutableArray();
 
-            // Why: Remove replaced types so the static constructor only registers the replacement.
             options = ReplacesDiscovery.FilterReplacedServiceTypeOptions(options, replacementMap, context);
 
             // Find child collections for this parent
@@ -376,10 +368,6 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         bodySb.AppendLine("        private static readonly object _lookupGate = new();");
         bodySb.AppendLine();
 
-        // Why: per-option / per-collection idempotence + order control now lives in the shared
-        // ServiceTypePhaseState registry (keyed by the IServiceCollection / IServiceProvider scope, never
-        // process-wide, so independent containers each get a full registration), covering all three phases
-        // uniformly. The old per-collection _registeredOptionNames table is superseded by it.
 
         // Nullable frozen dictionaries
         bodySb.AppendLine("        // Frozen dictionaries (populated on first access)");
@@ -401,16 +389,6 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         }
         bodySb.AppendLine();
 
-        // Why a [ModuleInitializer] and NOT a static constructor: the three phase methods live on
-        // ServiceTypeCollectionBase, so a call like `ConnectionTypes.Register(builder)` binds to the
-        // INHERITED static — and C# does not run the derived type's static constructor for that. The
-        // registry would stay empty and every Get() would miss. A module initializer runs at assembly
-        // load, before anything can read the collection, so registration cannot be skipped.
-        //
-        // Collecting service types is ALL this does; it does not touch the phase funcs. A collection's
-        // Register body — including the domain provider its own declaration names — is set by the class
-        // carrying [ServiceTypeCollection], in its static constructor, so the body is written where the
-        // collection is declared and an application can replace it wholesale.
         bodySb.AppendLine("        [ModuleInitializer]");
         bodySb.AppendLine($"        internal static void RegisterDiscoveredOptions()");
         bodySb.AppendLine("        {");
@@ -513,9 +491,6 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
             bodySb.AppendLine();
         }
 
-        // Why unconditional: do not gate this on anything. A collection declaring its own
-        // [TypeLookup] ByName still wins and this only fills the gap — but it was once tied to an
-        // unrelated provider flag, so removing that flag would have silently taken ByName with it.
         if (!lookupGroups.Any(g => string.Equals(g.Key, "ByName", StringComparison.Ordinal)))
         {
             bodySb.AppendLine($"        /// <summary>Looks up a service type by name. Returns NotFound if not found.</summary>");
@@ -644,8 +619,6 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
 
         return sb.ToString();
     }
-    // Why: extracted from GenerateCode so that method stays within the FDW006 executable-line budget.
-    // Emits the GetMetadata() accessor plus the private ComputeFnv1aHash helper for one collection.
     private static void AppendMetadataMethod(StringBuilder bodySb, ServiceTypeCollectionModel collection)
     {
         bodySb.AppendLine("        private static Fdw.Types.TypeCollectionMetadata? _metadata;");

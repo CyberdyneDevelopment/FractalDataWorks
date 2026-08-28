@@ -14,15 +14,12 @@ namespace Fdw.Services.Quality.Configuration;
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Promotion",
     ServiceType = "Environment")]
-// Why: IGenericConfiguration is required by ImplementationConfigurationProviderBase<T>
-// for dual-source (ctrl+cfg) provider pattern.
 public sealed partial class EnvironmentConfiguration : IGenericConfiguration
 {
     /// <inheritdoc />
     public string SectionName => "Promotions";
 
     /// <inheritdoc />
-    // Why: Matches ServiceCategory from [ManagedConfiguration] attribute for IOptions binding path.
     public string ServiceType => "Promotion";
 
     /// <inheritdoc />

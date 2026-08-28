@@ -24,10 +24,6 @@ public sealed class ConnectionConfigurationJsonConverter : JsonConverter<Connect
     private const string DiscriminatorPropertyName = "ServiceOptionType";
     private const string SettingsPropertyName = "Configuration";
 
-    // Why: CA1869 — inner options must be cached, not created per call. The inner options
-    // are built once after the parent options are fully constructed (on first Read/Write call)
-    // and exclude this converter to prevent infinite recursion. Lazy<T> ensures thread-safe
-    // one-time initialization without locking overhead on the hot path.
     private JsonSerializerOptions? _innerOptions;
 
     private JsonSerializerOptions GetInnerOptions(JsonSerializerOptions outerOptions)
@@ -52,9 +48,6 @@ public sealed class ConnectionConfigurationJsonConverter : JsonConverter<Connect
         var innerOptions = GetInnerOptions(options);
 
         // Build the parent-only JSON (everything EXCEPT the typed Configuration child).
-        // Why: STJ refuses to deserialize the IConnectionImplementationConfiguration interface property in one
-        // pass — the concrete type isn't known until we resolve it via the ServiceOptionType
-        // discriminator. Strip Configuration here and re-attach manually below.
         using var stream = new System.IO.MemoryStream();
         using (var writer = new Utf8JsonWriter(stream))
         {
@@ -76,9 +69,6 @@ public sealed class ConnectionConfigurationJsonConverter : JsonConverter<Connect
             && root.TryGetProperty(SettingsPropertyName, out var settingsElement)
             && settingsElement.ValueKind == JsonValueKind.Object)
         {
-            // Why: the JSON declares a Configuration body, so failing to bind it is never benign —
-            // silently leaving Configuration null defers the failure to connection construction,
-            // where it surfaces as an unrelated "could not resolve" far from the real cause.
             var connectionType = ConnectionTypes.ByName(connection.ServiceOptionType);
             if (ReferenceEquals(connectionType, ConnectionTypes.NotFound))
             {

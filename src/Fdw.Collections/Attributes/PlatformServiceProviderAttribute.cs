@@ -16,7 +16,6 @@ namespace Fdw.Collections;
 /// <c>DataSetProvider</c>/<c>ConfigurationGatewayDataStoreProvider</c> that isn't itself a TypeCollection). Applying this
 /// attribute is purely a discovery signal for the PlatformServices collect.
 /// </remarks>
-// Why: pure attribute definition (declarative metadata only, consumed by a source generator) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 [ExcludeFromCodeCoverage]
 public sealed class PlatformServiceProviderAttribute : Attribute

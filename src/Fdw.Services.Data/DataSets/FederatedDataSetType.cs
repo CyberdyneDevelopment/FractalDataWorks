@@ -60,15 +60,11 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         if (context is not DataSetExecutionContext ctx)
             return GenericResult<T>.Failure(DataServiceResultCodes.ByName("DataSetConfigurationRequired"));
 
-        // Why: the helpers take IReadOnlyList; Config.Sources is IList (its concrete List satisfies both),
-        // so view it through IReadOnlyList, materializing only if it is some non-IReadOnlyList impl.
         IReadOnlyList<DataSetSourceConfiguration> sources =
             ctx.Config.Sources as IReadOnlyList<DataSetSourceConfiguration> ?? ctx.Config.Sources?.ToList() ?? [];
         if (sources.Count == 0)
             return GenericResult<T>.Failure(DataGatewayLogger.DataSetNoSources(ctx.Logger, ctx.Config.Name));
 
-        // Why: honor the AUTHORED federation strategy — fail loud (no default) when it is missing or
-        // not a registered FederationStrategies member. IsParallel drives concurrent vs sequential pulls.
         if (string.IsNullOrWhiteSpace(ctx.Config.FederationStrategy))
             return GenericResult<T>.Failure(
                 DataGatewayLogger.FederationStrategyMissing(ctx.Logger, ctx.Config.Name, "no FederationStrategy is configured"));
@@ -125,7 +121,6 @@ public sealed class FederatedDataSetType : DataSetTypeBase
     private static Dictionary<string, IReadOnlyDictionary<string, string>> PreResolveFieldMappings(
         IReadOnlyList<DataSetSourceConfiguration> sources)
     {
-        // Why: FieldMappings is composed by DataSetConfigurationProvider.Get — no resolver needed.
         var fieldMappingsBySource = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var source in sources)
         {
@@ -148,8 +143,6 @@ public sealed class FederatedDataSetType : DataSetTypeBase
 
         (string SourceName, IGenericResult<MaterializedSource> Result)[] results;
 
-        // Why: honor the federation strategy — IsParallel runs the source pulls concurrently; otherwise
-        // they run sequentially (e.g. to bound load or preserve order).
         if (isParallel)
         {
             results = await Task.WhenAll(sources.Select(RunOne)).ConfigureAwait(false);
@@ -180,10 +173,6 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         return GenericResult<Dictionary<string, MaterializedSource>>.Success(map);
     }
 
-    // Why the override: pulling one federated source is a straight-line sequence of independent
-    // guards — filter translation, container, connection, record capability — each failing loud on its
-    // own condition. Splitting it would scatter one source's addressing across helpers without removing
-    // a single branch, and the branches are the point.
     [ConventionOverride(MaxCyclomaticComplexity = 20)]
     private static async Task<IGenericResult<MaterializedSource>> PullSource(
         DataSetExecutionContext ctx,
@@ -194,9 +183,6 @@ public sealed class FederatedDataSetType : DataSetTypeBase
     {
         var sourceName = sourceConfig.SourceName;
 
-        // Why: addressing comes from the container the source names — commands are address-free shapes
-        // (filter/ordering/paging only). Nothing here reads a connection off the source; see the same
-        // resolution in SimpleDataSetType.
         IFilterExpression? translatedFilter = null;
         if (sourceFilters.TryGetValue(sourceName, out var rawFilter) && rawFilter is not null)
         {
@@ -218,8 +204,6 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         if (!containerResult.IsSuccess || containerResult.Value is null)
             return GenericResult<MaterializedSource>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, sourceName));
 
-        // Why the connection is walked off the container: a DataStore owns its connection and the
-        // container reaches it through Parent.Store, so the container already carries the answer.
         var connectionId = containerResult.Value.Parent?.Store?.ConnectionId ?? Guid.Empty;
         if (connectionId == Guid.Empty)
             return GenericResult<MaterializedSource>.Failure(
@@ -231,9 +215,6 @@ public sealed class FederatedDataSetType : DataSetTypeBase
             return GenericResult<MaterializedSource>.Failure(
                 DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, connectionResult.CurrentMessage ?? "Unknown error"));
 
-        // Why: a federated in-memory join pulls each source as DataRecord through the record-source
-        // capability. A connection that does not advertise it cannot be federated — fail loud (NO
-        // FALLBACKS); never degrade to a materializing path (that would silently change the contract).
         if (connectionResult.Value is not IRecordSourceConnection recordConnection)
             return GenericResult<MaterializedSource>.Failure(
                 DataGatewayLogger.FederatedSourceNotRecordCapable(ctx.Logger, ctx.Config.Name, sourceName, sourceConfig.DataStoreName));
@@ -258,8 +239,6 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         var recordSource = openResult.Value;
         await using (recordSource.ConfigureAwait(false))
         {
-            // Why: each DataRecord owns its own value array (CursorRecordSource allocates per record), so
-            // materializing into a list is safe — list entries do not alias one reused buffer.
             var records = new List<DataRecord>();
             await foreach (var recordResult in recordSource.Read(ct).ConfigureAwait(false))
             {
@@ -281,8 +260,6 @@ public sealed class FederatedDataSetType : DataSetTypeBase
     {
         if (ctx.Config.Joins.Count == 0)
         {
-            // Why: with no join graph, a federated dataset is the concatenation of every source's records,
-            // each keeping its own schema (heterogeneous rows).
             DataGatewayLogger.DataSetNoJoins(ctx.Logger, ctx.Config.Name, sources.Count);
             var all = new List<DataRecord>();
             foreach (var source in sourceData.Values)
@@ -302,8 +279,6 @@ public sealed class FederatedDataSetType : DataSetTypeBase
                 return GenericResult<List<DataRecord>>.Failure(
                     DataGatewayLogger.JoinSourceNotFound(ctx.Logger, ctx.Config.Name, join.RightSource));
 
-            // Why: the first join's left side is its left source; each subsequent join chains onto the
-            // accumulated result (which already carries the combined schema of the joins so far).
             var leftRecords = accumulated ?? left.Records;
             var leftSchema = accumulatedSchema ?? left.Schema;
             var combinedSchema = CombineSchema(leftSchema, right.Schema);
@@ -318,8 +293,6 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         return GenericResult<List<DataRecord>>.Success(accumulated ?? []);
     }
 
-    // Why: hash join over typed DataRecord cells. Keys are read by field NAME through each record's own
-    // shared schema (record["field"]); a matched pair merges into one DataRecord over the combined schema.
     private static List<DataRecord> HashJoin(
         List<DataRecord> leftRecords,
         List<DataRecord> rightRecords,
@@ -360,8 +333,6 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         return results;
     }
 
-    // Why: a merged row's values are the left record's cells followed by the right record's cells, over
-    // the combined schema. No dictionary, no dynamic — straight span copy into one object?[].
     private static DataRecord Merge(DataRecord left, DataRecord right, RecordSchema combinedSchema)
     {
         var values = new object?[combinedSchema.FieldCount];
@@ -374,7 +345,6 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         return new DataRecord(combinedSchema, values);
     }
 
-    // Why: a left-outer row with no right match carries the left cells and leaves the right portion null.
     private static DataRecord MergeLeftOuter(DataRecord left, RecordSchema combinedSchema)
     {
         var values = new object?[combinedSchema.FieldCount];
@@ -413,7 +383,6 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         if (itemType == typeof(DataRecord))
             return GenericResult<T>.Success((T)(object)records);
 
-        // Why: a DataRecord IS an object row — box each into the object sequence. No dynamic, no dict.
         if (itemType == typeof(object))
             return GenericResult<T>.Success((T)(object)records.Cast<object>().ToList());
 
@@ -448,10 +417,6 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         return GenericResult<T>.Success((T)list);
     }
 
-    // Why: a materialized federated source — its records (each owning its value array) plus the shared
-    // flyweight schema produced by the source's record cursor. Carried together so the join can build a
-    // combined schema and merge cells positionally without re-describing fields per record.
-    // Why: pure data holder, no logic beyond trivial construction/assignment
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private readonly struct MaterializedSource
     {

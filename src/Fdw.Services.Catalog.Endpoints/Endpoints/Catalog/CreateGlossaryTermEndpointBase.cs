@@ -48,7 +48,6 @@ public abstract class CreateGlossaryTermEndpointBase : Endpoint<GlossaryTermResp
             return;
         }
 
-        // Why: Reflect the minted Id back to the DTO so the caller receives the canonical identifier.
         req.Id = result.Value?.Id ?? req.Id;
 
         await Send.CreatedAtAsync<GetGlossaryTermEndpointBase>(new { Id = req.Id }, req, cancellation: ct).ConfigureAwait(false);

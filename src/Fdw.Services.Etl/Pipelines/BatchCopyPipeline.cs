@@ -77,8 +77,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     public override string Name => _configuration.Name;
 
     /// <inheritdoc />
-    // Why: the engine discriminator is intrinsic to this pipeline class (a BatchCopyPipeline IS "BatchCopy"),
-    // not read from the engine body's ServiceOptionType (which can be null on a leaf typed body).
     public override string PipelineType => "BatchCopy";
 
     /// <inheritdoc />
@@ -113,8 +111,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
                     EtlLog.ExecutionFailed(_logger, Name, executionId, "DataGateway is required for pipeline execution"));
             }
 
-            // Why: In test mode, apply batch-size cap so extraction is bounded by MaxRowsPerSource.
-            // BatchCopyPipeline is an optimized linear path — no DAG walk needed.
             var effectiveBatchSize = options.IsTestMode
                 ? Math.Min(_configuration.BatchSize, options.MaxRowsPerSource)
                 : _configuration.BatchSize;
@@ -177,7 +173,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 
         var transformedRecords = transformResult.Value!;
 
-        // Why: In test mode with SkipDestinationWrites, replace load with a no-op log.
         if (options.IsTestMode && options.SkipDestinationWrites)
         {
             EtlLog.TestModeWriteSkipped(_logger, Name, transformedRecords.Count);
@@ -208,10 +203,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Why: SourceKind is the authoritative discriminator set by the factory at construction time.
-        // Branching on Kind (not on which string field is populated) keeps the executor clean and
-        // makes the ELT vs ETL distinction explicit. No fallback — if Kind was not set the factory
-        // is the culprit and we fail loud here.
         if (_configuration.SourceKind == null || _configuration.SourceKind == DataSourceKinds.NotFound)
         {
             return GenericResult<List<IDictionary<string, object?>>>.Failure(
@@ -343,9 +334,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 
         EtlLog.ExtractingFromConnection(_logger, Name, _configuration.SourceConnectionName, _configuration.SourceContainerPath!);
 
-        // Why: DataStoreTarget routes through the gateway to the named physical connection.
-        // Path is null so the gateway searches all registered paths in the store — the container
-        // name (SourceContainerPath) is the full qualified identifier (e.g. schema.table).
         var queryCommand = new QueryCommand<Dictionary<string, object?>>
         {
             Paging = new PagingExpression
@@ -429,10 +417,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         }
     }
 
-    // Why: the transform engine folds the WHOLE record set through each ordered step via
-    // TransformBatch (never per-record Transform) — this is the mechanism fix that lets Aggregate
-    // reduce N→M groups, Filter drop rows, and Lookup's TransformBatch pre-load its cache before any
-    // record is enriched. A per-record loop cannot express any of the three (FDW-556 Part 5.1).
     private async Task<IGenericResult<List<IDictionary<string, object?>>>> TransformStepFold(
         List<IDictionary<string, object?>> records,
         List<PipelineTransformConfiguration> orderedTransforms,
@@ -461,10 +445,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 
             if (!stepResult.IsSuccess)
             {
-                // Why: a step failure here is structural (missing required params, unknown function/
-                // join-type/formula-language, wrong configuration type) — not a per-record data issue.
-                // Per-record issues are already reported via transformContext.ReportError inside
-                // TransformBatch and excluded from its output set, so they never surface as !IsSuccess.
                 if (!_configuration.ContinueOnError)
                 {
                     return stepResult.ToNewResult<List<IDictionary<string, object?>>>();
@@ -503,8 +483,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Why: DestinationKind is the authoritative discriminator set by the factory. No fallback —
-        // if Kind was not set we fail loud here and surface the factory gap.
         if (_configuration.DestinationKind == null || _configuration.DestinationKind == DataDestinationKinds.NotFound)
         {
             loadStopwatch.Stop();
@@ -600,9 +578,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
                 EtlLog.LoadFailed(_logger, Name, "DestinationDataSet is required when DestinationKind is DataSet"));
         }
 
-        // Why: TruncateCommand (not DeleteCommand) is the explicit empty-the-container intent —
-        // DeleteCommand requires a filter (where-less deletes are blocked for safety), so it cannot
-        // express "delete all".
         var truncateResult = await dataGateway.Execute<int>(
             new TruncateCommand(), new DataSetTarget(_configuration.DestinationDataSet), cancellationToken).ConfigureAwait(false);
         if (!truncateResult.IsSuccess)
@@ -720,9 +695,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 
         EtlLog.LoadingToConnection(_logger, Name, _configuration.DestinationConnectionName, _configuration.DestinationContainerPath!);
 
-        // Why: feature-detect the HTTP record writer capability by interface — the connection type is
-        // never named above the connection layer. If the provider is absent the pipeline falls through
-        // to the BulkInsert path (SQL/tabular connections that don't go through the connection provider).
         if (_connectionProvider != null)
         {
             var connectionResult = await _connectionProvider.Get(
@@ -783,8 +755,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
     {
-        // Why: the container carries the format + field schema needed for serialization. It lives in the
-        // data store configured on this pipeline; IDataStoreProvider resolves it by walking the store tree.
         if (_dataStoreProvider == null)
         {
             return GenericResult<int>.Failure(
@@ -799,11 +769,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
             return storeResult.ToNewResult<int>();
         }
 
-        // Why: DataStoreTarget uses null path to mean "search all paths"; mirror that here by walking
-        // every path's container list until a name match is found. A missing container is a hard failure.
-        // Why no ct check here: this in-memory path scan is sandwiched between two awaited,
-        // cancellation-aware calls (_dataStoreProvider.Get(…ct) above and httpWriter.WriteRecords(…ct)
-        // below), both of which already observe cancellation — an explicit check adds nothing.
         IDataContainer? container = null;
         foreach (var path in storeResult.Value!.Paths)
         {
@@ -824,8 +789,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 
         EtlLog.LoadingViaHttpRecordWriter(_logger, Name, records.Count, _configuration.DestinationConnectionName!);
 
-        // Why: project IDictionary<string, object?> to IReadOnlyDictionary<string, object?> — the HTTP
-        // writer interface uses the narrower read-only abstraction; the records here implement both.
         IReadOnlyList<IReadOnlyDictionary<string, object?>> rows =
             records.Select(r => (IReadOnlyDictionary<string, object?>)
                 new System.Collections.ObjectModel.ReadOnlyDictionary<string, object?>(r))
@@ -865,8 +828,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
             messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, "MaxParallelism must be at least 1"));
         }
 
-        // Why: source/destination Kind validation is extracted into helpers so Validate() stays under
-        // the FDW007 cyclomatic-complexity threshold — the per-Kind branches live with their own concern.
         ValidateSourceKind(messages);
         ValidateDestinationKind(messages);
 
@@ -878,8 +839,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         return GenericResult.Success();
     }
 
-    // Why: validate source requirements based on Kind rather than blindly requiring both
-    // SourceConnectionName and SourceDataSet — only one is required depending on kind.
     private void ValidateSourceKind(List<IGenericMessage> messages)
     {
         if (_configuration.SourceKind == null || _configuration.SourceKind == DataSourceKinds.NotFound)
@@ -909,7 +868,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         }
     }
 
-    // Why: same rationale as ValidateSourceKind — validate destination based on kind, not universally.
     private void ValidateDestinationKind(List<IGenericMessage> messages)
     {
         if (_configuration.DestinationKind == null || _configuration.DestinationKind == DataDestinationKinds.NotFound)

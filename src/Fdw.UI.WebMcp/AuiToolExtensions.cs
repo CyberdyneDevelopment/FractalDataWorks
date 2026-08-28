@@ -54,8 +54,6 @@ public static class AuiToolExtensions
         if (result.IsSuccess)
             return new JsonObject { ["success"] = true }.ToJsonString();
 
-        // Why no ?? fallback on CurrentMessage: a failed result with no message is a defect in the
-        // action, and saying so is more useful than inventing "Unknown error" and hiding it.
         return new JsonObject
         {
             ["success"] = false,
@@ -91,13 +89,6 @@ public static class AuiToolExtensions
         return parameters;
     }
 
-    // Why a dispatch table rather than a switch: FDW018 steers enum dispatch onto a data-driven
-    // lookup instead of a switch, and JsonValueKind belongs to the BCL, so it cannot carry
-    // [TypeOption]s the way a TypeCollection would. A frozen table is the same idea — behaviour
-    // hangs off the value — for an enum this solution does not own.
-    // Why null for Null/Undefined: the parameter bag is non-nullable, so a JSON null has no
-    // representation. The caller drops the key, letting the action apply its own
-    // required/optional rules instead of receiving a sentinel it would have to special-case.
     private static readonly FrozenDictionary<JsonValueKind, Func<JsonElement, object?>> ValueReaders =
         new Dictionary<JsonValueKind, Func<JsonElement, object?>>
         {
@@ -109,8 +100,6 @@ public static class AuiToolExtensions
             [JsonValueKind.Undefined] = _ => null,
         }.ToFrozenDictionary();
 
-    // Why GetRawText for anything unlisted (objects, arrays): the parameter bag has no structured
-    // representation for them, and discarding them would silently drop arguments the agent sent.
     private static object? ToParameterValue(JsonElement element) =>
         ValueReaders.TryGetValue(element.ValueKind, out var reader)
             ? reader(element)

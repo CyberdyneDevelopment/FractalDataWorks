@@ -5,8 +5,6 @@ namespace Fdw.Roslyn.Commands.Abstractions.Results;
 /// <summary>
 /// JSON-safe snapshot of a <see cref="FileChange"/> for storage in a <see cref="ChangeLedgerEntry"/>.
 /// </summary>
-// Why: ChangeLedgerEntry cannot store raw FileChange because FileChange.ChangeType is IFileChangeType
-// (not JSON-serializable via the stdio .Data reflection path); this snapshots ChangeType.Name instead.
 public sealed class LedgerFileChange
 {
     /// <summary>

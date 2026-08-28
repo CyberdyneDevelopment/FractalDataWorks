@@ -173,7 +173,6 @@ public sealed class FileBasedSessionStore : ISessionStore, IProjectIndexStore
             }
             catch (Exception ex)
             {
-                // Why: best-effort list — a single corrupt or unreadable session file must not abort the listing.
                 RoslynWorkspaceLog.WorkspaceWarning(_logger, ex.Message);
             }
         }
@@ -241,7 +240,6 @@ public sealed class FileBasedSessionStore : ISessionStore, IProjectIndexStore
         }
         catch (Exception ex)
         {
-            // Why: best-effort load — a corrupt or unreadable index file returns null so the caller rebuilds.
             RoslynWorkspaceLog.WorkspaceWarning(_logger, ex.Message);
             return null;
         }

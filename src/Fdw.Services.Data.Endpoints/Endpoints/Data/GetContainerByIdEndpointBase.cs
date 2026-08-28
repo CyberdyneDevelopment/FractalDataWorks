@@ -15,7 +15,6 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class GetContainerByIdEndpointBase : CrudGetEndpointBase<ContainerIdRequest, DataStoreContainerDetailDto>
 {
-    // Why: DataStoreConfigurationProvider (dual-source) merges system (ctrl) and user (cfg) DataStore configs.
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
 
     /// <inheritdoc />
@@ -67,7 +66,6 @@ public abstract class GetContainerByIdEndpointBase : CrudGetEndpointBase<Contain
         {
             Id = container.Id,
             Name = container.Name,
-            // Why: TypeId replaces ContainerType after Wave A5 DDL rename.
             ContainerType = container.TypeId ?? string.Empty,
             Description = container.Description,
             Fields = (container.Fields ?? []).Select(MapField).ToList()
@@ -77,8 +75,6 @@ public abstract class GetContainerByIdEndpointBase : CrudGetEndpointBase<Contain
     /// <summary>Maps a field configuration to a field DTO.</summary>
     protected virtual DataStoreFieldResponse MapField(DataContainerFieldConfiguration field)
     {
-        // Why: IsNullable/Ordinal moved to data.MsSqlDataContainerField typed body after Wave A5.
-        // NativeDataType, IsNullable, and Ordinal will be sourced from the typed body in Wave B2.
         return new DataStoreFieldResponse
         {
             Id = field.Id,
@@ -86,7 +82,6 @@ public abstract class GetContainerByIdEndpointBase : CrudGetEndpointBase<Contain
             NativeDataType = field.DataType,
             FrameworkDataType = field.DataType,
             IsNullable = false,
-            // Why: IsPrimaryKey removed from DataContainerFieldConfiguration — key role expressed via Keys collection.
             IsKey = false,
             Ordinal = 0,
             Description = field.Description

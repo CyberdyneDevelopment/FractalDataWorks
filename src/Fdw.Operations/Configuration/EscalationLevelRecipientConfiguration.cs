@@ -28,16 +28,12 @@ namespace Fdw.Operations.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Operations")]
-// Why: IGenericConfiguration is required by ImplementationConfigurationProviderBase<T> for child data pattern
-// in EscalationConfigurationProvider.
 public sealed partial class EscalationLevelRecipientConfiguration : IGenericConfiguration
 {
     /// <inheritdoc />
-    // Why: ServiceCategory + "s" matches the MsSqlConfigurationSource key generation convention.
     public string SectionName => "Operationss";
 
     /// <inheritdoc />
-    // Why: Matches parent domain for IOptions binding path resolution.
     public string ServiceType => "Operations";
 
     /// <inheritdoc />
@@ -47,8 +43,6 @@ public sealed partial class EscalationLevelRecipientConfiguration : IGenericConf
     /// <summary>
     /// Gets or sets the unique identifier.
     /// </summary>
-    // Why: no default GUID — child Ids are minted by the save cascade on insert when empty (the single
-    // sanctioned place). Pre-minting here is a forbidden default-GUID fallback.
     public Guid Id { get; set; }
 
     /// <summary>

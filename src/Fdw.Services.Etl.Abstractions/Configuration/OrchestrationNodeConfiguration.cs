@@ -28,9 +28,6 @@ namespace Fdw.Services.Etl.Projects.Abstractions.Configuration;
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
-// Why: GenerateMapper is required for ConfigurationSaveCommand to serialize this record
-// to SQL via the POCO mapper pipeline. Without it, inserts and updates on OrchestrationNode
-// fail at runtime with "No PocoMapper registered for type OrchestrationNodeConfiguration".
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Orchestration", ServiceType = "Node")]
 public sealed partial class OrchestrationNodeConfiguration : IGenericConfiguration
@@ -126,7 +123,6 @@ public sealed partial class OrchestrationNodeConfiguration : IGenericConfigurati
     // ========================================
 
     /// <summary>Gets or sets the direct child nodes ordered by Ordinal.</summary>
-    // Why: IList<T> required by IOptions binding — IReadOnlyList<T> would break deserialization.
     public IList<OrchestrationNodeConfiguration> Children { get; set; } = [];
 
     /// <summary>Gets or sets the pipeline memberships for this node (only meaningful when NodeTypeId = Step).</summary>

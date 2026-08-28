@@ -60,8 +60,6 @@ public abstract class GetExternalIdentityProvidersEndpointBase
         var summaries = new List<ExternalIdentityProviderSummaryDto>(headersResult.Value.Count);
         foreach (var header in headersResult.Value)
         {
-            // Why: the list read is header-only (FDW-558); re-read by name to compose the typed body
-            // whose public fields (Authority/ClientId) the login page needs. Fail loud on any miss.
             var composedResult = await _configurationProvider.Get(header.Name, ct).ConfigureAwait(false);
             if (!composedResult.IsSuccess || composedResult.Value is null)
             {
@@ -78,8 +76,6 @@ public abstract class GetExternalIdentityProvidersEndpointBase
                 return;
             }
 
-            // Why: a composed header with no typed body is a genuine compose failure, not an empty
-            // provider — fail loud rather than emitting a summary of nulls (FDW-624).
             if (composed.Configuration is null)
             {
                 ExternalIdentityProviderLog.ProviderDiscoveryFailed(logger, $"provider '{header.Name}' composed no typed configuration body.");
@@ -87,8 +83,6 @@ public abstract class GetExternalIdentityProvidersEndpointBase
                 return;
             }
 
-            // Why: the typed body projects its own public fields, so this endpoint names no concrete
-            // option and Fdw.Web.Api carries no reference to any option package (FDW-624).
             var summary = new ExternalIdentityProviderSummaryDto
             {
                 Name = composed.Name,

@@ -23,10 +23,6 @@ public abstract class SqliteDataCommandTranslatorBase : SqlDataCommandTranslator
     /// <summary>
     /// Null logger used by translator catch blocks to satisfy the structured-logging contract.
     /// </summary>
-    // Why: translators are TypeOption singletons created without DI — NullLogger.Instance
-    // is the only safe static logger here. It ensures TranslationFailed() log calls are
-    // structurally correct (exception IS passed to the method; infrastructure would capture it
-    // if a real logger were ever wired). Callers with real loggers log via their own fields.
     protected static readonly ILogger TranslatorLogger = NullLogger.Instance;
 
     /// <summary>
@@ -42,8 +38,6 @@ public abstract class SqliteDataCommandTranslatorBase : SqlDataCommandTranslator
     /// Creates a new <see cref="SqliteCommand"/> with the supplied SQL text.
     /// </summary>
     /// <param name="sql">The SQL command text.</param>
-    // Why: static for CA1822; defined here (not as abstract on the shared base) to avoid
-    // CS0507 from the TypeCollection source generator emitting 'public override' stubs.
     protected static SqliteCommand CreateCommand(string sql) => new SqliteCommand(sql);
 
     /// <summary>
@@ -53,9 +47,6 @@ public abstract class SqliteDataCommandTranslatorBase : SqlDataCommandTranslator
     /// <param name="command">The SQLite command.</param>
     /// <param name="name">Parameter name without the <c>@</c> prefix.</param>
     /// <param name="value">Parameter value; <c>null</c> maps to <see cref="System.DBNull.Value"/>.</param>
-    // Why: SqliteParameter cannot marshal IEnumerable types natively; serialize to JSON text to
-    // match how MsSql handles JSON-column values. Same pattern for consistency.
-    // Why static: same CS0507/CA1822 rationale as CreateCommand.
     protected static void AddParameter(SqliteCommand command, string name, object? value)
     {
         var materialized = value is IEnumerable enumerable && value is not string

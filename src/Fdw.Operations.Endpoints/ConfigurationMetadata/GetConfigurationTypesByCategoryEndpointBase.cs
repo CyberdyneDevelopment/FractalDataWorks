@@ -54,7 +54,6 @@ public abstract class GetConfigurationTypesByCategoryEndpointBase : CrudListEndp
     /// <summary>Maps containers in the specified category to summary DTOs.</summary>
     protected virtual IReadOnlyList<ConfigurationTypeSummaryDto> MapTypes(string category)
     {
-        // Why: ByCategory() returns empty until Wave A6 typed-body SectionPath is on IDataContainer.
         return _containerLookup.ByCategory(category)
             .Select(ConfigurationTypeMapper.ToSummary)
             .OrderBy(t => t.DisplayName, StringComparer.Ordinal)

@@ -201,8 +201,6 @@ public static partial class DataStoreConfigurationProviderLog
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why (FDW-558): next available EventId in this assembly's DATA-typecode flow series — grepped
-    // src/Fdw.Services.Data for the highest existing "EventId = 111xx" before reserving (11264, StatSetServiceLog).
     [MessageLogging(EventId = 11265, Level = LogLevel.Trace,
         Message = "Composing DataStore list to full aggregates (Paths/Containers/Fields)")]
     public static partial IGenericMessage ComposingDataStoreList(ILogger logger);
@@ -223,12 +221,6 @@ public static partial class DataStoreConfigurationProviderLog
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="dataStoreName">The name of the DataStore whose aggregate compose failed.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why (FDW-558): 91025 is the next number after this assembly's own DATA-typecode error series
-    // (91000-91024) but COLLIDES with Fdw.Data.Components/Logging/DataStoreEditorProviderLog (a
-    // different assembly/typecode "DATACOMPONENTS" that independently claimed 91025-91056) — grepping
-    // broadly (not just src/Fdw.Services.Data) before reserving found that block fully packed, so this
-    // uses the next number free ACROSS THE WHOLE src TREE (91057) rather than adding another documented
-    // "acceptable" cross-assembly collision.
     [MessageLogging(EventId = 91057, Level = LogLevel.Error,
         Message = "Failed to compose DataStore '{dataStoreName}' aggregate during list read — no fallback, failing the whole list")]
     public static partial IGenericMessage DataStoreListComposeFailed(ILogger logger, string dataStoreName);

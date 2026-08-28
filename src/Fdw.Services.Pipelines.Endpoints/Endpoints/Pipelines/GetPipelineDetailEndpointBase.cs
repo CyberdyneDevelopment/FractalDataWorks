@@ -18,8 +18,6 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameRequest, PipelineDetailResponse>
 {
-    // Why: PipelineServiceConfigurationProvider is the sole domain-owned gateway path for all
-    // pipeline data. Endpoints inject the provider — never IDataGateway or IConfigurationGateway.
     private readonly PipelineServiceConfigurationProvider _pipelineProvider;
 
     /// <summary>
@@ -59,9 +57,6 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
         var result = await _pipelineProvider.Get(req.Name, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
-            // Why: a failed result carries its own structured CurrentMessage; surface it verbatim instead of
-            // a magic-string fallback. The guard mirrors GenericEndpointBase's failure-message handling so an
-            // empty message yields an empty Details rather than an invented literal.
             OnPipelineFetchFailed(req.Name, result.CurrentMessage);
             HttpContext.Response.StatusCode = 500;
             await HttpContext.Response.WriteAsJsonAsync(
@@ -77,9 +72,6 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
             return;
         }
 
-        // Why: the KIND discriminator (ServiceOptionType) is NOT NULL on a persisted pipeline header. A null
-        // here is a data-integrity defect, not a display default — fail loud with a 500 rather than papering
-        // over it with an empty-string fallback in the DTO mapping.
         if (string.IsNullOrEmpty(pipeline.ServiceOptionType))
         {
             OnPipelineFetchFailed(req.Name, $"Pipeline '{req.Name}' has no kind (ServiceOptionType).");
@@ -91,9 +83,6 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
 
         OnPipelineRetrieved(req.Name);
 
-        // Why: provider.Get returns the fully composed aggregate — the ETL-kind typed body
-        // (pipeline.Configuration) already carries its Transforms. Read them off the aggregate; no second
-        // gateway round-trip and no graph types.
         await Send.OkAsync(MapToDetailDto(pipeline, ExtractTransforms(pipeline)), ct).ConfigureAwait(false);
     }
 
@@ -101,8 +90,6 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
     /// Extracts the transform DTOs from the composed pipeline aggregate's ETL-kind typed body.
     /// Returns an empty list when the pipeline is not an ETL kind or has no transforms.
     /// </summary>
-    // Why: Transforms live on the ETL-kind body (EtlPipelineConfiguration). A non-ETL kind (or an ETL
-    // pipeline with no operations) legitimately has none — that is an empty list, not a defect.
     protected virtual IList<PipelineTransformDto> ExtractTransforms(PipelineConfiguration pipeline)
     {
         var transforms = new List<PipelineTransformDto>();
@@ -117,10 +104,6 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
     /// <summary>
     /// Maps the domain pipeline configuration to a detail DTO.
     /// </summary>
-    // Why: PipelineConfiguration is the parent (identity-only) row in pipe.Pipeline. Source/target
-    // connection + dataset bindings are promoted onto the ENGINE typed body
-    // (IEtlPipelineTypedConfiguration, e.g. BatchCopyPipelineConfiguration) reachable via the ETL-kind
-    // body's Configuration property — read them off there instead of hardcoding empty/null.
     protected virtual PipelineDetailResponse MapToDetailDto(PipelineConfiguration pipeline, IList<PipelineTransformDto> transforms)
     {
         var engine = (pipeline.Configuration as EtlPipelineConfiguration)?.Configuration;
@@ -143,8 +126,6 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
     }
 
     /// <summary>Maps a transform configuration to its DTO.</summary>
-    // Why: the provider already composes children on read (Parts 1-4 cascade), so this is a pure
-    // in-memory projection off the aggregate — no extra gateway round-trip.
     protected virtual PipelineTransformDto MapTransformToDto(PipelineTransformConfiguration transform)
     {
         return new PipelineTransformDto

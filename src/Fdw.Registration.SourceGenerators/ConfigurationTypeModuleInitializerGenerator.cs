@@ -50,11 +50,6 @@ public sealed class ConfigurationTypeModuleInitializerGenerator : IIncrementalGe
         if (typesFromReferences.Count == 0)
             return;
 
-        // Why: Only emit the initializer when ConfigurationTypes is actually reachable in the
-        // current compilation. An assembly can reference a package that has
-        // [ConfigurationTypeOption]-decorated types without itself referencing the Configuration
-        // package that defines ConfigurationTypes — emitting `ConfigurationTypes.RegisterMember(...)`
-        // in that case produces a compile error like `CS0103 'ConfigurationTypes' not found`.
         var configurationTypesSymbol = compilation.GetTypeByMetadataName("Fdw.Configuration.ConfigurationTypes");
         if (configurationTypesSymbol is null)
             return;

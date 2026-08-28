@@ -25,8 +25,6 @@ public sealed partial class FormulaCalculationConfiguration : ICalculationTypedC
     public Guid Id { get; set; }
 
     /// <summary>Gets or sets the parent CalculationEntity's logical Id (FK to calc.CalculationEntity.Id).</summary>
-    // Why: the keystone Save stamps this from the header's Id so the cascade insert links the typed body;
-    // the translator resolves the physical CalculationEntityRowId by subquery on insert.
     public Guid CalculationEntityId { get; set; }
 
 

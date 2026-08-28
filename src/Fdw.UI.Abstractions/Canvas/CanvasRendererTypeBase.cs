@@ -40,7 +40,6 @@ public abstract class CanvasRendererTypeBase : TypeOptionBase<int, CanvasRendere
         bool supportsLargeGraphs,
         IReadOnlyList<string> layoutAlgorithms,
         Type? renderComponentType = null)
-        // Why: DisplayName comes from TypeOptionBase via its 6-arg ctor; the capability flags are net-new.
         : base(id, name, name, displayName, displayName, category: null)
     {
         SupportsEditing = supportsEditing;

@@ -51,12 +51,6 @@ public static class ServiceCollectionExtensions
             throw new ArgumentNullException(nameof(configureRegistry));
         }
 
-        // Why: the registry hands each translator its logger as it is registered (see TranslatorRegistry),
-        // so this only has to supply the factory. An earlier version decorated the static TypeOption
-        // catalogue here instead, which reached executing translators only because this one host happened
-        // to register those same instances — GetRequiredService rather than GetService for the same
-        // reason the registry takes a required factory: a host without logging should fail at wiring, not
-        // produce a working-looking server that emits nothing.
         services.AddSingleton<ITranslatorRegistry>(sp =>
         {
             var registry = new TranslatorRegistry(sp.GetRequiredService<ILoggerFactory>());

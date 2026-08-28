@@ -61,8 +61,6 @@ public abstract class ListAccessRequestsEndpointBase : EndpointWithoutRequest<IR
     /// <inheritdoc/>
     public override async Task HandleAsync(CancellationToken ct)
     {
-        // Why: MapInboundClaims = false on JWT bearer keeps "sub" as-is; ClaimTypes.NameIdentifier
-        // is the WS-Federation URI only present when claim mapping is enabled. Check "sub" first.
         var userIdClaim = HttpContext.User.FindFirst("sub")?.Value
             ?? HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))

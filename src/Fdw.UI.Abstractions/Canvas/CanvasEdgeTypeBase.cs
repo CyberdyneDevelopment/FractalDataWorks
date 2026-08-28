@@ -20,7 +20,6 @@ public abstract class CanvasEdgeTypeBase : TypeOptionBase<int, CanvasEdgeTypeBas
     /// <param name="name">The registry name (used by <c>CanvasEdgeTypes.ByName()</c>).</param>
     /// <param name="displayName">The human-readable display name shown in the renderer.</param>
     /// <param name="iconHint">The icon or line-style hint string passed to the renderer.</param>
-    // Why: DisplayName comes from TypeOptionBase via its 6-arg ctor; only IconHint is net-new.
     protected CanvasEdgeTypeBase(int id, string name, string displayName, string iconHint)
         : base(id, name, name, displayName, displayName, category: null)
     {

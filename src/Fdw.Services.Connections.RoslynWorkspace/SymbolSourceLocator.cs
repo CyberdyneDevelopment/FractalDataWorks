@@ -80,8 +80,6 @@ internal static class SymbolSourceLocator
 
         if (lines is not null)
         {
-            // Why: line range is 1-based inclusive per RawTextLineRange contract.
-            // Clamp to the symbol's actual span to avoid returning unrelated source.
             var requestedStart = System.Math.Max(lines.StartLine - 1, startLine);
             var requestedEnd = System.Math.Min(lines.EndLine - 1, endLine);
 

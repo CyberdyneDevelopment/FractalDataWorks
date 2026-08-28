@@ -117,12 +117,6 @@ public abstract class RoslynCommandTranslatorBase<TCommand, TResult> : RoslynCom
 
         if (!result.IsSuccess)
         {
-            // Why: forwarded, not rebuilt. Constructing a fresh message-only failure here discarded the
-            // ResultCode every translator had carefully chosen — NoGlobalUsingsMatched, MoveWouldCollide,
-            // ChangeCannotBeVerified all arrived at the caller as Code=null with only a string. Every
-            // failure in the system passed through this one line, so nothing downstream could branch on a
-            // code, and the MCP layer had nothing but prose to report. The log line stays for visibility;
-            // the result the caller receives is the translator's own, code intact.
             RoslynCommandLog.CommandExecutionFailed(Logger, result.CurrentMessage);
             return result.ToNewResult<IRoslynCommandResult>();
         }

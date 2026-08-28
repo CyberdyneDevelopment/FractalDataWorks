@@ -79,13 +79,8 @@ public partial class PipelineConfiguration : IPipelineConfiguration
     /// (e.g. <c>EtlPipelineConfiguration</c> for kind "Etl"). The keystone cascade persists this typed-body
     /// row alongside the parent on write and composes it on read.
     /// </summary>
-    // Why: declared as the IPipelineImplementationConfiguration marker (NOT bare IGenericConfiguration) so the
-    // generated mapper emits GetTypedBody/SetTypedBody and the polymorphic typed-body composition fires.
     public IPipelineImplementationConfiguration? Configuration { get; set; }
 
     /// <inheritdoc />
-    // Why: the runtime service factory is registered under the ENGINE discriminator on the kind typed
-    // body (e.g. EtlPipelineConfiguration.ServiceOptionType = "BatchCopy"), not this header's KIND
-    // ("Etl"). The service provider drills here to select the correct factory.
     public IGenericConfiguration? ServiceDispatchBody => Configuration;
 }

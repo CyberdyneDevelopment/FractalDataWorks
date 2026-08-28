@@ -24,8 +24,6 @@ public sealed class SqlTranslatorBaseFailLoudTests
 
     private static Mock<IStorageContainer> CreateContainerWithNonDatabasePath()
     {
-        // Why: supply a plain IPath (not IDatabasePath) so the translator's
-        // `container.Path is not IDatabasePath` guard fires.
         var nonDbPath = new Mock<IPath>();
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns([]);
@@ -42,10 +40,6 @@ public sealed class SqlTranslatorBaseFailLoudTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateReturnsFailureWhenContainerPathIsNotIDatabasePath()
     {
-        // Why: the dialect is ALWAYS derived from IDatabasePath — never defaulted.
-        // This test is the direct proof of the "no fallback dialect" contract documented in
-        // SqlDataCommandTranslatorBase's XML comment: "if the container's path is not an
-        // IDatabasePath, the translator returns a fail-loud error result."
         var container = CreateContainerWithNonDatabasePath();
         var command = new Mock<IQueryCommand>();
         command.Setup(q => q.Filter).Returns((IFilterExpression?)null);
@@ -80,8 +74,6 @@ public sealed class SqlTranslatorBaseFailLoudTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateSucceedsWhenContainerPathIsIDatabasePath()
     {
-        // Why: contrast test — proves the guard only fires for non-IDatabasePath, not for
-        // valid paths. Uses DatabasePath (MsSql concrete IDatabasePath impl).
         var dbPath = new DatabasePath(string.Empty, "dbo", "customers");
         var idField = new Mock<IField>();
         idField.Setup(f => f.Name).Returns("Id");

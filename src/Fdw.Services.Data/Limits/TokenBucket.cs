@@ -17,7 +17,6 @@ internal sealed class TokenBucket
     private readonly double _maxTokens;
     private double _tokens;
     private long _lastRefillTicks;
-    // Why: System.Threading.Lock (net9+) is preferred over object for lock statements (MA0158).
     private readonly Lock _lock = new();
 
     /// <summary>

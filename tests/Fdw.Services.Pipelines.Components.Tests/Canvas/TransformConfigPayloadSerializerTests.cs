@@ -59,7 +59,6 @@ public sealed class TransformConfigPayloadSerializerTests
     public void ToConfigPayloadMapWithUnresolvablePortReturnsFailure()
     {
         var node = BuildTransformPlaceholder("Map");
-        // Why: SourcePortId lacks the "in:" prefix — unresolvable port field.
         var edge = new PipelineCanvasEdge("e1", "t1", "t1", PipelineCanvasTestFixtures.FieldMappingEdgeType, "CustomerId", "out:CustomerName");
 
         var result = TransformConfigPayloadSerializer.ToConfigPayload("Map", node, [edge]);
@@ -86,9 +85,6 @@ public sealed class TransformConfigPayloadSerializerTests
     [Trait("Category", "CoreFramework")]
     public void ToConfigPayloadMapWithAbsentMetadataUsesDeclaredDefaults()
     {
-        // Why: absent IsRequired/IsEnabled/MappingName is a legitimate "not yet overridden" state
-        // (PipelineCanvasEdge starts with empty metadata) — must still resolve to the DTO's own
-        // declared defaults (IsRequired=false, IsEnabled=true) and a generated Name.
         var node = BuildTransformPlaceholder("Map");
         var edge = new PipelineCanvasEdge("e1", "t1", "t1", PipelineCanvasTestFixtures.FieldMappingEdgeType, "in:CustomerId", "out:CustomerName");
 
@@ -107,8 +103,6 @@ public sealed class TransformConfigPayloadSerializerTests
     [Trait("Category", "CoreFramework")]
     public void ToConfigPayloadMapWithUnparseableIsRequiredReturnsFailure()
     {
-        // Why: a PRESENT-but-garbled IsRequired value must fail loud, not silently coerce to false —
-        // this is the "disabled mapping persists as enabled" class of corruption bug.
         var node = BuildTransformPlaceholder("Map");
         var metadata = new Dictionary<string, string> { [PipelineCanvasEdgeMetadataKeys.IsRequired] = "not-a-bool" };
         var edge = new PipelineCanvasEdge("e1", "t1", "t1", PipelineCanvasTestFixtures.FieldMappingEdgeType, "in:CustomerId", "out:CustomerName", metadata: metadata);
@@ -139,8 +133,6 @@ public sealed class TransformConfigPayloadSerializerTests
     [Trait("Category", "CoreFramework")]
     public void ToConfigPayloadMapWithBlankMappingNameReturnsFailure()
     {
-        // Why: an explicitly-present-but-blank MappingName is an invalid override, distinct from a
-        // genuinely absent key (which legitimately derives a generated name).
         var node = BuildTransformPlaceholder("Map");
         var metadata = new Dictionary<string, string> { [PipelineCanvasEdgeMetadataKeys.MappingName] = "   " };
         var edge = new PipelineCanvasEdge("e1", "t1", "t1", PipelineCanvasTestFixtures.FieldMappingEdgeType, "in:CustomerId", "out:CustomerName", metadata: metadata);

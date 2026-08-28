@@ -38,7 +38,6 @@ public abstract class HttpConnectionConfigurationBase : IConnectionImplementatio
     /// Minted by <see cref="Fdw.Services.Configuration.ImplementationConfigurationProviderBase{TConfig,TCommand}"/>
     /// via <see cref="Guid.CreateVersion7()"/> when <see cref="Guid.Empty"/>.
     /// </summary>
-    // Why: NO Guid.NewGuid() default — the provider mints this before INSERT via CreateVersion7().
     public Guid Id { get; set; }
 
     /// <summary>
@@ -48,9 +47,6 @@ public abstract class HttpConnectionConfigurationBase : IConnectionImplementatio
     public Guid ConnectionId { get; set; }
 
 
-    // Why: IGenericConfiguration members below satisfy the interface contract.
-    // Name is not meaningful on the typed body — the canonical name lives on the parent
-    // ConnectionConfiguration row. Typed-body providers never call Get(string name).
     string IGenericConfiguration.Name
     {
         get => string.Empty;
@@ -72,9 +68,6 @@ public abstract class HttpConnectionConfigurationBase : IConnectionImplementatio
     /// </summary>
     public string Lifetime { get; set; } = "Scoped";
 
-    // Why: SecretManagerName/SecretKeyName are NOT properties on the connection — they are keys in the
-    // authentication KVP (conn.HttpConnectionAuthentication), parsed by the selected
-    // HttpAuthenticationTypes option. A connection is not a special-cased secret pair.
 
     /// <summary>
     /// Gets or sets the base URL for the HTTP connection.

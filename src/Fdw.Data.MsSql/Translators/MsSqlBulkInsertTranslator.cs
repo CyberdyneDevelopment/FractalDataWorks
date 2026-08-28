@@ -158,8 +158,6 @@ public sealed class MsSqlBulkInsertTranslator : MsSqlDataCommandTranslatorBase
 
         if (fields.Count == 0)
         {
-            // Why: reported as a defect (FDW rule) — a translator should return IGenericResult, not
-            // throw. Left in place per instructions; the caller's try/catch converts it to a Failure.
             MsSqlBulkInsertTranslatorLog.NoInsertableFields(
                 NullLogger<MsSqlBulkInsertTranslator>.Instance, container.Name);
             throw new InvalidOperationException($"Container {container.Name} has no insertable fields");
@@ -236,10 +234,6 @@ public sealed class MsSqlBulkInsertTranslator : MsSqlDataCommandTranslatorBase
         return dataTable;
     }
 
-    // Why: ETL bulk records are IDictionary<string,object?> (the transform output / field-array record),
-    // NOT POCOs — reflection GetProperty(field.Name) finds nothing and would write an all-NULL row. Read
-    // by key for dictionary records; keep property reflection for POCO entities. Extracted from
-    // ConvertToDataTable so that method stays under the FDW007 complexity threshold.
     private static void FillRow(DataRow row, object entity, List<IField> fields)
     {
         if (entity is IDictionary<string, object?> dict)

@@ -28,9 +28,6 @@ public sealed class CreateConnectionClientRequest
     /// <summary>Gets or sets whether to encrypt the connection.</summary>
     public bool Encrypt { get; set; } = true;
 
-    // Why: HTTP/SOAP connection types bind these instead of Server/Port/Database. They mirror the
-    // server-side CreateConnectionRequest fields so the per-type create + test carry the typed body
-    // (without them the HTTP test step 400s "baseUrl required" and BaseUrl is lost on create).
     /// <summary>Gets or sets the base URL for HTTP connections (e.g., "https://api.example.com/v1/").</summary>
     public string? BaseUrl { get; set; }
     /// <summary>Gets or sets the protocol type: Rest, Soap11, Soap12, GraphQL, OData.</summary>

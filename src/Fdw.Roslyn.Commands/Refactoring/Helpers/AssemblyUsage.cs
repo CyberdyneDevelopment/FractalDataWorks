@@ -5,7 +5,6 @@ namespace Fdw.Roslyn.Commands.Refactoring.Helpers;
 /// <summary>
 /// How much a document depends on one assembly.
 /// </summary>
-// Why: pure data holder, auto-properties only, no logic
 [ExcludeFromCodeCoverage]
 public sealed class AssemblyUsage
 {

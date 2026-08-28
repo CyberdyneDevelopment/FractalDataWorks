@@ -32,9 +32,6 @@ public sealed class PipelineJobHttpClientTests
         await sut.Trigger(new TriggerPipelineRequest { Name = "test-pipeline" }, TestContext.Current.CancellationToken);
 
         handler.LastRequest.ShouldNotBeNull();
-        // Why: the client targets the ETL's canonical UnifiedTriggerEndpoint route (POST
-        // etl/trigger/pipeline). The old "proxy/etl/trigger" target is hosted only by the
-        // reference-api inbound proxy, never the ETL, so dispatch 404'd against the ETL.
         handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/etl/trigger/pipeline");
         handler.LastRequest.Method.ShouldBe(HttpMethod.Post);
     }

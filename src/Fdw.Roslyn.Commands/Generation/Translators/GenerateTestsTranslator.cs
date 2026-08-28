@@ -14,8 +14,6 @@ using Fdw.Roslyn.Commands.Generation.Commands;
 using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-// Why: Fdw.Roslyn.Commands.Project namespace now lives in this assembly; alias
-// disambiguates the Roslyn Project type from the sibling namespace.
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Fdw.Conventions;
@@ -38,10 +36,6 @@ public sealed class GenerateTestsTranslator : RoslynCommandTranslatorBase<Genera
 
     /// <inheritdoc/>
 #pragma warning disable MA0051 // Linear code generation: analyze class, build test file via StringBuilder
-    // Why the override: adding trace and error logging to a method that was already at the line
-    // limit pushed it two lines past. The method is linear generation — analyze, then build a file
-    // with a StringBuilder — so splitting it would scatter one readable sequence across helpers to
-    // satisfy a counter, which the existing MA0051 suppression above says the same thing about.
     [ConventionOverride(MaxMethodLines = 140)]
     public override async Task<IGenericResult<MutationResult>> Translate(
         GenerateTestsCommand command,

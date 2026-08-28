@@ -25,11 +25,8 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public abstract class ExpandLineageNodeEndpointBase : Endpoint<ExpandLineageNodeRequest, LineageGraphResponse>
 {
-    // Why: IConfigurationGateway routes directly to ConfigurationDb via configurationSchema.json.
     private readonly IConfigurationGateway _configurationGateway;
     private readonly ILogger<ExpandLineageNodeEndpointBase> _logger;
-    // Why: same composing-provider mechanism as GetLineageGraphEndpointBase — see that class's
-    // field comment. Pipeline linkage lives on the engine typed body, not the flat pipe.Pipeline row.
     private readonly PipelineServiceConfigurationProvider _pipelineProvider;
 
     /// <inheritdoc />
@@ -66,7 +63,6 @@ public abstract class ExpandLineageNodeEndpointBase : Endpoint<ExpandLineageNode
 
         var graph = await BuildFullGraph(ct).ConfigureAwait(false);
 
-        // Why: node IDs are composite keys of {NodeType}_{NodeId} matching how AddNodes creates them.
         var entryNodeId = $"{req.NodeType}_{req.NodeId}";
         var entryNode = graph.FindNode(entryNodeId);
 
@@ -85,8 +81,6 @@ public abstract class ExpandLineageNodeEndpointBase : Endpoint<ExpandLineageNode
         foreach (var n in directDownstream) neighborNodeIds.Add(n.Id);
 
         var neighborNodes = graph.Nodes.Where(n => neighborNodeIds.Contains(n.Id)).ToList();
-        // Why: include only edges where BOTH endpoints are in the neighbor set — avoids emitting
-        // dangling edges that would confuse the UI tree renderer.
         var neighborEdges = graph.Edges
             .Where(e => neighborNodeIds.Contains(e.SourceId) && neighborNodeIds.Contains(e.TargetId))
             .ToList();
@@ -97,9 +91,6 @@ public abstract class ExpandLineageNodeEndpointBase : Endpoint<ExpandLineageNode
         await Send.OkAsync(response, ct).ConfigureAwait(false);
     }
 
-    // Why: QueryAll<T> is duplicated from GetLineageGraphEndpointBase because that class's
-    // BuildFullGraph is `protected virtual` — not callable across class boundaries.
-    // The shared node/edge building uses BuildGraphFromRecords (internal static on base class).
     private async Task<LineageGraph> BuildFullGraph(CancellationToken ct)
     {
         var dataSetsTask = QueryAll<DataSetRecord>("DataSet", "data", DataSetTags, ct);
@@ -134,8 +125,6 @@ public abstract class ExpandLineageNodeEndpointBase : Endpoint<ExpandLineageNode
 
     private async Task<IReadOnlyList<T>> QueryAll<T>(string containerName, string pathName, string[] invalidationTags, CancellationToken ct) where T : class
     {
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget; path is passed explicitly
-        // so the correct schema segment (data/pipe/transform) is preserved per-container.
         var command = new QueryCommand<T>
         {
             Metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)

@@ -3,7 +3,6 @@ namespace Fdw.UI.Schema.Clients.Models;
 /// <summary>
 /// Represents the visual position and dimensions of an entity in a schema diagram.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class SchemaPosition
 {

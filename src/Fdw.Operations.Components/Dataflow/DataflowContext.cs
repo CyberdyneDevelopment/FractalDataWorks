@@ -7,7 +7,6 @@ using Fdw.UI.Providers;
 
 namespace Fdw.Operations.Components.Dataflow;
 
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class DataflowContext : ProviderContextBase
 {

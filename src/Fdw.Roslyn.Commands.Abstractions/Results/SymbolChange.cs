@@ -19,12 +19,6 @@ public sealed class SymbolChange
     /// <param name="oldAssembly">The assembly that contained the symbol before the change, if applicable.</param>
     /// <param name="newAssembly">The assembly that contains the symbol after the change, if applicable.</param>
     /// <param name="relativePosition">The symbol's position relative to its owning project root, if applicable.</param>
-    // Why: assembly is REQUIRED, not optional. Every symbol change happens in some assembly, so an
-    // overload that let a caller omit it recorded null meaning "did not bother" rather than "no assembly
-    // involved" — and CrossesAssembly then read false-because-unknown instead of false-because-same.
-    // The consumer-facing CS0246 maps a type to the package now carrying it, and package identity IS the
-    // assembly, so a ledger entry without one cannot answer the question the ledger exists to answer.
-    // Pass the same value twice when a change stays put; that states it, rather than leaving it unsaid.
     public SymbolChange(
         string oldFullyQualifiedName,
         string newFullyQualifiedName,

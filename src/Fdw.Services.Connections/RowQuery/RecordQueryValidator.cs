@@ -45,8 +45,6 @@ public static class RecordQueryValidator
         return GenericResult.Success();
     }
 
-    // Why: walk the whole predicate tree so an unsupported operator or a top-level OR group fails loud
-    // at evaluation time instead of silently matching (or failing to match) the wrong rows.
     private static IGenericResult ValidateFilter(IFilterNode? node, ILogger logger)
     {
         switch (node)
@@ -71,10 +69,6 @@ public static class RecordQueryValidator
                 }
                 return GenericResult.Success();
 
-            // Why: an IFilterNode implementation this evaluator does not recognise (e.g.
-            // KeyExpressionFactory's internal KeyAndFilterGroup) must fail loud here, not validate as
-            // "supported" and then match nothing in RecordRowMatcher — a silent empty read is worse than
-            // a startup-time failure naming the unhandled type (NO FALLBACKS).
             default:
                 return GenericResult.Failure(RecordQueryLog.UnsupportedFilterNodeType(logger, node.GetType().Name));
         }

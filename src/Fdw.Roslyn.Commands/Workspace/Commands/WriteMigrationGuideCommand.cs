@@ -22,9 +22,6 @@ public sealed class WriteMigrationGuideCommand : RoslynCommandBase, ILedgerAware
     /// <summary>
     /// Gets or sets the absolute path for the migration-guide markdown file.
     /// </summary>
-    // Why: = null! (not string.Empty) so CommandRegistry.BuildParameters marks the parameter
-    // required:true in get_command_info (CommandRegistry checks for null on a fresh instance);
-    // the value is validated fail-loud in the translator — this is not a silent fallback.
     [System.ComponentModel.Description("Absolute path for the migration-guide markdown file.")]
     public string OutputPath { get; set; } = null!;
 

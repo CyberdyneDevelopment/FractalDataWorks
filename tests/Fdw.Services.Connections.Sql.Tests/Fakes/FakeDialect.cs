@@ -10,8 +10,6 @@ namespace Fdw.Services.Connections.Sql.Tests.Fakes;
 /// </summary>
 internal sealed class FakeDialect : ISqlDialect
 {
-    // Why: configurable at construction so one fake covers both schema-aware (T-SQL / PG)
-    // and schemaless (SQLite) paths, which is exactly what BuildQualifiedTableName branches on.
     public FakeDialect(bool supportsSchemaNamespace = true)
     {
         SupportsSchemaNamespace = supportsSchemaNamespace;

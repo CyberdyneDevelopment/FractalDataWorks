@@ -20,8 +20,6 @@ namespace Fdw.Commands.Data;
 /// <typeparam name="T">The result type from the query.</typeparam>
 public class QueryCommandBuilder<T>
 {
-    // Why: addressing lives in the builder, not on the command.
-    // Build() packages them into DataStoreTarget so the command itself stays address-free.
     private readonly string _dataStoreName;
     private readonly string? _pathName;
     private readonly string _containerName;
@@ -30,13 +28,7 @@ public class QueryCommandBuilder<T>
     private readonly Stack<FilterGroupBuilder> _groupStack = new();
     private FilterGroupBuilder? _rootGroup;
     private readonly List<OrderedField> _orderedFields = [];
-    // Why: Metadata must survive command replacement during Build(). Stored separately
-    // so Paging(), filter, and ordering rebuilds all propagate it to the final command.
     private readonly Dictionary<string, object> _metadata = new(StringComparer.OrdinalIgnoreCase);
-    // Why: JOIN expressions captured fluently via Join(...). The builder is metadata-agnostic — it
-    // records exactly the column-name pairs the caller supplies (which may be a physical FK, a
-    // natural key, or columns specified explicitly). Resolving WHICH columns to join is the caller's
-    // job (e.g. the configuration provider reads the FK from the container metadata), not the builder's.
     private readonly List<IJoinExpression> _joins = [];
 
     /// <summary>
@@ -98,9 +90,6 @@ public class QueryCommandBuilder<T>
     /// <param name="rightColumn">The column on the <paramref name="targetContainer"/>.</param>
     /// <param name="joinType">INNER (default), LEFT, RIGHT, or FULL.</param>
     /// <returns>This builder for chaining.</returns>
-    // Why: explicit column names — the builder does not read metadata. Callers that join on a
-    // foreign key resolve the FK column(s) from the container metadata and pass them here; callers
-    // with a natural key (or any explicit relationship) pass those column names directly.
     public QueryCommandBuilder<T> Join(string targetContainer, string leftColumn, string rightColumn, string joinType = "INNER")
         => Join(targetContainer, [(leftColumn, rightColumn)], joinType);
 
@@ -298,8 +287,6 @@ public class QueryCommandBuilder<T>
     /// Null auto-derives from "{PathName}.{ContainerName}" at Build time.
     /// </param>
     /// <returns>This builder for chaining.</returns>
-    // Why: Opt-in caching for configuration queries. Data queries (ETL, NFL) never call this
-    // and are never cached. The tag convention "{schema}.{table}" matches what writers use.
     public QueryCommandBuilder<T> WithCaching(TimeSpan? duration = null, params string[] invalidationTags)
     {
         _metadata[CachePolicy.CacheEnabledKey] = true;
@@ -366,8 +353,6 @@ public class QueryCommandBuilder<T>
             command = newCommand;
         }
 
-        // Why: If no filter or ordering triggered a command rebuild, the original _command
-        // doesn't have _metadata applied. Apply it now to ensure WithMetadata() always works.
         if (_metadata.Count > 0 && command == _command)
         {
             command = new QueryCommand<T>
@@ -379,9 +364,6 @@ public class QueryCommandBuilder<T>
             };
         }
 
-        // Why: Joins are applied last so they survive every rebuild branch above. The earlier
-        // rebuilds (filter/ordering/metadata) never set Joins, so a single final copy attaches them
-        // without having to thread the property through each branch. No-op when no Join(...) was called.
         if (_joins.Count > 0 && command.Joins.Count == 0)
         {
             command = new QueryCommand<T>

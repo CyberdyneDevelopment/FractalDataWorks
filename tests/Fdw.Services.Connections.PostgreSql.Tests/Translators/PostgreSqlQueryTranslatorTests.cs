@@ -25,15 +25,11 @@ public sealed class PostgreSqlQueryTranslatorTests
     {
         var dbPath = new PostgreSqlDatabasePath(database, schema, name);
         var containerSchema = new Mock<IContainerSchema>();
-        // Why: the translator requires at least one field to build a SELECT column list.
-        // Default to a single "id" field so WHERE/ORDER BY/paging tests reach clause-building.
         containerSchema.Setup(s => s.Fields).Returns(fields ?? new[] { CreateField("id").Object });
         containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? new[] { CreateField("id").Object });
 
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns(name);
-        // Why: translator reads container.Path via IStorageContainer.Path for the
-        // `is not IDatabasePath` guard. Use .As<IStorageContainer>() to target that member.
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
         container.Setup(c => c.Schema).Returns(containerSchema.Object);
         container.Setup(c => c.ReferencingKeys)
@@ -68,7 +64,6 @@ public sealed class PostgreSqlQueryTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateSelectFieldsUsesDoubleQuoteQuoting()
     {
-        // Why: regression guard — PG must emit "col" not [col]. Verifies the dialect seam.
         var fields = new[]
         {
             CreateField("id").Object,
@@ -113,7 +108,6 @@ public sealed class PostgreSqlQueryTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateWhereClauseUsesDoubleQuoteQuotingAndAtParam()
     {
-        // Why: regression guard — PG emits "Col" = @p0 not [Col] = @p0.
         var container = CreateContainer();
         var filter = new FilterExpression
         {
@@ -143,7 +137,6 @@ public sealed class PostgreSqlQueryTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslatePagingUsesLimitOffset()
     {
-        // Why: PG paging is LIMIT/OFFSET, NOT OFFSET n ROWS FETCH NEXT n ROWS ONLY (T-SQL).
         var container = CreateContainer(fields: new[] { CreateField("id").Object });
         var paging = new PagingExpression { Skip = 20, Take = 10 };
 
@@ -336,8 +329,6 @@ public sealed class PostgreSqlQueryTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateEmptyInListEmitsFALSENotOneEqualsZero()
     {
-        // Why: PG dialect AlwaysFalsePredicate = "FALSE"; MsSql = "1 = 0".
-        // This test guards against regression to the MsSql form.
         var container = CreateContainer();
         var filter = new FilterExpression
         {
@@ -387,8 +378,6 @@ public sealed class PostgreSqlQueryTranslatorTests
 
         var result = await _sut.Translate(queryCommand.Object, container.Object, TestContext.Current.CancellationToken);
 
-        // Why: shared base names IN-list params p{conditionIndex}_{itemIndex}
-        // so the first IN condition becomes @p0_0, @p0_1, @p0_2.
         result.IsSuccess.ShouldBeTrue();
         result.Value!.CommandText.ShouldContain("\"id\" IN (@p0_0, @p0_1, @p0_2)");
         result.Value.Parameters.Count.ShouldBe(3);
@@ -443,9 +432,6 @@ public sealed class PostgreSqlQueryTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateWithNoFieldsAndNoProjectionFailsLoud()
     {
-        // Why: SELECT * is forbidden. With no projection, no schema fields, and no joins the
-        // translator has no column source, so it MUST fail loud (NoFieldsToProject) rather than
-        // fall back to SELECT *. This guards the no-SELECT-* invariant on the empty-source path.
         var container = CreateContainer(fields: []);
         var queryCommand = new Mock<IQueryCommand>();
         queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
@@ -463,8 +449,6 @@ public sealed class PostgreSqlQueryTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateSelectDoesNotEmitSelectStar()
     {
-        // Why: SELECT * is forbidden. This test guards the "no asterisk" invariant
-        // explicitly so it can never silently regress.
         var fields = new[] { CreateField("id").Object, CreateField("name").Object };
         var container = CreateContainer(fields: fields);
 

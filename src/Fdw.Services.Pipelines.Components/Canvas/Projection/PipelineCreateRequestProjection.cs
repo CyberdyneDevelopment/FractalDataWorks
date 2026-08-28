@@ -87,8 +87,6 @@ public static class PipelineCreateRequestProjection
         if (!transformsResult.IsSuccess)
             return transformsResult.ToNewResult<CreatePipelineClientRequest>();
 
-        // Why: source/sink/transforms above are already fully resolved and validated; PipelineType is
-        // the last piece — fail loud rather than defaulting it if the canvas genuinely doesn't carry one.
         if (string.IsNullOrWhiteSpace(model.PipelineType))
         {
             return GenericResult<CreatePipelineClientRequest>.Failure(
@@ -182,14 +180,6 @@ public static class PipelineCreateRequestProjection
         return GenericResult<IList<PipelineTransformClientRequest>>.Success(transforms);
     }
 
-    // Why: delegates to TransformConfigPayloadSerializer.FromConfigPayload — the write-side reader
-    // that already enforces the full validation contract per operation type (empty Filter, null
-    // Aggregation/Calculation/Lookup, incomplete aggregation/calculation items all fail loud). This
-    // method previously deserialized the payload directly with no validation at all, so an
-    // empty-predicate Filter (`"\"\""`) or a null Aggregation/Lookup/Calculation would succeed here
-    // and persist — the two readers disagreed on the exact same payload shape. Strengthening this
-    // (the lax reader) to match FromConfigPayload (the strict one) closes that gap without weakening
-    // either.
     private static IGenericResult ApplyConfigPayload(
         PipelineTransformClientRequest transform,
         string operationType,
@@ -225,9 +215,6 @@ public static class PipelineCreateRequestProjection
                 return GenericResult.Success();
 
             default:
-                // Why: unreachable in practice — FromConfigPayload above recognises exactly this same
-                // case list and already failed loud for anything else. Kept as a defensive parity
-                // guard should the two switches ever drift out of sync.
                 return GenericResult.Failure(PipelineCanvasLog.TransformOperationTypeUnrecognized(log, nodeId, operationType));
         }
     }

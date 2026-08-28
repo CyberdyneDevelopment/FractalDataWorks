@@ -33,10 +33,6 @@ namespace Fdw.Services.DataVault;
 /// </remarks>
 public abstract class DataVaultBase : IDataVault, IDisposable
 {
-    // Why: connection + pepper are the dangerous capabilities. They are PRIVATE, immutable, and
-    // have no accessor of any kind for the pepper. The connection is reachable by a DB-specific
-    // subclass only through RequireConnection() (it is not a secret — the pepper is), so the
-    // abstract Query/NonQuery can run ADO. Nothing here is exposed to vault consumers.
     private readonly string _vaultName;
     private readonly IDataConnection _connection;
     private readonly byte[] _pepper;
@@ -53,8 +49,6 @@ public abstract class DataVaultBase : IDataVault, IDisposable
     /// <param name="logger">Optional logger; falls back to <see cref="NullLogger"/>.</param>
     protected DataVaultBase(
         string vaultName,
-        // Why: connection is resolved once by DataVaultProvider in system context and handed
-        // in here — the vault is immutable at construction, not a live service-locator dependency.
         [ServiceOptionDependency] IDataConnection connection,
         byte[] pepper,
         ILogger<DataVaultBase>? logger)
@@ -77,13 +71,9 @@ public abstract class DataVaultBase : IDataVault, IDisposable
     string IGenericService.ServiceType => "DataVault";
 
     /// <inheritdoc />
-    // Why: a constructed vault is always available — its connection and pepper are resolved before
-    // construction. There is no init state to gate on.
     bool IGenericService.IsAvailable => true;
 
     /// <inheritdoc />
-    // Why: a vault has NO generic command surface — that closed set is the access policy. A generic
-    // command is rejected fail-loud; capabilities are reached only through a narrow per-domain interface.
     Task<IGenericResult<T>> IGenericService.Execute<T>(IGenericCommand command, CancellationToken cancellationToken)
         => Task.FromResult(GenericResult<T>.Failure(DataVaultLog.GenericCommandRejected(_logger, _vaultName)));
 

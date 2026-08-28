@@ -7,7 +7,6 @@ namespace Fdw.UI.Abstractions;
 /// <summary>
 /// Metadata about a property.
 /// </summary>
-// Why: pure DTO, only auto-properties, no logic.
 [ExcludeFromCodeCoverage]
 public class PropertyMetadata
 {

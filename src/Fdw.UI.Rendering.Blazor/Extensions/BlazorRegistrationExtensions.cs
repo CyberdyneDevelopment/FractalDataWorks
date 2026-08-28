@@ -10,8 +10,6 @@ namespace Fdw.UI.Rendering.Blazor.Extensions;
 /// DI registration helpers for the Blazor rendering backend. Hosting layers call
 /// <c>AddFrameworkBlazorUI</c> to wire the renderer and its supporting services.
 /// </summary>
-// Why: mirrors SpectreRegistrationExtensions — each rendering backend self-describes its
-// registration so hosts pick a backend by calling exactly one AddFramework*UI method.
 public static class BlazorRegistrationExtensions
 {
     /// <summary>
@@ -29,8 +27,6 @@ public static class BlazorRegistrationExtensions
     {
         if (services is null) throw new ArgumentNullException(nameof(services));
 
-        // Why: transient so each interaction flow gets its own fragment sink; contexts are
-        // stateful per render conversation, not per app.
         services.TryAddTransient<BlazorRenderContext>(_ =>
             new BlazorRenderContext(RenderModes.ByName(defaultRenderModeName)));
 

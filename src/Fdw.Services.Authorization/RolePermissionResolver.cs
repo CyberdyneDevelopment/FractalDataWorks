@@ -53,9 +53,6 @@ public sealed class RolePermissionResolver : IRolePermissionResolver
                 AuthorizationLog.RoleExpansionNamesRequired(_logger));
 
         var allRoles = await _roleProvider.Get(cancellationToken).ConfigureAwait(false);
-        // Why the provider's own reason is carried through rather than restated: a catalogue read
-        // fails for reasons that are not absence, and each says which. Reporting them all as "no such
-        // role" sends the reader looking for a missing row when the row is there.
         if (!allRoles.IsSuccess)
             return allRoles.ToNewResult<IReadOnlyCollection<string>>();
         if (allRoles.Value is null)
@@ -83,9 +80,6 @@ public sealed class RolePermissionResolver : IRolePermissionResolver
             var role = allRoles.Value.FirstOrDefault(
                 r => string.Equals(r.Name, roleName, StringComparison.OrdinalIgnoreCase));
 
-            // Why a failure and not a skip: a role name that matches nothing is a declaration pointing
-            // at a row that does not exist. Skipping it grants a narrower set than declared and reads,
-            // downstream, as a permission the operator forgot to grant.
             if (role is null)
                 return GenericResult<IReadOnlyCollection<string>>.Failure(
                     AuthorizationLog.RoleNameUnknown(_logger, roleName));

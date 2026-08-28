@@ -73,8 +73,6 @@ public class PipelineLineageProjectionTests
     [Fact]
     public void FromComposedStreamingAggregateExtractsLinkage()
     {
-        // Why: proves polymorphism — the projection reads linkage off IEtlPipelineTypedConfiguration,
-        // never a `is BatchCopyPipelineConfiguration` branch.
         var aggregate = new PipelineConfiguration
         {
             Id = System.Guid.NewGuid(),

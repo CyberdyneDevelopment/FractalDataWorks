@@ -56,8 +56,6 @@ public abstract class GetConfigurationTypeDetailEndpointBase : CrudGetEndpointBa
     /// <summary>Looks up and maps a container by service type name.</summary>
     protected virtual ConfigurationTypeDetailDto? FindConfigurationType(string category, string type)
     {
-        // Why: IConfigurationContainerLookup.Get() replaces ConfigurationTypes.GetByServiceType().
-        // The container name is the service type name (e.g., "MsSqlConnection").
         var result = _containerLookup.Get(type);
         if (!result.IsSuccess)
             return null;

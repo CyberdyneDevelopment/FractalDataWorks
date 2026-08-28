@@ -5,7 +5,6 @@ namespace Fdw.WebMcp.Hosting;
 /// <summary>
 /// Represents an API key that authorizes an AI agent to act on behalf of a user.
 /// </summary>
-// Why: pure DTO, only auto-properties bound from IOptions, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class WebMcpAgentKey
 {

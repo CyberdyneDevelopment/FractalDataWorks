@@ -61,8 +61,6 @@ public class NewOperationsTests
     [Fact]
     public async Task ProportionalAllocationKeepsPrecisionThroughTheDivision()
     {
-        // Why this case: 1/3 of 100 evaluated as (Part/Whole) first would round to 0.33 and lose
-        // a third of a cent per allocation. Computing in one step keeps full decimal precision.
         var result = await new ProportionalAllocationOperation().Calculate(
             new Dictionary<string, object?> { ["Part"] = 1m, ["Whole"] = 3m, ["Total"] = 100m },
             TestContext.Current.CancellationToken);

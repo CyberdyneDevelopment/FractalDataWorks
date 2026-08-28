@@ -29,7 +29,6 @@ public sealed class DetachedDataStore : IDataStore
     public DetachedDataStore(string name, ILogger? logger = null)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
-        // Why: NullLogger keeps the store functional without DI logging — the only sanctioned ?? fallback.
         _logger = logger ?? NullLogger.Instance;
     }
 

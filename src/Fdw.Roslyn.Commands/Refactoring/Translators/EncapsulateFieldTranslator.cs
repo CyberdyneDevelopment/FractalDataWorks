@@ -84,8 +84,6 @@ public sealed class EncapsulateFieldTranslator : RoslynCommandTranslatorBase<Enc
         var fieldName = fieldSymbol.Name;
         var propertyName = command.PropertyName ?? GeneratePropertyName(fieldName);
 
-        // Why: for an Added symbol change, "old" is the source field it was extracted FROM and
-        // "new" is the created property, so the guide reads "extracted from X → created Y".
         var oldFqn = SymbolFqn.Of(fieldSymbol);
         var newFqn = SymbolFqn.OfRenamed(fieldSymbol, propertyName);
 

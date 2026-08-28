@@ -32,21 +32,12 @@ public sealed class SingleTenantMultitenancyType : MultitenancyTypeBase<ISingleT
         displayName: "Single Tenant",
         description: "No real tenant store — request-scoped contexts only, tenant/org resolution disabled")
     {
-        // Why no Configuration phase: this option used to bind a "Multitenancy" IConfiguration section
-        // into List<MultitenancyConfiguration> so a host could declare ServiceOptionType via appsettings
-        // or Multitenancy__0__ServiceOptionType. Nothing ever read that value -- the active option is
-        // selected from ConfigurationSchema.Multitenancy (configurationSchema.json) -- so the binding
-        // was a lever that looked live and was not.
 
         Registration((builder, loggerFactory) =>
         {
 
             RegisterAlwaysOnContexts(builder.Services);
 
-            // Why: register null-object providers so endpoints/builder.Services that always inject
-            // ITenantProvider/IOrganizationProvider (Tenant admin endpoints, DefaultPrincipalResolver at
-            // sign-in) do not crash with DI resolution failures when this host has no real tenant store.
-            // Consumers guard via IsSuccess/HasTenant/HasOrg.
             builder.Services.AddScoped<ITenantProvider, NullTenantProvider>();
             builder.Services.TryAddSingleton<IOrganizationProvider>(_ => NullOrganizationProvider.Instance);
 

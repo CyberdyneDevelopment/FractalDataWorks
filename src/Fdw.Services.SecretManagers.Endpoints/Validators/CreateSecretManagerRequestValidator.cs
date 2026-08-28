@@ -19,9 +19,6 @@ public sealed class CreateSecretManagerRequestValidator : FdwEndpointValidator<C
             .NotEmpty()
             .WithMessage("SecretManagerType is required");
 
-        // Why: callers must supply the typed body explicitly. A request body that omits
-        // Configuration would leave the typed-body child row unset and silently break
-        // subsequent Get/Update/Delete on the SM.
         RuleFor(x => x.Configuration)
             .NotNull()
             .WithMessage("Configuration object is required");

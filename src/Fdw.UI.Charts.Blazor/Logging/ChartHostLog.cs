@@ -10,10 +10,6 @@ namespace Fdw.UI.Charts.Blazor.Logging;
 /// MessageLogging for <c>ChartHost</c> operations.
 /// EventId range: 4720–4739 (UI charts host layer).
 /// </summary>
-// Why: default TypeCode ("FDW") collided with Fdw.UI.Canvas.Blazor's SvgCanvasRendererLog, which
-// independently reused EventIds 4720-4726 — both generated "FDW-4720".."FDW-4726" for unrelated
-// messages. A distinct per-project TypeCode makes the generated Code unique even though the
-// numeric EventId ranges still overlap across the two sibling UI projects.
 [ExcludeFromCodeCoverage]
 [MessageLoggingTypeCode("CHARTS")]
 public static partial class ChartHostLog
@@ -48,8 +44,6 @@ public static partial class ChartHostLog
         Message = "Resolving Blazor component for chart renderer '{rendererName}'")]
     public static partial IGenericMessage ResolvingRendererComponent(ILogger logger, string rendererName);
 
-    // Why: Error, not Critical — the host survives (it falls through without rendering) rather than
-    // taking down the process; this is a deployment/registration failure the component handles.
     [MessageLogging(
         EventId = 4725,
         Level = LogLevel.Error,

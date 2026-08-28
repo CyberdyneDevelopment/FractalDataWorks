@@ -15,8 +15,6 @@ public sealed class LoginFailedCode : MsSqlResultCodeBase
     /// Initializes a new instance of the <see cref="LoginFailedCode"/> class.
     /// </summary>
     public LoginFailedCode()
-        // Why: categorized-number ctor (catalog scheme) — Id == EventId == number, Code == "MSSQL-{number}",
-        // matching every other sibling ResultCode in this collection (see NullPrimaryKeyValueCode, ConnectionFailedCode).
         : base(50002, "LoginFailed", ResultSeverities.ByName("Error"),
             "Login failed for the database user. Check that the login exists and the password matches the FDW_SECRET_* environment variable.",
             isRetryable: false)

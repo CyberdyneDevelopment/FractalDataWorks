@@ -26,7 +26,6 @@ public sealed class ScopePathsTests
     [Fact]
     public void Overlap_is_detected_across_multi_path_claims()
     {
-        // Why: a claim is a SET. One colliding member is enough to refuse the whole claim.
         ScopePaths.Overlap(["docs", "src/Foo.cs"], ["tests", "src/Foo.cs"]).ShouldBeTrue();
         ScopePaths.Overlap(["docs", "src/Foo.cs"], ["tests", "src/Bar.cs"]).ShouldBeFalse();
     }

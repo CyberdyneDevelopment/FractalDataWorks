@@ -17,10 +17,6 @@ internal static class PreferenceEndpointIdentity
     /// <returns><see langword="true"/> when a GUID was resolved; otherwise <see langword="false"/>.</returns>
     public static bool TryGetUserId(ClaimsPrincipal user, out Guid userId)
     {
-        // Why: FDW puts the user GUID in the standard JWT `sub`. JwtBearer maps `sub` to
-        // ClaimTypes.NameIdentifier, but OpenIddict validation can preserve the raw `sub` too —
-        // check both, mirroring the SessionState endpoints. Both name the same claim; this is
-        // claim-alias selection, not a value fallback.
         var sub = user.FindFirst(ClaimTypes.NameIdentifier)?.Value
                ?? user.FindFirst("sub")?.Value;
         return Guid.TryParse(sub, out userId);

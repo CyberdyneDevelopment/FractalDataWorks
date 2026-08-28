@@ -12,8 +12,6 @@ namespace Fdw.UI.Canvas.Blazor.Tests.Fakes;
 [ExcludeFromCodeCoverage]
 internal sealed class FakeCanvasModel : ICanvasModel
 {
-    // Why: IRenderMode is a TypeOption; create a stand-alone mock rather than relying on the
-    // TypeCollection registration which may not be loaded in all test contexts.
     private static readonly IRenderMode _viewMode = CreateViewMode();
 
     private static IRenderMode CreateViewMode()

@@ -7,8 +7,6 @@ namespace Fdw.Services.Connections.MsSql.Results;
 /// <summary>
 /// Source configuration is missing ContainerName — cannot resolve to a MsSql table container.
 /// </summary>
-// Why: ResolveContainer requires ContainerName (table name) to build the TableContainer.
-// Without it, the MsSql connection cannot determine which table to target.
 [TypeOption(typeof(MsSqlConnectionResultCodes), "SourceMissingContainerName", RestrictToCurrentCompilation = true)]
 [ExcludeFromCodeCoverage]
 public sealed class SourceMissingContainerNameCode : MsSqlConnectionResultCodeBase

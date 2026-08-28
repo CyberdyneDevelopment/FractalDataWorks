@@ -5,7 +5,6 @@ namespace Fdw.Commands.Abstractions.Messages;
 /// <summary>
 /// Message for when a command is null.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class CommandNullMessage : CommandMessage
 {

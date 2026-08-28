@@ -14,8 +14,6 @@ using Fdw.Roslyn.Commands.Generation.Commands;
 using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-// Why: Fdw.Roslyn.Commands.Project namespace now lives in this assembly; alias
-// disambiguates the Roslyn Project type from the sibling namespace.
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 

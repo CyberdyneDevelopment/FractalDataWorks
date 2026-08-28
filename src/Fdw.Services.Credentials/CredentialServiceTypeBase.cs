@@ -16,15 +16,10 @@ namespace Fdw.Services.Credentials;
 /// Instantiation logic belongs in factories — this class carries metadata only.
 /// </remarks>
 public abstract class CredentialServiceTypeBase<TService, TFactory, TConfiguration> :
-    // Why: CredentialServiceProvider (concrete) is the TProvider parameter, not ICredentialServiceProvider.
     ServiceTypeBase<TService, TFactory, TConfiguration>,
     ICredentialServiceType<TService, TFactory, TConfiguration>
     where TService : ICredentialService
     where TFactory : ICredentialServiceFactory<TService, TConfiguration>
-    // Why: TConfiguration is constrained to IGenericConfiguration (not ICredentialServiceImplementationConfiguration)
-    // because CredentialServiceTypes registers the root provider with CredentialServiceConfiguration (the header)
-    // as the type parameter. The header implements IGenericConfiguration but not ICredentialServiceImplementationConfiguration.
-    // Factory-level runtime checks enforce typed body correctness.
     where TConfiguration : class, IGenericConfiguration
 {
     /// <summary>

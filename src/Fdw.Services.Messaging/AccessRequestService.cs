@@ -19,9 +19,6 @@ namespace Fdw.Services.Messaging;
 /// </summary>
 public sealed class AccessRequestService : IAccessRequestService
 {
-    // Why: msg.AccessRequest and msg.Message live in OpsDb (operational data store),
-    // not a separate MessagingDb. There is no MessagingDb DataStore — the msg schema is
-    // one of OpsDb's paths (alongside ops, etl, sched, dq).
     private const string DataStoreName = "OpsDb";
     private const string PathName = "msg";
     private const string MessageContainer = "Message";
@@ -170,8 +167,6 @@ public sealed class AccessRequestService : IAccessRequestService
                         MessagingLog.AccessRequestFailed(_logger, requestIdStr, "Update command failed"));
             }
 
-            // Why: 0 rows affected means the request doesn't exist — the endpoint
-            // needs to distinguish this from a successful approve so it can emit 404.
             if (result.Value == 0)
             {
                 return GenericResult.Failure(
@@ -225,7 +220,6 @@ public sealed class AccessRequestService : IAccessRequestService
                         MessagingLog.AccessRequestFailed(_logger, requestIdStr, "Update command failed"));
             }
 
-            // Why: 0 rows affected means the request doesn't exist.
             if (result.Value == 0)
             {
                 return GenericResult.Failure(

@@ -140,9 +140,6 @@ public sealed class SqliteUpdateTranslator : SqliteDataCommandTranslatorBase
             if (pkProperty != null)
             {
                 var pkValue = pkProperty.GetValue(data);
-                // Why: a null PK value is an EXPECTED failure (bad input data), not an
-                // exceptional condition — fail loud with a structured ResultCode instead of
-                // throwing+catching, matching the MsSql/PostgreSql sibling translators.
                 if (pkValue == null)
                     return GenericResult<SqliteCommand>.Failure(
                         SqliteDataResultCodes.ByName("NullPrimaryKeyValue"),

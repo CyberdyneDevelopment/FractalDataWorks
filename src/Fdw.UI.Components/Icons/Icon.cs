@@ -55,8 +55,6 @@ public sealed class Icon : ComponentBase
         if (string.IsNullOrEmpty(Name))
             throw new InvalidOperationException("Icon requires a Name; no glyph can be selected without one.");
 
-        // Why: ByName answers with the NotFound sentinel rather than null, which would draw an empty svg
-        // and swallow the typo. A name that names no glyph is a markup defect and says so.
         var glyph = IconGlyphs.ByName(Name);
         if (ReferenceEquals(glyph, IconGlyphs.NotFound))
             throw new InvalidOperationException($"No icon glyph is registered under the name '{Name}'.");
@@ -79,17 +77,11 @@ public sealed class Icon : ComponentBase
         builder.CloseElement();
     }
 
-    // Why extracted: keeps BuildRenderTree to one job — the svg element — and the per-path attributes
-    // to another, rather than one method carrying both sequence-number schemes.
     private void BuildPaths(RenderTreeBuilder builder, IIconGlyph glyph)
     {
-        // Why not '??': the parameters override the glyph, they do not stand in for a value that went
-        // missing — an unset parameter means "draw it as registered", which the glyph always answers.
         var strokeWidth = StrokeWidth is null ? glyph.StrokeWidth : StrokeWidth;
         var rounded = Rounded.HasValue ? Rounded.Value : glyph.Rounded;
 
-        // Why the same sequence numbers on every iteration: this is what the Razor compiler emits for a
-        // @foreach body, and what the diff algorithm expects from a repeating region.
         foreach (var pathData in glyph.Paths)
         {
             builder.OpenElement(10, "path");

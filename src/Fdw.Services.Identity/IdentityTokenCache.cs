@@ -75,8 +75,6 @@ public sealed class IdentityTokenCache : IIdentityTokenCache
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            // Why the second check: another caller may have acquired while this one waited on the
-            // gate, and re-acquiring would defeat the serialization the gate exists to provide.
             if (TryServe(configurationName, request, out var justAcquired))
                 return GenericResult<IssuedIdentityToken>.Success(justAcquired);
 

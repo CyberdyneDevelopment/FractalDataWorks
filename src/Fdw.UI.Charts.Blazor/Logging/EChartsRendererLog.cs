@@ -11,8 +11,6 @@ namespace Fdw.UI.Charts.Blazor.Logging;
 /// MessageLogging for <c>EChartsRenderer</c> operations.
 /// EventId range: 4770–4779 (UI charts ECharts renderer layer).
 /// </summary>
-// Why: give every Fdw.UI.Charts.Blazor Log class its own TypeCode so its generated Code never
-// collides with the sibling Fdw.UI.Canvas.Blazor project, which shares the same 47xx EventId band.
 [ExcludeFromCodeCoverage]
 [MessageLoggingTypeCode("CHARTS")]
 public static partial class EChartsRendererLog

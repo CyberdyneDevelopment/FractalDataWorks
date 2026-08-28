@@ -20,8 +20,6 @@ public sealed class InjectionTransformTests
     [Fact]
     public async Task ParameterEmitsTheOperatingDateFromTheContext()
     {
-        // Why only these two names: Parameter injects RUN context, not arbitrary configuration —
-        // "operatingDate" and "now" are the whole vocabulary. Any other name yields null.
         var result = await new ParameterFieldTransformer().Transform(
             null, TransformTestContext.With(("name", "operatingDate")), TestContext.Current.CancellationToken);
 
@@ -41,8 +39,6 @@ public sealed class InjectionTransformTests
     [Fact]
     public async Task ParameterFailsLoudForAnyOtherName()
     {
-        // Why this changed: it used to return null, which reached the row as an empty column with
-        // nothing saying why. The ETL caller reports a failed transform and keeps the original value.
         var result = await new ParameterFieldTransformer().Transform(
             null, TransformTestContext.With(("name", "season")), TestContext.Current.CancellationToken);
 

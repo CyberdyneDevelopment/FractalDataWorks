@@ -35,9 +35,6 @@ public sealed class ChainedExternalIdentityProvisionerType
     /// <summary>Initializes a new instance of <see cref="ChainedExternalIdentityProvisionerType"/>.</summary>
     public ChainedExternalIdentityProvisionerType() : base(name: "Chained", defaultContainerName: "ExternalIdentityProvisioner")
     {
-        // Why Initialize and not Register: this wiring needs a LIVE container (it resolves the
-        // domain provider and its typed-body providers), and Register runs while the container
-        // is still being built. Initialize runs after Build() with a real IServiceProvider.
         Initialization((host, hostLoggerFactory) =>
         {
             var services = host.Services;
@@ -56,11 +53,6 @@ public sealed class ChainedExternalIdentityProvisionerType
             var factoryResult = provider.Register("Chained", factory);
             if (!factoryResult.IsSuccess) return factoryResult.ToNewResult<IHost>();
 
-            // Why Trace here when ProviderRegistered already reports this option at Information: that
-            // line names the option and nothing else. This one names the type that did the registering
-            // and the factory it registered, which is what distinguishes a base wiring an option from
-            // the option wiring itself — and no failure line is needed alongside it, because unlike the
-            // other options in this domain these three results propagate and the collect reports them.
             ServiceTypeLog.OptionFactoryRegistered(
                 logger, nameof(ChainedExternalIdentityProvisionerType), Name, factory.GetType().Name);
 
@@ -79,11 +71,6 @@ public sealed class ChainedExternalIdentityProvisionerType
                     DataStore,
                     PathName));
 
-            // Why: the factory is a PURE constructor (logger only) — it holds no providers and resolves
-            // nothing. The provisioner provider it needs for Provision-time sibling lookup is passed in by
-            // DefaultExternalIdentityProvisionerProvider (as `this`) at Create time. That is what keeps
-            // resolving this factory from re-entering the provider's own resolver lambda (FDW-615).
-            // Scoped to match the provider's generated lifetime — never Singleton over a Scoped dependency.
             builder.Services.TryAddScoped<ChainedExternalIdentityProvisionerFactory>();
             builder.Services.TryAddScoped<IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ChainedExternalIdentityProvisionerFactory>());

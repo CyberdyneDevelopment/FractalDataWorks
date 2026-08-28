@@ -8,8 +8,6 @@ namespace Fdw.Services.Connections.Http.Results;
 /// <summary>
 /// Source configuration is missing HttpMethod — cannot resolve to a container without knowing the HTTP verb.
 /// </summary>
-// Why: ResolveContainer requires an explicit HttpMethod (e.g. "GET", "POST") on the source config.
-// Defaulting to "GET" silently masks a data-quality issue; fail loud so the configuration is fixed.
 [TypeOption(typeof(HttpResultCodes), "SourceMissingHttpMethod", RestrictToCurrentCompilation = true)]
 [ExcludeFromCodeCoverage]
 public sealed class SourceMissingHttpMethodCode : HttpResultCodeBase

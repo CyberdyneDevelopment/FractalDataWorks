@@ -55,9 +55,6 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
 
             if (!routesByEndpointType.TryGetValue(declaration.EndpointType, out var candidates))
             {
-                // Why Warning rather than a silent skip: the option declared this tool, which means
-                // the endpoint was switched on, so a missing route is a contradiction — not an
-                // ordinary absence — and the tool vanishing quietly is how it stays unnoticed.
                 WebMcpLog.ToolSkipped(logger, typeName);
                 continue;
             }
@@ -65,9 +62,6 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
             var selected = Select(candidates, declaration.HttpMethodOverride);
             if (selected is null)
             {
-                // Why not pick the first: several routes or verbs on one endpoint is a genuine
-                // question about which one the agent should call, and the attribute's HttpMethod is
-                // the way to answer it. Guessing would hand an agent a working call to the wrong one.
                 WebMcpLog.ToolRouteAmbiguous(logger, typeName, candidates.Count);
                 continue;
             }

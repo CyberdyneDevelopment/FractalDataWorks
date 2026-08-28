@@ -49,8 +49,6 @@ public class SystemAuthenticationContextScopeTests
     public void DisposeRestoresThePriorValueRatherThanAlwaysNull()
     {
         // Arrange
-        // Why: defense in depth — if this scope is ever entered while some other context is already
-        // ambient, exiting must restore THAT value, not blindly null it out.
         var accessor = new AuthenticationContextAccessor();
         var previous = new WorkAuthenticationContext(Guid.NewGuid());
         accessor.Current = previous;

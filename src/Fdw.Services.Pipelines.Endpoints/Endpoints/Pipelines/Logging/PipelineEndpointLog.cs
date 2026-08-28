@@ -20,8 +20,6 @@ public static partial class PipelineEndpointLog
     public static partial IGenericMessage SystemPipelineReadOnly(ILogger logger, string pipelineName);
 
     /// <summary>Logs that a persisted pipeline is missing its required kind (ServiceOptionType).</summary>
-    // Why: the kind discriminator is NOT NULL on pipe.Pipeline; a null is a data-integrity defect the list
-    // endpoint fails loud on rather than substituting an "Unknown" display fallback.
     [MessageLogging(EventId = 21000, Level = LogLevel.Error, Message = "Pipeline '{pipelineName}' has no kind (ServiceOptionType)")]
     public static partial IGenericMessage PipelineMissingKind(ILogger logger, string pipelineName);
 }

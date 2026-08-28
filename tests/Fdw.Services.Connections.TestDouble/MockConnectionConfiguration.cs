@@ -33,8 +33,6 @@ public partial class MockConnectionConfiguration : IConnectionImplementationConf
     /// <summary>Gets or sets the single value the schema-load assertions read back.</summary>
     public string Root { get; set; } = string.Empty;
 
-    // Why explicit: the canonical name lives on the parent ConnectionConfiguration row.
-    // A typed body is identified by ConnectionId and never resolved by name.
     string IGenericConfiguration.Name
     {
         get => string.Empty;

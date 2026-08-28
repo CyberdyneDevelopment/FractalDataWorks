@@ -107,8 +107,6 @@ public static partial class ConfigurationDrillDownProviderLog
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>Logs when a parent collection property contains no children.</summary>
-    // Why Debug, not Warning (FDW-583): an empty child collection is normal leaf/empty UI state, not
-    // an abnormal or actionable condition.
     [MessageLogging(EventId = 31000, Level = LogLevel.Debug,
         Message = "ConfigurationDrillDownProvider: Empty children for property '{propertyName}' on '{parentLabel}'")]
     public static partial IGenericMessage EmptyChildren(

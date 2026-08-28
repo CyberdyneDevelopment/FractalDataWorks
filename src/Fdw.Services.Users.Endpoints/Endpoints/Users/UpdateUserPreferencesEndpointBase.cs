@@ -61,11 +61,6 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
     /// <inheritdoc/>
     public override async Task HandleAsync(UpdateUserPreferencesRequest req, CancellationToken ct)
     {
-        // Why: the FDW access token carries the durable user GUID in the standard JWT `sub`
-        // claim (ClaimDefinitions defines no `name`/`preferred_username` claim), so
-        // User.Identity.Name is empty and resolving identity from it 401s every authenticated
-        // caller. Read `sub` directly — the canonical pattern the SessionState endpoints use —
-        // and fail loud (401) when it is absent or not a GUID. No username round-trip, no fallback.
         if (!PreferenceEndpointIdentity.TryGetUserId(User, out var userId))
         {
             await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
@@ -74,8 +69,6 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
 
         try
         {
-            // Why: load the current row (if any) so we can patch only the supplied fields and
-            // preserve the rest. This is a typed record — there is no per-field SetPreference.
             var loadResult = await _preferenceProvider.GetPreferences(userId, ct).ConfigureAwait(false);
             if (!loadResult.IsSuccess)
             {
@@ -95,8 +88,6 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
                     IsDeleted = false,
                 };
 
-            // Why: only patch fields the caller supplied (non-null). Fields omitted from the
-            // request retain their stored values.
             if (req.ThemeName is not null) record.ThemeName = req.ThemeName;
             if (req.DarkMode.HasValue) record.DarkMode = req.DarkMode.Value;
             if (req.Language is not null) record.Language = req.Language;

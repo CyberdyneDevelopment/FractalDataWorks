@@ -21,8 +21,6 @@ public interface IExternalIdentityProvisionerFactory
 /// </summary>
 /// <typeparam name="TService">The type of external identity provisioner this factory creates.</typeparam>
 /// <typeparam name="TConfiguration">The type of configuration this factory requires.</typeparam>
-// Why: TConfiguration is constrained to `class` because IPlatformServiceProvider<TService, TConfiguration>
-// requires a reference type, and the provider-supplied Create overload below names that interface.
 public interface IExternalIdentityProvisionerFactory<TService, TConfiguration> : IExternalIdentityProvisionerFactory, IServiceFactory<TService, TConfiguration>
     where TService : IExternalIdentityProvisioner
     where TConfiguration : class, IGenericConfiguration

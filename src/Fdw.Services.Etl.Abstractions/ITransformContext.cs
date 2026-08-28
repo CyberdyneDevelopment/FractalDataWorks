@@ -13,8 +13,6 @@ namespace Fdw.Services.Etl.Abstractions;
 /// CancellationToken, Logger, Services, Parameters, SharedState) are inherited
 /// from <see cref="IExecutionContext"/>.
 /// </remarks>
-// Why: Previously redeclared ExecutionId (Guid) and Logger independently.
-// All universal fields are now inherited from IExecutionContext.
 public interface ITransformContext : IExecutionContext
 {
     /// <summary>

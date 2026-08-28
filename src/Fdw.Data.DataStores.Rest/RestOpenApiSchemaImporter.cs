@@ -219,7 +219,6 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
             {
                 Id = Guid.NewGuid(),
                 Name = operationId,
-                // Why: TypeId discriminator carries the container-type intent (Endpoint).
                 TypeId = "Endpoint",
                 Format = DetermineFormatFromOperation(operation)
             };

@@ -4,7 +4,6 @@ using Fdw.Results.Abstractions;
 namespace Fdw.Sql.Commands.Abstractions.Results;
 
 /// <summary>Result codes used across SQL command translators.</summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static class SqlResultCodes
 {

@@ -27,7 +27,6 @@ namespace Fdw.Services.Connections.Sqlite;
 [TypeOption(typeof(SqliteDataCommandTranslators), "BatchInsert", RestrictToCurrentCompilation = true)]
 public sealed class SqliteBatchInsertTranslator : SqliteDataCommandTranslatorBase
 {
-    // Why: SQLite default SQLITE_MAX_VARIABLE_NUMBER is 999. Stay conservatively under it.
     private const int MaxParametersPerStatement = 999;
 
     /// <summary>

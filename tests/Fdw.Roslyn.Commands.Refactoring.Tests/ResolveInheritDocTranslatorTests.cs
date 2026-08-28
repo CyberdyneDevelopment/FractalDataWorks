@@ -124,7 +124,6 @@ public class Lonely
         run.Data.SitesUnresolved.ShouldBe(1);
         run.Data.Unresolved.Single().Reason.ShouldBe(UnresolvedReason.NoBaseMember);
         run.Data.Unresolved.Single().SymbolDisplayName.ShouldContain("Solo");
-        // Why: unresolved sites are the user's intent — never delete them.
         run.NewText.ShouldContain("/// <inheritdoc/>");
     }
 

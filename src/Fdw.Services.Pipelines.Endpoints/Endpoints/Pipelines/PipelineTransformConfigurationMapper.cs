@@ -38,9 +38,6 @@ public static class PipelineTransformConfigurationMapper
 
         foreach (var spec in specs)
         {
-            // Why: TransformTypes.ByName returns the ITransformType surface; MapSpecToConfiguration is
-            // declared on the TransformTypeBase option (not the interface), so every registered option —
-            // concrete TypeOptions always derive from TransformTypeBase — is pattern-matched down to it.
             if (TransformTypes.ByName(spec.OperationType) is not TransformTypeBase option || option == TransformTypes.NotFound)
             {
                 return GenericResult<List<PipelineTransformConfiguration>>.Failure(

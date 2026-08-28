@@ -28,9 +28,6 @@ public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSched
     protected override string ResourceName => "schedules";
 
     /// <summary>Loads all schedule configurations and maps them to summary DTOs.</summary>
-    // Why: returns a flat list — the base CrudListEndpointBase applies skip/take and wraps the result
-    // in PaginatedResponse&lt;ScheduleSummaryDto&gt;. Previously we double-wrapped by also building
-    // a SchedulePaginatedResponse inside the items list, producing the wrong response shape.
     protected override async Task<IGenericResult<List<ScheduleSummaryDto>>> LoadItems(ListSchedulesRequest request, CancellationToken ct)
     {
         var allResult = await _provider.Get(ct).ConfigureAwait(false);

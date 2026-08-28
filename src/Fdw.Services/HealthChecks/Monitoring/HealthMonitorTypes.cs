@@ -41,9 +41,6 @@ namespace Fdw.Services.HealthChecks.Monitoring;
     typeof(IHealthMonitorType),
     typeof(HealthMonitorTypes),
     ServiceInterface = typeof(IHealthMonitorService),
-    // Why: the concrete domain provider + domain-named interface, exactly like ConnectionTypes
-    // (ConnectionProvider/IConnectionProvider) — consumers inject IHealthMonitorProvider,
-    // so the generated Register must bind THAT interface, not the generic IPlatformServiceProvider<,>.
     ProviderType = typeof(HealthMonitorProvider),
     ProviderInterface = typeof(IHealthMonitorProvider),
     ServiceCategory = "HealthMonitor")]
@@ -75,19 +72,12 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
     {
         var collectOptions = RegisterFunc;
 
-        // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
-        // three points below — the deferred declaration, the milestone, and the zero-option warning.
-        // Written out three times it is three chances for them to disagree.
         var providerService = typeof(IHealthMonitorProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<HealthMonitorTypes>() ?? NullLogger<HealthMonitorTypes>.Instance;
 
-            // Why this collection registers the provider and the provider does not register itself: the
-            // owner of a registration is the type that knows the thing exists, and this collection ships
-            // beside it. It goes before the collect because each monitor option registers itself against
-            // this provider, so it has to be there when the member cycle runs.
             builder.Services.TryAddSingleton<IHealthMonitorConfigurationProvider>(sp =>
                 new HealthMonitorConfigurationProvider(
                     sp.GetService<ILogger<HealthMonitorConfigurationProvider>>()!,
@@ -96,11 +86,6 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<HealthMonitorConfiguration>>(
                 sp => sp.GetRequiredService<HealthMonitorConfigurationProvider>());
 
-            // Why the collect's result is read and returned: this body composes ONTO the default collect,
-            // and it used to discard what the collect returned — so an option that failed to register was
-            // followed by this method registering the provider anyway and reporting success. The
-            // provider would then resolve and serve a collection that is missing a member. Stopping
-            // here means the caller learns about the first failure instead of a later, stranger one.
             var collected = collectOptions(builder, loggerFactory);
             if (collected.IsFailure)
                 return collected;
@@ -118,10 +103,6 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILoggerFactory>()?.CreateLogger<HealthMonitorProvider>()
                     ?? NullLogger<HealthMonitorProvider>.Instance);
 
-                // Why ILogger<HealthMonitorTypes> and not CreateLogger("HealthMonitorTypes"): SourceContext then
-                // carries the namespace-qualified collection, and the category cannot drift from the
-                // type it claims to name. The provider logs its own lines under its own type, so the
-                // two layers read base-then-derived rather than collapsing onto one category.
                 var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<HealthMonitorTypes>()
                     ?? NullLogger<HealthMonitorTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(HealthMonitorTypes), provider.GetType().Name);
@@ -129,8 +110,6 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
                 {
                     if (sp.GetService<IHealthMonitorConfigurationProvider>() is { } cfgProvider)
                     {
-                        // Why the result is read: a provider that did not take its parent still constructs, and
-                        // every later read silently misses. The failure has to be said out loud here or nowhere.
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(HealthMonitorTypes), provider.GetType().Name, cfgProvider.GetType().Name);
@@ -139,11 +118,6 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
                     }
                     else
                     {
-                        // Why Critical, and why the collection says it rather than the provider: from
-                        // inside the provider a null parent is indistinguishable from a domain that needs
-                        // none. This is the one place that knows one was meant to arrive, and without it
-                        // the domain fails every lookup by name for the life of the scope with nothing
-                        // pointing back here.
                         ServiceTypeLog.DomainHasNoConfigurationSource(
                             stLogger,
                             nameof(HealthMonitorTypes),
@@ -153,16 +127,12 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
                 }
                 catch (Exception ex)
                 {
-                    // Why rethrow: a throw here was previously silent, and a provider that failed to take
-                    // its parent is unusable in a way that only surfaces much later.
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(HealthMonitorTypes));
                     throw;
                 }
                 return provider;
             });
 
-            // Why the milestone comes after the registration and not before: it states that the domain
-            // finished phase 2, which is only true once the provider is actually in the container.
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(HealthMonitorTypes), providerService);
             else

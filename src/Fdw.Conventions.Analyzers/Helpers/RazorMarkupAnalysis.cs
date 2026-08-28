@@ -83,8 +83,6 @@ internal static class RazorMarkupAnalysis
         bool wholeElementName = false,
         bool skipDrawnElements = false)
     {
-        // Why: additional files carry every non-compiled item the project feeds the compiler, not just
-        // .razor — filter on the extension rather than assuming the item order or count.
         if (!context.AdditionalFile.Path.EndsWith(RazorExtension, StringComparison.OrdinalIgnoreCase))
             return;
 
@@ -99,8 +97,6 @@ internal static class RazorMarkupAnalysis
         {
             var lineText = text.ToString(line.Span);
 
-            // Why: a single markup line routinely carries several matches (nested elements, an svg with a
-            // styled child) — scanning only the first occurrence per line silently drops the rest.
             for (var column = lineText.IndexOf(needle, StringComparison.OrdinalIgnoreCase);
                  column >= 0;
                  column = lineText.IndexOf(needle, column + 1, StringComparison.OrdinalIgnoreCase))
@@ -167,8 +163,6 @@ internal static class RazorMarkupAnalysis
 
                 var valueStart = line.Start + column + needle.Length;
 
-                // Why the whole document and not lineText: an expression value may run past the end of
-                // the line, and the reader has to balance delimiters across it to find where it ends.
                 if (RazorAttributeValue.IsDataDriven(document, valueStart))
                     continue;
 

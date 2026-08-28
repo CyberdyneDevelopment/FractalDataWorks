@@ -45,9 +45,6 @@ public class AuthenticationContextAccessorTests
     public async Task ValueSetInOneAsyncFlowDoesNotLeakIntoASiblingFlow()
     {
         // Arrange
-        // Why: this is the exact isolation guarantee PipelineExecutionBackgroundService.ProcessRequest
-        // depends on — one execution's WorkAuthenticationContext must never be visible while a
-        // DIFFERENT execution (a sibling async flow) is running concurrently.
         var accessor = new AuthenticationContextAccessor();
         var tenantA = Guid.NewGuid();
         var tenantB = Guid.NewGuid();
@@ -81,9 +78,6 @@ public class AuthenticationContextAccessorTests
     public async Task ValueSetInsideAnAwaitedMethodDoesNotLeakBackToTheCallerAfterItReturns()
     {
         // Arrange
-        // Why: this is the exact isolation guarantee the background services' sequential
-        // `await foreach` loop depends on — setting Current inside ProcessRequest(request1, ...) must
-        // not still be visible once that call returns and the loop moves on to request2.
         var accessor = new AuthenticationContextAccessor();
         var tenantId = Guid.NewGuid();
 

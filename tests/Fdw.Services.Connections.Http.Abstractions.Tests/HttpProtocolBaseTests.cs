@@ -152,8 +152,6 @@ public class HttpProtocolBaseTests
     public void GetRequestPathUsesContainerNameWhenPathIsNull()
     {
         // Arrange
-        // Why: With target-typed gateway, addressing lives on the container, not the command.
-        // GetRequestPath falls back to container.Name when Path is null.
         _mockContainer.Setup(c => c.Path).Returns((IPath)null!);
         _mockContainer.Setup(c => c.Name).Returns("TestContainer");
 
@@ -170,8 +168,6 @@ public class HttpProtocolBaseTests
     public void GetRequestPathReturnsEmptyWhenBothPathAndContainerNameAreNull()
     {
         // Arrange
-        // Why: With target-typed gateway, container.Name is the fallback. When both Path and Name are
-        // empty, GetRequestPath returns string.Empty.
         _mockContainer.Setup(c => c.Path).Returns((IPath)null!);
         _mockContainer.Setup(c => c.Name).Returns(string.Empty);
 

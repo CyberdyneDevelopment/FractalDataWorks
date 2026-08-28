@@ -10,8 +10,6 @@ namespace Fdw.Services.Abstractions.Health;
 /// Health states are extensible TypeOptions that indicate service health status.
 /// Common states: Healthy, Unhealthy, Degraded.
 /// </remarks>
-// Why: applying the converter on the interface makes every IHealthState-typed property
-// (de)serialize correctly wherever it appears, on the wire or on disk, without per-call wiring.
 [JsonConverter(typeof(HealthStateJsonConverter))]
 public interface IHealthState
 {

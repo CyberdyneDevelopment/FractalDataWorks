@@ -28,12 +28,6 @@ public sealed class DefaultResiliencyServiceType : ResiliencyServiceTypeBase
             "Default Resiliency",
             "Default resiliency services with Polly pipeline factory")
     {
-    // Why: ResiliencyExecutor wraps stage-band orchestration nodes and is consumed directly by
-    // Fdw.Services.Etl.Projects.Execution.OrchestrationNodeOrchestrator. Without these
-    // registrations ETL servers crash on startup ("Unable to resolve IResiliencyExecutor" or
-    // "Unable to resolve IResiliencyPolicyProvider").
-    // EmptyResiliencyPolicyProvider is a baseline implementation that reports no policies; callers
-    // pass null policyId to bypass it. The full dual-source provider is tracked as FDW-400.
         Registration((builder, loggerFactory) =>
         {
             builder.Services.TryAddSingleton<IResiliencyPipelineFactory, ResiliencyPipelineFactory>();

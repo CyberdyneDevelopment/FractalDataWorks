@@ -64,7 +64,6 @@ public class DefaultCalculationSourceTests
     [Fact]
     public async Task ResolveByIdAlwaysReturnsFailure()
     {
-        // Why: codified operators have no calc.CalculationEntity row — there is no Guid to resolve against.
         var sut = new DefaultCalculationSource();
 
         var result = await sut.Resolve(Guid.NewGuid(), CreateContext(), TestContext.Current.CancellationToken);

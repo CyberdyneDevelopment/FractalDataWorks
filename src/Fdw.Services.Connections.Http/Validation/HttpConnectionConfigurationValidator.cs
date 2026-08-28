@@ -13,10 +13,6 @@ public sealed class HttpConnectionConfigurationValidator : FdwConfigurationValid
     /// </summary>
     public HttpConnectionConfigurationValidator()
     {
-        // Why: Name and Description are header fields on ConnectionConfiguration after config-split.
-        // HttpConnectionConfiguration (typed body) only exposes them as explicit IGenericConfiguration
-        // members returning string.Empty — they cannot be validated here. Validators for header fields
-        // live in ConnectionConfigurationValidator.
 
         RuleFor(x => x.BaseUrl)
             .NotEmpty()

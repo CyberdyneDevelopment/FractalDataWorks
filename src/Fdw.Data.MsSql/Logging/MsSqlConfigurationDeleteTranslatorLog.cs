@@ -38,14 +38,12 @@ public static partial class MsSqlConfigurationDeleteTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses MsSqlDataResultCodes.ContainerNull's number (20000).
     [MessageLogging(
         EventId = 20000,
         Level = LogLevel.Error,
         Message = "MsSqlConfigurationDeleteTranslator received a null container")]
     public static partial IGenericMessage ContainerNull(ILogger logger);
 
-    // Why: reuses MsSqlDataResultCodes.InvalidContainerPath's number (20001).
     [MessageLogging(
         EventId = 20001,
         Level = LogLevel.Error,
@@ -54,7 +52,6 @@ public static partial class MsSqlConfigurationDeleteTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses MsSqlDataResultCodes.MissingInputData's number (21001).
     [MessageLogging(
         EventId = 21001,
         Level = LogLevel.Error,
@@ -89,7 +86,6 @@ public static partial class MsSqlConfigurationDeleteTranslatorLog
         string container,
         string ownerLogicalFkColumn);
 
-    // Why: reuses MsSqlDataResultCodes.DeleteTranslationFailed's number (91003).
     [MessageLogging(
         EventId = 91003,
         Level = LogLevel.Error,

@@ -30,17 +30,12 @@ internal static class CompilationHelper
             MetadataReference.CreateFromFile(Assembly.Load("System.Collections").Location),
         };
 
-        // Why: ConfigurationTypeBase deleted in Wave C5. No runtime Configuration assembly reference needed.
-        // The source generator tests compile against the source-generator's embedded attribute definitions only.
 
         if (additionalReferences != null)
         {
             references.AddRange(additionalReferences);
         }
 
-        // Why: ManagedConfigurationAttribute lives in the Fdw.Configuration namespace
-        // (post-init output of the source generator). Test sources use the bare `[ManagedConfiguration]`
-        // syntax, so prepend the using directive so attribute lookup succeeds.
         var withUsing = source.Contains("using Fdw.Configuration;", StringComparison.Ordinal)
             ? source
             : "using Fdw.Configuration;\n" + source;

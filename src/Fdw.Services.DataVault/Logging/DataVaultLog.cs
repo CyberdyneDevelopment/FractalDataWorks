@@ -210,7 +210,6 @@ public static partial class DataVaultLog
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="vaultName">The name of the vault that cannot be resolved.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why: the 4532-4549 band is full; 4200 is from the DataVault 4200-4249 allocation block.
     [MessageLogging(EventId = 61009, Level = LogLevel.Error,
         Message = "Vault '{vaultName}' cannot be resolved — the provider's resolution dependencies (connection + secret-manager providers) were not configured via RegisterFactory")]
     public static partial IGenericMessage ResolutionProvidersNotConfigured(ILogger logger, string vaultName);

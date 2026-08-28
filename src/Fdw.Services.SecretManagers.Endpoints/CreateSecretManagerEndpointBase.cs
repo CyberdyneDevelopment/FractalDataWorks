@@ -21,8 +21,6 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
     private readonly SecretManagerConfigurationProvider _configProvider;
     private readonly ILogger<CreateSecretManagerEndpointBase> _logger;
 
-    // Why: case-insensitive matches against typed-body property names so callers
-    // can send camelCase JSON (FDW POCOs are PascalCase).
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -58,8 +56,6 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
     private static (ISecretManagerImplementationConfiguration? Body, string? Error) BuildTypedBody(
         CreateSecretManagerRequest req, Guid domainConfigurationId)
     {
-        // Why the collection and not a registry of its own: the option already declares the
-        // configuration type it binds, so asking the option is asking the one thing that knows.
         var option = SecretManagerTypes.ByName(req.SecretManagerType);
         if (option is null)
             return (null, $"Unknown SecretManagerType: '{req.SecretManagerType}'");
@@ -80,8 +76,6 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
 
         if (typedBody.Id == Guid.Empty)
             typedBody.Id = Guid.CreateVersion7();
-        // Why: SecretManagerId is declared on ISecretManagerImplementationConfiguration — set the FK directly,
-        // no reflection. (typedType is still needed above for JSON deserialize-by-type.)
         typedBody.SecretManagerId = domainConfigurationId;
 
         return (typedBody, null);
@@ -158,7 +152,6 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
                 ServiceOptionType = config.ServiceOptionType
             };
 
-            // Why: Send.OkAsync forces 200; use ResponseAsync to actually emit 201.
             await Send.ResponseAsync(detail, 201, ct).ConfigureAwait(false);
         }
         catch (Exception ex)

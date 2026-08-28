@@ -321,8 +321,6 @@ public sealed class AccessRequestServiceTests
     [Trait("Category", "Api")]
     public async Task GetPendingReturnsAllPendingRequestsRegardlessOfTenantIdParameter()
     {
-        // Why: GetPending's tenantId parameter is never applied to the query - documents a real
-        // defect (dead filter parameter); see defectsFound.
         var fixture = CreateService();
         var pending = new[] { new AccessRequestPayload { Id = Guid.NewGuid(), Status = "Pending" } };
         fixture.Gateway

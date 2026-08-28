@@ -37,9 +37,6 @@ public partial class PermissionConfiguration : ConfigurationBase<PermissionConfi
     /// <inheritdoc />
     public override string ServiceType => "Permission";
 
-    // Why: Previously Resource held the full domain (e.g., "connections") and was also used as a
-    // grouping key in the UI. Splitting into Domain + Resource allows fine-grained sub-resource
-    // permissions (e.g., Domain="connections", Resource="mssql") while keeping domain grouping clean.
 
     /// <summary>
     /// Gets or sets the service domain this permission applies to (e.g., "connections", "datastores", "pipelines").
@@ -58,10 +55,6 @@ public partial class PermissionConfiguration : ConfigurationBase<PermissionConfi
     /// </summary>
     public string Action { get; set; } = string.Empty;
 
-    // Why: RequiresTenant was a boolean that couldn't distinguish between system-level and global
-    // permissions. Scope is a string column with three valid values: "tenant" (requires tenant context),
-    // "system" (system-wide, no tenant), "global" (applies everywhere). This avoids a boolean that
-    // collapses two distinct concepts (system vs global) into one false value.
 
     /// <summary>
     /// Gets or sets the permission scope. Valid values: "tenant" (requires tenant context),

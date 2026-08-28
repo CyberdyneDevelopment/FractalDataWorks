@@ -22,8 +22,6 @@ namespace Fdw.Services.Pipelines;
 /// </remarks>
 public sealed class DataSetSchemaService : IDataSetSchemaService
 {
-    // Why: DataSetConfigurationProvider is the domain-owned gateway path for all DataSet data —
-    // fields included. Services inject the provider, never IDataGateway or IConfigurationGateway directly.
     private readonly DataSetConfigurationProvider _provider;
     private readonly ILogger<DataSetSchemaService> _logger;
 

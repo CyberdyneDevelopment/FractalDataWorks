@@ -16,9 +16,6 @@ namespace Fdw.Services.Pipelines.Endpoints;
 public abstract class CreatePipelineEndpointBase<TConfig> : CrudCreateEndpointBase<CreatePipelineRequest, PipelineDetailResponse>
     where TConfig : PipelineConfiguration
 {
-    // Why: PipelineServiceConfigurationProvider replaces IOptionsMonitor<List<T>> with dual-source
-    // (ctrl + cfg) provider. Pipelines are excluded from MsSqlConfigurationSource (FDW-220/221/222),
-    // so all pipeline configs come from the the provider.s user cache (cfg schema).
     private readonly PipelineServiceConfigurationProvider _provider;
 
     /// <inheritdoc />
@@ -52,9 +49,6 @@ public abstract class CreatePipelineEndpointBase<TConfig> : CrudCreateEndpointBa
     /// <summary>Creates the pipeline configuration and persists it via the DataGateway.</summary>
     protected override async Task<IGenericResult<PipelineDetailResponse>> Create(CreatePipelineRequest request, CancellationToken ct)
     {
-        // Why: dispatch every transform spec through TransformTypes.ByName(...).MapSpecToConfiguration
-        // BEFORE building the concrete configuration — a param-less combine op (Aggregate/Lookup/
-        // Calculate/Filter) must fail the create call loudly, never silently persist an inert transform.
         var transformsResult = PipelineTransformConfigurationMapper.Map(request.Transforms, Logger);
         if (!transformsResult.IsSuccess)
         {
@@ -63,7 +57,6 @@ public abstract class CreatePipelineEndpointBase<TConfig> : CrudCreateEndpointBa
 
         MappedTransforms = transformsResult.Value!;
 
-        // Why: API contract — IDs are uuid v7 for time-orderable persistence.
         var pipelineId = Guid.CreateVersion7();
         var config = CreateConfiguration(request, pipelineId);
 

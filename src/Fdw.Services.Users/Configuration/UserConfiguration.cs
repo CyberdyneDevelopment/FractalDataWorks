@@ -25,8 +25,6 @@ public partial class UserConfiguration : IUserConfiguration, IUser
     public Guid Id { get; set; }
 
     /// <inheritdoc />
-    // Why: Name = Username for the user domain — the IGenericConfiguration contract requires Name;
-    // callers use Username as the domain-specific alias. Both map to the same column.
     public string Name { get; set; } = string.Empty;
 
     /// <inheritdoc />

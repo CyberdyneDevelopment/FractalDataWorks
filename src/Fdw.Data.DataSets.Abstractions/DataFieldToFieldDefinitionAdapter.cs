@@ -162,8 +162,6 @@ public sealed class DataFieldToFieldDefinitionAdapter : IFieldDefinition
         }
         catch (Exception ex)
         {
-            // Why: Type.GetType with throwOnError:false should not throw, but observe ex if it
-            // ever does so the failure is not silently discarded. Fall back to string.
             _ = ex;
             return typeof(string);
         }

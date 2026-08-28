@@ -7,9 +7,6 @@ using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Runtime;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-// Why: Use fully qualified aliases to avoid IDataField ambiguity — both Fdw.Data.Abstractions
-// and Fdw.Data.DataSets.Abstractions define IDataField with different contracts.
-// The IDataField we work with here is from Data.Abstractions (IDataNode hierarchy).
 using DataFieldConfiguration = Fdw.Data.DataSets.Abstractions.DataFieldConfiguration;
 using DataSetCompositionTypes = Fdw.Data.Abstractions.DataSetCompositionTypes;
 using DataSetConfiguration = Fdw.Data.DataSets.Abstractions.DataSetConfiguration;
@@ -66,12 +63,8 @@ public sealed class DataSetBuilder : IDataSetBuilder
         }
 
         // Resolve the composition strategy from the TypeCollection.
-        // Why: DataSetConfiguration does not carry a composition field directly; composition is
-        // derived from the number of sources and join configuration. Singular = 1 source, no joins.
-        // Join = multiple sources with explicit joins. Union = multiple sources, no joins.
         var composition = ResolveComposition(config);
 
-        // Why: Sources are composed by DataSetConfigurationProvider.Get — no resolver needed.
         IReadOnlyList<DataSetSourceConfiguration> sourceConfigs =
             config.Sources is IReadOnlyList<DataSetSourceConfiguration> ro ? ro
             : config.Sources?.ToList() ?? [];
@@ -119,9 +112,6 @@ public sealed class DataSetBuilder : IDataSetBuilder
             .ToList()
             .AsReadOnly();
 
-        // Why: Keys are not populated from DataSetConfiguration — keys come from the DataStore
-        // tree (IContainerKey on IDataContainer). DataSet-level key fields (DataSetKeyFieldConfiguration)
-        // are query-layer hints, not the same as container-layer structural keys.
         IReadOnlyList<IContainerKey> keys = Array.Empty<IContainerKey>();
 
         var dataSet = new DataSet(
@@ -142,10 +132,6 @@ public sealed class DataSetBuilder : IDataSetBuilder
     /// </summary>
     private static IDataSetCompositionType ResolveComposition(DataSetConfiguration config)
     {
-        // Why: Composition is inferred from Sources count and Joins presence.
-        // Singular = 0 or 1 source, no explicit joins.
-        // Join = 2+ sources with joins defined.
-        // Union = 2+ sources, no joins defined (federated union).
         var sourceCount = config.Sources?.Count ?? 0;
         if (sourceCount <= 1 || config.Joins.Count == 0)
         {

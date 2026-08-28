@@ -51,10 +51,8 @@ public static class McpTopics
 
     private static string Require(string segment)
     {
-        // Why: ArgumentException.ThrowIfNullOrWhiteSpace is .NET 8+; use explicit guard for netstandard2.0 compatibility.
         if (string.IsNullOrWhiteSpace(segment))
             throw new ArgumentException("Topic segment must not be null or whitespace.", nameof(segment));
-        // Why: char+StringComparison overload of Contains is .NET 5+; IndexOf is available on netstandard2.0.
         if (segment.IndexOf('/') >= 0)
             throw new ArgumentException("Topic segment may not contain '/'.", nameof(segment));
         return segment;

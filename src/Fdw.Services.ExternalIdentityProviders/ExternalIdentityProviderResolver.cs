@@ -31,12 +31,6 @@ public sealed class ExternalIdentityProviderResolver
     /// Registers <see cref="ExternalIdentityProviderResolver"/> with DI. Idempotent — safe to call from
     /// any consumer's registration cascade (e.g. the OpenIddict token endpoint's own service type option).
     /// </summary>
-    // Why: Scoped, NOT Singleton. This ctor-injects
-    // IPlatformServiceProvider<IExternalIdentityProvider, IExternalIdentityProviderImplementationConfiguration>, which the
-    // ServiceTypeCollection generator registers Scoped by default. A Singleton capturing a Scoped
-    // provider is a captive dependency (throws under ValidateScopes, and pins one scope's provider for
-    // the process lifetime). The only consumer, ConnectTokenEndpointBase, is a per-request endpoint, so
-    // Scoped is the correct lifetime.
     public static void RegisterDomainServices(IServiceCollection services)
     {
         services.TryAddScoped<ExternalIdentityProviderResolver>();

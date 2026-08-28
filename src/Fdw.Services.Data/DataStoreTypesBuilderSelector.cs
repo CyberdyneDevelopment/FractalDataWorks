@@ -29,9 +29,6 @@ public sealed class DataStoreTypesBuilderSelector : IDataStoreBuilderSelector
         var option = DataStoreTypes.ByName(configuration.ServiceOptionType);
         if (option == DataStoreTypes.NotFound)
         {
-            // Why: reuse the same failure DataStoreProvider logged for exactly this case (transport
-            // type not registered) before the core/server split — see
-            // DataStoreProviderLog.NoDataStoreTypeFoundAtStartup for the Critical-severity rationale.
             return GenericResult<IDataStoreBuilder>.Failure(
                 DataStoreProviderLog.NoDataStoreTypeFoundAtStartup(
                     logger ?? NullLogger.Instance,

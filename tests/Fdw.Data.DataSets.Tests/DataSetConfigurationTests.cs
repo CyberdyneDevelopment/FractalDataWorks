@@ -138,7 +138,6 @@ public class DataSetConfigurationTests
         var config = new DataSetConfiguration();
 
         // Act
-        // Why: SourceIds is computed from Sources — populate via a source config carrying the Id.
         config.Sources.Add(new DataSetSourceConfiguration { Id = sourceId });
 
         // Assert
@@ -200,8 +199,6 @@ public class DataSetConfigurationTests
         var aggregateId = Guid.NewGuid();
 
         // Act
-        // Why: DataSetConfiguration.Aggregates only cascades through [GenerateMapper] when its element
-        // type implements IGenericConfiguration — this proves the WI-5 unification (FDW-557) landed.
         IGenericConfiguration aggregate = new DataSetAggregateDefinition
         {
             Id = aggregateId,

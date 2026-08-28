@@ -246,10 +246,6 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
         }
 
         var result = ConfigurationMethod(builder);
-        // Why the latch is only set on success: the early return above turns an already-latched phase
-        // into an unconditional Success, so latching after a failure records work that never happened
-        // as done and reports success for it forever after. Returning first leaves the phase
-        // un-latched, so a caller that retries actually retries.
         if (result.IsFailure)
         {
             return result;
@@ -274,10 +270,6 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
         ILoggerFactory? loggerFactory = null,
         bool force = false)
     {
-        // Why the option checks its own switch rather than trusting the collection to filter it out:
-        // an endpoint is reachable directly as well as through its collection, and a switch only half
-        // its callers honour is not a switch. AddTransient and Declare are not free to repeat either -
-        // declaring the same endpoint twice registers the route twice.
         if (!force && (Registered || SkipRegistration))
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
@@ -312,10 +304,6 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
         }
 
         var result = InitializationMethod(host, loggerFactory);
-        // Why the latch is only set on success: the early return above turns an already-latched phase
-        // into an unconditional Success, so latching after a failure records work that never happened
-        // as done and reports success for it forever after. Returning first leaves the phase
-        // un-latched, so a caller that retries actually retries.
         if (result.IsFailure)
         {
             return result;

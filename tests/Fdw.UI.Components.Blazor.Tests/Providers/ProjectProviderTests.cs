@@ -299,8 +299,6 @@ public sealed class ProjectProviderTests : IDisposable
     [Trait("Priority", "P2")]
     public void InitialState_IsNotLoading()
     {
-        // Why: provide an empty-list response so the auto-load in OnAfterRenderAsync
-        // completes without error; bUnit runs OnAfterRenderAsync synchronously on render.
         var handler = new MockHttpHandler()
             .RespondWith("projects", new List<ProjectConfiguration>());
         var component = RenderWithHandler(handler);
@@ -347,9 +345,6 @@ public sealed class ProjectProviderTests : IDisposable
 
         var component = RenderWithHandler(handler);
 
-        // Why: verify IsLoading transitions correctly.
-        // The TCS pattern isn't needed here since MockHttpHandler responds synchronously,
-        // but we verify the final state is correct.
         await component.InvokeAsync(async () =>
         {
             var ctx = GetContext(component);

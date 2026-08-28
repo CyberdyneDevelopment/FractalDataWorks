@@ -72,8 +72,6 @@ public sealed class RecordDictionaryReaderTests
     [Trait("Category", "BoolCoercion")]
     public void GetBooleanCoercesTheStringZeroWithoutThrowing()
     {
-        // Why (fix b): Convert.ToBoolean("0") throws FormatException. A bit column decoded from a
-        // text-based format may arrive as the literal string "0" — GetBoolean must coerce, not throw.
         var reader = new RecordDictionaryReader([Row(("IsDeleted", "0"))]);
         reader.Read();
 
@@ -137,8 +135,6 @@ public sealed class RecordDictionaryReaderTests
     [Trait("Category", "RowQuery")]
     public void IsDBNullReturnsTrueForAMissingColumnOnASpecificRow()
     {
-        // Why: the column union spans BOTH rows (Description only appears on row 2), so
-        // GetOrdinal succeeds, but row 1 does not carry that key — IsDBNull must be true, not throw.
         var reader = new RecordDictionaryReader([Row(("Name", "A")), Row(("Name", "B"), ("Description", "x"))]);
         reader.Read();
 

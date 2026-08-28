@@ -3,7 +3,6 @@ namespace Fdw.Schema.Clients.Models;
 /// <summary>
 /// Response from a DDL execution request.
 /// </summary>
-// Why: pure response DTO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ExecuteDdlResponse
 {

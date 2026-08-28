@@ -96,7 +96,6 @@ public partial class ObjectPicker<TItem>
     [Parameter] public string? CreatePlaceholder { get; set; }
 
     /// <summary>Gets or sets the optional logger. Falls back to <see cref="NullLogger.Instance"/>.</summary>
-    // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions.
     [Parameter] public ILogger? Logger { get; set; }
 
     // ── State ──────────────────────────────────────────────────────────────────────
@@ -105,8 +104,6 @@ public partial class ObjectPicker<TItem>
     private bool _isLoading;
     private string? _errorMessage;
     private bool _initialized;
-    // Why: stable-reference guard mirrors OptionPicker — rebuilding _items every parameter pass makes the
-    // interactive circuit diff a fresh list reference mid-batch ("error applying batch 2").
     private IReadOnlyList<TItem>? _lastItems;
 
     private string? _selectedKey;
@@ -130,8 +127,6 @@ public partial class ObjectPicker<TItem>
             _items = Items;
         }
 
-        // Why: keep local selection mirrors in sync with the bound parameters each pass so external
-        // resets (e.g. parent clearing Value) are reflected without a manual reload.
         _selectedKey = Value;
         _selectedKeys = Values?.ToArray() ?? [];
     }
@@ -162,7 +157,6 @@ public partial class ObjectPicker<TItem>
         }
         catch (OperationCanceledException ex)
         {
-            // Why: cancellation is expected when the component is disposed; ex is named to satisfy FDW022.
             _ = ex;
             return;
         }
@@ -180,10 +174,6 @@ public partial class ObjectPicker<TItem>
 
     // ── Selection handlers ───────────────────────────────────────────────────────────
 
-    // Why: @bind:set delivers the chosen value as a string (empty placeholder normalises to null).
-    // The manual value+@onchange pairing on a <select> makes the Razor compiler emit a LITERAL
-    // "@onchange" attribute (browser InvalidCharacterError / bUnit "no onchange handler") — see the
-    // OptionPicker note. @bind:get/@bind:set keeps Blazor's "apply value after options render" marker.
     private async Task HandleSingleChange(string? newKey)
     {
         _selectedKey = string.IsNullOrEmpty(newKey) ? null : newKey;
@@ -205,8 +195,6 @@ public partial class ObjectPicker<TItem>
         if (!SelectedItemsChanged.HasDelegate)
             return Task.CompletedTask;
 
-        // Why: resolve keys back to items so consumers that need the full object (not just the key)
-        // don't have to re-scan the source themselves.
         var resolved = _items
             .Where(i => keys.Contains(KeyOf(i), StringComparer.Ordinal))
             .ToList();

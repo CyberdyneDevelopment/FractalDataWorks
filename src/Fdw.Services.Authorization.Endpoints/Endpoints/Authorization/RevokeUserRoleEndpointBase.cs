@@ -20,17 +20,10 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, UserRolesResponse>
 {
-    // Why: RoleConfigurationProvider replaces IOptionsMonitor<List<RoleConfiguration>> for role lookups.
     private readonly RoleConfigurationProvider _roleProvider;
-    // Why: UserRoleConfigurationProvider replaces IOptionsMonitor<List<UserRoleConfiguration>>
-    // for dual-source (ctrl + cfg) user-role queries.
     private readonly UserRoleConfigurationProvider _userRoleProvider;
 
-    // Why: route binds {Name} as string so we look up the user by name and resolve to a Guid here.
-    // Why: UserConfigurationProvider replaces the deleted IUserService wrapper.
     private readonly UserConfigurationProvider _userProvider;
-    // Why: IConfigurationGateway is the single connection used by the authorization domain; opening
-    // a transaction on it ensures the role deletion is atomic.
     private readonly IConfigurationGateway _configurationGateway;
 
     /// <summary>
@@ -64,18 +57,11 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "users:write".
     /// </summary>
-    // Why: the standard CRUD tier for this resource. This endpoint previously required ":delete"
-    // as an ad-hoc "Admin-only" tier, because the seeded Operator role is granted ":write" on
-    // every resource by a blanket rule and would otherwise have inherited user administration.
-    // The grant was the wrong thing to work around: user/role admin is now carved out of
-    // Operator in the seed, so these permissions can mean exactly what they say (FDW-634).
     protected virtual string WritePolicy => "users:write";
 
     /// <inheritdoc />
     public override void Configure()
     {
-        // Why: {IdOrName} accepts a Guid id or a username, matching the assign route. Binding it as
-        // a string avoids the Guid binder rejecting "/users/admin/roles/Admin" with a parse error.
         Delete("/users/{IdOrName}/roles/{RoleName}");
         Policies(WritePolicy);
         ConfigureEndpoint();
@@ -112,7 +98,6 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
             }
 
             var userRolesResult = await _userRoleProvider.GetByUser(userIdString, ct).ConfigureAwait(false);
-            // Why: FDW-532 — GetByUser now returns IGenericResult; fail-closed on provider failure.
             if (!userRolesResult.IsSuccess || userRolesResult.Value is null)
             {
                 await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
@@ -121,9 +106,6 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
 
             var existing = userRolesResult.Value.FirstOrDefault(ur => ur.RoleId == role.Id);
 
-            // Why: idempotent delete — if the role isn't currently assigned, treat as already-revoked
-            // and return 204. The DELETE verb's HTTP semantic is "ensure this is gone", not "fail if
-            // it never existed".
             if (existing is null)
             {
                 await Send.NoContentAsync(ct).ConfigureAwait(false);
@@ -144,8 +126,6 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
         }
     }
 
-    // Why: Extracted to keep HandleAsync below the FDW007 cyclomatic-complexity threshold.
-    // Returns success when the transaction commits; on failure, the HTTP response is already sent.
     private async Task<IGenericResult> RevokeRoleAtomically(
         UserRoleConfiguration existing, Guid userId, string userIdString, CancellationToken ct)
     {

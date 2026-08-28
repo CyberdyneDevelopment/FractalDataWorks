@@ -29,8 +29,6 @@ public sealed class PipelineHubOptionTests
         option.Name.ShouldBe("Pipeline");
         option.Route.ShouldBe("/hubs/pipelines");
         option.HubType.ShouldBe(typeof(PipelineStatusHub));
-        // Why: null means "require the default authenticated-principal policy" (see
-        // RealTimeHubOptionBase.MapHubAt) - never anonymous access.
         option.AuthorizationPolicy.ShouldBeNull();
     }
 

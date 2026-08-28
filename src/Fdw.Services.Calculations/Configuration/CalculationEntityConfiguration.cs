@@ -21,12 +21,6 @@ namespace Fdw.Services.Calculations.Configuration;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
-// Why Temporal: a calculation definition is the archetypal valid-time record. When a settlement is
-// restated, the run must use the definition that GOVERNED the period being recomputed, not the one
-// that happened to be current when someone last edited it — and those differ the moment a correction
-// is entered mid-period but backdated to its start. Transaction-time history (CreateDate/ModifyDate,
-// which every config already keeps) answers "what did we believe then" and would hand back the
-// pre-correction definition, silently reproducing the very figure the restatement exists to fix.
 [ManagedConfiguration( ServiceCategory = "Calculation", ServiceType = "Entity", Temporal = true)]
 public partial class CalculationEntityConfiguration : IGenericConfiguration
 {
@@ -34,12 +28,9 @@ public partial class CalculationEntityConfiguration : IGenericConfiguration
     public string SectionName => "Calculations";
 
     /// <inheritdoc />
-    // Why: Matches ServiceCategory from [ManagedConfiguration] attribute for IOptions binding path.
     public string ServiceType => "Calculation";
 
     /// <inheritdoc />
-    // Why: the typed-body discriminator the keystone ComposeTypedBody dispatches on. It mirrors
-    // CalculationEntityType ("Formula"/"Windowed") so the matching registered typed provider is selected.
     public string? ServiceOptionType => CalculationEntityType;
 
 

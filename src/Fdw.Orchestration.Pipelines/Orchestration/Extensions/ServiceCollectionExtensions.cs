@@ -11,8 +11,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Fdw.Orchestration.Extensions;
 
-// Why: No owning ServiceTypeOption exists for orchestration yet. These methods have no external
-// callers. When an OrchestrationTypes ServiceTypeOption is created, move these registrations there.
 /// <summary>
 /// Extension methods for registering orchestration services with the DI container.
 /// </summary>

@@ -4,11 +4,6 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
-// Why: Fdw.Services.Messaging.MessagePayload (server-side) is accessible via
-// ancestor-namespace lookup from this namespace (Services.Messaging.Clients), causing
-// ambiguity with the client-side DTOs. A namespace alias (not type alias) creates a unique
-// identifier that bypasses the ancestor-namespace lookup, so ClientModels.MessagePayload is
-// unambiguous regardless of what the ancestor namespace contains.
 using ClientModels = Fdw.Services.Messaging.Clients.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -81,9 +76,6 @@ public class MessageApiClient
         return response?.Count ?? 0;
     }
 
-    // Why POST: each of these performs a named action on a message rather than changing its
-    // fields, and this surface has no PUT. The path matters as much as the verb — an earlier
-    // version called "messages/read-all" against a server serving "messages/mark-all-read".
 
     /// <summary>Marks a single message as read.</summary>
     public virtual Task MarkRead(Guid id, CancellationToken cancellationToken = default)

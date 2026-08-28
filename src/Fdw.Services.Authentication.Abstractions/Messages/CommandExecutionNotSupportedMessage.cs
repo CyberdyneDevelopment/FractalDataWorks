@@ -7,7 +7,6 @@ namespace Fdw.Services.Authentication.Abstractions.Messages;
 /// <summary>
 /// CurrentMessage indicating that command-based execution is not supported.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [Message("CommandExecutionNotSupported")]
 [MessageOption(typeof(AuthenticationMessageCollectionBase))]

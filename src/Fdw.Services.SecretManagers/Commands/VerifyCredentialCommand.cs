@@ -36,15 +36,12 @@ public sealed class VerifyCredentialCommand : SecretManagerCommandBase, ISecretM
         UserId = userId;
         if (credentialType is null)
         {
-            // Why: reported as a defect (FDW rule) — a command should return IGenericResult, not
-            // throw. Left in place per instructions (constructors cannot return IGenericResult).
             VerifyCredentialCommandLog.RequiredValueMissing(NullLogger<VerifyCredentialCommand>.Instance, nameof(credentialType));
             throw new ArgumentNullException(nameof(credentialType));
         }
 
         if (candidateValue is null)
         {
-            // Why: same throw-instead-of-result defect as above — logged, not converted.
             VerifyCredentialCommandLog.RequiredValueMissing(NullLogger<VerifyCredentialCommand>.Instance, nameof(candidateValue));
             throw new ArgumentNullException(nameof(candidateValue));
         }

@@ -112,9 +112,6 @@ public sealed class ConnectionHealthMonitorWorkerTests
 
     // ── Result builders ─────────────────────────────────────────────────────
 
-    // Why this exact shape: it mirrors what DataStore.Path builds when the store registers no 'conn'
-    // path — the typed code chained over the node's own navigation message — which ConfigurationGateway
-    // and ImplementationConfigurationProviderBase then propagate with ToNewResult (Code/InnerResult preserved).
     private static IGenericResult<IReadOnlyList<ConnectionConfiguration>> PathNotRegistered() =>
         GenericResult<IReadOnlyList<ConnectionConfiguration>>.Chain(
             DataStoresResultCodes.DataPathNotFound,
@@ -127,8 +124,6 @@ public sealed class ConnectionHealthMonitorWorkerTests
             GenericResult.Failure(new GenericMessage("Container 'Connection' not found in path 'conn'")),
             ResultDetails.Create("ContainerName", "Connection", "PathName", "conn", "DataStoreName", "ConfigurationDb"));
 
-    // Why message-only: a genuine transient failure (dropped connection, timeout, malformed row) carries
-    // no result code — this is the shape that must KEEP the per-tick Error.
     private static IGenericResult<IReadOnlyList<ConnectionConfiguration>> TransientFailure() =>
         GenericResult<IReadOnlyList<ConnectionConfiguration>>.Failure(
             new GenericMessage("A network-related or instance-specific error occurred"));
@@ -139,8 +134,6 @@ public sealed class ConnectionHealthMonitorWorkerTests
         var provider = new StubConnectionConfigurationProvider(loadResult);
         var services = new ServiceCollection();
 
-        // Why the explicit service type: the worker resolves ConnectionConfigurationProvider, so
-        // registering the stub under its own derived type would leave that resolution unsatisfied.
         services.AddSingleton<ConnectionConfigurationProvider>(provider);
 
         var logger = new RecordingLogger();
@@ -193,8 +186,6 @@ public sealed class ConnectionHealthMonitorWorkerTests
         logger.Entries.ShouldNotContain(entry => entry.Level >= LogLevel.Error);
     }
 
-    // Why this assertion matters most: the defect was UNBOUNDED repetition. Stopping the loop means the
-    // store is read exactly once — never re-read every ScanTick for a condition that cannot change.
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
@@ -210,9 +201,6 @@ public sealed class ConnectionHealthMonitorWorkerTests
 
     // ── Genuine failure: unchanged fail-loud behaviour ──────────────────────
 
-    // Why: this is the reference-api regression guard — a load that genuinely fails carries no result
-    // code, must still log the per-tick Error, and must NOT be mistaken for a host that manages
-    // zero connections (the worker keeps monitoring so the next tick retries).
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]

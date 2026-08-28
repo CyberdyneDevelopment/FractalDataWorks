@@ -24,7 +24,6 @@ namespace Fdw.DevSession.McpServer;
 [McpServerToolType]
 public sealed class DevSessionToolService
 {
-    // Why compact: every byte of a tool result is tokens the model pays for on each call.
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = false,
@@ -223,9 +222,6 @@ public sealed class DevSessionToolService
             lastActiveAt = session.LastActiveAt,
         };
 
-    // Why the message is passed through verbatim: the domain already explains WHY it refused
-    // (which strand conflicts, which base ref is missing). Replacing that with a generic failure
-    // would strip the only actionable part of the response.
     private static string Failed(string? message)
         => JsonSerializer.Serialize(new { ok = false, error = message }, JsonOptions);
 }

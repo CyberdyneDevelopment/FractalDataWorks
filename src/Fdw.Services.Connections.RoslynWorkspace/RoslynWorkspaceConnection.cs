@@ -29,7 +29,6 @@ public sealed class RoslynWorkspaceConnection
     : ConnectionBase<IRoslynWorkspaceCommand, RoslynWorkspaceConnectionConfiguration, RoslynWorkspaceConnection>,
       IRoslynWorkspaceConnection
 {
-    // Why: no-op translator — no DataGateway commands registered in 1.1.1.
     private static readonly IDataCommandTranslator<IRoslynWorkspaceCommand> _nullTranslator =
         new NullRoslynWorkspaceTranslator();
 
@@ -53,8 +52,6 @@ public sealed class RoslynWorkspaceConnection
     /// <param name="mode">The workspace mode (Live, Snapshot, etc.).</param>
     /// <param name="connectionName">The connection name from the parent ConnectionConfiguration header.</param>
     /// <param name="logger">Logger; falls back to NullLogger if null.</param>
-    // Why: After config-split, Name lives on the parent ConnectionConfiguration header, not on the typed body.
-    // The factory extracts it and passes it explicitly so logging and the workspace client have the correct name.
     public RoslynWorkspaceConnection(
         RoslynWorkspaceConnectionConfiguration configuration,
         IRoslynWorkspace workspace,
@@ -73,7 +70,6 @@ public sealed class RoslynWorkspaceConnection
     /// <inheritdoc />
     protected override IDataCommandTranslator<IRoslynWorkspaceCommand> GetTranslator(string commandType)
     {
-        // Why: No DataGateway commands ship in 1.1.1. Return the null sentinel.
         return _nullTranslator;
     }
 
@@ -83,7 +79,6 @@ public sealed class RoslynWorkspaceConnection
         IStorageContainer container,
         CancellationToken cancellationToken)
     {
-        // Why: No native RoslynWorkspace DataGateway command path in 1.1.1.
         return Task.FromResult(
             GenericResult<T>.Failure(
                 RoslynWorkspaceConnectionLog.FactoryValidationFailed(
@@ -97,7 +92,6 @@ public sealed class RoslynWorkspaceConnection
         IStorageContainer container,
         CancellationToken cancellationToken)
     {
-        // Why: No native RoslynWorkspace DataGateway command path in 1.1.1.
         return Task.FromResult<IGenericResult>(
             GenericResult.Failure(
                 RoslynWorkspaceConnectionLog.FactoryValidationFailed(
@@ -108,14 +102,11 @@ public sealed class RoslynWorkspaceConnection
     /// <inheritdoc />
     public override Task<IGenericResult> TestConnection(CancellationToken cancellationToken = default)
     {
-        // Why: The workspace was already loaded by the factory — if we got here, the connection is live.
         return Task.FromResult<IGenericResult>(GenericResult.Success());
     }
 
     // ── Private sentinel translator ────────────────────────────────────────────
 
-    // Why: private nested class avoids polluting the namespace. Exists only to satisfy
-    // ConnectionBase abstract requirement for 1.1.1 where no DataGateway commands ship.
     private sealed class NullRoslynWorkspaceTranslator : IDataCommandTranslator<IRoslynWorkspaceCommand>
     {
         public int Id => 0;

@@ -23,10 +23,6 @@ public sealed class DataStoreBackReferenceTests
 {
     private const string StoreName = "TestStore";
 
-    // Why: two paths with a container in each mirrors the real shape that exposed the defect —
-    // ImplementationConfigurationProviderBase.FindForeignKey probes path 'data' for container 'Connection'
-    // (which lives in path 'conn') as its deliberate parent-FK-vs-data-FK test, so a cross-path MISS
-    // is a normal control-flow event on every boot, not an error condition.
     private static DataStoreConfiguration CreateStoreConfig()
     {
         var storeId = Guid.NewGuid();

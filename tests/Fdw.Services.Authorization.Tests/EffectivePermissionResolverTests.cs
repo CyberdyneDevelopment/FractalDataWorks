@@ -41,7 +41,6 @@ public sealed class EffectivePermissionResolverTests
 
     private static readonly Guid TenantId = new("55555555-0000-0000-0000-000000000005");
     private static readonly Guid OrgId    = new("66666666-0000-0000-0000-000000000006");
-    // Why: real user IDs are Guids (JWT sub claim); the org-tier parse guard uses Guid.TryParse.
     private static readonly Guid User1Id  = new("00000001-0000-0000-0000-000000000001");
     private static readonly string User1IdStr = User1Id.ToString();
 
@@ -333,8 +332,6 @@ public sealed class EffectivePermissionResolverTests
             NullLogger<UserRoleConfigurationProvider>.Instance,
             new ConfigurationGatewayProvider(),
             "TestStore", "authz");
-        // Why: CallBase = true lets GetByUser() run its real body (calls Get() → Failure).
-        // Without it, Loose mock returns null for the virtual GetByUser() call.
         userRoleProviderMock.CallBase = true;
         userRoleProviderMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleConfiguration>>.Failure(new GenericMessage("DB unavailable")));
@@ -367,7 +364,6 @@ public sealed class EffectivePermissionResolverTests
             TenantId = null
         };
         const int totalCatalogPermissions = 5; // admin:delete, global:admin, tenant:read, viewer:read1, viewer:read2
-        // Why: 2 admin-only perms (admin:delete + global:admin) are explicitly checked via ShouldNotContain below.
 
         var sut = BuildResolverWithAssignments([viewerAssignment], orgGrants: []);
         var result = await sut.Resolve("viewer-sub", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
@@ -469,9 +465,6 @@ public sealed class EffectivePermissionResolverTests
             NullLogger<UserRoleConfigurationProvider>.Instance,
             new ConfigurationGatewayProvider(),
             "TestStore", "authz");
-        // Why: CallBase = true lets GetByUser() delegate to its real body, which calls Get().
-        // Get() is mocked to return the seeded list so GetByUser() filters by userId as normal.
-        // Without CallBase, Moq returns null for the virtual GetByUser() call (Loose mock default).
         mock.CallBase = true;
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleConfiguration>>.Success(list));

@@ -43,16 +43,12 @@ namespace Fdw.Operations.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Operations")]
-// Why: IGenericConfiguration is required by ImplementationConfigurationProviderBase<T>
-// for dual-source (ctrl+cfg) provider pattern.
 public sealed partial class EscalationPolicyConfiguration : IGenericConfiguration
 {
     /// <inheritdoc />
-    // Why: ServiceCategory + "s" matches the MsSqlConfigurationSource key generation convention.
     public string SectionName => "Operationss";
 
     /// <inheritdoc />
-    // Why: Matches ServiceCategory from [ManagedConfiguration] attribute for IOptions binding path.
     public string ServiceType => "Operations";
 
     /// <inheritdoc />
@@ -62,8 +58,6 @@ public sealed partial class EscalationPolicyConfiguration : IGenericConfiguratio
     /// <summary>
     /// Gets or sets the unique identifier for this escalation policy.
     /// </summary>
-    // Why: no default GUID — ImplementationConfigurationProviderBase.Save mints a UUID v7 on insert when Id is
-    // empty (the single sanctioned place). Pre-minting here is a forbidden default-GUID fallback.
     public Guid Id { get; set; }
 
     /// <summary>

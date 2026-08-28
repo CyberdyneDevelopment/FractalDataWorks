@@ -36,15 +36,8 @@ public sealed partial class ChainedExternalIdentityProvisionerConfiguration : IE
     /// Gets or sets the unique identifier for this typed-body row
     /// (<c>sec.ChainedExternalIdentityProvisioner.Id</c>).
     /// </summary>
-    // Why: No Guid.NewGuid() default — the provider mints this before INSERT.
     public Guid Id { get; set; }
 
-    // Why: IGenericConfiguration members below satisfy the interface contract via EXPLICIT
-    // interface implementation so [GenerateMapper] does NOT map them — they are not columns on
-    // sec.ChainedExternalIdentityProvisioner. The canonical Name/SectionName/ServiceType/
-    // ServiceOptionType live on the parent ExternalIdentityProvisionerConfiguration row; the typed
-    // body is identified solely by ExternalIdentityProvisionerId. Mirrors
-    // OidcExternalIdentityProviderConfiguration.
     string IGenericConfiguration.Name
     {
         get => string.Empty;

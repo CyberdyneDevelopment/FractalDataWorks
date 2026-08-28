@@ -55,8 +55,6 @@ public sealed class PipelineIndexPageTests : IDisposable
         var cut = RenderReal();
         cut.WaitForAssertion(() =>
         {
-            // Why: the old reference-ui test asserted a "Managed processes: N" eyebrow; the current
-            // page renders the count in the "Pipelines & Scheduling · N" eyebrow instead.
             cut.Markup.ShouldContain("Pipelines &amp; Scheduling · 2", Case.Insensitive);
             cut.Markup.ShouldContain("nightly-load");
             cut.Markup.ShouldContain("stream-sync");

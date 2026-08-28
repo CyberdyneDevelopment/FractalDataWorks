@@ -24,8 +24,6 @@ namespace Fdw.UI.Canvas.Blazor.Tests;
 /// </remarks>
 public sealed class BlazorDiagramsRendererTests
 {
-    // Why: BuildDiagram only reads its model argument and logs via the renderer's NullLogger fallback,
-    // so a bare component instance (no DI, no render) is sufficient to exercise the mapping logic.
     private static BlazorDiagramsRenderer NewRenderer() => new();
 
     private static IRenderMode EditMode()

@@ -13,9 +13,6 @@ namespace Fdw.Services.Data.Limits;
 /// been registered. It is replaced at runtime by any IConnectionLimitResolver registered with
 /// higher priority (e.g., the configuration-backed resolver in Services.Connections.MsSql).
 /// </summary>
-// Why: A no-op resolver keeps the LimitEnforcementDataGateway registered unconditionally
-// in the DI stack. When limits ARE configured, callers replace this via
-// services.AddSingleton<IConnectionLimitResolver, MyConfiguredResolver>().
 internal sealed class PassThroughConnectionLimitResolver : IConnectionLimitResolver
 {
     private static readonly IGenericResult<IReadOnlyList<ConnectionLimitConfiguration>> _empty =

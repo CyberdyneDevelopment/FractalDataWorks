@@ -14,9 +14,6 @@ namespace Fdw.Data.Abstractions;
 /// <c>ReferencedKeyId</c> on a <see cref="LogicalKeyType"/> or <see cref="PhysicalKeyType"/> key.
 /// Use Logical (with ReferencedKeyId set) for new logical-Id FK seed entries.
 /// </remarks>
-// Why: EditorBrowsable(Never) hides from IntelliSense without generating CS0618; [Obsolete] is
-// avoided because the TypeCollection source generator emits new ForeignKeyType() and would
-// produce a CS0618 error in Release (TreatWarningsAsErrors) from generated code we cannot annotate.
 [EditorBrowsable(EditorBrowsableState.Never)]
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(KeyTypes), "Foreign")]

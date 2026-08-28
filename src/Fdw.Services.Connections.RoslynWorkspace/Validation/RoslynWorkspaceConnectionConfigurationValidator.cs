@@ -13,9 +13,6 @@ public sealed class RoslynWorkspaceConnectionConfigurationValidator : FdwConfigu
     /// </summary>
     public RoslynWorkspaceConnectionConfigurationValidator()
     {
-        // Why: Name is a header field on ConnectionConfiguration after config-split.
-        // RoslynWorkspaceConnectionConfiguration exposes it as an explicit IGenericConfiguration
-        // member returning string.Empty — it cannot be validated here.
 
         RuleFor(x => x.SolutionPath)
             .NotEmpty()

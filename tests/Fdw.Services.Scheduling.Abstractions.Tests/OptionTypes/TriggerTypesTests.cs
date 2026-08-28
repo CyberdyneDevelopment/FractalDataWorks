@@ -197,8 +197,6 @@ public class TriggerTypesTests
     [Trait("Category", "Scheduling")]
     public void IntervalIsDueWithNullLastExecutionIsDueImmediately()
     {
-        // Why: FDW-576 — a stateless evaluator recomputes CalculateNextExecution(null) = now+interval
-        // on every pass, so without this first-run rule a fresh schedule would never fire.
         var trigger = Trigger.CreateInterval("FirstRun", intervalMinutes: 5);
 
         TriggerTypes.Interval.IsDue(trigger, lastExecution: null, DateTimeOffset.UtcNow).ShouldBeTrue();
@@ -231,9 +229,6 @@ public class TriggerTypesTests
     [Trait("Category", "Scheduling")]
     public void IntervalIsDueWithNullLastExecutionAndInvalidConfigurationIsNotDue()
     {
-        // Why: the first-run rule must not let a malformed trigger "fire once" — a configuration
-        // without a valid IntervalMinutes stays not-due (surfaced by ValidateTrigger, never a
-        // guessed dispatch). A Manual trigger's configuration carries no IntervalMinutes.
         TriggerTypes.Interval.IsDue(Trigger.CreateManual("Broken"), lastExecution: null, DateTimeOffset.UtcNow)
             .ShouldBeFalse();
     }
@@ -279,8 +274,6 @@ public class TriggerTypesTests
     [Trait("Category", "Scheduling")]
     public void EventIsNeverDueOnTheClock()
     {
-        // Why: an event trigger fires when its named event is raised, never because time passed.
-        // A polling evaluation loop must therefore never find it due, regardless of last execution.
         var trigger = Trigger.CreateEvent("Post-extract", eventName: "ExtractCompleted");
         var now = DateTimeOffset.UtcNow;
 
@@ -303,8 +296,6 @@ public class TriggerTypesTests
     [Trait("Category", "Scheduling")]
     public void EventValidateTriggerFailsWhenEventNameMissing()
     {
-        // Why: a Manual trigger's configuration carries no EventName — validation must fail loud
-        // rather than accept a trigger that names no event and could never fire.
         TriggerTypes.Event.ValidateTrigger(Trigger.CreateManual("NoEventName")).IsSuccess.ShouldBeFalse();
     }
 

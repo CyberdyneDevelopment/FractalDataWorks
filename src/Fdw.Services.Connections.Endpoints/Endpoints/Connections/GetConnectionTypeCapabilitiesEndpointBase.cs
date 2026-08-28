@@ -62,8 +62,6 @@ public abstract class GetConnectionTypeCapabilitiesEndpointBase
     protected override async Task<IGenericResult<ConnectionTypeCapabilitiesResponse?>> FindByIdentifier(
         ConnectionTypeNameRequest request, CancellationToken ct)
     {
-        // Why: {Name} accepts either a connection-type name (e.g., "MsSql") or a connection Id
-        // (Guid). If a Guid, resolve the connection and use its ServiceOptionType.
         var typeName = request.Name;
         if (Guid.TryParse(request.Name, out var connectionId))
         {

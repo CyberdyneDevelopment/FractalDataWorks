@@ -5,7 +5,6 @@ namespace Fdw.Services.Agents.Abstractions.TypeCollections.AgentActionStatusType
 /// <summary>
 /// Represents an agent action that has been denied by a human reviewer.
 /// </summary>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(AgentActionStatusTypes), "Denied")]
 public sealed class DeniedAgentActionStatus : AgentActionStatusTypeBase

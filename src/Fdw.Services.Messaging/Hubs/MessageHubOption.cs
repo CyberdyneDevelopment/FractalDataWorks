@@ -29,8 +29,6 @@ public sealed class MessageHubOption : RealTimeHubOptionBase
     /// <inheritdoc/>
     public override void RegisterServices(IServiceCollection services, ILoggerFactory? loggerFactory)
     {
-        // Why: no broadcaster to register — the typed IHubContext<MessageHub, IMessageHubClient> is
-        // supplied by AddSignalR() and consumed directly by MessageService.
     }
 
     /// <inheritdoc/>

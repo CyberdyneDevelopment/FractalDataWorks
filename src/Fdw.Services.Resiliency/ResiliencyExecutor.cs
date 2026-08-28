@@ -26,8 +26,6 @@ public sealed class ResiliencyExecutor : IResiliencyExecutor
         ILogger<ResiliencyExecutor>? logger = null)
     {
         _policyProvider = policyProvider ?? throw new ArgumentNullException(nameof(policyProvider));
-        // Why NullLogger fallback: per FDW convention, ensures the executor remains functional
-        // if DI does not wire up logging.
         _logger = logger ?? NullLogger<ResiliencyExecutor>.Instance;
     }
 
@@ -43,7 +41,6 @@ public sealed class ResiliencyExecutor : IResiliencyExecutor
 
         ResiliencyLog.ResiliencyExecutorStarted(_logger, ctx.ExecutionId, ctx.StageId, policyId);
 
-        // Why: null policyId means no resiliency configured — run once and return directly.
         if (policyId is null)
         {
             ResiliencyLog.PolicyNotFound(_logger, ctx.ExecutionId, "(none — pass-through)");
@@ -55,8 +52,6 @@ public sealed class ResiliencyExecutor : IResiliencyExecutor
 
         if (!configResult.IsSuccess || configResult.Value is null)
         {
-            // Why: policy not found is a configuration error — log and fail fast rather
-            // than silently falling back to no-resiliency, which could mask misconfiguration.
             return GenericResult.Failure(
                 ResiliencyLog.PolicyNotFound(_logger, ctx.ExecutionId, policyId.Value.ToString("N")));
         }
@@ -88,7 +83,6 @@ public sealed class ResiliencyExecutor : IResiliencyExecutor
         }
         catch (OperationCanceledException)
         {
-            // Why: cancellation is not an error — let it propagate silently.
             throw;
         }
         catch (Exception ex)

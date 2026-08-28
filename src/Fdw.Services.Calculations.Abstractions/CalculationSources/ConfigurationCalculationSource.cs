@@ -23,8 +23,6 @@ public sealed class ConfigurationCalculationSource : CalculationSourceTypeBase
     }
 
     /// <inheritdoc/>
-    // Why: no own EventIds — every failure here is the live entity service's own already-logged
-    // result, propagated with full metadata via ToNewResult (never re-wrapped in a bare string).
     public override async Task<IGenericResult<IReadOnlyList<CalculationCatalogItem>>> List(
         CalculationSourceContext context,
         CancellationToken cancellationToken = default)

@@ -35,8 +35,6 @@ namespace Fdw.Services.Identity.Tests;
 [Trait("Category", "Configuration")]
 public sealed class IdentityHostBootTests
 {
-    // Why force: the collection tracks each phase run-once, so a second test running Configure would
-    // otherwise be skipped and assert nothing. force re-runs the body against this test's own builder.
     private const bool Force = true;
 
     private static HostApplicationBuilder Builder()
@@ -46,8 +44,6 @@ public sealed class IdentityHostBootTests
         // The prerequisites a real entry-point app supplies before any domain registers. Named here
         // rather than mocked away, because discovering exactly this list is the point of the test.
         builder.Services.AddHttpClient();
-        // Why the interface and not the concrete type: the collections resolve
-        // IConfigurationGatewayProvider, which ConfigurationGatewayTypes would normally supply.
         builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
 
         return builder;
@@ -110,8 +106,6 @@ public sealed class IdentityHostBootTests
         using var host = builder.Build();
         using var scope = host.Services.CreateScope();
 
-        // Why scoped: the generator registers every domain provider AddScoped, so resolving from the
-        // root container would be the capture bug the framework warns about.
         scope.ServiceProvider
             .GetService<IIdentityServiceProvider>()
             .ShouldNotBeNull();

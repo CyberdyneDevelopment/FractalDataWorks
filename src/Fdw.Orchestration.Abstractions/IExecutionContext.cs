@@ -13,9 +13,6 @@ namespace Fdw.Orchestration.Abstractions;
 /// is consolidated here. Domain contexts inherit this interface and add only
 /// domain-specific members.
 /// </remarks>
-// Why: Eliminates the cross-cutting duplication of ExecutionId/StartTime/CancellationToken/Logger/
-// Services/Parameters/SharedState that existed independently on every domain execution context.
-// Composing rather than flattening keeps each domain context's surface area minimal.
 public interface IExecutionContext
 {
     /// <summary>

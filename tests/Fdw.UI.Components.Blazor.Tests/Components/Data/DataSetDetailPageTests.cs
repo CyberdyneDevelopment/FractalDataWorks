@@ -43,9 +43,6 @@ public sealed class DataSetDetailPageTests : IDisposable
 
     private void Swap(DataSetContext? ds = null, AnnotationContext? ann = null)
     {
-        // Why: DataSetDetail captures the provider via @ref="_provider" (typed to the
-        // real provider), so the unrelated ProviderStub would throw InvalidCastException.
-        // Use a concrete subclass (StubDataSetProvider IS-A DataSetProvider) instead.
         _dsSeed = ds ?? new DataSetContext();
         _ctx.RegisterProviderInfrastructure();
         _ctx.ComponentFactories.Add(new InheritingProviderFactory<DataSetProvider, StubDataSetProvider>());
@@ -174,11 +171,6 @@ public sealed class DataSetDetailPageTests : IDisposable
 
     // ── Preview tab ─────────────────────────────────────────────────────────
 
-    // Why these replaced PreviewTabRendersOpenDataPreviewButtonAndNavigates: the Preview tab no
-    // longer navigates to a separate /data-preview page. It renders DataSetDetailPreviewPane inline,
-    // whose Run Query button calls OnLoadPreview on the pane's own context. The old "Open Data
-    // Preview" button was already absent at 978b09003 — before the UI remediation — so the old test
-    // had been asserting removed markup since well before that work.
 
     [Fact]
     public void PreviewTabRendersInlinePreviewPaneControls()
@@ -298,9 +290,6 @@ public sealed class DataSetDetailPageTests : IDisposable
         var cut = RenderDetail();
         cut.FindAll(".tabs a").First(a => string.Equals(a.TextContent.Trim(), "Annotations", StringComparison.Ordinal)).Click();
 
-        // Why: these fields use @bind (onchange), so drive them with Change(), not Input().
-        // Re-find before each Change because every bind re-renders and invalidates prior
-        // element handles (bUnit UnknownEventHandlerIdException otherwise).
         cut.FindAll("input").First(i => string.Equals(i.GetAttribute("placeholder"), "Data owner", StringComparison.Ordinal)).Change("alice");
         cut.FindAll("input").First(i => string.Equals(i.GetAttribute("placeholder"), "Data steward", StringComparison.Ordinal)).Change("bob");
         cut.Find("select.fin").Change("Internal");

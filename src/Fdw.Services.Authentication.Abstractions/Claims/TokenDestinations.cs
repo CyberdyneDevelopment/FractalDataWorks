@@ -5,7 +5,6 @@ namespace Fdw.Services.Authentication.Abstractions;
 /// OAuth/OpenID token names (and OpenIddict's destination constants) so the claim-baking
 /// pipeline can apply them verbatim. A claim may target one or both.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static class TokenDestinations
 {

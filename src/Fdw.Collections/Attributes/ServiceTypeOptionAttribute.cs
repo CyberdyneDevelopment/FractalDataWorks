@@ -7,7 +7,6 @@ namespace Fdw.Collections;
 /// Marks a class as a ServiceTypeOption that belongs to a ServiceTypeCollection.
 /// Can be in any project that references the collection's assembly.
 /// </summary>
-// Why: pure attribute definition (declarative metadata only, consumed by source generators) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 [ExcludeFromCodeCoverage]
 public sealed class ServiceTypeOptionAttribute : Attribute

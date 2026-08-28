@@ -30,9 +30,6 @@ internal static class CompilationHelper
 
             MetadataReference.CreateFromFile(typeof(Fdw.Collections.ITypeOption).Assembly.Location),
             MetadataReference.CreateFromFile(typeof(Fdw.Results.GenericResult).Assembly.Location),
-            // Why: ConfigurationTypeOptionAttribute and ConfigurationTypes deleted in Wave C5.
-            // The ConfigurationTypeModuleInitializerGenerator short-circuits when these symbols
-            // are absent from the compilation — no registration code is emitted.
             MetadataReference.CreateFromFile(typeof(Fdw.Data.GenerateMapperAttribute).Assembly.Location),
         };
 

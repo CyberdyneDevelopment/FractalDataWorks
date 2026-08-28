@@ -20,9 +20,6 @@ namespace Fdw.Security.Hashing;
 [TypeOption(typeof(PasswordHashAlgorithms), "Pbkdf2")]
 public sealed class Pbkdf2PasswordHashAlgorithm : PasswordHashAlgorithmBase
 {
-    // Why: 210,000 is the OWASP-current work factor for PBKDF2-HMAC-SHA512 (raised from the prior
-    // 100k, which is below current guidance). Re-verify against the OWASP Password Storage Cheat Sheet
-    // before changing — these numbers go stale.
     private const int IterationCount = 210_000;
     private const int SaltSizeBytes = 16;
     private const int HashSizeBytes = 32;
@@ -60,9 +57,6 @@ public sealed class Pbkdf2PasswordHashAlgorithm : PasswordHashAlgorithmBase
     /// <inheritdoc />
     public override byte[] DeriveKey(string plaintext, string storedSalt)
     {
-        // Why: deterministic KDF over a KNOWN salt, returning the raw derived key for the vault to
-        // pepper + compare/store. No comparison happens here (the vault owns the pepper and the compare).
-        // A bad/empty salt is a data-integrity error, not a normal path — let it surface loudly.
         var saltBytes = Convert.FromBase64String(storedSalt);
         return KeyDerivation.Pbkdf2(
             password: plaintext,
@@ -85,8 +79,6 @@ public sealed class Pbkdf2PasswordHashAlgorithm : PasswordHashAlgorithmBase
         }
         catch (FormatException ex)
         {
-            // Why: corrupt Base64 in stored hash or salt means the stored value is invalid.
-            // Return false (hash mismatch) rather than throwing. ex is observed.
             _ = ex;
             return false;
         }
@@ -98,13 +90,9 @@ public sealed class Pbkdf2PasswordHashAlgorithm : PasswordHashAlgorithmBase
             iterationCount: IterationCount,
             numBytesRequested: expectedHash.Length);
 
-        // Why: Constant-time comparison prevents timing attacks.
-        // CryptographicOperations.FixedTimeEquals is not available in netstandard2.0.
         return FixedTimeEquals(actualHash, expectedHash);
     }
 
-    // Why: netstandard2.0 doesn't have CryptographicOperations.FixedTimeEquals.
-    // XOR accumulator ensures comparison time is constant regardless of where bytes differ.
     private static bool FixedTimeEquals(byte[] left, byte[] right)
     {
         if (left.Length != right.Length)

@@ -5,7 +5,6 @@ namespace Fdw.Roslyn.Commands.Analysis.Results;
 /// <summary>
 /// One type whose namespace disagrees with its file path and/or its owning project.
 /// </summary>
-// Why: pure data holder, auto-properties only, no logic
 [ExcludeFromCodeCoverage]
 public sealed class NamespaceMismatch
 {

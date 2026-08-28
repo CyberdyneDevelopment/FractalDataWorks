@@ -47,7 +47,6 @@ public sealed partial class ApexChartsRenderer : ComponentBase
     /// <summary>
     /// Gets or sets the optional logger. Falls back to <see cref="NullLogger{T}.Instance"/>.
     /// </summary>
-    // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions.
     [Parameter]
     public ILogger? Logger { get; set; }
 
@@ -57,8 +56,6 @@ public sealed partial class ApexChartsRenderer : ComponentBase
     private string? _errorMessage;
     private bool _isLoading = true;
 
-    // Why: the ApexChart component ref is held so future methods (e.g. UpdateSeriesAsync)
-    // can trigger data refreshes without a full re-render.
     private ApexCharts.ApexChart<ChartDataRow>? _apexChart;
 
     private ILogger ResolvedLogger => Logger ?? NullLogger<ApexChartsRenderer>.Instance;

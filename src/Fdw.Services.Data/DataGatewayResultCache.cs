@@ -21,18 +21,11 @@ namespace Fdw.Services.Data;
 /// invalidation mechanics. Implements <see cref="ICacheInvalidator"/> so domain providers'
 /// write paths evict matching entries from the shared cache.
 /// </remarks>
-// Why: public so DataGatewayService (also public) can reference it in its constructor signature
-// without CS0051. The cache is an explicit part of the DataGatewayService composition contract —
-// it was always a first-class singleton; inlining caching into DataGatewayService (P3) makes
-// the dependency visible.
 public sealed class DataGatewayResultCache : ICacheInvalidator
 {
     private readonly IMemoryCache _cache;
     private readonly ILogger<DataGatewayResultCache> _logger;
 
-    // Why: IMemoryCache doesn't support key enumeration. This sidecar maps invalidation tags
-    // to the set of cache keys tagged with them, enabling tag-based eviction. Lock-free via
-    // ConcurrentDictionary<string, byte> (set semantics).
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _tagToKeys = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
@@ -66,10 +59,8 @@ public sealed class DataGatewayResultCache : ICacheInvalidator
     {
         var entryOptions = new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = duration };
 
-        // Why: PostEvictionCallback cleans up the tag sidecar when entries expire naturally.
         entryOptions.RegisterPostEvictionCallback((key, _, _, _) => RemoveKeyFromAllTags(key?.ToString()));
 
-        // Why: IMemoryCache.Set returns the stored value, not a success indicator; discard is intentional.
         _ = _cache.Set(cacheKey, value, entryOptions);
         TrackKeyForTags(cacheKey, tags);
 

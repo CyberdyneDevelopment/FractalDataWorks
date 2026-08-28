@@ -24,8 +24,6 @@ public sealed class TabularFormatType : FormatTypeBase
             mimeType: "application/vnd.tabular",
             isBinary: false,
             supportsStreaming: true,
-            // Why: Tabular is SQL result sets / in-memory tables, NOT a file format — empty extension
-            // marks it non-file-addressable so a FileSystem-store builder fails loud on it (NO FALLBACKS).
             canonicalFileExtension: "")
     {
     }

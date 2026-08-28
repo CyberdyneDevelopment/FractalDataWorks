@@ -10,8 +10,6 @@ namespace Fdw.Services.Connections.Http.Security.Types;
 [TypeOption(typeof(HttpAuthenticationTypes), "WsSecurity")]
 public sealed class WsSecurityConfiguration : HttpAuthenticationConfiguration
 {
-    // Why: SecretManagerName is a key THIS secret-backed method owns and requires (it resolves the
-    // certificate secret name). It is NOT on the base — non-secret methods declare no such key.
     private static readonly string[] ExpectedList = ["SecretManagerName", "CertificateSecretName", "TimestampTtlSeconds"];
     private static readonly string[] RequiredList = ["SecretManagerName", "CertificateSecretName"];
 

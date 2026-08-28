@@ -6,7 +6,6 @@ namespace Fdw.UI.Abstractions.Pages;
 /// <summary>
 /// Base class for trend direction for metrics.
 /// </summary>
-// Why: pure TypeOption base — trivial pass-through constructor, no logic to test.
 [ExcludeFromCodeCoverage]
 public abstract class TrendDirectionBase : TypeOptionBase<int, TrendDirectionBase>, ITrendDirection
 {

@@ -83,8 +83,6 @@ public sealed class PipelineStatusHubTests
         await hub.OnConnectedAsync();
 
         // Assert
-        // Why: NO FALLBACKS - a connection with no org_id claim must join no group at all, never a
-        // placeholder/global firehose.
         groups.Verify(
             g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);

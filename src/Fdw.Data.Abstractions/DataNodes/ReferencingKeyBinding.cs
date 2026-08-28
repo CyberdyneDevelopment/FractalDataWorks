@@ -15,6 +15,5 @@ namespace Fdw.Data.Abstractions;
 /// </remarks>
 /// <param name="Key">The key that points at the parent container.</param>
 /// <param name="Owner">The child container that declares this key.</param>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record ReferencingKeyBinding(IContainerKey Key, IDataContainer Owner);

@@ -14,8 +14,6 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class UpdateServerSettingEndpointBase : CrudUpdateEndpointBase<UpdateServerSettingRequest, ServerSettingDetailDto>
 {
-    // Why: SettingsConfigurationProvider replaces IOptionsMonitor<List<ServerSettingConfiguration>>
-    // with dual-source (ctrl + cfg) provider that provides server/tenant/role settings.
     private readonly SettingsConfigurationProvider _provider;
 
     /// <inheritdoc />
@@ -44,10 +42,6 @@ public abstract class UpdateServerSettingEndpointBase : CrudUpdateEndpointBase<U
 
         if (setting is null)
         {
-            // Why: the Update path only mutates existing rows, but a recognized platform
-            // setting (e.g. Enable2FA, SystemName) has no row until first write. For names in
-            // the SettingDefinitions allow-list, return a synthesized detail so the update
-            // proceeds and materializes the row. Unknown names still 404 (no fallback).
             if (SettingDefinitions.TryGet(request.SettingName, out var definition))
             {
                 return GenericResult<ServerSettingDetailDto?>.Success(new ServerSettingDetailDto
@@ -91,8 +85,6 @@ public abstract class UpdateServerSettingEndpointBase : CrudUpdateEndpointBase<U
 
         if (setting is null)
         {
-            // Why: known platform setting with no row yet — materialize it from the
-            // registry definition (FindForUpdate already gated this to allow-listed names).
             if (!SettingDefinitions.TryGet(request.SettingName, out var definition))
             {
                 SettingsEndpointLog.ServerSettingNotFound(Logger, request.SettingName);

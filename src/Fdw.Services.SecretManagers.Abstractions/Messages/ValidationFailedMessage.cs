@@ -7,7 +7,6 @@ namespace Fdw.Services.SecretManagers.Abstractions.Messages;
 /// <summary>
 /// CurrentMessage indicating that validation failed.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [Message("ValidationFailed")]
 [MessageOption(typeof(SecretManagerMessageCollectionBase))]

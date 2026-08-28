@@ -4,7 +4,6 @@ namespace Fdw.Services.Etl.Projects.Clients;
 /// Request body for the unified trigger endpoint (POST /etl/trigger/{type}).
 /// Either <see cref="Id"/> OR (<see cref="Name"/> + <see cref="ParentPath"/>) must be supplied.
 /// </summary>
-// Why: pure request DTO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class TriggerRequest
 {

@@ -39,8 +39,6 @@ public sealed class HttpSessionStateService : ISessionStateService
     public async Task<IGenericResult<bool>> SaveState<T>(string userId, string key, T value, CancellationToken cancellationToken = default)
     {
         var body = new { Value = JsonSerializer.SerializeToElement(value, SerializerOptions) };
-        // Why PATCH: the upsert endpoint moved from PUT to PATCH in the verb sweep (4ffe4acfc)
-        // and this caller was not moved with it, so every save answered 405.
         var response = await _httpClient.PatchAsJsonAsync($"session-state/{Uri.EscapeDataString(key)}", body, cancellationToken).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)

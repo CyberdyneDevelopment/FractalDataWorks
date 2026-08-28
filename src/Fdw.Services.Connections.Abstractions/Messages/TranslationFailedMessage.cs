@@ -6,7 +6,6 @@ namespace Fdw.Services.Connections.Abstractions.Messages;
 /// <summary>
 /// Message indicating that command translation failed.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [Message("TranslationFailed")]
 [MessageOption(typeof(ConnectionMessageCollectionBase))]

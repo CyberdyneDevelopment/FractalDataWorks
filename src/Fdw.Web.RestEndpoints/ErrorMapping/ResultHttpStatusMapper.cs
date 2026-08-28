@@ -32,15 +32,11 @@ public static class ResultHttpStatusMapper
         var referenceId = httpContext.TraceIdentifier;
         var code = ExtractResultCode(result);
 
-        // Why: the leading digit of the code's number (number / 10000) is the handling category;
-        // ById returns the NotFound sentinel (never null) for anything outside the 1..9 band.
         if (code is not null && code.Id >= 10000)
         {
             var category = ResultCategories.ById(code.Id / 10000);
             if (!ReferenceEquals(category, ResultCategories.NotFound) && category.IsFailure)
             {
-                // Why: status, retryability, and the client-safe copy all travel with the category
-                // option (set via its constructor) — no per-code table and no dispatch on the id here.
                 return (category.HttpStatus, Build(
                     category.HttpStatus,
                     category.ClientMessage,

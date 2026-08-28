@@ -20,7 +20,6 @@ public sealed class SnapshotRoslynWorkspaceConnection
     : ConnectionBase<IRoslynWorkspaceCommand, RoslynWorkspaceConnectionConfiguration, SnapshotRoslynWorkspaceConnection>,
       IRoslynWorkspaceConnection
 {
-    // Why: no-op translator — no DataGateway commands registered in 1.1.1.
     private static readonly IDataCommandTranslator<IRoslynWorkspaceCommand> _nullTranslator =
         new NullRoslynTranslator();
 
@@ -44,7 +43,6 @@ public sealed class SnapshotRoslynWorkspaceConnection
     /// <param name="mode">The workspace mode.</param>
     /// <param name="connectionName">The connection name from the parent ConnectionConfiguration header.</param>
     /// <param name="logger">Logger; falls back to NullLogger if null.</param>
-    // Why: After config-split, Name lives on the parent ConnectionConfiguration header, not on the typed body.
     public SnapshotRoslynWorkspaceConnection(
         RoslynWorkspaceConnectionConfiguration configuration,
         IRoslynWorkspaceClient client,
@@ -94,8 +92,6 @@ public sealed class SnapshotRoslynWorkspaceConnection
     /// <inheritdoc />
     public override Task<IGenericResult> TestConnection(CancellationToken cancellationToken = default)
     {
-        // Why: Snapshot mode doesn't keep the workspace resident. TestConnection validates
-        // only that the solution file exists — it was already checked at factory creation time.
         return Task.FromResult<IGenericResult>(GenericResult.Success());
     }
 

@@ -19,13 +19,10 @@ internal static class ConfigurationTypeMapper
     /// </summary>
     public static ConfigurationTypeSummaryDto ToSummary(IDataContainer container) => new()
     {
-        // Why: container.Name is the type discriminator (e.g., "MsSqlConnection").
-        // ServiceCategory is not yet on IDataContainer — use Path.Name (schema) as a proxy.
         TypeName = container.Name,
         DisplayName = container.Name,
         Description = container.Description,
         Category = container.Parent.Name,
-        // Why: ValuesFromReferences is a typed-body feature pending Wave A6. Return empty list.
         RelatedCollections = []
     };
 

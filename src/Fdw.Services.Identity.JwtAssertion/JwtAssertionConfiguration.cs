@@ -90,8 +90,6 @@ public partial class JwtAssertionConfiguration : IIdentityServiceImplementationC
     public string? Description { get; set; }
 
     // ── Tenant / visibility / audit ──────────────────────────────────────────
-    // Why: no value defaults — a missing tenant/visibility/audit value must read as its
-    // DB-configured null, never a silently-assumed default.
 
     /// <summary>Gets or sets the tenant identifier for tenant isolation. Null means system-wide.</summary>
     public Guid? TenantId { get; set; }

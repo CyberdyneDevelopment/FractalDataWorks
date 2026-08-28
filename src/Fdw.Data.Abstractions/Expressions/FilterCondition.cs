@@ -45,13 +45,6 @@ public sealed record FilterCondition : IFilterCondition, IFilterNode
     /// </summary>
     public object? Value { get; init; }
 
-    // Why: the compiler-synthesized record Equals/GetHashCode compare Value via
-    // EqualityComparer<object>.Default, which is value-correct for scalars but falls back to reference
-    // identity for a collection — e.g. FilterConditionBuilder.In(...) sets Value to the caller's
-    // IEnumerable. Two structurally-identical IN-clause conditions built fresh per call (the normal
-    // case) would otherwise hash/compare unequal, the same defect fixed on FilterGroup.Nodes, and for
-    // the same reason: CacheKeyBuilder.ComputeCacheKey needs GetHashCode() to be value-based to key the
-    // DataGateway result cache.
     /// <inheritdoc/>
     public bool Equals(FilterCondition? other) =>
         other is not null

@@ -23,9 +23,6 @@ public abstract class CanvasNodeTypeBase : TypeOptionBase<int, CanvasNodeTypeBas
     /// <param name="displayName">The human-readable display name shown in the renderer.</param>
     /// <param name="category">The category/group for renderer colour-coding and legend grouping.</param>
     /// <param name="iconHint">The icon hint string passed to the renderer.</param>
-    // Why: TypeOptionBase already exposes DisplayName + Category; pass them through its
-    // 6-arg ctor (id, name, configurationKey, displayName, description, category) rather than
-    // redeclaring (which would hide the inherited members). Only IconHint is net-new.
     protected CanvasNodeTypeBase(int id, string name, string displayName, string category, string iconHint)
         : base(id, name, name, displayName, displayName, category)
     {

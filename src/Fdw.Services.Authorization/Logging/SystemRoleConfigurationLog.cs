@@ -12,7 +12,6 @@ namespace Fdw.Services.Authorization.Logging;
 public static partial class SystemRoleConfigurationLog
 {
     /// <summary>Logs when AdminRoleName is absent or empty — startup fatal.</summary>
-    // Why: fail-loud; the admin role name is required for all system-role guards.
     [MessageLogging(EventId = 61001, Level = LogLevel.Critical,
         Message = "authz:SystemRoleMapping:AdminRoleName is required but is missing or empty. Application cannot start.")]
     public static partial IGenericMessage AdminRoleNameMissing(ILogger logger);

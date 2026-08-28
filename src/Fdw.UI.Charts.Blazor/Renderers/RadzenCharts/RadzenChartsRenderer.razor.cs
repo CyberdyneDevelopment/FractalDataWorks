@@ -47,7 +47,6 @@ public sealed partial class RadzenChartsRenderer : ComponentBase
     /// <summary>
     /// Gets or sets the optional logger. Falls back to <see cref="NullLogger{T}.Instance"/>.
     /// </summary>
-    // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions.
     [Parameter]
     public ILogger? Logger { get; set; }
 

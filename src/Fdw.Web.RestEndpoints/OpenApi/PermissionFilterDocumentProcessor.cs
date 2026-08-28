@@ -35,7 +35,6 @@ namespace Fdw.Web.RestEndpoints.OpenApi;
 /// </remarks>
 public sealed class PermissionFilterDocumentProcessor : IDocumentProcessor
 {
-    // Why: The health check path is always public; never filter it out.
     private const string HealthCheckPath = "/healthz";
 
     private IServiceProvider? _serviceProvider;
@@ -65,15 +64,11 @@ public sealed class PermissionFilterDocumentProcessor : IDocumentProcessor
         var user = httpContextAccessor.HttpContext?.User;
         if (user?.Identity?.IsAuthenticated != true)
         {
-            // Why: Unauthenticated users see only public endpoints (health check, auth).
-            // This prevents information disclosure about API surface area.
             OpenApiProcessorLog.FilteredToPublicOnly(logger);
             FilterToPublicOnly(context.Document);
             return;
         }
 
-        // Why: Admin users see everything — no filtering needed. Resolve the configured admin role
-        // name from ISystemRoleConfiguration so this check survives a per-environment role rename.
         var systemRoleConfig = _serviceProvider.GetService<ISystemRoleConfiguration>();
         if (systemRoleConfig is not null && systemRoleConfig.IsInRole(user, systemRoleConfig.AdminRoleName))
         {
@@ -82,8 +77,6 @@ public sealed class PermissionFilterDocumentProcessor : IDocumentProcessor
             return;
         }
 
-        // Why: Get the user's effective permissions from JWT claims.
-        // The FDW authorization system stores permission claims as "permission" type.
         var userPermissions = user.FindAll("permission")
             .Select(c => c.Value)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -108,13 +101,11 @@ public sealed class PermissionFilterDocumentProcessor : IDocumentProcessor
 
         foreach (var (pathKey, pathItem) in document.Paths)
         {
-            // Why: Always keep health check visible regardless of permissions.
             if (pathKey.EndsWith(HealthCheckPath, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             removedCount += FilterPathOperations(pathItem, pathKey, userPermissions, logger);
 
-            // Why: Remove empty paths so Scalar sidebar doesn't show empty groups.
             if (!pathItem.Any())
                 pathsToRemove.Add(pathKey);
         }
@@ -142,8 +133,6 @@ public sealed class PermissionFilterDocumentProcessor : IDocumentProcessor
             if (requiredPolicy is null)
                 continue;
 
-            // Why: "fdw:authenticated" means any logged-in user can access it,
-            // so don't filter those operations for authenticated users.
             if (string.Equals(requiredPolicy, "fdw:authenticated", StringComparison.OrdinalIgnoreCase))
                 continue;
 
@@ -170,9 +159,6 @@ public sealed class PermissionFilterDocumentProcessor : IDocumentProcessor
     /// </remarks>
     private static string? GetRequiredPolicy(OpenApiOperation operation)
     {
-        // Why: FastEndpoints adds security requirements where the scheme name IS the policy name.
-        // Policy names follow the bare "{resource}:{action}" shape (or "authenticated"); claim
-        // anything matching that shape.
         foreach (var securityRequirement in operation.Security)
         {
             foreach (var (schemeName, _) in securityRequirement)
@@ -186,8 +172,6 @@ public sealed class PermissionFilterDocumentProcessor : IDocumentProcessor
             }
         }
 
-        // Why: If no FDW-shaped policy is set, the operation might use AllowAnonymous()
-        // or the default policy. Return null to indicate no filtering is needed.
         return null;
     }
 
@@ -196,9 +180,6 @@ public sealed class PermissionFilterDocumentProcessor : IDocumentProcessor
     /// </summary>
     private static bool HasPermission(HashSet<string> userPermissions, string policyName)
     {
-        // Why: Policy names and permission claims both use the bare "{resource}:{action}"
-        // shape — direct comparison works. Per-tenant org prefixes are applied at the API
-        // DTO boundary, not in the policy/permission identity used here.
         return userPermissions.Contains(policyName);
     }
 
@@ -211,7 +192,6 @@ public sealed class PermissionFilterDocumentProcessor : IDocumentProcessor
 
         foreach (var (pathKey, _) in document.Paths)
         {
-            // Why: Keep health check for monitoring and auth endpoints for login.
             if (pathKey.EndsWith(HealthCheckPath, StringComparison.OrdinalIgnoreCase))
                 continue;
 

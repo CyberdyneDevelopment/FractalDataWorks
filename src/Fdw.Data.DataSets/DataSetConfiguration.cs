@@ -65,8 +65,6 @@ public partial class DataSetConfiguration : IGenericConfiguration
     /// Gets or sets the human-facing display name for this dataset.
     /// Falls back to <see cref="Name"/> when null or empty.
     /// </summary>
-    // Why: Name is the stable identifier other code references; DisplayName is the
-    // user-visible label. Decoupling lets users rename without breaking references.
     public string? DisplayName { get; set; }
 
     /// <summary>
@@ -92,11 +90,6 @@ public partial class DataSetConfiguration : IGenericConfiguration
     public string? ServiceOptionType { get; set; }
 
     // ── Type-specific properties (flattened from former child tables) ────────────
-    // Why: The three former child tables (Standard, MultiSource, Distributed subtypes)
-    // each held only 2–4 columns. Flattening them into DataSet eliminates three JOIN
-    // legs from every query path and removes the need for three separate C# subtypes.
-    // Columns specific to one variant are nullable so they are always schema-safe on
-    // rows of other variants. ServiceOptionType is the discriminator.
 
     /// <summary>
     /// Gets or sets whether this dataset supports client-side sorting in data preview.
@@ -286,8 +279,6 @@ public partial class DataSetConfiguration : IGenericConfiguration
     /// Gets or sets the key fields for this dataset (Surrogate, Natural, Foreign).
     /// Loaded from <c>data.DataSetKeyField</c>. Callers filter by <see cref="DataSetKeyFieldConfiguration.KeyType"/>.
     /// </summary>
-    // Why: mapper-visible (no [NotMapped]) so [GenerateMapper] emits the CascadeChildren descriptor and
-    // the keystone base read (ComposeChildren) loads these rows — replacing AssembleHierarchy.
 #pragma warning disable MA0016 // Prefer collection abstraction — List<T> required for provider assignment
     public List<DataSetKeyFieldConfiguration> KeyFields { get; set; } = [];
 #pragma warning restore MA0016

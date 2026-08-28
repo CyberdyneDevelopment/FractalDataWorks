@@ -31,10 +31,6 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// treated as a load-time failure, not silently ignored.
 /// </para>
 /// </remarks>
-// Why: implements IGenericConfiguration so [GenerateMapper] emits a CascadeChildren descriptor for the
-// parent DataSetConfiguration.Aggregates collection — the keystone base read (ComposeChildren) then
-// loads data.DataSetAggregate rows, matched via the child's ConfigurationCommand.ContainerName
-// ("DataSetAggregate"). Mirrors the DataSetSourceConfiguration/DataSetKeyFieldConfiguration pattern.
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "DataSetAggregate")]

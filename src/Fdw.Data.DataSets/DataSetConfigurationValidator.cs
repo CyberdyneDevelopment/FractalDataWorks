@@ -43,10 +43,6 @@ public sealed class DataSetConfigurationValidator : AbstractValidator<DataSetCon
             .NotEmpty()
             .WithMessage("At least one key field must be specified");
 
-        // Why: Name-matches-field-list validation was removed in FDW-395 Phase 6.
-        // Key field records are resolved by RowId at load time via IDataNode, not by matching
-        // KeyName against the Fields collection. Removing this cross-field rule avoids false
-        // validation failures for configs where key fields are defined before their field records.
     }
 
     private static bool BeValidTypeName(string typeName)

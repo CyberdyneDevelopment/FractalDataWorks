@@ -54,8 +54,6 @@ public partial class NotificationConfiguration : INotificationConfiguration
     /// <summary>
     /// Gets or sets the unique identifier for this notification.
     /// </summary>
-    // Why: No Guid.NewGuid() default — DB owns identity assignment. A random default would
-    // propagate to typed-body lookups via WHERE [NotificationId] = @domainConfigurationId, causing misses.
     public Guid Id { get; set; }
 
     /// <summary>

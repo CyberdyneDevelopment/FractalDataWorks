@@ -42,14 +42,9 @@ public abstract class IdentityServiceBase<TConfiguration, TService>
     public override async Task<IGenericResult<T>> Execute<T>(IdentityTokenCommand command, CancellationToken cancellationToken = default)
     {
         var acquired = await Acquire(command.Request, cancellationToken).ConfigureAwait(false);
-        // Why ToNewResult and not Failure(Messages): it carries Code, InnerResult and Details across
-        // the type change too, so the reason the acquisition failed survives the conversion intact.
         if (acquired.IsFailure)
             return acquired.ToNewResult<T>();
 
-        // Why this is a failure and not a cast: the generic surface cannot constrain T to the type
-        // this domain returns, so a caller asking for anything else has made an error that must be
-        // said out loud rather than surfaced as an empty success.
         return acquired.Value is T typed
             ? GenericResult<T>.Success(typed)
             : GenericResult<T>.Failure(IdentityLog.ResultTypeMismatch(Logger, typeof(T).Name, nameof(IssuedIdentityToken)));

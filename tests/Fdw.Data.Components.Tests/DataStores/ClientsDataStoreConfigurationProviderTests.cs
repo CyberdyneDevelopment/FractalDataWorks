@@ -140,8 +140,6 @@ public sealed class ClientsDataStoreConfigurationProviderTests
         var result = await sut.Get("Store1", TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        // Why: ConnectionId is a known API gap (DTO carries ConnectionName, not the Guid) — must stay
-        // at the POCO default rather than being invented (NO FALLBACKS).
         result.Value.ShouldNotBeNull();
         result.Value.ConnectionId.ShouldBe(Guid.Empty);
     }
@@ -255,8 +253,6 @@ public sealed class ClientsDataStoreConfigurationProviderTests
         result.Value.ShouldNotBeNull();
         result.Value.Count.ShouldBe(1);
         result.Value[0].Name.ShouldBe("Store1");
-        // Why: the shallow summary endpoint carries no Paths — ConfiguredDataStoreProvider.Get()
-        // composes the full aggregate per store via a follow-up Get(name).
         result.Value[0].Paths.ShouldBeEmpty();
     }
 

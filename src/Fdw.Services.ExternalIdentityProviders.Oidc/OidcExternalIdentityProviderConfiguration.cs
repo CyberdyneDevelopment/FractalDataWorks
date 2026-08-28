@@ -39,14 +39,8 @@ public sealed partial class OidcExternalIdentityProviderConfiguration : IExterna
     /// Gets or sets the unique identifier for this typed-body row
     /// (<c>auth.OidcExternalIdentityProvider.Id</c>).
     /// </summary>
-    // Why: No Guid.NewGuid() default — the provider mints this before INSERT.
     public Guid Id { get; set; }
 
-    // Why: IGenericConfiguration members below satisfy the interface contract via EXPLICIT
-    // interface implementation so [GenerateMapper] does NOT map them — they are not columns on
-    // auth.OidcExternalIdentityProvider. The canonical Name/SectionName/ServiceType/
-    // ServiceOptionType live on the parent ExternalIdentityProviderConfiguration row; the typed body
-    // is identified solely by ExternalIdentityProviderId. Mirrors OpenIddictTokenManagerConfiguration.
     string IGenericConfiguration.Name
     {
         get => string.Empty;
@@ -75,8 +69,6 @@ public sealed partial class OidcExternalIdentityProviderConfiguration : IExterna
     /// build the default discovery document address when <see cref="MetadataAddress"/> is not set.
     /// Example: <c>https://login.microsoftonline.com/{tenant}/v2.0</c>.
     /// </summary>
-    // Why: no fallback default — a missing Authority is a structured, logged validation failure
-    // (see OidcExternalIdentityProvider.ValidateExternalToken), never a silently assumed value.
     public string? Authority { get; set; }
 
     /// <summary>
@@ -98,11 +90,6 @@ public sealed partial class OidcExternalIdentityProviderConfiguration : IExterna
     public string? MetadataAddress { get; set; }
 
     /// <inheritdoc />
-    // Why: the Oidc option projects its OWN public fields for login-time discovery, so
-    // GetExternalIdentityProvidersEndpointBase never down-casts to this concrete type and
-    // Fdw.Web.Api carries no reference to this package (FDW-624). Secrets are never surfaced —
-    // the client secret is resolved at runtime via SecretManagerName/SecretKeyName and is not a
-    // property on this row.
     public void PopulateSummary(ExternalIdentityProviderSummaryDto summary)
     {
         ArgumentNullException.ThrowIfNull(summary);

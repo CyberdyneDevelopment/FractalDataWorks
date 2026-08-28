@@ -7,7 +7,6 @@ namespace Fdw.UI.Components.Services;
 /// Base class for semantic status colors. Each color carries the dot class and the theme token that
 /// draw it, so a component says which tone a value takes and never which css that tone is.
 /// </summary>
-// Why: pure TypeOption base — trivial pass-through constructor, no logic to test.
 [ExcludeFromCodeCoverage]
 public abstract class StatusColorBase : TypeOptionBase<int, StatusColorBase>, IStatusColor
 {

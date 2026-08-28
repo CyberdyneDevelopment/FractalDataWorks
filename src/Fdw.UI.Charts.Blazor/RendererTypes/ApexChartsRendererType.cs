@@ -42,9 +42,6 @@ public sealed class ApexChartsRendererType : ChartRendererTypeBase
             supportsInteraction: true,
             supportsLargeSeries: false,
             supportsEditing: false,
-            // Why: explicit list so the ChartHost can filter the chart-type dropdown to only the
-            // types this renderer handles — no reflection, no switch. Geo, Sankey, and Table are
-            // excluded; they need rendering beyond ApexCharts' capabilities.
             supportedChartTypes: new List<string>
             {
                 "Bar", "Line", "Area", "Pie", "Donut", "Scatter", "Heatmap", "Kpi",

@@ -57,10 +57,6 @@ public sealed class AuthorizeIssuanceStep : IAuthenticationStep
         if (decision.IsFailure)
             return decision.ToNewResult<StepOutcome>();
 
-        // Why a denial is contributed rather than returned as a failure: the runner's terminal check
-        // refuses on a decision that does not permit, and it does so with the reason this carries. A
-        // failure here would lose that reason and report the step as broken rather than the login as
-        // denied.
         StepLog.EligibilityDecided(_logger, principal.Id, decision.Value!.Permitted, decision.Value!.Reason);
 
         return GenericResult<StepOutcome>.Success(

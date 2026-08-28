@@ -65,9 +65,6 @@ public sealed class RawSvgMarkupAnalyzer : DiagnosticAnalyzer
             if (!RazorMarkupAnalysis.IsAnalyzedAssembly(compilationContext.Compilation.AssemblyName))
                 return;
 
-            // Why: the per-file callback, not RegisterCompilationAction — a compilation action would force
-            // the CompilationEnd custom tag on the descriptor (RS1037) and that excludes the diagnostic
-            // from IDE live analysis, which is where a markup convention needs to show up.
             compilationContext.RegisterAdditionalFileAction(Analyze);
         });
     }

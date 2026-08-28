@@ -6,8 +6,6 @@ using Fdw.Data.Abstractions;
 using Fdw.Data.DataStores.Abstractions;
 using Fdw.Data.Http.Results;
 using Fdw.Results;
-// Why: Phase 1 introduced IDataNodePath in Data.Abstractions alongside the pre-existing one in
-// DataStores.Abstractions. This file predates Phase 1 and uses the old interface throughout.
 using IDataNodePath = Fdw.Data.DataStores.Abstractions.IDataPath;
 
 namespace Fdw.Data.Http.Paths;

@@ -81,10 +81,6 @@ public interface IServiceType<TKey> : ITypeOption<TKey, IServiceType<TKey>>
 /// Non-generic convenience interface for IServiceType that defaults to using Guid as the key type.
 /// Defines the two-phase registration pattern used by ServiceTypeCollections.
 /// </summary>
-// Why it extends IServiceTypeRegistration: that interface declares the three phases and the row
-// location, and lives in Fdw.Collections so ServiceTypeCollectionBase can collect its options. This
-// interface cannot move there itself — it depends on Fdw.Abstractions and Fdw.Configuration, which
-// depend on Fdw.Collections, so the reference would invert.
 public interface IServiceType : IServiceType<Guid>, IServiceTypeRegistration
 {
     // Configure / Register / Initialize come from IServiceTypeRegistration. The setters below replace

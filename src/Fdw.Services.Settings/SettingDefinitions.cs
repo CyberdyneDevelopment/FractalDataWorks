@@ -73,10 +73,6 @@ public static class SettingDefinitions
     /// <summary>Whether system-update notifications are enabled.</summary>
     public const string NotifySystemUpdates = "NotifySystemUpdates";
 
-    // Why: The Update endpoint only mutates existing rows; a recognized setting that
-    // has never been written has no row yet. This registry is the authoritative
-    // allow-list of platform settings — an unknown name still fails loud (no fallback),
-    // but a known name is materialized on first write with the correct DataType.
     private static readonly Dictionary<string, SettingDefinition> KnownSettings =
         new Dictionary<string, SettingDefinition>(StringComparer.OrdinalIgnoreCase)
         {

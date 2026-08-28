@@ -28,8 +28,6 @@ public abstract class ListFieldMappingTransformsEndpointBase : CrudListEndpointB
     /// <summary>Gets the data gateway for executing queries.</summary>
     protected IDataGateway DataGateway { get; }
 
-    // Why: DataSetConfigurationProvider owns the DataStoreName and PathName for the
-    // configuration database — eliminating IConfigurationConnectionNameProvider (anti-pattern).
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
     /// <inheritdoc />
@@ -63,11 +61,6 @@ public abstract class ListFieldMappingTransformsEndpointBase : CrudListEndpointB
     /// <summary>
     /// Gets the configuration path that holds the transform containers.
     /// </summary>
-    // Why not the dataset provider's PathName: these containers are declared in ConfigurationDb's
-    // "transform" path, not "data". Borrowing the dataset path made every addressed lookup fail with
-    // "DataContainer 'FieldMappingTransform' not found in path 'data'", which surfaced as a 404 on
-    // every transform route. The container names beside this are literals for the same reason — the
-    // endpoint names the location it targets rather than inheriting one that happens to differ.
     protected virtual string TransformPathName => "transform";
 
     /// <summary>Gets the container name for FieldMappingTransform queries.</summary>
@@ -96,7 +89,6 @@ public abstract class ListFieldMappingTransformsEndpointBase : CrudListEndpointB
     {
         FieldMappingTransformEndpointLog.ListingTransforms(Logger);
 
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget.
         var transformCommand = new QueryCommand<FieldMappingTransformConfiguration>
         {
             Filter = DataSetQueryHelper.ByParentIdFilter(nameof(FieldMappingTransformConfiguration.DataSetFieldMappingId), fieldMappingId)

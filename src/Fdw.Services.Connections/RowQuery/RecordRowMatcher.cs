@@ -80,11 +80,6 @@ public static class RecordRowMatcher
             case FilterGroup group:
                 return EvaluateGroup(childRow, parentRow, parentContainerName, group);
 
-            // Why: RecordQueryValidator.ValidateShape already rejects any unrecognised IFilterNode
-            // BEFORE evaluation reaches here (fix #3) — an unhandled type at this point means the
-            // validator's grammar coverage has a gap, not that this is a data condition to tolerate.
-            // Throwing (not silently matching everything, and not silently matching nothing) surfaces
-            // that gap immediately instead of masquerading as an empty/full result set.
             default:
                 throw new InvalidOperationException(
                     $"Unsupported filter node type '{node.GetType().Name}' reached the matcher — RecordQueryValidator should have rejected it first.");
@@ -127,15 +122,6 @@ public static class RecordRowMatcher
 
         row.TryGetValue(columnName, out var actual);
 
-        // Why the operator decides: this compared with ValuesEqual regardless of what the condition
-        // asked for, so GreaterThan, Contains, In, IsNull and the other eight all behaved as
-        // equality — a file-backed "wins > 8" matched only rows where wins was exactly 8. The
-        // operator owns the comparison; ValuesEqual remains the equality it always was.
-        // Why equality keeps ValuesEqual rather than delegating: this row path carries SQL semantics
-        // the generic comparer does not have — "x = NULL" never matches, and a decoded bit column
-        // arriving as the string "0" must compare equal to a native false without throwing. Both are
-        // pinned by tests here. Every OTHER operator was collapsing to equality, which is the bug:
-        // GreaterThan, Contains, In and IsNull now decide for themselves.
         return condition.Operator switch
         {
             EqualOperator => ValuesEqual(actual, condition.Value),
@@ -145,11 +131,6 @@ public static class RecordRowMatcher
         };
     }
 
-    // Why: strip the "Container." qualifier to the bare column, matching the SQL translators'
-    // BuildWhereClause qualification convention (bare -> primary/child table, dotted -> named table).
-    // The qualifier is validated against the container tree upstream (RecordQueryEvaluator, fix #2) —
-    // an unrecognised qualifier reaching this point is already a fail-loud condition raised earlier, so
-    // this resolves rather than re-validating.
     private static (IReadOnlyDictionary<string, object?>? Row, string Column) ResolveTarget(
         IReadOnlyDictionary<string, object?> childRow,
         IReadOnlyDictionary<string, object?>? parentRow,
@@ -165,21 +146,11 @@ public static class RecordRowMatcher
             : (null, column);
     }
 
-    // Why: type-tolerant equality — decoded rows carry raw format primitives (JSON numbers arrive as
-    // long/double, Guid/bool columns arrive as strings), and the filter's Value may be a native
-    // Guid/bool/int from the query builder. Compare by coercing to a common representation rather than
-    // requiring identical CLR types.
-    // Why (fix #2 NULL semantics): SQL equality never matches NULL to NULL — "WHERE x = NULL" never
-    // matches in SQL (IS NULL is the only way to test nullity, which this AND-of-equality grammar does
-    // not carry). left==null && right==null now returns FALSE, not TRUE, matching that semantics.
     internal static bool ValuesEqual(object? left, object? right)
     {
         if (left is null || right is null)
             return false;
 
-        // Why: each CLR-shape comparison is its own small helper (not inlined branches here) so this
-        // dispatcher stays a flat sequence of type-shape checks — keeps cyclomatic complexity low while
-        // still restricting comparison to the shapes this grammar was designed for (fix #8).
         if (TryCompareGuid(left, right, out var guidEqual))
             return guidEqual;
 
@@ -195,12 +166,6 @@ public static class RecordRowMatcher
         if (TryCompareDateTime(left, right, out var dateEqual))
             return dateEqual;
 
-        // Why (fix #8): restrict comparison to the CLR shapes that can actually arrive from a decoded
-        // record row or a filter's Value (string/bool/Guid/numeric/DateTime family — all handled above).
-        // The removed catch-all Convert.ToString comparison silently compared unrelated types by their
-        // ToString() (e.g. two distinct byte[] instances both stringify to "System.Byte[]" and would
-        // compare EQUAL) — fail loud instead of fabricating equality for a type this grammar was never
-        // designed to compare (NO FALLBACKS).
         throw new InvalidOperationException(
             $"Unsupported comparison value type '{left.GetType().Name}'/'{right.GetType().Name}' — only string, bool, Guid, numeric, DateTime and DateTimeOffset values can be compared.");
     }
@@ -243,11 +208,6 @@ public static class RecordRowMatcher
         return true;
     }
 
-    // Why (fix a, kept): SQL runs case-insensitive collation, so a config lookup like
-    // Get("envsecrets") must match a stored "EnvSecrets" — string VALUE comparisons are
-    // case-insensitive. Column-NAME lookups are already case-insensitive because every row
-    // dictionary this matcher sees is built with StringComparer.OrdinalIgnoreCase
-    // (DataRecord.ToDictionary()).
     private static bool TryCompareString(object left, object right, out bool equal)
     {
         if (left is not string && right is not string)
@@ -284,12 +244,6 @@ public static class RecordRowMatcher
         _ => null,
     };
 
-    // Why (fix b, kept): Convert.ToBoolean(string) only accepts "True"/"False" (any case) and THROWS
-    // FormatException for "0"/"1" — but the config filter always carries IsCurrent/IsDeleted as a
-    // native bool, while a JSON/text-decoded row may carry the same bit column as the literal string
-    // "0" or "1". Parse those explicitly before falling back to Convert.ToBoolean so a bit-as-string
-    // column never throws — it must coerce, never throw (NO FALLBACKS: an unrecognized string still
-    // throws via Convert.ToBoolean, which is the correct fail-loud behavior for a genuinely bad value).
     private static bool ToBoolean(object value) => value switch
     {
         bool flag => flag,

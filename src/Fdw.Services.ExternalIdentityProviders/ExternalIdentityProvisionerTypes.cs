@@ -35,10 +35,6 @@ namespace Fdw.Services.ExternalIdentityProviders;
     typeof(IExternalIdentityProvisionerType),
     typeof(ExternalIdentityProvisionerTypes),
     ServiceInterface = typeof(IExternalIdentityProvisioner),
-    // Why: ExternalIdentityProvisionerServiceProvider (not the raw DefaultServiceProvider) so the
-    // provider supplies ITSELF to the factory at Create time. That keeps provisioner factories pure —
-    // a factory that ctor-injected this provider recursed forever during the provider's own
-    // realization and hung the host silently (FDW-615).
     ProviderType = typeof(ExternalIdentityProvisionerServiceProvider),
     ProviderInterface = typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>),
     ServiceCategory = "ExternalIdentityProvisioner")]
@@ -66,18 +62,12 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
     {
         var collectOptions = RegisterFunc;
 
-        // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
-        // three points below — the deferred declaration, the milestone, and the zero-option warning.
-        // Written out three times it is three chances for them to disagree.
         var providerService = typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<ExternalIdentityProvisionerTypes>() ?? NullLogger<ExternalIdentityProvisionerTypes>.Instance;
 
-            // Why the result is read: this replacement calls the func it captured, and discarding
-            // what that returned meant an option that failed to register was followed by this body
-            // registering the provider anyway and reporting success.
             var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
                 return registered;
@@ -88,8 +78,6 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
             ServiceTypeLog.DomainOptionsCollected(log, nameof(ExternalIdentityProvisionerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(ExternalIdentityProvisionerTypes), providerService);
 
-            // Why here: the collection owns what there is one of per domain. A provider that
-            // registers itself is a second place to look and a second thing to keep in step.
             builder.Services.TryAddSingleton<ExternalIdentityProvisionerBindingConfigurationProvider>(sp =>
                 new ExternalIdentityProvisionerBindingConfigurationProvider(
                     sp.GetService<ILogger<ExternalIdentityProvisionerBindingConfigurationProvider>>()!,
@@ -102,11 +90,6 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProvisionerBindingConfiguration>>(sp =>
                 sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
 
-            // Why the domain interface and not only the concrete class: this collection resolves
-            // IExternalIdentityProvisionerConfigurationProvider to attach it to the domain provider, and a registration of
-            // the concrete type alone leaves that lookup empty — the domain then fails every lookup by
-            // name for the life of the scope. ConfigurationConnection is the one place that names which
-            // store these rows live in.
             builder.Services.TryAddSingleton<IExternalIdentityProvisionerConfigurationProvider>(sp =>
                 new ExternalIdentityProvisionerConfigurationProvider(
                     sp.GetService<ILogger<ExternalIdentityProvisionerConfigurationProvider>>()!,
@@ -126,10 +109,6 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ExternalIdentityProvisionerServiceProvider>()
                     ?? NullLogger<ExternalIdentityProvisionerServiceProvider>.Instance);
 
-                // Why ILogger<ExternalIdentityProvisionerTypes> and not CreateLogger("ExternalIdentityProvisionerTypes"): SourceContext then
-                // carries the namespace-qualified collection, and the category cannot drift from the
-                // type it claims to name. The provider logs its own lines under its own type, so the
-                // two layers read base-then-derived rather than collapsing onto one category.
                 var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<ExternalIdentityProvisionerTypes>()
                     ?? NullLogger<ExternalIdentityProvisionerTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(ExternalIdentityProvisionerTypes), provider.GetType().Name);
@@ -137,8 +116,6 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                 {
                     if (sp.GetService<IExternalIdentityProvisionerConfigurationProvider>() is { } cfgProvider)
                     {
-                        // Why the result is read: a provider that did not take its parent still constructs, and
-                        // every later read silently misses. The failure has to be said out loud here or nowhere.
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(ExternalIdentityProvisionerTypes), provider.GetType().Name, cfgProvider.GetType().Name);
@@ -147,11 +124,6 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                     }
                     else
                     {
-                        // Why Critical, and why the collection says it rather than the provider: from
-                        // inside the provider a null parent is indistinguishable from a domain that needs
-                        // none. This is the one place that knows one was meant to arrive, and without it
-                        // the domain fails every lookup by name for the life of the scope with nothing
-                        // pointing back here.
                         ServiceTypeLog.DomainHasNoConfigurationSource(
                             stLogger,
                             nameof(ExternalIdentityProvisionerTypes),
@@ -161,16 +133,12 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                 }
                 catch (Exception ex)
                 {
-                    // Why rethrow: a throw here was previously silent, and a provider that failed to take
-                    // its parent is unusable in a way that only surfaces much later.
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(ExternalIdentityProvisionerTypes));
                     throw;
                 }
                 return provider;
             });
 
-            // Why the milestone comes after the registration and not before: it states that the domain
-            // finished phase 2, which is only true once the provider is actually in the container.
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(ExternalIdentityProvisionerTypes), providerService);
             else

@@ -48,8 +48,6 @@ public sealed class PlPgSqlDialectTests
     [Trait("Category", "DataGateway")]
     public void BuildPagingClauseEmitsLimitOffset()
     {
-        // Why: Skip=10, Take=5 → "LIMIT 5 OFFSET 10". Verifies the PG-native syntax
-        // (LIMIT before OFFSET) and that Skip/Take map to the right clause positions.
         var paging = new PagingExpression { Skip = 10, Take = 5 };
         _sut.BuildPagingClause(paging).ShouldBe("LIMIT 5 OFFSET 10");
     }

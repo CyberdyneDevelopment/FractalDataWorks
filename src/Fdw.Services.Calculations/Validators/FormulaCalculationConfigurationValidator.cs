@@ -15,11 +15,6 @@ public sealed class FormulaCalculationConfigurationValidator : FdwConfigurationV
     /// </summary>
     public FormulaCalculationConfigurationValidator()
     {
-        // Why these four are here rather than in a second validator: they used to live in a
-        // sibling FormulaCalculationConfigurationValidator that derived from AbstractValidator
-        // directly. Only FdwConfigurationValidator implements IValidateOptions<T>, so that
-        // sibling never ran at startup -- a configuration missing its Name or ServiceType
-        // passed validation and failed later, somewhere less obvious.
         RuleFor(x => x.Name)
             .NotEmpty()
             .WithMessage("Name is required");

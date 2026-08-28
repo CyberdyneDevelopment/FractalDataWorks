@@ -58,22 +58,14 @@ public sealed class PlatformServicesRegistrationGenerator : IIncrementalGenerato
 
     private static void Execute(SourceProductionContext context, Compilation compilation)
     {
-        // Why: only emit in entry-point assemblies — libraries should not embed cross-assembly
-        // registrations that may be loaded into hosts that already register the same collections
-        // via their own initializer.
         if (compilation.Options.OutputKind == OutputKind.DynamicallyLinkedLibrary)
             return;
 
         var serviceTypeCollectionAttributeSymbol = compilation.GetTypeByMetadataName(ServiceTypeCollectionAttributeName);
         var platformServiceProviderAttributeSymbol = compilation.GetTypeByMetadataName(PlatformServiceProviderAttributeName);
-        // Why: discovery keys on either marker — a compilation that sees neither attribute type has
-        // nothing to discover regardless of PlatformServices' presence.
         if (serviceTypeCollectionAttributeSymbol is null && platformServiceProviderAttributeSymbol is null)
             return;
 
-        // Why: only emit when the consumer's compilation can actually see PlatformServices — an app
-        // that hasn't referenced Fdw.Services.Registration has no type to register into; this generator
-        // is opt-in precisely because of this check.
         var platformServicesSymbol = compilation.GetTypeByMetadataName(PlatformServicesTypeName);
         if (platformServicesSymbol is null)
             return;
@@ -148,11 +140,6 @@ public sealed class PlatformServicesRegistrationGenerator : IIncrementalGenerato
         if (!hasServiceTypeCollectionAttribute && !hasPlatformServiceProviderAttribute)
             return;
 
-        // Why: [ServiceTypeCollection] classes are always closed, concrete, generator-completed partial
-        // classes — abstract/generic/open-type-parameter classes are never valid there, so that marker
-        // keeps the strict skip. [PlatformServiceProvider] classes are hand-written three-phase statics
-        // (e.g. DataSetProvider) whose phase methods are static, so abstract/static classes are legal —
-        // only the generic/open-type check applies to that marker (relaxed filter).
         if (type.IsGenericType || type.TypeParameters.Length > 0)
             return;
         if (hasServiceTypeCollectionAttribute && type.IsAbstract)
@@ -161,18 +148,11 @@ public sealed class PlatformServicesRegistrationGenerator : IIncrementalGenerato
         discovered.Add(type);
     }
 
-    // Why: no existence check for the three phase methods here — for [ServiceTypeCollection] the FDW024
-    // ServiceTypeCollectionPhaseMethodsAnalyzer enforces their presence as a build ERROR, and it now fires
-    // on [PlatformServiceProvider] too, so by the time this generator runs every discovered type is
-    // guaranteed to have them. The registration is emitted unconditionally.
     private static CollectionModel BuildModel(
         INamedTypeSymbol type,
         INamedTypeSymbol? serviceTypeCollectionAttributeSymbol,
         INamedTypeSymbol? platformServiceProviderAttributeSymbol)
     {
-        // Why: [ServiceTypeCollection] is the richer/primary marker (it also drives the TypeCollection
-        // generator); when a class somehow carries both, its metadata wins. Only one of the two lookups
-        // finds a match in practice since ScanType only discovers classes carrying at least one marker.
         var attribute = (serviceTypeCollectionAttributeSymbol != null
                 ? type.GetAttributes().FirstOrDefault(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, serviceTypeCollectionAttributeSymbol))
                 : null)
@@ -181,9 +161,6 @@ public sealed class PlatformServicesRegistrationGenerator : IIncrementalGenerato
                 : null)
             ?? throw new InvalidOperationException($"'{type.Name}' was discovered without either PlatformServices marker attribute.");
 
-        // Why: ServiceCategory is an optional named argument on both markers; when absent, derive it by
-        // stripping a trailing "Types" suffix ([ServiceTypeCollection], e.g. ConnectionTypes -> Connection)
-        // or a trailing "Provider" suffix ([PlatformServiceProvider], e.g. DataSetProvider -> DataSet).
         var categoryArg = attribute.NamedArguments
             .FirstOrDefault(kvp => string.Equals(kvp.Key, "ServiceCategory", StringComparison.Ordinal)).Value;
         var categoryName = categoryArg.Value as string;
@@ -257,10 +234,6 @@ public sealed class PlatformServicesRegistrationGenerator : IIncrementalGenerato
         sb.AppendLine("    {");
         sb.AppendLine("        extension(PlatformServices)");
         sb.AppendLine("        {");
-        // Why non-nullable with a fail-loud guard (not a nullable return, not the `!` operator): the
-        // backing field is assigned by this file's [ModuleInitializer] — CLR-guaranteed complete before
-        // Main() — and PlatformServices.Add never returns null, so every read at or after Main() sees a
-        // non-null entry. The `?? throw` states that invariant to the compiler without a fallback value.
         foreach (var m in models)
         {
             sb.AppendLine($"            /// <summary>The registered entry for the <c>{m.CategoryName}</c> ServiceTypeCollection.</summary>");
@@ -275,8 +248,6 @@ public sealed class PlatformServicesRegistrationGenerator : IIncrementalGenerato
         return sb.ToString();
     }
 
-    // Why: field names are lowerCamelCase by convention while the category (and hence the generated
-    // property) stays exactly as declared — this only affects the private backing field's spelling.
     private static string FieldNameFor(string categoryName)
         => categoryName.Length == 0
             ? "entry"

@@ -17,8 +17,6 @@ namespace Fdw.Services.Connections.Endpoints;
 /// </summary>
 public abstract class GetConnectionHealthEndpointBase : Endpoint<ConnectionNameRequest, List<ConnectionHealthCheckDto>>
 {
-    // Why: ConnectionConfigurationProvider (dual-source) replaces IConnectionProvider.GetAllConnectionConfigurations()
-    // which was removed. The provider merges system (ctrl) and user (cfg) connection configs.
     private readonly ConnectionConfigurationProvider _configProvider;
     private readonly IConnectionHealthService _healthService;
     private readonly ILogger<GetConnectionHealthEndpointBase> _logger;
@@ -53,8 +51,6 @@ public abstract class GetConnectionHealthEndpointBase : Endpoint<ConnectionNameR
     /// <summary>Resolves the connection by name and returns its health check history.</summary>
     public override async Task HandleAsync(ConnectionNameRequest req, CancellationToken ct)
     {
-        // Why: resolve connection by name to get the logical Id needed for the history query;
-        // ConnectionConfigurationProvider merges all registered connection types.
         var configResult = await _configProvider.Get(req.Name, ct).ConfigureAwait(false);
 
         if (!configResult.IsSuccess || configResult.Value is null)

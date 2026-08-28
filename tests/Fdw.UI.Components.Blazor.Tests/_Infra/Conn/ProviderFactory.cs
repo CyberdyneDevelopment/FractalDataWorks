@@ -18,7 +18,5 @@ public sealed class ProviderFactory<TActual, TContext> : IComponentFactory
 
     public bool CanCreate(Type componentType) => componentType == typeof(TActual);
 
-    // Why: pass the seed straight into the stub instance instead of a shared static, so stub-based
-    // tests from different classes running in parallel never read each other's pending context.
     public IComponent Create(Type componentType) => new ProviderStub<TContext>(_seed);
 }

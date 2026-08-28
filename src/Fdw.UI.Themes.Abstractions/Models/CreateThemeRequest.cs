@@ -6,7 +6,6 @@ namespace Fdw.UI.Themes.Clients.Models;
 /// <summary>
 /// Represents a request to create a new theme.
 /// </summary>
-// Why: pure DTO, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class CreateThemeRequest
 {

@@ -85,9 +85,6 @@ public sealed class FindImplementationsTranslator : RoslynCommandTranslatorBase<
 
         var implementations = new List<ImplementationInfo>();
 
-        // Why: the workspace strips UnresolvedAnalyzerReference at the load boundary
-        // (RoslynWorkspaceFactory + SolutionExtensions.WithoutUnresolvedAnalyzers), so the
-        // DependentTypeFinder checksum path no longer throws here — no defensive catch needed.
         if (symbol is INamedTypeSymbol typeSymbol)
         {
             var implementingTypes = await SymbolFinder.FindImplementationsAsync(

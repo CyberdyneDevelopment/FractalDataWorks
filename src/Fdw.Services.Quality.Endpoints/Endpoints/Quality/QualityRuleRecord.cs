@@ -47,8 +47,6 @@ public partial class QualityRuleRecord
     /// <summary>Gets or sets whether this record has been soft-deleted.</summary>
     public bool IsDeleted { get; set; }
 
-    // Why: Column names match quality.QualityRule DDL (CreateDate/ModifyDate), not the
-    // "At" alias convention. DataGateway maps by exact property-to-column name.
     /// <summary>Gets or sets the date and time the record was created.</summary>
     public DateTimeOffset CreateDate { get; set; }
 

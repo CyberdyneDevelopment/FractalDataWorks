@@ -17,9 +17,6 @@ namespace Fdw.Services.Pipelines.Components.Canvas;
 [ExcludeFromCodeCoverage]
 public sealed class PipelineCanvasEdge : ICanvasEdge
 {
-    // Why: mirrors PipelineCanvasNode's mutable backing — kept separate so callers can write
-    // individual keys without reconstructing the whole edge, while the public Metadata property
-    // preserves the IReadOnlyDictionary<string,string> contract.
     private readonly Dictionary<string, string> _mutableMetadata;
 
     /// <summary>

@@ -76,9 +76,6 @@ public static partial class ConfigurationCascadeLog
     /// <summary>
     /// Logs when a cycle is detected in the ParentTableName chain.
     /// </summary>
-    // Why Error, not Critical (FDW-583): one save is aborted; the host process is unaffected and
-    // survives. NOTE: this method has zero call sites (dead) as of this audit — flagged, not deleted
-    // (out of scope for a severity-only pass).
     [MessageLogging(
         EventId = 41000,
         Level = LogLevel.Error,

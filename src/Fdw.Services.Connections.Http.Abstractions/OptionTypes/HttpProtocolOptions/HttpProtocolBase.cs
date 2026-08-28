@@ -135,17 +135,8 @@ public abstract class HttpProtocolBase : TypeOptionBase<int, HttpProtocolBase>, 
             return GenericResult<object?>.Success(null);
         }
 
-        // Why: Row-collection check intercepts before ExtractResult so that GeoJSON/FeatureCollections
-        // and similar envelope formats are correctly unwrapped. The container reference is available
-        // here but NOT inside ExtractResult, so this is the correct seam. The format is no longer a
-        // hardcoded "Json" literal — TryCreateRowReader resolves a reader for the container's format
-        // (the net10 override consults the RecordSourceTypes TypeCollection); a null result means no row
-        // source is registered for this format, so we fall through to ExtractResult.
         if (IsRowCollectionType(resultType) && HasRowReaderForFormat(container))
         {
-            // Why: ExtractRowsFromContent produces List<Dictionary<string,object?>>, which IS the
-            // framework's generic row shape — the same one the SQL connections materialize and
-            // DataSetExecutionHelpers converts without a mapper. Nothing converts it further.
             return ExtractRowsFromContent(content, container);
         }
 
@@ -190,8 +181,6 @@ public abstract class HttpProtocolBase : TypeOptionBase<int, HttpProtocolBase>, 
         IStorageContainer container,
         HttpProtocolContext context)
     {
-        // Why: Addressing lives in the container (resolved before this call), not on the command.
-        // Use the container's physical path, falling back to the container's own name.
         return container.Path?.PathValue ?? container.Name;
     }
 
@@ -289,8 +278,6 @@ public abstract class HttpProtocolBase : TypeOptionBase<int, HttpProtocolBase>, 
     /// </summary>
     /// <param name="container">The container whose <see cref="IStorageContainer.Format"/> is checked.</param>
     /// <returns>True when <see cref="TryCreateRowReader"/> can produce a reader for this format.</returns>
-    // Why: the dispatch decision is "is a row source registered for this format?", expressed through
-    // the same seam that creates the reader — not a hardcoded format literal in ProcessResponse.
     protected virtual bool HasRowReaderForFormat(IStorageContainer container)
         => container.Format is not null
            && string.Equals(container.Format.Name, "Json", StringComparison.Ordinal);
@@ -352,17 +339,12 @@ public abstract class HttpProtocolBase : TypeOptionBase<int, HttpProtocolBase>, 
     {
         try
         {
-            // Why: the reader requires a Stream. We wrap the already-read string in a MemoryStream
-            // rather than re-reading from HttpResponseMessage because ProcessResponse has already
-            // materialized the body.
             var bytes = Encoding.UTF8.GetBytes(content);
             using var stream = new MemoryStream(bytes);
 
             using var src = TryCreateRowReader(container, stream);
             if (src is null)
             {
-                // Why: NO FALLBACKS — reaching here means HasRowReaderForFormat said yes but the
-                // reader factory returned null, a genuine inconsistency. Fail loud with context.
                 return GenericResult<object?>.Failure(
                     HttpResultCodes.ByName("ResponseRowExtractionFailed"),
                     ResultDetails.Create().With("ErrorMessage",
@@ -414,10 +396,6 @@ public abstract class HttpProtocolBase : TypeOptionBase<int, HttpProtocolBase>, 
             return false;
 
         var elementType = resultType.GetGenericArguments()[0];
-        // Why: Dictionary<string,?> / IDictionary<string,?> are the generic row representation, and
-        // object (dynamic) is the untyped one used by DataSet queries with no compile-time schema.
-        // Both yield flat name→value rows that JsonStreamRowSource produces as
-        // Dictionary<string, object?>, so the same row-extraction path is correct for both.
         return IsDictionaryRowType(elementType) || IsDynamicRowType(elementType);
     }
 
@@ -430,18 +408,9 @@ public abstract class HttpProtocolBase : TypeOptionBase<int, HttpProtocolBase>, 
         if (def != typeof(Dictionary<,>) && def != typeof(IDictionary<,>))
             return false;
 
-        // Why: Only string-keyed dictionaries map to rows; non-string keys are not row types.
         return t.GetGenericArguments()[0] == typeof(string);
     }
 
-    // Why these three: IDataRow is the framework's row and what a DataSet query asks for; object is
-    // the untyped element type; the generic dictionary row is covered by IsDictionaryRowType. All are
-    // satisfied by the same extraction, which produces List<Dictionary<string,object?>> — the caller
-    // (ConvertResult<T>) converts that to the requested shape.
-    //
-    // IDataRow MUST be listed here. It is an interface, so a resultType that reaches the plain
-    // deserializer instead of this branch fails with "The JSON value could not be converted to
-    // IEnumerable<IDataRow>" on a response that arrived perfectly intact with status 200.
     private static bool IsDynamicRowType(Type t)
         => t.Equals(typeof(object))
         || t.Equals(typeof(global::Fdw.Data.DataContainers.Abstractions.IDataRow))

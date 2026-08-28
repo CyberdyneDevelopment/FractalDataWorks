@@ -8,7 +8,6 @@ using Fdw.UI.Providers;
 
 namespace Fdw.UI.Themes.Components.Themes;
 
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class ThemeContext : ProviderContextBase
 {

@@ -74,10 +74,6 @@ public abstract class HttpAuthenticationConfiguration
     /// <inheritdoc />
     public bool IsEmpty => string.IsNullOrEmpty(Name);
 
-    // Why: NO SecretManagerName on the base — it is NOT common to all methods. Managed-identity,
-    // integrated, and MFA methods authenticate without any secret manager. Only secret-backed methods
-    // (Basic/Bearer/ApiKey/UsernameToken/WsSecurity-cert) declare SecretManagerName among their own KVP
-    // keys; the factory reads it from the authentication KVP only when the chosen method has one.
 
     /// <inheritdoc />
     public abstract HttpAuthenticationConfiguration CreateInstance();

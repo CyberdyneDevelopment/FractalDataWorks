@@ -33,8 +33,6 @@ public sealed class DefaultSessionStateServiceType : SessionStateServiceTypeBase
         Registration((builder, loggerFactory) =>
         {
 
-            // Why: SessionStateConfigurationProvider owns all gateway access for this domain.
-            // Register it before SessionStateService so the service can inject it.
             builder.Services.TryAddSingleton<SessionStateConfigurationProvider>();
             builder.Services.TryAddScoped<ISessionStateService, SessionStateService>();
 

@@ -3,7 +3,6 @@ using System;
 namespace Fdw.Services.Authentication.Abstractions.Methods;
 
 /// <summary>Result of validating a Personal Access Token.</summary>
-// Why: pure result/warning POCO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class PersonalAccessTokenValidationResult
 {

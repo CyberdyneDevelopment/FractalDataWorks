@@ -34,8 +34,6 @@ internal static class NamespaceReconcileTestSolution
             name,
             LanguageNames.CSharp,
             filePath: Path.Combine(Root, "src", name, name + ".csproj"),
-            // Why: without corlib every compilation reports "predefined type not defined" instead of the
-            // CS0246 the repair path keys on, so the diagnostic tests would be exercising the wrong error.
             metadataReferences: new[]
             {
                 MetadataReference.CreateFromFile(typeof(object).Assembly.Location),

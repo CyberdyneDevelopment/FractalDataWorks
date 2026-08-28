@@ -27,10 +27,6 @@ public static class PageHost
         ctx.Services.AddSingleton(factory.Object);
         ctx.Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
 
-        // Why: pages that call the API directly take IAccessTokenProvider by [Inject]
-        // (PipelineBuilderPage does). The renderer resolves it before any test-specific setup runs,
-        // so an unregistered provider fails the render rather than the assertion. Returning no token
-        // is correct here — the providers these tests exercise are stubbed, so nothing authenticates.
         var tokens = new Mock<IAccessTokenProvider>();
         ctx.Services.AddSingleton(tokens.Object);
     }

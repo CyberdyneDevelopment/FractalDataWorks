@@ -31,8 +31,6 @@ public sealed record PipelineExecutionOptions
     /// edges in a single test execution. Oldest samples are evicted when the budget is exceeded.
     /// 0 disables the cap (use with caution). Resolved from appsettings at startup.
     /// </summary>
-    // Why: cap is configurable via PipelineTestMode:InspectorSampleBufferMaxBytes so
-    // administrators can raise it for deeper inspection without redeploying code.
     public long SampleBufferMaxBytes { get; init; } = 10_000_000;
 
     /// <summary>

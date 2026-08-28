@@ -89,9 +89,6 @@ public class OrchestrationExecutor : IOrchestrationExecutor
         }
         catch (OperationCanceledException ex)
         {
-            // Why: cancellation is an expected outcome at this boundary; ex is named so the caught
-            // exception is observed (FDW022) but no additional logging is needed — the handler
-            // already records the Cancelled status.
             _ = ex;
             return HandleCancellation(result, context, orchestration);
         }
@@ -498,8 +495,6 @@ public class OrchestrationExecutor : IOrchestrationExecutor
         }
         catch (TimeoutException ex)
         {
-            // Why: ex is named so the caught exception is observed (FDW022); TimedOut carries the
-            // structured status — the exception itself is recorded on the failure result for context.
             return OrchestrationStepResult.Failure(
                 step.StepId, step.Name, startTime,
                 $"Step timed out after {(step.Timeout ?? TimeSpan.FromMinutes(5)).TotalSeconds:F1} seconds",

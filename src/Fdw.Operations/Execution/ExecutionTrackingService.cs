@@ -61,8 +61,6 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         _dataStoreName = string.IsNullOrWhiteSpace(dataStoreName)
             ? throw new ArgumentException("DataStore name is required.", nameof(dataStoreName))
             : dataStoreName;
-        // Why: null means "notifications not wired" — emission is silently skipped. No ?? fallback;
-        // only the NullLogger pattern is allowed as a fallback in this codebase.
         _notificationProvider = notificationProvider;
         _notificationRuleProvider = notificationRuleProvider;
     }
@@ -409,7 +407,6 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         string? correlationId = null,
         CancellationToken cancellationToken = default)
     {
-        // Why: Filter is init-only on QueryCommand — must be built before construction.
         var filter = BuildListFilter(itemType, state, correlationId);
 
         var queryCommand = new QueryCommand<ExecutionItem>
@@ -441,8 +438,6 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         var items = result.Value?.Select(i => (IExecutionItem)new ExecutionItemRecord(i)).ToList()
             ?? new List<IExecutionItem>();
 
-        // Why: Without a COUNT query, estimate total from result size.
-        // If we got a full page, there are likely more. If less, we're on the last page.
         var totalEstimate = items.Count < pageSize
             ? (long)((page - 1) * pageSize + items.Count)
             : (long)((page + 1) * pageSize);
@@ -472,8 +467,6 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         {
             conditions.Add(new FilterCondition
             {
-                // Why: the ExecutionItem entity/column is [State]; "CurrentState" matched no property, so the
-                // query translator emitted no predicate and the state filter was silently inert (all rows returned).
                 PropertyName = "State",
                 Operator = FilterOperators.ByName("Equal"),
                 Value = state.Name
@@ -697,8 +690,6 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         bool success,
         CancellationToken cancellationToken)
     {
-        // Why: wrapped in a top-level try/catch so that any unexpected emission failure
-        // cannot propagate out of Complete() and change its return value. Emission is auxiliary.
         try
         {
             if (_notificationProvider is null || _notificationRuleProvider is null)
@@ -707,7 +698,6 @@ public sealed class ExecutionTrackingService : IExecutionTracker
                 return;
             }
 
-            // Why: only root executions emit notifications to avoid notifying on every child step/task.
             if (item.ParentExecutionItemId.HasValue)
             {
                 return;
@@ -761,8 +751,6 @@ public sealed class ExecutionTrackingService : IExecutionTracker
 
                 var request = new NotificationRequest(
                     channelName: rule.NotificationServiceType,
-                    // Why: recipient resolution is a documented v1 follow-up; channel implementations
-                    // like Console ignore recipients and rules carry none in this model.
                     recipients: [],
                     subject: $"[{rule.Severity}] {item.Name} {targetState.Name}",
                     message: message,
@@ -783,9 +771,6 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         }
         catch (OperationCanceledException ex)
         {
-            // Why: cancellation is silent — the emission did not complete but the execution
-            // result is already persisted and is unaffected. ex is named to satisfy FDW022;
-            // no log is emitted because cancellation is an expected outcome, not a failure.
             _ = ex;
         }
         catch (Exception ex)
@@ -837,9 +822,6 @@ public sealed class ExecutionTrackingService : IExecutionTracker
             return NotificationPriorities.ByName("Critical");
         }
 
-        // Why: return NotFound rather than a silent default so the caller can log a structured
-        // warning and skip the rule. Returning NotFound keeps the fail-loud convention while
-        // avoiding a thrown exception in this auxiliary path.
         return NotificationPriorities.NotFound;
     }
 

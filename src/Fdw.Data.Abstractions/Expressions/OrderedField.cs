@@ -3,7 +3,6 @@ namespace Fdw.Data.Abstractions;
 /// <summary>
 /// Represents a single ordered field (property and direction).
 /// </summary>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record OrderedField : IOrderedField
 {

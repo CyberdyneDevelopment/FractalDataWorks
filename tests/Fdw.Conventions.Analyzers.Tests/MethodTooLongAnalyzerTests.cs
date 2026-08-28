@@ -74,9 +74,6 @@ public class MethodTooLongAnalyzerTests
         await VerifyCS.VerifyAnalyzerAsync(test);
     }
 
-    // Why this is the case that matters: a constructor whose job is to hand a body to something else is
-    // a few lines long no matter how much that body contains. Counting the two together is what pushed
-    // cohesive registration code out into one-call-site private statics to get under the threshold.
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Analyzer")]
@@ -104,8 +101,6 @@ public class MethodTooLongAnalyzerTests
         await VerifyCS.VerifyAnalyzerAsync(test);
     }
 
-    // Why the lambda is still measured: excluded from its declaring method and analyzed nowhere else, a
-    // phase func would escape the threshold entirely. It is measured as the unit it actually is.
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Analyzer")]
@@ -132,8 +127,6 @@ public class MethodTooLongAnalyzerTests
             VerifyCS.Diagnostic("FDW006").WithLocation(0).WithArguments("Sample (lambda)", Threshold + 1, Threshold));
     }
 
-    // Why an authoring class is exempt: the body of a phase func is a registration manifest, so its
-    // length is the count of what the domain contributes, not a measure of complexity.
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Analyzer")]
@@ -163,8 +156,6 @@ public class MethodTooLongAnalyzerTests
         await VerifyCS.VerifyAnalyzerAsync(test);
     }
 
-    // Why the exemption is scoped to the authoring class and not to lambdas generally: an ordinary class
-    // gets no relief just because it put its code in a lambda.
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Analyzer")]

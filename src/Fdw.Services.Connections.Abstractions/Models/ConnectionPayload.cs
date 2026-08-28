@@ -15,8 +15,6 @@ public sealed class ConnectionPayload
     public string? Description { get; set; }
     /// <summary>Gets or sets the connection type.</summary>
     public string ConnectionType { get; set; } = string.Empty;
-    // Why: tri-state, not a collapsed bool — mirrors the server ConnectionSummaryDto.LastTestSuccess.
-    // Null means never tested (renders as "Unknown"), distinct from a known test failure (false).
     /// <summary>Gets or sets whether the last connection test succeeded, false if it failed, or null if never tested.</summary>
     public bool? LastTestSuccess { get; set; }
     /// <summary>Gets or sets the last tested time.</summary>

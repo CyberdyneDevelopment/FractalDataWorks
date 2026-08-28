@@ -1,9 +1,6 @@
 namespace Fdw.UI.Rendering.Spectre.PageRenderers;
 
 /// <summary>High-level actions the user can take on a browse page.</summary>
-// Why: FDW017 recommends TypeCollections over enums. Leaving as enum intentionally —
-// this is an internal renderer contract, not extended at runtime, and there is no
-// dispatch logic that would benefit from TypeCollection lookup.
 #pragma warning disable FDW017
 public enum BrowseAction
 {

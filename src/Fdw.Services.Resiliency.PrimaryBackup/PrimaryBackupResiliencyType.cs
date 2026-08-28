@@ -58,8 +58,6 @@ public sealed class PrimaryBackupResiliencyType : ResiliencyTypeBase
                 PrimaryBackupLog.WrongConfigurationType(NullLogger.Instance, config.GetType().Name));
         }
 
-        // Why: cast context to access PrimaryBackup-specific services.
-        // Non-PrimaryBackup contexts fall through to failure — the executor must provide the correct context.
         if (ctx is not IPrimaryBackupResiliencyContext pbCtx)
         {
             return GenericResult.Failure(
@@ -78,7 +76,6 @@ public sealed class PrimaryBackupResiliencyType : ResiliencyTypeBase
         // Attempt 2: re-run stage with backup source active in context.
         var backupResult = await runStage(cancellationToken).ConfigureAwait(false);
 
-        // Why: check IsSuccess per FDW012; log backup failure for observability.
         if (!backupResult.IsSuccess)
         {
             ResiliencyLog.AttemptFailed(
@@ -89,13 +86,10 @@ public sealed class PrimaryBackupResiliencyType : ResiliencyTypeBase
         }
 
         // Schedule the refresh pipeline to re-sync primary, regardless of backup result.
-        // Why: fire-and-forget; failure to schedule is non-fatal — backup is already serving.
         var scheduleResult = await pbCtx.ScheduleClient.ToggleSchedule(
                 pbConfig.RefreshScheduleId.ToString("N"), cancellationToken)
             .ConfigureAwait(false);
 
-        // Why: log schedule toggle failure as warning but don't fail the backup result —
-        // the stage ran successfully on backup, refresh scheduling is best-effort.
         if (!scheduleResult.IsSuccess)
         {
             PrimaryBackupLog.ScheduleToggleFailed(

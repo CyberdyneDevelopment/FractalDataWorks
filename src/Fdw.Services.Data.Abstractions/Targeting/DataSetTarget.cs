@@ -5,6 +5,5 @@ namespace Fdw.Services.Data.Abstractions;
 /// to route a command through the DataSet federation layer.
 /// </summary>
 /// <param name="DataSet">The DataSet name.</param>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record DataSetTarget(string DataSet);

@@ -63,8 +63,6 @@ public sealed class GetObjectInfoTranslator : SqlCommandTranslatorBase<GetObject
                 new QueryResult<SqlObjectDetail>($"Object '{detail.FullName}' ({detail.Kind})", detail)));
     }
 
-    // Why: GetScript() throws for non-scriptable object types; extracting it here keeps the
-    // swallow-and-continue (null Definition) out of the IGenericResult-returning Translate method.
     private static string? TryGetScript(TSqlObject obj, ILogger logger)
     {
         try
@@ -73,8 +71,6 @@ public sealed class GetObjectInfoTranslator : SqlCommandTranslatorBase<GetObject
         }
         catch (Exception ex)
         {
-            // Why: not all SQL objects are scriptable. Return null Definition and continue;
-            // ex.Message observed to satisfy FDW022.
             _ = ex.Message;
             GetObjectInfoTranslatorLog.ScriptUnavailable(logger, obj.Name.ToString(), obj.ObjectType.Name);
             return null;

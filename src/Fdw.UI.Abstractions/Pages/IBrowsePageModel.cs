@@ -13,9 +13,6 @@ namespace Fdw.UI.Abstractions.Pages;
 /// Rendering is agnostic of what the columns contain — they can be DataStores,
 /// paths, containers, or rows of actual data.
 /// </remarks>
-// Why: List + Detail don't express drill-down navigation. Tree is hierarchical
-// but doesn't have the column pane layout. Miller-column is the right shape for
-// "pick a DataStore, then a path, then a container, then preview its rows".
 public interface IBrowsePageModel
 {
     /// <summary>Gets the unique identifier for this page.</summary>

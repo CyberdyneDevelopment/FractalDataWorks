@@ -39,14 +39,11 @@ public sealed class HttpConnectionCommand : IConnectionCommand
     {
         if (method is null)
         {
-            // Why: reported defect (see logging-pass report) — this constructor throws instead of
-            // returning IGenericResult. Logged here per scope; the throw below is left in place.
             HttpConnectionCommandLog.HttpMethodMissing(NullLogger<HttpConnectionCommand>.Instance);
         }
 
         if (relativePath is null)
         {
-            // Why: same defect class as above — logged, throw left in place.
             HttpConnectionCommandLog.RelativePathMissing(NullLogger<HttpConnectionCommand>.Instance);
         }
 

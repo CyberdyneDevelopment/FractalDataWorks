@@ -13,9 +13,6 @@ public sealed class EdgeInspectorState
     private long _recordsFlowed;
     private long _samplesDiscarded;
 
-    // Why: Private list with a public lock object so the inspector (different assembly)
-    // can synchronize access via lock(state.SamplesLock) while still using the public
-    // AddSampleRecord / Samples members. The list itself never escapes the class boundary.
     private readonly List<IDictionary<string, object?>> _samples = new();
 
     /// <summary>Gets the synchronization object for sample buffer mutations.</summary>
@@ -64,8 +61,6 @@ public sealed class EdgeInspectorState
     /// <param name="estimateBytes">Delegate to compute byte size of an existing record (used for evicted records).</param>
     /// <param name="reportByteDelta">Callback to adjust the shared bucket's used-bytes counter.</param>
     /// <returns>True if the budget was already at capacity before eviction began.</returns>
-    // Why: Mirrors TaskInspectorState.AddSampleRecord — eviction stays inside the state class
-    // so the inspector never needs cross-assembly access to the private _samples list.
     public bool AddSampleRecord(
         IDictionary<string, object?> record,
         long estimatedBytes,

@@ -5,7 +5,6 @@ namespace Fdw.Roslyn.Commands.Refactoring.Results;
 /// <summary>
 /// Something that will break as a result of moving a type between assemblies.
 /// </summary>
-// Why: pure data holder, auto-properties only, no logic
 [ExcludeFromCodeCoverage]
 public sealed class BreakFinding
 {

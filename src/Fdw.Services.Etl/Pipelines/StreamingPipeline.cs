@@ -70,8 +70,6 @@ public sealed class StreamingPipeline : EtlPipelineBase
     public override string Name => _configuration.Name;
 
     /// <inheritdoc />
-    // Why: the engine discriminator is intrinsic to this pipeline class (a StreamingPipeline IS "Streaming"),
-    // not read from the engine body's ServiceOptionType (which can be null on a leaf typed body).
     public override string PipelineType => "Streaming";
 
     /// <inheritdoc />
@@ -145,8 +143,6 @@ public sealed class StreamingPipeline : EtlPipelineBase
             connectionProvider: _connectionProvider,
             dataGateway: dataGateway);
 
-        // Why: Get the test controller state if this is a test execution so the batch loop
-        // can await the pause event between batches.
         PipelineTestExecutionState? testState = null;
         if (options.IsTestMode && _testController != null)
         {
@@ -203,8 +199,6 @@ public sealed class StreamingPipeline : EtlPipelineBase
         var buffer = new List<IDictionary<string, object?>>(effectiveTake);
         var windowStart = DateTime.UtcNow;
 
-        // Why: In test mode, a single pass through the source is sufficient (bounded by
-        // MaxRowsPerSource). Production mode loops until cancelled.
         var runOnce = options.IsTestMode;
 
         while (!cancellationToken.IsCancellationRequested)
@@ -257,8 +251,6 @@ public sealed class StreamingPipeline : EtlPipelineBase
     private static async Task ApplyPauseGate(PipelineTestExecutionState? testState, CancellationToken cancellationToken)
     {
         if (testState == null) return;
-        // Why: async-safe wait — Task.Run wraps the synchronous WaitHandle.Wait so
-        // the ASP.NET thread pool is not blocked during the pause.
         await Task.Run(
             () => testState.PauseEvent.Wait(cancellationToken),
             cancellationToken).ConfigureAwait(false);
@@ -275,8 +267,6 @@ public sealed class StreamingPipeline : EtlPipelineBase
         _inspector.AddTaskSamples(executionId, _configuration.Id, buffer);
     }
 
-    // Why: Returns a value tuple (Transformed, Loaded, Failed, SkipIteration, failure messages)
-    // instead of ref parameters because async methods cannot take ref parameters in C#.
     private async Task<IGenericResult<(int Transformed, int Loaded, int Failed, bool SkipIteration)>> RunFlushCycle(
         Guid executionId,
         PipelineExecutionOptions options,
@@ -324,7 +314,6 @@ public sealed class StreamingPipeline : EtlPipelineBase
     private static void ApplyStepRepause(PipelineTestExecutionState? testState)
     {
         if (testState == null || !testState.StepPending) return;
-        // Why: After one batch in step mode, re-pause so the user must issue another Step.
         testState.StepPending = false;
         testState.PauseEvent.Reset();
     }
@@ -414,8 +403,6 @@ public sealed class StreamingPipeline : EtlPipelineBase
 
         var transformedRecords = transformResult.Value!;
 
-        // Why: In test mode with SkipDestinationWrites, replace the BulkInsertCommand with a
-        // no-op that logs the row count — prevents writing to production targets during testing.
         if (options.IsTestMode && options.SkipDestinationWrites)
         {
             EtlLog.TestModeWriteSkipped(_logger, Name, transformedRecords.Count);
@@ -486,9 +473,6 @@ public sealed class StreamingPipeline : EtlPipelineBase
 
         try
         {
-            // Why: the pipeline source is a configured DataSet — it carries the full store→path→container
-            // address plus any RecordSelector/format — so resolve it through the DataSet dispatch, the
-            // same read path the dataset-query endpoint uses. The connection is taken from the DataSet source.
             var queryCommand = new QueryCommand<Dictionary<string, object?>>
             {
                 Paging = new PagingExpression
@@ -598,10 +582,6 @@ public sealed class StreamingPipeline : EtlPipelineBase
         foreach (var transformConfig in orderedTransforms)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            // Why: TransformTypes (ETL.Abstractions TypeCollection) is the execution-layer registry for
-            // ITransformType implementations. OperationTypes (Services.Transformations) is the ServiceTypeCollection
-            // for DI-managed transformation services. These are separate registries; future unification
-            // under OperationTypes is tracked in FDW-389 Phase 2.
             var transformType = TransformTypes.ByName(transformConfig.OperationType);
             if (transformType == null)
             {
@@ -679,8 +659,6 @@ public sealed class StreamingPipeline : EtlPipelineBase
                 return GenericResult<int>.Success(0);
             }
 
-            // Why: the destination is a single-source DataSet sink; the bulk insert is forwarded to
-            // its one container through the DataSet dispatch, which carries the full store→path→container address.
             var insertCommand = new BulkInsertCommand<IDictionary<string, object?>>(records);
 
             var insertResult = await dataGateway.Execute<int>(

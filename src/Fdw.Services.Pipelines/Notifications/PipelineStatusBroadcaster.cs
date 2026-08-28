@@ -24,9 +24,6 @@ public sealed class PipelineStatusBroadcaster
     private readonly int _broadcastHz;
     private readonly long _sampleBufferMaxBytes;
 
-    // Why: Per-(executionId, key) last-broadcast timestamps enable coalescing without a global
-    // lock. ConcurrentDictionary is safe for concurrent reads and writes across the pipeline
-    // batch loop and the SignalR timer.
     private readonly ConcurrentDictionary<string, long> _lastBroadcastTick = new(StringComparer.Ordinal);
 
     /// <summary>
@@ -42,8 +39,6 @@ public sealed class PipelineStatusBroadcaster
         var resolved = options?.Value ?? new PipelineStatusBroadcasterOptions();
         _broadcastHz = resolved.BroadcastHz > 0 ? resolved.BroadcastHz : 5;
         _sampleBufferMaxBytes = resolved.SampleBufferMaxBytes > 0 ? resolved.SampleBufferMaxBytes : 10_000_000;
-        // Why: Log the resolved configuration at startup so administrators can verify their
-        // appsettings values were picked up correctly (plan decision 0c5).
         SignalRBroadcasterLog.BroadcasterConfigured(_logger, _broadcastHz, _sampleBufferMaxBytes);
     }
 
@@ -103,11 +98,6 @@ public sealed class PipelineStatusBroadcaster
             FirehoseGroups(orgId, completion.PipelineName, completion.ExecutionId));
     }
 
-    // Why: the org-scoped firehose replaces the removed global "pipeline-updates" firehose. When the
-    // pipeline has an owning org, its lifecycle events also fan out to org:{orgId}:pipeline-updates so
-    // an "all my pipelines" view scoped to that org receives them; a null org targets no firehose
-    // (there is no global cross-org group) — the pipeline/execution groups still deliver to explicit
-    // subscribers. No fallback to a global group: a missing org means no org firehose, logged.
     private string[] FirehoseGroups(Guid? orgId, string pipelineName, Guid executionId)
     {
         if (orgId.HasValue)
@@ -138,8 +128,6 @@ public sealed class PipelineStatusBroadcaster
     {
         var coalesceKey = $"task:{executionId:N}:{taskId:N}";
 
-        // Why: terminal statuses (Complete, Failed) always bypass coalescing so clients see
-        // the final state even if they missed the last coalesced update.
         var isTerminal = IsTerminalStatus(status);
         if (!isTerminal && ShouldCoalesce(coalesceKey))
         {

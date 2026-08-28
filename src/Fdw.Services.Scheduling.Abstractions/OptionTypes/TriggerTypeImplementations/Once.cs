@@ -176,7 +176,6 @@ public sealed class Once : TriggerTypeBase
         }
         catch (TimeZoneNotFoundException ex)
         {
-            // Why: timezone is invalid; log the failure and fall back to a UTC-based calculation.
             SchedulingLogger.CalculateNextRunTimeZoneError(_logger, ex);
             try
             {
@@ -193,16 +192,12 @@ public sealed class Once : TriggerTypeBase
             }
             catch (Exception innerEx)
             {
-                // Why: log the inner exception so it is observed; return null so the scheduler
-                // treats this trigger as having no calculable next execution time.
                 SchedulingLogger.CalculateNextRunFallbackFailed(_logger, innerEx);
                 return null;
             }
         }
         catch (ArgumentException ex)
         {
-            // Why: argument/conversion errors during calculation are logged and treated as
-            // "no next execution" rather than propagated.
             SchedulingLogger.CalculateNextRunArgumentError(_logger, ex);
             return null;
         }
@@ -309,9 +304,6 @@ public sealed class Once : TriggerTypeBase
     }
 #pragma warning restore MA0051
 
-    // Why: FindSystemTimeZoneById throws only TimeZoneNotFoundException/InvalidTimeZoneException for a
-    // bad id (already validated above); extracting keeps the UTC fallback out of the result-returning
-    // ValidateTrigger, and the narrow filter lets any other (unexpected) exception fail loud.
     private TimeZoneInfo ResolveTimeZoneOrUtc(string timeZoneId)
     {
         try
@@ -325,9 +317,6 @@ public sealed class Once : TriggerTypeBase
         }
     }
 
-    // Why: ConvertTimeToUtc throws only ArgumentException/InvalidTimeZoneException for kind/zone
-    // mismatches; extracting keeps the best-effort swallow out of the result-returning ValidateTrigger,
-    // and the narrow filter lets any other (unexpected) exception fail loud.
     private bool TryConvertToUtc(DateTime startTime, TimeZoneInfo timeZone, out DateTime utcStartTime)
     {
         try

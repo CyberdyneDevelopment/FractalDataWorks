@@ -37,8 +37,6 @@ public sealed class SqlTranslatorBaseOrderByAndValidationTests
     [Trait("Category", "DataGateway")]
     public void BuildOrderByClauseQuotesFieldNamesViaDialect()
     {
-        // Why: ORDER BY column quoting must route through ISqlDialect.QuoteIdentifier —
-        // not hardcoded bracket style. FakeDialect → "col" double-quote form.
         var ordering = new OrderingExpression
         {
             OrderedFields = [OrderedField("last_name", ascending: true).Object]
@@ -88,8 +86,6 @@ public sealed class SqlTranslatorBaseOrderByAndValidationTests
     [Trait("Category", "DataGateway")]
     public void BuildOrderByClauseRejectsInjectionInFieldName()
     {
-        // Why: BuildOrderByClause calls IsValidColumnName before quoting. An injection attempt
-        // (semicolon, dash) must throw ArgumentException — not produce malformed SQL.
         var ordering = new OrderingExpression
         {
             OrderedFields = [OrderedField("a; DROP TABLE", ascending: true).Object]
@@ -104,8 +100,6 @@ public sealed class SqlTranslatorBaseOrderByAndValidationTests
     [Trait("Category", "DataGateway")]
     public void BuildOrderByClauseRejectsDottedFieldName()
     {
-        // Why: a dotted name (schema.column) is rejected in ORDER BY — the caller must
-        // use a plain column alias, not a qualified name.
         var ordering = new OrderingExpression
         {
             OrderedFields = [OrderedField("table.column", ascending: true).Object]
@@ -150,7 +144,6 @@ public sealed class SqlTranslatorBaseOrderByAndValidationTests
     [Trait("Category", "DataIntegrity")]
     public void IsValidColumnNameUnderscoreStartIsAccepted()
     {
-        // Why: underscores are common for internal/private columns (e.g., _RowId, _version).
         SqlTranslatorProxy.ExposeIsValidColumnName("_hidden").ShouldBeTrue();
     }
 

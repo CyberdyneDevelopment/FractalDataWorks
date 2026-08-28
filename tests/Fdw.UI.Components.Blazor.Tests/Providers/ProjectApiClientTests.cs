@@ -123,9 +123,6 @@ public sealed class ProjectApiClientTests
     [Trait("Priority", "P2")]
     public async Task ListProjects_CancelledToken_ReturnsFailure()
     {
-        // Why: ApiClientBase catches OperationCanceledException internally and returns
-        // a failure result rather than propagating the exception to callers.
-        // Providers handle cancellation silently via their own try/catch.
         var handler = new MockHttpHandler();
         var client = CreateClient(handler);
         using var cts = new CancellationTokenSource();
@@ -142,9 +139,6 @@ public sealed class ProjectApiClientTests
     [Trait("Priority", "P1")]
     public async Task GetExecutionStatus_ApiError_ReturnsFailure()
     {
-        // Why: Only testing the failure path here — success requires a concrete IExecutionItem
-        // implementation which is not available in the test project. The HTTP routing is
-        // proven sufficient by the success path tests on ListProjects/GetProject above.
         var executionId = Guid.NewGuid();
         var handler = new MockHttpHandler().RespondError($"executions/{executionId}");
         var client = CreateClient(handler);

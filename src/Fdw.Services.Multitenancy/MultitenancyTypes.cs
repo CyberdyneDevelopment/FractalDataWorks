@@ -48,28 +48,11 @@ namespace Fdw.Services.Multitenancy;
     ServiceCategory = "Multitenancy")]
 public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyTypeBase<IMultitenancyFactory>, IMultitenancyType>
 {
-    // Why [ModuleInitializer] rather than an explicit static constructor: the generator ALREADY emits
-    // this type's static constructor (for the deferred-freeze RegisterMember discovery), and C# permits
-    // only one `static ClassName()` per type across all partial declarations — a second one is a compile
-    // error. A module initializer runs at ASSEMBLY LOAD, strictly before any static constructor in the
-    // assembly can fire, so these overrides are guaranteed in place before PlatformServices' collect (or any
-    // direct MultitenancyTypes.Configure/Register/Initialize call) could otherwise run the generated
-    // default (iterate every discovered option), which this domain must never do. Accessing
-    // MultitenancyTypes.Configuration(...) below also triggers this type's own static constructor first
-    // (per ordinary C# static-init-on-first-access rules), so RegisterMember discovery still runs before
-    // these overrides are set — the ordering this domain needs falls out naturally.
-    // Why: CA2255 discourages [ModuleInitializer] in libraries, but selecting this domain's self-selecting
-    // Configure/Register/Initialize overrides before the generated static constructor's discovery runs is
-    // exactly the sanctioned "advanced" use — mirrors OpenIddictPocoMapperRegistration's identical rationale.
 #pragma warning disable CA2255 // The 'ModuleInitializer' attribute should not be used in libraries
     [System.Runtime.CompilerServices.ModuleInitializer]
     internal static void RegisterOverrides()
     {
         Configuration(SelectAndConfigureSingleOption);
-        // Why no-op: SelectAndConfigureSingleOption already ran the selected option's full
-        // Configure/Register before Build(). These stay overridden (rather than left at
-        // the generated default) so the ordinary PlatformServices collect does not ALSO iterate and
-        // register every discovered option — this domain runs exactly one.
         Registration(static (builder, _) => GenericResult<IHostApplicationBuilder>.Success(builder));
         Initialization(static (host, _) => GenericResult<IHost>.Success(host));
     }
@@ -88,19 +71,10 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
     /// choice is missing, or names a ServiceOptionType that does not match any registered option
     /// (NO FALLBACKS — never a silent default).
     /// </returns>
-    // Why these are returned rather than thrown: both already build a logged message describing exactly
-    // what is wrong, and wrapping that in an exception threw away the message object to carry only its
-    // string. Returning the failure keeps the message — and lets the host decide whether a missing
-    // multitenancy choice stops it, which is not this collection's call to make.
     private static IGenericResult<IHostApplicationBuilder> SelectAndConfigureSingleOption(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory)
     {
         var logger = loggerFactory?.CreateLogger("MultitenancyTypes") ?? NullLogger.Instance;
 
-        // Why: which Multitenancy option a host runs is per-host topology, declared once in
-        // configurationSchema.json (ConfigurationSchema.Multitenancy) — not a shared ConfigurationDb row.
-        // ConfigurationGatewayTypes registers the deserialized ConfigurationSchema as a direct singleton
-        // INSTANCE (TryAddSingleton(schema)), so it is resolvable straight off the pre-Build service
-        // descriptor — no factory invocation, no partially-built ServiceProvider required.
         var schema = builder.Services
             .FirstOrDefault(d => d.ServiceType == typeof(ConfigurationSchema))
             ?.ImplementationInstance as ConfigurationSchema;
@@ -117,8 +91,6 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
             return GenericResult<IHostApplicationBuilder>.Failure(MultitenancyLog.ChoiceNotFound(logger, choice));
         }
 
-        // Why this collection selects ONE option instead of collecting all of them: multitenancy is a
-        // host-wide choice, so exactly the configured option runs its phases.
         var configured = option.Configure(builder);
         if (configured.IsFailure)
             return configured;

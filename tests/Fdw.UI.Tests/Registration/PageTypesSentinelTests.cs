@@ -26,8 +26,6 @@ public sealed class PageTypesSentinelTests
     [Trait("Category", "Registration")]
     public void TouchingTheCollectionDoesNotThrow()
     {
-        // Why Should.NotThrow rather than asserting a value: the defect was a TypeInitializationException
-        // from the static constructor, so merely forcing the type to initialize is the assertion.
         Should.NotThrow(() => PageTypes.All());
     }
 
@@ -50,8 +48,6 @@ public sealed class PageTypesSentinelTests
     [Trait("Category", "Registration")]
     public void UnknownNameReturnsTheSentinelRatherThanThrowing()
     {
-        // Why: ByName returns the NotFound sentinel for a miss (never null), so a caller compares against
-        // NotFound instead of null-checking. That contract only works if the sentinel can be constructed.
         PageTypes.ByName("no-such-page-type").ShouldBe(PageTypes.NotFound);
     }
 }

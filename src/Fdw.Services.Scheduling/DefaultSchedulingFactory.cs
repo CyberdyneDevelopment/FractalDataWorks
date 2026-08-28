@@ -15,15 +15,6 @@ namespace Fdw.Services.Scheduling;
 /// Default factory that produces <see cref="DefaultSchedulingService"/> instances from a
 /// <see cref="SchedulerConfiguration"/>.
 /// </summary>
-// Why: SchedulerTypes is a ServiceTypeCollection; its provider expects an ISchedulingFactory<...>
-// to construct services from configuration. DefaultSchedulingService takes a SchedulerConfiguration,
-// IDataGateway, and optional ITenantContext. The factory wraps construction so the provider can hand
-// it a configuration loaded from the gateway.
-// Why: IHttpContextAccessor (not ITenantContext) is injected here. DefaultSchedulingFactory is
-// registered as a singleton; ITenantContext is scoped. Capturing ITenantContext at construction
-// time pins the root-scope context (HasTenant=false, TenantId=null) permanently, killing tenant
-// filtering. IHttpContextAccessor is a singleton that reads the ambient per-request HttpContext,
-// delivering the correct per-request ITenantContext at factory.Create() time — not at construction.
 public sealed class DefaultSchedulingFactory : ISchedulingFactory<IFrameworkSchedulingService, ISchedulerImplementationConfiguration>
 {
     private readonly ILoggerFactory _loggerFactory;
@@ -51,10 +42,6 @@ public sealed class DefaultSchedulingFactory : ISchedulingFactory<IFrameworkSche
             return GenericResult<IFrameworkSchedulingService>.Failure(
                 SchedulingLog.FactoryConfigurationNull(_logger));
 
-        // Why: Resolve ITenantContext from the current request's service scope, not from a
-        // captured singleton-time context. The root scope's ITenantContext always has
-        // HasTenant=false and TenantId=null, so schedule queries would never apply tenant
-        // filtering. HttpContext.RequestServices provides the per-request scope.
         var tenantContext = _httpContextAccessor?.HttpContext?.RequestServices
             .GetService(typeof(ITenantContext)) as ITenantContext;
 

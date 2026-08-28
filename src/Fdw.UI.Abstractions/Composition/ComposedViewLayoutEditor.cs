@@ -79,8 +79,6 @@ public static class ComposedViewLayoutEditor
             return false;
         }
 
-        // Why refuse rather than clamp: a drop past the right edge is an ambiguous gesture, and
-        // quietly snapping it somewhere the user did not point at reads as the UI ignoring them.
         if (column + placement.Width > layout.ColumnCount)
         {
             return false;
@@ -116,9 +114,6 @@ public static class ComposedViewLayoutEditor
             return false;
         }
 
-        // Why the minimum is a hard floor and not a suggestion: the component declared the size
-        // below which it stops being readable, so honouring the drag past it would produce a
-        // placement the catalogue already said does not work.
         if (descriptor is not null && (width < descriptor.MinimumWidth || height < descriptor.MinimumHeight))
         {
             return false;
@@ -168,8 +163,6 @@ public static class ComposedViewLayoutEditor
     private static PlacedComponent? Find(ComposedViewLayout layout, Guid placementId) =>
         layout?.Components.FirstOrDefault(c => c.Id == placementId);
 
-    // Why scan row by row rather than append below everything: appending leaves a growing band of
-    // dead space as a view is edited, and the first gap wide enough is where a person would put it.
     private static (int Column, int Row) FindFreeCell(ComposedViewLayout layout, int width, int height)
     {
         for (var row = 0; row < MaxSearchRows(layout); row++)

@@ -34,9 +34,6 @@ public class ServiceProviderInjectionAnalyzer : DiagnosticAnalyzer
     private const string ServiceOptionMetadataName = "Fdw.Services.Abstractions.IServiceOption";
     private const string ServiceOptionDependencyAttributeMetadataName = "Fdw.Services.Abstractions.ServiceOptionDependencyAttribute";
 
-    // Why: every declared arity of IPlatformServiceProvider that shapes the correct indirection —
-    // the non-generic base (arity 0) never appears here because it does not implement
-    // IServiceOption and therefore never reaches the exclusion check in the first place.
     private static readonly string[] ServiceProviderMetadataNames =
     [
         "Fdw.ServiceTypes.IPlatformServiceProvider`1",
@@ -84,8 +81,6 @@ public class ServiceProviderInjectionAnalyzer : DiagnosticAnalyzer
                 .Cast<INamedTypeSymbol>()
                 .ToImmutableArray();
 
-            // Why: resolved semantically, no project reference required — when the attribute type
-            // isn't present in a given compilation (null), no parameter is skipped (normal behavior).
             var serviceOptionDependencyAttributeType =
                 compilationContext.Compilation.GetTypeByMetadataName(ServiceOptionDependencyAttributeMetadataName);
 
@@ -103,8 +98,6 @@ public class ServiceProviderInjectionAnalyzer : DiagnosticAnalyzer
     {
         var classSymbol = (INamedTypeSymbol)context.Symbol;
 
-        // Why: only classes implementing IServiceOption (directly or via a derived ServiceInterface)
-        // are service-option services in scope for this rule.
         if (classSymbol.TypeKind != TypeKind.Class || !IsServiceOptionType(classSymbol, serviceOptionType))
             return;
 
@@ -119,8 +112,6 @@ public class ServiceProviderInjectionAnalyzer : DiagnosticAnalyzer
                 if (IsServiceProviderType(parameter.Type, serviceProviderTypes))
                     continue;
 
-                // Why: the parameter is explicitly opted out — the owning provider/factory supplies
-                // this dependency already-resolved (see ServiceOptionDependencyAttribute doc).
                 if (HasServiceOptionDependencyAttribute(parameter, serviceOptionDependencyAttributeType))
                     continue;
 

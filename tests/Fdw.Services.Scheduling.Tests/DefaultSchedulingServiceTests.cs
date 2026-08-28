@@ -12,8 +12,6 @@ using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Scheduling.Abstractions;
 using Fdw.Services.Scheduling.Data;
 using Microsoft.Extensions.Logging.Abstractions;
-// Why: Aliases disambiguate from Fdw.Services.Scheduling.Commands.Data
-// and Fdw.Services.Scheduling.Data namespace segments (matches TenantIsolationTests convention).
 using FilterGroup = Fdw.Data.FilterGroup;
 using IFilterCondition = Fdw.Data.Abstractions.IFilterCondition;
 using IFilterNode = Fdw.Data.Abstractions.IFilterNode;

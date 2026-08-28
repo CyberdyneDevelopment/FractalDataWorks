@@ -4,7 +4,6 @@ using Fdw.Collections;
 namespace Fdw.UI.Abstractions.Components;
 
 /// <summary>Base class for validation message severity.</summary>
-// Why: pure TypeOption base — trivial pass-through constructor, no logic to test.
 [ExcludeFromCodeCoverage]
 public abstract class ValidationSeverityBase : TypeOptionBase<int, ValidationSeverityBase>, IValidationSeverity
 {

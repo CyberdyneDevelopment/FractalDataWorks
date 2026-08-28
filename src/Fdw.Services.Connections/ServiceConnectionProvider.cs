@@ -120,9 +120,6 @@ public sealed class ServiceConnectionProvider : IServiceConnectionProvider, IDis
     /// <summary>
     /// Gets a pre-registered framework connection matching the supplied configuration.
     /// </summary>
-    // Why: this provider holds pre-created connections keyed by name — it has no factories,
-    // so it cannot BUILD from a configuration. Name lookup in the registry is its only
-    // resolution mechanism (in-memory objects, no database read). Unregistered → fail loud.
     public Task<IGenericResult<IGenericConnection>> Get(IGenericConfiguration configuration, CancellationToken cancellationToken = default)
     {
         if (configuration is null || string.IsNullOrWhiteSpace(configuration.Name))
@@ -157,7 +154,6 @@ public sealed class ServiceConnectionProvider : IServiceConnectionProvider, IDis
                 catch (Exception ex)
 #pragma warning restore CA1031
                 {
-                    // Why: Disposal must not propagate exceptions; log the failure so it is not silently discarded.
                     ServiceConnectionProviderLog.DisposeConnectionFailed(_logger, ex, entry.Key);
                 }
             }

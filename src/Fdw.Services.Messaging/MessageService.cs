@@ -22,9 +22,6 @@ namespace Fdw.Services.Messaging;
 /// </summary>
 public sealed class MessageService : IMessageService
 {
-    // Why: msg.Message and msg.MessageRecipient live in OpsDb (operational data store),
-    // not a separate MessagingDb. There is no MessagingDb DataStore — the msg schema is
-    // one of OpsDb's paths (alongside ops, etl, sched, dq).
     private const string DataStoreName = "OpsDb";
     private const string PathName = "msg";
     private const string MessageContainer = "Message";
@@ -208,8 +205,6 @@ public sealed class MessageService : IMessageService
 
         try
         {
-            // Why: unread = ReadAt IS NULL. Equal(null) emits "ReadAt = NULL" (never matches / translator
-            // rejects null equality) — use IsNull() for correct IS NULL semantics. Same defect as MarkAllRead.
             var command = Query.From<MessagePayload>(DataStoreName, PathName, MessageContainer)
                 .Where(m => m.RecipientUserId).Equal(userId)
                 .Where(m => m.ReadAt).IsNull()
@@ -415,9 +410,6 @@ public sealed class MessageService : IMessageService
             var userIdStr = userId.ToString("D");
             var now = DateTime.UtcNow;
 
-            // Why: "unread" is ReadAt IS NULL. The two-arg Where(name, null) builds an EqualOperator
-            // (ReadAt = NULL), which never matches in SQL and the translator rejects a null equality
-            // parameter — the source of the runtime 500. Use IsNullOperator for proper IS NULL semantics.
             var command = CmdBuilders.Update.In<MessageReadUpdate>(MessageContainer)
                 .DataStore(DataStoreName).Path(PathName)
                 .Where(nameof(MessagePayload.RecipientUserId), userId)
@@ -528,9 +520,6 @@ public sealed class MessageService : IMessageService
         }
     }
 
-    // Why: SignalR typed-client interface methods do not take a CancellationToken (the FDW
-    // CancellationToken-propagation rule explicitly exempts SignalR hub clients), so the push here
-    // is fire-and-forget on the typed contract rather than a stringly-typed SendAsync.
     private async Task NotifyRecipientViaSignalR(
         CreateMessageRequest request,
         Guid messageId)
@@ -595,12 +584,6 @@ public sealed class MessageService : IMessageService
         public DateTime CreatedAt { get; set; }
     }
 
-    // Why: One minimal update record per status transition. The MsSql UPDATE translator builds the
-    // SET clause from EVERY property on the update object that maps to a container column. A single
-    // shared record carrying all timestamps (Delivered/Read/Dismissed/Archived) would emit
-    // "SET [DeliveredAt]=NULL, [DismissedAt]=NULL, [ArchivedAt]=NULL, ..." on every transition,
-    // clobbering timestamps set by earlier transitions. Each record below sets ONLY the columns
-    // that transition owns, so unrelated timestamps are left untouched.
 
     /// <summary>Update record for the Delivered transition (Status + DeliveredAt only).</summary>
     private sealed class MessageDeliveredUpdate

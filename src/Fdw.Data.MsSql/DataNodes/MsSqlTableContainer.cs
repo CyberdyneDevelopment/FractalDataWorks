@@ -51,13 +51,9 @@ public sealed class MsSqlTableContainer : DataContainer
             fields,
             keys,
             referencingKeys,
-            // Why: instantiate the Table container type directly. TableContainerType is registered
-            // RestrictToCurrentCompilation=true (Data.MsSql-local), so a shared-registry ByName lookup
-            // is not reliable across assemblies; the concrete type is the source of truth here.
             new TableContainerType(),
             format,
             physicalPath,
-            // Why: real table operations — drives gateway operation validation.
             ["Query", "Insert", "Update", "Delete"],
             metadata,
             logger)

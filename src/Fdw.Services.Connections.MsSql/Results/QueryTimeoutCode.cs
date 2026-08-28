@@ -15,9 +15,6 @@ public sealed class QueryTimeoutCode : MsSqlResultCodeBase
     /// Initializes a new instance of the <see cref="QueryTimeoutCode"/> class.
     /// </summary>
     public QueryTimeoutCode()
-        // Why: GatewayTimeout(504) band (110000-119999) — SQL Server (the downstream dependency)
-        // did not respond within the configured command timeout, distinct from the generic
-        // Transient(503) band this code previously shared with unrelated retryable failures.
         : base(
             110001,
             "QueryTimeout",

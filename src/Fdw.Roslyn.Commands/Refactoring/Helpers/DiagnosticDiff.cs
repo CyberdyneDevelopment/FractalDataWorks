@@ -56,8 +56,6 @@ public static class DiagnosticDiff
             var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
             if (compilation is null) return null;
 
-            // Why: if System.Object itself is an error type the compilation has no framework references,
-            // so every name in the project is unresolvable and a diff would be pure noise.
             if (compilation.GetSpecialType(SpecialType.System_Object).TypeKind == TypeKind.Error) return null;
 
             foreach (var diagnostic in compilation.GetDiagnostics(cancellationToken))

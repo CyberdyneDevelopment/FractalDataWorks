@@ -58,8 +58,6 @@ public class UpdateConnectionRequest : ResourceUpdateRequest
     /// <summary>Gets or sets whether to use mutual TLS (Http connections). Null means no change.</summary>
     public bool? UseMtls { get; set; }
 
-    // Why: mirrors the check-settings columns on conn.Connection (see CreateConnectionRequest).
-    // Null means no change — consistent with every other nullable field on this DTO.
 
     /// <summary>Gets or sets whether the automated Connections domain health check probes this connection. Null means no change.</summary>
     public bool? HealthCheckEnabled { get; set; }

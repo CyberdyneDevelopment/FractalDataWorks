@@ -29,10 +29,6 @@ namespace Fdw.Aegis.McpServer;
 /// </summary>
 public static class AegisHostRegistration
 {
-    // Why: the same three discriminator-dispatch converters ConfigurationGatewayExtensions uses —
-    // Aegis.McpServer deserializes its own aegisSchema.json directly via STJ (bypassing IConfiguration
-    // binding) rather than letting ConfigurationGatewayTypes build them, which would additionally register
-    // IConnectionFactory/IConfigurationGateway against a real ConfigurationDb this host never touches.
     private static readonly JsonSerializerOptions SchemaJsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true,
@@ -53,9 +49,6 @@ public static class AegisHostRegistration
         if (string.IsNullOrWhiteSpace(jsonFilePath))
             throw new InvalidOperationException("aegisSchema.json path must not be null or whitespace.");
 
-        // Why: relative paths resolve against the published app's own output directory (where
-        // CopyToOutputDirectory=PreserveNewest places the JSON file), not the process's current
-        // working directory.
         var resolvedPath = Path.IsPathRooted(jsonFilePath)
             ? jsonFilePath
             : Path.Combine(AppContext.BaseDirectory, jsonFilePath);
@@ -97,16 +90,9 @@ public static class AegisHostRegistration
     /// </summary>
     public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)
     {
-        // Why ILogger<AegisHostRegistration>: SourceContext then names the type the line was written
-        // in, so these phase lines are attributable to the host registration rather than to whichever
-        // collection happens to be running underneath.
         var logger = Logger(loggerFactory);
         AegisLog.HostPhaseStarting(logger, nameof(Configure));
 
-        // Why the result is returned rather than discarded: a phase that fails returns a coded
-        // failure and logs it once. Swallowing it here left this host starting up as though its
-        // secret managers had registered, so the first secret resolution failed instead - far from
-        // the cause, and for a secrets host that is the worst place to discover it.
         var result = SecretManagerTypes.Configure(builder, loggerFactory);
         if (result.IsFailure)
         {
@@ -118,16 +104,6 @@ public static class AegisHostRegistration
         return result;
     }
 
-    // Why CreateLogger(typeof(...)) and not ILogger<AegisHostRegistration>: this class is static, and
-    // a static type cannot be a generic type argument (CS0718). The Type overload sets the same
-    // category the generic form would, so SourceContext still names this type — which is the whole
-    // reason for the typed logger: these phase lines are attributable to the host registration rather
-    // than to whichever collection is running underneath.
-    //
-    // Why a helper rather than repeating the expression three times: every phase needs the same
-    // logger, and loggerFactory is optional so each site would otherwise carry the same
-    // null-coalesce. NullLogger keeps the phases working when no factory is supplied — the one
-    // fallback the codebase allows.
     private static ILogger Logger(ILoggerFactory? loggerFactory) =>
         loggerFactory?.CreateLogger(typeof(AegisHostRegistration))
         ?? NullLogger.Instance;
@@ -150,21 +126,8 @@ public static class AegisHostRegistration
             return secretManagersRegistered;
         }
 
-        // Why: every SecretManager-kind [ServiceTypeOption]'s Register (and the shared
-        // SecretManagerConfigurationProvider it registers) constructs a ImplementationConfigurationProviderBase
-        // that takes a Lazy<IConfigurationGateway> constructor dependency — that dependency exists
-        // purely to satisfy the shared FDW registration machinery; this host never resolves it.
-        // AegisInjector resolves secret managers via ISecretManagerProvider.Get(name), whose parent
-        // configuration provider is the in-memory DeclaredSecretManagerConfigurationProvider wired in
-        // Initialize — so name resolution never touches this gatewayProvider either. Mirrors the exact
-        // registration line ConfigurationGatewayServiceType uses (Fdw.Services.Data); IConfigurationGateway
-        // itself is deliberately never registered here — any accidental use fails loud with a normal DI
-        // resolution exception instead of silently reaching a real ConfigurationDb.
         builder.Services.TryAddSingleton(sp => new Lazy<IConfigurationGateway>(() => sp.GetRequiredService<IConfigurationGateway>()));
 
-        // Why: HttpHeaderInjectionTarget picks up its downstream endpoint purely by ConnectionName —
-        // register one named HttpClient per declared Http-typed-body connection so CreateClient(name)
-        // resolves without this host ever building an IGenericConnection.
         foreach (var connection in schema.Connections)
         {
             if (connection.Configuration is HttpConnectionConfigurationBase http)
@@ -176,20 +139,9 @@ public static class AegisHostRegistration
 
         builder.Services.AddSingleton(Options.Create(new AegisCommandsOptions { Commands = [.. schema.Commands] }));
 
-        // Why the declared schema is registered as the domain configuration provider rather than
-        // handed to the provider directly: ISecretManagerProvider is Scoped, so an instance resolved
-        // here is not the instance AegisInjector receives per tool call. SecretManagerTypes' own
-        // registration reads ISecretManagerConfigurationProvider out of DI for every scope it builds,
-        // so supplying it here reaches all of them and swaps only the SOURCE of the configuration.
         builder.Services.AddSingleton<ISecretManagerConfigurationProvider>(
             new DeclaredSecretManagerConfigurationProvider([.. schema.SecretManagers]));
 
-        // Why: Scoped — IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration> (registered by
-        // SecretManagerTypes.Register above) is itself Scoped by default, so AegisInjector (which takes
-        // it as a constructor dependency) must be Scoped too. PreApprovedPolicyEvaluator and
-        // HttpHeaderInjectionTarget have no scoped dependencies of their own but are registered Scoped
-        // for consistency with the one-scope-per-tool-call model ModelContextProtocol's WithTools<T>
-        // uses (a fresh target is activated per call from the per-request scope).
         builder.Services.AddScoped<IApprovalPolicyEvaluator, PreApprovedPolicyEvaluator>();
         builder.Services.AddScoped<IAegisInjectionTarget, HttpHeaderInjectionTarget>();
         builder.Services.AddScoped<AegisInjector>();

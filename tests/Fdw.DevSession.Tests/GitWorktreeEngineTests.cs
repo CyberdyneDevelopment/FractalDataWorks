@@ -11,8 +11,6 @@ public sealed class GitWorktreeEngineTests
 {
     private static GitWorktreeEngine CreateEngine() => new(new GitProcessRunner());
 
-    // Why: xUnit's own token, so cancelling a run actually interrupts the git subprocesses these
-    // tests spawn instead of waiting them out.
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     [Fact]
@@ -61,9 +59,6 @@ public sealed class GitWorktreeEngineTests
             Token);
 
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
-        // Why this test exists: branching from a fetched origin/* ref instead of the caller's local
-        // HEAD silently discards unpushed work. That is the specific failure the workspace protocol
-        // forbids, so it is pinned here rather than left to review.
         repository.Git("rev-parse", "feature/from-local").ShouldBe(localHead);
     }
 
@@ -95,8 +90,6 @@ public sealed class GitWorktreeEngineTests
             new IsolationRequest(repository.Path, "main", "feature/no-path"),
             Token);
 
-        // Why: the engine must not invent a filesystem location. Remove() later deletes whatever
-        // path is recorded here, so a guessed one is actively dangerous.
         result.IsFailure.ShouldBeTrue();
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("worktree path");
     }
@@ -170,8 +163,6 @@ public sealed class GitWorktreeEngineTests
 
         var result = await engine.Merge(repository.Path, "feature/conflict", "main", Token);
 
-        // Why: which side wins is never the engine's call, so a conflict is surfaced, not resolved
-        // and not auto-aborted.
         result.IsFailure.ShouldBeTrue();
         result.CurrentMessage.ShouldNotBeNullOrWhiteSpace();
     }
@@ -205,8 +196,6 @@ public sealed class GitWorktreeEngineTests
 
         var result = await engine.Remove(created.Value!, Token);
 
-        // Why: Remove deletes a working directory. Being handed a copy that never had one means the
-        // caller confused two isolation levels; succeeding quietly would hide that.
         result.IsFailure.ShouldBeTrue();
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("no worktree path");
     }
@@ -232,8 +221,6 @@ public sealed class GitWorktreeEngineTests
         var worktreePath = Path.Combine(repository.Root, "wt");
         var engine = CreateEngine();
 
-        // Why: exercises the TypeOption's behavioural Materialize rather than calling the engine
-        // directly, so the registered isolation level and the engine stay in agreement.
         var result = await new WorktreeIsolation().Materialize(
             engine,
             new IsolationRequest(repository.Path, "main", "feature/via-option") { WorktreePath = worktreePath },

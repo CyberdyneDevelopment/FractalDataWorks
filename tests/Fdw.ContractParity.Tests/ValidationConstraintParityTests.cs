@@ -111,7 +111,6 @@ public class ValidationConstraintParityTests
 
     private static IEnumerable<Type> SafeTypes(Assembly assembly)
     {
-        // Why: a partially-loadable assembly must not take the whole guard down -- take what resolved.
         try
         {
             return assembly.GetTypes();
@@ -124,9 +123,6 @@ public class ValidationConstraintParityTests
 
     private static IReadOnlyList<Assembly> LoadFdwAssemblies()
     {
-        // Why load from disk rather than AppDomain.CurrentDomain.GetAssemblies(): a referenced
-        // assembly is not loaded until something touches it, so the in-memory list would silently
-        // omit exactly the contracts nothing has referenced yet.
         var loaded = new List<Assembly>();
 
         foreach (var path in Directory.GetFiles(AppContext.BaseDirectory, "Fdw.*.dll"))

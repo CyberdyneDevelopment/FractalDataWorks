@@ -256,8 +256,6 @@ public sealed class Interval : TriggerTypeBase
             return base.IsDue(trigger, lastExecution, now);
         }
 
-        // Why: a null lastExecution is only dispatchable when the trigger itself is well-formed —
-        // an invalid/missing interval must not "fire once" through the first-run path.
         return trigger?.Configuration != null
             && trigger.Configuration.TryGetValue(IntervalMinutesKey, out var intervalObj)
             && TryConvertToInt(intervalObj, out var intervalMinutes)

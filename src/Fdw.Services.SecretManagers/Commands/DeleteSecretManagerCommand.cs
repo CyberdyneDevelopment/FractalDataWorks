@@ -36,8 +36,6 @@ public sealed class DeleteSecretManagerCommand : SecretManagerCommandBase, ISecr
     {
         if (string.IsNullOrWhiteSpace(secretKey))
         {
-            // Why: reported as a defect (FDW rule) — a command should return IGenericResult, not
-            // throw. Left in place per instructions (constructors cannot return IGenericResult).
             DeleteSecretManagerCommandLog.RequiredValueMissing(NullLogger<DeleteSecretManagerCommand>.Instance, nameof(secretKey));
             throw new ArgumentException("Secret key cannot be null or empty for DeleteSecret operation.", nameof(secretKey));
         }

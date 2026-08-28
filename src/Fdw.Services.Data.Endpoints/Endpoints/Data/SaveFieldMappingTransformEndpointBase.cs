@@ -29,9 +29,6 @@ public abstract class SaveFieldMappingTransformEndpointBase : CrudCreateEndpoint
     /// <summary>Gets the data gateway for executing queries and commands.</summary>
     protected IDataGateway DataGateway { get; }
 
-    // Why: DataSetConfigurationProvider owns the DataStoreName and PathName for the
-    // configuration database — this is the single source of truth rather than
-    // IConfigurationConnectionNameProvider (which is the anti-pattern being eliminated).
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
     /// <inheritdoc />
@@ -65,11 +62,6 @@ public abstract class SaveFieldMappingTransformEndpointBase : CrudCreateEndpoint
     /// <summary>
     /// Gets the configuration path that holds the transform containers.
     /// </summary>
-    // Why not the dataset provider's PathName: these containers are declared in ConfigurationDb's
-    // "transform" path, not "data". Borrowing the dataset path made every addressed lookup fail with
-    // "DataContainer 'FieldMappingTransform' not found in path 'data'", which surfaced as a 404 on
-    // every transform route. The container names beside this are literals for the same reason — the
-    // endpoint names the location it targets rather than inheriting one that happens to differ.
     protected virtual string TransformPathName => "transform";
 
     /// <summary>Gets the container name for FieldMappingTransform queries.</summary>
@@ -106,21 +98,12 @@ public abstract class SaveFieldMappingTransformEndpointBase : CrudCreateEndpoint
 
         var config = new FieldMappingTransformConfiguration
         {
-            // Why minted here: the UUIDv7 is assigned by ImplementationConfigurationProviderBase, on the
-            // Save/cascade path. A child record written straight through IDataGateway with
-            // ConfigurationSaveCommand never reaches that code, so Id = default was not "signals
-            // INSERT" — it persisted literally. Every row in transform.FieldMappingTransform carried
-            // 00000000-0000-0000-0000-000000000000, which left the transform with no logical
-            // identity: it could be created and listed but never addressed, so update and delete
-            // answered "no identifier supplied". Minting at the point of creation is the same thing
-            // AddDataStoreContainerEndpointBase does for the same reason.
             Id = Guid.CreateVersion7(),
             DataSetFieldMappingId = request.FieldMappingId,
             TransformType = request.TransformType,
             Ordinal = request.Ordinal
         };
 
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget.
         var saveResult = await DataGateway
             .Execute<int>(
                 new ConfigurationSaveCommand<FieldMappingTransformConfiguration>(config),
@@ -139,9 +122,6 @@ public abstract class SaveFieldMappingTransformEndpointBase : CrudCreateEndpoint
         {
             var paramConfig = new FieldMappingTransformParameterConfiguration
             {
-                // Why minted here: same as the transform above. This one also fed
-                // FieldMappingTransformId = config.Id, so while the transform's own Id stayed empty
-                // every parameter was parented to the all-zero GUID as well.
                 Id = Guid.CreateVersion7(),
                 FieldMappingTransformId = config.Id,
                 Name = param.Name,

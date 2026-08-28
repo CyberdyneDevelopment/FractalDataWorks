@@ -33,9 +33,6 @@ namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
 public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBase, IEndpointTypeOption>, IEndpointTypeCollection
     where TBase : EndpointTypeOptionBase, IEndpointTypeOption
 {
-    // Why: one fixed category for the whole collect, not the concrete collection's type name. A host
-    // filtering its startup log wants "show me what registration did" as a single switch; a
-    // per-collection category would make that a wildcard the collections have to keep agreeing on.
     private const string LogCategory = "Fdw.Web.RestEndpoints.EndpointRegistration";
 
     /// <summary>
@@ -297,9 +294,6 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// <returns>The builder, or the first failure encountered.</returns>
     public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        // Why the flag is set here rather than after the work: a phase that failed halfway
-        // has already registered whatever came before the failure, and re-entering would do
-        // that part twice.
         if (!force && (Configured || SkipConfiguration))
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
@@ -348,8 +342,6 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
         bool force = false,
         bool defer = false)
     {
-        // Why: the factory is null until the host has one, and reporting is not optional work that
-        // gets dropped when it is — NullLogger keeps every call below unconditional and silent.
         var logger = loggerFactory?.CreateLogger(LogCategory) ?? NullLogger.Instance;
 
         if (!force && (Registered || SkipRegistration))
@@ -358,12 +350,8 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
-        // Why the flag is set here rather than after the work: a phase that failed halfway has already
-        // registered whatever came before the failure, and re-entering would do that part twice.
         Registered = true;
 
-        // Why: zero when no body was set is the measurement, not a stand-in for one — a group that
-        // declared no registration body of its own contributed nothing to the container.
         var groupServiceCount = 0;
         if (RegistrationMethod is not null)
         {
@@ -379,9 +367,6 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
 
         var endpointCount = 0;
 
-        // Why: every declared member, not Selected(Members) — an endpoint switched off has to be
-        // named as switched off. Filtering first is what makes a skipped endpoint indistinguishable
-        // from one that was never declared, which is the state this collect exists to make visible.
         foreach (var member in Members)
         {
             if (member.SkipRegistration)
@@ -424,9 +409,6 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
         bool force = false,
         bool defer = false)
     {
-        // Why the flag is set here rather than after the work: a phase that failed halfway
-        // has already registered whatever came before the failure, and re-entering would do
-        // that part twice.
         if (!force && (Initialized || SkipInitialization))
         {
             return GenericResult<IHost>.Success(host);
@@ -455,13 +437,6 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
         return GenericResult<IHost>.Success(host);
     }
 
-    // Why the members arrive as an argument rather than being read from the collection here: All()
-    // is a generated static on the derived collection, and this base cannot name it. The caller
-    // that knows the concrete collection passes them in.
-    //
-    // Why no argument check: nothing to register is a real state, not a mistake. A resource whose
-    // members are all skipped, or which has none yet, should register nothing and say so by doing
-    // nothing — throwing would turn an ordinary composition choice into a startup failure.
     private static IEnumerable<IEndpointTypeOption> Selected(IEnumerable<IEndpointTypeOption>? members)
         => (members ?? Enumerable.Empty<IEndpointTypeOption>()).Where(m => !m.SkipRegistration);
 }

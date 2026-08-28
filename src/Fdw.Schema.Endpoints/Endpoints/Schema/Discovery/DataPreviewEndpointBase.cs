@@ -107,9 +107,6 @@ public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, Dat
             }
             else
             {
-                // Why: fail loud — a missing DataStoreName or PathName is a caller error, not a
-                // value to default. The container-address trio (DataStoreName, PathName, ContainerName)
-                // must all be present; any missing field is surfaced as a 400 with a structured log.
                 if (string.IsNullOrEmpty(req.DataStoreName))
                 {
                     SchemaEndpointLog.PreviewContainerAddressMissing(_logger, "DataStoreName");
@@ -167,11 +164,7 @@ public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, Dat
             Projection = projection
         };
 
-        // Why: DataSet federation routes through DataSetTarget, not DataStoreTarget.
-        // The gateway resolves the DataSet name to its underlying sources automatically.
         var result = await _dataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, new DataSetTarget(dataSetName), ct).ConfigureAwait(false);
-        // Why: a gateway failure must surface as a 500 — returning an empty 200 hides the error from
-        // callers and makes a broken query indistinguishable from a query that returned zero rows.
         if (!result.IsSuccess)
         {
             SchemaEndpointLog.SchemaOperationFailed(_logger, new InvalidOperationException(result.CurrentMessage ?? "Gateway returned failure"), "preview", dataSetName);
@@ -215,8 +208,6 @@ public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, Dat
     {
         ProjectionExpression? projection = BuildProjection(columns);
 
-        // Why: address is DataStoreName.Path/ContainerName — the gateway resolves this
-        // to the correct connection, schema, and table. Connection is invisible above this layer.
         var command = new QueryCommand<Dictionary<string, object?>>
         {
             Paging = new PagingExpression { Skip = 0, Take = maxRows },
@@ -225,8 +216,6 @@ public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, Dat
         var containerIdentifier = $"{dataStoreName}/{pathName}/{containerName}";
 
         var result = await _dataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, new DataStoreTarget(dataStoreName, pathName, containerName), ct).ConfigureAwait(false);
-        // Why: a gateway failure must surface as a 500 — returning an empty 200 hides the error from
-        // callers and makes a broken query indistinguishable from a query that returned zero rows.
         if (!result.IsSuccess)
         {
             SchemaEndpointLog.SchemaOperationFailed(_logger, new InvalidOperationException(result.CurrentMessage ?? "Gateway returned failure"), "preview", containerIdentifier);

@@ -83,9 +83,6 @@ public sealed partial class MsSqlConnectionLimitConfiguration : ConnectionLimitC
     public MsSqlDailyBudgetConfiguration? DailyBudget { get; set; }
 
     // ── Enforcement overrides ────────────────────────────────────────────────
-    // Why: LimitEnforcementDataGateway operates on ConnectionLimitConfiguration only.
-    // These overrides forward to the populated subtype navigation property so the
-    // enforcement layer stays invisible to MsSql-specific types.
 
     /// <inheritdoc/>
     public override int? EnforceMaxPerSecond => RateLimit?.MaxPerSecond;

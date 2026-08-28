@@ -29,8 +29,6 @@ public class DataflowGraphConfigurationProvider
     /// </summary>
     public static IServiceCollection RegisterDomainConfiguration(IServiceCollection services)
     {
-        // Why: Singleton — the provider holds no per-request state; IConfigurationGateway is scoped
-        // but accessed via a factory so the singleton wrapper remains safe.
         services.TryAddSingleton<DataflowGraphConfigurationProvider>(sp =>
             new DataflowGraphConfigurationProvider(
                 sp.GetRequiredService<IConfigurationGatewayProvider>()
@@ -61,11 +59,9 @@ public class DataflowGraphConfigurationProvider
     /// <summary>
     /// Returns all current DataSet summary rows for graph node construction.
     /// </summary>
-    // Why: virtual — Moq can override in unit tests without a real IConfigurationGateway.
     public virtual async Task<IGenericResult<IReadOnlyList<DataSetRecord>>> LoadDataSets(
         CancellationToken cancellationToken = default)
     {
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget.
         var command = new QueryCommand<DataSetRecord>();
 
         var result = await _gateway.Execute<IEnumerable<DataSetRecord>>(
@@ -81,11 +77,9 @@ public class DataflowGraphConfigurationProvider
     /// <summary>
     /// Returns all current DataStore summary rows for graph node construction.
     /// </summary>
-    // Why: virtual — Moq can override in unit tests without a real IConfigurationGateway.
     public virtual async Task<IGenericResult<IReadOnlyList<DataStoreRecord>>> LoadDataStores(
         CancellationToken cancellationToken = default)
     {
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget.
         var command = new QueryCommand<DataStoreRecord>();
 
         var result = await _gateway.Execute<IEnumerable<DataStoreRecord>>(
@@ -101,11 +95,9 @@ public class DataflowGraphConfigurationProvider
     /// <summary>
     /// Returns all current DataSetSource summary rows for graph edge construction.
     /// </summary>
-    // Why: virtual — Moq can override in unit tests without a real IConfigurationGateway.
     public virtual async Task<IGenericResult<IReadOnlyList<DataSetSourceConfiguration>>> LoadSources(
         CancellationToken cancellationToken = default)
     {
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget.
         var command = new QueryCommand<DataSetSourceConfiguration>();
 
         var result = await _gateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
@@ -122,13 +114,11 @@ public class DataflowGraphConfigurationProvider
     /// Returns whether a pipeline with the given name exists (case-insensitive).
     /// Used to validate the optional ?pipelineName filter before graph construction.
     /// </summary>
-    // Why: virtual — Moq can override in unit tests without a real IConfigurationGateway.
     public virtual async Task<IGenericResult<bool>> PipelineExists(
         string name, CancellationToken cancellationToken = default)
     {
         try
         {
-            // Why: Addressing moved off IDataCommand onto DataStoreTarget.
             var command = new QueryCommand<System.Collections.Generic.Dictionary<string, object?>>();
 
             var result = await _gateway

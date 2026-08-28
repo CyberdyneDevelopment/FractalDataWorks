@@ -121,7 +121,6 @@ public static partial class DataStoreTypesLog
     /// <summary>
     /// Logs an individual DataContainerField loaded from configuration.
     /// </summary>
-    // Why: IsPrimaryKey removed from DataContainerFieldConfiguration — PK identity is now in DataContainerKeyField entries.
     [MessageLogging(
         EventId = 11209,
         Level = LogLevel.Trace,

@@ -9,7 +9,6 @@ namespace Fdw.Services.Connections.RoslynWorkspace.Abstractions;
 /// <param name="Kind">Symbol kind in lowercase invariant form: <c>method</c>, <c>class</c>, <c>interface</c>, <c>property</c>, <c>field</c>, <c>event</c>, <c>namespace</c>, …</param>
 /// <param name="FilePath">Source file path when the symbol has an in-source location; <c>null</c> for metadata-only symbols.</param>
 /// <param name="Line">1-based line number when <see cref="FilePath"/> is non-null.</param>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record RoslynSymbolMatch(
     string DocumentationCommentId,

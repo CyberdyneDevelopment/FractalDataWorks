@@ -14,8 +14,6 @@ namespace Fdw.Services.Scheduling.Endpoints;
 public abstract class DeleteScheduleEndpointBase<TConfig> : CrudDeleteEndpointBase<ScheduleNameRequest>
     where TConfig : ScheduleConfiguration
 {
-    // Why: ScheduleConfigurationProvider replaces IOptionsMonitor<List<T>> with dual-source
-    // (ctrl + cfg) provider that merges system and user configurations.
     private readonly ScheduleConfigurationProvider _provider;
 
     /// <inheritdoc />

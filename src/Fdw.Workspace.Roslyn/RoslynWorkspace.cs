@@ -353,10 +353,6 @@ public sealed class RoslynWorkspace : IRoslynWorkspace
 
                 try
                 {
-                    // Why: GetTextAsync, NOT TryGetText. TryGetText asks "is the text already in
-                    // memory?" and returns false for any document still backed by its TextLoader — so the
-                    // comparison below would fail for a file nobody had touched, refusing the delete
-                    // permanently and for the wrong reason. The question here is what the text IS.
                     var lastKnown = await oldDocument.GetTextAsync(cancellationToken).ConfigureAwait(false);
 
                     var onDisk = await File.ReadAllTextAsync(oldDocument.FilePath, cancellationToken)
@@ -419,9 +415,6 @@ public sealed class RoslynWorkspace : IRoslynWorkspace
 
                 try
                 {
-                    // Why: a moved document lands in a folder that may not exist yet. Without this the
-                    // write throws DirectoryNotFoundException, which is caught below and reported as a
-                    // per-file error — so the move silently fails to land while the old file remains.
                     var targetDirectory = Path.GetDirectoryName(newDocument.FilePath);
                     if (!string.IsNullOrEmpty(targetDirectory))
                         Directory.CreateDirectory(targetDirectory!);
@@ -446,12 +439,6 @@ public sealed class RoslynWorkspace : IRoslynWorkspace
         if (deleteRemovedFiles)
             await DeleteRemovedDocuments(written, errors, cancellationToken).ConfigureAwait(false);
 
-        // Why: _lastApplied is the record of what is on disk, and it is the ONLY thing that knows a
-        // deletion is still pending — DeleteRemovedDocuments finds deletions by diffing it against the
-        // current solution. Advancing it after a failure discards that knowledge, so a refused delete
-        // (file changed on disk, or an IO/permission error) leaves the file orphaned and UNRETRYABLE:
-        // the next call has nothing left to compare against. Failing while silently consuming the retry
-        // is worse than failing, so the record only moves when everything actually landed.
         if (errors.Count > 0)
         {
             return GenericResult<IReadOnlyList<string>>.Failure(
@@ -534,20 +521,6 @@ public sealed class RoslynWorkspace : IRoslynWorkspace
                 projectInfo.FilePath,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            // Why: AddProject(name, assemblyName, language) creates a BARE project — no metadata
-            // references, no compilation options, no parse options. The project was just loaded properly
-            // by MSBuild a few lines above, carrying all of them, and throwing them away is what made
-            // every later compilation of it unable to resolve System: with zero references, nothing binds,
-            // so the probe reported the entire BCL as missing and buried the real findings. Carry the
-            // loaded project's actual settings across instead.
-            //
-            // ParseOptions and CompilationOptions come too, not just references: LangVersion, nullable
-            // context, unsafe and preprocessor symbols each produce their own phantom diagnostics when
-            // they silently revert to defaults.
-            //
-            // AnalyzerReferences are deliberately NOT carried. The probe reads compiler diagnostics, so
-            // analyzers add nothing it looks at, and the workspace factory strips unresolved analyzers on
-            // load precisely because they throw — re-adding them here would reintroduce that.
             var projectId = ProjectId.CreateNewId();
             var newSolution = _currentSolution.AddProject(
                 Microsoft.CodeAnalysis.ProjectInfo.Create(

@@ -51,8 +51,6 @@ public abstract class GetDataSetFieldsEndpointBase : CrudGetEndpointBase<DataSet
     {
         DataSetEndpointLog.LoadingFields(Logger, dataSetName);
 
-        // Why: DataSetConfigurationProvider.Get(name) calls AssembleHierarchy which populates
-        // config.Fields via a secondary query. We get fields without a separate IDataGateway call.
         var result = await _dataSetProvider.Get(dataSetName, ct).ConfigureAwait(false);
         if (result.IsFailure) return result.ToNewResult<List<DataSetFieldPayload>?>();
 

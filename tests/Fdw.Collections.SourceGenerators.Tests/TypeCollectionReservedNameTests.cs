@@ -57,11 +57,6 @@ public sealed class {optionName}Gate : GateBase
     {
         var (compilation, _) = CompilationHelper.RunGenerator(WithOption(optionName));
 
-        // Why CS0102 specifically rather than "no errors at all": CompilationHelper's compilation
-        // carries only a minimal reference set, so the generated output always reports unrelated
-        // CS0234/CS0246/CS1061 for System.Collections.Frozen and Fdw.Types. Those are harness
-        // limits, present for every option name including the control. CS0102 — the type already
-        // contains a definition for X — is the collision this test exists for.
         DuplicateMemberErrors(compilation).ShouldBeEmpty();
     }
 

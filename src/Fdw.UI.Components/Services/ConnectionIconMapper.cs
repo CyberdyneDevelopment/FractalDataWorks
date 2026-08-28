@@ -17,9 +17,6 @@ public static class ConnectionIconMapper
     /// <param name="connectionType">The connection type name (e.g., "MsSql", "PostgreSql").</param>
     /// <param name="logger">Optional logger. Falls back to <see cref="NullLogger.Instance"/> when not supplied.</param>
     /// <returns>A <see cref="ConnectionIcon"/> with category, icon key, and label.</returns>
-    // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions; this static
-    // helper has no DI-constructed instance to hold a logger, so it is threaded through as an
-    // optional trailing parameter instead, mirroring the EntityPicker/ObjectPicker component pattern.
     public static ConnectionIcon FromType(string? connectionType, ILogger? logger = null)
     {
         var effectiveLogger = logger ?? NullLogger.Instance;

@@ -12,7 +12,6 @@ namespace Fdw.Data.Components.DataPreview;
 /// Carries state snapshots for DataStore/DataSet loading and selection, plus callback delegates
 /// so that markup can remain free of logic.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class DataPreviewContext : ProviderContextBase
 {

@@ -83,20 +83,11 @@ public abstract class RoslynCommandBase : TypeOptionBase<int, RoslynCommandBase>
 
         var normalised = path!.Replace('\\', '/');
 
-        // Why: match PATH SEGMENTS, not a substring — a project legitimately named "Fdw.Objects" contains
-        // "obj" and must not be excluded wholesale.
         if (normalised.Contains("/obj/", StringComparison.OrdinalIgnoreCase)) return true;
         if (normalised.Contains("/bin/", StringComparison.OrdinalIgnoreCase)) return true;
         if (normalised.StartsWith("obj/", StringComparison.OrdinalIgnoreCase)) return true;
         if (normalised.StartsWith("bin/", StringComparison.OrdinalIgnoreCase)) return true;
 
-        // Why: match on the GENERATED suffixes only, and deliberately NOT on names like GlobalUsings.cs,
-        // AssemblyInfo.cs or *.designer.cs. MSBuild's versions of those live under obj/ (as
-        // <Project>.GlobalUsings.g.cs and <Project>.AssemblyInfo.cs) and are already caught by the path
-        // rule above — so adding the bare names excludes only the HAND-WRITTEN ones, of which this repo
-        // has 47 GlobalUsings.cs and several AssemblyInfo.cs carrying [InternalsVisibleTo]. Skipping
-        // those would let a rename miss real source and then filter away the CS0246 it caused, so the
-        // command would report success while breaking the build.
         var fileName = Path.GetFileName(normalised);
         foreach (var suffix in GeneratedFileSuffixes)
         {

@@ -123,9 +123,6 @@ public sealed class SqliteFindTranslator : SqliteDataCommandTranslatorBase
 
         var command = CreateCommand(sql.ToString());
 
-        // Why: SQLite LIKE is case-insensitive by default for ASCII only. Use GLOB (case-sensitive)
-        // or LIKE with no COLLATE modifier (case-insensitive). For the case-sensitive path, escape
-        // with GLOB wildcards instead of LIKE wildcards.
         var likeConditions = new List<string>();
         foreach (var column in searchColumns)
         {
@@ -155,9 +152,6 @@ public sealed class SqliteFindTranslator : SqliteDataCommandTranslatorBase
     private static string EscapeLikeWildcards(string value)
         => value.Replace("%", "\\%").Replace("_", "\\_");
 
-    // Why: escape the literal-bracket escape char `[` FIRST. Escaping "*"/"?" first injects
-    // `[` characters that the trailing `[`→`[[]` Replace would then re-escape, corrupting any
-    // term that legitimately contains `*`, `?`, or `[`.
     private static string EscapeGlobWildcards(string value)
         => value.Replace("[", "[[]").Replace("*", "[*]").Replace("?", "[?]");
 }

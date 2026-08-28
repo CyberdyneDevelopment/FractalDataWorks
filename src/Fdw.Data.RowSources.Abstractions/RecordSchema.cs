@@ -35,8 +35,6 @@ public sealed class RecordSchema
         _ordinalsByName = new Dictionary<string, int>(_fields.Count, StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < _fields.Count; i++)
         {
-            // Why: last-wins on duplicate names keeps construction total (no throw on a malformed
-            // schema); duplicate field names are a configuration defect surfaced upstream, not here.
             _ordinalsByName[_fields[i].Name] = i;
         }
     }

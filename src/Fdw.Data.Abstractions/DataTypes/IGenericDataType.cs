@@ -23,8 +23,6 @@ namespace Fdw.Data.Abstractions;
 public interface IGenericDataType : ITypeOption<int, DataTypeOptionBase>
 {
     /// <summary>Gets the type's name in its own vocabulary (e.g. "varchar", "Edm.String", "integer").</summary>
-    // Why Description is not redeclared here: TypeOptionBase already carries Id, Name, DisplayName,
-    // Description, Category and ConfigurationKey for every option in the framework.
     new string Name { get; }
 
     /// <summary>Gets the portable abstract type this one normalizes to (e.g. SQL Server <c>bigint</c> → Int64).</summary>

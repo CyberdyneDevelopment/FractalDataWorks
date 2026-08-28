@@ -37,7 +37,6 @@ public class TenantOrgAccessConfigurationProviderTests
         var tenantId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<IEnumerable<TenantOrgAccessConfiguration>>(
@@ -62,7 +61,6 @@ public class TenantOrgAccessConfigurationProviderTests
     public async Task Get_WhenNoGrants_ReturnsEmptyList()
     {
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<IEnumerable<TenantOrgAccessConfiguration>>(
@@ -82,7 +80,6 @@ public class TenantOrgAccessConfigurationProviderTests
     public async Task Get_WhenGatewayFails_ReturnsFailure()
     {
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<IEnumerable<TenantOrgAccessConfiguration>>(

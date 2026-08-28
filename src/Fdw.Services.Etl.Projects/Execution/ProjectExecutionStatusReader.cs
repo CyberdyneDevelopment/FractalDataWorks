@@ -21,8 +21,6 @@ public sealed class ProjectExecutionStatusReader : IProjectExecutionStatusReader
     private readonly IExecutionTracker _tracker;
     private readonly ILogger<ProjectExecutionStatusReader> _logger;
 
-    // Why: terminal state names used for rollup. String comparison uses Ordinal because these
-    // are internal infrastructure values, not user-facing strings.
     private static readonly HashSet<string> TerminalStates = new HashSet<string>(StringComparer.Ordinal)
     {
         "Completed", "Failed", "Cancelled"
@@ -39,8 +37,6 @@ public sealed class ProjectExecutionStatusReader : IProjectExecutionStatusReader
         ILogger<ProjectExecutionStatusReader>? logger = null)
     {
         _tracker = tracker;
-        // Why NullLogger fallback: per FDW convention, ensures the reader remains functional
-        // if DI does not wire up logging.
         _logger = logger ?? NullLogger<ProjectExecutionStatusReader>.Instance;
     }
 
@@ -54,8 +50,6 @@ public sealed class ProjectExecutionStatusReader : IProjectExecutionStatusReader
         {
             if (itemResult.Messages.Count > 0)
             {
-                // Why ToNewResult: FDW015 — preserves the full error chain from the tracker result
-                // rather than copying messages into a new failure (which loses the chain context).
                 return itemResult.ToNewResult<ProjectExecutionStatusNode>();
             }
 
@@ -77,15 +71,12 @@ public sealed class ProjectExecutionStatusReader : IProjectExecutionStatusReader
         {
             ExecutionItem = item,
             Depth = depth,
-            // Why: RollupState starts as the stored state; children may override it.
             RollupState = item.State?.Name ?? "Unknown"
         };
 
         var childrenResult = await _tracker.GetChildren(item.Id, cancellationToken).ConfigureAwait(false);
         if (!childrenResult.IsSuccess || childrenResult.Value is null)
         {
-            // Why: a failure to read children is non-fatal for the status tree.
-            // The node retains its own state; children appear as empty.
             return node;
         }
 
@@ -95,7 +86,6 @@ public sealed class ProjectExecutionStatusReader : IProjectExecutionStatusReader
             node.Children.Add(childNode);
         }
 
-        // Why: rollup only if children exist — leaf nodes keep their own stored state.
         if (node.Children.Count > 0)
         {
             node.RollupState = ComputeRollupState(node.Children);
@@ -142,13 +132,11 @@ public sealed class ProjectExecutionStatusReader : IProjectExecutionStatusReader
             return "Running";
         }
 
-        // Why: if all children are terminal but none failed, the parent is Completed.
         if (allTerminal)
         {
             return "Completed";
         }
 
-        // Why: children are in a mix of non-terminal, non-running states (e.g., Scheduled, Initialized).
         return "Initialized";
     }
 }

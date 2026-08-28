@@ -83,8 +83,6 @@ public sealed class PolicyElevationValidator : IPolicyElevationValidator
             ProjectConfigurationLog.PolicyElevationFailed(_logger, "Step", step.Name, message));
     }
 
-    // Why: Shared violation collection for Stage and Step — both have identical policy field semantics.
-    // Split into per-field helpers to stay under complexity threshold.
     private static List<string> CollectViolations(
         string? stepFailurePolicy,
         string? stageFailurePolicy,

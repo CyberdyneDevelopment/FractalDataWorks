@@ -12,10 +12,6 @@ namespace Fdw.Services.Authorization;
 /// Provides access to roles, permissions, and role-permission assignments
 /// through the dual-source (ctrl + cfg) configuration model.
 /// </summary>
-// Why: Authorization had no proper provider interface. Consumers previously depended on
-// IServiceConfigurationProvider<RoleConfiguration> (synchronous, no child loading) or
-// raw IOptionsMonitor. This interface exposes the full authorization hierarchy with
-// async child assembly (role → permissions).
 public interface IAuthorizationProvider
 {
     /// <summary>

@@ -19,9 +19,6 @@ public static partial class GetSecretManagerCommandLog
         string? container,
         string secretKey);
 
-    // Why: 20000 is the FDW canonical RequiredValueMissing number, reused across every
-    // SecretManagers command's constructor/factory guard for the same "required value missing"
-    // condition — see SecretManagerCommandBaseLog.RequiredValueMissing's remark.
     [MessageLogging(
         EventId = 20000,
         Level = LogLevel.Critical,

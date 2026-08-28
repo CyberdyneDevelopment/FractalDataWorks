@@ -18,8 +18,6 @@ public class SetRolePermissionsRequest
     /// Gets or sets the permission names to assign. Bound from the JSON body's
     /// <c>permissions</c> property.
     /// </summary>
-    // Why: the client contract marks this Required; without the matching server-side check a
-    // request omitting "permissions" was accepted and silently set the role to zero permissions.
     [Required]
     [JsonPropertyName("permissions")]
     public IList<string> PermissionNames { get; set; } = [];

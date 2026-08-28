@@ -3,7 +3,6 @@ namespace Fdw.Data.RowSources.Http.Abstractions;
 /// <summary>
 /// Options for GraphQL cursor-based pagination.
 /// </summary>
-// Why: pure options POCO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class GraphQlStreamingOptions : HttpRowEnumeratorOptions
 {

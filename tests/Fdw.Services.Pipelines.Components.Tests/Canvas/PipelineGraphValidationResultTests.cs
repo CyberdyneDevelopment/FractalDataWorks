@@ -50,7 +50,6 @@ public sealed class PipelineGraphValidationResultTests
     public void WarningOnlyIssuesIsValid()
     {
         // Arrange
-        // Why: a Warning-only result should still pass IsValid — warnings don't block execution.
         var issues = new List<PipelineGraphValidationIssue>
         {
             new(ValidationSeverities.Warning, "Orphan node detected"),

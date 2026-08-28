@@ -12,8 +12,6 @@ namespace Fdw.Services.Pipelines.Endpoints;
 public abstract class DeletePipelineEndpointBase<TConfig> : CrudDeleteEndpointBase<PipelineNameRequest>
     where TConfig : PipelineConfiguration
 {
-    // Why: PipelineServiceConfigurationProvider replaces IOptionsMonitor<List<T>> with dual-source
-    // (ctrl + cfg) provider for pipeline configuration management.
     private readonly PipelineServiceConfigurationProvider _provider;
 
     /// <inheritdoc />

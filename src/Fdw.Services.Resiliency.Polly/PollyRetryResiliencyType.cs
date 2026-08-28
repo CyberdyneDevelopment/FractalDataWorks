@@ -47,7 +47,6 @@ public sealed class PollyRetryResiliencyType : ResiliencyTypeBase
         if (config == null) throw new ArgumentNullException(nameof(config));
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
 
-        // Why: TypeOptions are DI-free; logger is retrieved from context if available.
         var logger = ctx is ILoggerProvider lp
             ? lp.CreateLogger(nameof(PollyRetryResiliencyType))
             : NullLogger.Instance;
@@ -63,16 +62,12 @@ public sealed class PollyRetryResiliencyType : ResiliencyTypeBase
 
         try
         {
-            // Why: Polly returns the result from the delegate on success.
-            // On retry-exhaustion, it re-throws the last ResiliencyRetryException.
             var pollyResult = await pipeline.ExecuteAsync(
                 async (ct) =>
                 {
                     var stageResult = await runStage(ct).ConfigureAwait(false);
                     if (!stageResult.IsSuccess)
                     {
-                        // Why: capture the failure message before throwing so the catch block
-                        // has context without needing to reference the result across boundaries.
                         lastFailureMessage = stageResult.CurrentMessage;
                         throw new ResiliencyRetryException(lastFailureMessage ?? "Stage failed");
                     }
@@ -81,7 +76,6 @@ public sealed class PollyRetryResiliencyType : ResiliencyTypeBase
                 }, cancellationToken)
             .ConfigureAwait(false);
 
-            // Why: inspect IsSuccess per FDW012 — all IGenericResult values must be checked.
             if (!pollyResult.IsSuccess)
             {
                 return GenericResult.Failure(
@@ -96,13 +90,10 @@ public sealed class PollyRetryResiliencyType : ResiliencyTypeBase
         }
         catch (OperationCanceledException)
         {
-            // Why: propagate cancellation without wrapping.
             throw;
         }
         catch (ResiliencyRetryException ex)
         {
-            // Why: all retries exhausted — return a failure result using the last captured message.
-            // ex.Message is the fallback when lastFailureMessage was not captured (e.g. immediate throw path).
             return GenericResult.Failure(
                 PollyRetryLog.RetriesExhausted(
                     logger,
@@ -117,13 +108,11 @@ public sealed class PollyRetryResiliencyType : ResiliencyTypeBase
     {
         var builder = new ResiliencePipelineBuilder<IGenericResult>();
 
-        // Why: add timeout strategy first so it wraps each attempt.
         if (config.TimeoutSeconds.HasValue)
         {
             builder.AddTimeout(TimeSpan.FromSeconds(config.TimeoutSeconds.Value));
         }
 
-        // Why: retry strategy with configurable backoff.
         builder.AddRetry(new RetryStrategyOptions<IGenericResult>
         {
             MaxRetryAttempts = config.MaxRetries,
@@ -144,7 +133,6 @@ public sealed class PollyRetryResiliencyType : ResiliencyTypeBase
             return DelayBackoffType.Constant;
         if (string.Equals(backoffKind, "Random", StringComparison.OrdinalIgnoreCase))
             return DelayBackoffType.Linear;
-        // Why: default to Exponential — most common and safe for transient failures.
         return DelayBackoffType.Exponential;
     }
 }

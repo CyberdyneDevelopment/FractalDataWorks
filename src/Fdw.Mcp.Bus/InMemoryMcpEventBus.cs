@@ -47,9 +47,6 @@ public sealed class InMemoryMcpEventBus : IMcpEventBus
         McpEvent evt;
         Subscription[] snapshot;
 
-        // Why: hold the lock only long enough to assign EventId, append to the ring, and
-        // snapshot the subscriber list. Fanning out to channels happens outside the lock so
-        // a slow subscriber can never block a publisher.
         lock (_gate)
         {
             evt = new McpEvent(
@@ -86,9 +83,6 @@ public sealed class InMemoryMcpEventBus : IMcpEventBus
     {
         ArgumentNullException.ThrowIfNull(topicPattern);
 
-        // Why: register the subscription eagerly — async iterator bodies don't run until
-        // MoveNextAsync, which would race with publishers. Do the registration here so the
-        // returned enumerator is already wired to the live channel.
         var channel = Channel.CreateUnbounded<McpEvent>(new UnboundedChannelOptions
         {
             SingleReader = true,

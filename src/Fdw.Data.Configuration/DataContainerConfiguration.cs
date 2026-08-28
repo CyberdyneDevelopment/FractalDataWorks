@@ -122,9 +122,6 @@ public partial class DataContainerConfiguration : IGenericConfiguration
     /// Gets or sets the keys (PrimaryKey, Surrogate, Natural, Foreign, Unique) for this container.
     /// Loaded as a child collection from <c>data.DataContainerKey</c>.
     /// </summary>
-    // Why: [NotMapped] — child collection assembled by hierarchy loader, not by the POCO mapper.
-    // Keys replace the four flat partition lists (SurrogateKeyFields, NaturalKeyFields, etc.)
-    // that existed on the pre-Wave-A5 POCO.
 #pragma warning disable MA0016 // Prefer collection abstraction — List<T> required for provider assignment
     [NotMapped]
     public List<DataContainerKeyConfiguration> Keys { get; set; } = [];

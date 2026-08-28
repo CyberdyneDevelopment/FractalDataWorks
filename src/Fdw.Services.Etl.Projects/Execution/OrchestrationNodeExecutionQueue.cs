@@ -10,9 +10,6 @@ namespace Fdw.Services.Etl.Projects.Execution;
 /// </summary>
 public sealed class OrchestrationNodeExecutionQueue
 {
-    // Why: BoundedChannelFullMode.DropWrite causes TryWrite to return false when the channel
-    // is full, giving the caller a non-blocking signal to return HTTP 503. We never block
-    // the HTTP request thread waiting for queue space.
     private readonly Channel<OrchestrationNodeExecutionRequest> _channel;
 
     /// <summary>
@@ -28,12 +25,8 @@ public sealed class OrchestrationNodeExecutionQueue
         _channel = Channel.CreateBounded<OrchestrationNodeExecutionRequest>(
             new BoundedChannelOptions(capacity)
             {
-                // Why DropWrite: TryWrite returns false on full instead of blocking.
-                // Endpoints detect the false return and respond HTTP 503 immediately.
                 FullMode = BoundedChannelFullMode.DropWrite,
-                // Why SingleReader = false: allows future scale-out to multiple consumers.
                 SingleReader = false,
-                // Why SingleWriter = false: multiple endpoints/scheduler can enqueue concurrently.
                 SingleWriter = false
             });
     }
@@ -50,8 +43,6 @@ public sealed class OrchestrationNodeExecutionQueue
         OrchestrationNodeExecutionRequest request,
         CancellationToken cancellationToken = default)
     {
-        // Why TryWrite (non-blocking): endpoints must return quickly. If the queue is full,
-        // return false so the endpoint responds HTTP 503 — never block the HTTP request thread.
         return new ValueTask<bool>(_channel.Writer.TryWrite(request));
     }
 

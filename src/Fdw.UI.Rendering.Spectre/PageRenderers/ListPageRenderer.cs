@@ -6,8 +6,6 @@ using Fdw.UI.Abstractions.Rendering;
 using Fdw.UI.Themes;
 using Spectre.Console;
 
-// Why: Fdw.UI.Abstractions.Rendering (imported for ListPageResult) also declares an IPageActionType.
-// A list page's actions are the Pages one, so bind it explicitly rather than leaving it ambiguous.
 using IPageActionType = Fdw.UI.Abstractions.Pages.IPageAction;
 
 namespace Fdw.UI.Rendering.Spectre.PageRenderers;

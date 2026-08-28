@@ -6,7 +6,6 @@ using Fdw.Services.Authentication.Clients.Models;
 /// <summary>
 /// Event arguments for authentication state changes.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class AuthStateChangedEventArgs : EventArgs
 {

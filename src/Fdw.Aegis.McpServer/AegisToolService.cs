@@ -36,8 +36,6 @@ namespace Fdw.Aegis.McpServer;
 [McpServerToolType]
 public sealed class AegisToolService
 {
-    // Why: WriteIndented adds whitespace to every JSON-RPC payload, which an LLM client pays for
-    // in tokens on every tool result. Compact output is smaller on the wire and parses identically.
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = false,
@@ -164,9 +162,6 @@ public sealed class AegisToolService
         var verdictResult = _evaluator.Evaluate(request);
         if (!verdictResult.IsSuccess || verdictResult.Value is null)
         {
-            // Why no `??` fallback: surface the evaluator's own failure message; if a failure somehow
-            // arrives with none (an anomaly), fail loud with a logged AEG code rather than a magic
-            // default string.
             var reason = verdictResult.CurrentMessage;
             return reason is not null
                 ? Error(reason)
@@ -177,9 +172,6 @@ public sealed class AegisToolService
 
         AegisLog.VerdictReached(_logger, verdict.Disposition.Name, commandName, request.CorrelationId);
 
-        // Why: gate on the disposition's own behavior flag — never a name/string comparison against
-        // "Approve". A future disposition kind (Phases 2-4) that legitimately allows injection needs
-        // no change here.
         if (!verdict.Disposition.AllowsInjection)
         {
             var denyPayload = new
@@ -196,9 +188,6 @@ public sealed class AegisToolService
         var injectionResult = await _injector.Execute(request, cancellationToken).ConfigureAwait(false);
         if (!injectionResult.IsSuccess || injectionResult.Value is null)
         {
-            // Why no `??` fallback: surface the injector's own structured failure (verified never to
-            // contain the secret); if it somehow lacks a message, fail loud with a logged AEG code
-            // rather than a magic default.
             var reason = injectionResult.CurrentMessage;
             return reason is not null
                 ? Error(reason)
@@ -224,10 +213,6 @@ public sealed class AegisToolService
     /// The parsed parameters, or null with a caller-returnable reason when the input is not a usable
     /// JSON object.
     /// </returns>
-    // Why the two rejections live together: both are the same concern — parameters arrived as text and
-    // are not a JSON object. Malformed JSON throws; a JSON literal 'null' deserializes to a null
-    // dictionary. Neither is substituted with an empty dictionary, which would silently run a command
-    // with no parameters instead of telling the caller their input was wrong.
     private static (Dictionary<string, object?>? Parameters, string Error) ParseParameters(string parametersJson)
     {
         try
@@ -247,11 +232,6 @@ public sealed class AegisToolService
     private AegisCommandConfiguration? FindCommand(string commandName) =>
         _commands.Value.Commands.FirstOrDefault(c => string.Equals(c.Name, commandName, StringComparison.Ordinal));
 
-    // Why: PreApprovedCommandConfiguration and AdHocCommandConfiguration are the only two typed
-    // approval-policy bodies (Phase 1) — this is a legitimate discriminated-union pattern match over
-    // the approval-policy domain's own typed bodies, the same shape
-    // EnvironmentVariableSecretManagerFactory uses to unwrap its own typed configuration. It is not a
-    // switch over CONNECTION type, which the codebase forbids above the connection layer.
     private static (IReadOnlyList<ParameterAllowEntry> AllowList, string? SecretManagerName, string? SecretKeyName) ExtractPolicyDetails(
         IApprovalPolicyConfiguration? configuration) => configuration switch
         {
@@ -260,10 +240,6 @@ public sealed class AegisToolService
             _ => (Array.Empty<ParameterAllowEntry>(), null, null),
         };
 
-    // Why: every submitted parameter must be declared with a permitted value, and every Required
-    // entry must be present — the allow-list is the whole approval contract for a PreApproved
-    // command. A command with an empty allow list (e.g. AdHoc, which declares none) only accepts an
-    // empty parameter set. Returns the first offending parameter name, or null when all are valid.
     private static string? FindInvalidParameter(
         Dictionary<string, object?> submitted,
         IReadOnlyList<ParameterAllowEntry> allowList)
@@ -272,8 +248,6 @@ public sealed class AegisToolService
         {
             var entry = allowList.FirstOrDefault(e => string.Equals(e.ParameterName, kvp.Key, StringComparison.Ordinal));
 
-            // Why reject (not coerce) a null value: a JSON 'null' is never a permitted value, and
-            // coercing it to "" would silently conflate absent-with-empty.
             if (entry is null || kvp.Value is null)
                 return kvp.Key;
 

@@ -114,7 +114,6 @@ public class FormulaCalculationEntityTypeTests
     {
         var type = new FormulaCalculationEntityType();
 
-        // Why: right-associative subtraction would evaluate 10-(2-3)=11, not 5.
         var value = await EvaluateAsync(type, "10-2-3");
 
         value.ShouldBe(5m);
@@ -125,7 +124,6 @@ public class FormulaCalculationEntityTypeTests
     {
         var type = new FormulaCalculationEntityType();
 
-        // Why: right-associative division would evaluate 20/(4/5)=25, not 1.
         var value = await EvaluateAsync(type, "20/4/5");
 
         value.ShouldBe(1m);
@@ -164,9 +162,6 @@ public class FormulaCalculationEntityTypeTests
     [Fact]
     public async Task ExecuteDivisionByZeroReturnsZeroInsteadOfFailing()
     {
-        // Why (defect): the parser silently maps division-by-zero to 0m rather than failing loud
-        // with a structured MessageLogging error, which violates the NO-FALLBACKS convention.
-        // This test characterizes the CURRENT behavior; it is not an endorsement of it.
         var type = new FormulaCalculationEntityType();
 
         var value = await EvaluateAsync(type, "5/0");
@@ -177,7 +172,6 @@ public class FormulaCalculationEntityTypeTests
     [Fact]
     public async Task ExecuteModuloByZeroReturnsZeroInsteadOfFailing()
     {
-        // Why (defect): same silent-fallback issue as division by zero — see above.
         var type = new FormulaCalculationEntityType();
 
         var value = await EvaluateAsync(type, "5%0");
@@ -198,8 +192,6 @@ public class FormulaCalculationEntityTypeTests
     [Fact]
     public async Task ExecuteTripleUnaryMinusNegatesThreeTimes()
     {
-        // Why a third level: two negations could be satisfied by a special case for "--". Recursion is
-        // what makes the operator compose, and only an odd count proves the sign is actually tracked.
         var type = new FormulaCalculationEntityType();
 
         var value = await EvaluateAsync(type, "---5");
@@ -220,8 +212,6 @@ public class FormulaCalculationEntityTypeTests
     [Fact]
     public async Task ExecuteTrailingGarbageIsSilentlyIgnored()
     {
-        // Why (defect): the parser has no "end of input fully consumed" check, so trailing characters
-        // after a syntactically complete expression are silently dropped instead of failing loud.
         var type = new FormulaCalculationEntityType();
 
         var value = await EvaluateAsync(type, "2+3abc");
@@ -294,7 +284,6 @@ public class FormulaCalculationEntityTypeTests
     public async Task ExecuteWrongTypedConfigurationTypeReturnsFormulaConfigurationNotLoaded()
     {
         var type = new FormulaCalculationEntityType();
-        // Why: TypedConfiguration is IGenericConfiguration-typed but not a FormulaCalculationConfiguration.
         var entity = new TestCalculationEntity { TypedConfiguration = new WindowedCalculationConfiguration() };
 
         var result = await type.Execute(entity, [], Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
@@ -399,8 +388,6 @@ public class FormulaCalculationEntityTypeTests
     [Fact]
     public void CreateTypedConfigurationMissingFormulaLanguageReturnsNull()
     {
-        // Why: a fabricated "CSharp" default would be a silent fallback (NO-FALLBACKS) — missing
-        // FormulaLanguage must be treated the same as a missing body: cannot build.
         var type = new FormulaCalculationEntityType();
         var node = new Dictionary<string, object?> { ["FormulaBody"] = "1+1" };
 

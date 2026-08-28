@@ -35,11 +35,6 @@ public sealed class WorkspaceCoordinator : IWorkspaceCoordinator
     private readonly IMcpEventBus _bus;
     private readonly ILogger<WorkspaceCoordinator> _logger;
 
-    // Why keyed by session: strands only contend within the session that shares an isolated copy.
-    // Two sessions have different worktrees, so identical paths in each are different files.
-    // Why the case-insensitive strand key: same reasoning as path fencing — two strand ids that
-    // differ only in case are far more likely to be one strand named inconsistently than two
-    // genuinely distinct strands, and colliding them refuses a claim rather than double-granting.
     private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<string, StrandInfo>> _strands = new();
 
     /// <summary>Initializes the coordinator.</summary>
@@ -64,8 +59,6 @@ public sealed class WorkspaceCoordinator : IWorkspaceCoordinator
         var session = _sessions.Get(sessionId);
         if (session.IsFailure) return session.ToNewResult<ScopeClaim>();
 
-        // Why: an empty claim would fence nothing while reading as a granted claim, so every later
-        // overlap check would pass and the strand would appear safely scoped when it is not.
         if (request.Paths.Count == 0)
         {
             return GenericResult<ScopeClaim>.Failure(
@@ -87,8 +80,6 @@ public sealed class WorkspaceCoordinator : IWorkspaceCoordinator
                 WorkspaceCoordinatorLog.StrandAlreadyFenced(_logger, request.StrandId, sessionId));
         }
 
-        // Why only non-terminal strands contend: a reconciled or abandoned strand has released its
-        // claim, so its paths are available again.
         var conflict = forSession.Values.FirstOrDefault(existing =>
             !existing.State.IsTerminal && ScopePaths.Overlap(existing.Claim.Paths, request.Paths));
         if (conflict is not null)
@@ -99,8 +90,6 @@ public sealed class WorkspaceCoordinator : IWorkspaceCoordinator
 
         var claim = new ScopeClaim(request.StrandId, sessionId, request.Paths, DateTimeOffset.UtcNow);
 
-        // Why TryAdd rather than an indexer assignment: two callers racing the same strand id must
-        // not both believe they hold the claim. The loser is told it is already fenced.
         if (!forSession.TryAdd(request.StrandId, new StrandInfo(request.StrandId, claim, active)))
         {
             return GenericResult<ScopeClaim>.Failure(
@@ -142,9 +131,6 @@ public sealed class WorkspaceCoordinator : IWorkspaceCoordinator
         var session = _sessions.Get(sessionId);
         if (session.IsFailure) return session;
 
-        // Why this can legitimately find nothing: StrandHandlers ships EMPTY on purpose. The
-        // framework owns routing; handlers are consumer domain work. An unroutable strand is
-        // therefore a real configuration gap and is reported as one rather than silently ignored.
         var handler = StrandHandlers.All().FirstOrDefault(h => h.CanHandle(strand));
         if (handler is null)
         {
@@ -179,8 +165,6 @@ public sealed class WorkspaceCoordinator : IWorkspaceCoordinator
                 WorkspaceCoordinatorLog.StrandNotFound(_logger, strandId, sessionId));
         }
 
-        // Why: reconciling twice would re-release a claim that another strand may already have
-        // taken over, so a terminal strand fails loud instead.
         if (strand.State.IsTerminal)
         {
             return GenericResult<StrandInfo>.Failure(

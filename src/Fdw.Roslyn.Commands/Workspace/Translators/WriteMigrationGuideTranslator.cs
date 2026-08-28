@@ -50,16 +50,10 @@ public sealed class WriteMigrationGuideTranslator
 
         WriteMigrationGuideTranslatorLog.Writing(Logger, command.OutputPath);
 
-        // Why: header-only use — an in-memory/no-path solution renders a nameless guide header;
-        // the absence is passed through explicitly, never replaced with an invented name.
         var solutionName = solution.FilePath is null
             ? null
             : Path.GetFileNameWithoutExtension(solution.FilePath);
 
-        // Why: a relative path would otherwise resolve against the MCP server's process working
-        // directory — wherever the client happened to spawn it — so the guide would land somewhere
-        // arbitrary. Resolving against the solution directory is what makes an in-repo path like
-        // "PACKAGE-MIGRATION.md" deterministic, committable, and therefore trackable across commits.
         var outputPath = command.OutputPath;
         if (!Path.IsPathRooted(outputPath))
         {

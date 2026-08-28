@@ -6,7 +6,6 @@ namespace Fdw.Services.Data.Abstractions.Messages;
 /// <summary>
 /// Base class for DataGateway-related messages.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public abstract class DataGatewayMessage : MessageTemplate<MessageSeverity>
 {

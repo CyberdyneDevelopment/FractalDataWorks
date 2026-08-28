@@ -65,7 +65,6 @@ public sealed class DataSetsPageTests : IDisposable
     [Fact]
     public void DoesNotRenderSpinnerWhenLoadingButDataSetsPresent()
     {
-        // Why: branch is `IsLoading && !DataSets.Any()` - with data present, the else path renders the list.
         var ds = Ds("Customers");
         Swap(new DataSetContext { IsLoading = true, DataSets = [ds], FilteredDataSets = [ds] });
         var cut = _ctx.Render<DataSetsPage>();
@@ -124,7 +123,6 @@ public sealed class DataSetsPageTests : IDisposable
     [Fact]
     public void RowHidesNameColumnWhenDisplayNameEqualsName()
     {
-        // Why: the secondary Name column (3rd <td>) is empty when DisplayName == Name (ordinal).
         var ds = Ds("Same", display: "Same");
         Swap(new DataSetContext { DataSets = [ds], FilteredDataSets = [ds] });
         var cut = _ctx.Render<DataSetsPage>();

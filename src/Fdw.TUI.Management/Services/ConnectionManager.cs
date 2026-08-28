@@ -82,8 +82,6 @@ public sealed class ConnectionManager : IConnectionManager
             return ConnectionResult.Failed("URL must use http or https scheme");
         }
 
-        // Why: actually reach the instance before declaring ourselves connected. Previously this method
-        // slept and assumed success, so every screen rendered against a server that may not exist.
         var probe = await Probe(connection, baseUri, cancellationToken).ConfigureAwait(false);
         if (!probe.Success)
         {
@@ -149,8 +147,6 @@ public sealed class ConnectionManager : IConnectionManager
         }
         catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            // Why the filter: HttpClient reports its own timeout as TaskCanceledException, so this
-            // distinguishes "the instance did not answer in time" from "the user cancelled".
             return ConnectionResult.Failed($"Timed out connecting to {baseUri} ({ex.Message}).");
         }
     }

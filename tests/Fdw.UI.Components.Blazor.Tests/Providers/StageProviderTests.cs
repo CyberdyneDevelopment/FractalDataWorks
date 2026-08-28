@@ -244,7 +244,6 @@ public sealed class StageProviderTests : IDisposable
         // After delete, project has no stages.
         var projectEmpty = MakeProject(projectId);
 
-        // Why: First load uses the project with a stage; after delete (update), refresh sees empty project.
         var handler = new MockHttpHandler()
             .RespondWith($"projects/{projectId}", projectWithStage)
             .RespondOk($"projects/{projectId}");
@@ -274,7 +273,6 @@ public sealed class StageProviderTests : IDisposable
     [Trait("Priority", "P2")]
     public async Task OnDeleteStage_NoProjectLoaded_ReturnsFalse()
     {
-        // Why: If LoadStages was never called, _projectId is null — delete must fail cleanly.
         var stageId = Guid.NewGuid();
         var handler = new MockHttpHandler();
 

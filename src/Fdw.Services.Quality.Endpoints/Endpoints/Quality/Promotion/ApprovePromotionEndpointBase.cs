@@ -48,8 +48,6 @@ public abstract class ApprovePromotionEndpointBase : Endpoint<PromotionActionReq
 
         try
         {
-            // Why: probe existence first so an unknown Id returns 404 instead of a generic 500
-            // from ApproveRequest's failure path.
             var existing = await _promotionService.GetRequest(req.Id, ct).ConfigureAwait(false);
             if (!existing.IsSuccess || existing.Value is null)
             {

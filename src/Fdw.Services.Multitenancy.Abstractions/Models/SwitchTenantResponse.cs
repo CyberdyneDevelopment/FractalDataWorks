@@ -3,7 +3,6 @@ namespace Fdw.Services.Multitenancy.Clients.Models;
 /// <summary>
 /// Response for tenant switch operation.
 /// </summary>
-// Why: pure response DTO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class SwitchTenantResponse
 {

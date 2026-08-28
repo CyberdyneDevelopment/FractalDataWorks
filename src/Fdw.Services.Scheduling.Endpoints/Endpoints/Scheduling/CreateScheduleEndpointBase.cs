@@ -15,8 +15,6 @@ namespace Fdw.Services.Scheduling.Endpoints;
 public abstract class CreateScheduleEndpointBase<TConfig> : CrudCreateEndpointBase<CreateScheduleRequest, ScheduleDetailDto>
     where TConfig : ScheduleConfiguration
 {
-    // Why: ScheduleConfigurationProvider replaces IOptionsMonitor<List<T>> with dual-source
-    // (ctrl + cfg) provider that merges system and user configurations.
     private readonly ScheduleConfigurationProvider _provider;
 
     /// <inheritdoc />
@@ -41,7 +39,6 @@ public abstract class CreateScheduleEndpointBase<TConfig> : CrudCreateEndpointBa
     /// <summary>Creates the schedule configuration and persists it via the DataGateway.</summary>
     protected override async Task<IGenericResult<ScheduleDetailDto>> Create(CreateScheduleRequest request, CancellationToken ct)
     {
-        // Why: API contract — IDs are uuid v7 for time-orderable persistence.
         var scheduleId = Guid.CreateVersion7();
         var config = CreateConfiguration(request, scheduleId);
 

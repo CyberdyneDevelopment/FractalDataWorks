@@ -99,6 +99,5 @@ public sealed partial class ProjectConfiguration : IGenericConfiguration
     public string? ResiliencyPolicyName { get; set; }
 
     /// <summary>Gets or sets the ordered stages belonging to this project.</summary>
-    // Why: IList<T> required by IOptions binding — IReadOnlyList<T> would break deserialization.
     public IList<StageConfiguration> Stages { get; set; } = new List<StageConfiguration>();
 }

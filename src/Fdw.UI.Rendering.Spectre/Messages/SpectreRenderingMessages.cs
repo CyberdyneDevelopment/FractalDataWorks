@@ -106,9 +106,6 @@ public static partial class SpectreRenderingMessages
     /// <summary>
     /// Logs when a component type is not supported.
     /// </summary>
-    // Why: Warning, not Error — the renderer falls through to a muted placeholder line and keeps
-    // rendering the rest of the page; matches the equivalent-outcome Warning already used elsewhere
-    // (e.g. SvgCanvasRendererLog.EditOperationFailed) for a handled, surfaced-inline condition.
     [MessageLogging(
         EventId = 61000,
         Level = LogLevel.Warning,

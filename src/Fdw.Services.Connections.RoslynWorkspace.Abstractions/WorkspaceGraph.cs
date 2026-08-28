@@ -6,7 +6,6 @@ namespace Fdw.Services.Connections.RoslynWorkspace.Abstractions;
 /// Represents the project-dependency graph of a Roslyn workspace.
 /// Returned by <see cref="IRoslynWorkspaceClient.GetGraph"/>.
 /// </summary>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record WorkspaceGraph(
     IReadOnlyList<WorkspaceNode> Nodes,

@@ -73,8 +73,6 @@ public abstract class GetQualityRuleEndpointBase : Endpoint<QualityRuleIdRequest
             MaxValue = config.MaxValue,
             Pattern = config.Pattern,
             Expression = config.Expression
-            // Why: QualityRuleConfiguration has no CreatedAt/ModifiedAt scalar property exposed
-            // at this layer — audit columns are managed by the DB DEFAULT. Left at DateTimeOffset.MinValue.
         };
     }
 }

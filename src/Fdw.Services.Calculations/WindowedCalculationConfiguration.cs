@@ -26,9 +26,6 @@ public sealed partial class WindowedCalculationConfiguration : ICalculationTyped
     public Guid Id { get; set; }
 
     /// <summary>Gets or sets the parent CalculationEntity's logical Id (FK to calc.CalculationEntity.Id).</summary>
-    // Why: the keystone Save stamps this from the header's Id so the cascade insert links the typed body;
-    // the translator resolves the physical CalculationEntityRowId by subquery on insert (FK added to
-    // calc.WindowedCalculation in this wave so ComposeTypedBody's child->parent join resolves).
     public Guid CalculationEntityId { get; set; }
 
 

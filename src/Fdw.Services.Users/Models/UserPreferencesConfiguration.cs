@@ -15,8 +15,6 @@ namespace Fdw.Services.Users.Models;
 public sealed partial class UserPreferencesConfiguration : IGenericConfiguration
 {
     /// <inheritdoc />
-    // Why: UserPreferences has no business Name; UserId.ToString() satisfies the IGenericConfiguration
-    // contract. The provider queries by UserId — never by Name.
     public Guid Id { get; set; }
 
     /// <inheritdoc />

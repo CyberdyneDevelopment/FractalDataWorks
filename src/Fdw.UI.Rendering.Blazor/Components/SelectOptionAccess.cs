@@ -9,10 +9,6 @@ namespace Fdw.UI.Rendering.Blazor.Components;
 /// Non-generic access to the generic <c>Options</c>/<c>SelectedValues</c> members of
 /// select-style component models.
 /// </summary>
-// Why: ISelectableComponentModel<T>/IMultiSelectComponentModel<T> expose options only on the
-// generic interface, but a renderer dispatches on the NON-generic interfaces. Spectre solves
-// this the same way (SpectreUIRenderer.GetSelectDisplayText); a contract-level fix (non-generic
-// option access on the abstractions) is tracked as follow-up on FDW-546.
 internal static class SelectOptionAccess
 {
     /// <summary>

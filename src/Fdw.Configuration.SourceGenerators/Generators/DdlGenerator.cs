@@ -21,8 +21,6 @@ public static class DdlGenerator
     {
         var sb = new StringBuilder();
         var tableName = model.GetEffectiveTableName();
-        // Why: Parent-child structure is now owned by IDataNode, not [ManagedConfiguration].
-        // All config types generate as flat root tables. hasParent is always false here.
         var hasParent = false;
         var parentFkColumn = (string?)null;
 
@@ -56,18 +54,10 @@ public static class DdlGenerator
         sb.AppendLine("{");
 
         // Partial class implementing IConfigurationDdlProvider
-        // Why the attribute goes on the generated MEMBERS below and not on this declaration: the
-        // type is a partial shared with the user's hand-written [ManagedConfiguration] POCO, and an
-        // attribute on any part of a partial applies to the WHOLE type — marking it here would
-        // silently exclude the consumer's own properties and any logic they add. Member-level
-        // marking excludes exactly what this generator emits and nothing else.
         sb.AppendLine($"    partial class {model.ClassName} : IConfigurationDdlProvider");
         sb.AppendLine("    {");
 
         // GetDdlDefinition static method
-        // Why: Use 'new' only when the parent class also has [ManagedConfiguration] (both generate GetDdlDefinition).
-        // ParentHasManagedConfiguration is now set by Roslyn symbol analysis in ConfigurationAnalyzer
-        // rather than by the attribute — IDataNode owns structural hierarchy, not [ManagedConfiguration].
         var methodModifier = model.ParentHasManagedConfiguration ? "public new static" : "public static";
         sb.AppendLine("        /// <summary>");
         sb.AppendLine("        /// Gets the DDL definition for this configuration type.");
@@ -233,8 +223,6 @@ public static class DdlGenerator
 
         var hasForeignKeys = false;
 
-        // Why: Parent FK generation was removed — IDataNode now owns parent-child structure.
-        // hasParent is always false; this block would never execute. Omitted entirely.
 
         // TypeCollection FKs
         foreach (var prop in model.Properties.Where(p => p.TypeCollectionReference != null))
@@ -346,10 +334,6 @@ public static class DdlGenerator
         sb.AppendLine("                        IsUnique = false");
         sb.AppendLine("                    }");
 
-        // Why an as-of covering index: every other index here is filtered WHERE IsCurrent = 1, so
-        // none of them serves a historical lookup. An as-of read scans by logical Id across ALL
-        // versions and picks the one whose effective interval contains the instant — unindexed,
-        // that degrades to a full scan of the entity's whole history on every restatement.
         if (model.Temporal)
         {
             sb.AppendLine("                    ,");

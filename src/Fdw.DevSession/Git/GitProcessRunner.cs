@@ -51,8 +51,6 @@ public sealed class GitProcessRunner : IGitRunner
             CreateNoWindow = true,
         };
 
-        // Why: ArgumentList quotes each element itself. Building one command string would make
-        // branch names and paths containing spaces a quoting bug waiting to happen.
         foreach (var argument in arguments)
         {
             startInfo.ArgumentList.Add(argument);
@@ -74,9 +72,6 @@ public sealed class GitProcessRunner : IGitRunner
         }
         catch (Exception ex)
         {
-            // Why: a missing or unusable git executable is an environment failure, not a git
-            // result. It must surface as a failed result rather than a non-zero exit code that a
-            // caller might interpret as a meaningful git outcome.
             return GenericResult<GitCommandResult>.Failure(
                 WorktreeEngineLog.GitUnavailable(_logger, ex.Message));
         }
@@ -84,8 +79,6 @@ public sealed class GitProcessRunner : IGitRunner
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        // Why: WaitForExitAsync also waits for the redirected output streams to reach EOF, so the
-        // builders are complete once it returns — no separate synchronous drain is needed.
         using (cancellationToken.Register(() => KillQuietly(process, _logger)))
         {
             await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
@@ -111,9 +104,6 @@ public sealed class GitProcessRunner : IGitRunner
         }
         catch (InvalidOperationException ex)
         {
-            // Why: the process exited between the HasExited check and the Kill call, which is a
-            // benign race — the caller's cancellation is already the outcome. Observed at trace
-            // level rather than swallowed, so it is visible when diagnosing a hung git.
             WorktreeEngineLog.GitUnavailable(logger, ex.Message);
         }
     }

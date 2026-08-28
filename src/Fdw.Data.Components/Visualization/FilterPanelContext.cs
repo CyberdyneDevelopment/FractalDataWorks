@@ -11,7 +11,6 @@ namespace Fdw.Data.Components.Visualization;
 /// <summary>
 /// Immutable context for the dynamic filter builder panel.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class FilterPanelContext : ProviderContextBase
 {

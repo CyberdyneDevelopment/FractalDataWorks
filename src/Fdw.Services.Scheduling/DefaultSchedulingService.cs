@@ -74,10 +74,6 @@ public sealed class DefaultSchedulingService : IFrameworkSchedulingService
     {
         try
         {
-            // Why: CreateSchedule is idempotent on Name — sched.Schedule has a unique index on
-            // (Name) WHERE IsCurrent=1, so a duplicate insert raises SQL 2601. Treat an existing
-            // active record as success rather than failing; callers that want strict
-            // create-only semantics should call GetSchedule first.
             var existing = await GetScheduleRecord(schedule.ScheduleName, cancellationToken).ConfigureAwait(false);
             if (existing is not null)
             {
@@ -87,8 +83,6 @@ public sealed class DefaultSchedulingService : IFrameworkSchedulingService
 
             var record = new ScheduleInsertRecord
             {
-                // Why: uuid v7 for time-orderable persistence. NO fallback — the DB column is
-                // uniqueidentifier NOT NULL with no default; missing Id surfaces as a SQL 515.
                 Id = Guid.CreateVersion7(),
                 Name = schedule.ScheduleName,
                 PipelineName = schedule.ProcessId,
@@ -488,10 +482,6 @@ public sealed class DefaultSchedulingService : IFrameworkSchedulingService
     /// <inheritdoc />
     public Task<IGenericResult<T>> Execute<T>(IGenericCommand command, CancellationToken cancellationToken = default)
     {
-        // Why: Target-typed gateway refactor stripped addressing from IDataCommand. A bare IDataCommand
-        // no longer carries DataStore/Path/Container, so gateway execution requires a DataStoreTarget.
-        // This IGenericService.Execute(IGenericCommand) contract cannot be satisfied without a target;
-        // callers must use the typed service methods instead.
         return Task.FromResult(
             GenericResult<T>.Failure(
                 SchedulingLog.SchedulingFailed(_logger, "Execute", "IGenericCommand execution is not supported; use typed service methods")));
@@ -500,7 +490,6 @@ public sealed class DefaultSchedulingService : IFrameworkSchedulingService
     /// <inheritdoc />
     public Task<IGenericResult> Execute(IGenericCommand command, CancellationToken cancellationToken = default)
     {
-        // Why: See Execute<T> — target-typed gateway refactor removed addressing from IDataCommand.
         return Task.FromResult(
             (IGenericResult)GenericResult.Failure(
                 SchedulingLog.SchedulingFailed(_logger, "Execute", "IGenericCommand execution is not supported; use typed service methods")));

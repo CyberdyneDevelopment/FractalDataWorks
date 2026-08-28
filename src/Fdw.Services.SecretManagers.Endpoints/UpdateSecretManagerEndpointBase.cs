@@ -64,10 +64,6 @@ public abstract class UpdateSecretManagerEndpointBase : Endpoint<UpdateSecretMan
                 return;
             }
 
-            // Why: mutate the composed aggregate we just read (including its typed-body
-            // Configuration) rather than build a fresh header — Save now version-on-writes
-            // and cascades the WHOLE aggregate, so saving a bare header here would strand the
-            // existing typed body (vault URI/prefix/connection) on the previous version.
             existing.Description = req.Description ?? existing.Description;
             existing.Environment = req.Environment;
 

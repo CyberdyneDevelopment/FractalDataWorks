@@ -36,8 +36,6 @@ public sealed class InMemoryExecutionStore : IAuthenticationExecutionStore
         if (record is null)
             return Task.FromResult(GenericResult<string>.Failure(ExecutionStoreLog.RecordMissing(_logger)));
 
-        // Why 256 bits from the CSPRNG: this token is the only thing standing between a stranger and
-        // someone's half-finished login. A Guid is neither uniformly random nor sized for the job.
         var token = Base64Url(RandomNumberGenerator.GetBytes(32));
 
         _records[token] = record;
@@ -54,9 +52,6 @@ public sealed class InMemoryExecutionStore : IAuthenticationExecutionStore
             return Task.FromResult(GenericResult<ExecutionRecord>.Failure(
                 ExecutionStoreLog.TokenMissing(_logger)));
 
-        // Why TryRemove and not TryGetValue then remove: consuming has to be one operation. A
-        // check-then-act pair is a window two concurrent resumes can both pass through, which is
-        // exactly the replay this method exists to prevent.
         if (!_records.TryRemove(resumeToken, out var record))
         {
             return Task.FromResult(GenericResult<ExecutionRecord>.Failure(
@@ -65,8 +60,6 @@ public sealed class InMemoryExecutionStore : IAuthenticationExecutionStore
 
         if (record.ExpiresAt <= DateTimeOffset.UtcNow)
         {
-            // Why the same failure as a missing token: telling a caller their token was real but
-            // stale confirms it existed, and the token is already consumed either way.
             ExecutionStoreLog.Expired(_logger, record.Id);
             return Task.FromResult(GenericResult<ExecutionRecord>.Failure(
                 ExecutionStoreLog.NotResumable(_logger)));

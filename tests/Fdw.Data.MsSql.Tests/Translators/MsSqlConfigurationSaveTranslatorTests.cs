@@ -23,9 +23,6 @@ public sealed class MsSqlConfigurationSaveTranslatorTests
 {
     private readonly MsSqlConfigurationSaveTranslator _sut = new();
 
-    // Why: a real [GenerateMapper] POCO so PocoMapperCollection.ByName resolves a genuine mapper —
-    // mirrors conn.MsSqlConnectionAuthentication's Name/Value shape. Public + nested so the generated
-    // mapper (emitted as a top-level class in this file's namespace) can reference it.
     [GenerateMapper]
     public sealed class TestKvpRow
     {
@@ -135,8 +132,6 @@ public sealed class MsSqlConfigurationSaveTranslatorTests
 
         result.IsSuccess.ShouldBeTrue();
         var sql = result.Value!.CommandText;
-        // Why: the regression this pins — scoping the predicate to the owner FK alone would deactivate
-        // EVERY sibling KVP row for that owner on each new-entry insert (bag collapses to last entry).
         sql.ShouldContain("[MsSqlConnectionId] = @MsSqlConnectionId AND [Name] = @Name");
     }
 }

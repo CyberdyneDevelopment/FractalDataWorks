@@ -5,7 +5,6 @@ namespace Fdw.Roslyn.Commands.Refactoring.Results;
 /// <summary>
 /// One assembly a project must reference, together with why.
 /// </summary>
-// Why: pure data holder, auto-properties only, no logic
 [ExcludeFromCodeCoverage]
 public sealed class ReferenceRequirement
 {

@@ -126,8 +126,6 @@ public sealed class MsSqlInsertTranslator : MsSqlDataCommandTranslatorBase
 
         if (fields.Count == 0)
         {
-            // Why: reported as a defect (FDW rule) — a translator should return IGenericResult, not
-            // throw. Left in place per instructions; the caller's try/catch converts it to a Failure.
             MsSqlInsertTranslatorLog.NoInsertableFields(
                 NullLogger<MsSqlInsertTranslator>.Instance, container.Name);
             throw new InvalidOperationException($"Container {container.Name} has no insertable fields");
@@ -141,7 +139,6 @@ public sealed class MsSqlInsertTranslator : MsSqlDataCommandTranslatorBase
 
         if (fieldNames.Count == 0)
         {
-            // Why: same throw-instead-of-result defect as above — logged, not converted.
             MsSqlInsertTranslatorLog.NoMatchingProperties(
                 NullLogger<MsSqlInsertTranslator>.Instance, container.Name);
             throw new InvalidOperationException(
@@ -158,7 +155,6 @@ public sealed class MsSqlInsertTranslator : MsSqlDataCommandTranslatorBase
         var paramList = string.Join(", ", fieldNames.Select(f => $"{prefix}{f}"));
 
         // Build INSERT statement with SCOPE_IDENTITY() to return generated ID
-        // Why BIGINT: OpsDb identity columns are BIGINT IDENTITY; INT cast risks overflow on large tables.
         var sql = $"INSERT INTO {BuildQualifiedTableName(dbPath)} ({columnList}) VALUES ({paramList}); SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
 
         var command = CreateCommand(sql);

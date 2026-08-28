@@ -38,8 +38,6 @@ internal static partial class ExecutionStoreLog
 
     /// <summary>Nothing was suspended under the token presented.</summary>
     /// <param name="logger">The logger.</param>
-    // Why Warning: unknown, already used, or expired — from here they are one event, and each is
-    // either a caller mistake or someone trying tokens. Refusing is the system working.
     [MessageLogging(EventId = 91132, Level = LogLevel.Warning,
         Message = "No suspended flow can be resumed with the token presented")]
     internal static partial IGenericMessage NotResumable(ILogger<InMemoryExecutionStore> logger);
@@ -47,8 +45,6 @@ internal static partial class ExecutionStoreLog
     /// <summary>A record was found but had expired.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="executionId">The execution.</param>
-    // Why separate from NotResumable: the caller is told one thing and the operator sees another.
-    // Distinguishing them in a log is diagnosis; distinguishing them in a response is disclosure.
     [MessageLogging(EventId = 91133, Level = LogLevel.Debug,
         Message = "Execution {executionId} had expired and was discarded on consumption")]
     internal static partial IGenericMessage Expired(

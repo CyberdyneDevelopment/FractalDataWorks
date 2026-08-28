@@ -6,8 +6,6 @@ using Fdw.Roslyn.Commands.Search.Results;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-// Why: Fdw.Roslyn.Commands.Compilation namespace now lives in this assembly; alias
-// disambiguates the Roslyn Compilation type from the sibling namespace.
 using MsCompilation = Microsoft.CodeAnalysis.Compilation;
 
 namespace Fdw.Roslyn.Commands.Search.Translators;

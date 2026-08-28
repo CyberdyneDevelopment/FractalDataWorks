@@ -34,8 +34,6 @@ namespace Fdw.Services.Authorization.Authorization;
 /// </remarks>
 public sealed class FdwAuthorizationPolicyProvider : IAuthorizationPolicyProvider
 {
-    // Why: canonical name for the hub-level admin-only policy — centralised here so both
-    // CalculationHub and SchemaDiscoveryHub can attribute the same string without duplication.
     internal const string SystemAdminPolicy = "system:admin";
 
     private readonly DefaultAuthorizationPolicyProvider _fallbackProvider;
@@ -60,23 +58,11 @@ public sealed class FdwAuthorizationPolicyProvider : IAuthorizationPolicyProvide
     /// <inheritdoc />
     public Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
     {
-        // Why: FastEndpoints generates an internal aggregate policy for each endpoint named
-        // "epPolicy:{EndpointFullTypeName}" (e.g. "epPolicy:Reference.Api.Endpoints.ListUsersEndpoint").
-        // This policy name contains a colon but is NOT a permission — it is an envelope that
-        // FastEndpoints' own middleware fills by invoking the declared Policies("...") on the
-        // endpoint. If we claim it as a permission requirement (resource="epPolicy",
-        // action="...FullType..."), it maps to nothing in authz.Permission and the request 403s
-        // before FDW's permission check even runs. Delegating to the fallback lets FastEndpoints
-        // build the aggregate from the declared per-resource policies.
         if (policyName.StartsWith("epPolicy:", StringComparison.Ordinal))
         {
             return _fallbackProvider.GetPolicyAsync(policyName);
         }
 
-        // Why: "system:admin" is a role-based policy that checks ISystemRoleConfiguration.AdminRoleName
-        // rather than a permission claim. This allows SignalR hub methods (and any other site that
-        // cannot inject ISystemRoleConfiguration via constructor) to protect admin-only operations
-        // without hardcoding the role name as a string literal.
         if (string.Equals(policyName, SystemAdminPolicy, StringComparison.Ordinal))
         {
             var adminRoleName = _systemRoleConfiguration.AdminRoleName;

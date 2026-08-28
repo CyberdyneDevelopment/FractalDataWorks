@@ -20,7 +20,6 @@ namespace Fdw.Data.Abstractions;
 /// </code>
 /// </para>
 /// </remarks>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class LogicalOperator : TypeOptionBase<int, LogicalOperator>, ILogicalOperator
 {

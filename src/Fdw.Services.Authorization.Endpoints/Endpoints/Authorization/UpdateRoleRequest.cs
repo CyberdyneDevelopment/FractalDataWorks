@@ -16,15 +16,12 @@ public class UpdateRoleRequest
     /// <summary>
     /// Gets or sets the display name, if updating.
     /// </summary>
-    // Why: matches the client contract and authz.Role.DisplayName nvarchar(200). Without it the
-    // server accepted an over-long value that then failed at the database.
     [StringLength(200)]
     public string? DisplayName { get; set; }
 
     /// <summary>
     /// Gets or sets the description, if updating.
     /// </summary>
-    // Why: authz.Role.Description is nvarchar(500).
     [StringLength(500)]
     public string? Description { get; set; }
 

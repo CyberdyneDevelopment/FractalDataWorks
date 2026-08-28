@@ -78,10 +78,6 @@ public class DataStoreApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the discovery summary.</returns>
     public virtual Task<IGenericResult<DiscoveryResultPayload>> DiscoverContainers(DiscoverDataStoreRequest request, CancellationToken ct = default)
-        // Why: aligned to the server's POST DiscoverDataStoreEndpointBase (the tested source of truth):
-        // it binds a DiscoverDataStoreRequest body and returns a DiscoveryResultPayload summary keyed by
-        // data store name. The route uses the non-colliding "/datastores/-/discover" form because the
-        // bare "/datastores/discover" is swallowed by the "/datastores/{name}" catch-all.
         => Post<DiscoverDataStoreRequest, DiscoveryResultPayload>("datastores/-/discover", request, ct);
 
     /// <summary>

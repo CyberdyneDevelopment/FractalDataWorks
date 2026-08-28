@@ -5,7 +5,6 @@ namespace Fdw.UI.Components.Error;
 /// <summary>
 /// Context for rendering API result display (success or error).
 /// </summary>
-// Why: pure DTO, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class ApiResultContext
 {

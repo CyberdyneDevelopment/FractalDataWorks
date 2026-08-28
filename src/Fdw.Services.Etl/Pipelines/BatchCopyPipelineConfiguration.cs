@@ -31,10 +31,6 @@ public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineTypedCo
     public Guid Id { get; set; }
 
     /// <summary>Gets or sets the parent EtlPipeline's logical Id (FK to pipe.EtlPipeline.Id).</summary>
-    // Why: the keystone cascade stamps this from the EtlPipeline body's Id; the physical EtlPipelineRowId FK
-    // column is NOT a POCO property (per the connection convention) so the save translator resolves it by
-    // subquery on insert and the read JOIN uses the container's FK metadata. A POCO EtlPipelineRowId would
-    // defeat the subquery and insert an empty RowId (FK_BatchCopyPipeline_EtlPipeline violation).
     public Guid EtlPipelineId { get; set; }
 
     /// <inheritdoc/>
@@ -141,9 +137,6 @@ public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineTypedCo
     /// Not a DB column — populated by the factory from SourceDataSet / SourceConnectionName
     /// at construction time. Null means the factory has not yet resolved the kind.
     /// </summary>
-    // Why: [NotMapped] because this is a runtime discriminator computed from the configuration
-    // fields (SourceDataSet vs SourceConnectionName), not a persisted column. The factory sets
-    // it so the executor can branch on Kind without repeating the same if-else logic.
     [NotMapped]
     public IDataSourceKind? SourceKind { get; set; }
 
@@ -152,7 +145,6 @@ public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineTypedCo
     /// Not a DB column — populated by the factory from DestinationDataSet / DestinationConnectionName
     /// at construction time. Null means the factory has not yet resolved the kind.
     /// </summary>
-    // Why: same reason as SourceKind — computed from configuration fields, not persisted.
     [NotMapped]
     public IDataDestinationKind? DestinationKind { get; set; }
 

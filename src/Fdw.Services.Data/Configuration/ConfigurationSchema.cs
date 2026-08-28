@@ -22,9 +22,6 @@ public sealed class ConfigurationSchema
     /// Gets or sets the connections available to the entry-point app.
     /// Corresponds to the <c>ConfigurationSchema:Connections</c> configuration section.
     /// </summary>
-    // Why: List<T> is required for IOptions binding — the configuration system instantiates
-    // concrete collection types. IList<T> at the property level satisfies both the binding
-    // contract and the MA0016 "prefer abstraction" rule.
 #pragma warning disable MA0016 // Prefer collection abstraction — required for IOptions binding
     public IList<ConnectionConfiguration> Connections { get; set; } = new List<ConnectionConfiguration>();
 

@@ -175,8 +175,6 @@ public abstract class WizardProviderBase<TContext> : UIComponentBase
         }
         catch (OperationCanceledException ex)
         {
-            // Why: cancellation is expected when the component is disposed or the operation is
-            // explicitly cancelled; ex is named to satisfy FDW022 — no error is surfaced.
             _ = ex;
         }
         catch (Exception ex)
@@ -206,7 +204,6 @@ public abstract class WizardProviderBase<TContext> : UIComponentBase
         }
         catch (OperationCanceledException ex)
         {
-            // Why: cancellation is expected; ex is named to satisfy FDW022.
             _ = ex;
             return default;
         }

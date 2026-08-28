@@ -51,7 +51,6 @@ public class DataRecordTests
     {
         var sut = new DataRecord(Schema(), [1L, "Alice"]);
 
-        // Why: the record exposes a zero-copy ReadOnlySpan window over the value buffer.
         var span = sut.Values;
         span.Length.ShouldBe(2);
         span[1].ShouldBe("Alice");

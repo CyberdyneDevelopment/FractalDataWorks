@@ -7,7 +7,6 @@ namespace Fdw.Services.Scheduling.Abstractions.Messages;
 /// <summary>
 /// Base class for all scheduling-related messages.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [MessageCollection("SchedulingMessages")]
 public abstract class SchedulingMessage : MessageTemplate<MessageSeverity>, IServiceMessage

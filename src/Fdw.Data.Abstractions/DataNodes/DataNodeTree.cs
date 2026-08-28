@@ -27,10 +27,8 @@ public class DataNodeTree<TRoot> : IDataNodeTree<TRoot>
     public DataNodeTree(IReadOnlyList<TRoot> roots, ILogger? logger = null)
     {
         Roots = roots ?? throw new ArgumentNullException(nameof(roots));
-        // Why: NullLogger keeps the tree functional when DI logging is not wired — the only sanctioned ?? fallback.
         _logger = logger ?? NullLogger.Instance;
 
-        // Why: O(1) lookup dictionary — root node names are unique within a tree.
         _index = new Dictionary<string, TRoot>(StringComparer.Ordinal);
         for (var i = 0; i < roots.Count; i++)
         {

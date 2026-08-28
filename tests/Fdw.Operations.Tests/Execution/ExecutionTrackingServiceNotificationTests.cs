@@ -31,7 +31,6 @@ public sealed class ExecutionTrackingServiceNotificationTests
     private readonly Mock<IServiceConfigurationProvider<NotificationRuleConfiguration>> _mockRuleProvider;
     private readonly Mock<INotificationService> _mockNotificationSvc;
 
-    // Why: NullLoggerFactory avoids needing to wire up real logging in unit tests.
     private static readonly NullLoggerFactory LoggerFactory = NullLoggerFactory.Instance;
 
     public ExecutionTrackingServiceNotificationTests()
@@ -105,8 +104,6 @@ public sealed class ExecutionTrackingServiceNotificationTests
             IsEnabled = true,
             NotificationServiceName = serviceName,
             NotificationServiceType = "Console",
-            // Why: default severity is "Info" (the DB column default) — the mapping must translate
-            // "Info" → Normal so an out-of-the-box rule actually emits.
             Severity = severity,
             PipelineId = null,
             WorkflowId = null,
@@ -310,7 +307,6 @@ public sealed class ExecutionTrackingServiceNotificationTests
         var item = BuildRunningRootItem(itemId);
         SetupGatewayForComplete(item);
 
-        // Why: pass null for both optional providers — tests the "not wired" path.
         var sut = new ExecutionTrackingService(
             _mockGateway.Object,
             LoggerFactory,
@@ -345,8 +341,6 @@ public sealed class ExecutionTrackingServiceNotificationTests
         var item = BuildRunningRootItem(itemId);
         SetupGatewayForComplete(item);
 
-        // Why: "Bogus" is not in the severity vocabulary; the mapping must return NotFound
-        // so the rule is skipped (fail loud, no silent default).
         var rule = BuildCatchAllRule("BogusRule", "console-channel", severity: "Bogus");
         _mockRuleProvider
             .Setup(p => p.Get(It.IsAny<CancellationToken>()))
@@ -398,7 +392,6 @@ public sealed class ExecutionTrackingServiceNotificationTests
             .Setup(p => p.Get("console-channel", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IPlatformNotification>.Success(_mockNotificationSvc.Object));
 
-        // Why: simulate a send failure — Complete must still succeed.
         _mockNotificationSvc
             .Setup(s => s.Send(It.IsAny<INotificationRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<INotificationResult>.Failure(new GenericMessage("Send failed")));

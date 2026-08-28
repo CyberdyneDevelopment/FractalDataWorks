@@ -12,8 +12,6 @@ using Fdw.Roslyn.Commands.Refactoring.Commands;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-// Why: Fdw.Roslyn.Commands.Compilation namespace now lives in this assembly; alias
-// disambiguates the Roslyn Compilation type from the sibling namespace.
 using MsCompilation = Microsoft.CodeAnalysis.Compilation;
 
 namespace Fdw.Roslyn.Commands.Refactoring.Translators;

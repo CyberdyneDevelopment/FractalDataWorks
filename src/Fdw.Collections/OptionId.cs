@@ -17,7 +17,6 @@ namespace Fdw.Collections;
 /// </remarks>
 public static class OptionId
 {
-    // Why MD5: deterministic hashing for a stable id, not security.
 #pragma warning disable CA5351, SCS0006, CA1850
     /// <summary>Derives the identity for <paramref name="name"/>.</summary>
     /// <param name="name">The option's name, or a type's full name for a collection.</param>

@@ -18,9 +18,6 @@ public static class StorageContainerExtensions
         if (container is null)
             return null;
 
-        // Why: IsPrimaryKey is true for both Surrogate and PrimaryKey key types — the only
-        // key types that serve as a physical or logical single-column identity. No string-keyed
-        // Metadata access; structured Keys properties are the source of truth.
         var keys = container.Keys;
         for (var i = 0; i < keys.Count; i++)
         {
@@ -39,9 +36,6 @@ public static class StorageContainerExtensions
     /// <returns>
     /// The surrogate key field name from Metadata, or <c>null</c> if no surrogate key is defined.
     /// </returns>
-    // Why: Retained for OData translators and other generic IStorageContainer callers that
-    // do not have access to the underlying IDataContainer. MsSql translators use the
-    // IDataContainer overload above to read structured keys directly.
     public static string? GetPrimaryKeyFieldName(this IStorageContainer container)
     {
         if (container?.Metadata == null)

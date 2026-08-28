@@ -49,12 +49,6 @@ public static class Program
 
             // Phase 3: eager initialize every registered domain.
             //
-            // Why this host aborts: the TUI is an interactive admin console, and a domain that failed
-            // to initialize means some commands would fail at the point of use with no way for the
-            // operator to tell a broken deployment from a bad argument. Refusing to start is the right
-            // call FOR THIS APPLICATION — a background worker or a degraded-mode service could read
-            // the same result and legitimately choose to carry on. That choice is the reason the phase
-            // returns a result rather than throwing.
             var initialized = PlatformServices.Initialize(host);
             if (initialized.IsFailure)
             {
@@ -115,10 +109,6 @@ public static class Program
         // Register UI renderer
         services.AddSingleton<SpectreUIRenderer>();
 
-        // Why: this composition root is the ONE place that names a rendering backend. Screens
-        // depend only on the render-agnostic seam (IUIRenderer + IRenderContext), so retargeting
-        // this app at another registered UIRenderers option means changing these two lines —
-        // not the screens.
         services.AddSingleton<IRenderContext>(sp => sp.GetRequiredService<SpectreRenderContext>());
         services.AddSingleton<IUIRenderer>(sp => sp.GetRequiredService<SpectreUIRenderer>());
 
@@ -134,8 +124,6 @@ public static class Program
         services.AddSingleton<IConnectionManager, ConnectionManager>();
         services.AddSingleton<ISettingsService, SettingsService>();
 
-        // Why singleton: the suite is a folder on disk, so the service holds no per-use state —
-        // it locates the folder, shells out and reads the run record back.
         services.AddSingleton<INewmanSuiteService, NewmanSuiteService>();
 
         ConfigureApiClients(builder);
@@ -162,11 +150,6 @@ public static class Program
             client.Timeout = TimeSpan.FromSeconds(10);
         });
 
-        // Why this one call: the shared extension registers BOTH the token provider and the
-        // BearerTokenHandler itself. The client options only ATTACH the handler to their pipeline
-        // (the IHttpClientBuilder overload) — putting it in DI is the app's job, and this is the
-        // seam Fdw provides for it. The named HttpClients themselves need nothing from us: each
-        // client option's Configure already calls AddHttpClient(Name, ...) during the collect below.
         services.AddBearerTokenHandler<InstanceAccessTokenProvider>();
 
         // Instance routing has no shared extension — it is genuinely TUI-specific, because this is
@@ -185,8 +168,6 @@ public static class Program
         if (registered.IsFailure)
             throw new InvalidOperationException($"Register phase failed: {registered.CurrentMessage}");
 
-        // Why iterate the collection instead of naming clients: a newly referenced .Clients package
-        // registers itself as an ApiClientTypes option, and picks up instance routing automatically.
         foreach (var clientType in ApiClientTypes.All())
         {
             services.AddHttpClient(clientType.Value.Name).AddHttpMessageHandler<InstanceRoutingHandler>();

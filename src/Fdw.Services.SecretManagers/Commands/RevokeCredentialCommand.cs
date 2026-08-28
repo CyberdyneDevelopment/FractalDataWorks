@@ -33,8 +33,6 @@ public sealed class RevokeCredentialCommand : SecretManagerCommandBase, ISecretM
         CredentialId = credentialId;
         if (credentialType is null)
         {
-            // Why: reported as a defect (FDW rule) — a command should return IGenericResult, not
-            // throw. Left in place per instructions (constructors cannot return IGenericResult).
             RevokeCredentialCommandLog.RequiredValueMissing(NullLogger<RevokeCredentialCommand>.Instance, nameof(credentialType));
             throw new ArgumentNullException(nameof(credentialType));
         }

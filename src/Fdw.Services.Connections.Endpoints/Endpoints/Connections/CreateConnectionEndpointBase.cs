@@ -29,8 +29,6 @@ namespace Fdw.Services.Connections.Endpoints;
 public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpointBase<CreateConnectionRequest, ConnectionDetailDto>
     where TConfig : class, IConnectionImplementationConfiguration
 {
-    // Why: the connection provider writes the whole aggregate — the conn.Connection header row AND, by
-    // dispatch, the per-type body row (conn.MsSqlConnection etc.) with its authentication/limits children.
     private readonly ConnectionConfigurationProvider _connectionProvider;
 
     /// <inheritdoc />
@@ -55,16 +53,10 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
     /// <summary>Creates both the parent connection and typed body, then persists each to its own provider.</summary>
     protected override async Task<IGenericResult<ConnectionDetailDto>> Create(CreateConnectionRequest request, CancellationToken ct)
     {
-        // Why: connectionId is minted here — before the save — so the typed body can carry its ConnectionId
-        // FK. The typed body's own Id is left as Guid.Empty; the cascade mints it via Guid.CreateVersion7()
-        // before INSERT.
         var connectionId = Guid.CreateVersion7();
 
         var connection = CreateConnectionRecord(request, connectionId);
 
-        // Why: HealthCheckEnabled=true with no trigger (neither an on-startup probe nor a periodic
-        // interval) is a dead config — ConnectionHealthMonitorWorker would never check it. Fail loud
-        // here, before either Save, rather than silently persisting an inert setting.
         if (connection.HealthCheckEnabled && !connection.HealthCheckOnStartup && connection.HealthCheckIntervalSeconds is null)
         {
             return GenericResult<ConnectionDetailDto>.Failure(
@@ -85,9 +77,6 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
         var detail = MapToDetail(connection, typedBody, connectionId);
 
         // Fire schema discovery if ISchemaInformationService is registered (optional dependency).
-        // Why: ISchemaInformationService is the demand-driven replacement for ISchemaDiscoveryOrchestrator.
-        // GetSchema discovers and persists schema immediately after connection creation so the UI
-        // has metadata without requiring a separate "Re-discover" action.
         var schemaService = TryResolve<ISchemaInformationService>();
         if (schemaService != null)
         {
@@ -97,8 +86,6 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
             {
                 detail.SetupSummary = new ConnectionSetupSummaryPayload
                 {
-                    // Why: No SignalR correlation ID in the new service — the DataStore name
-                    // serves as the stable identifier the client can use for follow-up queries.
                     DiscoveryId = schemaInfo.DataStore.Id.ToString(),
                     ConnectionTestPassed = true,
                     DataStoreName = schemaInfo.DataStore.Name

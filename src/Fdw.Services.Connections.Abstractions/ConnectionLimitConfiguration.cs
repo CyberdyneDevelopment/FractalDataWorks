@@ -64,11 +64,6 @@ public class ConnectionLimitConfiguration : IGenericConfiguration
     public string LimitType { get; set; } = string.Empty;
 
     // ── Enforcement properties (type-agnostic) ───────────────────────────────
-    // Why: The LimitEnforcementDataGateway in Services.Data must NOT reference
-    // connection-type-specific assemblies (MsSql, Http). Virtual properties on this
-    // base class expose all values needed by the enforcement layer via the connection
-    // abstraction layer only. Concrete subclasses override the properties that apply
-    // to them; all others return null (not enforced).
 
     /// <summary>
     /// Gets the maximum outbound operations per second for rate-limiting.

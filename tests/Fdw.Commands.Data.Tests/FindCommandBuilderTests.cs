@@ -37,7 +37,6 @@ public sealed class FindCommandBuilderTests
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        // Why: Build() returns a DataGatewayCall struct; command properties live on Command, addressing on Target.
         var call = result.Value;
         var command = (FindCommand<object>)call.Command;
         command.SearchTerm.ShouldBe("acme");
@@ -126,7 +125,6 @@ public sealed class FindCommandBuilderTests
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        // Why: Addressing lives on DataStoreTarget after the target-typed-gateway refactor.
         var target = result.Value.Target;
         target.DataStore.ShouldBe("MyStore");
         target.Path.ShouldBe("sales");

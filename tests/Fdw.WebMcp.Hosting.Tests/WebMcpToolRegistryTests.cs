@@ -48,8 +48,6 @@ public class WebMcpToolRegistryTests
     [Fact]
     public void GivesTheRouteALeadingSlash()
     {
-        // Why this matters: the generated script fetches the route verbatim, and a relative URL
-        // resolves against the current page rather than the site root.
         var tools = Resolve(
             [Declaration(typeof(ListUsersEndpoint))],
             new RouteTable().Add("users/me", typeof(ListUsersEndpoint), verbs: "GET"));

@@ -115,8 +115,6 @@ public abstract class VerifyIdentityEndpointBase : Endpoint<VerifyIdentityReques
                     Audience = req.Audience,
                     Failure = acquired.CurrentMessage,
                 },
-                // Why 502 and not 500: the failure is the upstream provider's answer, not this
-                // service malfunctioning, and an operator reading a dashboard needs that distinction.
                 502, ct).ConfigureAwait(false);
             return;
         }

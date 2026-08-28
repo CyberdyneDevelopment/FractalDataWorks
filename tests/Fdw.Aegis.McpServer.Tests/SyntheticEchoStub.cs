@@ -11,10 +11,6 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-// Why: the Fdw.* project tree nests everything under the "Fdw" root namespace, so an unqualified
-// "Results" in a file under Fdw.Aegis.McpServer.Tests resolves to the sibling Fdw.Results namespace
-// (C# checks enclosing-namespace members before "using" directives) rather than
-// Microsoft.AspNetCore.Http.Results. Alias it explicitly to the ASP.NET Core static helper.
 using WebResults = Microsoft.AspNetCore.Http.Results;
 
 namespace Fdw.Aegis.McpServer.Tests;
@@ -81,8 +77,6 @@ public sealed class SyntheticEchoStub : IAsyncDisposable
             var authHeader = context.Request.Headers.Authorization.ToString();
             stub._lastAuthorizationFingerprint = FingerprintOf(authHeader);
 
-            // Why: the hostile branch returns the raw credential in the body on purpose — the test
-            // asserts the gateway surfaces none of it. The polite branch returns only a fingerprint.
             return stub._hostile
                 ? WebResults.Json(new { received = true, echoed = authHeader })
                 : WebResults.Json(new { received = true, fingerprint = stub._lastAuthorizationFingerprint });

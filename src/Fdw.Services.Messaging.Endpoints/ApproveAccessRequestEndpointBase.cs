@@ -43,8 +43,6 @@ public abstract class ApproveAccessRequestEndpointBase : Endpoint<ReviewAccessRe
     /// <inheritdoc/>
     public override void Configure()
     {
-        // Why: approving is an action rather than a change to a resource's fields, so it is a
-        // POST. The PUT that sat beside it for backwards compatibility is gone with the rest.
         Verbs(Http.POST);
         Routes("/access-requests/{Id}/approve");
         Policies("access-requests:manage");
@@ -62,8 +60,6 @@ public abstract class ApproveAccessRequestEndpointBase : Endpoint<ReviewAccessRe
     /// <inheritdoc/>
     public override async Task HandleAsync(ReviewAccessRequestRequest req, CancellationToken ct)
     {
-        // Why: MapInboundClaims = false on JWT bearer keeps "sub" as-is; ClaimTypes.NameIdentifier
-        // is the WS-Federation URI only present when claim mapping is enabled. Check "sub" first.
         var userIdClaim = HttpContext.User.FindFirst("sub")?.Value
             ?? HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var reviewerUserId))
@@ -82,8 +78,6 @@ public abstract class ApproveAccessRequestEndpointBase : Endpoint<ReviewAccessRe
             if (!result.IsSuccess)
             {
                 MessagingEndpointLog.AccessRequestApproveFailed(_logger, req.Id.ToString(), result.CurrentMessage!);
-                // Why: service signals missing entity via "AccessRequest not found" in the
-                // current message; map that to 404 instead of a generic 500.
                 if (result.CurrentMessage is not null
                     && result.CurrentMessage.Contains("not found", StringComparison.OrdinalIgnoreCase))
                 {

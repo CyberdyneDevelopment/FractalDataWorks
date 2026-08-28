@@ -15,8 +15,6 @@ namespace Fdw.Services.Abstractions.Health;
 public sealed class HealthCheckResult : IHealthCheckResult
 {
     /// <inheritdoc/>
-    // Why: required, no initializer — a checkable that forgets to set Status must not
-    // silently report Healthy (no-fallbacks doctrine).
     public required IHealthState Status { get; set; }
 
     /// <inheritdoc/>

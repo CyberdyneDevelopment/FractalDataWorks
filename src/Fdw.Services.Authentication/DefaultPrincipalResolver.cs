@@ -24,13 +24,7 @@ namespace Fdw.Services.Authentication;
 /// </summary>
 public sealed class DefaultPrincipalResolver : IPrincipalResolver
 {
-    // Why: this is a PERMISSION value, not a claim name. Kept as a local const so it does not
-    // pollute ClaimDefinitions (which owns claim-name strings, not permission values).
     private const string ViewAllTenantsPermission = "tenants:view-all";
-    // Why: UserTenantConfigurationProvider is Singleton — injecting Singleton into Scoped
-    // (DefaultPrincipalResolver runs in scoped ProcessSignInClaimsHandler) is valid; the
-    // provider has no per-request state. The former IServiceScopeFactory captive-dependency
-    // dance is no longer needed.
     private readonly UserTenantConfigurationProvider _userTenantProvider;
     private readonly IOrganizationProvider _organizationProvider;
     private readonly IEffectivePermissionResolver _permissionResolver;
@@ -75,7 +69,6 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
         Guid? orgId,
         IReadOnlyList<string> additionalRoles,
         CancellationToken cancellationToken = default)
-        // Why: single-expression delegate avoids async state machine overhead.
         => Resolve(userId, tenantId, orgId, isCrossTenant: false, additionalRoles, cancellationToken);
 
     /// <inheritdoc />
@@ -89,8 +82,6 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
     {
         var userIdStr = userId.ToString();
 
-        // Why: cross-tenant and single-tenant are mutually exclusive. A token cannot carry
-        // both a specific tenant_id and the cross_tenant claim — that would be ambiguous.
         if (isCrossTenant && tenantId.HasValue)
             return GenericResult<ClaimsPrincipal>.Failure(
                 PrincipalResolverLog.CrossTenantTenantConflict(_logger, userIdStr));
@@ -126,9 +117,6 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
 
         if (tenantId.HasValue)
         {
-            // Why: When a specific tenant is requested, VALIDATE that the user belongs to it.
-            // This is the security boundary — a forged or mismatched tenant_id is blocked here,
-            // in addition to the RS256 signature block at the JWT layer.
             var tenantsResult = await _userTenantProvider.GetUserTenants(userId, cancellationToken).ConfigureAwait(false);
             if (!tenantsResult.IsSuccess)
                 return GenericResult<ClaimsPrincipal>.Failure(
@@ -146,9 +134,6 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
         }
         else
         {
-            // Why: No tenant specified — resolve the user's default tenant (IsDefault=1).
-            // We do NOT fall back to [0]; if there is no default row, the user has no tenants
-            // and token issuance must fail loud.
             var defaultResult = await _userTenantProvider.GetDefaultTenant(userId, cancellationToken).ConfigureAwait(false);
             if (!defaultResult.IsSuccess)
                 return GenericResult<ClaimsPrincipal>.Failure(
@@ -171,8 +156,6 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
         PrincipalResolverLog.PrincipalResolveStarted(
             _logger, userIdStr, resolvedTenantId.ToString(), resolvedOrgId?.ToString() ?? string.Empty);
 
-        // Why: isGlobalTenant is always false here — token-issuance context is always tenant-scoped.
-        // Global-tenant admins will have their global privileges via the role grant in authz.Role.
         var permResult = await _permissionResolver.Resolve(
             userIdStr, resolvedTenantId, resolvedOrgId, isGlobalTenant: false, cancellationToken).ConfigureAwait(false);
 
@@ -211,8 +194,6 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
     {
         if (requestedOrgId.HasValue)
         {
-            // Why: When orgId is provided, validate it belongs to the resolved tenant.
-            // A mismatched org would cause the RLS VisibilityGroup join to return nothing.
             var orgResult = await _organizationProvider.Get(requestedOrgId.Value, cancellationToken).ConfigureAwait(false);
             if (!orgResult.IsSuccess || orgResult.Value is null)
                 return GenericResult<Guid?>.Failure(
@@ -226,7 +207,6 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
         }
 
         var defaultOrgResult = await _organizationProvider.GetDefault(tenantId, cancellationToken).ConfigureAwait(false);
-        // Why: Missing default org is not fatal — some tenants have no orgs. Use null.
         return GenericResult<Guid?>.Success(defaultOrgResult.IsSuccess ? defaultOrgResult.Value?.Id : null);
     }
 
@@ -238,10 +218,6 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
         if (!assignmentsResult.IsSuccess || assignmentsResult.Value is null)
             return Array.Empty<string>();
 
-        // Why: GetRole(Guid id, ct) on ImplementationConfigurationProviderBase incorrectly resolves
-        // the WHERE column to ParentRoleId (authz.Role's self-referential FK) via
-        // TryResolveFkColumnForGet, emitting WHERE ParentRoleId=@id and returning 0 rows.
-        // Load all roles once and match by Id in memory — Get(ct) is cached per scope.
         var allRoles = await _roleProvider.GetAllRoles(ct).ConfigureAwait(false);
 
         var roleNames = new List<string>(assignmentsResult.Value.Count);
@@ -254,7 +230,6 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
         return roleNames;
     }
 
-    // Why: Extracted to keep ResolveSingleTenant and ResolveCrossTenant under the FDW007 complexity threshold.
     private static IReadOnlyList<string> MergeRoles(IReadOnlyList<string> additionalRoles, IReadOnlyList<string> loadedRoles)
     {
         if (additionalRoles.Count == 0)
@@ -270,9 +245,6 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
         IReadOnlyList<string> additionalRoles,
         CancellationToken cancellationToken)
     {
-        // Why: Cross-tenant requires tenants:view-all. We validate this by resolving permissions
-        // in a non-tenant-scoped context — use the user's default tenant as the permission scope
-        // (the permission is expected to be granted at the global-tenant or platform level).
         var defaultResult = await _userTenantProvider.GetDefaultTenant(userId, cancellationToken).ConfigureAwait(false);
         if (!defaultResult.IsSuccess)
             return GenericResult<ClaimsPrincipal>.Failure(
@@ -294,8 +266,6 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
         var holdsViewAll = permResult.Value!.Any(p => string.Equals(p, ViewAllTenantsPermission, StringComparison.OrdinalIgnoreCase));
         PrincipalResolverLog.ResolveCrossTenantGateTrace(_logger, userIdStr, holdsViewAll, permResult.Value!.Count);
 
-        // Why: Cross-tenant is only allowed when the user holds tenants:view-all.
-        // Fail loud — do NOT silently strip the cross-tenant request and issue a single-tenant token.
         if (!holdsViewAll)
             return GenericResult<ClaimsPrincipal>.Failure(
                 PrincipalResolverLog.CrossTenantAccessDenied(_logger, userIdStr));
@@ -329,8 +299,6 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
             new(ClaimDefinitions.sub.Name, userId.ToString()),
         };
 
-        // Why: Mutually exclusive — cross-tenant tokens have no single active tenantId.
-        // Single-tenant tokens always have a tenantId (resolvedTenantId is non-null there).
         if (isCrossTenant)
             claims.Add(new Claim(ClaimDefinitions.crossTenant.Name, "true"));
         else if (tenantId.HasValue)

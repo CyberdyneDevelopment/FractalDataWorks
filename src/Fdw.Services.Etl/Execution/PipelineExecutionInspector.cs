@@ -17,8 +17,6 @@ public sealed class PipelineExecutionInspector : IPipelineExecutionInspector
 {
     private readonly ILogger<PipelineExecutionInspector> _logger;
 
-    // Why: Two-level ConcurrentDictionary: outer key=executionId, inner key=taskId|edgeKey.
-    // Thread-safe without a global write lock on the hot path (record tracking per batch).
     private readonly ConcurrentDictionary<Guid, ExecutionInspectorBucket> _buckets = new();
 
     /// <summary>
@@ -142,9 +140,6 @@ public sealed class PipelineExecutionInspector : IPipelineExecutionInspector
         return state;
     }
 
-    // Why: JSON serialization provides a reasonable byte estimate without reflection.
-    // Approximate — actual CLR object size is larger — but sufficient for ring-buffer
-    // eviction purposes since we're bounding transport-visible data size.
     private static long EstimateRecordBytes(IDictionary<string, object?> record)
     {
         try
@@ -153,8 +148,6 @@ public sealed class PipelineExecutionInspector : IPipelineExecutionInspector
         }
         catch (Exception ex) when (ex is JsonException or NotSupportedException or InvalidOperationException)
         {
-            // Why: Fallback to a fixed estimate when serialization fails (e.g., circular refs).
-            // ex is observed via the when clause; unexpected exceptions propagate.
             return 512;
         }
     }
@@ -174,9 +167,6 @@ public sealed class PipelineExecutionInspector : IPipelineExecutionInspector
             _maxBytes = maxBytes;
         }
 
-        // Why: Exposed as a field (not property) so Interlocked.Add(ref bucket.UsedBytes, delta)
-        // can be called from the inspector methods above. This is a private nested class, so
-        // CA1051 (visible instance fields) does not apply.
         public long UsedBytes;
 
         public long RemainingBytes => _maxBytes <= 0
@@ -185,7 +175,6 @@ public sealed class PipelineExecutionInspector : IPipelineExecutionInspector
 
         public ConcurrentDictionary<Guid, TaskInspectorState> Tasks { get; } = new();
 
-        // Why: StringComparer.Ordinal used on edge key dictionary per MA0002 requirement.
         public ConcurrentDictionary<string, EdgeInspectorState> Edges { get; } = new(StringComparer.Ordinal);
 
         public TaskInspectorState GetOrAddTask(Guid taskId)

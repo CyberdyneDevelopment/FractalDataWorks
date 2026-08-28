@@ -7,7 +7,6 @@ namespace Fdw.Services.Scheduling.Abstractions.Messages;
 /// <summary>
 /// Error message indicating that a schedule's updated timestamp is earlier than its created timestamp.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [Message("InvalidScheduleTimestamp")]
 [MessageOption(typeof(SchedulingMessageCollectionBase))]

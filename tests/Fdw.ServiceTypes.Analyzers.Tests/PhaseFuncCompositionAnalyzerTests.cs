@@ -13,9 +13,6 @@ namespace Fdw.ServiceTypes.Analyzers.Tests;
 /// </summary>
 public class PhaseFuncCompositionAnalyzerTests
 {
-    // Why a stand-in rather than a reference to the real assemblies: the analyzer matches the attribute
-    // and the phase methods on short name, the same self-contained-fixture style this project's other
-    // analyzer tests use.
     private const string Fixture = """
         using System;
 
@@ -202,8 +199,6 @@ public class PhaseFuncCompositionAnalyzerTests
         await VerifyCS.VerifyAnalyzerAsync(test);
     }
 
-    // Why this case must stay clean: customising an option somebody else shipped is the whole reason
-    // the composition seam exists. The rule is about where it is called from, not that it exists.
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Analyzer")]
@@ -231,8 +226,6 @@ public class PhaseFuncCompositionAnalyzerTests
         await VerifyCS.VerifyAnalyzerAsync(test);
     }
 
-    // Why an intermediate base is the case this rule exists for: it is where the hazard originates, and it
-    // carries no attribute, so nothing keyed off the declaration can see it.
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Analyzer")]
@@ -283,8 +276,6 @@ public class PhaseFuncCompositionAnalyzerTests
             VerifyCS.Diagnostic("STC001").WithLocation(0).WithArguments("PrependRegistration", "Registration"));
     }
 
-    // Why a plain type option is untouched: the phases are optional there, so a TypeOptionBase-derived
-    // class setting one is not evidence of anything.
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Analyzer")]

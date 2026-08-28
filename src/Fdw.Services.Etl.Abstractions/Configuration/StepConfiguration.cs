@@ -94,10 +94,8 @@ public sealed partial class StepConfiguration : IGenericConfiguration
     public Guid? ResiliencyPolicyId { get; set; }
 
     /// <summary>Gets or sets the pipeline memberships belonging to this step.</summary>
-    // Why: IList<T> required by IOptions binding — IReadOnlyList<T> would break deserialization.
     public IList<StepPipelineMembershipConfiguration> Pipelines { get; set; } = new List<StepPipelineMembershipConfiguration>();
 
     /// <summary>Gets or sets the prerequisite relationships between pipelines in this step.</summary>
-    // Why: IList<T> required by IOptions binding — IReadOnlyList<T> would break deserialization.
     public IList<StepPipelinePrerequisiteConfiguration> Prerequisites { get; set; } = new List<StepPipelinePrerequisiteConfiguration>();
 }

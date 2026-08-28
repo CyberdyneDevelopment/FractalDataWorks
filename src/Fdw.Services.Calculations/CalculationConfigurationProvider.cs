@@ -61,8 +61,6 @@ public class CalculationConfigurationProvider : ImplementationConfigurationProvi
         if (record.Id == Guid.Empty)
             record.Id = Guid.CreateVersion7();
 
-        // Why: stamp the typed body's logical FK directly via ICalculationTypedConfiguration — the body
-        // shares the header's identity, and the save translator resolves the physical RowId on insert.
         if (record.Configuration is not null)
             record.Configuration.CalculationEntityId = record.Id;
 

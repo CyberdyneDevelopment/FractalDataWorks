@@ -10,21 +10,15 @@ namespace Fdw.Services.Etl.Abstractions.Execution;
 /// </summary>
 public sealed class TaskInspectorState
 {
-    // Why: Interlocked-compatible long fields used by Interlocked.Add/Increment in the
-    // inspector. Properties expose read-only snapshots for callers.
     private long _recordsIn;
     private long _recordsOut;
     private long _recordsDiscarded;
     private long _recordsHeld;
     private long _samplesDiscarded;
 
-    // Why: Private list with a public lock object so the inspector (different assembly)
-    // can synchronize access via lock(state.SamplesLock) while still using the public
-    // AddSampleRecord / Samples members. The list itself never escapes the class boundary.
     private readonly List<IDictionary<string, object?>> _samples = new();
 
     /// <summary>Gets the synchronization object for sample buffer mutations.</summary>
-    // Why: Inspector locks on this object externally to coordinate eviction + add atomically.
     public object SamplesLock { get; } = new object();
 
     /// <summary>Gets or sets the total records received by this task node.</summary>
@@ -69,7 +63,6 @@ public sealed class TaskInspectorState
     public bool SampleBufferAtCapacity { get; set; }
 
     /// <summary>Gets the sample ring buffer (up to byte budget).</summary>
-    // Why: IReadOnlyList<T> in public interface for MA0016 compliance.
     public IReadOnlyList<IDictionary<string, object?>> Samples => _samples;
 
     /// <summary>Gets the byte budget in effect for this execution (for UI display).</summary>
@@ -111,8 +104,6 @@ public sealed class TaskInspectorState
     /// <param name="estimateBytes">Delegate to compute byte size of an existing record (used for evicted records).</param>
     /// <param name="reportByteDelta">Callback to adjust the shared bucket's used-bytes counter.</param>
     /// <returns>True if the budget was already at capacity before eviction began.</returns>
-    // Why: Eviction runs inside the state class so the inspector (different assembly) never
-    // needs direct access to the private _samples list. All list mutations stay here.
     public bool AddSampleRecord(
         IDictionary<string, object?> record,
         long estimatedBytes,

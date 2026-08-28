@@ -59,8 +59,6 @@ public class VsCodeContributesExportTests
     [Trait("Category", "CoreFramework")]
     public void SpecialCharactersInTitleSurviveAsValidJson()
     {
-        // Why: proves the emitted blob is well-formed JSON even when a title contains " and ; — round-trips
-        // rather than corrupting, which is the failure the escaping concern was about.
         var json = VsCodeShellContributesExport.BuildJson(new IVsCodeCommandType[] { new QuotedCommand() });
 
         using var doc = JsonDocument.Parse(json);
@@ -83,8 +81,6 @@ public class VsCodeContributesExportTests
     [Trait("Category", "CoreFramework")]
     public void EmitsSingleLineJson()
     {
-        // Why: the staging target joins the file into one MSBuild property, so a multi-line blob would not
-        // survive the .Replace round trip.
         var json = VsCodeShellContributesExport.BuildJson(new IVsCodeCommandType[] { new PlainCommand() });
 
         json.ShouldNotContain("\n");

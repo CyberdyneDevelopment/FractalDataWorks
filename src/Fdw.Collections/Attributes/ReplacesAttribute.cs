@@ -12,7 +12,6 @@ namespace Fdw.Collections.Attributes;
 /// The executable's module initializer has full visibility across all referenced assemblies, so it
 /// builds the complete replacement map before emitting any RegisterMember calls.
 /// </remarks>
-// Why: pure attribute definition (declarative metadata only, consumed by source generators) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 [ExcludeFromCodeCoverage]
 public sealed class ReplacesAttribute : Attribute

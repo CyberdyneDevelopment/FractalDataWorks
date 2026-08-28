@@ -15,8 +15,6 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class UpdateTenantSettingEndpointBase : CrudUpdateEndpointBase<UpdateTenantSettingRequest, TenantSettingSummaryDto>
 {
-    // Why: SettingsConfigurationProvider replaces IOptionsMonitor<List<TenantSettingConfiguration>>
-    // with dual-source (ctrl + cfg) provider that provides server/tenant/role settings.
     private readonly SettingsConfigurationProvider _provider;
 
     /// <inheritdoc />
@@ -98,8 +96,6 @@ public abstract class UpdateTenantSettingEndpointBase : CrudUpdateEndpointBase<U
         return GenericResult<TenantSettingSummaryDto>.Success(dto);
     }
 
-    // Why: Compound-key lookup for tenant settings (TenantId + SettingName).
-    // The provider doesn't have a compound-key Get method, so we load all and filter.
     private async Task<TenantSettingConfiguration?> FindTenantSetting(
         Guid tenantId, string settingName, CancellationToken ct)
     {

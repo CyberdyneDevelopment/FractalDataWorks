@@ -14,8 +14,6 @@ public sealed class FixedWidthRowSourceOptions : RowSourceOptions
     /// Gets or sets the ordered fixed-width field definitions. Required — a fixed-width reader cannot
     /// slice columns without knowing their offsets and widths.
     /// </summary>
-    // Why: NO FALLBACKS — field offsets/widths come from the container schema, never guessed.
-    // IList (mutable) for option binding/assignment; backed by List.
     public IList<FixedWidthField> Fields { get; set; } = new List<FixedWidthField>();
 
     /// <summary>

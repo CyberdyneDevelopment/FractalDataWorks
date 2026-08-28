@@ -59,8 +59,6 @@ public abstract class DeleteDataSetEndpointBase : CrudDeleteEndpointBase<DataSet
     {
         DataSetEndpointLog.DeletingDataSet(Logger, name);
 
-        // Why: Load the configuration to get its Id — the provider's Delete(Guid) is the correct
-        // path; Delete(string name) resolves via Get(name) internally but we log not-found here.
         var loadResult = await _dataSetProvider.Get(name, ct).ConfigureAwait(false);
         if (loadResult.IsFailure) return loadResult;
 

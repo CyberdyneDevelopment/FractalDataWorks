@@ -34,8 +34,6 @@ public sealed class SvgCanvasRendererPortTests
 
     private static IRenderMode CreateEditMode()
     {
-        // Why: mirrors FakeCanvasModel's own view-mode mock — IRenderMode is a TypeOption and a
-        // stand-alone mock avoids depending on TypeCollection registration order in tests.
         var mock = new Mock<IRenderMode>();
         mock.Setup(m => m.Name).Returns("Edit");
         mock.Setup(m => m.AllowsEditing).Returns(true);
@@ -62,9 +60,6 @@ public sealed class SvgCanvasRendererPortTests
 
     private static Mock<ICanvasEditContext> CreateEditContext()
     {
-        // Why: the success result is mocked rather than built with GenericResult.Success — the
-        // concrete result type lives in Fdw.Results, which this test project does not reference,
-        // and the renderer only ever reads IsSuccess/CurrentMessage off the returned contract.
         var successResult = new Mock<IGenericResult<string>>();
         successResult.Setup(r => r.IsSuccess).Returns(true);
         successResult.Setup(r => r.Value).Returns("new-edge");

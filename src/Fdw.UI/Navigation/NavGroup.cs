@@ -5,8 +5,6 @@ namespace Fdw.UI.Navigation;
 /// <summary>
 /// One rendered sidebar section: its label and the pages in it, already ordered.
 /// </summary>
-// Why: a COMPUTED grouping, not a declaration — sections have no declaration of their own, they are
-// whatever the declared pages name. Produced only by NavTree.Build.
 public sealed class NavGroup
 {
     internal NavGroup(string? label, int order, IReadOnlyList<IPage> pages)

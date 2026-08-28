@@ -9,7 +9,6 @@ namespace Fdw.Services.Data.Configuration;
 /// <see cref="ConfigurationSchema"/>. The extra indirection lets future tooling add top-level
 /// metadata (e.g., schema version) without changing the inner schema shape.
 /// </remarks>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ConfigurationSchemaRoot
 {

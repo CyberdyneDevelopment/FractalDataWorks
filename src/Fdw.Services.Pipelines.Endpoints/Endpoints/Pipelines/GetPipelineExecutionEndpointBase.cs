@@ -58,7 +58,6 @@ public abstract class GetPipelineExecutionEndpointBase : Endpoint<GetPipelineExe
 
         OnFetchingExecutionRecord(req.ExecutionId);
 
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget.
         var command = new QueryCommand<PipelineExecutionDbRecord>
         {
             Filter = new FilterExpression
@@ -72,10 +71,6 @@ public abstract class GetPipelineExecutionEndpointBase : Endpoint<GetPipelineExe
             }
         };
 
-        // Why OpsDb: etl.PipelineExecution physically lives in OpsDb (execution tracking), not
-        // ConfigurationDb — which has no etl schema. The OpsDb DataStore + etl path + PipelineExecution
-        // container resolve at runtime through the gateway (seeded like AuthDb). Matches the write path
-        // in PipelineExecutionBackgroundService. Targeting ConfigurationDb here 500s (container not found).
         var result = await _dataGateway.Execute<IEnumerable<PipelineExecutionDbRecord>>(
             command, new DataStoreTarget("OpsDb", "etl", "PipelineExecution"), ct).ConfigureAwait(false);
 

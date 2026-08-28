@@ -84,8 +84,6 @@ public sealed class BlazorUIRenderer : IUIRenderer
             return Task.FromResult(PromptResult<T>.Failure(BlazorUIResultCodes.ByName("InvalidRenderContext").MessageTemplate));
         }
 
-        // Why: RunContinuationsAsynchronously keeps the awaiting caller off the Blazor
-        // dispatcher thread that invoked the button callback.
         var completion = new TaskCompletionSource<PromptResult<T>>(TaskCreationOptions.RunContinuationsAsynchronously);
         cancellationToken.Register(() =>
         {
@@ -138,8 +136,6 @@ public sealed class BlazorUIRenderer : IUIRenderer
 
         try
         {
-            // Why: same seam as Prompt/RenderPage — compose the fragment and complete the task when the
-            // user acts, so this backend is interchangeable with Spectre's blocking prompt loop.
             var completion = new TaskCompletionSource<ListPageResult>(TaskCreationOptions.RunContinuationsAsynchronously);
             cancellationToken.Register(() => completion.TrySetResult(ListPageResult.Cancel()));
 
@@ -188,9 +184,6 @@ public sealed class BlazorUIRenderer : IUIRenderer
                 builder.AddComponentParameter(2, nameof(FdwPage.Mode), blazorContext.Mode);
                 builder.AddComponentParameter(3, nameof(FdwPage.OnSave), (Func<ValidationResult?>)(() =>
                 {
-                    // Why: validation failure RESOLVES the page task (ValidationFailed), matching
-                    // Spectre's one-shot RenderPage semantics — callers re-invoke to retry. The
-                    // returned validation also renders in-page so the user sees why.
                     var validation = page.Validate();
                     if (!validation.IsValid)
                     {
@@ -242,11 +235,6 @@ public sealed class BlazorUIRenderer : IUIRenderer
         };
     }
 
-    // Why this now asks the registry instead of testing marker interfaces: the old predicate
-    // hard-coded the same closed set the dispatcher switched on, so a downstream component model
-    // was reported "unsupported" even once its renderer was registered. Asking the registry makes
-    // the warning fire exactly when the dispatcher will actually fall through — one source of truth
-    // for "can this be painted", which is the point of opening the dispatch at all.
     private static bool IsSupported(IComponentModel model) =>
         Dispatch.BlazorComponentRendererExtensions.ResolveFor(model) is not null;
 }

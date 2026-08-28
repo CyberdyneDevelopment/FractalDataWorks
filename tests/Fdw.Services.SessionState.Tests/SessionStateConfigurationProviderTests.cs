@@ -34,7 +34,6 @@ public class SessionStateConfigurationProviderTests
     {
         var userId = Guid.NewGuid();
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
         var expectedRecord = new SessionStateRecord { Id = Guid.NewGuid(), UserId = userId, StateKey = "ui:dashboard:filter" };
 
@@ -56,7 +55,6 @@ public class SessionStateConfigurationProviderTests
     {
         var userId = Guid.NewGuid();
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<IEnumerable<SessionStateRecord>>(
@@ -76,7 +74,6 @@ public class SessionStateConfigurationProviderTests
     {
         var userId = Guid.NewGuid();
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<IEnumerable<SessionStateRecord>>(
@@ -97,7 +94,6 @@ public class SessionStateConfigurationProviderTests
     {
         var userId = Guid.NewGuid();
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<IEnumerable<SessionStateRecord>>(
@@ -122,7 +118,6 @@ public class SessionStateConfigurationProviderTests
     public async Task Insert_WhenGatewaySucceeds_ReturnsSuccess()
     {
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
@@ -143,7 +138,6 @@ public class SessionStateConfigurationProviderTests
     {
         var userId = Guid.NewGuid();
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
@@ -163,7 +157,6 @@ public class SessionStateConfigurationProviderTests
     {
         var userId = Guid.NewGuid();
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))

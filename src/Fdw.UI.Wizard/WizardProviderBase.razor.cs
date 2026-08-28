@@ -17,12 +17,6 @@ namespace Fdw.UI.Wizard;
 /// The domain-specific immutable context type passed to the consumer
 /// <see cref="RenderFragment{TValue}"/>.
 /// </typeparam>
-// Why: the state machine itself lives in WizardCore<TContext> so CLI hosts
-// can drive identical wizard logic without Blazor. WizardProviderBase forwards
-// its (historical) protected surface through a private adapter subclass of
-// the core. Existing Blazor subclasses (Connection/DataSet/Schedule wizards)
-// see no API change — their abstract overrides, protected properties, and
-// protected method calls all continue to work via the delegation.
 public abstract partial class WizardProviderBase<TContext> : ComponentBase, IAsyncDisposable
     where TContext : class, new()
 {
@@ -33,8 +27,6 @@ public abstract partial class WizardProviderBase<TContext> : ComponentBase, IAsy
     protected WizardProviderBase()
     {
         _core = new CoreAdapter(this);
-        // Why: StateChanged is an EventHandler (sender/args); StateHasChanged is parameter-less.
-        // Wrap so the delegate shapes match.
         _core.StateChanged += (_, _) => StateHasChanged();
     }
 
@@ -152,9 +144,6 @@ public abstract partial class WizardProviderBase<TContext> : ComponentBase, IAsy
     /// <summary>Sealed lifecycle hook; subclasses use <see cref="OnWizardInitialized"/>.</summary>
     protected sealed override void OnInitialized()
     {
-        // Why: call the subclass's OnWizardInitialized synchronously during component
-        // init, BEFORE the first render, so subclass-owned state (e.g. ILogger, API
-        // clients) is ready when BuildContext runs. Historical behaviour preserved.
         OnWizardInitialized();
         _core.RebuildAndNotify();
     }
@@ -173,8 +162,6 @@ public abstract partial class WizardProviderBase<TContext> : ComponentBase, IAsy
             }
             catch (OperationCanceledException ex)
             {
-                // Why: cancellation during initial load is expected on component disposal;
-                // ex is named to satisfy FDW022 — no error is surfaced.
                 _ = ex;
             }
             catch (Exception ex)
@@ -197,10 +184,6 @@ public abstract partial class WizardProviderBase<TContext> : ComponentBase, IAsy
 
     // ── Adapter — routes WizardCore abstract methods back to the host ────
 
-    // Why: WizardCore is abstract; we need a concrete subclass so WizardProviderBase
-    // can hold an instance. The adapter forwards each abstract/virtual hook from the
-    // core to the host's existing abstract/virtual methods, preserving the subclass
-    // contract.
     private sealed class CoreAdapter : WizardCore<TContext>
     {
         private readonly WizardProviderBase<TContext> _host;

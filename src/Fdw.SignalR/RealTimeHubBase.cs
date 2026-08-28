@@ -59,8 +59,6 @@ public abstract class RealTimeHubBase<TClient> : Hub<TClient>
     /// </param>
     protected RealTimeHubBase(ILogger<RealTimeHubBase<TClient>>? logger = null)
     {
-        // Why: NullLogger fallback is the single sanctioned ?? pattern (CLAUDE.md) so the hub is
-        // usable when DI does not supply a logger; no other fallback values are permitted here.
         Logger = logger ?? NullLogger<RealTimeHubBase<TClient>>.Instance;
     }
 

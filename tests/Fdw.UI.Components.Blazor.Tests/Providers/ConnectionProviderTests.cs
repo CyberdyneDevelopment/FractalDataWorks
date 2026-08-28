@@ -56,8 +56,6 @@ public sealed class ConnectionProviderTests : IDisposable
             new() { Name = "ProdDb", ConnectionType = "MsSql" }
         };
 
-        // Why: ConnectionProvider calls both "connections" and "configuration/types" in parallel;
-        // RespondWith handles both via substring matching.
         var handler = new MockHttpHandler()
             .RespondWith("connections", items)
             .RespondWith("configuration/types", new List<object>());

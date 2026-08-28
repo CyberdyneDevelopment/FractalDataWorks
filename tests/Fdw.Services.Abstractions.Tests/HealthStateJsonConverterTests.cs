@@ -13,9 +13,6 @@ namespace Fdw.Services.Abstractions.Tests;
 [Trait("Category", "CoreFramework")]
 public sealed class HealthStateJsonConverterTests
 {
-    // Why: register the converter on the options the same way the interface
-    // [JsonConverter] attribute does — ensures the round-trip test exercises
-    // the same serializer path that production code uses.
     private static readonly JsonSerializerOptions Options = new()
     {
         Converters = { new HealthStateJsonConverter() },
@@ -88,8 +85,6 @@ public sealed class HealthStateJsonConverterTests
         var json = JsonSerializer.Serialize(state, Options);
 
         // Assert
-        // Why: the converter writes the state name as a plain JSON string,
-        // not an object — the reader must accept this form back.
         json.ShouldBe("\"Healthy\"");
     }
 
@@ -141,8 +136,6 @@ public sealed class HealthStateJsonConverterTests
     public void DeserializeFullObjectShapeResolvesHealthy()
     {
         // Arrange
-        // Why: the server may serialize the full TypeOption object; the converter
-        // must accept this shape and resolve by the "name" property.
         const string json = "{\"id\":1,\"name\":\"Healthy\",\"isHealthy\":true}";
 
         // Act
@@ -174,8 +167,6 @@ public sealed class HealthStateJsonConverterTests
     public void DeserializeObjectWithExtraPropertiesStillResolvesName()
     {
         // Arrange
-        // Why: extra/unknown properties in the object must be skipped; the converter
-        // reads only the "name" property and ignores everything else.
         const string json = "{\"extra\":\"value\",\"name\":\"Degraded\",\"code\":\"foo\"}";
 
         // Act
@@ -206,8 +197,6 @@ public sealed class HealthStateJsonConverterTests
     public void DeserializeUnknownNameThrowsJsonException()
     {
         // Act & Assert
-        // Why: fail loud — an unrecognized state name must throw, never silently
-        // return a default or NotFound sentinel through the JSON surface.
         Should.Throw<JsonException>(() =>
             JsonSerializer.Deserialize<IHealthState>("\"UnknownStateName\"", Options));
     }
@@ -228,8 +217,6 @@ public sealed class HealthStateJsonConverterTests
     [Trait("Priority", "P0")]
     public void DeserializeWrongTokenTypeThrowsJsonException()
     {
-        // Why: a numeric token is not a valid representation; the converter must
-        // throw rather than silently default.
         Should.Throw<JsonException>(() =>
             JsonSerializer.Deserialize<IHealthState>("42", Options));
     }
@@ -245,10 +232,6 @@ public sealed class HealthStateJsonConverterTests
         IHealthState? nullState = null;
 
         // Act
-        // Why: System.Text.Json writes a top-level null reference as the JSON literal `null`
-        // WITHOUT invoking a custom converter's Write (HandleNull is false by default), so the
-        // converter's defensive null-guard is unreachable on this path — the observable behaviour
-        // is a literal `null` token.
         var json = JsonSerializer.Serialize(nullState, Options);
 
         // Assert

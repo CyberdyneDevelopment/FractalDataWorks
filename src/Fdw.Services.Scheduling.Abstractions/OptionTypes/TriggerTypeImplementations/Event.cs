@@ -84,8 +84,6 @@ public sealed class Event : TriggerTypeBase
             return GenericResult.Failure(SchedulingLogger.TriggerConfigurationNull(_logger));
         }
 
-        // Why: the event name IS the binding. Absent, blank, or non-string means the trigger
-        // names no event and can never fire, so fail loud rather than accept a dead trigger.
         if (!trigger.Configuration.TryGetValue(EventNameKey, out var eventNameObj) ||
             eventNameObj is not string eventName ||
             string.IsNullOrWhiteSpace(eventName))

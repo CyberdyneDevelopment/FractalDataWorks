@@ -53,7 +53,6 @@ public partial class CredentialServiceConfiguration : ICredentialServiceConfigur
     /// <summary>
     /// Gets or sets the durable logical identifier (matches sec.CredentialService.Id).
     /// </summary>
-    // Why: NO Guid.NewGuid() default — DB owns identity assignment.
     public Guid Id { get; set; }
 
     /// <summary>
@@ -102,8 +101,6 @@ public partial class CredentialServiceConfiguration : ICredentialServiceConfigur
     /// Populated on the read path after loading the typed body table row.
     /// Not persisted — the typed body is saved separately to its own table.
     /// </summary>
-    // Why: [NotMapped] — not a column on sec.CredentialService. Written separately via typed provider.
-    // Read path populates by dispatching on ServiceOptionType to the appropriate typed provider.
     [NotMapped]
     public ICredentialServiceImplementationConfiguration? Configuration { get; set; }
 }

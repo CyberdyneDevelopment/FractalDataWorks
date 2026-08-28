@@ -24,7 +24,6 @@ namespace Fdw.Data.Abstractions;
 /// a child-side naming convention, not a cross-table reference.
 /// The PocoMapper always has this property; only the physical RowId column is absent.
 /// </param>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record ForeignKeyResolution(
     string FkColumnName,

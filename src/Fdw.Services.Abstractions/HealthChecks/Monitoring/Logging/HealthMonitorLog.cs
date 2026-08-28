@@ -41,9 +41,6 @@ public static partial class HealthMonitorLog
     /// <summary>
     /// Logs when a system health check completes with a non-Healthy overall status.
     /// </summary>
-    // Why Error, not Information (FDW-583): SystemHealthCheckCompleted above printed "overall status:
-    // Unhealthy" as an Information record — indistinguishable from a healthy breadcrumb. Branched at
-    // the GetSystemHealth call site on worstStatus.IsHealthy.
     [MessageLogging(
         EventId = 71001,
         Level = LogLevel.Error,
@@ -79,9 +76,6 @@ public static partial class HealthMonitorLog
     /// <summary>
     /// Logs when a service health check completes with a non-Healthy status (no exception thrown).
     /// </summary>
-    // Why Error, not Debug (FDW-583): ServiceHealthCheckCompleted above was the SOLE record when a
-    // service reports Unhealthy without throwing, at Debug — effectively invisible. Branched at the
-    // CheckService call site on status.IsHealthy.
     [MessageLogging(
         EventId = 71002,
         Level = LogLevel.Error,
@@ -108,9 +102,6 @@ public static partial class HealthMonitorLog
     /// Logs when a service health check returns a non-success/null result WITHOUT throwing — the
     /// non-exception twin of <see cref="ServiceHealthCheckFailed"/>.
     /// </summary>
-    // Why Error (FDW-583): the "else" branch in HealthMonitorService.CheckService previously discarded
-    // result.CurrentMessage into a snapshot field and logged nothing — the reason for the failure was
-    // never printed.
     [MessageLogging(
         EventId = 71003,
         Level = LogLevel.Error,

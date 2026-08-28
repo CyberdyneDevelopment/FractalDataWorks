@@ -29,7 +29,6 @@ public sealed class TenantScopedPolicy : PathAuthorizationPolicyBase
         if (context.IsSystemAdmin)
             return GenericResult<IPathAuthorizationDecision>.Success(PathAuthorizationDecision.Allow(Name));
 
-        // Why: tenant id is a guid; the resolved address must contain it as a path segment.
         var tenantSegment = context.TenantId.ToString("D", System.Globalization.CultureInfo.InvariantCulture);
         if (canonicalAddress.IndexOf(tenantSegment, StringComparison.OrdinalIgnoreCase) >= 0)
             return GenericResult<IPathAuthorizationDecision>.Success(PathAuthorizationDecision.Allow(Name));

@@ -36,11 +36,6 @@ namespace Fdw.Services.Connections.RowQuery;
 /// hard casts and throws on these values).
 /// </para>
 /// </remarks>
-// Why: DbDataReader (the BCL base class) itself implements only the non-generic IEnumerable (for
-// legacy row iteration via GetEnumerator(), which this forward-only reader deliberately does not
-// support — see GetEnumerator() below). CA1010 flags every concrete DbDataReader subclass equally;
-// there is no IEnumerable<T> to add without breaking the DbDataReader contract, so this is a
-// documented suppression, not a masked defect.
 [SuppressMessage("Design", "CA1010:Generic interface should also be implemented", Justification = "DbDataReader itself only implements non-generic IEnumerable; GetEnumerator() is intentionally unsupported below.")]
 public sealed class RecordDictionaryReader : DbDataReader
 {
@@ -109,13 +104,6 @@ public sealed class RecordDictionaryReader : DbDataReader
     public override string GetName(int ordinal) => _columns[ordinal];
 
     /// <inheritdoc/>
-    // Why: an unknown column name must raise IndexOutOfRangeException — DbDataReader's own documented
-    // GetOrdinal contract (every real ADO.NET provider throws exactly this for a name outside the
-    // result set), and the generated PocoMapper's GetReaderValue_* helpers catch specifically that
-    // exception to default an OPTIONAL POCO property with no declared field on this container. CA2201
-    // forbids explicitly constructing that reserved exception type (`throw new
-    // IndexOutOfRangeException(...)`), so it is raised the way the BCL itself raises it — an actual
-    // out-of-bounds array read — rather than suppressing the analyzer. No suppression, no masked defect.
     public override int GetOrdinal(string name)
     {
         for (var i = 0; i < _columns.Count; i++)
@@ -164,11 +152,6 @@ public sealed class RecordDictionaryReader : DbDataReader
     }
 
     /// <inheritdoc/>
-    // Why (fix #5): the removed `?? string.Empty` fabricated a value for a null/unconvertible column —
-    // forbidden. After RecordRowValidator (fix #1), a DECLARED non-nullable column can no longer reach
-    // this reader as DBNull, so a DBNull value here is either a declared-nullable field genuinely
-    // carrying no value (a real caller error — GetString on a null column) or a wiring defect; a real
-    // ADO.NET provider throws for a typed read of a null column, and so does this one.
     public override string GetString(int ordinal)
     {
         var value = GetValue(ordinal);
@@ -269,9 +252,6 @@ public sealed class RecordDictionaryReader : DbDataReader
     public override long GetInt64(int ordinal) => Convert.ToInt64(GetValue(ordinal), CultureInfo.InvariantCulture);
 
     /// <inheritdoc/>
-    // Why: coercing, not (T)GetValue(ordinal) — the base DbDataReader.GetFieldValue<T> default does an
-    // unchecked cast, which throws for e.g. a Guid/DateTimeOffset column whose raw decoded value is a
-    // string. Route every well-known T through the matching coercing getter above.
     public override T GetFieldValue<T>(int ordinal)
     {
         var targetType = typeof(T);

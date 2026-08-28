@@ -398,7 +398,6 @@ public sealed class DataSetConfigurationBuilder
                     Ordinal = i
                 })
                 .ToList(),
-            // Why: SourceIds is now computed from Sources — set the source configs; SourceIds projects their Ids.
             Sources = new List<DataSetSourceConfiguration>(_sources),
             Caching = _caching
         };

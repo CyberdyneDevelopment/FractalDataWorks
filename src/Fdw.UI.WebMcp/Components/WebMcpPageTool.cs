@@ -83,9 +83,6 @@ public sealed class WebMcpPageTool : ComponentBase
     /// <inheritdoc />
     protected override void OnInitialized()
     {
-        // Why fail-loud on each of these: a tool that is silently skipped looks identical to a
-        // browser without WebMCP — the page renders, nothing errors, and the agent simply never
-        // sees the tool. Throwing at initialisation surfaces the wiring mistake immediately.
         var bridge = Bridge
             ?? throw new InvalidOperationException(
                 $"{nameof(WebMcpPageTool)} '{Name}' must be placed inside a {nameof(WebMcpBridge)}.");

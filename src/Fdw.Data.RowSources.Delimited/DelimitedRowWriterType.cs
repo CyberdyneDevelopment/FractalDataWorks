@@ -28,8 +28,6 @@ public sealed class DelimitedRowWriterType : RecordWriterTypeBase
     public override string Format => "Delimited";
 
     /// <inheritdoc />
-    // Why: delimited is a ROW writer — DelimitedStreamRowWriter implements IRowWriter (itself an
-    // IRecordWriter<DataRecord>). The return type matches the base abstract signature exactly.
     public override IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions? options)
         => new DelimitedStreamRowWriter(target, options as DelimitedRowWriterOptions);
 }

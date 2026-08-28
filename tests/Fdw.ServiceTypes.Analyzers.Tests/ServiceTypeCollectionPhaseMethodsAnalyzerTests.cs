@@ -12,9 +12,6 @@ namespace Fdw.ServiceTypes.Analyzers.Tests;
 /// </summary>
 public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
 {
-    // Why: the analyzer resolves parameter and return types by fully-qualified name, so the test source
-    // must declare the real ones. The framework references are not available to the analyzer test host,
-    // and stand-ins under the same namespaces are what the production symbols resolve to anyway.
     private const string Scaffold = """
         using System;
 
@@ -43,8 +40,6 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
     [Trait("Category", "SourceGen")]
     public async Task ServiceTypeCollection_WithAllPhaseMethods_ReportsNothing()
     {
-        // Why: the false-positive case is the one that matters — every existing correct collection in the
-        // solution has exactly this shape, so a rule that fires here would fail the whole build.
         var test = $$"""
             {{Scaffold}}
 
@@ -100,9 +95,6 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
     [Trait("Category", "SourceGen")]
     public async Task PlatformServiceProvider_MissingAllPhases_ReportsThreeDiagnostics()
     {
-        // Why: [PlatformServiceProvider] classes are hand-written — the generator emits no half for them,
-        // so all three are the author's responsibility and all three must be reported at once rather than
-        // one per rebuild.
         var test = $$"""
             {{Scaffold}}
 
@@ -135,9 +127,6 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
     [Trait("Category", "SourceGen")]
     public async Task PhaseMethod_WithWrongShape_ReportsDiagnostic()
     {
-        // Why: a method group only converts to the descriptor's delegate if the parameters and return type
-        // match. An instance method, or one returning void, compiles fine here but breaks in generated
-        // code — which is exactly the failure this rule exists to move to the declaration.
         var test = $$"""
             {{Scaffold}}
 
@@ -169,10 +158,6 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
     [Trait("Category", "SourceGen")]
     public async Task PhaseMethods_InheritedFromBase_ReportsNothing()
     {
-        // Why: THE regression guard. Real collections do not redeclare the phase methods — they inherit
-        // them as statics from ServiceTypeCollectionBase, and a C# static is reachable through the derived
-        // type name, so the generator's method group binds to the base. Checking declared members only
-        // reported every correct collection in the solution as an error.
         var test = $$"""
             {{Scaffold}}
 

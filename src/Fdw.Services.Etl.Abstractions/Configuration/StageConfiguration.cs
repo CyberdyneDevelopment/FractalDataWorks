@@ -92,6 +92,5 @@ public sealed partial class StageConfiguration : IGenericConfiguration
     public Guid? ResiliencyPolicyId { get; set; }
 
     /// <summary>Gets or sets the ordered steps belonging to this stage.</summary>
-    // Why: IList<T> required by IOptions binding — IReadOnlyList<T> would break deserialization.
     public IList<StepConfiguration> Steps { get; set; } = new List<StepConfiguration>();
 }

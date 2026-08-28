@@ -7,7 +7,6 @@ namespace Fdw.Services.Authentication.Abstractions.Messages;
 /// <summary>
 /// CurrentMessage indicating that a refresh token is invalid.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [Message("RefreshTokenInvalid")]
 [MessageOption(typeof(AuthenticationMessageCollectionBase))]

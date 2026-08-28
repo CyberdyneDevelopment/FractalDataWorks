@@ -18,8 +18,6 @@ public sealed class ChartDataSource : IChartDataSource
     /// <summary>
     /// Gets the sentinel empty data source used before a dataset is selected.
     /// </summary>
-    // Why: the Visualize page must not fabricate a dataset name; use this sentinel as the
-    // initial state so callers can check DataSetName == string.Empty to detect "no selection".
     public static readonly ChartDataSource Empty = new(string.Empty, rowLimit: null);
 
     /// <summary>

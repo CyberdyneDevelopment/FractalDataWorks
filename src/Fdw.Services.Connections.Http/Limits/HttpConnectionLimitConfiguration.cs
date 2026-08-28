@@ -58,9 +58,6 @@ public sealed partial class HttpConnectionLimitConfiguration : ConnectionLimitCo
     public HttpRequestTimeoutConfiguration? RequestTimeout { get; set; }
 
     // ── Enforcement overrides ────────────────────────────────────────────────
-    // Why: LimitEnforcementDataGateway operates on ConnectionLimitConfiguration only.
-    // These overrides forward to the populated subtype navigation property so the
-    // enforcement layer stays invisible to Http-specific types.
 
     /// <inheritdoc/>
     public override int? EnforceMaxPerSecond => MaxRequestRate?.RequestsPerSecond;

@@ -26,10 +26,6 @@ public class PipelineJobHttpClient : ApiClientBase, IPipelineJobClient, ITrigger
     public Task<IGenericResult<TriggerPipelineResponse>> Trigger(
         TriggerPipelineRequest request, CancellationToken cancellationToken = default)
     {
-        // Why: post to the ETL's canonical UnifiedTriggerEndpoint route (POST etl/trigger/pipeline).
-        // The earlier "proxy/etl/trigger" target was a phantom: that route is hosted ONLY by the
-        // reference-api proxy (inbound), never by the ETL, so scheduler→ETL and api-proxy→ETL both
-        // 404'd. Both dispatch paths use this client, so targeting the real ETL route fixes both.
         return Post<TriggerPipelineRequest, TriggerPipelineResponse>("etl/trigger/pipeline", request, cancellationToken);
     }
 

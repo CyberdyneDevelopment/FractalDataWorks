@@ -42,10 +42,6 @@ public sealed class EChartsRendererType : ChartRendererTypeBase
             supportsInteraction: true,
             supportsLargeSeries: true,
             supportsEditing: false,
-            // Why: explicit list so the ChartHost can filter the chart-type dropdown to only the
-            // types this renderer handles — no reflection, no switch. Kpi, Geo, and Table are
-            // excluded; Kpi uses a RadialBar pattern specific to ApexCharts; Geo and Table need
-            // rendering beyond ECharts' basic configuration.
             supportedChartTypes: new List<string>
             {
                 "Bar", "Line", "Area", "Pie", "Donut", "Scatter", "Heatmap", "Sankey",

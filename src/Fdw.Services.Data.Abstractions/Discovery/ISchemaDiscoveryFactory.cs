@@ -9,9 +9,6 @@ namespace Fdw.Services.Data.Abstractions.Discovery;
 /// service-type collections at startup so any registered connection type that ships
 /// a typed discoverer becomes routable here.
 /// </summary>
-// Why: The CLI's `discover datastore` verb (and the web UI's schema-import flow)
-// shouldn't know whether a connection is MsSql, PostgreSql, or Http. They hand the
-// connection to the factory and get back the right discoverer.
 public interface ISchemaDiscoveryFactory
 {
     /// <summary>

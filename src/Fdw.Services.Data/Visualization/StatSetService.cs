@@ -46,9 +46,6 @@ public sealed class StatSetService : IStatSetService
 
         StatSetServiceLog.RetrievingDataForStats(_logger, request.ContainerName);
 
-        // Why: DataStoreName / PathName / ContainerName are validated at the endpoint boundary
-        // by StatSetRequestValidator (FluentValidation). A request that reaches here without
-        // them is a contract violation — the null-suppression is intentional.
         var query = DataQuery.From<IEnumerable<Dictionary<string, object?>>>(request.DataStoreName!, request.PathName!, request.ContainerName).Build();
 
         var queryResult = await _dataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(query, cancellationToken).ConfigureAwait(false);
@@ -67,10 +64,6 @@ public sealed class StatSetService : IStatSetService
 
         var rows = MaterializeRows(queryResult.Value);
 
-        // Why: when the caller omits ColumnNames, auto-discover numeric columns from the first
-        // materialized row so the endpoint can return useful stats without forcing clients to
-        // pre-enumerate the schema. Non-numeric columns are skipped because ColumnStatSet only
-        // exposes min/max/mean/median/percentile which require numeric values.
         var columnNames = request.ColumnNames.Count > 0
             ? request.ColumnNames
             : DiscoverNumericColumns(rows);
@@ -105,7 +98,6 @@ public sealed class StatSetService : IStatSetService
 
         var stopwatch = Stopwatch.StartNew();
 
-        // Why: Validated at endpoint boundary by GroupedStatSetRequestValidator.
         var query = DataQuery.From<IEnumerable<Dictionary<string, object?>>>(request.DataStoreName!, request.PathName!, request.ContainerName).Build();
 
         var queryResult = await _dataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(query, cancellationToken).ConfigureAwait(false);
@@ -123,8 +115,6 @@ public sealed class StatSetService : IStatSetService
         }
 
         var rows = MaterializeRows(queryResult.Value);
-        // Why: same auto-discovery as ComputeStatSet — caller may omit ColumnNames; use any
-        // numeric column from the first row, minus the group-by columns.
         var requestedColumns = request.ColumnNames.Count > 0
             ? request.ColumnNames
             : DiscoverNumericColumns(rows)
@@ -165,9 +155,6 @@ public sealed class StatSetService : IStatSetService
         });
     }
 
-    // Why: auto-discover columns by inspecting the first row's keys and keeping only those whose
-    // value is numeric (or null — non-null check happens during stat extraction). Returns empty
-    // if the row set is empty, in which case ColumnStats just comes back empty too.
     private static List<string> DiscoverNumericColumns(List<IDictionary<string, object?>> rows)
     {
         if (rows.Count == 0) return new List<string>();
@@ -186,9 +173,6 @@ public sealed class StatSetService : IStatSetService
         return discovered;
     }
 
-    // Why: stat queries request IEnumerable<Dictionary<string,object?>>, so every row already is a
-    // case-insensitive dictionary (ExpandoObject also implements IDictionary<string,object?>). Cast
-    // through the interface — there is no reflection projection of arbitrary POCOs.
     private static List<IDictionary<string, object?>> MaterializeRows(IEnumerable<object> data)
     {
         var result = new List<IDictionary<string, object?>>();

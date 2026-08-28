@@ -42,8 +42,6 @@ public sealed class RecordColumnValidatorTests
     [Trait("Category", "UndeclaredColumn")]
     public void ValidateFilterColumnsFailsWhenADottedColumnIsNotDeclaredOnTheJoinedContainer()
     {
-        // Why (fix #2 proof, joined side): "SecretManager.IsCurrent" is well-formed and qualifies to the
-        // right container by name, but IsCurrent must still be a DECLARED field on that container.
         var primary = ContainerStub.Build("EnvironmentVariableSecretManager", ("SecretManagerRowId", false));
         var joined = ContainerStub.Build("SecretManager", ("RowId", false));
         var condition = new FilterCondition { PropertyName = "SecretManager.IsCurrent", Operator = new EqualOperator(), Value = true };

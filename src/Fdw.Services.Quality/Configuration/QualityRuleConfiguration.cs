@@ -14,15 +14,12 @@ namespace Fdw.Services.Quality.Configuration;
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Quality",
     ServiceType = "Rule")]
-// Why: IGenericConfiguration is required by ImplementationConfigurationProviderBase<T>
-// for dual-source (ctrl+cfg) provider pattern.
 public sealed partial class QualityRuleConfiguration : IGenericConfiguration
 {
     /// <inheritdoc />
     public string SectionName => "Qualitys";
 
     /// <inheritdoc />
-    // Why: Matches ServiceCategory from [ManagedConfiguration] attribute for IOptions binding path.
     public string ServiceType => "Quality";
 
     /// <inheritdoc />

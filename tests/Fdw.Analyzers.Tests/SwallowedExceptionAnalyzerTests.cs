@@ -11,8 +11,6 @@ namespace Fdw.Analyzers.Tests;
 /// </summary>
 public class SwallowedExceptionAnalyzerTests : AnalyzerTestBase<SwallowedExceptionAnalyzer>
 {
-    // Why: the analyzer skips assemblies whose name looks like a test project, so the verifier's
-    // default assembly name ("TestProject") is overridden to a production-shaped name.
     private const string AssemblyName = "Fdw.Sample";
 
     private static CSharpAnalyzerTest<SwallowedExceptionAnalyzer, DefaultVerifier> CreateTest(string source)

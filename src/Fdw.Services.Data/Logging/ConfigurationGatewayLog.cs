@@ -115,10 +115,6 @@ public static partial class ConfigurationGatewayLog
     /// Logged when container resolution scanned every path in the resolved store (target.Path was
     /// empty) and none contained the named container.
     /// </summary>
-    // Why (FDW-583): distinct from the per-path DataStoreLoaderLog.ContainerNotFoundInPath misses the
-    // scan produces along the way (those are expected per-candidate misses) — this is the terminal
-    // "no path had it" outcome for the whole ResolveContainer call, so it is logged at Error and its
-    // message is propagated to the caller instead of a generic ExecuteFailed literal.
     [MessageLogging(EventId = 61024, Level = LogLevel.Error,
         Message = "ConfigurationGateway.ResolveContainer: container '{containerName}' not found in any path of DataStore '{dataStoreName}'")]
     public static partial IGenericMessage ResolveContainerNotFoundInAnyPath(ILogger logger, string containerName, string dataStoreName);
@@ -144,9 +140,6 @@ public static partial class ConfigurationGatewayLog
     public static partial IGenericMessage BuildConnectionExit(ILogger logger, string connectionName, bool success);
 
     /// <summary>Logged when the gateway is registered, naming the connection type it will use.</summary>
-    // Why: the connection type is chosen from configurationSchema.json rather than a generic type
-    // argument, so the only way an operator can see WHICH one won is if registration says so. The
-    // message carries the change instructions because this is the moment the choice is made.
     [MessageLogging(EventId = 11014, Level = LogLevel.Information,
         Message = "ConfigurationGateway registered using connection type '{connectionType}' from '{schemaFile}'. "
                 + "To use a different type, set ServiceOptionType on the connection in that file and reference the "
@@ -156,9 +149,6 @@ public static partial class ConfigurationGatewayLog
         ILogger logger, string connectionType, string schemaFile, string registeredTypes);
 
     /// <summary>Logged when the schema names a connection type that is not registered in ConnectionTypes.</summary>
-    // Why: a ServiceOptionType that resolves to nothing is almost always a MISSING PACKAGE REFERENCE,
-    // not a typo — module initialisers register every [ServiceTypeOption] at assembly load, so a type
-    // is absent precisely when its package was never referenced. Say that, and list what IS present.
     [MessageLogging(EventId = 71004, Level = LogLevel.Error,
         Message = "ConfigurationGateway: connection type '{connectionType}' declared in '{schemaFile}' is not "
                 + "registered. Is the package that provides it referenced? A [ServiceTypeOption] registers itself "

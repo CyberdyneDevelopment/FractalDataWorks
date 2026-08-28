@@ -25,10 +25,6 @@ namespace Fdw.ServiceTypes;
 public static class ServiceTypePhaseState
 {
     /// <summary>The three registration phases, tracked independently.</summary>
-    // Why suppress FDW017: it pushes enums toward TypeCollections for extensibility, but the three-phase
-    // pipeline is a CLOSED architectural constant — there are exactly Configure/Register/Initialize and never
-    // more — and this value is only ever a HashSet key, never a switch-dispatched domain. A TypeCollection
-    // here would be pure ceremony over a fixed triple.
 #pragma warning disable FDW017
     public enum Phase
     {
@@ -43,10 +39,6 @@ public static class ServiceTypePhaseState
     }
 #pragma warning restore FDW017
 
-    // Why: keyed by the scope object (IServiceCollection or IServiceProvider). The value is the set of steps
-    // already run for that scope — (category, phase, optionName?) where optionName == null means the whole
-    // collection's phase. HashSet under a lock: registration is single-threaded at startup, but the lock
-    // keeps it correct if a host ever parallelizes bootstrap.
     private static readonly ConditionalWeakTable<object, HashSet<(string Category, Phase Phase, string? Option)>> _byScope = new();
 
     private static HashSet<(string Category, Phase Phase, string? Option)> SetFor(object scope)
@@ -62,8 +54,6 @@ public static class ServiceTypePhaseState
     /// <param name="phase">The phase being run.</param>
     /// <exception cref="ArgumentException"><paramref name="category"/> is null/empty.</exception>
     /// <exception cref="ArgumentNullException"><paramref name="scope"/> is null.</exception>
-    // Why fail loud on a missing scope/category: an unkeyed or unnamed step is a wiring bug, never a
-    // silently-allowed re-run — see the FDW no-fallbacks rule.
     public static bool TryMarkCollection(string category, object scope, Phase phase)
     {
         if (string.IsNullOrEmpty(category)) throw new ArgumentException("category must not be empty.", nameof(category));

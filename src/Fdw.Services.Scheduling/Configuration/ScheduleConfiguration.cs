@@ -14,9 +14,6 @@ namespace Fdw.Services.Scheduling.Abstractions.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Schedule")]
-// Why: Must be non-abstract so the [GenerateMapper] source generator can create a POCO mapper.
-// The DataGateway queries sched.Schedule using this type — it needs to instantiate it.
-// Type-specific behavior (Cron, Interval) is handled by ServiceOptionType dispatch, not by subclassing.
 public partial class ScheduleConfiguration : IScheduleDefinition
 {
     /// <summary>

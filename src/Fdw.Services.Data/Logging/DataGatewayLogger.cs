@@ -166,9 +166,6 @@ public static partial class DataGatewayLogger
     /// </summary>
     /// <param name="logger">The logger instance.</param>
     /// <returns>A generic message containing the error information.</returns>
-    // Why (FDW-583): the comment above the null-check in DataGatewayService.ResolveContainer already
-    // said "fail loud" but no log call backed it — container routing silently returned null and the
-    // caller re-derived a generic "container not found" instead of naming the real cause.
     [MessageLogging(
         EventId = 71052,
         Level = LogLevel.Error,
@@ -419,8 +416,6 @@ public static partial class DataGatewayLogger
     /// <summary>
     /// Logs when the DataStore was resolved but has no ConnectionId (empty Guid).
     /// </summary>
-    // Why: ConnectionId == Guid.Empty means the DataStore was built without a connection binding —
-    // a data integrity failure that must fail loud rather than fall through to a name lookup.
     [MessageLogging(
         EventId = 41003,
         Level = LogLevel.Error,
@@ -457,9 +452,6 @@ public static partial class DataGatewayLogger
     /// <summary>
     /// Logs when the resolved connection cannot stream a record-source cursor.
     /// </summary>
-    // Why: fail loud — a caller that asked for a streaming cursor must not silently receive a
-    // materialized result. The connection type lacks IRecordSourceConnection; the caller falls back
-    // to the materializing Execute path only on this explicit non-success.
     [MessageLogging(
         EventId = 61009,
         Level = LogLevel.Error,

@@ -10,9 +10,6 @@ namespace Fdw.Services.Connections.Endpoints;
 /// Returns the schema information for a connection. If no schema has been discovered yet,
 /// discovers it on-demand and persists the results before returning.
 /// </summary>
-// Why: Schema information is lazy-loaded — the first GET triggers discovery if the DataStore
-// doesn't exist yet. Subsequent calls return the cached metadata. This eliminates the need
-// for a separate startup discovery service.
 public abstract class GetConnectionSchemaEndpointBase : Endpoint<ConnectionNameRequest, SchemaInformationDto>
 {
     private readonly ISchemaInformationService _schemaService;

@@ -80,9 +80,6 @@ public sealed class DeclaredSecretManagerConfigurationProvider
         => Task.FromResult<IGenericResult<IReadOnlyList<SecretManagerConfiguration>>>(
             GenericResult<IReadOnlyList<SecretManagerConfiguration>>.Success(_declared));
 
-    // Why explicit: the erased Get(Guid) differs from the typed one only by return type, which a
-    // class cannot declare twice. Explicit implementation keeps both, and keeps the erased surface
-    // off the public API where only the registry uses it.
     async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
     {
         var result = await Get(id, ct).ConfigureAwait(false);
@@ -127,8 +124,6 @@ public sealed class DeclaredSecretManagerConfigurationProvider
                 ResultDetails.Create("Operation", nameof(Delete))));
 
     // ── IDomainConfigurationProvider ────────────────────────────────────────
-    // Why declared-only: this reads what configurationSchema.json declares, so there is nothing to
-    // route to and nothing to write. Every member fails loud rather than pretending.
 
     /// <inheritdoc />
     async Task<IGenericResult<ISecretManagerImplementationConfiguration>> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Get(

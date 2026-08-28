@@ -38,11 +38,6 @@ public sealed class ClaimsPrincipalAuthenticationContext : IAuthenticationContex
 
         IsAuthenticated = principal.Identity?.IsAuthenticated ?? false;
 
-        // Why: read the FDW-baked claims by their CANONICAL ClaimDefinitions names (not string literals)
-        // so the reader can never drift from the baker — the same reason tenant/org/crossTenant below use
-        // ClaimDefinitions.*.Name. The canonical roles claim is "roles" (plural, isArray); a literal "role"
-        // silently misses every baked role. ClaimTypes.* / standard "name" remain as interop fallbacks for
-        // non-FDW principals.
         UserId = principal.FindFirst(ClaimDefinitions.sub.Name)?.Value
               ?? principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
               ?? principal.FindFirst("name")?.Value
@@ -55,9 +50,6 @@ public sealed class ClaimsPrincipalAuthenticationContext : IAuthenticationContex
 
         Roles = CollectDistinct(principal, ClaimDefinitions.roles.Name, ClaimTypes.Role);
 
-        // Why: the access token carries one "perm" claim per resolved permission (the baked effective
-        // permission set). Enforcement trusts these as authoritative; surface ALL of them because the
-        // single-valued Claims dictionary keeps only the first occurrence per type.
         Permissions = principal.FindAll(ClaimDefinitions.perm.Name)
             .Select(c => c.Value)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -66,10 +58,6 @@ public sealed class ClaimsPrincipalAuthenticationContext : IAuthenticationContex
         Claims = BuildClaimsMap(principal);
         ExpiresAt = ParseExpiry(principal);
 
-        // Why: ActiveTenantId / ActiveOrgId / IsCrossTenant are read back from the JWT and used by
-        // MsSqlConnection to set SESSION_CONTEXT for RLS. Absence of tenant/org is intentional for
-        // cross-tenant tokens and system connections; crossTenant=true is baked only when the user
-        // holds tenants:view-all and enables RLS Mode 2 (all-tenant access).
         ActiveTenantId = ParseGuidClaim(principal, ClaimDefinitions.tenantId.Name);
         ActiveOrgId = ParseGuidClaim(principal, ClaimDefinitions.orgId.Name);
         IsCrossTenant = string.Equals(
@@ -110,13 +98,8 @@ public sealed class ClaimsPrincipalAuthenticationContext : IAuthenticationContex
     public bool IsCrossTenant { get; }
 
     /// <inheritdoc />
-    // Why: an HTTP request authenticated from a ClaimsPrincipal is, by definition, an end-user
-    // request — never the deliberate system elevation. System elevation is granted ONLY by
-    // SystemAuthenticationContext, constructed explicitly during host bootstrap.
     public bool IsSystemContext => false;
 
-    // Why: helpers keep the constructor under the FDW007 complexity threshold without a
-    // ConventionOverride (this assembly does not reference Fdw.Conventions).
     private static List<string> CollectDistinct(ClaimsPrincipal principal, string primaryType, string fallbackType)
         => principal.FindAll(primaryType)
             .Concat(principal.FindAll(fallbackType))

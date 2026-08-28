@@ -154,8 +154,6 @@ public static partial class VisualizationProviderLog
     /// </summary>
     /// <param name="logger">The logger to write the log event to.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why: fail-loud for a failed result with a null CurrentMessage — a distinct structured event,
-    // never a fabricated "API returned failure" fallback string (NO FALLBACKS rule).
     [MessageLogging(EventId = 91055, Level = LogLevel.Error,
         Message = "VisualizePageProvider: failed to load dataset list (the API result carried no message)")]
     public static partial IGenericMessage LoadDataSetsFailedNoMessage(ILogger logger);
@@ -166,8 +164,6 @@ public static partial class VisualizationProviderLog
     /// <param name="logger">The logger to write the log event to.</param>
     /// <param name="dataSetName">The dataset whose preview failed.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why: fail-loud for a failed result with a null CurrentMessage — a distinct structured event,
-    // never a fabricated default string (NO FALLBACKS rule).
     [MessageLogging(EventId = 91056, Level = LogLevel.Error,
         Message = "VisualizePageProvider: failed to preview dataset '{dataSetName}' (the API result carried no message)")]
     public static partial IGenericMessage PreviewFailedNoMessage(ILogger logger, string dataSetName);

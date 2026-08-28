@@ -77,7 +77,6 @@ public sealed class StdioBridgeMcpToolSource : IMcpToolSource
         _process = Process.Start(psi) ?? throw new InvalidOperationException($"Failed to start {_command}");
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        // Why: subscribe synchronously so the subscription is live before any publisher races us.
         var invokeStream = bus.Subscribe($"mcp/{ServerName}/*/invoke", _cts.Token);
         _stdoutPump = Task.Run(() => PumpStdout(_process.StandardOutput, _cts.Token), _cts.Token);
         _busPump = Task.Run(() => PumpBus(bus, invokeStream, _cts.Token), _cts.Token);
@@ -217,9 +216,5 @@ public sealed class StdioBridgeMcpToolSource : IMcpToolSource
         return parts.Length == 4 ? parts[2] : null;
     }
 
-    // Why the completion carries a result rather than being faulted: the reader loop and the pump are
-    // two loops in this one class, so an exception here would be thrown and caught in the same file
-    // purely to move an error across that boundary. A result carries the same information without
-    // using the exception machinery as control flow.
     private sealed record PendingCall(string ToolName, McpEvent Invoke, TaskCompletionSource<IGenericResult<JsonElement>> Completion);
 }

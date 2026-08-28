@@ -490,7 +490,6 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
             return name;
         }
 
-        // Why: Addressing comes from container, not command. Container.Name is always set.
         var typeName = container.Name;
         return command.CommandType switch
         {

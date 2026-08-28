@@ -624,8 +624,6 @@ public class CalculationEntityServiceTests
     [Fact]
     public async Task ExecuteCalculationEntityExecuteFailurePropagates()
     {
-        // Why: dispatch to the real registered FormulaCalculationEntityType — a missing typed
-        // configuration is a genuine execution failure (FormulaConfigurationNotLoaded).
         var providerMock = CreateProviderMock();
         var config = SampleConfig(Guid.NewGuid());
         config.Configuration = null;

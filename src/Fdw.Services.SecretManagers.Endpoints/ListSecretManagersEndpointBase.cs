@@ -67,8 +67,6 @@ public abstract class ListSecretManagersEndpointBase : EndpointWithoutRequest<Pa
             .ToList();
 
         SecretManagerEndpointLog.SecretManagersListed(_logger, configs.Count);
-        // Why: Newman/clients expect a paginated envelope {items, skip, take, totalCount, hasMore}
-        // matching the response shape from /pipelines and other Crud-list endpoints.
         await Send.OkAsync(PaginatedResponse<SecretManagerSummaryResponse>.Create(configs, 0, configs.Count, configs.Count), ct).ConfigureAwait(false);
     }
 }

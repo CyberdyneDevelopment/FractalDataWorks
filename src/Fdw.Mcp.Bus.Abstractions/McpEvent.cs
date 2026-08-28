@@ -17,7 +17,6 @@ namespace Fdw.Mcp.Bus;
 /// invocations triggering follow-up events, etc. Used by causation-based replay.
 /// </para>
 /// </remarks>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record McpEvent(
     ulong          EventId,

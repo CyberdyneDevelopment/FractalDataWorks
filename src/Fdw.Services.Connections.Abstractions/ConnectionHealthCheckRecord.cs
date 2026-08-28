@@ -6,10 +6,6 @@ namespace Fdw.Services.Connections.Abstractions;
 /// <summary>
 /// Represents a single health check result persisted in ops.ConnectionHealthCheck.
 /// </summary>
-// Why: [GenerateMapper] is required (not just an optimization) — the MsSql connection's reader
-// mapping throws InvalidOperationException for any complex query-result type that has no generated
-// PocoMapper registered (see MsSqlConnection.MapReaderResult). This type is the query-result shape
-// for IConnectionHealthService.GetHistory.
 [GenerateMapper]
 public sealed class ConnectionHealthCheckRecord
 {

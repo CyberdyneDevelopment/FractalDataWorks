@@ -10,7 +10,6 @@ namespace Fdw.Commands.Abstractions.Messages;
 /// Command messages provide structured information about command operations,
 /// including errors, warnings, and informational messages.
 /// </remarks>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [MessageCollection("CommandMessages")]
 public abstract class CommandMessage : MessageTemplate<MessageSeverity>, IGenericMessage

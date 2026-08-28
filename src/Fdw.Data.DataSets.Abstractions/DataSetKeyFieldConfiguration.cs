@@ -12,11 +12,6 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// Why: Mirrors DataContainerKeyField pattern — references fields by RowId, not by name.
 /// ReferencedFieldRowId enables FK visualization in lineage graphs and join discovery.
 /// </remarks>
-// Why: implements IGenericConfiguration so [GenerateMapper] emits a CascadeChildren descriptor for the
-// parent DataSetConfiguration.KeyFields collection — the keystone base read loads data.DataSetKeyField
-// rows, matched via the child's ConfigurationCommand.ContainerName ("DataSetKeyField"). Name/SectionName/
-// ServiceType/ServiceOptionType have no DataSetKeyField column; the translator's column-intersection
-// excludes them on save and reads default them — no [NotMapped] needed.
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "DataSetKeyField")]
 public partial class DataSetKeyFieldConfiguration : IGenericConfiguration

@@ -12,8 +12,6 @@ namespace Fdw.Services.Notifications.Endpoints;
 /// </summary>
 public abstract class GetNotificationEndpointBase : CrudGetEndpointBase<NotificationNameRequest, NotificationDetailDto>
 {
-    // Why: NotificationConfigurationProvider replaces IOptionsMonitor<List<NotificationConfiguration>>
-    // with dual-source (ctrl + cfg) provider that merges system and user configurations.
     private readonly NotificationConfigurationProvider _provider;
 
     /// <inheritdoc />
@@ -48,10 +46,6 @@ public abstract class GetNotificationEndpointBase : CrudGetEndpointBase<Notifica
         }
 
         var notification = notificationResult.Value;
-        // Why: GetNotification reads the parent header (notify.Notification) which is identity-only
-        // per the polymorphic configuration pattern. Runtime fields (IsEnabled, SecretManagerName,
-        // SecretKeyName) live on typed-body tables and are not accessible from the parent query path.
-        // Typed endpoints supply those fields when a typed-body provider is bound.
         var detail = new NotificationDetailDto
         {
             Id = notification.Id,

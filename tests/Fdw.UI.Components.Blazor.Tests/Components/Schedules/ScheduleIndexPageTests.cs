@@ -37,8 +37,6 @@ public sealed class ScheduleIndexPageTests : IDisposable
     private IRenderedComponent<IndexPage> RenderWith(ScheduleContext context)
     {
         _ctx.RegisterPageInfrastructure();
-        // Why: the page's OnInitializedAsync awaits IPipelineClient.List even though the schedules
-        // come from the swapped provider; register a List stub so it does not throw.
         _pipelineClient
             .Setup(c => c.List(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<PipelineSummaryResponse>>.Success([]));
@@ -61,9 +59,6 @@ public sealed class ScheduleIndexPageTests : IDisposable
         var cut = RenderWith(new ScheduleContext { Schedules = [schedule], FilteredSchedules = [schedule] });
         cut.Markup.ShouldContain("nightly");
         cut.Markup.ShouldContain("0 0 * * *");
-        // Why: the old reference-ui test asserted an "Active" status text. The current page shows
-        // enabled state through a toggle switch whose title is "Pause" when enabled (there is no
-        // literal "Active" text), so assert that instead.
         cut.FindAll("[role=button]").ShouldContain(e => e.GetAttribute("title") == "Pause");
     }
 
@@ -72,7 +67,6 @@ public sealed class ScheduleIndexPageTests : IDisposable
     {
         var schedule = S("paused-one", enabled: false);
         var cut = RenderWith(new ScheduleContext { Schedules = [schedule], FilteredSchedules = [schedule] });
-        // Why: a disabled schedule's toggle title is "Resume" (the old "Paused" text no longer exists).
         cut.FindAll("[role=button]").ShouldContain(e => e.GetAttribute("title") == "Resume");
     }
 
@@ -113,7 +107,6 @@ public sealed class ScheduleIndexPageTests : IDisposable
             },
         };
         var cut = RenderWith(context);
-        // Why: an enabled schedule's toggle (title="Pause") fires OnToggleSchedule(name, !IsEnabled).
         cut.FindAll("[role=button]").First(e => e.GetAttribute("title") == "Pause").Click();
         capturedName.ShouldBe("nightly");
         capturedEnabled.ShouldBe(false);

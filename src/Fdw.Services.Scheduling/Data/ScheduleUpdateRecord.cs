@@ -26,9 +26,5 @@ public sealed class ScheduleUpdateRecord
     /// Gets or sets the outcome of the most recent dispatch attempt (e.g. "Succeeded"/"Failed",
     /// the canonical <c>Fdw.Results.ExecutionStatus.ExecutionStatuses</c> names).
     /// </summary>
-    // Why: the MsSql UPDATE translator SETs exactly the container-field ∩ record-property intersection,
-    // so a record used for a timestamp write must ALSO carry a concrete status — otherwise the column
-    // is either omitted (old behaviour) or, once this property exists, null-wiped. Callers set it on
-    // every write (optimistic "Succeeded" pre-dispatch, "Failed" on the revert path), never null.
     public string? LastRunStatus { get; set; }
 }

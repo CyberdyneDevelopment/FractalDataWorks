@@ -57,7 +57,6 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
     /// <param name="logger">Logger for build diagnostics. Defaults to a null logger.</param>
     protected DataStoreBuilderBase(ILogger? logger = null)
     {
-        // Why: NullLogger keeps the builder functional without DI logging — the only sanctioned ?? fallback.
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -80,13 +79,6 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
     }
 
     /// <inheritdoc />
-    // Why: a true builder has ONE source — the nested DataStoreConfiguration seeded via Configure.
-    // The async signature is kept because a transport may fetch field/key metadata here in a later
-    // slice; today the assembly is in-memory, so return a completed task (no sync-over-async).
-    // The length/complexity is inherent to the multi-wave composite assembly (build fields → wave-A
-    // bare nodes → resolve keys FK-direct → referencing index → wave-B final nodes) and is not
-    // reducible without hiding the assembly intent; the per-step work is already delegated to
-    // BuildFields/ResolveKeys/BuildReferencingIndex and the transport seams BuildField/BuildContainer.
     [ConventionOverride(MaxCyclomaticComplexity = 20, MaxMethodLines = 110)]
     public Task<IGenericResult<IDataStore>> Build(CancellationToken cancellationToken = default)
     {
@@ -99,9 +91,6 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
         var cfg = _config;
         DataStoreLoaderLog.BuildEntry(_logger, cfg.Name, cfg.Paths.Count);
 
-        // Why: the fail-loud seam for the void-returning BuildContainer step — a transport that cannot
-        // build a given configuration (e.g. the FileSystem builder, when a container's format is not
-        // file-addressable) rejects it HERE with a non-success result before any node is built.
         var validation = ValidateConfiguration(cfg);
         if (!validation.IsSuccess)
             return Task.FromResult(validation.ToNewResult<IDataStore>());
@@ -115,10 +104,6 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
                 built[containerCfg.Name] = new BuiltContainer(containerCfg, pathCfg, BuildFields(containerCfg));
         }
 
-        // Why: construct the FINAL store FIRST (empty) so every path below can carry a real Store
-        // back-reference, then SetPaths to wire its index — the same set-once shape DataPath uses for its
-        // containers. IDataNodePath.Store is non-nullable; building paths with `store: null!` left it null on
-        // every runtime path and made the not-found helper throw instead of returning a failure result.
         var store = new DataStore(cfg.Name, cfg.ConnectionId, [], cfg.Description, _logger);
 
         // Wave A: build bare container nodes (no keys, no referencing) so cross-references resolve to
@@ -145,10 +130,6 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
         var referencingByContainerName = BuildReferencingIndex(built, bareNodesByName, keysByContainerName);
 
         // Wave B: build the final nodes carrying keys + referencing, wired under real parent paths.
-        // Why: construct the FINAL path FIRST (empty), build every container parented to THAT same path
-        // object, then SetContainers to wire its index. Previously each container was parented to a
-        // throwaway empty placeholder path while the populated path was a DIFFERENT object, so
-        // container.Parent.Container(sibling) (e.g. a typed-body JOIN) always missed. See DataPath.SetContainers.
         var builtPaths = new List<IDataNodePath>(cfg.Paths.Count);
         foreach (var pathCfg in cfg.Paths)
         {
@@ -222,8 +203,6 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
     // Fields
     // -------------------------------------------------------------------------
 
-    // Why: concrete List<T> return (not IReadOnlyList<T>) per CA1859 — these are private build helpers
-    // whose results are only used internally; the concrete type avoids an interface-dispatch penalty.
     private List<IDataField> BuildFields(DataContainerConfiguration containerCfg)
     {
         var ordered = containerCfg.Fields.OrderBy(f => f.Ordinal).ToList();
@@ -237,7 +216,6 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
     // FK-direct key resolution (Addendum-B)
     // -------------------------------------------------------------------------
 
-    // Why: concrete List<T> return per CA1859 — private build helper, internal use only.
     private List<IContainerKey> ResolveKeys(
         BuiltContainer owner,
         Dictionary<string, BuiltContainer> built,
@@ -295,7 +273,6 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
         return result;
     }
 
-    // Why: concrete List<T> return per CA1859 — private build helper, internal use only.
     private List<IContainerKeyField> BuildKeyFields(
         DataContainerKeyConfiguration keyCfg,
         BuiltContainer owner,
@@ -305,9 +282,6 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
         if (keyCfg.KeyFields.Count == 0)
             return [];
 
-        // Why (FK-direct): the referenced field is the field bound by the referenced container's key
-        // named ReferencedKeyName — follow the FK's direct link. Resolved once per key and shared
-        // across all participating key fields. NO hardcoded "Id", NO guesser.
         var referencedField = ResolveReferencedField(keyCfg, owner.Config.Name, referencedBuilt);
 
         var result = new List<IContainerKeyField>(keyCfg.KeyFields.Count);
@@ -412,8 +386,6 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
         return index;
     }
 
-    // Why: carries the config + fields through the multi-pass build so FK resolution can read the
-    // referenced container's config (for ReferencedKeyName) and fields (to bind the referenced field).
     private sealed class BuiltContainer(
         DataContainerConfiguration config,
         DataPathConfiguration path,

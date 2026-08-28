@@ -70,15 +70,10 @@ public sealed class ClientCredentialsIdentityService
 
         IdentityLog.AcquiringToken(Logger, Name, "ClientCredentials", request.Audience);
 
-        // Why resolved by name at acquisition rather than injected: the configuration names WHICH
-        // secret manager holds this identity's secret, and binding one at construction would ignore
-        // that and silently read from whichever happened to be injected.
         var secretManager = await _secretManagers.Value.Get(secretManagerName, cancellationToken).ConfigureAwait(false);
         if (!secretManager.IsSuccess || secretManager.Value is null)
             return secretManager.ToNewResult<IssuedIdentityToken>();
 
-        // Why the canonical GetSecretManagerCommand.Latest path: secret resolution is identical
-        // everywhere in FDW, and a bespoke read here would be one more place to keep in step.
         var secret = await secretManager.Value
             .Execute(GetSecretManagerCommand.Latest(container: null, secretKey: secretKeyName), cancellationToken)
             .ConfigureAwait(false);

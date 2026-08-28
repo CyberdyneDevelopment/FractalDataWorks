@@ -190,11 +190,6 @@ public static class TransformConfigPayloadSerializer
         return GenericResult<string>.Success(json);
     }
 
-    // Why: extracted from ToMapPayload (FDW007 — cyclomatic complexity 17 vs threshold 15). Each
-    // helper resolves exactly one piece of per-field-mapping metadata and fails loud on its own
-    // corrupt-data case, so the loop in ToMapPayload reads as a flat sequence of named resolution
-    // steps instead of one long branchy block. Behaviour (including every fail-loud path and its
-    // MessageLogging call) is unchanged — only the shape moved.
     private static IGenericResult<(string SourceField, string DestinationField)> ResolveMappingFieldNames(
         PipelineCanvasEdge edge, ILogger log)
     {
@@ -213,12 +208,6 @@ public static class TransformConfigPayloadSerializer
         return GenericResult<(string, string)>.Success((sourceField, destinationField));
     }
 
-    // Why: absent IsRequired metadata legitimately means "not yet overridden" — the edge starts with
-    // no per-mapping overrides (see PipelineCanvasEdge's own remarks), so fall back to the DTO's own
-    // declared default (false) ONLY when the key is genuinely absent. A key that IS present but fails
-    // to parse as a bool is corrupt data, not an unset override — fail loud rather than silently
-    // coercing it to the opposite of whatever the caller actually wrote (the "a disabled mapping
-    // persists as enabled" bug).
     private static IGenericResult<bool> ResolveMappingIsRequired(PipelineCanvasEdge edge, ILogger log)
     {
         if (!edge.Metadata.TryGetValue(PipelineCanvasEdgeMetadataKeys.IsRequired, out var isRequiredText))
@@ -233,8 +222,6 @@ public static class TransformConfigPayloadSerializer
         return GenericResult<bool>.Success(isRequired);
     }
 
-    // Why: same reasoning as ResolveMappingIsRequired, but IsEnabled's declared default is true (a
-    // mapping is enabled unless explicitly disabled).
     private static IGenericResult<bool> ResolveMappingIsEnabled(PipelineCanvasEdge edge, ILogger log)
     {
         if (!edge.Metadata.TryGetValue(PipelineCanvasEdgeMetadataKeys.IsEnabled, out var isEnabledText))
@@ -249,11 +236,6 @@ public static class TransformConfigPayloadSerializer
         return GenericResult<bool>.Success(isEnabled);
     }
 
-    // Why: Name is a display/identity label, not a domain identifier — when the key is genuinely
-    // absent (e.g. right after a two-click port connect, before the Inspector panel is used), derive
-    // it deterministically from the already-validated source/destination field names. But a key that
-    // IS present and blank is an explicit invalid override, not an unset one — fail loud instead of
-    // silently overwriting it with the generated name.
     private static IGenericResult<string> ResolveMappingName(
         PipelineCanvasEdge edge, string sourceField, string destinationField, ILogger log)
     {
@@ -264,10 +246,6 @@ public static class TransformConfigPayloadSerializer
         return GenericResult<string>.Success(hasMappingName ? mappingName! : $"{sourceField}->{destinationField}");
     }
 
-    // Why: TargetType/TransformExpression/DefaultValue are always optional per-mapping overrides —
-    // a genuinely absent key is never a failure, only blank-as-present is normalized to null. Returns
-    // IGenericResult<T> for parity with the sibling resolvers above (and so a future validation rule
-    // on these fields has somewhere to fail loud); there is no failing path today.
     private static IGenericResult<(string? TargetType, string? TransformExpression, string? DefaultValue)> ResolveOptionalMappingMetadata(
         PipelineCanvasEdge edge)
     {

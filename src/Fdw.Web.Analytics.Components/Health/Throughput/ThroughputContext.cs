@@ -12,7 +12,6 @@ namespace Fdw.Web.Analytics.Components.Health.Throughput;
 /// Immutable context for the Throughput headless provider.
 /// Combines gauge and sparkline data for throughput visualization.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class ThroughputContext : ProviderContextBase
 {

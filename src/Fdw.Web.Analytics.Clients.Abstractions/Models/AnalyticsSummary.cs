@@ -5,7 +5,6 @@ namespace Fdw.Web.Analytics.Clients.Models;
 /// <summary>
 /// Represents a summary of analytics metrics for a given time period.
 /// </summary>
-// Why: pure data-transfer POCO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class AnalyticsSummary
 {

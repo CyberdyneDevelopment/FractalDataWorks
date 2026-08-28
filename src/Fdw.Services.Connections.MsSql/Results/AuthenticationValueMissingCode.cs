@@ -7,7 +7,6 @@ namespace Fdw.Services.Connections.MsSql.Results;
 /// <summary>
 /// A required authentication property is absent or empty. The authentication type declares it as required, so the connection cannot be built.
 /// </summary>
-// Why: the auth KVP bag is a raw dictionary; a bool+out lookup cannot say which property was missing or which auth type required it.
 [TypeOption(typeof(MsSqlConnectionResultCodes), "AuthenticationValueMissing", RestrictToCurrentCompilation = true)]
 [ExcludeFromCodeCoverage]
 public sealed class AuthenticationValueMissingCode : MsSqlConnectionResultCodeBase

@@ -30,8 +30,6 @@ public sealed class ScheduleProviderTests : IDisposable
         Mock<IScheduleClient> scheduleMock,
         MockHttpHandler? configHandler = null)
     {
-        // Why: ScheduleProvider also creates a ConfigurationApiClient via IHttpClientFactory
-        // to load schedule types. We provide a handler that returns an empty list to prevent errors.
         configHandler ??= new MockHttpHandler()
             .RespondWith("configuration/types", new List<object>());
 

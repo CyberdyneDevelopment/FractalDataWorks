@@ -28,12 +28,9 @@ namespace Fdw.Services.ExternalIdentityProviders;
 public partial class ExternalIdentityProvisionerConfiguration : IExternalIdentityProvisionerConfiguration
 {
     /// <inheritdoc />
-    // Why: get-only — [GenerateMapper] does not map a property with no public setter, so this is
-    // NEVER treated as a scalar column. sec.ExternalIdentityProvisioner carries no SectionName column.
     public string SectionName => "ExternalIdentityProvisioners";
 
     /// <inheritdoc />
-    // Why: get-only — see SectionName. sec.ExternalIdentityProvisioner carries no ServiceType column.
     public string ServiceType => "ExternalIdentityProvisioner";
 
     /// <summary>
@@ -60,15 +57,10 @@ public partial class ExternalIdentityProvisionerConfiguration : IExternalIdentit
     /// Populated on the read path by the provider after loading the typed body table row. Not
     /// persisted — the typed body is saved separately.
     /// </summary>
-    // Why: [NotMapped] — this property is not a column on sec.ExternalIdentityProvisioner. The write
-    // path saves the typed body independently via its own provider. The read path populates this by
-    // dispatching on ServiceOptionType to the appropriate typed provider.
     [NotMapped]
     public IExternalIdentityProvisionerImplementationConfiguration? Configuration { get; set; }
 
     // ── Tenant / visibility / audit ──────────────────────────────────────────
-    // Why: no value defaults — a missing tenant/visibility/audit value must read as its
-    // DB-configured null, never a silently-assumed default.
 
     /// <summary>
     /// Gets or sets the tenant identifier for tenant isolation. Null means system-wide (visible to

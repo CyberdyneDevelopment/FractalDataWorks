@@ -99,10 +99,6 @@ public sealed record AuthenticationServiceConfiguration
                 return GenericResult<IReadOnlyList<(AuthenticationServiceConfiguration, IConfigurationSection)>>.Failure(
                     AuthenticationValidationLog.EntryMissingAuthority(logger, header.Name));
 
-            // Why the scheme is checked and not just absoluteness: on Unix, Uri parses a bare path as
-            // an absolute file URI, so "/connect" would pass an absolute-only check and normalise to
-            // "file:///connect" — an authority that matches no token and fetches no metadata. An issuer
-            // is an http(s) URL.
             if (!Uri.TryCreate(header.Authority, UriKind.Absolute, out var authority)
                 || (!string.Equals(authority.Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal)
                     && !string.Equals(authority.Scheme, Uri.UriSchemeHttp, StringComparison.Ordinal)))

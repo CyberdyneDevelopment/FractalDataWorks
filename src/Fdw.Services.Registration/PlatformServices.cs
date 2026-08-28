@@ -76,9 +76,6 @@ public static class PlatformServices
                 e => string.Equals(e.CategoryName, categoryName, StringComparison.OrdinalIgnoreCase));
             if (existing is not null)
             {
-                // Why: re-registration of the IDENTICAL CollectionType is harmless (e.g. a
-                // deduped-but-still-visible-twice scan result) and must not throw; two DIFFERENT
-                // domains claiming the same category name is a real bug and must fail loud.
                 if (!ReferenceEquals(existing.Descriptor.CollectionType, serviceCollection.CollectionType))
                     throw new InvalidOperationException(
                         $"Category '{categoryName}' is already registered to " +
@@ -109,30 +106,16 @@ public static class PlatformServices
     /// <param name="builder">The host builder.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
-    // Why the collect stops at the first failing domain: the domains after it are ordered AFTER it
-    // because they may depend on it. Continuing would register them against a dependency that is not
-    // there, turning one legible failure into a cascade of unrelated-looking ones. The caller gets the
-    // first failure, which is the one that explains the rest.
     public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         EnsureFrozen();
         foreach (var entry in _frozenOrder)
         {
-            // Why the entry and not its Descriptor: the entry is what consults a phase replacement
-            // and records that the phase ran. Reaching past it to the descriptor made a Configure
-            // replacement silently not run under the collect, and left Configured unset so neither the
-            // lock-at-collect guard nor the already-run skip fired — the exact silent no-op they exist for.
-            // Why the collect skips Deferred but an explicit call does not: that asymmetry IS the
-            // mechanism. A host claims a domain out of the collect, lets the collect finish, then runs
-            // the domain itself — and the run has to actually happen when it does.
             if (entry.ConfigureState == PhaseState.Deferred) continue;
 
             var result = entry.Configure(builder, loggerFactory);
             if (result.IsFailure)
             {
-                // Why logged here and not left to the domain: the domain reported its own reason, but
-                // nothing said the PLATFORM was mid-phase, which entry it stopped on, or that the
-                // remaining domains never ran. Without that the host exits looking like a crash.
                 ServiceTypeLog.PlatformPhaseStopped(
                     loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance,
                     "Configure",
@@ -164,17 +147,11 @@ public static class PlatformServices
         foreach (var entry in _frozenOrder)
         {
 
-            // Why the collect skips Deferred but an explicit call does not: that asymmetry IS the
-            // mechanism. A host claims a domain out of the collect, lets the collect finish, then runs
-            // the domain itself — and the run has to actually happen when it does.
             if (entry.RegisterState == PhaseState.Deferred) continue;
 
             var result = entry.Register(builder, loggerFactory);
             if (result.IsFailure)
             {
-                // Why logged here and not left to the domain: the domain reported its own reason, but
-                // nothing said the PLATFORM was mid-phase, which entry it stopped on, or that the
-                // remaining domains never ran. Without that the host exits looking like a crash.
                 ServiceTypeLog.PlatformPhaseStopped(
                     loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance,
                     "Register",
@@ -204,17 +181,11 @@ public static class PlatformServices
         foreach (var entry in _frozenOrder)
         {
 
-            // Why the collect skips Deferred but an explicit call does not: that asymmetry IS the
-            // mechanism. A host claims a domain out of the collect, lets the collect finish, then runs
-            // the domain itself — and the run has to actually happen when it does.
             if (entry.InitializeState == PhaseState.Deferred) continue;
 
             var result = entry.Initialize(host, loggerFactory);
             if (result.IsFailure)
             {
-                // Why logged here and not left to the domain: the domain reported its own reason, but
-                // nothing said the PLATFORM was mid-phase, which entry it stopped on, or that the
-                // remaining domains never ran. Without that the host exits looking like a crash.
                 ServiceTypeLog.PlatformPhaseStopped(
                     loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance,
                     "Initialize",
@@ -244,20 +215,12 @@ public static class PlatformServices
         }
     }
 
-    // Why lazy-on-first-real-access rather than an explicit Freeze(): every [ModuleInitializer] Add()
-    // call is CLR-guaranteed complete before Main() runs, and EnsureFrozen() can only be triggered by
-    // code that runs at or after Main() (Program.cs calling one of the methods above) — so there is no
-    // window in which EnsureFrozen() could fire before some module initializer's Add() has completed,
-    // and the frozen snapshot always reflects every discovered domain with no explicit Freeze() ceremony.
     private static void EnsureFrozen()
     {
         if (_frozen) return;
         lock (_gate)
         {
             if (_frozen) return;
-            // Why no sort: order is the host's to control, by running a domain's own entry ahead of
-            // this collect or deferring it out of the collect entirely. What survives here is the
-            // generator's deterministic alphabetical-by-category emission order.
             _frozenOrder = _pending.ToImmutableArray();
             _frozen = true;
         }

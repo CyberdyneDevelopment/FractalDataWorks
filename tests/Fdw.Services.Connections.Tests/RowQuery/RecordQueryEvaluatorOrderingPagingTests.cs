@@ -84,7 +84,6 @@ public sealed class RecordQueryEvaluatorOrderingPagingTests
     [Fact]
     public async Task NumbersSortNumericallyNotAsText()
     {
-        // Why: as text "10" sorts before "3", which is the classic wrong answer.
         var rows = new[] { Row("Lions", 3), Row("Bears", 10), Row("Packers", 7) };
         (await Evaluate(rows, By("wins")))
             .Select(r => r["wins"]).ShouldBe(new object?[] { 3, 7, 10 });
@@ -134,8 +133,6 @@ public sealed class RecordQueryEvaluatorOrderingPagingTests
     [Fact]
     public async Task OrderingIsAppliedBeforePaging()
     {
-        // Why this is the test that matters: paging an unordered set returns an arbitrary window and
-        // calls it page one. Top-2 by wins is Bears then Packers, never Lions.
         var rows = new[] { Row("Lions", 3), Row("Bears", 10), Row("Packers", 7) };
         (await Evaluate(rows, By("wins", ascending: false), new PagingExpression { Skip = 0, Take = 2 }))
             .Select(r => r["team"]).ShouldBe(new object?[] { "Bears", "Packers" });

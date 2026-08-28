@@ -40,10 +40,6 @@ internal static class SvgPortGeometry
     /// <summary>Vertical breathing room kept between the outermost port and the body edge.</summary>
     public const double BodyVerticalPadding = 10.0;
 
-    // Why: the two framework-seeded PortDirections this renderer has column geometry for. Compared
-    // by Name (Ordinal) rather than against a cached PortDirections.ByName(...) option, because the
-    // TypeCollection is populated by the entry-point app's module initializers — a static field here
-    // could capture the NotFound sentinel if it initialised before that registration ran.
     private const string InDirectionName = "In";
     private const string OutDirectionName = "Out";
 
@@ -79,9 +75,6 @@ internal static class SvgPortGeometry
         return new NodePortLayout(BodyHalfHeight(Math.Max(inPorts.Count, outPorts.Count)), placements, unplaceablePorts);
     }
 
-    // Why: the body only needs to grow once a column holds more ports than the original box can
-    // contain. At 0 or 1 ports the expression stays under DefaultBodyHalfHeight, so an ordinary node
-    // renders at exactly its pre-port size and no existing canvas shifts.
     private static double BodyHalfHeight(int tallestColumnPortCount) =>
         Math.Max(
             DefaultBodyHalfHeight,
@@ -89,8 +82,6 @@ internal static class SvgPortGeometry
 
     private static void AddColumn(List<PortPlacement> into, List<ICanvasPort> ports, double dx)
     {
-        // Why: centre the column on the node — port i of n sits at (i - (n-1)/2) * spacing, which
-        // puts a lone port on the node's centre line and an even count symmetrically astride it.
         for (var i = 0; i < ports.Count; i++)
             into.Add(new PortPlacement(ports[i], dx, (i - ((ports.Count - 1) / 2.0)) * PortSpacing));
     }

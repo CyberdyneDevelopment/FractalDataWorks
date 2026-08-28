@@ -35,9 +35,6 @@ public abstract class DiscoverDataStoreEndpointBase : Endpoint<DiscoverDataStore
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
     {
-        // Why: "/datastores/discover" is shadowed by the "/datastores/{name}" catch-all route
-        // (a request binds name="discover"). The "-" placeholder segment makes the route
-        // non-colliding so the discovery endpoint is reachable. Client path matches.
         Post($"/{ResourceName}/-/discover");
 #if DEVELOP
         AllowAnonymous();

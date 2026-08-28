@@ -20,8 +20,6 @@ public sealed class CollectionPhaseFailedCode : ServiceTypeResultCodeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CollectionPhaseFailedCode"/> class.
     /// </summary>
-    // Why 61011: ServiceTypeLog.CollectionPhaseFailed is EventId 61011. One event, one number,
-    // whichever record of it you are holding.
     public CollectionPhaseFailedCode()
         : base(61011, "CollectionPhaseFailed",
             ResultSeverities.ByName("Error"),

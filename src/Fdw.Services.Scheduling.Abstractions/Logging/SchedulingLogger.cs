@@ -270,8 +270,6 @@ public static partial class SchedulingLogger
     /// Logs when next run time calculation fails due to an unrecognised timezone, falling back to UTC.
     /// The string parameter carries the cron expression or other available context for diagnostics.
     /// </summary>
-    // Why: level raised to Error (this recomputes the trigger in UTC, changing when the job fires) but
-    // the UTC-fallback behavior itself is intentionally left in place pending a separate decision.
     [MessageLogging(EventId = 91002, Level = LogLevel.Error, Message = "Failed to calculate next run time with configured timezone, falling back to UTC. Context: '{context}'")]
     public static partial IGenericMessage CalculateNextRunTimeZoneFailed(ILogger logger, Exception ex, string context);
 

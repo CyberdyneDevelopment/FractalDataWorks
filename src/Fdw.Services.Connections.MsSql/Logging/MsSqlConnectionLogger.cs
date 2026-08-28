@@ -467,8 +467,6 @@ public static partial class MsSqlConnectionLogger
     [MessageLogging(EventId = 11027, Level = LogLevel.Trace, Message = "Set SESSION_CONTEXT CanReadSecrets='1' on pooled connection")]
     public static partial IGenericMessage TraceCanReadSecretsContextSet(ILogger logger);
 
-    // Why: 3030 was AmbiguousTypedBodyParent — removed with TypedBodyParent elimination (FDW-479).
-    // Keeping the EventId gap so existing log archives remain readable.
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Transaction Events (5231-5235)
@@ -531,8 +529,6 @@ public static partial class MsSqlConnectionLogger
     /// <summary>
     /// Logs when a health probe (SELECT 1) succeeds.
     /// </summary>
-    // Why Debug, not Information: a successful periodic probe is steady-state noise — it fired every
-    // 5m15s forever. The probe FAILURE record keeps its own higher level.
     [MessageLogging(EventId = 11033, Level = LogLevel.Debug, Message = "Health probe succeeded for connection '{connectionName}'")]
     public static partial IGenericMessage ProbeSucceeded(ILogger logger, string connectionName);
 }

@@ -48,7 +48,6 @@ namespace Fdw.Data;
 /// </code>
 /// </para>
 /// </remarks>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class FilterExpression : IFilterExpression
 {

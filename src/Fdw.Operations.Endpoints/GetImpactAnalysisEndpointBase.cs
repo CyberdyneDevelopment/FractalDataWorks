@@ -23,9 +23,6 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisRequest, ImpactAnalysisResponse>
 {
-    // Why: IConfigurationGateway routes directly to ConfigurationDb via configurationSchema.json.
-    // Using plain IDataGateway would look for "ConfigurationDb" in the runtime DataStore table
-    // (data.DataStore), where it does not exist — it is only a bootstrap connection in the JSON.
     private readonly IConfigurationGateway _configurationGateway;
     private readonly ILogger<GetImpactAnalysisEndpointBase> _logger;
 
@@ -96,7 +93,6 @@ public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisReq
     /// <summary>Finds DataSet source records matching a specific property value.</summary>
     protected virtual async Task<IReadOnlyList<DataSetSourceConfiguration>> FindSourcesByProperty(string propertyName, string value, CancellationToken ct)
     {
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget.
         var command = new QueryCommand<DataSetSourceConfiguration>
         {
             Filter = new FilterExpression
@@ -123,7 +119,6 @@ public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisReq
 
         foreach (var dsId in dataSetIds)
         {
-            // Why: Addressing moved off IDataCommand onto DataStoreTarget.
             var dsCommand = new QueryCommand<DataSetRecord>
             {
                 Filter = new FilterExpression

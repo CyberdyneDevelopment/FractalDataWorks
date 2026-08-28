@@ -65,9 +65,6 @@ public sealed class PooledDictionaryMapperTypeTests
     [Fact]
     public void RegisterPutsTheFactoryInTheContainerUnderItsFactoryType()
     {
-        // Why this shape: the option no longer pushes its factory into the provider. EtlRowMapperTypes
-        // fills the provider by resolving FactoryType out of the container, so what this option owes is
-        // exactly this — Register puts the factory in DI, and FactoryType names the type to resolve.
         var services = new ServiceCollection();
         var sut = new PooledDictionaryMapperType();
         services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);

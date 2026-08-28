@@ -44,7 +44,6 @@ public sealed class EscalationService : IEscalationService
     {
         OperationsLog.EscalationFetchingPolicy(_logger, policyId);
 
-        // Why: provider.Get(id) composes Policy→Levels→Recipients via the base read cascade.
         var result = await _provider.Get(policyId, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
             return result.ToNewResult<IEscalationPolicy>();
@@ -61,9 +60,6 @@ public sealed class EscalationService : IEscalationService
     {
         OperationsLog.EscalationListingPolicies(_logger);
 
-        // Why: the list read returns headers only (base Get(ct) does not compose children — that is the
-        // keystone's deliberate list-vs-detail split). Re-fetch each enabled policy by id so callers get
-        // the composed Levels→Recipients aggregate, matching the prior per-policy hierarchy load.
         var headers = await _provider.Get(cancellationToken).ConfigureAwait(false);
         if (!headers.IsSuccess)
             return GenericResult<IReadOnlyList<IEscalationPolicy>>.Failure(
@@ -95,8 +91,6 @@ public sealed class EscalationService : IEscalationService
         CancellationToken cancellationToken = default)
         => GetPolicyMatching(c => c.ScheduleId == scheduleId, cancellationToken);
 
-    // Why: workflow/schedule lookups have no dedicated provider verb, so select the matching enabled
-    // header from the list read, then compose it by id. Single match expected (one policy per scope).
     private async Task<IGenericResult<IEscalationPolicy?>> GetPolicyMatching(
         Func<EscalationPolicyConfiguration, bool> predicate,
         CancellationToken cancellationToken)
@@ -128,8 +122,6 @@ public sealed class EscalationService : IEscalationService
 
         OperationsLog.EscalationCreatingPolicy(_logger, policy.Name);
 
-        // Why: provider.Save mints the policy Id (Id left empty) and cascade-saves Levels→Recipients,
-        // setting the logical {Parent}Id FKs (the translator resolves the physical {Parent}RowId by subquery).
         var result = await _provider.Save(BuildConfig(policy, id: null), cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess || result.Value is null)
             return GenericResult<IEscalationPolicy>.Failure(
@@ -147,13 +139,6 @@ public sealed class EscalationService : IEscalationService
     {
         OperationsLog.EscalationUpdatingPolicy(_logger, policyId);
 
-        // Why: Save alone now version-on-writes (sets every prior IsCurrent=0, inserts the new
-        // version) and cascades the new Levels→Recipients on every write. The Delete-then-Save
-        // tombstone workaround this replaced predates that: it targeted a Save that only updated
-        // in place unless a prior probe found no current row. Against the now fail-loud Delete
-        // (Delete errors when there is no current row instead of silently succeeding), that
-        // workaround would abort an update whenever the pre-check raced the row's actual state,
-        // even though Save alone would have handled the version-on-write cycle correctly.
         var saveResult = await _provider.Save(BuildConfig(policy, id: policyId), cancellationToken).ConfigureAwait(false);
         if (!saveResult.IsSuccess || saveResult.Value is null)
             return GenericResult<IEscalationPolicy>.Failure(
@@ -170,9 +155,6 @@ public sealed class EscalationService : IEscalationService
     {
         OperationsLog.EscalationDeletingPolicy(_logger, policyId);
 
-        // Why: soft-delete the policy header (version-on-write tombstone). Child levels/recipients keep
-        // their FK to the now non-current RowId, so subsequent reads (which compose by the current
-        // header's RowId) no longer surface them.
         var result = await _provider.Delete(policyId, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
             return GenericResult.Failure(
@@ -182,9 +164,6 @@ public sealed class EscalationService : IEscalationService
         return GenericResult.Success();
     }
 
-    // Why: map the domain IEscalationPolicy to the persistence config with nested Levels→Recipients.
-    // Child Ids are left empty (the save cascade mints them); the {Parent}Id FKs are set by the cascade.
-    // id=null for create (base mints the policy Id); id=policyId for update (same logical Id, new version).
     private static EscalationPolicyConfiguration BuildConfig(IEscalationPolicy policy, Guid? id)
         => new()
         {

@@ -49,15 +49,10 @@ public abstract class ListConfigurationInstancesEndpointBase : Endpoint<ListConf
     {
         ConfigurationEndpointLog.ListingInstances(_logger, req.Category ?? "none");
 
-        // Why: IConfigurationContainerLookup replaces ConfigurationTypes.All()/GetByServiceCategory().
-        // ByCategory() returns empty until Wave A6 populates typed-body SectionPath metadata.
-        // All() returns every container in the ctrl tree for the uncategorised list case.
         var containers = string.IsNullOrEmpty(req.Category)
             ? _containerLookup.All()
             : _containerLookup.ByCategory(req.Category);
 
-        // Why: Group by schema.table to avoid querying the same physical table twice when multiple
-        // containers map to the same backing store location (legacy compatibility edge case).
         var tableGroups = containers
             .GroupBy(c => $"{c.Parent.Name}.{c.Name}", StringComparer.Ordinal)
             .ToList();
@@ -109,7 +104,6 @@ public abstract class ListConfigurationInstancesEndpointBase : Endpoint<ListConf
             }
             catch (Exception ex)
             {
-                // Why: Re-throw so HandleAsync can return 500 — partial results are worse than a clear error.
                 ConfigurationEndpointLog.TableQueryFailed(_logger, ex, container.Name, "configuration instances");
                 throw;
             }
@@ -120,8 +114,6 @@ public abstract class ListConfigurationInstancesEndpointBase : Endpoint<ListConf
 
     private static ConfigurationInstanceSummaryResponse MapToSummary(ConfigurationRecord record, IDataContainer container)
     {
-        // Why: IDataContainer.Name is the type discriminator. ServiceCategory is not yet on IDataContainer
-        // (pending Wave A6 typed-body promotion); use Path.Name as a proxy for the schema grouping.
         var serviceType = record.Type ?? container.Name;
 
         return new ConfigurationInstanceSummaryResponse

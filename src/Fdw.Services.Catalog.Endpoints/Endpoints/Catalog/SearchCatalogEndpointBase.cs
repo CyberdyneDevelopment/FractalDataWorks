@@ -30,7 +30,6 @@ public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest,
     }
 
     /// <summary>Executes a catalog search using the provided criteria and returns matching entries.</summary>
-    // Why: empty Query returns all catalog entries — the catalog must be browsable without a query.
     public override async Task HandleAsync(CatalogSearchRequest req, CancellationToken ct)
     {
         Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
@@ -43,8 +42,6 @@ public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest,
     /// Performs the catalog search. Override to provide a custom search implementation that enumerates the
     /// host's catalog entities (datasets, containers, …). The default returns no entries.
     /// </summary>
-    // Why: async so an override can enumerate datasets/containers through their async providers; the base
-    // catalog assembly stays generic (no Data dependency) — the consuming app supplies the real source.
     protected virtual Task<IReadOnlyList<CatalogEntryDto>> PerformSearch(CatalogSearchRequest req, CancellationToken ct)
         => Task.FromResult<IReadOnlyList<CatalogEntryDto>>([]);
 }

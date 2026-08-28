@@ -45,8 +45,6 @@ public abstract class GetChildConfigurationTypesEndpointBase : CrudListEndpointB
     /// </remarks>
     protected virtual IReadOnlyList<ConfigurationTypeSummaryDto> MapChildTypes(string parent)
     {
-        // Why: ParentTableName removed from IConfigurationType — IDataNode owns hierarchy.
-        // Returns empty; parent-child navigation goes through IDataNode, not ConfigurationTypes.
         return [];
     }
 }

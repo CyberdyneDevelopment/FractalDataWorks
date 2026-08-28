@@ -64,10 +64,6 @@ public abstract class UpdateFieldMappingTransformEndpointBase
     protected virtual string ConfigurationConnectionName => _dataSetProvider.DataStoreName;
 
     /// <summary>Gets the configuration path that holds the transform containers.</summary>
-    // Why not the dataset provider's PathName: these containers are declared in ConfigurationDb's
-    // "transform" path, not "data". Borrowing the dataset path made every addressed lookup fail with
-    // "DataContainer 'FieldMappingTransform' not found in path 'data'", which surfaced as a 404 on
-    // every transform route.
     protected virtual string TransformPathName => "transform";
 
     /// <summary>Gets the container name for FieldMappingTransform queries.</summary>
@@ -111,8 +107,6 @@ public abstract class UpdateFieldMappingTransformEndpointBase
     {
         FieldMappingTransformEndpointLog.UpdatingTransform(Logger, request.TransformId);
 
-        // Why the id is carried rather than defaulted: default means insert to the gateway, which is
-        // exactly why the save path could never edit.
         var config = new FieldMappingTransformConfiguration
         {
             Id = request.TransformId,
@@ -196,7 +190,6 @@ public abstract class UpdateFieldMappingTransformEndpointBase
         {
             var paramConfig = new FieldMappingTransformParameterConfiguration
             {
-                // Why: default signals insert with a new UUIDv7 from the gateway.
                 Id = default,
                 FieldMappingTransformId = request.TransformId,
                 Name = param.Name,

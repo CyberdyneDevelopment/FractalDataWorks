@@ -14,7 +14,6 @@ namespace Fdw.Data.Components.Visualization;
 /// Immutable context for the visualization provider.
 /// Carries the current data, visualization type, config, stats, and filter state.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class VisualizationContext : ProviderContextBase
 {

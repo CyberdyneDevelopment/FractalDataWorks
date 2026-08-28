@@ -12,8 +12,6 @@ namespace Fdw.Orchestration.Workflows.Abstractions;
 /// Universal per-run fields (ExecutionId, StartTime, CancellationToken, Logger,
 /// Services, Parameters, SharedState) are inherited from <see cref="IExecutionContext"/>.
 /// </remarks>
-// Why: Removes duplication of StartTime/CancellationToken/Parameters/SharedState
-// that previously existed independently on this interface alongside IOrchestrationContext.
 public interface IWorkflowExecutionContext : IExecutionContext
 {
     /// <summary>

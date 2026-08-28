@@ -7,8 +7,6 @@ namespace Fdw.UI.Rendering.Blazor.Messages;
 /// <summary>
 /// Log messages for Blazor rendering operations.
 /// </summary>
-// Why: EventIds mirror SpectreRenderingMessages for the same conditions so the two rendering
-// backends stay diagnosable with one mental model; the type code disambiguates the backend.
 [MessageLoggingTypeCode("BLAZORUI")]
 public static partial class BlazorRenderingMessages
 {

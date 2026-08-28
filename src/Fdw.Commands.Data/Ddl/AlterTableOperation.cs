@@ -3,7 +3,6 @@ namespace Fdw.Commands.Data.Ddl;
 /// <summary>
 /// Represents a single operation in an ALTER TABLE command.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class AlterTableOperation
 {

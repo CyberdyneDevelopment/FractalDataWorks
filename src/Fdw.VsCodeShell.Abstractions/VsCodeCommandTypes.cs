@@ -56,9 +56,6 @@ public partial class VsCodeCommandTypes
 
             foreach (var option in Options)
             {
-                // Why this fails loud: Options is IServiceTypeRegistration[], and an entry that is not a
-                // command cannot name the id the shell resolves by. Skipping it would leave that command
-                // unroutable, surfacing only when VS Code sends the id and nothing answers.
                 if (option is not IVsCodeCommandType command)
                     return GenericResult<IHostApplicationBuilder>.Failure(
                         ServiceTypeLog.FactoryRegistrationFailed(

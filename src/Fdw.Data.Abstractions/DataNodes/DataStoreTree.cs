@@ -12,7 +12,6 @@ namespace Fdw.Data.Abstractions;
 /// resolve a store via <see cref="DataNodeTree{TRoot}.Node(string)"/> and then dot-walk
 /// <see cref="IDataStore.Paths"/> / <see cref="IDataNodePath.Containers"/> / fields.
 /// </remarks>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class DataStoreTree : DataNodeTree<IDataStore>
 {

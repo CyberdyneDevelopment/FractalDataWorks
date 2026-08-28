@@ -98,11 +98,6 @@ public class ServiceTypePhaseReportingTests
         ServiceTypeCollectionBase<OptionBase, IThrowingCase>.Registration(
             (builder, loggerFactory) => throw new InvalidOperationException("phase blew up"));
 
-        // Why the throw must NOT survive: ending the process is a decision about this application, and
-        // the framework is not the thing entitled to make it. The phase converts the exception into a
-        // failure the caller has to read to get the builder back out of — so a half-registered domain
-        // still cannot reach a running application by accident, but "abort" versus "run without this
-        // domain" stays the host's call.
         var result = ServiceTypeCollectionBase<OptionBase, IThrowingCase>.Register(NewBuilder(), log);
 
         result.IsSuccess.ShouldBeFalse();
@@ -118,9 +113,6 @@ public class ServiceTypePhaseReportingTests
         ServiceTypeCollectionBase<OptionBase, ICodedCase>.Registration(
             (builder, loggerFactory) => throw new InvalidOperationException("phase blew up"));
 
-        // Why the code matters as well as the failure: a caller deciding whether to abort needs to tell
-        // "a phase crashed" from "a domain deliberately refused", and the code is what carries that
-        // distinction across the boundary. A bare IsSuccess=false says only that something went wrong.
         var result = ServiceTypeCollectionBase<OptionBase, ICodedCase>.Register(NewBuilder(), log);
 
         result.IsSuccess.ShouldBeFalse();
@@ -135,9 +127,6 @@ public class ServiceTypePhaseReportingTests
         var log = new CapturingLoggerFactory();
         var builder = NewBuilder();
 
-        // Why this is worth pinning next to the failure cases: wrapping the phases in a result is only
-        // safe if the success path still yields the same builder. If it did not, every chained caller
-        // would silently configure a different builder than the one it later builds.
         var result = ServiceTypeCollectionBase<OptionBase, IPassThroughCase>.Configure(builder, log);
 
         result.IsSuccess.ShouldBeTrue();
@@ -158,9 +147,6 @@ public class ServiceTypePhaseReportingTests
         log.Messages.Clear();
         new AlternateTestServiceType().Register(NewBuilder(), log);
 
-        // Why both report the same way: a body that has been appended to is neither the option's own
-        // nor the base's, so reporting one against the other stopped describing anything real. What
-        // is still worth pinning is that no option runs a phase without saying so.
         withBody.ShouldContain(m => m.Contains("Register", StringComparison.Ordinal));
         log.Messages.ShouldContain(m => m.Contains("Register", StringComparison.Ordinal));
     }

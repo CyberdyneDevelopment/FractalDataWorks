@@ -3,7 +3,6 @@ namespace Fdw.Services.Data.Clients.Models;
 /// <summary>
 /// Statistical summary for a numeric column.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class StatSet
 {

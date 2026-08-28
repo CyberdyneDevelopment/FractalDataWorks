@@ -41,8 +41,6 @@ public sealed class AnalyticsClientType : ApiClientTypeBase<AnalyticsApiClient>
                 return new AnalyticsApiClient(factory.CreateClient(Name), logger);
             });
 
-            // Why: IAnalyticsService was previously registered ad-hoc in application Program.cs files.
-            // Singleton because the in-memory implementation uses ConcurrentBag for process-lifetime tracking.
             builder.Services.TryAddSingleton<IAnalyticsService, AnalyticsService>();
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -27,8 +27,6 @@ namespace Fdw.Services.Authentication.Tests;
 /// </summary>
 public sealed class DefaultPrincipalResolverTests
 {
-    // Why an empty provider rather than a fake gateway: these providers are mocked at their virtual
-    // members and never reach a gateway, so holding none states that rather than implying one exists.
     private static IConfigurationGatewayProvider NullGateway() => new ConfigurationGatewayProvider();
 
     private static Mock<UserTenantConfigurationProvider> CreateTenantProviderMock() => new(
@@ -295,7 +293,6 @@ public sealed class DefaultPrincipalResolverTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.FindAll(ClaimDefinitions.roles.Name).ShouldBeEmpty();
-        // Why: GetAllRoles must never be reached once the assignments query itself failed.
         f.RoleProvider.Verify(p => p.GetAllRoles(It.IsAny<CancellationToken>()), Times.Never);
     }
 

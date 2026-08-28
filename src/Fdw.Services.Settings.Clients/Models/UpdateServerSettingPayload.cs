@@ -15,9 +15,6 @@ public sealed class UpdateServerSettingPayload
     /// </summary>
     public string? SettingValue { get; set; }
 
-    // Why: the server endpoint accepts these four optional fields (gated `if (req.X is not null)`),
-    // but the client payload previously omitted them, so a metadata edit was impossible to send. Carrying
-    // them here lets the Update client method ship them without dropping the values silently.
 
     /// <summary>
     /// Gets or sets the new description. When null the server leaves the existing value unchanged.

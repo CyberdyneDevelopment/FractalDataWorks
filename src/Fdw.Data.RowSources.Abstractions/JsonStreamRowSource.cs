@@ -194,10 +194,6 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
                 continue;
             }
 
-            // Why: a purely numeric segment indexes into an ARRAY element — real-world APIs nest
-            // the row array under indexed wrappers (e.g. ESPN's sports.0.leagues.0.teams). A
-            // numeric segment against a non-array, an out-of-range index, or a non-numeric
-            // segment against a non-object all return default (caller reports not-an-array).
             if (element.ValueKind == JsonValueKind.Array)
             {
                 if (!int.TryParse(segment, System.Globalization.NumberStyles.None,
@@ -266,10 +262,6 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
                     break;
 
                 case JsonValueKind.Array when _options.FlattenNestedObjects:
-                    // Why: when flattening is enabled, arrays within row objects expand by index
-                    // so each element becomes its own field (e.g. geometry.coordinates.0 = -122.0).
-                    // Top-level RowArrayPath array is handled separately by the array enumerator;
-                    // this only applies to arrays found inside a row object.
                     FlattenArrayByIndex(property.Value, fieldName);
                     break;
 
@@ -335,13 +327,10 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
             switch (element.ValueKind)
             {
                 case JsonValueKind.Object:
-                    // Why: recurse into nested objects within arrays using the indexed prefix,
-                    // mirroring the object-flatten path so e.g. arr.0.city = "NYC".
                     ReadObjectProperties(element, indexedName);
                     break;
 
                 case JsonValueKind.Array:
-                    // Why: recurse for nested arrays, so e.g. matrix.0.0 = value.
                     FlattenArrayByIndex(element, indexedName);
                     break;
 

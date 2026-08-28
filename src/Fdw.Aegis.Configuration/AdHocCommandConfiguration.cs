@@ -29,7 +29,6 @@ public partial class AdHocCommandConfiguration : IApprovalPolicyConfiguration
     /// <summary>
     /// Gets or sets the unique identifier for this typed body row.
     /// </summary>
-    // Why: NO Guid.NewGuid() default — DB owns identity assignment (strip-poco-defaults).
     public Guid Id { get; set; }
 
     /// <summary>
@@ -37,9 +36,6 @@ public partial class AdHocCommandConfiguration : IApprovalPolicyConfiguration
     /// </summary>
     public Guid AegisCommandId { get; set; }
 
-    // Why: IGenericConfiguration members below satisfy the interface contract. Name/SectionName
-    // are not meaningful on the typed body — the canonical name lives on the parent
-    // AegisCommandConfiguration row. Mirrors MsSqlConnectionConfiguration.
     string IGenericConfiguration.Name
     {
         get => string.Empty;

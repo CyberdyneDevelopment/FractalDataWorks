@@ -5,7 +5,6 @@ namespace Fdw.Web.Http.Abstractions.Policies;
 /// <summary>
 /// Sliding time window rate limiting.
 /// </summary>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(RateLimitPolicies), "SlidingWindow", RestrictToCurrentCompilation = true)]
 public sealed class SlidingWindow : RateLimitPolicyBase

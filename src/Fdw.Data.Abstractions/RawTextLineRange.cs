@@ -9,6 +9,5 @@ namespace Fdw.Data.Abstractions;
 /// Line numbers follow the Roslyn convention: lines are 1-based and both ends of the range
 /// are inclusive. A single-line range has <c>StartLine == EndLine</c>.
 /// </remarks>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record RawTextLineRange(int StartLine, int EndLine);

@@ -55,9 +55,6 @@ public partial class SecretManagerConfiguration : ISecretManagerConfiguration
     /// <summary>
     /// Gets or sets the durable logical identifier (matches sec.SecretManager.Id).
     /// </summary>
-    // Why: NO Guid.NewGuid() default — DB owns identity assignment. A random default
-    // here would silently propagate to child Get(domainConfigurationId) lookups when the mapper
-    // failed to bind Id, returning ConfigurationNotFound for valid records.
     public Guid Id { get; set; }
 
     /// <summary>
@@ -102,8 +99,6 @@ public partial class SecretManagerConfiguration : ISecretManagerConfiguration
     /// Populated on the read path after loading the typed body table row.
     /// Not persisted — the typed body is saved separately to its own table.
     /// </summary>
-    // Why: [NotMapped] — not a column on sec.SecretManager. Written separately via typed provider.
-    // Read path populates by dispatching on ServiceOptionType to the appropriate typed provider.
     [NotMapped]
     public ISecretManagerImplementationConfiguration? Configuration { get; set; }
 }

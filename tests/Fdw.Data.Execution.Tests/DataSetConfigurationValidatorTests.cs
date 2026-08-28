@@ -240,7 +240,6 @@ public sealed class DataSetConfigurationValidatorTests
         // Act
         var result = _sut.Validate(config);
 
-        // Why: Name-matches-field-list validation was removed; records are resolved by RowId at load time.
         result.IsValid.ShouldBeTrue();
     }
 
@@ -327,7 +326,6 @@ public sealed class DataSetConfigurationValidatorTests
         // Act
         var result = _sut.Validate(config);
 
-        // Why: Name-matches-field-list validation was removed; records resolved by RowId at load time.
         result.IsValid.ShouldBeTrue();
     }
 }

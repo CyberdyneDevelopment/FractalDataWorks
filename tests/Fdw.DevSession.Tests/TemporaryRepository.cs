@@ -25,19 +25,12 @@ internal sealed class TemporaryRepository : IDisposable
 
     public static TemporaryRepository CreateWithInitialCommit()
     {
-        // Why a temp subdirectory and not a fixed folder under the temp path: a shared
-        // "fdw-devsession-tests" segment is created by whoever runs the suite first and is owned
-        // by them. On a machine where CI and a developer both run, the second one is locked out
-        // of every test in the suite. CreateTempSubdirectory names the directory uniquely and
-        // gives it to the caller alone.
         var root = Directory.CreateTempSubdirectory("fdw-devsession-tests-").FullName;
         Directory.CreateDirectory(System.IO.Path.Combine(root, "repo"));
 
         var repository = new TemporaryRepository(root);
 
         repository.Git("init", "--initial-branch=main");
-        // Why: identity is set per-repository rather than relying on the machine's global git
-        // config, so the suite passes on a CI runner that has none.
         repository.Git("config", "user.email", "tests@fdw.local");
         repository.Git("config", "user.name", "FDW Tests");
         repository.WriteFile("README.md", "initial");
@@ -92,8 +85,6 @@ internal sealed class TemporaryRepository : IDisposable
         }
         catch (IOException)
         {
-            // Why: a leaked temp directory must never fail an otherwise-passing test. The path is
-            // under the OS temp root and is reclaimed there.
         }
     }
 
@@ -101,8 +92,6 @@ internal sealed class TemporaryRepository : IDisposable
     {
         if (!Directory.Exists(path)) return;
 
-        // Why: git marks objects in .git read-only; Directory.Delete refuses those on Windows and
-        // on some Linux configurations, so the attributes are cleared first.
         foreach (var file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
         {
             File.SetAttributes(file, FileAttributes.Normal);

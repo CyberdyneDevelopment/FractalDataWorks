@@ -12,7 +12,6 @@ namespace Fdw.Services.SecretManagers.Endpoints.Logging;
 [MessageLoggingTypeCode("ENDPOINTS11")]
 public static partial class SecretManagerEndpointLog
 {
-    // Why (FDW-583): pre-action announcement, not a completed business milestone — noise at Info.
     /// <summary>Logs listing secret managers.</summary>
     [MessageLogging(EventId = 11000, Level = LogLevel.Debug,
         Message = "Listing secret managers")]
@@ -23,7 +22,6 @@ public static partial class SecretManagerEndpointLog
         Message = "Found {count} secret manager(s)")]
     public static partial IGenericMessage SecretManagersListed(ILogger logger, int count);
 
-    // Why (FDW-583): pre-action announcement, not a completed business milestone — noise at Info.
     /// <summary>Logs getting a secret manager by name.</summary>
     [MessageLogging(EventId = 11002, Level = LogLevel.Debug,
         Message = "Getting secret manager '{name}'")]
@@ -34,7 +32,6 @@ public static partial class SecretManagerEndpointLog
         Message = "Secret manager '{name}' not found")]
     public static partial IGenericMessage SecretManagerNotFound(ILogger logger, string name);
 
-    // Why (FDW-583): pre-action announcement, not a completed business milestone — noise at Info.
     /// <summary>Logs creating a secret manager.</summary>
     [MessageLogging(EventId = 11003, Level = LogLevel.Debug,
         Message = "Creating secret manager '{name}' of type '{secretManagerType}'")]
@@ -55,7 +52,6 @@ public static partial class SecretManagerEndpointLog
         Message = "Secret manager '{name}' created successfully")]
     public static partial IGenericMessage SecretManagerCreated(ILogger logger, string name);
 
-    // Why (FDW-583): pre-action announcement, not a completed business milestone — noise at Info.
     /// <summary>Logs updating a secret manager.</summary>
     [MessageLogging(EventId = 11005, Level = LogLevel.Debug,
         Message = "Updating secret manager '{name}'")]
@@ -71,7 +67,6 @@ public static partial class SecretManagerEndpointLog
         Message = "Secret manager '{name}' updated successfully")]
     public static partial IGenericMessage SecretManagerUpdated(ILogger logger, string name);
 
-    // Why (FDW-583): pre-action announcement, not a completed business milestone — noise at Info.
     /// <summary>Logs deleting a secret manager.</summary>
     [MessageLogging(EventId = 11007, Level = LogLevel.Debug,
         Message = "Deleting secret manager '{name}'")]

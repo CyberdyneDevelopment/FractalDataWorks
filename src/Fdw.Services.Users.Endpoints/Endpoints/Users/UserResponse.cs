@@ -32,8 +32,6 @@ public class UserResponse : ResourceDetail
     /// <summary>
     /// Gets or sets when the user was created.
     /// </summary>
-    // Why: DateTimeOffset serializes with timezone offset (ISO 8601 compliant). DateTime serialized
-    // without offset because the underlying value was DateTimeKind.Unspecified, breaking ISO regex.
     public DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>

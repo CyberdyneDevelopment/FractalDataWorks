@@ -76,8 +76,6 @@ public sealed class AuiToolExtensionsTests
 
         await Invoke(action, """{"name":"nightly","note":null}""");
 
-        // Why omit: the parameter bag is non-nullable, so the action applies its own
-        // required/optional rules instead of special-casing an invented sentinel value.
         action.Captured.ShouldNotBeNull().ContainsKey("note").ShouldBeFalse();
     }
 

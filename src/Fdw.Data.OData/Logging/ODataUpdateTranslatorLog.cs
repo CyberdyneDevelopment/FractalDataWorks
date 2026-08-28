@@ -38,14 +38,12 @@ public static partial class ODataUpdateTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses ODataResultCodes.ContainerNull's number (20000).
     [MessageLogging(
         EventId = 20000,
         Level = LogLevel.Error,
         Message = "ODataUpdateTranslator received a null container")]
     public static partial IGenericMessage ContainerNull(ILogger logger);
 
-    // Why: reuses ODataResultCodes.UpdateDataRequired's number (21002).
     [MessageLogging(
         EventId = 21002,
         Level = LogLevel.Error,
@@ -54,7 +52,6 @@ public static partial class ODataUpdateTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses ODataResultCodes.UpdateResourceIdNotFound's number (30000).
     [MessageLogging(
         EventId = 30000,
         Level = LogLevel.Error,
@@ -63,9 +60,6 @@ public static partial class ODataUpdateTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: a fresh number, not ODataResultCodes.UpdateTranslationFailed's own 91003 — see
-    // ODataQueryTranslatorLog.QueryTranslationFailed's remark: 91003 already belongs to the
-    // pre-existing (orphaned) ODataLog in this same REST TypeCode pool.
     [MessageLogging(
         EventId = 92002,
         Level = LogLevel.Error,

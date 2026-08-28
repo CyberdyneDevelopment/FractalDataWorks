@@ -40,9 +40,6 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     protected IDictionary<string, IServiceFactory<TService>> Factories => _factories;
 
     /// <summary>Gets the domain's parent configuration provider.</summary>
-    // Why the erased view: a configuration provider is always closed over its CONCRETE configuration
-    // class and IServiceConfigurationProvider<T> is invariant, so no single closed typed field can hold
-    // one. This base reads only Id and ServiceOptionType off the record it returns.
     protected IDomainConfigurationProvider<TConfiguration>? DomainConfigurationProvider => _domainConfigurationProvider;
 
     private static readonly Dictionary<string, Func<IServiceProvider, IServiceFactory<TService>>> _registered
@@ -69,9 +66,6 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     /// </summary>
     /// <param name="services">The scope's container, used to resolve the registered factories.</param>
     /// <param name="logger">The logger for this provider.</param>
-    // Why the container is resolved here and NOT stored: every registered func is invoked once, now,
-    // against this scope. The provider keeps the resulting factories, never the container — so
-    // nothing can reach back into DI at request time.
     protected PlatformServiceProviderBase(
         IServiceProvider services,
         ILogger<PlatformServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>> logger)
@@ -117,12 +111,6 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
 
     // ── Registration ────────────────────────────────────────────────────────
 
-    // Why an adapter rather than a checked cast: IServiceConfigurationProvider<T> does NOT inherit the
-    // erased IServiceConfigurationProvider — they are two independent interfaces that
-    // ImplementationConfigurationProviderBase happens to implement both of. Register accepts the typed one in its
-    // signature, so refusing an argument that satisfies that signature makes the signature a lie, and
-    // the refusal lands at start-up on something the compiler already accepted. Erasing it here means
-    // every value the signature admits actually works.
     private static IServiceConfigurationProvider Erase<TConcrete>(IServiceConfigurationProvider<TConcrete> provider)
         where TConcrete : class, TConfiguration
         => provider as IServiceConfigurationProvider ?? new ErasedConfigurationProvider<TConcrete>(provider);
@@ -197,9 +185,6 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     public virtual async Task<IGenericResult<TService>> Get(Guid id, CancellationToken cancellationToken = default)
         => await Resolve(id.ToString(), ct => _domainConfigurationProvider!.Get(id, ct), cancellationToken).ConfigureAwait(false);
 
-    // Why one path for both: the domain configuration provider does the whole resolution — it finds the
-    // member, reads the ServiceOptionType that member names, and returns the implementation
-    // configuration. All that is left here is choosing the factory registered for that same type.
     private async Task<IGenericResult<TService>> Resolve(
         string identifier,
         Func<CancellationToken, Task<IGenericResult<TConfiguration>>> get,
@@ -227,9 +212,6 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
         return await CreateFrom(configuration.Value, identifier, cancellationToken).ConfigureAwait(false);
     }
 
-    // Why the registry and not the container: each option registered its factory func, and this
-    // provider resolved every one of them in its constructor. Nothing reaches back into DI at
-    // request time.
     private async Task<IGenericResult<TService>> CreateFrom(
         TConfiguration configuration, string identifier, CancellationToken cancellationToken)
     {
@@ -255,16 +237,10 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
 
         ServiceLogger.FactoryLookupSucceeded(_logger, serviceOptionType);
 
-        // Why the async overload wins when the factory offers one: a domain whose creation resolves a
-        // secret cannot do it in the sync Create, and reaching it any other way would need a provider
-        // of its own.
         var created = factory is IAsyncServiceFactory<TService> asyncFactory
             ? await asyncFactory.Create(configuration, cancellationToken).ConfigureAwait(false)
             : Create(factory, configuration);
 
-        // Why a null result is caught here: a factory registered under a ServiceOptionType it cannot
-        // actually build returns nothing at all, and handing that back gives the caller a null where a
-        // result belongs — the failure then surfaces far from the factory that caused it.
         return created ?? GenericResult<TService>.Failure(
             ServicesResultCodes.ByName("InvalidFactoryType"),
             ResultDetails.Create("ServiceOptionType", serviceOptionType,
@@ -272,8 +248,6 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     }
 
     // ── Typed views ─────────────────────────────────────────────────────────
-    // Why explicit: the constraint here is T : IGenericService, which the domain-typed Get above does
-    // not carry. Explicit implementation lets both live on one class.
 
     async Task<IGenericResult<T>> IPlatformServiceProvider.Get<T>(string name, CancellationToken cancellationToken)
         => Cast<T>(await Get(name, cancellationToken).ConfigureAwait(false));
@@ -297,8 +271,6 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     {
         if (result.IsSuccess)
         {
-            // Why a failure and not a widened success: the caller asked for a T, and a service that is
-            // not one cannot be returned as one. Carrying the success forward would hand back a null.
             return result.Value is T typed
                 ? GenericResult<T>.Success(typed)
                 : GenericResult<T>.Failure(
@@ -311,8 +283,6 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     }
 
     /// <inheritdoc />
-    // Why empty rather than enumerating: a domain's members are configuration rows, and listing every
-    // service means building every one. A caller that wants the set asks the configuration provider.
     public virtual Task<IGenericResult<IReadOnlyList<TService>>> Get(CancellationToken cancellationToken = default)
         => Task.FromResult(GenericResult<IReadOnlyList<TService>>.Success([]));
 
@@ -326,9 +296,6 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
                                      "ActualType", configuration?.GetType().Name ?? "(null)")));
 
     /// <inheritdoc />
-    // Why the caller's configuration is used as given: it was resolved once, in whatever context the
-    // caller had. Re-resolving it here would run under a different one, and row-level security can
-    // return a different row for the same name.
     public virtual Task<IGenericResult<TService>> Get(TConfiguration configuration, CancellationToken cancellationToken = default)
         => configuration is null
             ? Task.FromResult(GenericResult<TService>.Failure(

@@ -3,7 +3,6 @@ namespace Fdw.Services.Multitenancy.Abstractions;
 /// <summary>
 /// Dynamic tenant created from configuration at runtime.
 /// </summary>
-// Why: data-bearing option/category; ctor only forwards literal data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ConfiguredTenant : TenantTypeBase
 {

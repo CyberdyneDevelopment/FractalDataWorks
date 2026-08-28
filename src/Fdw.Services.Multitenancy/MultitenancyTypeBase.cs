@@ -62,10 +62,6 @@ public abstract class MultitenancyTypeBase<TFactory> :
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<MutableTenantContext>());
         services.AddScoped<IMutableTenantContext>(sp => sp.GetRequiredService<MutableTenantContext>());
 
-        // Why: Org context is always registered alongside tenant context so IOrgContext is
-        // injectable in every service that uses multitenancy. When OrgResolutionMiddleware
-        // does not run (tenant resolution disabled), HasOrg remains false and the org tier in
-        // DefaultAuthorizationService contributes zero grants.
         services.AddScoped<MutableOrgContext>();
         services.AddScoped<IOrgContext>(sp => sp.GetRequiredService<MutableOrgContext>());
         services.AddScoped<IMutableOrgContext>(sp => sp.GetRequiredService<MutableOrgContext>());

@@ -41,10 +41,6 @@ public abstract class SchemaDiscoveryTypeBase : TypeOptionBase<int, SchemaDiscov
     {
     }
 
-    // Why the type name: TypeCollectionBase derives its own id the same way, so this is the idiom
-    // already in Fdw.Collections rather than a second hashing scheme. Lookup here is ByName —
-    // SchemaDiscoveryTypes.ByName is what MsSqlConnectionType and PostgreSqlConnectionType call — so the
-    // id only has to be distinct, not stable across processes.
     private static int DeriveId(string name)
         => StringComparer.Ordinal.GetHashCode(name);
 }

@@ -13,8 +13,6 @@ public sealed class FixedWidthRowWriterOptions : RowWriterOptions
     /// <summary>
     /// Gets or sets the ordered fixed-width field definitions. Required.
     /// </summary>
-    // Why: NO FALLBACKS — field layout comes from the container schema, never guessed.
-    // IList (mutable) for option binding/assignment; backed by List.
     public IList<FixedWidthField> Fields { get; set; } = new List<FixedWidthField>();
 
     /// <summary>

@@ -34,8 +34,6 @@ public sealed class OrchestrationNodeOrchestratorBackgroundService : BackgroundS
     {
         _queue = queue ?? throw new ArgumentNullException(nameof(queue));
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
-        // Why NullLogger fallback: per FDW convention, ensures the service remains functional
-        // if DI does not wire up logging.
         _logger = logger ?? NullLogger<OrchestrationNodeOrchestratorBackgroundService>.Instance;
     }
 
@@ -44,8 +42,6 @@ public sealed class OrchestrationNodeOrchestratorBackgroundService : BackgroundS
     {
         OrchestrationNodeOrchestratorLog.OrchestratorStarted(_logger);
 
-        // Why ReadAllAsync with ConfigureAwait: respects the stoppingToken — when the host
-        // shuts down, the loop exits after the current item completes, providing graceful shutdown.
         await foreach (var request in _queue.Reader.ReadAllAsync(stoppingToken).ConfigureAwait(false))
         {
             await ProcessRequest(request, stoppingToken).ConfigureAwait(false);
@@ -56,16 +52,9 @@ public sealed class OrchestrationNodeOrchestratorBackgroundService : BackgroundS
 
     private async Task ProcessRequest(OrchestrationNodeExecutionRequest request, CancellationToken stoppingToken)
     {
-        // Why CreateAsyncScope: each node execution needs its own DI scope so scoped services
-        // (IExecutionTracker, IDataGateway, IOrchestrationNodeOrchestrator) have correct lifetimes.
         var scope = _scopeFactory.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
-            // Why here, before resolving IOrchestrationNodeOrchestrator: mirrors
-            // PipelineExecutionBackgroundService's seam — a background execution has no
-            // ClaimsPrincipal, so without this the scoped IAuthenticationContext stays absent and RLS
-            // SESSION_CONTEXT is never set for this scope's connections. No-op when the accessor isn't
-            // registered, the request carries no TenantId, or the scope already has a context.
             EstablishWorkAuthenticationContext(scope.ServiceProvider, request);
 
             var orchestrator = scope.ServiceProvider.GetRequiredService<IOrchestrationNodeOrchestrator>();
@@ -76,27 +65,17 @@ public sealed class OrchestrationNodeOrchestratorBackgroundService : BackgroundS
             }
             catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
-                // Why: cancellation is expected during graceful shutdown — observe at Debug.
-                // The orchestrator is responsible for recording any partial completion.
                 OrchestrationNodeOrchestratorLog.OrchestratorCancelledDuringShutdown(
                     _logger, ex, request.RootNodeId.ToString("N"), request.ExecutionId);
             }
             catch (Exception ex)
             {
-                // Why catch-all here: prevents the background service loop from dying on
-                // an unexpected error in one request. Each request is isolated.
                 OrchestrationNodeOrchestratorLog.OrchestratorException(
                     _logger, ex, request.RootNodeId.ToString("N"), request.ExecutionId);
             }
         }
     }
 
-    // Why: stamps the per-execution scope's ambient IAuthenticationContext (via the AsyncLocal-backed
-    // IAuthenticationContextAccessor) with a WorkAuthenticationContext carrying request.TenantId, so
-    // every MsSqlConnection created for the rest of this scope sets RLS SESSION_CONTEXT('TenantId').
-    // Mirrors PipelineExecutionBackgroundService.EstablishWorkAuthenticationContext.
-    // Why internal (not private): unit-tested directly by Fdw.Services.Etl.Projects.Tests via
-    // InternalsVisibleTo, rather than standing up the full node-orchestration dependency graph.
     internal void EstablishWorkAuthenticationContext(IServiceProvider services, OrchestrationNodeExecutionRequest request)
     {
         if (!request.TenantId.HasValue)

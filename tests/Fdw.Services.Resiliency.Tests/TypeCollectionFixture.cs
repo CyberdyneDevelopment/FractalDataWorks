@@ -15,9 +15,6 @@ public sealed class TypeCollectionFixture
         // Force legacy TypeCollection to initialize.
         _ = ResiliencyPolicies.All();
 
-        // Why: force ResiliencyTypes to initialize with all strategy types registered.
-        // Referencing types from each strategy assembly triggers their module initializers,
-        // which register the TypeOption with ResiliencyTypes before ByName() is called in tests.
         _ = ResiliencyTypes.All();
         _ = new Fdw.Services.Resiliency.Polly.PollyRetryResiliencyType();
         _ = new Fdw.Services.Resiliency.PrimaryBackup.PrimaryBackupResiliencyType();

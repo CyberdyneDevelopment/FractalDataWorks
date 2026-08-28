@@ -106,7 +106,6 @@ public sealed class FindUsagesTranslator : RoslynCommandTranslatorBase<FindUsage
         }
         catch (Exception ex)
         {
-            // Why: per-call failures are tolerated (best-effort); record so they are visible.
             FindUsagesTranslatorLog.ReferencesLookupFailed(Logger, symbol.Name, ex.GetType().Name);
             usages =
             [

@@ -29,9 +29,6 @@ public class ImplementationConfigurationProvider<TContract, TConfig, TCommand>
     where TConfig : class, TContract
     where TCommand : ConfigurationCommandBase<TConfig>
 {
-    // Why concrete: it declares no abstract member, so requiring a subclass per implementation bought
-    // nothing but a file. An implementation that needs no behaviour of its own closes the three type
-    // arguments at its registration; one that does still derives.
 
     /// <summary>
     /// Initializes a new instance of the

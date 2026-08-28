@@ -19,9 +19,6 @@ internal static partial class StepLog
     /// <summary>An authenticated subject has no binding to any local principal.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="issuer">The authority that asserted them.</param>
-    // Why Warning: someone authenticated successfully somewhere we trust and is still unknown here.
-    // That is provisioning policy declining, or a real person hitting the wrong tenant — expected,
-    // handled, and worth seeing without being a defect.
     [MessageLogging(EventId = 91140, Level = LogLevel.Warning,
         Message = "A subject asserted by '{issuer}' is bound to no local principal")]
     internal static partial IGenericMessage NoBinding(ILogger<ResolvePrincipalStep> logger, string issuer);
@@ -40,9 +37,6 @@ internal static partial class StepLog
     /// <param name="principalId">The principal.</param>
     /// <param name="permitted">Whether issuance is permitted.</param>
     /// <param name="reason">Why.</param>
-    // Why Trace and not Warning on a denial: the runner's terminal check logs the refusal at
-    // Warning with the same reason. Logging it twice at that level would double-count every denial
-    // in whatever counts them.
     [MessageLogging(EventId = 91142, Level = LogLevel.Trace,
         Message = "Principal {principalId} issuance permitted={permitted}: {reason}")]
     internal static partial IGenericMessage EligibilityDecided(

@@ -10,7 +10,6 @@ namespace Fdw.Services.SecretManagers.Logging;
 [MessageLoggingTypeCode("SECRETMGR")]
 public static partial class StoreCredentialCommandLog
 {
-    // Why: never logs PlaintextValue — only the non-sensitive user/credential-type identifiers.
     [MessageLogging(
         EventId = 12007,
         Level = LogLevel.Trace,
@@ -20,8 +19,6 @@ public static partial class StoreCredentialCommandLog
         System.Guid userId,
         string credentialType);
 
-    // Why: reuses the FDW canonical RequiredValueMissing number (20000) — see
-    // SecretManagerCommandBaseLog.RequiredValueMissing's remark.
     [MessageLogging(
         EventId = 20000,
         Level = LogLevel.Critical,

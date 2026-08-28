@@ -120,8 +120,6 @@ public sealed class NewmanSuiteService : INewmanSuiteService
             return GenericResult<NewmanRun>.Failure(NewmanSuiteLog.SuiteDirectoryMissing(logger, dir));
         }
 
-        // Why checked here rather than left to the script: the script exits 2 with a message on
-        // stderr, and surfacing "exit code 2" to an operator explains nothing.
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("FDW_TEST_PASSWORD")))
         {
             return GenericResult<NewmanRun>.Failure(NewmanSuiteLog.TestPasswordMissing(logger));
@@ -134,8 +132,6 @@ public sealed class NewmanSuiteService : INewmanSuiteService
         var exit = await Shell(dir, $"./run.sh{args}", cancellationToken).ConfigureAwait(false);
         var elapsed = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
 
-        // Why the record rather than the exit code: newman exits non-zero when assertions fail,
-        // which is a result and not an error. The run record distinguishes the two.
         var record = Path.Combine(dir, "last-run.json");
         if (!File.Exists(record))
         {

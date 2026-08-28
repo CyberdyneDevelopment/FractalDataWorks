@@ -70,8 +70,6 @@ public sealed class MapperPageTests : IDisposable
         {
             DataStorePickerItems = [Node("Src", DataStoreNodeKind.DataStore), Node("Tgt", DataStoreNodeKind.DataStore)],
         });
-        // Why: source + target pickers each render one ObjectPicker <select> at the root level; no
-        // node is selected so no recursive drill-down level exists yet.
         cut.FindAll("select").Count.ShouldBe(2);
     }
 
@@ -198,8 +196,6 @@ public sealed class MapperPageTests : IDisposable
             TargetFields = [Field("tgt_id")],
             OnMappingsChanged = m => { captured = m; return Task.CompletedTask; },
         });
-        // Why: TryAddMapping only fires OnMappingsChanged once BOTH a source and a target field
-        // button have been clicked (pending source + pending target).
         cut.FindAll("button").First(b => b.TextContent.Contains("src_id", StringComparison.Ordinal)).Click();
         cut.FindAll("button").First(b => b.TextContent.Contains("tgt_id", StringComparison.Ordinal)).Click();
 

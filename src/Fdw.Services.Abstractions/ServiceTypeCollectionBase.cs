@@ -44,16 +44,11 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     // guarantees complete before Main() and thus before anything can trigger the freeze.
     private static readonly List<IServiceTypeRegistration> _pending = new();
 
-    // Why an id set: membership is asked on every registration, from every assembly that loads, and
-    // the answer must not change meaning when the collection closes. A set keyed on the option's id
-    // answers in O(1) and is maintained at the one place membership changes.
     private static readonly HashSet<object> _registeredIds = new();
 
     private static IServiceTypeRegistration[] _frozenOptions = Array.Empty<IServiceTypeRegistration>();
     private static volatile bool _frozen;
 
-    // Why TInterface names the collection: it is the one type name that identifies the collection
-    // unambiguously at this altitude, and the freeze failure below already names it this way.
     private static string CollectionName => typeof(TInterface).Name;
 
     /// <summary>
@@ -61,9 +56,6 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// option's assembly loads — a package reference IS the registration.
     /// </summary>
     /// <param name="option">The option to register.</param>
-    // Why fail loud after freeze: the collection is read to build providers, so an option registered
-    // afterwards is invisible to everything already composed. NO FALLBACKS — a silent miss is exactly
-    // the failure this registry exists to prevent.
     public static void RegisterMember(IServiceTypeRegistration option)
     {
         if (option is null)
@@ -71,25 +63,11 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
 
         lock (_gate)
         {
-            // Why idempotent: registration arrives from two directions — the collection's own
-            // [ModuleInitializer] and, in an entry-point app, the cross-assembly
-            // ServiceTypeOptionRegistration the Registration.SourceGenerators emits. Both name the
-            // same option. First registration wins.
-            //
-            // Why membership is a set and why it is asked FIRST: re-offering a member that is already
-            // present is a no-op at every point in the lifecycle, including after the set has closed —
-            // the collection already holds it. Only a genuinely NEW member arriving after the close is
-            // an error, because that one would never appear in any lookup. The set answers in O(1) and
-            // means nothing here walks the frozen snapshot, which is a read-optimised copy rather than
-            // a second registry to consult.
             if (!_registeredIds.Add(option.Id))
                 return;
 
             if (_frozen)
             {
-                // Why the id comes back out: this option is being rejected, so it is not a member.
-                // Leaving it in the set would make a second attempt look like a duplicate and return
-                // quietly — turning a loud, correct failure into a silent one.
                 _registeredIds.Remove(option.Id);
                 throw new InvalidOperationException(
                     $"The {typeof(TInterface).Name} collection was already read; registering '{option.Name}' now would be invisible to it.");
@@ -133,11 +111,6 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     //
     // Each default calls the same method on every option in this collection.
 
-    // Why a default stops at the first failing option instead of running the rest: the options after it
-    // register against a domain that is already incomplete, and whatever they build on top of the
-    // missing piece fails later, somewhere else, with nothing pointing back here. Stopping means the
-    // failure the caller receives is the FIRST one, which is the one that explains the others.
-    // NO FALLBACKS — it does not carry on and hope.
 
     private static Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> _configurationFunc
         = static (builder, loggerFactory) =>
@@ -157,10 +130,6 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
         {
             foreach (var option in Options)
             {
-                // Why not threaded in: the option already exposes DefaultDataStoreName, DefaultPathName
-                // and DefaultContainerName, so passing them back to it was the collection reading three
-                // values off an option and handing them straight back — on every call site, for the few
-                // bodies that read them.
                 var result = option.Register(builder, loggerFactory);
                 if (result.IsFailure)
                     return Stop<IHostApplicationBuilder>(loggerFactory, "Register", option, result);
@@ -182,14 +151,6 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
             return GenericResult<IHost>.Success(host);
         };
 
-    // Why the option's own failure is carried forward rather than a fresh one: it already names what
-    // went wrong in that option's own vocabulary. Re-wrapping would bury the specific code under a
-    // generic one. The log line is what adds the context — which collection, which method, which option.
-    //
-    // Why ToNewResult and not Failure(failure.Messages): copying the messages out and building a new
-    // result drops the error CHAIN, so the caller sees the leaf complaint with nothing linking it to
-    // what it came from (FDW015 reports exactly this). ToNewResult re-types the same result, keeping
-    // the chain intact across the generic boundary.
     private static IGenericResult<T> Stop<T>(
         ILoggerFactory? loggerFactory,
         string phase,
@@ -207,13 +168,6 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     // Set by the gerund setters, read by the invokers, so each phase can say at Info whether the
     // framework's body or an application's replacement is the one about to run.
     //
-    // Why this is worth a log line: replacing a phase body is invisible from the outside. When a domain
-    // silently fails to register, the first question is whether the option collect everyone assumes runs
-    // actually ran — and until now nothing in the process could answer it.
-    //
-    // These track APPLICATION replacement only. The generated part of a collection contributes its
-    // provider registration as invariant wiring around the invoker, not by swapping the func, so
-    // framework composition never reads as custom here.
 
     /// <summary>Gets a value indicating whether an application replaced this collection's Configure body.</summary>
     protected static bool ConfigurationIsCustom { get; private set; }
@@ -422,8 +376,6 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
-        // Why the claim happens before the work: a deferred phase must look done to the collect
-        // without having run, which is the one thing a bool latch cannot express.
         if (defer)
         {
             _configure = PhaseState.Deferred;
@@ -432,12 +384,6 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
 
         var phaseResult = RunPhase(builder, loggerFactory, "Configure", ConfigurationIsCustom,
             ServiceTypePhaseSequence.Configure, _configurationFunc);
-        // Why the latch is only set on success: this flag is what makes the phase run-once, and the
-        // early return above turns an already-latched phase into an unconditional Success. Setting it
-        // after a failure therefore records a phase that did not happen as done, and every later call
-        // reports success for work that never ran - the failure is logged once and then permanently
-        // papered over. Returning first leaves the phase un-latched so a caller that retries actually
-        // retries.
         if (phaseResult.IsFailure)
         {
             return phaseResult;
@@ -466,8 +412,6 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
-        // Why the claim happens before the work: a deferred phase must look done to the collect
-        // without having run, which is the one thing a bool latch cannot express.
         if (defer)
         {
             _register = PhaseState.Deferred;
@@ -476,12 +420,6 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
 
         var phaseResult = RunPhase(builder, loggerFactory, "Register", RegistrationIsCustom,
             ServiceTypePhaseSequence.Register, _registerFunc);
-        // Why the latch is only set on success: this flag is what makes the phase run-once, and the
-        // early return above turns an already-latched phase into an unconditional Success. Setting it
-        // after a failure therefore records a phase that did not happen as done, and every later call
-        // reports success for work that never ran - the failure is logged once and then permanently
-        // papered over. Returning first leaves the phase un-latched so a caller that retries actually
-        // retries.
         if (phaseResult.IsFailure)
         {
             return phaseResult;
@@ -508,8 +446,6 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
             return GenericResult<IHost>.Success(host);
         }
 
-        // Why the claim happens before the work: a deferred phase must look done to the collect
-        // without having run, which is the one thing a bool latch cannot express.
         if (defer)
         {
             _initialize = PhaseState.Deferred;
@@ -518,12 +454,6 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
 
         var phaseResult = RunPhase(host, loggerFactory, "Initialize", InitializationIsCustom,
             ServiceTypePhaseSequence.Initialize, _initializationFunc);
-        // Why the latch is only set on success: this flag is what makes the phase run-once, and the
-        // early return above turns an already-latched phase into an unconditional Success. Setting it
-        // after a failure therefore records a phase that did not happen as done, and every later call
-        // reports success for work that never ran - the failure is logged once and then permanently
-        // papered over. Returning first leaves the phase un-latched so a caller that retries actually
-        // retries.
         if (phaseResult.IsFailure)
         {
             return phaseResult;
@@ -533,18 +463,6 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
         return phaseResult;
     }
 
-    // Why one runner rather than three copies of the same ceremony: the phases differ only in what
-    // flows through them, and a logging contract that drifts between phases is worse than none.
-    //
-    // Why catch-log-return rather than log-and-rethrow: a throw ends the process, which is a decision
-    // about THIS application that this framework type is in no position to make. Returning the failure
-    // hands that decision to whoever composed the host — abort, or run without this domain — while
-    // still guaranteeing they cannot proceed unaware, because they must read the result to get the
-    // builder back out of it. NO FALLBACKS is satisfied by refusing to return a success, not by
-    // choosing the caller's error handling for them.
-    //
-    // The catch stays because a phase body is arbitrary code that may still throw; this is the seam
-    // that turns that into the value the rest of the pipeline is written against.
     private static IGenericResult<T> RunPhase<T>(
         T subject,
         ILoggerFactory? loggerFactory,
@@ -567,14 +485,6 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
         {
             var result = body(subject, loggerFactory);
 
-            // Why only the success line is conditional: a failure has already been logged with the
-            // option that caused it by the collect, or by the option's own runner. Logging it again here
-            // would report one failure twice, at two altitudes, as if they were two events.
-            //
-            // Why an empty collection gets its own line: "completed successfully over 0 option(s)" is
-            // technically true and practically a lie — the phase ran and nothing joined. That reading
-            // is how a missing package reference stays invisible until a route 404s. Zero is reported
-            // as a Warning; a non-empty run keeps the Information success line.
             if (result.IsSuccess)
             {
                 if (Options.Length == 0)

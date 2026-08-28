@@ -10,10 +10,6 @@ namespace Fdw.UI.Canvas.Blazor.Logging;
 /// MessageLogging for the inline-SVG canvas renderer (<c>SvgCanvasRenderer</c>).
 /// EventId range: 4720–4739 (UI canvas SVG renderer layer).
 /// </summary>
-// Why: default TypeCode ("FDW") collided with Fdw.UI.Charts.Blazor's ChartHostLog, which
-// independently reused EventIds 4720-4726 — both generated "FDW-4720".."FDW-4726" for unrelated
-// messages. A distinct per-project TypeCode makes the generated Code unique even though the
-// numeric EventId ranges still overlap across the two sibling UI projects.
 [ExcludeFromCodeCoverage]
 [MessageLoggingTypeCode("CANVAS")]
 public static partial class SvgCanvasRendererLog
@@ -54,17 +50,12 @@ public static partial class SvgCanvasRendererLog
         Message = "Deleted canvas element '{elementId}' ({elementKind})")]
     public static partial IGenericMessage SelectionDeleted(ILogger logger, string elementId, string elementKind);
 
-    // Why: an edit operation that the edit context rejected (e.g. unknown node ref). Warning, not
-    // Error — the canvas remains usable and the failure is surfaced to the operator inline.
     [MessageLogging(
         EventId = 4726,
         Level = LogLevel.Warning,
         Message = "Canvas edit operation '{operation}' failed: {reason}")]
     public static partial IGenericMessage EditOperationFailed(ILogger logger, string operation, string? reason);
 
-    // Why: Error, not Critical — the canvas remains usable for everything except creating new
-    // connections; the Flow edge type being unregistered is a handled deployment defect, not a
-    // process-ending condition.
     [MessageLogging(
         EventId = 4727,
         Level = LogLevel.Error,
@@ -99,8 +90,6 @@ public static partial class SvgCanvasRendererLog
     public static partial IGenericMessage PortsConnected(
         ILogger logger, string sourceNodeId, string sourcePortId, string targetNodeId, string targetPortId);
 
-    // Why: Critical (fatal) — mirrors FlowEdgeTypeNotRegistered. FieldMapping is a framework-seeded
-    // edge type; without it the port-connect gesture cannot author a mapping at all.
     [MessageLogging(
         EventId = 4732,
         Level = LogLevel.Critical,
@@ -109,19 +98,12 @@ public static partial class SvgCanvasRendererLog
 
     // ── Unrenderable port geometry ────────────────────────────────────────────────
 
-    // Why: the edge names a port its node does not expose, so there is no honest anchor for it.
-    // Warning (not Error) — the rest of the canvas still renders. The edge is skipped rather than
-    // anchored at the node centre: every unresolved mapping would otherwise collapse onto the same
-    // wrong line and read as real. Naming the node and port keeps the underlying defect findable.
     [MessageLogging(
         EventId = 4733,
         Level = LogLevel.Warning,
         Message = "Canvas edge '{edgeId}' anchors to port '{portId}', which node '{nodeId}' does not expose — the edge is not rendered")]
     public static partial IGenericMessage PortAnchorUnresolvable(ILogger logger, string edgeId, string nodeId, string portId);
 
-    // Why: PortDirections is an extensible TypeCollection — a downstream assembly may register a
-    // direction (e.g. "Bidirectional") this renderer has no column geometry for. Report it rather
-    // than guessing a side; guessing would place the port on an edge it does not belong to.
     [MessageLogging(
         EventId = 4734,
         Level = LogLevel.Warning,
@@ -129,8 +111,6 @@ public static partial class SvgCanvasRendererLog
     public static partial IGenericMessage PortDirectionNotRenderable(
         ILogger logger, string nodeId, string portId, string directionName);
 
-    // Why: a self-loop edge is the field-mapping shape, which is defined entirely by its two port
-    // anchors (in:{field} → out:{field}). Without them there is nothing to draw between.
     [MessageLogging(
         EventId = 4735,
         Level = LogLevel.Warning,

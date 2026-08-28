@@ -94,8 +94,6 @@ public sealed class StepProviderTests : IDisposable
     [Trait("Priority", "P1")]
     public async Task OnLoadSteps_LoadsStepsFromStage_ViaListProjects()
     {
-        // Why: When _projectId is null (no prior project context), StepProvider scans
-        // all projects via ListProjects to locate the matching stage.
         var projectId = Guid.NewGuid();
         var stageId = Guid.NewGuid();
         var step1 = new StepConfiguration { Id = Guid.NewGuid(), Name = "Step 1", Ordinal = 1, ProjectStageConfigurationId = stageId };
@@ -124,7 +122,6 @@ public sealed class StepProviderTests : IDisposable
     [Trait("Priority", "P2")]
     public async Task OnLoadSteps_StageNotFound_SetsErrorMessage()
     {
-        // Why: If the stage doesn't exist in any project, must set error and return empty.
         var stageId = Guid.NewGuid();
         var handler = new MockHttpHandler()
             .RespondWith("projects", new List<ProjectConfiguration>());
@@ -250,7 +247,6 @@ public sealed class StepProviderTests : IDisposable
     [Trait("Priority", "P2")]
     public async Task OnDeleteStep_NoProjectLoaded_ReturnsFalse()
     {
-        // Why: If neither LoadSteps nor a project scan has run, _projectId/_stageId are null.
         var stepId = Guid.NewGuid();
         var handler = new MockHttpHandler();
 

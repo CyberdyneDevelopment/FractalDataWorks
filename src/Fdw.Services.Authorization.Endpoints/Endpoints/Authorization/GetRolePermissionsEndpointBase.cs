@@ -15,8 +15,6 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class GetRolePermissionsEndpointBase : Endpoint<GetRoleRequest, List<PermissionSummaryDto>>
 {
-    // Why: RoleConfigurationProvider replaces 3x IOptionsMonitor<List<T>> with a single dual-source
-    // provider that handles roles, permissions, and role-permission assembly.
     private readonly RoleConfigurationProvider _roleProvider;
 
     /// <summary>
@@ -60,7 +58,6 @@ public abstract class GetRolePermissionsEndpointBase : Endpoint<GetRoleRequest, 
 
         AuthorizationEndpointLog.GettingRolePermissions(EndpointLogger, req.Name);
 
-        // Why: accept either Guid (role Id) or string name in the {Name} segment.
         var role = Guid.TryParse(req.Name, out var roleId)
             ? await _roleProvider.GetRole(roleId, ct).ConfigureAwait(false)
             : await _roleProvider.GetRole(req.Name, ct).ConfigureAwait(false);
@@ -73,9 +70,6 @@ public abstract class GetRolePermissionsEndpointBase : Endpoint<GetRoleRequest, 
         var rolePermissions = await _roleProvider.GetRolePermissions(role.Id, ct).ConfigureAwait(false);
         var permissions = await _roleProvider.GetPermissions(ct).ConfigureAwait(false);
 
-        // Why: permission names are stored bare ("connections:read"). The API surface applies
-        // the current tenant's OrgPrefix at the DTO boundary so each tenant sees its branded
-        // form ("acme:connections:read"). Null/empty prefix → return bare name.
         var orgPrefix = Resolve<ITenantContext>()?.CurrentTenant?.OrgPrefix;
         var prefix = string.IsNullOrEmpty(orgPrefix) ? null : orgPrefix + ":";
 

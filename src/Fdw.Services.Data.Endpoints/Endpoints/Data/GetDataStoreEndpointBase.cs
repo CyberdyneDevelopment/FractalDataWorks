@@ -14,11 +14,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNameRequest, DataStoreDetailResponse>
 {
-    // Why: DataStoreConfigurationProvider provides dual-source (ctrl + cfg) merging
-    // with full hierarchy assembly.
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
-    // Why: ConnectionConfigurationProvider replaces IOptionsMonitor<List<ConnectionConfiguration>>
-    // for resolving ConnectionId -> ConnectionName.
     private readonly ConnectionConfigurationProvider? _connectionProvider;
 
     /// <inheritdoc />
@@ -50,8 +46,6 @@ public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNa
     /// <summary>Finds a data store by name and maps it to a detail DTO.</summary>
     protected override async Task<IGenericResult<DataStoreDetailResponse?>> FindByIdentifier(DataStoreNameRequest request, CancellationToken ct)
     {
-        // Why: Get now runs the gateway read cascade (single source — no GetWithChildren verb) so
-        // Paths → Containers → Fields are materialized for the detail DTO.
         var configResult = await _dataStoreProvider.Get(request.Name, ct).ConfigureAwait(false);
 
         if (!configResult.IsSuccess || configResult.Value is null)
@@ -109,16 +103,9 @@ public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNa
         {
             Id = container.Id,
             Name = container.Name,
-            // Why: TypeId replaces ContainerType after Wave A5 DDL rename; DTO still uses ContainerType field name.
             ContainerType = container.TypeId ?? string.Empty,
             FieldCount = (container.Fields ?? []).Count,
-            // Why: SourceDescription is on data.DataContainer but not yet mapped to DataContainerConfiguration.
-            // Will be populated when the field-detail loader is wired (Wave B2).
             SourceDescription = null,
-            // Why: SurrogateKeyFieldNames/NaturalKeyFieldNames replaced by container.Keys in Wave A5.
-            // Full resolution (Key → KeyField → Field name) requires KeyField child list on DataContainerKeyConfiguration,
-            // which is assembled by Wave B2 loader. Emit empty lists for now; no data is lost — the Keys
-            // collection on the container carries the raw key records.
             SurrogateKeyFields = [],
             NaturalKeyFields = [],
             Fields = (container.Fields ?? []).Select(MapField).ToList()
@@ -128,27 +115,18 @@ public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNa
     /// <summary>Maps a field configuration to a field DTO.</summary>
     protected virtual DataStoreFieldResponse MapField(DataContainerFieldConfiguration field)
     {
-        // Why: DataType is loaded into DataContainerFieldConfiguration; IsNullable and Ordinal
-        // are JSON-bound from configurationSchema.json. MaxLength/Precision/Scale are on data.DataContainerField
-        // but not yet loaded into the POCO — deferred to Wave B2.
         return new DataStoreFieldResponse
         {
             Id = field.Id,
             Name = field.Name,
-            // Why: expose DataType as NativeDataType for DTO compatibility.
             NativeDataType = field.DataType,
             IsNullable = false,
-            // Why: IsPrimaryKey removed from DataContainerFieldConfiguration — key role expressed via Keys collection.
             IsKey = false,
             Ordinal = 0,
             Description = field.Description
         };
     }
 
-    // Why: Resolves ConnectionId -> ConnectionName via provider. Returns empty string if
-    // no connection provider is available or the connection is not found.
-    // Why: VSTHRD002 suppressed because this is called from synchronous DTO mapping.
-    // The provider's system index lookup is synchronous for ctrl configs (in-memory dictionary).
 #pragma warning disable VSTHRD002
     private string ResolveConnectionName(Guid connectionId)
     {

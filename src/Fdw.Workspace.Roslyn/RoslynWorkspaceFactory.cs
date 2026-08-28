@@ -76,11 +76,6 @@ public sealed class RoslynWorkspaceFactory : IRoslynWorkspaceFactory
 
         using var msbuildWorkspace = MSBuildWorkspace.Create();
 
-        // Why: these are not decoration. When MSBuild cannot evaluate a project — no restore, a missing
-        // import, a design-time build failure — the project still LOADS, just with zero metadata
-        // references, and every later compilation of it fails to resolve System. Logging to an ILogger
-        // that is NullLogger unless DI wired one means the cause is invisible while the symptom shows up
-        // hundreds of diagnostics downstream. Keep them so a caller can be told what actually happened.
         var loadDiagnostics = new List<string>();
         msbuildWorkspace.RegisterWorkspaceFailedHandler(args =>
         {
@@ -92,12 +87,6 @@ public sealed class RoslynWorkspaceFactory : IRoslynWorkspaceFactory
             solutionPath,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        // Why: MSBuildWorkspace records an UnresolvedAnalyzerReference for every analyzer/generator
-        // DLL absent at load time. SymbolFinder's DependentTypeFinder path (FindImplementations /
-        // FindDerivedClasses) computes a project checksum, and SerializerService.CreateChecksum throws
-        // InvalidOperationException on those unresolved placeholders — breaking those commands while
-        // FindReferences/FindSourceDeclarations (which skip the checksum path) work. Strip the
-        // unresolved refs at the load boundary so every command sees a clean solution.
         fullSolution = fullSolution.WithoutUnresolvedAnalyzers();
 
         var totalProjects = fullSolution.ProjectIds.Count;
@@ -184,12 +173,6 @@ public sealed class RoslynWorkspaceFactory : IRoslynWorkspaceFactory
         {
             if (_msbuildRegistered) return;
 
-            // Why: hosts (e.g. an MCP server's Program.Main) often call
-            // MSBuildLocator.RegisterDefaults() at process startup to fix the
-            // load order before any Microsoft.Build type is JIT'd. Re-calling
-            // RegisterDefaults() unconditionally throws "MSBuild assemblies
-            // were already loaded" because RegisterDefaults does not gate on
-            // IsRegistered. Honor an existing registration instead.
             if (!MSBuildLocator.IsRegistered)
                 MSBuildLocator.RegisterDefaults();
             _msbuildRegistered = true;

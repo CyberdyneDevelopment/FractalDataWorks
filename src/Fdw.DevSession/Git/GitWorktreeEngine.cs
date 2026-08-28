@@ -65,9 +65,6 @@ public sealed class GitWorktreeEngine : IWorktreeEngine
     {
         if (request is null) throw new ArgumentNullException(nameof(request));
 
-        // Why: fail loud rather than inventing a path. A worktree location is a decision about the
-        // caller's filesystem; guessing one would put an agent's working copy somewhere the caller
-        // never agreed to and would later be removed by Remove().
         if (string.IsNullOrWhiteSpace(request.WorktreePath))
         {
             return GenericResult<IsolatedCopy>.Failure(
@@ -107,10 +104,6 @@ public sealed class GitWorktreeEngine : IWorktreeEngine
         var staged = await Git(path, cancellationToken, "add", "-A").ConfigureAwait(false);
         if (staged.IsFailure) return staged.ToNewResult<string>();
 
-        // Why: `diff --cached --quiet` exits 1 when there ARE staged changes, so a non-zero exit is
-        // the signal to proceed and zero means the tree is clean. Committing a clean tree would
-        // fail with git's own "nothing to commit" error, which reads as a defect rather than the
-        // ordinary outcome it is.
         var pending = await RawGit(path, cancellationToken, "diff", "--cached", "--quiet").ConfigureAwait(false);
         if (pending.IsFailure) return pending.ToNewResult<string>();
         if (pending.Value!.ExitCode == 0)
@@ -161,9 +154,6 @@ public sealed class GitWorktreeEngine : IWorktreeEngine
         var checkedOut = await Git(repoPath, cancellationToken, "checkout", targetBranch).ConfigureAwait(false);
         if (checkedOut.IsFailure) return checkedOut.ToNewResult<string>();
 
-        // Why: --no-edit only suppresses the editor. A conflicting merge still exits non-zero and
-        // is surfaced as a failure with git's conflict output — the engine never resolves or aborts
-        // on the caller's behalf, because which side wins is never the engine's decision.
         var merged = await Git(repoPath, cancellationToken, "merge", sourceBranch, "--no-edit").ConfigureAwait(false);
         if (merged.IsFailure) return merged.ToNewResult<string>();
 
@@ -181,9 +171,6 @@ public sealed class GitWorktreeEngine : IWorktreeEngine
     {
         if (copy is null) throw new ArgumentNullException(nameof(copy));
 
-        // Why: fail loud rather than silently treating a branch-only copy as removable. Remove()
-        // deletes a working directory; being handed something that never had one means the caller
-        // has confused two isolation levels, and quietly succeeding would hide that.
         if (string.IsNullOrWhiteSpace(copy.WorktreePath))
         {
             return GenericResult<bool>.Failure(
@@ -203,9 +190,6 @@ public sealed class GitWorktreeEngine : IWorktreeEngine
     private const string WorktreeIsolationName = "Worktree";
     private const string BranchIsolationName = "Branch";
 
-    // Why: a worktree-isolated copy's commands must run inside the worktree, a branch-isolated
-    // copy's inside the repo itself. Every operation that touches the working tree routes through
-    // here so that distinction is made in exactly one place.
     private static string WorkingPath(IsolatedCopy copy)
         => string.IsNullOrWhiteSpace(copy.WorktreePath) ? copy.RepoPath : copy.WorktreePath!;
 

@@ -5,7 +5,6 @@ namespace Fdw.Commands.Data.Abstractions;
 /// <summary>
 /// Base class for data command messages.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public abstract class DataCommandMessage : MessageTemplate<MessageSeverity>
 {

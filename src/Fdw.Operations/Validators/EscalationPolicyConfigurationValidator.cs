@@ -18,8 +18,6 @@ public sealed class EscalationPolicyConfigurationValidator : FdwConfigurationVal
             .NotEmpty()
             .WithMessage("Name is required");
 
-        // Why: An escalation policy must be scoped to either a workflow or a schedule;
-        // a policy with neither scope would match all executions indiscriminately.
         RuleFor(x => x)
             .Must(x => x.WorkflowId.HasValue || x.ScheduleId.HasValue)
             .WithMessage("Either WorkflowId or ScheduleId must be specified")

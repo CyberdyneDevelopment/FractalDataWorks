@@ -31,12 +31,6 @@ public sealed class QueryCapability : CommandCapabilityTypeBase
             name: "Query",
             displayName: "Structured Query",
             configurationFields: [],
-            // Why: BuilderComponentType is resolved at runtime by the UI layer.
-            // We reference the type by name via a string convention rather than a direct
-            // typeof() reference to avoid a hard dependency from Connections.Abstractions
-            // (netstandard2.0) on a Blazor UI package (net10.0). The builder looks up the
-            // component by scanning assemblies for a class named QueryCommandBuilder that
-            // implements ICommandCapabilityBuilder.
             builderComponentType: null)
     {
     }

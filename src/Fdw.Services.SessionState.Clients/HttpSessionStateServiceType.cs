@@ -36,10 +36,6 @@ public sealed class HttpSessionStateServiceType : SessionStateServiceTypeBase<IG
         Configuration(builder =>
         {
 
-            // Why the ApiClients hierarchy rather than this option's own SessionState:Http section: this
-            // registers a named API client exactly like the other 34, and reading a private section meant a
-            // host that moved its API had to restate the same endpoint in a second place — which is how the
-            // UI ended up pointing session state at a dev URL while its other clients were correct.
             builder.Services.AddApiHttpClient(builder.Configuration, HttpClientName);
     
                     return GenericResult<IHostApplicationBuilder>.Success(builder);

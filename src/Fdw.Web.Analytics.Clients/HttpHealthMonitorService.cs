@@ -34,8 +34,6 @@ public sealed class HttpHealthMonitorService : IHealthMonitorService
     public string Id => nameof(HttpHealthMonitorService);
 
     /// <inheritdoc />
-    // Why: no configured name — this is the single well-known HTTP monitor, not one of a
-    // named set, so its type name IS its identity.
     public string Name => nameof(HttpHealthMonitorService);
 
     /// <inheritdoc/>
@@ -45,8 +43,6 @@ public sealed class HttpHealthMonitorService : IHealthMonitorService
     public bool IsAvailable => true;
 
     /// <inheritdoc/>
-    // Why: the health monitor domain is query-only — commands fail loud with a structured message,
-    // never a silent no-op (NO FALLBACKS).
     public Task<IGenericResult<T>> Execute<T>(Fdw.Abstractions.IGenericCommand command, CancellationToken cancellationToken = default)
         => Task.FromResult(GenericResult<T>.Failure(
             Fdw.Services.Abstractions.Health.Monitoring.Logging.HealthMonitorLog.CommandsNotSupported(_logger, Id)));

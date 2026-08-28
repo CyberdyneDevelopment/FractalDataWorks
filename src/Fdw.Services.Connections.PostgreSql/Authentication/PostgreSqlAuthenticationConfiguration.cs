@@ -86,10 +86,6 @@ public abstract class PostgreSqlAuthenticationConfiguration
     public abstract IGenericResult<string> BuildAuthFragment(IReadOnlyDictionary<string, string?> values, string? resolvedPassword);
 
     /// <inheritdoc />
-    // Why: default implementation defers to the sync overload with no resolved password —
-    // appropriate for auth types that don't need a secret (None). Types that need a secret
-    // (Password) override and pull SecretKeyName from values themselves before calling
-    // secretManager.Execute.
     public virtual Task<IGenericResult<string>> BuildAuthFragment(
         IReadOnlyDictionary<string, string?> values,
         ISecretManager? secretManager,

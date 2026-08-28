@@ -82,8 +82,6 @@ public static partial class NotificationEndpointLog
     public static partial IGenericMessage ListingNotificationListMembers(ILogger logger, string listName);
 
     /// <summary>Logs when user preferences are not found.</summary>
-    // Why: level raised to Warning but the "returning defaults" behavior itself is intentionally
-    // left in place pending a separate decision.
     [MessageLogging(EventId = 11011, Level = LogLevel.Warning,
         Message = "No notification preferences found for user '{userId}', returning defaults")]
     public static partial IGenericMessage UserPreferencesNotFound(ILogger logger, string userId);

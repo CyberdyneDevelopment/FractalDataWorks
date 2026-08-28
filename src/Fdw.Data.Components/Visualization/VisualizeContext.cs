@@ -12,7 +12,6 @@ namespace Fdw.Data.Components.Visualization;
 /// Immutable context object passed to the consumer RenderFragment by <see cref="VisualizePageProvider"/>.
 /// Carries state snapshots and callback delegates so that the Visualize page markup stays free of logic.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class VisualizeContext : ProviderContextBase
 {

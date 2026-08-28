@@ -6,8 +6,6 @@ namespace Fdw.Security.Hashing;
 /// A password hashing algorithm that produces a hash and salt separately.
 /// TypeCollection member — implementations are discovered and registered automatically.
 /// </summary>
-// Why: TypeCollection allows configuring which algorithm is active and enables
-// future migration (e.g., PBKDF2 → Argon2) without code changes.
 public interface IPasswordHashAlgorithm : ITypeOption<int, PasswordHashAlgorithmBase>
 {
     /// <summary>

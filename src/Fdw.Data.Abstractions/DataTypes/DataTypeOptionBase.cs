@@ -80,9 +80,6 @@ public abstract class DataTypeOptionBase
         bool isDeprecated = false,
         string? nativeName = null,
         string? format = null)
-        // Why the full-metadata base constructor: Id, Name, DisplayName, Description, Category and
-        // ConfigurationKey are already TypeOptionBase's job. Redeclaring Description here would hide the
-        // inherited member and split one concept across two classes.
         : base(id, name, $"TypeOptions:{name}", displayName ?? name, description, category: null)
     {
         AbstractType = abstractType;
@@ -101,8 +98,6 @@ public abstract class DataTypeOptionBase
         IsBinary = isBinary;
         SupportsStreaming = supportsStreaming;
         IsDeprecated = isDeprecated;
-        // Why: the emitted token is the type's own name unless the vocabulary spells it differently. This
-        // is a naming alias, not a missing value — the caller supplying null is stating "same as Name".
         NativeName = nativeName ?? name;
         Format = format;
     }

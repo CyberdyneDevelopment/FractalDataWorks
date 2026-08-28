@@ -66,16 +66,10 @@ public class OrchestrationNodeConfigurationProvider
             dataStoreName,
             pathName)
     {
-        // Why NullLogger fallback: per FDW convention, ensures the provider remains functional
-        // if DI does not wire up logging.
         _logger = logger ?? NullLogger<OrchestrationNodeConfigurationProvider>.Instance;
     }
 
     // ── Self-FK-tree carve-out ─────────────────────────────────────────────────
-    // Why: the four overloads below + BuildSubtree are the sanctioned self-referencing-tree layer.
-    // The base loads the flat rows (Get() list, inherited); these walk by ParentId in memory. The base
-    // ComposeChildren cannot replicate this (no depth bound; per-node queries). Plain Get(id)/Get()/Save/
-    // Delete are inherited from the base — deliberately NOT overridden here.
 
     /// <inheritdoc/>
     public async Task<IGenericResult<OrchestrationNodeConfiguration>> Get(
@@ -102,10 +96,6 @@ public class OrchestrationNodeConfigurationProvider
         int depth,
         CancellationToken cancellationToken = default)
     {
-        // Why: Load all nodes once and build the tree in-memory to avoid N+1 queries.
-        // For large deployments, a recursive CTE query would be preferred, but the base
-        // ImplementationConfigurationProviderBase only supports flat list queries. Subtree size for
-        // orchestration hierarchies is bounded and manageable in-memory.
         var allResult = await Get(cancellationToken).ConfigureAwait(false);
         if (!allResult.IsSuccess)
             return allResult.ToNewResult<OrchestrationNodeConfiguration>();
@@ -146,8 +136,6 @@ public class OrchestrationNodeConfigurationProvider
         if (!allResult.IsSuccess)
             return allResult;
 
-        // Why: match children by the parent's DURABLE Id — RowId is DB-managed and invisible; the self-FK
-        // tree walks on ParentId (logical), matching GetRoots/BuildSubtree.
         var children = (allResult.Value ?? [])
             .Where(n => n.ParentId == domainConfigurationId)
             .OrderBy(n => n.Ordinal)

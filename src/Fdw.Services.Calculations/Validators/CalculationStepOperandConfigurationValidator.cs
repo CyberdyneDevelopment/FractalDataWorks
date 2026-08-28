@@ -26,7 +26,6 @@ public sealed class CalculationStepOperandConfigurationValidator : FdwConfigurat
             .Must(t => System.Array.IndexOf(ValidOperandTypes, t) >= 0)
             .WithMessage("OperandType must be one of: Input, StepReference, Literal");
 
-        // Why: When type is Input, an alias is required to resolve the bound input value.
         When(x => string.Equals(x.OperandType, "Input", System.StringComparison.OrdinalIgnoreCase), () =>
         {
             RuleFor(x => x.InputAlias)
@@ -34,7 +33,6 @@ public sealed class CalculationStepOperandConfigurationValidator : FdwConfigurat
                 .WithMessage("InputAlias is required when OperandType is Input");
         });
 
-        // Why: When type is StepReference, a step alias is required to resolve the prior step output.
         When(x => string.Equals(x.OperandType, "StepReference", System.StringComparison.OrdinalIgnoreCase), () =>
         {
             RuleFor(x => x.StepAlias)
@@ -42,7 +40,6 @@ public sealed class CalculationStepOperandConfigurationValidator : FdwConfigurat
                 .WithMessage("StepAlias is required when OperandType is StepReference");
         });
 
-        // Why: When type is Literal, a literal value must be provided; otherwise the operand has no resolvable value.
         When(x => string.Equals(x.OperandType, "Literal", System.StringComparison.OrdinalIgnoreCase), () =>
         {
             RuleFor(x => x.LiteralValue)

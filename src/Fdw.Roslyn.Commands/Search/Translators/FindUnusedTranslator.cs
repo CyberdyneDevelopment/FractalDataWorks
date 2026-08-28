@@ -103,9 +103,6 @@ public sealed class FindUnusedTranslator : RoslynCommandTranslatorBase<FindUnuse
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // Why: best-effort solution scan — per-project compilation failures (e.g. unresolved
-                // analyzer references) are tolerated; continue scanning remaining projects.
-                // ex is observed via the when filter expression; cancellation propagates normally.
                 continue;
             }
 #pragma warning restore FDW014
@@ -132,8 +129,6 @@ public sealed class FindUnusedTranslator : RoslynCommandTranslatorBase<FindUnuse
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            // Why: if we can't determine references, conservatively treat as used (true).
-            // The failure is surfaced in the result so the caller can choose to log it.
             FindUnusedTranslatorLog.ReferenceCheckFailed(logger, symbol.Name, ex.GetType().Name);
             return GenericResult<bool>.Success(true,
                 $"FindReferencesAsync failed for {symbol.Name}: {ex.GetType().Name}: {ex.Message}");

@@ -18,8 +18,6 @@ namespace Fdw.Roslyn.Commands.Refactoring.Tests;
 /// </summary>
 public sealed class RenameTranslatorSymbolChangeTests
 {
-    // Why: resolving the trusted-platform-assembly set once keeps each test from re-opening ~150 metadata
-    // files; the references are immutable so a single shared list is safe across tests.
     private static readonly Lazy<IReadOnlyList<MetadataReference>> References = new(() =>
         ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
             .Split(Path.PathSeparator)

@@ -45,7 +45,6 @@ public static class CacheKeyBuilder
     /// <returns>The tag, "{schema}.{table}" - or just the container when the path is empty.</returns>
     public static string TagFor(DataStoreTarget target)
     {
-        // Why: Default tag format matches invalidation convention: "{schema}.{table}"
         return string.IsNullOrEmpty(target.Path)
             ? target.Container
             : string.Concat(target.Path, ".", target.Container);
@@ -62,7 +61,6 @@ public static class CacheKeyBuilder
         if (command.Metadata.TryGetValue(CachePolicy.CacheInvalidationTagsKey, out var val) && val is string[] tags)
             return tags;
 
-        // Why: Default tag is "{schema}.{table}" — matches the convention writers use to invalidate.
         return new[] { GetKeyPrefix(command, target) };
     }
 
@@ -70,8 +68,6 @@ public static class CacheKeyBuilder
     /// Computes a deterministic cache key from the target address and command's semantic fields.
     /// Does NOT include typeof(T) — the caller (DataGatewayService) appends that.
     /// </summary>
-    // Why: Cache key must be deterministic from the query shape, not from object identity.
-    // CommandId and CreatedAt are unique per instance and must be excluded.
     public static string ComputeCacheKey(IDataCommand command, DataStoreTarget target)
     {
         var sb = new StringBuilder(128);

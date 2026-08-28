@@ -70,7 +70,6 @@ public sealed class DynamicStructMapper : IEtlRowMapper
             }
             catch (ArgumentException ex)
             {
-                // Why: DataTableReader throws ArgumentException instead of IndexOutOfRangeException.
                 EtlRowMapperLog.FieldOrdinalNotFound(_logger, field.Name);
                 _ = ex;
                 ordinal = -1;

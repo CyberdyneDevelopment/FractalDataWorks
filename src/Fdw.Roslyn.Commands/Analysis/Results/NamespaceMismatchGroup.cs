@@ -12,7 +12,6 @@ namespace Fdw.Roslyn.Commands.Analysis.Results;
 /// Grouping is the point of the report. 56 files sharing one cause are ONE decision; listing them as 56
 /// rows buries it.
 /// </remarks>
-// Why: pure data holder, auto-properties only, no logic
 [ExcludeFromCodeCoverage]
 public sealed class NamespaceMismatchGroup
 {

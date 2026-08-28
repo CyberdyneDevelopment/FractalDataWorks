@@ -42,8 +42,6 @@ public partial class MsSqlConnectionConfiguration : IConnectionImplementationCon
     /// Minted by <see cref="Fdw.Services.Configuration.ImplementationConfigurationProviderBase{TConfig,TCommand}"/>
     /// via <see cref="Guid.CreateVersion7()"/> when <see cref="Guid.Empty"/>.
     /// </summary>
-    // Why: NO Guid.NewGuid() default — DB owns no identity; the provider mints this before INSERT.
-    // A random default here would silently bypass the provider's Id-mint logic.
     public Guid Id { get; set; }
 
     /// <summary>
@@ -53,17 +51,12 @@ public partial class MsSqlConnectionConfiguration : IConnectionImplementationCon
     public Guid ConnectionId { get; set; }
 
 
-    // Why: IGenericConfiguration members below satisfy the interface contract.
-    // Name and SectionName are not meaningful on the typed body — the canonical name
-    // lives on the parent ConnectionConfiguration row. Empty string is the correct
-    // implementation; typed-body providers never call Get(string name).
     string IGenericConfiguration.Name
     {
         get => string.Empty;
         set { /* typed body has no independent name — it is identified by ConnectionId */ }
     }
 
-    // Why: explicit interface — prevents callers from accidentally setting Name on the typed body.
     string IGenericConfiguration.SectionName => "Connections";
     string IGenericConfiguration.ServiceType => "Connection";
     string? IGenericConfiguration.ServiceOptionType => "MsSql";

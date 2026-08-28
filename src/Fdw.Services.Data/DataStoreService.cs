@@ -30,8 +30,6 @@ public sealed class DataStoreService : IDataStoreProvider
     /// <param name="builder">Produces a builder per datastore built.</param>
     /// <param name="nodes">Answers path and container reads inside a built datastore.</param>
     /// <param name="logger">The logger.</param>
-    // Why a delegate rather than the builder itself: a builder holds the configuration it was given,
-    // so two concurrent Gets sharing one instance would build each other's datastore.
     public DataStoreService(
         DataStoreConfigurationProvider configuration,
         Func<IDataStoreBuilder> builder,
@@ -76,8 +74,6 @@ public sealed class DataStoreService : IDataStoreProvider
     }
 
     /// <inheritdoc />
-    // Why these delegate rather than build: a path and a container are nodes inside a datastore that
-    // is already built, so the node provider that walks the tree answers them.
     public Task<IGenericResult<IDataNodePath>> Get(string dataStoreName, string pathName, CancellationToken cancellationToken = default)
         => _nodes.Get(dataStoreName, pathName, cancellationToken);
 

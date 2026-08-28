@@ -65,7 +65,6 @@ public class FindEndpoint : Endpoint<FindRequest, FindResponse>
         FindEndpointLog.FindRequestReceived(_logger, req.DataStoreName, req.PathName, req.ContainerName, maxResults);
         FindEndpointLog.FindStarted(_logger, req.SearchTerm, req.ContainerName, req.FieldNames?.Count ?? 0);
 
-        // Why: Addressing (DataStore/Path/Container) moved off IDataCommand onto DataStoreTarget.
         var command = new FindCommand<Dictionary<string, object?>>
         {
             SearchTerm = req.SearchTerm,

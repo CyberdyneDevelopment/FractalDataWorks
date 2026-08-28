@@ -31,8 +31,6 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     public string ContainerName => TableName;
 
     /// <inheritdoc />
-    // Why the table name: a configuration command is identified by the table it targets, which is
-    // exactly what the collection keys it on.
     public string Name => TableName;
 
     /// <inheritdoc />
@@ -45,9 +43,6 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     public Type ConfigType => typeof(TConfig);
 
     /// <inheritdoc />
-    // Why: non-generic save-cascade entry point — casts the runtime-typed child record to this
-    // command's concrete config type and forwards to the typed Create, so the cascade saves a child
-    // whose type is only known at runtime without MakeGenericMethod.
     IDataCommand IConfigurationCommands.Create(string dataStoreName, string pathName, IGenericConfiguration record)
         => Create(dataStoreName, pathName, (TConfig)record);
 
@@ -136,8 +131,6 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// </param>
     public virtual IDataCommand Get(string dataStoreName, string pathName, string name, DateTimeOffset? asOf = null)
     {
-        // Why: Build() returns DataGatewayCall; .Command extracts the address-free command.
-        // The provider pairs it with Target via ImplementationConfigurationProviderBase.Target.
         return ApplyVersionFilter(
                 new QueryCommandBuilder<TConfig>(dataStoreName, pathName, TableName).Where(NameColumn, name),
                 asOf)
@@ -149,8 +142,6 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// Logical FK columns reference the parent's durable Id (e.g. ConnectionId → Connection.Id).
     /// IsCurrent filter is mandatory because the same logical Id can appear in multiple version rows.
     /// </summary>
-    // Why: protected — only ImplementationConfigurationProviderBase.Get(id) calls this when dispatching on the
-    // registered parentKeyType=Logical. Not a public sidecar — column name comes from registration.
     protected internal virtual IDataCommand GetByParent(string dataStoreName, string pathName, string parentIdColumn, Guid domainConfigurationId, DateTimeOffset? asOf = null)
     {
         return ApplyVersionFilter(
@@ -164,8 +155,6 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// Physical FK columns reference the parent's version-specific RowId (e.g. ConnectionRowId → Connection.RowId).
     /// No IsCurrent filter — RowId is unique per version row, so the predicate is already version-specific.
     /// </summary>
-    // Why: protected — only ImplementationConfigurationProviderBase.Get(id) calls this when dispatching on the
-    // registered parentKeyType=Physical. Not a public sidecar.
     protected internal virtual IDataCommand GetByPhysicalParent(string dataStoreName, string pathName, string parentRowIdColumn, Guid parentRowId)
     {
         return new QueryCommandBuilder<TConfig>(dataStoreName, pathName, TableName)
@@ -191,11 +180,6 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// When supplied, returns the child versions in force at that instant instead of the current
     /// ones. Only meaningful for configurations declared <c>Temporal</c>.
     /// </param>
-    // Why: the declared FK is physical (child.{Parent}RowId → parent.RowId) and the parent's RowId is
-    // NOT projected onto the header object, so we cannot filter the child by a known RowId. Instead we
-    // JOIN child→parent on the FK and filter the parent by its durable Id (which IS materialized). The
-    // child filters (IsCurrent/IsDeleted) stay bare → the translator qualifies them to the child table;
-    // the parent filter is dotted "{parentTable}.{parentKeyColumn}" → qualified to the parent table.
     protected internal virtual IDataCommand GetByParentJoin(
         string dataStoreName,
         string pathName,
@@ -212,12 +196,6 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
                 asOf)
             .Where(string.Concat(parentTable, ".", parentKeyColumn), parentKeyValue);
 
-        // Why: the FK points at a VERSION-SPECIFIC parent RowId, and the parent's durable Id matches every
-        // version of it — so without this the join also matches bodies hanging off retired parent versions,
-        // and a current read could return a stale body for a current header. Only on the current-version
-        // read: an as-of read is already pinned by the child's own as-of predicate above, and pinning the
-        // parent to IsCurrent there would defeat it. Mirrors BuildChildJoinQuery, which filters the owner
-        // the same way for collection children.
         if (asOf is null)
             builder = builder.Where(string.Concat(parentTable, ".IsCurrent"), true);
 
@@ -255,19 +233,8 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
             .Build().Command;
     }
 
-    // Why there is no Update verb: configuration tables are version-on-write, and Create IS the update —
-    // its translator retires the current row (IsCurrent=0) and inserts the new version in one transaction,
-    // which is correct for the first write and every later one. The in-place UPDATE that used to live here
-    // was a second, incompatible write path: it minted no version, carried no IsCurrent predicate (so it
-    // rewrote every historical row of the record), let the POCO's own IsCurrent/IsDeleted values reach the
-    // columns, and — because the provider only cascaded on the insert branch — silently dropped the typed
-    // body and every child. Deleted rather than deprecated: one write, one shape, every configuration type.
 
     /// <summary>Creates a DELETE command for a configuration record by id (soft delete).</summary>
-    // Why: configuration tables are version-on-write with child-table FKs (e.g. MsSqlConnection
-    // references conn.Connection.RowId). A plain DELETE FROM hits FK_*_Connection and 500s.
-    // ConfigurationDeleteCommand is recognized by MsSqlConfigurationDeleteTranslator which UPDATEs
-    // IsCurrent=0 + INSERTs a tombstone row, leaving FKs intact.
     public virtual IDataCommand Delete(string dataStoreName, string pathName, Guid id)
         => new ConfigurationDeleteCommand(id);
 

@@ -25,8 +25,6 @@ internal static partial class StepResolverLog
     /// <param name="logger">The logger.</param>
     /// <param name="flowName">The flow.</param>
     /// <param name="stepCount">How many steps it has.</param>
-    // Why Information: this runs once at startup per flow, and its absence from the log is how an
-    // operator notices a flow that never loaded.
     [MessageLogging(EventId = 91151, Level = LogLevel.Information,
         Message = "Flow '{flowName}' validated: {stepCount} step(s), every requirement met in order")]
     internal static partial IGenericMessage FlowValidated(
@@ -51,8 +49,6 @@ internal static partial class StepResolverLog
     /// <param name="stepName">The contested name.</param>
     /// <param name="existing">What holds it.</param>
     /// <param name="attempted">What tried to take it.</param>
-    // Why Error and not last-wins: whichever won would depend on assembly load order, so the same
-    // flow would mean different things on different hosts. Refusing makes the collision visible.
     [MessageLogging(EventId = 91154, Level = LogLevel.Error,
         Message = "Step '{stepName}' is already registered as {existing}; {attempted} cannot take the same name")]
     internal static partial IGenericMessage AlreadyRegistered(
@@ -62,8 +58,6 @@ internal static partial class StepResolverLog
     /// <param name="logger">The logger.</param>
     /// <param name="stepName">The name the flow used.</param>
     /// <param name="known">What is registered.</param>
-    // Why the known names are included: the usual cause is a package reference that was removed, and
-    // the list turns "why does this flow not work" into "that package is gone" without a debugger.
     [MessageLogging(EventId = 91155, Level = LogLevel.Error,
         Message = "No step is registered as '{stepName}'. Registered: {known}")]
     internal static partial IGenericMessage NotRegistered(

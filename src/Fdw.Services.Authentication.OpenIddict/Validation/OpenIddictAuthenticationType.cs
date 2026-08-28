@@ -91,15 +91,12 @@ public sealed class OpenIddictAuthenticationType : AuthenticationServiceTypeBase
     public override IReadOnlyList<string> SupportedTokenTypes => ["AccessToken", "IdToken", "RefreshToken"];
 
     /// <inheritdoc />
-    // Why above JwtBearer: this is the issuer the host runs itself, and the one every interactive
-    // caller arrives on.
     public override int Priority => 100;
 
     /// <inheritdoc />
     public override bool SupportsMultiTenant => true;
 
     /// <inheritdoc />
-    // Why false: this validates tokens presented to it. Acquiring and holding one is the outbound side.
     public override bool SupportsTokenCaching => false;
 
     /// <inheritdoc />

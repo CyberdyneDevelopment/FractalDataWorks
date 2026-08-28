@@ -39,9 +39,6 @@ public abstract class ListPipelinesEndpointBase : CrudListEndpointBase<PipelineS
         var items = new List<PipelineSummaryResponse>();
         foreach (var config in (result.Value ?? []).Where(p => !string.IsNullOrWhiteSpace(p.Name)))
         {
-            // Why: the KIND discriminator (ServiceOptionType) is NOT NULL on a persisted pipeline header.
-            // A null is a data-integrity defect — fail the list loud with FDW MessageLogging instead of
-            // substituting an "Unknown" display fallback.
             if (string.IsNullOrEmpty(config.ServiceOptionType))
                 return GenericResult<List<PipelineSummaryResponse>>.Failure(
                     Logging.PipelineEndpointLog.PipelineMissingKind(Logger, config.Name));

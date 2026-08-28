@@ -62,8 +62,6 @@ public sealed class PostgreSqlUpdateTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateUpdateUsesDoubleQuoteQuoting()
     {
-        // Why: regression guard — PG SET uses "col" = @set_col, WHERE uses "col" = @where_p0
-        // (not [col] as in T-SQL). Verifies dialect seam end-to-end.
         var fields = new[]
         {
             CreateField("id").Object,
@@ -96,7 +94,6 @@ public sealed class PostgreSqlUpdateTranslatorTests
         result.Value.CommandText.ShouldContain("\"email\" = @set_email");
         // Primary key must not appear in SET clause
         result.Value.CommandText.ShouldNotContain("\"id\" = @set_id");
-        // Why: the filter WHERE clause uses the shared base's counter-based param naming (@where_p0).
         result.Value.CommandText.ShouldContain("WHERE \"id\" = @where_p0");
     }
 

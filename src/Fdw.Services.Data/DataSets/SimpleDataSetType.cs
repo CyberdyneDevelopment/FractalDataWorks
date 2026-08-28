@@ -55,8 +55,6 @@ public sealed class SimpleDataSetType : DataSetTypeBase
 
         var isWrite = command is IDataCommandWithInput or DeleteCommand or TruncateCommand;
 
-        // Why: a Simple dataset is exactly one source — for both reads and writes (the sink). Any other
-        // count is a misconfiguration; fail loud rather than guess which source to target.
         if (sources.Count != 1)
         {
             return isWrite
@@ -69,8 +67,6 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         DataGatewayLogger.ExecutingSimpleDataSet(ctx.Logger, ctx.Config.Name);
         var sourceConfig = sources[0];
 
-        // Why: a write command is forwarded verbatim to the one source's container — the read pipeline
-        // (filter translation / field rename / calculated fields) does not apply to writes.
         return isWrite
             ? await ExecuteSourceQuery<T>(ctx, command, sourceConfig, ct).ConfigureAwait(false)
             : await ExecuteRead<T>(ctx, command, sourceConfig, ct).ConfigureAwait(false);
@@ -88,9 +84,6 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         if (containerName == null)
             return GenericResult<T>.Failure(DataGatewayLogger.SourceNoContainer(ctx.Logger, sourceConfig.SourceName, ctx.Config.Name));
 
-        // Why: when the dataset carries aggregate definitions (DataSetConfiguration.Aggregates), the read
-        // is a query-time GROUP BY pushed down to the source — not a row pull. Build the aggregation
-        // expression up front; a bad definition fails loud rather than silently returning ungrouped rows.
         IAggregationExpression? aggregation = null;
         if (ctx.Config.Aggregates is { Count: > 0 } aggregates)
         {
@@ -110,17 +103,11 @@ public sealed class SimpleDataSetType : DataSetTypeBase
 
         var result = await ExecuteSourceQuery<T>(ctx, sourceQuery, sourceConfig, ct).ConfigureAwait(false);
 
-        // Why: a failed source query has nothing to post-process — surface it immediately (this guard also
-        // satisfies FDW013: the failure path for 'result' is handled before any success-only use below).
         if (result.IsFailure)
             return result;
 
-        // Why: field rename + calculated fields are row-shape post-processing that assume the source row
-        // shape. An aggregated result has a different shape (group keys + measures), so both are skipped
-        // when aggregating — the SQL already produced the final columns.
         if (aggregation is null)
         {
-            // Why: physical→logical renames before calculated fields so downstream callers see logical names.
             if (fieldMappings != null && fieldMappings.Count > 0 && result.Value != null)
                 result = DataSetExecutionHelpers.ApplyFieldRename(ctx, result, fieldMappings, sourceConfig.SourceName);
 
@@ -169,7 +156,6 @@ public sealed class SimpleDataSetType : DataSetTypeBase
                 return (true, null, GenericResult<T>.Failure(DataGatewayLogger.DataSetValidationFailed(
                     ctx.Logger, ctx.Config.Name, $"Aggregate function '{def.AggregateFunctionName}' is not supported for SQL pushdown.")));
 
-            // Why: empty InputFieldName means COUNT(*) — the count of rows in the group.
             var inner = string.IsNullOrWhiteSpace(def.InputFieldName) ? "*" : def.InputFieldName.Trim();
             measures[def.AggregateColumnName.Trim()] = $"{sqlFunc}({inner})";
         }
@@ -181,10 +167,6 @@ public sealed class SimpleDataSetType : DataSetTypeBase
     /// Maps a <c>DataSetAggregate.AggregateFunctionName</c> to the SQL-pushdownable keyword the query
     /// translator emits, or <see langword="null"/> when the function has no SQL-aggregate form.
     /// </summary>
-    // Why: normalization (domain name → SQL keyword), not runtime dispatch — the name was already
-    // validated against the AggregationFunctions TypeCollection at create time. Accepts both the
-    // collection's PascalCase names and the equivalent SQL keywords; anything else returns null so the
-    // caller fails loud (never defaults to a different function).
     private static string? MapToSqlFunction(string functionName)
         => functionName.Trim().ToUpperInvariant() switch
         {
@@ -198,7 +180,6 @@ public sealed class SimpleDataSetType : DataSetTypeBase
 
     private static IReadOnlyDictionary<string, string>? ResolveFieldMappingsForSource(DataSetExecutionContext ctx, DataSetSourceConfiguration sourceConfig)
     {
-        // Why: FieldMappings is composed by DataSetConfigurationProvider.Get — no resolver needed.
         return sourceConfig.FieldMappings.Count > 0 ? sourceConfig.FieldMappings : null;
     }
 
@@ -221,8 +202,6 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         return (false, translationResult.Value, null);
     }
 
-    // Why: delegates to the shared helper so CompoundDataSetType can use the same resolution
-    // without duplicating code. The helper is internal to Fdw.Services.Data.
     private static string? GetContainerName(DataSetSourceConfiguration source)
         => DataSetExecutionHelpers.GetContainerName(source);
 
@@ -232,9 +211,6 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         DataSetSourceConfiguration sourceConfig,
         CancellationToken ct)
     {
-        // Why: addressing comes from the container the source names — commands are address-free shapes
-        // (filter/ordering/paging only). The source names a DataStore, path and container; the container
-        // it resolves to knows the rest, so nothing here reads a connection off the source.
         DataGatewayLogger.ExecuteSourceQueryEntering(ctx.Logger, sourceConfig.SourceName, sourceConfig.DataStoreName);
 
         var containerName = GetContainerName(sourceConfig);
@@ -247,13 +223,6 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         if (!containerResult.IsSuccess || containerResult.Value == null)
             return GenericResult<T>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, sourceConfig.SourceName));
 
-        // Why the connection is walked off the container and not read from the source: a DataStore owns
-        // its connection (data.DataStore.ConnectionRowId), and the container reaches it through
-        // Parent.Store, so the container ALREADY carries the answer. Requiring the source to repeat it
-        // as a name made a second source of truth that had to be kept in step by hand — and when it was
-        // simply absent, as it is for any source composed from a request DTO, extraction failed with
-        // "ConnectionName is required" against a datastore that knew its connection perfectly well.
-        // This is the same resolution DataGatewayService already performs for a container command.
         var connectionId = containerResult.Value.Parent?.Store?.ConnectionId ?? Guid.Empty;
         if (connectionId == Guid.Empty)
             return GenericResult<T>.Failure(

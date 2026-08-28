@@ -86,7 +86,6 @@ public sealed class SqliteInsertTranslator : SqliteDataCommandTranslatorBase
         var prefix = dialect.ParameterPrefix;
         var paramList = string.Join(", ", fieldNames.Select(f => $"{prefix}{f}"));
 
-        // Why: SQLite uses last_insert_rowid() (not SCOPE_IDENTITY / RETURNING) for the inserted row ID.
         var sql = $"INSERT INTO {BuildQualifiedTableName(dbPath)} ({columnList}) VALUES ({paramList}); SELECT last_insert_rowid();";
 
         var command = CreateCommand(sql);

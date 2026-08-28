@@ -35,8 +35,6 @@ public abstract class GetPromotionEndpointBase : Endpoint<PromotionIdRequest, Pr
     public override void Configure()
     {
         Get("/promotion/requests/{Id}");
-        // Why: GET is read — Viewer role should see promotions. The write-scoped policy was a
-        // copy-paste from CreatePromotion and blocked Viewer with 403.
         Policies("datasets:read");
         Summary(s => s.Summary = "Get promotion request by ID");
         ConfigureEndpoint();
@@ -56,8 +54,6 @@ public abstract class GetPromotionEndpointBase : Endpoint<PromotionIdRequest, Pr
 
             var msg = result.CurrentMessage ?? string.Empty;
 
-            // Why: PromotionService.GetRequest returns IsSuccess=false 'not found' for missing
-            // promotions. Map to a structured 404 envelope instead of 500.
             if ((!result.IsSuccess && msg.Contains("not found", System.StringComparison.OrdinalIgnoreCase))
                 || (result.IsSuccess && result.Value is null))
             {

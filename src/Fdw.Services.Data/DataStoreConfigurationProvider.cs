@@ -38,8 +38,6 @@ namespace Fdw.Services.Data;
 /// </remarks>
 public class DataStoreConfigurationProvider : ImplementationConfigurationProviderBase<DataStoreConfiguration, DataStoreConfigurationCommand>
 {
-    // Why: Lazy to avoid DI resolution-order cycle — the container provider is registered AFTER
-    // DataStoreConfigurationProvider in RegisterDomainConfiguration, so eager resolution would fail.
     private readonly Lazy<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>> _containerProvider;
 
     private readonly ILogger<DataStoreConfigurationProvider> _logger;
@@ -50,9 +48,6 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
     /// </summary>
     public static void RegisterDomainConfiguration(IServiceCollection services)
     {
-        // Why literal: the child-type providers below are plain ImplementationConfigurationProviderBase<,>
-        // instances (not domain-specific subclasses), so there is no per-domain constructor default
-        // to fall back on — this is the domain's own default location.
 
         services.TryAddSingleton<DataStoreConfigurationProvider>(sp =>
             new DataStoreConfigurationProvider(
@@ -66,8 +61,6 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
         services.TryAddSingleton<IServiceConfigurationProvider<DataStoreConfiguration>>(
             sp => sp.GetRequiredService<DataStoreConfigurationProvider>());
 
-        // Why: Child types (DataPath/DataContainer/DataContainerField) need their own providers so
-        // SchemaInformationService and MsSqlSchemaImportPersister can Save discovered schema.
         services.TryAddSingleton<ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand>>(sp =>
             new ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand>(
                 sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand>>()
@@ -90,11 +83,6 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
                 DataStoreTypes.ConfigurationConnection, "data"));
 
 
-        // Why keys are registered with DataPath, DataContainer and DataContainerField rather than with
-        // connections: a container's keys are the same kind of child of the same node, and the
-        // connections collection owns transports, not the data schema. The cascade resolves a child by
-        // finding the ConfigurationCommands option that claims its type, so without these a container
-        // that declared a key saved as NoChildCommandForType and data.DataContainerKey stayed empty.
         services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>(sp =>
             new ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>(
                 sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>()
@@ -109,10 +97,6 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 DataStoreTypes.ConfigurationConnection, "data"));
 
-        // Why (FDW-403 slice 2): DataPathPolicy and FileTypeHandlerOverride are child tables of
-        // data.DataPath using a physical FK (DataPathRowId → DataPath.RowId). Registering their
-        // providers here makes them available for cascade load in FileSystemDataStoreConfigProvider
-        // without the FileSystem package taking a dependency on IConfigurationGateway directly.
         services.TryAddSingleton<ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>>(sp =>
             new ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>(
                 sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>>()
@@ -153,8 +137,6 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
         DataContainerConfiguration container,
         CancellationToken ct = default)
     {
-        // Why: Get now cascades the full Paths → Containers hierarchy (no separate GetWithChildren verb),
-        // so the store-exists / path-exists / duplicate-container guards below have the data they need.
         var storeResult = await Get(storeName, ct).ConfigureAwait(false);
         if (!storeResult.IsSuccess || storeResult.Value is null)
         {
@@ -176,32 +158,16 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
                 DataStoreConfigurationProviderLog.ContainerAlreadyExists(_logger, container.Name, pathName, storeName));
         }
 
-        // Why: stamp only the LOGICAL parent FK (DataPathId). The physical DataPathRowId is RowId-invisible
-        // (DB-managed IDENTITY, not a POCO property) — the save translator resolves it by subquery on this
-        // DataPathId at insert time.
         container.DataPathId = path.Id;
 
         var saveResult = await _containerProvider.Value.Save(container, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
             return saveResult.ToNewResult<DataContainerConfiguration>();
 
-        // Why: no DataStore-tree invalidation needed — the eager full-tree singleton is deleted.
-        // Runtime container lookups go through ConfigurationGatewayDataStoreProvider.GetContainer over DataGatewayService
-        // (caching built in); the base Save path already tag-invalidates so the new container surfaces
-        // on the next read.
         DataStoreConfigurationProviderLog.ContainerAdded(_logger, container.Name, pathName, storeName);
         return GenericResult<DataContainerConfiguration>.Success(container);
     }
     /// <inheritdoc />
-    // Why (FDW-558): the base Get(CancellationToken) returns bare header rows (by design — other
-    // domains, e.g. lineage, rely on the cheap flat list). But DataStore's list DTO
-    // (ListDataStoresEndpointBase.MapToSummary) computes PathCount/ContainerCount by counting
-    // config.Paths/config.Paths[].Containers — which are empty on a bare header, so every store showed
-    // 0/0. Scoped fix: override HERE (not the base) to compose each header into its full aggregate via
-    // the inherited ComposeAggregate hook (reuses ComposeTypedBody + the SAME ComposeChildren recursion
-    // Get(string)/Get(Guid) already use — no duplicated compose logic, and it inherits whatever the
-    // Container->Field cascade already does correctly). One compose failure fails the whole list — no
-    // partial/fallback result (NO FALLBACKS WITHOUT EXPLICIT APPROVAL).
     public override async Task<IGenericResult<IReadOnlyList<DataStoreConfiguration>>> Get(CancellationToken ct = default)
     {
         DataStoreConfigurationProviderLog.ComposingDataStoreList(_logger);

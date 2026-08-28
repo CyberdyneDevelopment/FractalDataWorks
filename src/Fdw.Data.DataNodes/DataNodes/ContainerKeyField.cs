@@ -7,9 +7,6 @@ namespace Fdw.Services.Data.DataNodes;
 /// Constructed from <c>data.DataContainerKeyField</c> rows by the per-transport
 /// <c>DataStoreBuilderBase</c> and by <c>MsSqlDataContainerDetailLoader</c> for lazy-loaded containers.
 /// </summary>
-// Why: public so MsSqlDataContainerDetailLoader in Services.Connections.MsSql can
-// construct ContainerKeyField instances.
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ContainerKeyField : IContainerKeyField
 {

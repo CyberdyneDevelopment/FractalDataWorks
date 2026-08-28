@@ -58,8 +58,6 @@ public static partial class ProfileProviderLog
         Message = "Loaded {count} user preferences")]
     public static partial IGenericMessage LoadedPreferences(ILogger logger, int count);
 
-    // Why (FDW-583): reports an operation that could not complete — Error, matching its sibling
-    // LoadProfileFailed which is already Error for the identical outcome shape.
     /// <summary>
     /// Logs that loading user preferences failed.
     /// </summary>

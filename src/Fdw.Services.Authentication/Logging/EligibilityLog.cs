@@ -25,9 +25,6 @@ internal static partial class EligibilityLog
     /// <param name="logger">The logger.</param>
     /// <param name="principalId">The principal.</param>
     /// <param name="reason">Why.</param>
-    // Why Information and not Warning: a disabled account being turned away is the system doing its
-    // job, and at Warning a routine departure would look like an incident. The runner logs the
-    // resulting refusal at Warning once, which is the count worth having.
     [MessageLogging(EventId = 91201, Level = LogLevel.Information,
         Message = "Principal {principalId} was refused a token: {reason}")]
     internal static partial IGenericMessage Denied(

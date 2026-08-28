@@ -6,9 +6,6 @@ namespace Fdw.Roslyn.Commands.Refactoring.Results;
 /// Explains why an <c>&lt;inheritdoc/&gt;</c> site could not be expanded — these are the
 /// true MA0196 candidates that need explicit documentation written by hand.
 /// </summary>
-// Why: this is a serialized result-DTO value (emitted as a JSON string in the command result),
-// not a dispatch type. A TypeCollection would break the simple enum-string contract callers rely
-// on, so an enum is the correct shape here — not a TypeCollection conversion candidate.
 #pragma warning disable FDW017 // Result-DTO value enum — TypeCollection not applicable here
 [JsonConverter(typeof(JsonStringEnumConverter<UnresolvedReason>))]
 public enum UnresolvedReason

@@ -70,9 +70,6 @@ public sealed class RemoveGlobalUsingsTranslator
         var project = matches[0];
         var wanted = new HashSet<string>(command.Namespaces, StringComparer.Ordinal);
 
-        // Why: a namespace MSBuild also supplies (ImplicitUsings, <Using Include>) reappears in the
-        // generated GlobalUsings.g.cs on the next build, so deleting the source line is a no-op dressed up
-        // as a change. Refuse it and name the props file, rather than report success for nothing.
         var msbuildSupplied = await MsBuildSuppliedImports(project, command, cancellationToken).ConfigureAwait(false);
         var duplicate = command.Namespaces.FirstOrDefault(msbuildSupplied.Contains);
         if (duplicate is not null)
@@ -89,17 +86,11 @@ public sealed class RemoveGlobalUsingsTranslator
 
         var baseline = await DiagnosticDiff.Counts(project, cancellationToken).ConfigureAwait(false);
 
-        // Why: same rule as the move commands — a preview reports, only a real run refuses. Here the
-        // whole algorithm IS the diagnostic diff, so without a baseline there is nothing to preview
-        // either; the refusal stands in both modes, but it must say which mode it is refusing.
         if (baseline is null && !command.AcceptUnverified)
             return Fail("ChangeCannotBeVerified", ResultDetails.Create()
                 .With("ProjectCount", "1")
                 .With("Detail", $"'{project.Name}' has no framework references, so no diagnostic diff from it would be meaningful"));
 
-        // Why: with AcceptUnverified and no bindable baseline there is nothing to diff against, so every
-        // comparison below degrades to "nothing appeared, nothing resolved" and the command does the
-        // mechanical part — remove the directives, add the explicit imports — unchecked, as asked.
         baseline ??= new Dictionary<string, int>(StringComparer.Ordinal);
 
         var afterRemoval = await RemoveDirectives(solution, targets, cancellationToken).ConfigureAwait(false);
@@ -110,8 +101,6 @@ public sealed class RemoveGlobalUsingsTranslator
         var appeared = DiagnosticDiff.Appeared(baseline, removedCounts);
         var resolved = DiagnosticDiff.Appeared(removedCounts, baseline);
 
-        // Why: a break inside generated code cannot be repaired by editing it — the next build rewrites
-        // the file. Refusing is the only honest answer; repairing it would claim work that gets discarded.
         var unfixable = appeared.FirstOrDefault(a => command.IsGeneratedPath(DiagnosticDiff.PathOf(a)));
         if (unfixable is not null)
             return Fail("ChangeWouldNotCompile", ResultDetails.Create()
@@ -278,8 +267,6 @@ public sealed class RemoveGlobalUsingsTranslator
             var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
             if (root is null) continue;
 
-            // Why: match by text rather than by node identity — the nodes were read from an earlier
-            // snapshot of the tree, so they are not reference-equal to the nodes in this root.
             var texts = new HashSet<string>(group.Select(g => g.Directive.ToString().Trim()), StringComparer.Ordinal);
             var doomed = root.DescendantNodes().OfType<UsingDirectiveSyntax>()
                 .Where(u => texts.Contains(u.ToString().Trim()))
@@ -287,8 +274,6 @@ public sealed class RemoveGlobalUsingsTranslator
 
             if (doomed.Count == 0) continue;
 
-            // Why: KeepLeadingTrivia, so a file header comment or a #pragma above the first directive
-            // survives the removal instead of being deleted along with it.
             var updated = root.RemoveNodes(doomed, SyntaxRemoveOptions.KeepLeadingTrivia);
             if (updated is null) continue;
 
@@ -332,8 +317,6 @@ public sealed class RemoveGlobalUsingsTranslator
                         && string.Equals(u.Name?.ToString(), namespaceName, StringComparison.Ordinal)))
                     continue;
 
-                // Why: UsingDirective emits the `using` keyword with no trailing trivia, so the raw node
-                // renders as "usingFdw.Sample;". NormalizeWhitespace puts the separator in.
                 var updated = unit.AddUsings(
                     SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(namespaceName))
                         .NormalizeWhitespace()

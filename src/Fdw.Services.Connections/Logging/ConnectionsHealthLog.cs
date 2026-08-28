@@ -28,8 +28,6 @@ public static partial class ConnectionsHealthLog
     /// Logs that the Connections domain health check completed with a non-Healthy overall status
     /// (e.g. every connection down), with the number of connections probed.
     /// </summary>
-    // Why Error, not Information (FDW-583): CheckHealth returns Success(Unhealthy) — the monitor's
-    // success branch — so this was printed as an Information record even when every connection is down.
     [MessageLogging(EventId = 12007, Level = LogLevel.Error, Message = "Connections domain health check completed: {connectionCount} connection(s) checked, overall status {overallStatus}")]
     public static partial IGenericMessage CheckCompletedUnhealthy(ILogger logger, int connectionCount, string overallStatus);
 

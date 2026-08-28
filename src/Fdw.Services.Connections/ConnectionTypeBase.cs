@@ -61,12 +61,6 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
                defaultPathName: "conn",
                defaultContainerName: defaultContainerName)
     {
-        // Why this constructor contributes nothing to a phase: a phase holds one body and the option
-        // that declares it owns that body outright. A base contributing here would force every derived
-        // option to compose defensively or silently discard what the base left (STC002). The factory
-        // registration this used to do is not an option's concern anyway - every connection kind needs
-        // it identically - so it belongs to the domain, and ConnectionTypes.Register does it once over
-        // the option set it already holds.
     }
 
     /// <summary>

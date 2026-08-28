@@ -7,9 +7,6 @@ namespace Fdw.Mcp.Hosting;
 public abstract class McpToolTypeBase : TypeOptionBase<int, IMcpToolType>, IMcpToolType
 {
     /// <summary>Required protected parameterless constructor for the TypeCollection NotFound sentinel.</summary>
-    // Why: the module initializer silently skips a [TypeOption] that has no parameterless
-    // constructor, so the sentinel path must stay constructible or options vanish without a
-    // diagnostic.
     protected McpToolTypeBase() : base(0, "NotFound") { }
 
     /// <summary>Initializes an MCP tool-type option.</summary>

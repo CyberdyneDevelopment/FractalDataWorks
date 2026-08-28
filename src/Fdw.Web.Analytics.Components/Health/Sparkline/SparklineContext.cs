@@ -11,7 +11,6 @@ namespace Fdw.Web.Analytics.Components.Health.Sparkline;
 /// <summary>
 /// Immutable context for the Sparkline headless provider.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class SparklineContext : ProviderContextBase
 {

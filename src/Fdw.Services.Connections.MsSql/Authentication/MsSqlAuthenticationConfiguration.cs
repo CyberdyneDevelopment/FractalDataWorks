@@ -95,10 +95,6 @@ public abstract class MsSqlAuthenticationConfiguration
     /// <param name="values">The authentication KVP values for this connection.</param>
     /// <param name="name">The property name to read.</param>
     /// <returns>The value, or a structured failure naming the property and this authentication type.</returns>
-    // Why: the KVP bag is a raw dictionary, and a bool+out TryGetValue cannot say WHICH property was
-    // missing or which auth type required it. Every lookup in this domain returns a result the caller
-    // checks — absent and present-but-empty are the same failure, because an empty secret key is not
-    // a usable one.
     public IGenericResult<string> GetValue(IReadOnlyDictionary<string, string?> values, string name)
         => values is not null && values.TryGetValue(name, out var value) && !string.IsNullOrEmpty(value)
             ? GenericResult<string>.Success(value)
@@ -116,10 +112,6 @@ public abstract class MsSqlAuthenticationConfiguration
     public abstract IGenericResult<string> BuildAuthFragment(IReadOnlyDictionary<string, string?> values, string? resolvedPassword);
 
     /// <inheritdoc />
-    // Why: default implementation defers to the sync overload with no resolved password —
-    // appropriate for auth types that don't need a secret (Windows, EntraId access-token paths,
-    // etc.). Types that need a secret (SqlAuth) override and pull SecretKeyName from values
-    // themselves before calling secretManager.Execute.
     public virtual Task<IGenericResult<string>> BuildAuthFragment(
         IReadOnlyDictionary<string, string?> values,
         ISecretManager? secretManager,

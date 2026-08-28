@@ -27,8 +27,6 @@ namespace Fdw.UI.Charts.Blazor.Renderers.ApexChartsRender;
 [ExcludeFromCodeCoverage]
 public static class ApexChartStrategyMap
 {
-    // Why: static initializer for the strategy dictionary. Each entry is a named lambda
-    // factory keyed on the ChartTypes registry name (Ordinal comparison at lookup time).
     private static readonly Dictionary<string, Func<IChartModel, IReadOnlyList<IReadOnlyDictionary<string, object?>>, ApexChartConfiguration>> _strategies =
         new Dictionary<string, Func<IChartModel, IReadOnlyList<IReadOnlyDictionary<string, object?>>, ApexChartConfiguration>>(StringComparer.Ordinal)
         {
@@ -56,13 +54,10 @@ public static class ApexChartStrategyMap
 
     // ── Helpers ───────────────────────────────────────────────────────────────────────────────
 
-    // Why: resolve a field name from the Encodings list by role name (Ordinal comparison).
     private static string? FieldForRole(IChartModel model, string roleName)
         => model.Encodings.FirstOrDefault(
             e => string.Equals(e.Role.Name, roleName, StringComparison.Ordinal))?.FieldName;
 
-    // Why: extract a decimal value from a row field; non-numeric values resolve to null so the
-    // chart renders a gap rather than throwing. A gap is always preferable to a crash.
     private static decimal? NumericValue(IReadOnlyDictionary<string, object?> row, string? field)
     {
         if (field is null || !row.TryGetValue(field, out var raw) || raw is null)
@@ -80,7 +75,6 @@ public static class ApexChartStrategyMap
         };
     }
 
-    // Why: extract a string display value from a row field for axis labels / category names.
     private static string StringValue(IReadOnlyDictionary<string, object?> row, string? field)
     {
         if (field is null || !row.TryGetValue(field, out var raw))
@@ -88,8 +82,6 @@ public static class ApexChartStrategyMap
         return raw?.ToString() ?? string.Empty;
     }
 
-    // Why: build shared ApexCharts title/legend/tooltip options from IChartModel flags so all
-    // strategies share one coherent option-building path without duplicating property sets.
     private static ApexChartOptions<ChartDataRow> BaseOptions(IChartModel model)
     {
         var options = new ApexChartOptions<ChartDataRow>
@@ -109,9 +101,6 @@ public static class ApexChartStrategyMap
         return options;
     }
 
-    // Why: most XY chart types (Bar/Line/Area/Scatter) share the same series-splitting logic:
-    // if a Series encoding is bound, partition the rows by series value and emit one
-    // ApexChartSeries per partition; otherwise emit one series with all rows.
     private static List<ApexChartSeries> BuildXySeries(
         IChartModel model,
         IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
@@ -123,8 +112,6 @@ public static class ApexChartStrategyMap
 
         if (seriesField is not null)
         {
-            // Why: group by distinct series values so multi-series charts split correctly without
-            // a conditional branch per chart type.
             return rows
                 .GroupBy(r => StringValue(r, seriesField), StringComparer.Ordinal)
                 .Select(g => new ApexChartSeries
@@ -237,7 +224,6 @@ public static class ApexChartStrategyMap
         var xField = FieldForRole(model, "X");
         var yField = FieldForRole(model, "Y");
 
-        // Why: donut uses Measure role first if bound (KPI pattern), falls back to Y.
         var measureField = FieldForRole(model, "Measure") ?? yField;
 
         var items = rows.Select(r => new ChartDataRow(r)).ToList();
@@ -287,7 +273,6 @@ public static class ApexChartStrategyMap
     private static ApexChartConfiguration BuildKpiConfiguration(
         IChartModel model, IReadOnlyList<IReadOnlyDictionary<string, object?>> rows)
     {
-        // Why: KPI renders as a Radial bar showing a single numeric metric value.
         var options = BaseOptions(model);
         options.Chart!.Type = ChartType.RadialBar;
 

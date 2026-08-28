@@ -143,11 +143,6 @@ public class TypeOptionExtensionGenerator : IIncrementalGenerator
         // Extract constructors
         var constructors = ExtractConstructors(classSymbol);
 
-        // Why the CLR full name and not the option name: the runtime derives an unassigned Id the
-        // same way, from GetType().FullName, and the two must agree or every generated
-        // collection.ById(GeneratedId) lookup misses and returns the NotFound sentinel — silently,
-        // because ById does not throw. Hashing the name alone also collides: "Query" is the name of
-        // MsSqlQueryTranslator, PostgreSqlQueryTranslator, SqliteQueryTranslator and QueryCommand.
         var generatedId = GenerateIdFromName(GetClrFullName(classSymbol));
 
         // Skip extension generation for Guid-based collections
@@ -379,8 +374,6 @@ public class TypeOptionExtensionGenerator : IIncrementalGenerator
         sb.AppendLine($"/// <summary>");
         sb.AppendLine($"/// Provides static extension methods for <see cref=\"{option.TypeName}\"/> on <see cref=\"{option.CollectionFullName}\"/>.");
         sb.AppendLine($"/// </summary>");
-        // Why type-level here and not member-level: this class is created wholly by the generator —
-        // there is no hand-written partial part to collaterally exclude.
         sb.AppendLine("[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]");
         sb.AppendLine($"public static class {option.CollectionClassName}_{option.OptionName}Extension");
         sb.AppendLine("{");

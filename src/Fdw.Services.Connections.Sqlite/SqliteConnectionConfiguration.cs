@@ -27,8 +27,6 @@ public partial class SqliteConnectionConfiguration : IConnectionImplementationCo
     /// Gets or sets the unique identifier for this typed body row (conn.SqliteConnection.Id).
     /// Minted by the provider via <see cref="Guid.CreateVersion7()"/> when <see cref="Guid.Empty"/>.
     /// </summary>
-    // Why: NO Guid default — the provider mints this before INSERT. A random default here would
-    // bypass the provider's Id-mint logic silently.
     public Guid Id { get; set; }
 
     /// <summary>
@@ -36,8 +34,6 @@ public partial class SqliteConnectionConfiguration : IConnectionImplementationCo
     /// </summary>
     public Guid ConnectionId { get; set; }
 
-    // Why: Name and SectionName are not meaningful on the typed body — the canonical name lives on
-    // the parent ConnectionConfiguration. Empty string is the correct implementation.
     string IGenericConfiguration.Name
     {
         get => string.Empty;

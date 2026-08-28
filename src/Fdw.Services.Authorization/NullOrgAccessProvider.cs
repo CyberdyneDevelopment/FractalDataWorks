@@ -11,8 +11,6 @@ namespace Fdw.Services.Authorization;
 /// Null-object org-access provider — contributes zero org grants.
 /// Used when org access resolution is not wired in the DI container.
 /// </summary>
-// Why: public so MultitenancyExtensions (in Multitenancy.Sql, a different assembly) can
-// reference this as the fallback registration when multitenancy is disabled.
 public sealed class NullOrgAccessProvider : IOrgAccessProvider
 {
     /// <summary>Gets the singleton instance.</summary>

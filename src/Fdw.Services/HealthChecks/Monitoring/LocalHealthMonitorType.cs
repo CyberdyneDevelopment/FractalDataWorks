@@ -39,11 +39,6 @@ public sealed class LocalHealthMonitorType
         {
             HealthMonitorProvider.Register(Name, sp => sp.GetRequiredService<LocalHealthMonitorFactory>());
 
-            // Why this line exists at all: the call above writes into a STATIC registry that nothing
-            // else narrates. Until the provider drains it — much later, in another scope — a
-            // registration that never happened and one that happened and was then discarded are
-            // byte-identical in the log, because both are silence. This says which type registered
-            // what, for which option, at the moment it happened.
             ServiceLogger.FactoryRegistrationDeferred(
                 loggerFactory?.CreateLogger<LocalHealthMonitorType>()
                     ?? NullLogger<LocalHealthMonitorType>.Instance,
@@ -60,8 +55,6 @@ public sealed class LocalHealthMonitorType
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
-        // Why Initialize: registering into the domain provider needs a live container, and Register
-        // runs while it is still being built.
         Initialization((host, hostLoggerFactory) =>
         {
             var services = host.Services;

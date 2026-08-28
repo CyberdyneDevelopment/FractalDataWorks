@@ -33,8 +33,6 @@ public sealed class CalculationClientType : ApiClientTypeBase<CalculationApiClie
         Registration((builder, loggerFactory) =>
         {
 
-            // Why: register as both concrete and interface so [Inject] ICalculationApiClient resolves
-            // in headless Blazor components without requiring them to depend on the concrete type.
             builder.Services.AddScoped<CalculationApiClient>(sp =>
             {
                 var factory = sp.GetRequiredService<IHttpClientFactory>();

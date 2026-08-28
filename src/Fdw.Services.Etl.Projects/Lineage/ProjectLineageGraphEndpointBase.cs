@@ -29,12 +29,8 @@ namespace Fdw.Services.Etl.Projects.Lineage;
 /// </remarks>
 public abstract class ProjectLineageGraphEndpointBase : GetLineageGraphEndpointBase
 {
-    // Why: pipe.* tables (OrchestrationNode, OrchestrationNodePipeline, etc.) are in ConfigurationDb,
-    // declared in configurationSchema.json under the "pipe" path. IConfigurationGateway routes there
-    // directly. IDataGateway would look in the runtime DataStore table and find nothing.
     private readonly IConfigurationGateway _configurationGateway;
 
-    // Why: container name and connection constants are internal to the lineage query layer.
     private const string OrchestrationNodeContainer = "OrchestrationNode";
     private const string NodePipelineContainer = "OrchestrationNodePipeline";
     private const string NodePipelinePrerequisiteContainer = "OrchestrationNodePipelinePrerequisite";
@@ -43,13 +39,10 @@ public abstract class ProjectLineageGraphEndpointBase : GetLineageGraphEndpointB
 
     private static readonly TimeSpan LineageCacheDuration = TimeSpan.FromMinutes(5);
 
-    // Why static readonly: CA1861 — inline arrays would allocate on every BuildFullGraph call.
     private static readonly string[] NodeInvalidationTags = ["pipe.OrchestrationNode"];
     private static readonly string[] NodePipelineInvalidationTags = ["pipe.OrchestrationNodePipeline"];
     private static readonly string[] PrerequisiteInvalidationTags = ["pipe.OrchestrationNodePipelinePrerequisite"];
 
-    // Why static: NodeTypeIds are read from the TypeCollection at class load time — stable for
-    // the lifetime of the process.
     private static readonly int ProjectNodeTypeId = OrchestrationNodeTypes.ByName("Project").Id;
     private static readonly int StageNodeTypeId = OrchestrationNodeTypes.ByName("Stage").Id;
     private static readonly int StepNodeTypeId = OrchestrationNodeTypes.ByName("Step").Id;
@@ -61,7 +54,6 @@ public abstract class ProjectLineageGraphEndpointBase : GetLineageGraphEndpointB
         ILogger<GetLineageGraphEndpointBase> logger)
         : base(configurationGateway, pipelineProvider, logger)
     {
-        // Why: keep a reference to IConfigurationGateway for the pipe.* queries below.
         _configurationGateway = configurationGateway;
     }
 
@@ -72,8 +64,6 @@ public abstract class ProjectLineageGraphEndpointBase : GetLineageGraphEndpointB
         var graph = await base.BuildFullGraph(ct).ConfigureAwait(false);
 
         // Step 2: query the single recursive node table + 2 membership tables in parallel.
-        // Why single-table query: FDW-388 collapsed Project/ProjectStage/StageStep into
-        // pipe.OrchestrationNode, eliminating the 5-query fan-out.
         var nodesTask = QueryWithCaching<OrchestrationNodeLineageRecord>(
             OrchestrationNodeContainer, NodeInvalidationTags, ct);
         var nodePipelinesTask = QueryWithCaching<OrchestrationNodePipelineLineageRecord>(
@@ -127,7 +117,6 @@ public abstract class ProjectLineageGraphEndpointBase : GetLineageGraphEndpointB
                 Id = $"Stage_{stage.Id:N}",
                 Type = LineageNodeTypes.ByName("Stage"),
                 Name = stage.Name,
-                // Why: store Ordinal in Metadata for rendering in the UI.
                 Metadata = new Dictionary<string, object?>(StringComparer.Ordinal)
                 {
                     ["Ordinal"] = stage.Ordinal
@@ -194,7 +183,6 @@ public abstract class ProjectLineageGraphEndpointBase : GetLineageGraphEndpointB
         foreach (var membership in nodePipelines)
         {
             if (!stepIds.Contains(membership.NodeId)) continue;
-            // Why: use the pipeline's name-based lineage node ID (established by the base class).
             graph.Edges.Add(new LineageEdge
             {
                 Id = $"e{edgeId++}",

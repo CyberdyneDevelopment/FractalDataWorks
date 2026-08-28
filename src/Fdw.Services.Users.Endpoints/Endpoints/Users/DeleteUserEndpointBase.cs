@@ -55,8 +55,6 @@ public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
     {
         EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
 
-        // Why: resolving (rather than trusting a parsed Guid) also proves the user exists — a
-        // well-formed id for a user that isn't there now 404s instead of issuing a delete into space.
         var lookup = await _userProvider.ResolveUser(req.IdOrName, ct).ConfigureAwait(false);
         if (!lookup.IsSuccess || lookup.Value is null)
         {

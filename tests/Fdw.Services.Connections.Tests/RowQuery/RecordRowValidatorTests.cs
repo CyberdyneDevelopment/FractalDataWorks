@@ -25,8 +25,6 @@ public sealed class RecordRowValidatorTests
     [Trait("Category", "RequiredField")]
     public void ValidateFailsWhenADeclaredNonNullableFieldIsAbsentFromARow()
     {
-        // Why (fix #1 proof): deleting "Prefix" from a EnvironmentVariableSecretManager.json row is
-        // exactly this shape — a declared IsNullable:false field key missing entirely from the row.
         var container = ContainerStub.Build("EnvironmentVariableSecretManager", ("Prefix", false));
         var rows = new List<IReadOnlyDictionary<string, object?>> { Row(("SecretManagerId", Guid.NewGuid())) };
 
@@ -64,8 +62,6 @@ public sealed class RecordRowValidatorTests
     [Trait("Category", "RowQuery")]
     public void ValidateSucceedsWhenANullableFieldIsAbsentFromARow()
     {
-        // Why: only IsNullable:false fields are required — a nullable field absent from a row is
-        // legitimate (defaults to DBNull, exactly as a real ADO.NET provider would).
         var container = ContainerStub.Build("SecretManager", ("Name", false), ("Description", true));
         var rows = new List<IReadOnlyDictionary<string, object?>> { Row(("Name", "EnvSecrets")) };
 

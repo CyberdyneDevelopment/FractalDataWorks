@@ -6,7 +6,6 @@ namespace Fdw.Commands.Data.Abstractions;
 /// <summary>
 /// Message indicating that a container name is required.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [Message("ContainerNameRequired")]
 public sealed class ContainerNameRequiredMessage : DataCommandMessage

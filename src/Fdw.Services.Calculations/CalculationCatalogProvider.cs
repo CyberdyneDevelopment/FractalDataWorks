@@ -45,9 +45,6 @@ public sealed class CalculationCatalogProvider : ICalculationCatalogProvider
                 var listResult = await source.List(_context, cancellationToken).ConfigureAwait(false);
                 if (!listResult.IsSuccess)
                 {
-                    // Why: a per-source failure is surfaced, not swallowed — log which source failed,
-                    // then propagate the source's own result (full Code/Details/Messages) via ToNewResult
-                    // rather than re-wrapping just its Messages (FDW015).
                     CalculationCatalogLog.SourceListFailed(_logger, source.Name);
                     return listResult.ToNewResult<IReadOnlyList<CalculationCatalogItem>>();
                 }

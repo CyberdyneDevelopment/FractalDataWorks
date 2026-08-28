@@ -21,7 +21,6 @@ public sealed class DateTimeTransformTests
     [Fact]
     public async Task ParseDateOnlyHonoursTheConfiguredFormat()
     {
-        // Why this matters: 03/04 is 3 April or 4 March depending on the format, and both parse.
         var result = await new ParseDateOnlyFieldTransformer().Transform(
             "04/03/2026", TransformTestContext.With(("format", "dd/MM/yyyy")), TestContext.Current.CancellationToken);
 

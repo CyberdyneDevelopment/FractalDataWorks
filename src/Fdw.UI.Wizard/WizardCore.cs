@@ -16,12 +16,6 @@ namespace Fdw.UI.Wizard;
 /// <typeparam name="TContext">
 /// Domain-specific immutable context type the host renders.
 /// </typeparam>
-// Why: WizardProviderBase carried all the state-machine logic inside a
-// Blazor ComponentBase, which forced CLI hosts to either duplicate the
-// logic or fake a Blazor lifecycle. Extracting WizardCore means both
-// surfaces share the same step navigation, validation gates, and
-// error handling. WizardProviderBase now delegates to a core instance;
-// CLI callers construct a core directly.
 public abstract class WizardCore<TContext> : IAsyncDisposable
     where TContext : class, new()
 {
@@ -61,9 +55,6 @@ public abstract class WizardCore<TContext> : IAsyncDisposable
     /// Hosts subscribe and re-render. Payload-free because the host
     /// reads state from the core, not from arguments.
     /// </summary>
-    // Why: EventHandler (2-arg) matches the framework delegate shape
-    // Meziantou analyzers expect for .NET events; the first argument is
-    // unused but satisfies the convention.
     public event EventHandler? StateChanged;
 
     // ── Abstract hooks ─────────────────────────────────────────────────────
@@ -96,7 +87,6 @@ public abstract class WizardCore<TContext> : IAsyncDisposable
     /// Safe to call once — further calls are no-ops. Returns when initial load completes
     /// (or fails — failure is captured in <see cref="LastResult"/>).
     /// </summary>
-    // Why: FDW convention strips the Async suffix even on async methods.
     private bool _started;
     public async Task Start(CancellationToken cancellationToken = default)
     {
@@ -115,8 +105,6 @@ public abstract class WizardCore<TContext> : IAsyncDisposable
         }
         catch (OperationCanceledException ex)
         {
-            // Why: cancellation is expected during component disposal or on the provided token;
-            // ex is named to satisfy FDW022 — no error is surfaced at this boundary.
             _ = ex;
         }
         catch (Exception ex)
@@ -190,8 +178,6 @@ public abstract class WizardCore<TContext> : IAsyncDisposable
         }
         catch (OperationCanceledException ex)
         {
-            // Why: cancellation at this boundary (component disposal or explicit cancel) is expected;
-            // ex is named to satisfy FDW022 — no error is surfaced.
             _ = ex;
         }
         catch (Exception ex)
@@ -219,7 +205,6 @@ public abstract class WizardCore<TContext> : IAsyncDisposable
         }
         catch (OperationCanceledException ex)
         {
-            // Why: cancellation is expected here; ex named to satisfy FDW022.
             _ = ex;
             return default;
         }
@@ -255,7 +240,6 @@ public abstract class WizardCore<TContext> : IAsyncDisposable
         }
         catch (OperationCanceledException ex)
         {
-            // Why: cancellation is expected here; ex named to satisfy FDW022.
             _ = ex;
             return default;
         }
@@ -307,10 +291,6 @@ public abstract class WizardCore<TContext> : IAsyncDisposable
     // ── Dispose ────────────────────────────────────────────────────────────
 
     /// <summary>Cancels <see cref="ComponentCt"/> and disposes the underlying token source.</summary>
-    // Why: CS1061 / CA1816 — IAsyncDisposable.DisposeAsync is the framework-
-    // required name here; suppressing FDW001 for the interface implementation.
-    // GC.SuppressFinalize is appropriate because WizardCore honours the
-    // IAsyncDisposable contract, disposing its managed resources.
 #pragma warning disable FDW001
     public async ValueTask DisposeAsync()
 #pragma warning restore FDW001

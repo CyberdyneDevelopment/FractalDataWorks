@@ -11,9 +11,6 @@ namespace Fdw.Services.Data;
 /// implementation is registered (e.g., in unit tests or non-MsSql environments).
 /// Returns empty lists for all containers without logging or throwing.
 /// </summary>
-// Why: sentinel pattern avoids null-checks throughout the loader's tree-builder pass and prevents
-// NullReferenceException when field/key detail is not needed (e.g., cfg CRUD endpoints
-// only need container Name and Path — they never access Fields or Keys at bootstrap).
 public sealed class NullDataContainerDetailLoader : IDataContainerDetailLoader
 {
     /// <summary>Gets the shared singleton instance.</summary>

@@ -49,8 +49,6 @@ public class VsCodeManifestProjectionTests
     [Trait("Category", "CoreFramework")]
     public void WebviewOpenCommandIdIsProjectedFromItsOwningCommand()
     {
-        // Why: the wire format still joins webviews to commands by id, but the id is now derived from the
-        // owning option rather than hand-authored — so an orphaned openCommandId is unrepresentable.
         var manifest = VsCodeManifestFactory.Create(Options, new IVsCodeCommandType[] { new CanvasCommand() });
 
         manifest.Webviews.Count.ShouldBe(1);
@@ -100,8 +98,6 @@ public class VsCodeManifestProjectionTests
     [Trait("Category", "CoreFramework")]
     public void ContributesJsonOmitsTitlePrefixSoThePaletteDoesNotDoubleTheCategory()
     {
-        // Why: VS Code renders "Category: Title". A title that already embeds the category would display
-        // as "Pidgin: Pidgin: Open Canvas" — invisible until the palette actually worked.
         var manifest = VsCodeManifestFactory.Create(Options, new IVsCodeCommandType[] { new CanvasCommand() });
 
         manifest.Commands[0].Title.ShouldBe("Open Canvas");

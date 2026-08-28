@@ -7,7 +7,6 @@ namespace Fdw.Conventions;
 /// Override convention analyzer thresholds for a specific method or class.
 /// Values of -1 indicate "use the default threshold".
 /// </summary>
-// Why: pure attribute definition (declarative metadata only, consumed by analyzers at compile time) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor | AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 [ExcludeFromCodeCoverage]
 public sealed class ConventionOverrideAttribute : Attribute

@@ -21,10 +21,6 @@ public class PipelineFieldMappingDto
     /// <summary>Gets or sets the target data type.</summary>
     public string? TargetType { get; set; }
 
-    // Why: these three are persisted on the mapping (IFieldMapping declares them) but were omitted from this
-    // response, making GET lossy: a mapping saved with IsEnabled=false came back with the field ABSENT, the
-    // client materialised its `= true` initializer, and re-saving silently re-ENABLED it. Same class of data
-    // loss for IsRequired and DefaultValue. The response must carry everything the request can set.
 
     /// <summary>Gets or sets whether the mapping is enabled.</summary>
     public bool IsEnabled { get; set; }

@@ -25,11 +25,6 @@ public abstract class NotificationTypeBase<TService, TFactory, TConfiguration>
     /// <summary>
     /// Gets the notification channel this type handles.
     /// </summary>
-    // Why this resolves on read rather than in the constructor: a notification type is CONSTRUCTED by
-    // the registration initializer, and reading a TypeCollection closes it. A channel shipping in the
-    // same package as its type would still be mid-registration at that moment, so resolving here would
-    // close NotificationChannels against the very channel the package installs. Reading on access is
-    // what lets a channel live outside the assembly that declares the collection.
     public INotificationChannel Channel => NotificationChannels.ByName(_channelName);
 
     /// <summary>

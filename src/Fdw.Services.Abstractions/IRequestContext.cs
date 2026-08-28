@@ -7,8 +7,6 @@ namespace Fdw.Services.Abstractions;
 /// Represents the identity and authorization context for an incoming request.
 /// Resolved from the auth token per-request by middleware.
 /// </summary>
-// Why: Replaces ConfigurationScopes (System/User/Merged) with a richer context.
-// Visibility is driven by who is asking (tenant, org membership, roles), not by a scope enum.
 public interface IRequestContext
 {
     /// <summary>
@@ -29,7 +27,5 @@ public interface IRequestContext
     /// <summary>
     /// Gets whether the current user has the system-admin role.
     /// </summary>
-    // Why: Derived from Roles rather than stored separately, so it cannot drift from the
-    // role set the token actually carries. Consumed by AdminOnlyPolicy and TenantScopedPolicy.
     bool IsSystemAdmin { get; }
 }

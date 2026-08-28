@@ -340,9 +340,6 @@ public sealed class DataStoreApiClientTests
         await sut.DiscoverContainers(new DiscoverDataStoreRequest { Name = "store1" }, TestContext.Current.CancellationToken);
 
         handler.LastRequest.ShouldNotBeNull();
-        // Why: aligned to the server's POST DiscoverDataStoreEndpointBase; the bare
-        // "/datastores/discover" is shadowed by the "/datastores/{name}" catch-all, so both the
-        // client and server use the non-colliding "/datastores/-/discover" form.
         handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/datastores/-/discover");
         handler.LastRequest.Method.ShouldBe(HttpMethod.Post);
     }

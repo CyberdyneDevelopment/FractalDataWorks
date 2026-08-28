@@ -5,7 +5,6 @@ namespace Fdw.UI.Abstractions.Components;
 /// <summary>
 /// Represents a single validation message.
 /// </summary>
-// Why: pure DTO, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class ValidationMessage
 {

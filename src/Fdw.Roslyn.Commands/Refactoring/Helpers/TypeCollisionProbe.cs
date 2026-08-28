@@ -108,9 +108,6 @@ public static class TypeCollisionProbe
         return findings;
     }
 
-    // Why: attribute by the FILE first — a diagnostic inside a moved document belongs to that type
-    // unambiguously. Fall back to the type named in the message. Anything matching neither is reported
-    // unattributed rather than assigned to a type on a guess.
     private static string Attribute(IReadOnlyList<string> movedTypeNames, string path, string message)
     {
         if (movedTypeNames.Count == 0) return string.Empty;
@@ -129,9 +126,6 @@ public static class TypeCollisionProbe
         return string.Empty;
     }
 
-    // Why: the caller needs to act differently on the two. A collision means the change cannot stand as
-    // written; an unresolved reference means a reference still needs following. Lumping them together
-    // would hide which of those two problems you actually have.
     private static string? Classify(string diagnosticId)
     {
         if (Array.Exists(CollisionDiagnostics, id => string.Equals(id, diagnosticId, StringComparison.Ordinal)))
@@ -151,18 +145,11 @@ public static class TypeCollisionProbe
     {
         var findings = new List<BreakFinding>();
 
-        // Why: counted per key so the Nth occurrence of an error is compared against the N the baseline
-        // held. A set would let a change that duplicates an existing error pass unnoticed.
         var seen = new Dictionary<string, int>(StringComparer.Ordinal);
 
         var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
         if (compilation is null) return findings;
 
-        // Why: without framework references EVERY name fails to bind, so the probe reports the entire BCL
-        // as missing — hundreds of CS0246s for System, Guid, Task — and buries the genuine findings it
-        // exists to surface. That is a broken PROBE, not a broken change, so say so once and stop rather
-        // than emit noise the caller has to sift. System.Object is the cheapest possible witness: if the
-        // compilation cannot bind it, it cannot bind anything.
         if (compilation.GetSpecialType(SpecialType.System_Object).TypeKind == TypeKind.Error)
         {
             findings.Add(new BreakFinding
@@ -188,8 +175,6 @@ public static class TypeCollisionProbe
 
             var span = diagnostic.Location.GetLineSpan();
 
-            // Why: obj/ output is a real compilation input, so diagnostics land in AssemblyInfo.cs and
-            // friends. Reporting them tells the caller nothing about their own change.
             if (command.IsGeneratedPath(span.Path)) continue;
 
             var message = diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture);

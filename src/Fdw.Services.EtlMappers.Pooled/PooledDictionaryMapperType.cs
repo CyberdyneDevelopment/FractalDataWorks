@@ -36,8 +36,6 @@ public sealed class PooledDictionaryMapperType
 
 
     /// <inheritdoc />
-    // Why this is NOT a ServiceTypeBase phase func: this domain declares its own
-    // Register contract, driven directly by its provider.
     public override IServiceCollection Register(IServiceCollection services, ILoggerFactory? loggerFactory = null)
     {
 

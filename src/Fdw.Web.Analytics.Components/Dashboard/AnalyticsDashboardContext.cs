@@ -9,7 +9,6 @@ namespace Fdw.Web.Analytics.Components.Dashboard;
 /// <summary>
 /// Immutable context for the analytics dashboard widget.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class AnalyticsDashboardContext : ProviderContextBase
 {

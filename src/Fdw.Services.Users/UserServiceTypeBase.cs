@@ -24,10 +24,6 @@ public abstract class UserServiceTypeBase : ServiceTypeBase<IGenericService, IUs
         string description,
         string? category = null)
         : base(name, sectionName, displayName, description, category ?? "User",
-               // Why: DefaultDataStoreName/DefaultPathName are passed to Register by the
-               // source-generated ServiceTypeCollection dispatch. Without them the dataStoreName parameter
-               // arrives as "" — the gateway then logs "DataStoreName is empty" and cannot resolve the
-               // connection, causing all UserConfigurationProvider queries to fail.
                defaultDataStoreName: "ConfigurationDb",
                defaultPathName: "usr")
     {

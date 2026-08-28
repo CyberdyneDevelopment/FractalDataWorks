@@ -82,9 +82,6 @@ public sealed class CalculationContext : ICalculationContext
         if (string.IsNullOrWhiteSpace(containerName))
             return Task.FromResult(GenericResult<TData>.Failure(CalculationResultCodes.ContainerNameRequired()));
 
-        // Why: The simple connection+container overload requires a concrete IDataCommand
-        // implementation that belongs above the abstractions layer. Callers must use the
-        // IDataCommand overload when they need query filtering.
         return Task.FromResult(GenericResult<TData>.Failure(CalculationResultCodes.UseDataCommandOverload()));
     }
 
@@ -180,9 +177,6 @@ public sealed class CalculationContext : ICalculationContext
     /// <summary>
     /// Minimal service provider returned when no DI container is available.
     /// </summary>
-    // Why: CalculationContext may be constructed without a DI container in
-    // lightweight calculation scenarios (e.g. formula evaluation). NullServiceProvider
-    // prevents null reference exceptions while making the absence of services explicit.
     private sealed class EmptyServiceProvider : IServiceProvider
     {
         /// <summary>Gets the singleton instance.</summary>

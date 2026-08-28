@@ -239,13 +239,6 @@ public sealed class PollyRetryResiliencyTypeTests
     public async Task ExecuteAppliesPerAttemptTimeoutWhenConfigured()
     {
         // Arrange
-        // Why (DEFECT): PollyRetryResiliencyType.Execute only catches OperationCanceledException and
-        // ResiliencyRetryException. Polly.Timeout.TimeoutRejectedException derives from
-        // Polly.ExecutionRejectedException (plain Exception), NOT OperationCanceledException, so a
-        // per-attempt timeout escapes Execute as an unhandled exception instead of the documented
-        // IGenericResult failure contract. This test characterizes the CURRENT (defective) behavior;
-        // it should start failing (in a good way) once Execute gains a catch for TimeoutRejectedException
-        // that converts it into a GenericResult.Failure.
         var type = new PollyRetryResiliencyType();
         var config = new PollyRetryResiliencyConfiguration
         {
@@ -270,12 +263,6 @@ public sealed class PollyRetryResiliencyTypeTests
     public async Task ExecuteThrowsValidationExceptionWhenMaxRetriesIsZero()
     {
         // Arrange
-        // Why (DEFECT): BuildPipeline(pollyConfig) is called BEFORE the try/catch block in Execute, and
-        // Polly's RetryStrategyOptions.MaxRetryAttempts carries a [Range(1, int.MaxValue)] validation
-        // attribute. MaxRetries = 0 is a plausible "no retry, just run once" configuration, but it makes
-        // pipeline.Build() throw a raw System.ComponentModel.DataAnnotations.ValidationException that is
-        // never caught, violating both "fail loud via IGenericResult" and the IResiliencyType.Execute
-        // contract (Task<IGenericResult>, not an exception, for a config-driven failure).
         var type = new PollyRetryResiliencyType();
         var config = new PollyRetryResiliencyConfiguration { MaxRetries = 0 };
         var ctx = new FakeResiliencyExecutionContext();
@@ -291,10 +278,6 @@ public sealed class PollyRetryResiliencyTypeTests
     public async Task ExecuteIgnoresCircuitBreakerThresholdConfiguration()
     {
         // Arrange
-        // Why (DEFECT): PollyRetryResiliencyConfiguration.CircuitBreakerThreshold is documented as
-        // "the circuit opens after this many consecutive failures", but PollyRetryResiliencyType.BuildPipeline
-        // never calls builder.AddCircuitBreaker(...) — the setting is inert. This test proves the stage still
-        // runs MaxRetries+1 times even though CircuitBreakerThreshold is set to 1, i.e. no circuit ever opens.
         var type = new PollyRetryResiliencyType();
         var config = new PollyRetryResiliencyConfiguration
         {

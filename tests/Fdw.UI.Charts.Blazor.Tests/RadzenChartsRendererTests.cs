@@ -21,12 +21,7 @@ public sealed class RadzenChartsRendererTests
     private static TestContext CreateContext()
     {
         var ctx = new TestContext();
-        // Why: Radzen components use JS interop for chart rendering. Configure bUnit in
-        // loose mode so any un-setup JS call is silently ignored, allowing the render
-        // to complete without throwing.
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
-        // Why: AddRadzenComponents registers the DI services (TooltipService, DialogService,
-        // etc.) that Radzen component trees depend on via cascading parameters and injection.
         ctx.Services.AddRadzenComponents();
         return ctx;
     }

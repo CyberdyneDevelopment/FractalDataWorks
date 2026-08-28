@@ -15,8 +15,6 @@ public sealed class SaveSourceMappingsPayload
     public string SourceName { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the field mappings to persist.</summary>
-    // Why: the server contract marks this Required; without the matching client-side check the UI
-    // could send a request omitting Mappings and take a 400 back from the server.
     [Required]
     public IList<FieldMappingInputPayload> Mappings { get; set; } = [];
 }

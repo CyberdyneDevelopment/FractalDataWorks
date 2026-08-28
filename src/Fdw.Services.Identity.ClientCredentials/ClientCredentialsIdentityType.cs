@@ -32,29 +32,17 @@ public sealed class ClientCredentialsIdentityType
     public ClientCredentialsIdentityType()
         : base("ClientCredentials", defaultContainerName: "ClientCredentialsIdentity")
     {
-        // Why Append and not Registration: Registration ASSIGNS, discarding whatever body was already
-        // installed — including a segment a base constructor prepended. ConnectionTypeBase prepends its
-        // factory registration that way, and six connection kinds silently stopped being creatable when
-        // their options used Registration (af522f014). This base prepends nothing today, so either is
-        // correct right now; Append stays correct if that ever changes.
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<ClientCredentialsIdentityType>()
                 ?? NullLogger<ClientCredentialsIdentityType>.Instance;
 
-            // Why the option registers its own factory: this is the registry the domain provider reads
-            // to turn a configuration's ServiceOptionType into something that can build the service. An
-            // option that skips it resolves to "No registered service type matches ServiceOptionType"
-            // at the first request, which reads like a configuration fault and is not one.
             IdentityServiceProvider
                 .Register(Name, sp => new ClientCredentialsIdentityFactory(
                     sp.GetService<ILoggerFactory>(),
                     sp.GetRequiredService<IHttpClientFactory>().CreateClient(IdentityHttpClient.Name),
                     sp.GetRequiredService<Lazy<ISecretManagerProvider>>()));
 
-            // Why registered here: the factory takes the secret-manager provider as a Lazy so it is
-            // resolved after the container is built, and nothing else in the graph registers that
-            // closed Lazy.
             builder.Services.TryAddScoped(sp => new Lazy<ISecretManagerProvider>(
                 sp.GetRequiredService<ISecretManagerProvider>));
 
@@ -74,8 +62,6 @@ public sealed class ClientCredentialsIdentityType
 
         Initialization((host, loggerFactory) =>
         {
-            // Why here and not in Register: registering into the domain provider needs a live
-            // container, and Register runs while it is still being built.
             var services = host.Services;
             services.GetRequiredService<IIdentityServiceConfigurationProvider>()
                 .Register(Name, services.GetRequiredService<ClientCredentialsConfigurationProvider>());

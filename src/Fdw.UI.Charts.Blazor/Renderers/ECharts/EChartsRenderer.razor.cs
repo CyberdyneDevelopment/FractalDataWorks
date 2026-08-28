@@ -55,15 +55,11 @@ public sealed partial class EChartsRenderer : ComponentBase, IAsyncDisposable
     /// <summary>
     /// Gets or sets the optional logger. Falls back to <see cref="NullLogger{T}.Instance"/>.
     /// </summary>
-    // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions.
     [Parameter]
     public ILogger? Logger { get; set; }
 
     // ── Injected ──────────────────────────────────────────────────────────────────
 
-    // Why: IJSRuntime is injected by the Blazor DI container; the JS interop module is
-    // lazily imported on first render so the module file is not fetched until the chart
-    // component is actually mounted.
     [Inject]
     private IJSRuntime JS { get; set; } = default!;
 
@@ -139,7 +135,6 @@ public sealed partial class EChartsRenderer : ComponentBase, IAsyncDisposable
             }
             catch (OperationCanceledException ex)
             {
-                // Why: cancellation during dispose or navigation is expected — observe at Trace, no error state.
                 EChartsRendererLog.TeardownInterrupted(ResolvedLogger, ex);
             }
             catch (Exception ex)
@@ -163,9 +158,6 @@ public sealed partial class EChartsRenderer : ComponentBase, IAsyncDisposable
         {
             try
             {
-                // Why: notify the JS module to dispose the ECharts instance before releasing
-                // the JS object reference, so ECharts can clean up its internal event listeners
-                // and DOM mutations without leaking memory.
                 await _module.InvokeVoidAsync("dispose", _el);
             }
             catch (JSDisconnectedException ex) { EChartsRendererLog.TeardownInterrupted(ResolvedLogger, ex); }

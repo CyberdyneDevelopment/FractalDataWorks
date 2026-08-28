@@ -14,8 +14,6 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class GetRoleEndpointBase : Endpoint<GetRoleRequest, RoleDetailResponse>
 {
-    // Why: RoleConfigurationProvider replaces 3x IOptionsMonitor<List<T>> with a single dual-source
-    // (ctrl + cfg) provider that handles roles, permissions, and role-permission assembly.
     private readonly RoleConfigurationProvider _roleProvider;
 
     /// <summary>
@@ -57,16 +55,12 @@ public abstract class GetRoleEndpointBase : Endpoint<GetRoleRequest, RoleDetailR
     {
         EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
 
-        // Why: the {Name} route segment accepts either a Guid (role Id) or a literal name,
-        // so callers can reference roles with either identifier.
         RoleConfiguration? role = Guid.TryParse(req.Name, out var id)
             ? await _roleProvider.GetRole(id, ct).ConfigureAwait(false)
             : await _roleProvider.GetRole(req.Name, ct).ConfigureAwait(false);
 
         if (role is null)
         {
-            // Why: API-62 — emit a structured 404 envelope instead of empty body so clients
-            // can parse errorCode/messages consistently across all Get-by-name endpoints.
             HttpContext.Response.StatusCode = 404;
             HttpContext.Response.ContentType = "application/json";
             await HttpContext.Response.WriteAsJsonAsync(

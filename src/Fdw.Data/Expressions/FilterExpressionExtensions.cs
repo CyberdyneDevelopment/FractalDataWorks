@@ -47,8 +47,6 @@ public static class FilterExpressionExtensions
     /// <returns>A <see cref="FilterExpression"/> with an equality root condition.</returns>
     public static FilterExpression Equal(string fieldName, object value)
     {
-        // Why: static factory avoids exposing the internal FilterCondition/EqualOperator
-        // construction details to consumer code. One call site, one constructor.
         return new FilterExpression
         {
             Root = new FilterCondition
@@ -96,8 +94,6 @@ public static class FilterExpressionExtensions
         if (predicates.Length == 1)
             return predicates[0];
 
-        // Why: wrap in a FilterGroup so translators can walk the tree generically
-        // without needing to special-case the single-predicate path.
         return new FilterExpression
         {
             Root = new FilterGroup
@@ -155,8 +151,6 @@ public static class FilterExpressionExtensions
     /// </returns>
     public static FilterExpression AndAlso(this FilterExpression left, FilterExpression other)
     {
-        // Why: fluent chaining pattern for consumer code that builds conditions
-        // incrementally (e.g., starting from a single-field filter and adding clauses).
         return And(left, other);
     }
 

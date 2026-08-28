@@ -20,8 +20,5 @@ internal sealed class NullFilterExpression : IFilterExpression
     private NullFilterExpression() { }
 
     /// <inheritdoc />
-    // Why: Root is null — this expression carries no filter conditions.
-    // Consumers that translate this to SQL must skip it; consumers that require a real condition
-    // should check the DataSet's JoinConfiguration for LeftFieldName/RightFieldName.
     public IFilterNode? Root => null;
 }

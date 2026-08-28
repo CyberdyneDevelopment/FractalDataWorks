@@ -39,15 +39,10 @@ public sealed class DelimitedRowSourceType : RecordSourceTypeBase
     public override string Format => "Delimited";
 
     /// <inheritdoc />
-    // Why: the format-driven read seam. Downcast to DelimitedRowSourceOptions when supplied; a base
-    // RowSourceOptions (or null) yields the reader's defaults — but column names are required, so the
-    // reader fails loud when none are configured (NO FALLBACKS).
     public override IRowSourceReader CreateReader(Stream content, RowSourceOptions? options)
         => new DelimitedStreamRowSource(content, options as DelimitedRowSourceOptions);
 
     /// <inheritdoc />
-    // Why: delimited is ROW-oriented — build a RowCursorRecordSource (an IRowSource) so consumers get
-    // both DataRecord enumeration and ordinal cursor access over the container's field schema.
     public override IRecordSource<DataRecord> Create(RecordSourceContext context)
         => CreateRowSource(context);
 }

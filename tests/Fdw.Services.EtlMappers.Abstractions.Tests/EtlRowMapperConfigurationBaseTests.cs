@@ -27,8 +27,6 @@ public class EtlRowMapperConfigurationBaseTests
     [Trait("Category", "Etl")]
     public void EtlRowMapperConfigurationBaseIsAbstract()
     {
-        // Why: EtlRowMapperConfiguration is a concrete base with protected ctors;
-        // derived types instantiate via the protected ctor — class is not marked abstract.
         var type = typeof(EtlRowMapperConfiguration);
         type.IsClass.ShouldBeTrue();
         type.GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
@@ -54,8 +52,6 @@ public class EtlRowMapperConfigurationBaseTests
     [Trait("Category", "Etl")]
     public void EtlRowMapperConfigurationBaseImplementsIEtlRowMapperConfiguration()
     {
-        // Why: IEtlRowMapperConfiguration interface was collapsed into the concrete
-        // EtlRowMapperConfiguration class; it implements IGenericConfiguration directly.
         var interfaces = typeof(EtlRowMapperConfiguration).GetInterfaces();
         interfaces.ShouldContain(typeof(Fdw.Configuration.IGenericConfiguration));
     }

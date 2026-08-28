@@ -71,8 +71,6 @@ public sealed class ProjectIndexPageTests : IDisposable
     [Fact]
     public void RendersErrorBannerWhenErrorMessageSet()
     {
-        // Why: current markup emits the error banner as class "card b-fail" (the old reference-ui
-        // test asserted a stale "border-red-700" class the page no longer emits).
         var cut = RenderWith(new ProjectContext { LastResult = GenericResult.Failure(new GenericMessage("load failed")) });
         cut.Markup.ShouldContain("load failed");
         cut.FindAll("div").ShouldContain(d => d.ClassList.Contains("b-fail"));

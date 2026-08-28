@@ -46,8 +46,6 @@ public class UserCredentialServiceTests
             "ConfigurationDb",
             "usr");
 
-    // Why the name is passed twice: the provider resolves its gateway by the connection it was told
-    // its rows live on, so a gateway filed under any other name is not the one it will ask for.
     private static IConfigurationGatewayProvider GatewayProviderOn(string connectionName)
     {
         var gateways = new ConfigurationGatewayProvider();
@@ -148,8 +146,6 @@ public class UserCredentialServiceTests
     [Trait("Category", "Security")]
     public async Task VerifyWithLowercasePasswordSecretTypeIsAccepted()
     {
-        // Why: the secret-type comparison is StringComparison.OrdinalIgnoreCase — confirm case
-        // doesn't trip the SecretTypeNotSupported guard.
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId);
         var userProviderMock = MakeUserProviderMock();
@@ -248,10 +244,6 @@ public class UserCredentialServiceTests
     [Trait("Category", "Security")]
     public async Task VerifyWhenUserSecurityLookupProviderFailsReturnsFailureWithoutRunningDecoy()
     {
-        // Why: a provider/gateway FAILURE (e.g. a transient DB error) is an infrastructure outage,
-        // not an "unknown account" — UserCredentialService.Verify (~lines 88-93) must fail loud here
-        // rather than fall through to RunDecoyAndDeny, which would mask the outage as a generic
-        // NoMatch. Assert both the fail-loud result AND that the decoy/vault path never ran.
         var userId = Guid.NewGuid();
         var userProviderMock = MakeUserProviderMock();
         SetupGetUserFails(userProviderMock, userId, new GenericMessage("security lookup blew up"));
@@ -289,7 +281,6 @@ public class UserCredentialServiceTests
         result.Value.ShouldNotBeNull();
         result.Value.Name.ShouldBe("NoMatch");
         result.Value.GrantsAccess.ShouldBeFalse();
-        // Why: the decoy path never reaches the vault — only the edge-side KDF runs.
         credentialServiceMock.Verify(
             s => s.Validate(It.IsAny<Guid>(), It.IsAny<byte[]>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -343,8 +334,6 @@ public class UserCredentialServiceTests
     [Trait("Category", "Security")]
     public async Task VerifyDecoyWithUnregisteredPolicyAlgorithmStillReturnsNoMatchWithoutThrowing()
     {
-        // Why: RunDecoyAndDeny looks up the decoy algorithm from policy too — an unregistered
-        // name must not crash the anti-enumeration path; it just skips the KDF call.
         var userId = Guid.NewGuid();
         var userProviderMock = MakeUserProviderMock();
         SetupGetUser(userProviderMock, userId, null);
@@ -700,7 +689,6 @@ public class UserCredentialServiceTests
             .Setup(s => s.Validate(userId, It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(MakeVaultOutcome(grantsAccess: false)));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
-        // Why: MaxFailedLoginAttempts == 0 disables lockout regardless of count.
         var policy = new PasswordPolicyOptions { MaxFailedLoginAttempts = 0, LockoutDurationMinutes = 0 };
         var service = MakeService(providerMock.Object, userProviderMock.Object, policy);
 
@@ -718,8 +706,6 @@ public class UserCredentialServiceTests
     [Trait("Category", "Security")]
     public async Task VerifyWhenLockoutCounterWriteFailsStillReturnsNoMatch()
     {
-        // Why: the counter write is best-effort — its failure must never change (or block) the
-        // access decision.
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId, failedLoginCount: 0, lockoutEnd: null);
         var userProviderMock = MakeUserProviderMock();

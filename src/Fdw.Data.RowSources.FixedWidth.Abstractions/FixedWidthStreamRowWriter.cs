@@ -42,7 +42,6 @@ public sealed class FixedWidthStreamRowWriter : IRowWriter
         _options = options ?? new FixedWidthRowWriterOptions();
         if (_options.Fields.Count == 0)
         {
-            // Why: NO FALLBACKS — field layout is a real serializer input.
             throw new ArgumentException(
                 "FixedWidthRowWriterOptions.Fields must contain at least one field definition.", nameof(options));
         }
@@ -90,8 +89,6 @@ public sealed class FixedWidthStreamRowWriter : IRowWriter
     }
 
     /// <inheritdoc />
-    // Why: the typed IRecordWriter<DataRecord> surface projects the row record's field-array onto the
-    // existing dictionary write path; the flyweight schema names the fields laid into the fixed-width windows.
     public void Write(DataRecord record) => Write(record.ToDictionary());
 
     /// <inheritdoc />
@@ -133,7 +130,6 @@ public sealed class FixedWidthStreamRowWriter : IRowWriter
         }
     }
 
-    // Why: RecordParser's TryFormat contract — lay the fixed-width record into the destination span.
     private bool FormatRow(IReadOnlyDictionary<string, object?> row, Span<char> destination, out int charsWritten)
     {
         if (_recordWidth > destination.Length)
@@ -162,8 +158,6 @@ public sealed class FixedWidthStreamRowWriter : IRowWriter
     {
         cell.Fill(field.PaddingChar);
 
-        // Why: a value wider than the cell is truncated to the cell width (right side dropped),
-        // matching the read path which only slices the field's window.
         var text = value.Length > cell.Length ? value.AsSpan(0, cell.Length) : value.AsSpan();
 
         if (field.Padding == Padding.Left)

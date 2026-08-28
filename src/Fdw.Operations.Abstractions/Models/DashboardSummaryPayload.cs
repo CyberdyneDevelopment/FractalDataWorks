@@ -5,7 +5,6 @@ using System;
 /// <summary>
 /// Summary information for the system dashboard.
 /// </summary>
-// Why: pure data-transfer POCO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class DashboardSummaryPayload
 {

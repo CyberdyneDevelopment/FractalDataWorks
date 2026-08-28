@@ -433,11 +433,6 @@ public sealed class PromotionServiceTests
         result.Messages.ShouldContain(m => m.Code == "QUALITY-91001");
     }
 
-    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
-    // connection it was told its rows live on, so the fake has to answer to that name to be found.
-    // Why a double rather than the real provider: these tests exercise what a configuration provider
-    // does with its gateway, not which gateway it selects, so the double answers for whatever
-    // connection is asked. Selection itself is covered where the real provider is under test.
     private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 

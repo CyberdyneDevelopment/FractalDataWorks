@@ -5,7 +5,6 @@ namespace Fdw.Services.Abstractions.Health.Monitoring;
 /// <summary>
 /// Represents a single throughput data point in a time series.
 /// </summary>
-// Why: pure data-transfer POCO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ThroughputDataPoint
 {

@@ -70,55 +70,35 @@ public sealed class WorkAuthenticationContext : IAuthenticationContext
     public string UserId { get; }
 
     /// <inheritdoc/>
-    // Why: Username has no separate identity source for work-scoped execution — mirror UserId so
-    // display/log call sites always have a non-empty value.
     public string Username => UserId;
 
     /// <inheritdoc/>
-    // Why: work-scoped execution carries no claims bag — it is sourced from the execution's own
-    // TenantId, not from a token.
     public IDictionary<string, object> Claims { get; } = new Dictionary<string, object>(StringComparer.Ordinal);
 
     /// <inheritdoc/>
-    // Why: background executions carry no role assignments — authorization for background work is
-    // enforced by tenant/RLS scoping, not by role checks.
     public IEnumerable<string> Roles { get; } = [];
 
     /// <inheritdoc/>
-    // Why: background executions carry no baked permission set — they are not subject to the
-    // effective-permission authorization path that HTTP requests go through.
     public IEnumerable<string> Permissions { get; } = [];
 
     /// <inheritdoc/>
-    // Why: a unit of work with a known TenantId is, by construction, an authenticated/authorized
-    // execution context — it is always true for this type.
     public bool IsAuthenticated => true;
 
     /// <inheritdoc/>
-    // Why: "None" (no interactive authentication scheme) is the most neutral existing SecurityMethods
-    // option for a non-interactive, work-scoped context — there is no dedicated "System"/"Internal"
-    // SecurityMethodBase option in the framework today (grepped SecurityMethods: ApiKey, Certificate,
-    // JWT, None, OAuth2).
     public SecurityMethodBase AuthenticationMethod => (SecurityMethodBase)SecurityMethods.ByName("None");
 
     /// <inheritdoc/>
-    // Why: background work is not token-based, so there is no token expiry to track.
     public DateTimeOffset? ExpiresAt => null;
 
     /// <inheritdoc/>
     public Guid? ActiveTenantId { get; }
 
     /// <inheritdoc/>
-    // Why: work-scoped execution always carries exactly one tenant (the execution's own) — there is no
-    // org-level scoping concept for background work today.
     public Guid? ActiveOrgId => null;
 
     /// <inheritdoc/>
-    // Why: a work context always carries a single, specific ActiveTenantId — it is never cross-tenant.
     public bool IsCrossTenant => false;
 
     /// <inheritdoc/>
-    // Why: a work-scoped execution is bound to one tenant's own data, never a deliberate full-
-    // visibility elevation. Only SystemAuthenticationContext reports true.
     public bool IsSystemContext => false;
 }

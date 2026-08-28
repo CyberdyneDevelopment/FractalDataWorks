@@ -7,7 +7,6 @@ namespace Fdw.Roslyn.Commands.Workspace.Results;
 /// <summary>
 /// The outcome of a <c>RepairMovedReferences</c> run.
 /// </summary>
-// Why: pure data holder, auto-properties only, no logic
 [ExcludeFromCodeCoverage]
 public sealed class ReferenceRepairData
 {

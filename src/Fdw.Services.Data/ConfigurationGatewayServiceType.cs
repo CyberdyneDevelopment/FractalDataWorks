@@ -40,14 +40,9 @@ public sealed class ConfigurationGatewayServiceType : ConfigurationGatewayTypeBa
         Registration((builder, loggerFactory) =>
         {
 
-            // Why: IConfigurationContainerLookup consumes the gateway's DataStores property
-            // (the schema-built tree). The gateway is the single source of truth for the ctrl-tier tree.
             builder.Services.TryAddSingleton<IConfigurationContainerLookup>(sp =>
             {
                 var gateway = sp.GetRequiredService<IConfigurationGateway>();
-                // Why: Lazy<IReadOnlyList<IDataStore>> wraps the gateway's DataStores property so
-                // the Lazy is still available to consumers that expect it, while the actual tree
-                // comes from the schema-built path rather than a separate registration.
                 var dataStoresLazy = new Lazy<IReadOnlyList<IDataStore>>(
                     () => gateway.DataStores,
                     LazyThreadSafetyMode.ExecutionAndPublication);

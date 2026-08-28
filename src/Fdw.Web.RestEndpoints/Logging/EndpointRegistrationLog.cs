@@ -64,11 +64,6 @@ public static partial class EndpointRegistrationLog
     public static partial IGenericMessage NoEndpointsDeclared(ILogger logger);
 
     // ── OpenAPI document processors ─────────────────────────────────────────────────────────────
-    // Why these are logged at all: a document processor that is never attached, and one that is
-    // attached but never handed a service provider, both fail by doing nothing. The document simply
-    // renders unfiltered. PermissionFilterDocumentProcessor is what keeps the anonymous Scalar page
-    // from listing every operation in the app, so "silently did nothing" is a security-relevant
-    // outcome that previously produced no output at any level.
 
     /// <summary>Logged as each document processor is attached to the OpenAPI document settings.</summary>
     [MessageLogging(

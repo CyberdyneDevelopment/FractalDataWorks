@@ -22,7 +22,6 @@ public sealed partial class DataDomainProposalConfiguration
 
 
     /// <summary>Gets or sets the proposal type: "SchemaChange", "NewSource", or "PipelineModification".</summary>
-    // Why: ProposalType is a TypeCollection-backed enum constrained at the DB level.
     public string ProposalType { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the proposal title.</summary>
@@ -32,7 +31,6 @@ public sealed partial class DataDomainProposalConfiguration
     public string? Description { get; set; }
 
     /// <summary>Gets or sets the proposal status: Draft, Proposed, InReview, Approved, Rejected, or Deployed.</summary>
-    // Why: Status follows a defined lifecycle constrained at the DB level.
     public string Status { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the user who created the proposal.</summary>

@@ -25,8 +25,6 @@ public class RoslynWorkspaceConnectionFactoryTests
             AppContext.BaseDirectory,
             "tests", "_Fixtures", "SyntheticSolution", "SyntheticSolution.sln");
 
-    // Why: Name is a header field on ConnectionConfiguration after config-split.
-    // Direct typed-body construction cannot set Name; factory uses ConnectionId for logging.
     private static RoslynWorkspaceConnectionConfiguration ValidLiveConfig() =>
         new()
         {
@@ -134,8 +132,6 @@ public class RoslynWorkspaceConnectionFactoryTests
     [Trait("Category", "RoslynWorkspaceCore")]
     public async Task Create_SnapshotMode_ReturnsSnapshotConnectionWithoutLoadingWorkspace()
     {
-        // Why: Snapshot mode must NOT call CreateFromSolution at factory-create time.
-        // The workspace is loaded lazily per command.
         var workspaceFactoryMock = new Mock<IRoslynWorkspaceFactory>();
 
         var factory = new RoslynWorkspaceConnectionFactory(
@@ -161,8 +157,6 @@ public class RoslynWorkspaceConnectionFactoryTests
     [Trait("Category", "RoslynWorkspaceCore")]
     public async Task Create_SnapshotMode_GetGraph_LoadsAndDisposes()
     {
-        // Why: Each snapshot operation must load the workspace and dispose it in the finally block.
-        // As<IDisposable> must be called before .Object to register the interface on the mock.
         var mockWorkspace = new Mock<IRoslynWorkspace>();
         mockWorkspace.As<IDisposable>().Setup(d => d.Dispose());
         mockWorkspace.Setup(w => w.CurrentSolution)
@@ -191,8 +185,6 @@ public class RoslynWorkspaceConnectionFactoryTests
             f => f.CreateFromSolution(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
-        // Why: snapshot client checks `workspace is IDisposable` and calls Dispose in finally.
-        // As<IDisposable> must be registered before .Object — done above.
         mockWorkspace.As<IDisposable>().Verify(d => d.Dispose(), Times.Once);
     }
 

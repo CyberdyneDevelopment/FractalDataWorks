@@ -18,11 +18,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Quality.Endpoints;
 
-// Why: ExecuteQualityCheckEndpointBase is a RUNTIME EXECUTION endpoint, not a configuration endpoint.
-// It uses QualityConfigurationProvider to look up rule configuration, then uses IDataGateway
-// to query live DataSet data and run the actual quality check. The IDataGateway reference here
-// is for live-data queries — not configuration writes — and is not subject to the
-// "endpoints must not touch IDataGateway for config" rule.
 
 /// <summary>Endpoint that executes a single quality check by rule identifier.</summary>
 public abstract class ExecuteQualityCheckEndpointBase : Endpoint<QualityRuleIdRequest, QualityCheckResultResponse>
@@ -94,8 +89,6 @@ public abstract class ExecuteQualityCheckEndpointBase : Endpoint<QualityRuleIdRe
             return;
         }
 
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget; path is null to search
-        // all paths in the store (documented DataStoreTarget behaviour).
         var dataCommand = new QueryCommand<Dictionary<string, object>>();
 
         var dataResult = await _dataGateway.Execute<IEnumerable<Dictionary<string, object>>>(
@@ -328,8 +321,6 @@ public abstract class ExecuteQualityCheckEndpointBase : Endpoint<QualityRuleIdRe
             }
             catch (System.Text.RegularExpressions.RegexMatchTimeoutException ex)
             {
-                // Why: timeout on a single row is treated as a pattern failure for that row.
-                // ex is observed (referenced below) so the exception is not silently discarded.
                 _ = ex;
                 return true;
             }

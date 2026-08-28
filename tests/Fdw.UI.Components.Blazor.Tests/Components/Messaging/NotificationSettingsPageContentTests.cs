@@ -61,8 +61,6 @@ public sealed class NotificationSettingsPageContentTests : IDisposable
     {
         ConfigureHttp();
         var cut = _ctx.Render<NotificationSettingsPage>();
-        // Why: the page renders each preference as a clickable ".sw" toggle span (".sw on" when
-        // enabled), not an <input type=checkbox> — assert the real toggle markup.
         cut.WaitForAssertion(() =>
         {
             cut.FindAll("span.sw").Count.ShouldBe(2);

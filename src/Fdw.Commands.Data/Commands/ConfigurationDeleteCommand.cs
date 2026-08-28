@@ -67,8 +67,6 @@ public sealed class ConfigurationDeleteCommand : DataCommandBase<int, Guid>
     {
         if (string.IsNullOrEmpty(ownerForeignKeyColumn))
         {
-            // Why: reported defect (see logging-pass report) — this constructor throws instead of
-            // returning IGenericResult. Logged here per scope; the throw below is left in place.
             ConfigurationDeleteCommandLog.OwnerForeignKeyColumnMissing(NullLogger<ConfigurationDeleteCommand>.Instance);
             throw new ArgumentException("Owner foreign key column is required for a scoped configuration delete.", nameof(ownerForeignKeyColumn));
         }

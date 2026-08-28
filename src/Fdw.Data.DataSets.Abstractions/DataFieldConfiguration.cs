@@ -9,13 +9,6 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// <summary>
 /// Configuration class for dataset field definitions.
 /// </summary>
-// Why: implements IGenericConfiguration so [GenerateMapper] emits a CascadeChildren descriptor for the
-// parent DataSetConfiguration.Fields collection — the keystone base read (ComposeChildren) then loads
-// data.DataSetField rows, matched via the child's ConfigurationCommand.ContainerName ("DataSetField").
-// IsKey/IsIndexed/DefaultValue/IsJoinKey/CalculationName all have DataSetField columns and round-trip
-// through the save translator's column-intersection. Only Calculator (a runtime delegate) has no column —
-// it cannot be persisted, so the translator's column-intersection excludes it and reads default it
-// (unchanged from how AssembleHierarchy read this type) — no [NotMapped] needed (the generator ignores it).
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 public sealed partial class DataFieldConfiguration : IGenericConfiguration

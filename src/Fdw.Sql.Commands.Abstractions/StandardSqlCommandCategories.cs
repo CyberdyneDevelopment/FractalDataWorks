@@ -1,7 +1,6 @@
 namespace Fdw.Sql.Commands.Abstractions;
 
 /// <summary>Static accessors for the built-in SQL command categories.</summary>
-// Why: data-bearing option/category; ctor only forwards literal data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static class StandardSqlCommandCategories
 {

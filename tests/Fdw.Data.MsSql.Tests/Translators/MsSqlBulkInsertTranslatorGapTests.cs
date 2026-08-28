@@ -39,7 +39,6 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
     {
         var field = new Mock<IField>();
         field.Setup(f => f.Name).Returns(name);
-        // Why: IsPrimaryKey removed from IField — PK identity resolved from container Metadata["SurrogateKeyField"].
         field.Setup(f => f.IsIdentity).Returns(isIdentity);
         field.Setup(f => f.IsComputed).Returns(isComputed);
         field.Setup(f => f.IsNullable).Returns(isNullable);

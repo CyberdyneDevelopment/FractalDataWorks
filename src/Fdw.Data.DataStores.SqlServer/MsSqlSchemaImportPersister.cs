@@ -29,18 +29,10 @@ namespace Fdw.Data.DataStores.SqlServer;
 [ExcludeFromCodeCoverage] // Excluded: requires SQL Server connection
 public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
 {
-    // Why: DataStoreConfigurationProvider provides the full DataStore -> Path -> Container -> Field
-    // hierarchy, eliminating the need to scan all configurations and filter by parent ID.
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
     private readonly ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand> _dataPathProvider;
     private readonly ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand> _containerProvider;
     private readonly ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand> _fieldProvider;
-    // Why: the DOMAIN provider, because it composes the whole Connection aggregate — header, MsSql
-    // typed body, and the auth/limit KVP children. Versioning itself is not a provider behaviour:
-    // ConfigurationSaveCommand IS version-on-write, and every row takes that same path. What the
-    // domain provider adds is the cascade, so the children are re-pointed at the new version too.
-    // Saving the typed body through a typed-only provider versions the body alone and leaves its
-    // KVP children attached to an EMPTY IOptions POCO, silently dropping stored credentials.
     private readonly ConnectionConfigurationProvider _connectionProvider;
     private readonly ILogger<MsSqlSchemaImportPersister> _logger;
 
@@ -79,8 +71,6 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
             return GenericResult<Guid>.Failure(SqlServerDataStoreResultCodes.ByName("ConnectionIdEmpty"));
         }
 
-        // Why: the discovered side is already DataStoreConfiguration — no intermediate tree to tear apart.
-        // Create the persisted DataStore configuration directly from the discovered header.
         var dataStoreConfig = new DataStoreConfiguration
         {
             Id = Guid.NewGuid(),
@@ -302,11 +292,6 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
                 IsNullable = field.IsNullable,
                 Ordinal = field.Ordinal,
                 IsSystemProvided = field.IsSystemProvided,
-                // Why: discovery already reads CHARACTER_MAXIMUM_LENGTH / NUMERIC_PRECISION /
-                // NUMERIC_SCALE / COLUMN_DEFAULT from SQL Server and carries them on the discovered
-                // field — they were simply not copied here, so nvarchar(200) was persisted as
-                // "nvarchar" with no length and decimal(18,2) lost both facets. The columns have
-                // existed on data.DataContainerField the whole time.
                 MaxLength = field.MaxLength,
                 Precision = field.Precision,
                 Scale = field.Scale,
@@ -358,10 +343,6 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
         // Save if either structural or source description changed
         if (pathModified || sourceDescriptionChanged)
         {
-            // Why: propagate the failure rather than swallowing it into pathModified=false —
-            // the previous behavior always returned GenericResult.Success() below regardless
-            // of this outcome, so SyncPath's own caller (Sync's PathSyncFailed log check) never
-            // fired. Mirrors PersistPath, which already returns the failing save result directly.
             var updateResult = await _dataPathProvider.Save(existingPath, cancellationToken).ConfigureAwait(false);
             if (!updateResult.IsSuccess)
             {
@@ -452,10 +433,6 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
         // Save if structural properties changed
         if (containerModified)
         {
-            // Why: propagate the failure rather than swallowing it into containerModified=false —
-            // the previous behavior always returned GenericResult.Success() below regardless of
-            // this outcome, so SyncPath's ContainerSyncFailed log check never fired. Mirrors
-            // PersistContainer, which already returns the failing save result directly.
             var updateResult = await _containerProvider.Save(existingContainer, cancellationToken).ConfigureAwait(false);
             if (!updateResult.IsSuccess)
             {
@@ -536,8 +513,6 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
         }
     }
 
-    // Why: Uses the DataPath's Containers collection from the cached hierarchy instead of
-    // scanning all containers via IOptionsMonitor and filtering by pathId.
     private static Dictionary<string, DataContainerConfiguration> LoadExistingContainers(DataPathConfiguration path)
     {
         var existingContainers = new Dictionary<string, DataContainerConfiguration>(StringComparer.OrdinalIgnoreCase);
@@ -570,8 +545,6 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
         }
     }
 
-    // Why: Uses the DataContainer's Fields collection from the cached hierarchy instead of
-    // scanning all fields via IOptionsMonitor and filtering by containerId.
     private static Dictionary<string, DataContainerFieldConfiguration> LoadExistingFields(DataContainerConfiguration container)
     {
         var existingFields = new Dictionary<string, DataContainerFieldConfiguration>(StringComparer.OrdinalIgnoreCase);
@@ -628,8 +601,6 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
                     IsNullable = field.IsNullable,
                     Ordinal = field.Ordinal,
                     IsSystemProvided = field.IsSystemProvided,
-                    // Why: the add-new-field path has to carry the same facets as the initial import
-                    // above, or a column discovered on a later sync lands without its length.
                     MaxLength = field.MaxLength,
                     Precision = field.Precision,
                     Scale = field.Scale,
@@ -685,10 +656,6 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
 
     private async Task UpdateConnectionAssociation(Guid connectionId, Guid dataStoreId, CancellationToken cancellationToken)
     {
-        // Why: read the COMPOSED aggregate (header + MsSql typed body + its auth/limit KVP
-        // children) rather than a bare typed-body row — mutating and saving only the typed
-        // body would re-cascade its children from whatever was in memory, which here would
-        // be an empty freshly-loaded POCO.
         var connectionResult = await _connectionProvider.Get(connectionId, cancellationToken).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value is null)
         {

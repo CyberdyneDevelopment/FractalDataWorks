@@ -30,17 +30,11 @@ internal static class ScopePaths
         return path.Replace('\\', '/').TrimEnd('/');
     }
 
-    // Why OrdinalIgnoreCase: fencing must err toward REFUSING a claim. A false overlap costs one
-    // caller a retry with a narrower scope; a missed overlap lets two strands edit the same file
-    // and silently lose one side's work. On a case-insensitive filesystem "Foo.cs" and "foo.cs" are
-    // the same file, so treating them as colliding everywhere is the safe direction.
     private static bool Collide(string left, string right)
         => string.Equals(left, right, StringComparison.OrdinalIgnoreCase)
             || IsUnder(left, right)
             || IsUnder(right, left);
 
-    // Why the explicit "/" : a plain StartsWith would make "src/Foo" collide with "src/FooBar",
-    // which are unrelated siblings. Containment only counts on a segment boundary.
     private static bool IsUnder(string candidate, string ancestor)
         => candidate.StartsWith(ancestor + "/", StringComparison.OrdinalIgnoreCase);
 }

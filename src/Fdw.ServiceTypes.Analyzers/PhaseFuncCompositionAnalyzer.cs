@@ -11,13 +11,6 @@ namespace Fdw.ServiceTypes.Analyzers;
 /// Governs who sets a phase func: the service type or service type collection that declares the phase
 /// sets it outright, and nothing between it and <c>ServiceTypeBase</c> holds a piece of it.
 /// </summary>
-// Why service types only: the three phases are optional on a plain [TypeOption] / [TypeCollection], which
-// is an enhanced-enum member and frequently has no host wiring at all. A service type is the shape that
-// always has phases, so it is the shape where ownership of one can be stated.
-//
-// Why two rules from one analyzer: they are one rule seen from the two places a phase func can be written.
-// The declaring class must own its phase outright (STC001), and nothing beneath it in the chain may hold
-// part of one (STC002). Either alone leaves the other half of the hazard open.
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class PhaseFuncCompositionAnalyzer : DiagnosticAnalyzer
 {
@@ -87,10 +80,6 @@ public sealed class PhaseFuncCompositionAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // Why the declared type is exempt and the receiver is checked: setting the phase is exactly what a
-        // [ServiceTypeOption] / [ServiceTypeCollection] class is for, and `option.Registration(...)` on
-        // somebody else's instance is the ordinary customisation the seam exists for. What is left is a
-        // base class in the middle of the chain contributing to a phase it does not declare.
         if (IsDeclaredServiceType(declaringType) || !IsImplicitReceiver(invocation.Expression))
             return;
 
@@ -113,8 +102,6 @@ public sealed class PhaseFuncCompositionAnalyzer : DiagnosticAnalyzer
         _ => expression.GetLocation()
     };
 
-    // Why "this" counts as implicit: `this.Registration(...)` from inside the class is the same call as the
-    // bare one, and it is the instance being the class itself that makes it a contribution to its own phase.
     private static bool IsImplicitReceiver(ExpressionSyntax expression) => expression switch
     {
         IdentifierNameSyntax => true,
@@ -127,9 +114,6 @@ public sealed class PhaseFuncCompositionAnalyzer : DiagnosticAnalyzer
         || string.Equals(name, "Registration", StringComparison.Ordinal)
         || string.Equals(name, "Initialization", StringComparison.Ordinal);
 
-    // Why the mapping is spelled out rather than trimming an "Append"/"Prepend" prefix: the message names
-    // the exact call the author should make instead, and a prefix trim would happily invent one for any
-    // unrelated method that starts with the same word.
     private static string? PrimarySetterFor(string name) => name switch
     {
         "AppendConfiguration" or "PrependConfiguration" => "Configuration",
@@ -142,8 +126,6 @@ public sealed class PhaseFuncCompositionAnalyzer : DiagnosticAnalyzer
     {
         foreach (var ancestor in node.Ancestors())
         {
-            // Why the first enclosing type decides and the walk then stops: a nested type is its own unit,
-            // and continuing outward would judge it by whatever happens to contain it.
             if (ancestor is TypeDeclarationSyntax typeDeclaration)
                 return semanticModel.GetDeclaredSymbol(typeDeclaration) as INamedTypeSymbol;
         }
@@ -151,9 +133,6 @@ public sealed class PhaseFuncCompositionAnalyzer : DiagnosticAnalyzer
         return null;
     }
 
-    // Why the base chain and not the attribute: the classes this most needs to reach are the ones between
-    // ServiceTypeBase and the declared option, and those carry no attribute — that is what makes them
-    // intermediate. Matching the chain also excludes TypeOptionBase / TypeCollectionBase for free.
     private static bool IsServiceTypeShape(INamedTypeSymbol type)
     {
         for (var current = type; current is not null; current = current.BaseType)

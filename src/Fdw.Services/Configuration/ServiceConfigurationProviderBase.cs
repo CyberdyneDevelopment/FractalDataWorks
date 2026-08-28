@@ -105,9 +105,6 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
     Task<IGenericResult> IDomainConfigurationProvider<TImplementationConfiguration>.Delete(
         string name, CancellationToken cancellationToken) => Delete(name, cancellationToken);
 
-    // Why the composed record is unwrapped rather than returned: the caller asked the domain which
-    // implementation this member is, and the answer is that implementation's configuration. The domain
-    // record is how it was found, not what was wanted.
     private IGenericResult<TImplementationConfiguration> Unwrap(
         IGenericResult<TDomainConfiguration> composed, string identifier)
     {

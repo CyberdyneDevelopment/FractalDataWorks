@@ -25,12 +25,6 @@ public abstract class ChartTypeBase : TypeOptionBase<int, ChartTypeBase>, IChart
     /// <param name="iconHint">The icon hint string passed to the renderer.</param>
     /// <param name="requiredEncodings">Encoding role names that MUST be bound.</param>
     /// <param name="optionalEncodings">Encoding role names that may optionally be bound.</param>
-    // Why: TypeOptionBase already exposes DisplayName + Category; pass them through its
-    // 6-arg ctor (id, name, configurationKey, displayName, description, category) rather than
-    // redeclaring. IconHint + encoding requirement lists are net-new.
-    // Why: the encoding lists are nullable-defaulted so the source-generated TypeCollection sentinel
-    // (NotFound) can be constructed without supplying collection arguments (TC009); the empty-collection
-    // coalesce is the sanctioned `?? []` fallback (never a non-collection fallback).
     protected ChartTypeBase(
         int id,
         string name,

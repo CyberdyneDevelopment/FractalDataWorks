@@ -17,8 +17,6 @@ public sealed class UserResultCodesTests
 
         // Assert
         all.ShouldNotBeEmpty();
-        // Why: 6 codes — UserNotFound, InvalidCredentials, UserAlreadyExists, UserInactive,
-        // QueryFailed, MissingTenantClaim (added when tenant_id propagation landed).
         all.Count.ShouldBe(6);
     }
 

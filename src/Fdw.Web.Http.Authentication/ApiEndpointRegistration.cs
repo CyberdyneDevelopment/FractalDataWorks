@@ -76,12 +76,6 @@ public static class ApiEndpointRegistration
 
             if (string.IsNullOrEmpty(declared))
             {
-                // Why logged and not thrown: this delegate runs while a scope is realizing a client,
-                // frequently inside a Blazor render. Throwing there tears down the circuit and buries the
-                // cause in an unhandled-exception page, so the operator sees a dead app rather than the
-                // one sentence that fixes it. The error line names the client and every key that would
-                // satisfy it. BaseAddress stays unset, so the request still fails — loudly, and after the
-                // log that explains it.
                 ApiEndpointLog.EndpointNotDeclared(
                     sp.GetService<ILoggerFactory>() is ILoggerFactory factory
                         ? factory.CreateLogger(typeof(ApiEndpointRegistration))

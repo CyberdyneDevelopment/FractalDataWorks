@@ -3,7 +3,6 @@ using Fdw.Collections.Attributes;
 namespace Fdw.Services.Authentication.Abstractions;
 
 /// <summary>Tenant identifier the user is operating under. Feeds SESSION_CONTEXT for RLS.</summary>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(ClaimDefinitions), "tenantId")]
 public sealed class TenantIdClaim : ClaimDefinitionBase

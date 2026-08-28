@@ -22,7 +22,6 @@ namespace Fdw.Services.SecretManager;
 public abstract class SecretManagerServiceBase<TSecretCommand, TSecretManagerConfiguration, TSecretManagerService>
     : ServiceBase<TSecretCommand, TSecretManagerConfiguration, TSecretManagerService>, ISecretManager
     where TSecretCommand : IGenericCommand, ISecretManagerCommand
-    // Why: After config-split, typed body configs implement ISecretManagerImplementationConfiguration directly.
     where TSecretManagerConfiguration : class, ISecretManagerImplementationConfiguration
     where TSecretManagerService : class
 {

@@ -155,8 +155,6 @@ public sealed class MsSqlBatchInsertTranslator : MsSqlDataCommandTranslatorBase
 
         if (fields.Count == 0)
         {
-            // Why: reported as a defect (FDW rule) — a translator should return IGenericResult, not
-            // throw. Left in place per instructions; the caller's try/catch converts it to a Failure.
             MsSqlBatchInsertTranslatorLog.NoInsertableFields(
                 NullLogger<MsSqlBatchInsertTranslator>.Instance, container.Name);
             throw new InvalidOperationException($"Container {container.Name} has no insertable fields");
@@ -182,7 +180,6 @@ public sealed class MsSqlBatchInsertTranslator : MsSqlDataCommandTranslatorBase
 
         if (entities.Count == 0)
         {
-            // Why: same throw-instead-of-result defect as above — logged, not converted.
             MsSqlBatchInsertTranslatorLog.EmptyCollection(
                 NullLogger<MsSqlBatchInsertTranslator>.Instance, container.Name);
             throw new InvalidOperationException("Cannot insert empty collection");

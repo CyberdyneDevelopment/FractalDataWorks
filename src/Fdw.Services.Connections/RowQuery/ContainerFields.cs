@@ -25,10 +25,6 @@ internal static class ContainerFields
         var fields = new List<IDataField>(container.Nodes.Count);
         foreach (var node in container.Nodes)
         {
-            // Why: every container child IS a field (DataContainer's Nodes ARE its fields); a child that
-            // is not an IDataField is a contract violation in the builder, not a runtime data condition —
-            // throw rather than silently skip it out of the declared schema (NO FALLBACKS). Mirrors
-            // DataContainer.ProjectSchema and FileSystemRecordConnector.Fields.
             fields.Add(node as IDataField
                 ?? throw new InvalidOperationException(
                     $"Container '{container.Name}' child node '{node.Name}' is not an IDataField."));

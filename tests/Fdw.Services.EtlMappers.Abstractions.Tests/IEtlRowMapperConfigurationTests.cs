@@ -14,9 +14,6 @@ public class IEtlRowMapperConfigurationTests
     [Trait("Category", "Etl")]
     public void IEtlRowMapperConfigurationInterfaceExists()
     {
-        // Why: IEtlRowMapperConfiguration interface was collapsed into the concrete
-        // EtlRowMapperConfiguration class. Assert the concrete class exists and
-        // implements the generic configuration contract.
         var type = typeof(EtlRowMapperConfiguration);
         type.ShouldNotBeNull();
         type.IsClass.ShouldBeTrue();
@@ -82,10 +79,6 @@ public class IEtlRowMapperConfigurationTests
     [Trait("Category", "Etl")]
     public void IEtlRowMapperConfigurationHasCorrectNumberOfDeclaredProperties()
     {
-        // Why: After the interface→concrete-class refactor, EtlRowMapperConfiguration declares
-        // its IGenericConfiguration members directly plus the three mapper-specific ones.
-        // Assert presence of the three mapper-specific properties; total count varies with
-        // the IGenericConfiguration surface and is asserted elsewhere.
         var properties = typeof(EtlRowMapperConfiguration).GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
         properties.ShouldContain(p => p.Name == nameof(EtlRowMapperConfiguration.MapperType));
         properties.ShouldContain(p => p.Name == nameof(EtlRowMapperConfiguration.EnablePooling));

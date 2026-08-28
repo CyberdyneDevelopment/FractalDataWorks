@@ -6,7 +6,6 @@ namespace Fdw.UI.Themes.Clients.Models;
 /// <summary>
 /// Represents a request to update an existing theme.
 /// </summary>
-// Why: pure DTO, no logic.
 [ExcludeFromCodeCoverage]
 public class UpdateThemeRequest
 {

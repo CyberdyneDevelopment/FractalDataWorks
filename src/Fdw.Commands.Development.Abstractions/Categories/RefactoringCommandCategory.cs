@@ -5,7 +5,6 @@ namespace Fdw.Commands.Development.Abstractions.Categories;
 /// <summary>
 /// Category for refactoring commands (rename, extract method, encapsulate field, etc.).
 /// </summary>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(DevelopmentCommandCategories), "Refactoring", RestrictToCurrentCompilation = true)]
 public sealed class RefactoringCommandCategory : DevelopmentCommandCategoryBase

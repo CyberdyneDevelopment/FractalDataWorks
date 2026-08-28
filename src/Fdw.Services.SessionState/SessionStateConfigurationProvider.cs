@@ -24,8 +24,6 @@ namespace Fdw.Services.SessionState;
 /// </remarks>
 public class SessionStateConfigurationProvider
 {
-    // Why: SessionState records live in settings.SessionState in ConfigurationDb.
-    // IConfigurationGateway routes directly to ConfigurationDb via configurationSchema.json.
     private const string DataStoreName = "ConfigurationDb";
     private const string PathName = "settings";
     private const string ContainerName = "SessionState";

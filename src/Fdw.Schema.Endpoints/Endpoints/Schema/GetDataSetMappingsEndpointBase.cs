@@ -64,8 +64,6 @@ public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsReque
     {
         EndpointLog.GettingResource(_logger, "field mappings", req.Name);
 
-        // Why the read is checked before its value: a failed read and a name that does not exist
-        // both arrived here as null, so a broken query answered 404 "this data set does not exist".
         var dataSetResult = await FindDataSet(req.Name, ct).ConfigureAwait(false);
         if (!dataSetResult.IsSuccess)
         {
@@ -215,9 +213,6 @@ public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsReque
         };
     }
 
-    // Why a 500 rather than an empty list: the read did not happen, so nothing is known about what
-    // it would have returned. Answering [] claims the data set has no mappings, which is a different
-    // and possibly false statement.
     private Task SendReadFailure(string what, string? reason, CancellationToken ct)
     {
         HttpContext.Response.StatusCode = 500;

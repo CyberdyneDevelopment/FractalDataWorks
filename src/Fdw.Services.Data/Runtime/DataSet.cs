@@ -19,8 +19,6 @@ public sealed class DataSet : IDataSet
 {
     private readonly ILogger<DataSet> _logger;
 
-    // Why: fields are declared in-memory at construction (from DataSetConfiguration). They feed
-    // both the async GetFields contract and the synchronous Field(name) lookup.
     private readonly IReadOnlyList<IDataField> _fields;
 
     /// <summary>
@@ -77,8 +75,6 @@ public sealed class DataSet : IDataSet
     public IReadOnlyList<IDataSetJoin> Joins { get; }
 
     /// <inheritdoc />
-    // Why: a dataset's child IDataNode set is its fields (the same set Field(name) looks up over).
-    // IReadOnlyList<IDataField> is covariant to IReadOnlyList<IDataNode>.
     public IReadOnlyList<IDataNode> Nodes => _fields;
 
     /// <inheritdoc />
@@ -97,9 +93,6 @@ public sealed class DataSet : IDataSet
     }
 
     /// <summary>Gets the fields declared on this dataset (async contract retained for resolvers).</summary>
-    // Why: GetFields/Keys are no longer on IDataSet (the uniform IDataNode surface replaced the
-    // node-level async fields + Keys), but resolvers still call GetFields to materialise the
-    // dataset's field list. Kept as plain instance members, not interface overrides.
     public Task<IReadOnlyList<IDataField>> GetFields(CancellationToken cancellationToken = default)
         => Task.FromResult(_fields);
 
@@ -116,7 +109,6 @@ public sealed class DataSet : IDataSet
 
         if (field is null)
         {
-            // Why: Log-and-return pattern — single call both logs and returns the message.
             return GenericResult<IDataField>.Failure(
                 DataSetProviderLog.FieldNotFoundInDataSet(_logger, name, Name));
         }

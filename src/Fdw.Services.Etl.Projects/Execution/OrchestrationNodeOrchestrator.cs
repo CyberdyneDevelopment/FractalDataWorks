@@ -68,16 +68,12 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         _signaler = signaler ?? throw new ArgumentNullException(nameof(signaler));
         _broadcaster = broadcaster ?? throw new ArgumentNullException(nameof(broadcaster));
         _serverDefaults = serverDefaults ?? throw new ArgumentNullException(nameof(serverDefaults));
-        // Why NullLogger fallback: per FDW convention, ensures the orchestrator remains functional
-        // if DI does not wire up logging.
         _logger = logger ?? NullLogger<OrchestrationNodeOrchestrator>.Instance;
     }
 
     /// <inheritdoc/>
     public async Task Execute(OrchestrationNodeExecutionRequest request, CancellationToken cancellationToken = default)
     {
-        // Why depth=int.MaxValue: load the entire subtree in one call to avoid N+1 queries
-        // during recursive execution. Orchestration trees are bounded by design.
         var configResult = await _nodeProvider.Get(request.RootNodeId, depth: int.MaxValue, cancellationToken)
             .ConfigureAwait(false);
 
@@ -105,9 +101,6 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
             OrchestrationNodeOrchestratorLog.RootTransitionStateFailed(_logger, request.ExecutionId, rootTransitionResult.CurrentMessage);
         }
 
-        // Why: orgId null — project-level (orchestration node) status has no owning-org firehose wired
-        // yet (it would derive from the project's owning org, mirroring the pipeline path); the
-        // execution:{id} group still delivers to subscribers. Per-org project firehose is a follow-up.
         await _broadcaster.BroadcastStatusChange(rootNode.Name, request.ExecutionId, "Running", orgId: null)
             .ConfigureAwait(false);
 
@@ -227,8 +220,6 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         Guid childItemId,
         CancellationToken cancellationToken)
     {
-        // Why stage-level resiliency wrap: the IResiliencyExecutor wraps Stage-band nodes.
-        // This matches v1 behavior where stage execution was wrapped for retry/fallback.
         if (child.NodeTypeId == StageNodeTypeId && childPolicy.ResiliencyPolicyId.HasValue)
         {
             var resiliencyCtx = new ResiliencyExecutionContext
@@ -267,7 +258,6 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     {
         if (node.PipelineMemberships.Count == 0)
         {
-            // Why: an empty leaf node succeeds trivially — nothing to run.
             return true;
         }
 
@@ -330,7 +320,6 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
             }
             finally
             {
-                // Why: always deregister to release TCS memory, success or failure.
                 _signaler.Deregister(childExecutionId);
             }
 
@@ -358,9 +347,6 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         ExecutionPolicySnapshot parentPolicy,
         OrchestrationNodeConfiguration failedChild)
     {
-        // Why: a Step-level failure (leaf child) reads StepFailurePolicy;
-        // a Stage-level failure reads StageFailurePolicy.
-        // For other depths, StepFailurePolicy governs as the generic default.
         var nodeType = OrchestrationNodeTypes.ById(failedChild.NodeTypeId);
         if (nodeType.Name.Equals("Step", StringComparison.Ordinal) ||
             nodeType.CanHostPipelines)
@@ -468,7 +454,6 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
             }
         }
 
-        // Why: fallback to Ordinal order if prerequisites formed a cycle (validator should have caught this).
         if (result.Count < node.PipelineMemberships.Count)
         {
             return node.PipelineMemberships

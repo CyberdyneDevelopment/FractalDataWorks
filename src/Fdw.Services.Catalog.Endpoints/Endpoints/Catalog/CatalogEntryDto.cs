@@ -9,8 +9,6 @@ public class CatalogEntryDto
     public string EntityType { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the name of the catalog entity.</summary>
-    // Why: named 'Name' (not 'EntityName') so the JSON contract matches the client CatalogEntityPayload.Name
-    // the UI binds — otherwise the catalog list renders blank names (client/server field-name drift).
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the description of the catalog entity.</summary>

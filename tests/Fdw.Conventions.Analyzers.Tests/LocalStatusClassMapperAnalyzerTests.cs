@@ -271,8 +271,6 @@ public class LocalStatusClassMapperAnalyzerTests
     [Trait("Category", "Conventions")]
     public async Task StatusSwitchMixingCssClassesAndProse_NoDiagnostic()
     {
-        // Why: a helper that also returns prose is not purely a class mapper; reporting it would
-        // suggest a migration that would lose information.
         var test = """
             namespace TestNamespace
             {

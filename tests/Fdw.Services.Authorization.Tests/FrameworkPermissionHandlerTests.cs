@@ -47,7 +47,6 @@ public sealed class FrameworkPermissionHandlerTests
     [Trait("Category", "Security")]
     public async Task HandleRequirementAsync_UnauthenticatedUser_DoesNotSucceed_AndSkipsAuthorizeCall()
     {
-        // Why: ClaimsIdentity() with no authenticationType yields IsAuthenticated == false.
         var principal = new ClaimsPrincipal(new ClaimsIdentity());
         var context = BuildContext(principal, "connections", "read");
         var sut = CreateHandler();
@@ -65,8 +64,6 @@ public sealed class FrameworkPermissionHandlerTests
     [Trait("Category", "Security")]
     public async Task HandleRequirementAsync_NoIdentityAtAll_DoesNotSucceed()
     {
-        // Why: a bare ClaimsPrincipal() has no primary identity — Identity is null, so the
-        // null-conditional short-circuit (`context.User.Identity?.IsAuthenticated != true`) must hold.
         var principal = new ClaimsPrincipal();
         var context = BuildContext(principal, "connections", "read");
         var sut = CreateHandler();
@@ -101,8 +98,6 @@ public sealed class FrameworkPermissionHandlerTests
     [Trait("Category", "Security")]
     public async Task HandleRequirementAsync_InnerServiceDeniesSuccessfully_DoesNotSucceed()
     {
-        // Why: a successful result carrying Value == false (a clean "not authorized" decision)
-        // must NOT call context.Succeed — fail-closed.
         var principal = CreateAuthenticatedPrincipal();
         var context = BuildContext(principal, "connections", "write");
         _authorizationServiceMock
@@ -120,8 +115,6 @@ public sealed class FrameworkPermissionHandlerTests
     [Trait("Category", "Security")]
     public async Task HandleRequirementAsync_InnerServiceFails_DoesNotSucceed()
     {
-        // Why: when the inner authorization service itself fails (e.g. a provider query error),
-        // the handler must fail-closed rather than treat the failure as an implicit grant.
         var principal = CreateAuthenticatedPrincipal();
         var context = BuildContext(principal, "connections", "delete");
         _authorizationServiceMock

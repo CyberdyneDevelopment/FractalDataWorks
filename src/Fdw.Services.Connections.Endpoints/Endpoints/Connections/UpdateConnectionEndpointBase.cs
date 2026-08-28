@@ -24,7 +24,6 @@ namespace Fdw.Services.Connections.Endpoints;
 public abstract class UpdateConnectionEndpointBase<TConfig> : CrudUpdateEndpointBase<UpdateConnectionRequest, ConnectionDetailDto>
     where TConfig : class, IConnectionImplementationConfiguration
 {
-    // Why: the connection provider reads and writes the whole aggregate — header plus dispatched typed body.
     private readonly ConnectionConfigurationProvider _connectionProvider;
 
     /// <inheritdoc />
@@ -48,8 +47,6 @@ public abstract class UpdateConnectionEndpointBase<TConfig> : CrudUpdateEndpoint
             return GenericResult<ConnectionDetailDto?>.Success(null);
         }
 
-        // Why: Get composed the typed body already — it is the same dispatch the save uses, so the two
-        // halves can never disagree about which type this connection is.
         if (connectionResult.Value.Configuration is not TConfig body)
             return GenericResult<ConnectionDetailDto?>.Success(null);
 
@@ -75,17 +72,10 @@ public abstract class UpdateConnectionEndpointBase<TConfig> : CrudUpdateEndpoint
 
         var (updatedConnection, updatedBody) = MergeUpdate(request, connectionResult.Value, existingBody);
 
-        // Why: the check-settings fields live on the shared header row (conn.Connection), so they
-        // are merged once here rather than in every per-type MergeUpdate override — every connection
-        // type gets the same behavior for free. Null means no change, matching every other nullable
-        // field on UpdateConnectionRequest.
         updatedConnection.HealthCheckEnabled = request.HealthCheckEnabled ?? updatedConnection.HealthCheckEnabled;
         updatedConnection.HealthCheckOnStartup = request.HealthCheckOnStartup ?? updatedConnection.HealthCheckOnStartup;
         updatedConnection.HealthCheckIntervalSeconds = request.HealthCheckIntervalSeconds ?? updatedConnection.HealthCheckIntervalSeconds;
 
-        // Why: same dead-config guard as CreateConnectionEndpointBase, evaluated against the fully
-        // merged header so a request that only flips HealthCheckEnabled=true (leaving an existing
-        // OnStartup/IntervalSeconds untouched) is still validated correctly.
         if (updatedConnection.HealthCheckEnabled && !updatedConnection.HealthCheckOnStartup && updatedConnection.HealthCheckIntervalSeconds is null)
         {
             return GenericResult<ConnectionDetailDto>.Failure(

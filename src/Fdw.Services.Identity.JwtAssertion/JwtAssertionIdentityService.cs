@@ -66,8 +66,6 @@ public sealed class JwtAssertionIdentityService
 
         IdentityLog.AcquiringToken(Logger, Name, "JwtAssertion", request.Audience);
 
-        // Why ByName and not a switch: the carriers are a TypeCollection precisely so a consumer can
-        // add one in its own assembly. A switch here would close a set that is deliberately open.
         var source = FederatedAssertionSources.ByName(assertionSource);
         if (source == FederatedAssertionSources.NotFound)
             return GenericResult<IssuedIdentityToken>.Failure(IdentityLog.ConfigurationValueMissing(Logger, Name, nameof(Configuration.AssertionSource)));

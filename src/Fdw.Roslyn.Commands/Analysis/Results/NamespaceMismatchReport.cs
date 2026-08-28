@@ -8,7 +8,6 @@ namespace Fdw.Roslyn.Commands.Analysis.Results;
 /// The result of <c>FindNamespaceMismatches</c>: every type whose namespace disagrees with where it
 /// physically lives, grouped by cause.
 /// </summary>
-// Why: pure data holder, auto-properties only, no logic
 [ExcludeFromCodeCoverage]
 public sealed class NamespaceMismatchReport
 {

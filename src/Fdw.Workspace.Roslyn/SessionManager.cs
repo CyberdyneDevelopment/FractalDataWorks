@@ -175,15 +175,6 @@ public sealed class SessionManager : ISessionManager
 
             RoslynWorkspaceLog.SessionCreated(_logger, sessionId, fullPath, state.Description);
 
-            // Why persist at creation rather than only on save/close: a session's whole purpose is to
-            // be findable again later, and the process holding it does not get to choose how it ends.
-            // A crash, a client disconnect, or an operator killing a stdio server all skip CloseSession
-            // entirely — so a create-without-persist meant the common case left nothing on disk and
-            // every reconnect looked like a first visit. The record is cheap; the workspace graph is
-            // not persisted here, only the session's identity and metadata.
-            // Deliberately not fatal: failing to write the record must not fail a load that otherwise
-            // succeeded. The caller still gets a working in-memory session; it just will not survive
-            // this process, and the failure is logged rather than swallowed silently.
             var persistResult = await SaveSession(sessionId, cancellationToken).ConfigureAwait(false);
             if (!persistResult.IsSuccess)
             {
@@ -585,10 +576,6 @@ public sealed class SessionManager : ISessionManager
         if (_disposed)
             return;
 
-        // Why: SleepTimeout can be TimeSpan.MaxValue when a caller disables sleeping.
-        // DateTimeOffset.UtcNow - TimeSpan.MaxValue is un-representable and throws on the
-        // Timer thread, crashing the host. When the timeout exceeds UtcNow's distance from
-        // DateTimeOffset.MinValue, nothing can be older than the cutoff — there is nothing to sleep.
         if (SleepTimeout >= DateTimeOffset.UtcNow - DateTimeOffset.MinValue)
             return;
 
@@ -703,10 +690,6 @@ public sealed class SessionManager : ISessionManager
         if (live is not null)
             return live;
 
-        // Why the store is consulted at all: the sync overload can only ever see sessions this
-        // process created, so a reconnecting agent — new process, same conversation — always missed
-        // and was handed a brand new session. The persisted record is the only thing that survives a
-        // process boundary, which is exactly the boundary reattach exists to cross.
         var persisted = await _sessionStore.ListSessions(cancellationToken).ConfigureAwait(false);
 
         return persisted.FirstOrDefault(s =>
@@ -767,14 +750,10 @@ public sealed class SessionManager : ISessionManager
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // Why: git HEAD resolution is best-effort; I/O failures (missing .git dir, permission denied)
-            // return null so the caller proceeds without a commit hash. ex is observed via the when filter.
             return null;
         }
         catch (Exception ex)
         {
-            // Why: catch remaining unexpected exceptions so git HEAD resolution never throws out of the session manager.
-            // ex.Message is observed here to satisfy FDW022 without a logger (static helper, no DI).
             _ = ex.Message;
             return null;
         }

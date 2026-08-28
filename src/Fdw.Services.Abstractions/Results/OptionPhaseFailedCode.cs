@@ -20,7 +20,6 @@ public sealed class OptionPhaseFailedCode : ServiceTypeResultCodeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="OptionPhaseFailedCode"/> class.
     /// </summary>
-    // Why 61012: ServiceTypeLog.OptionPhaseFailed is EventId 61012.
     public OptionPhaseFailedCode()
         : base(61012, "OptionPhaseFailed",
             ResultSeverities.ByName("Error"),

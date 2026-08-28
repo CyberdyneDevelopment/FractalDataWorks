@@ -48,7 +48,6 @@ public sealed class ContainerCompositionTests
     [Trait("Category", "CoreFramework")]
     public void ResolveFormatExplicitFormatOverridesTransportDefault()
     {
-        // Why: a container can expose a non-default format on any transport (e.g. Xml over Http).
         var cfg = new DataContainerConfiguration { Name = "Feed", Format = "Xml" };
 
         var format = ContainerComposition.ResolveFormat(cfg, FormatTypes.Json);
@@ -65,8 +64,6 @@ public sealed class ContainerCompositionTests
 
         var format = ContainerComposition.ResolveFormat(cfg, FormatTypes.Json);
 
-        // Why: an explicit-but-unknown format discriminator is a misconfiguration — it resolves to the
-        // NotFound sentinel (observable as a failed read), never a guessed Tabular/Json substitute.
         format.Name.ShouldBe(FormatTypes.NotFound.Name);
     }
 
@@ -79,9 +76,6 @@ public sealed class ContainerCompositionTests
 
         var format = ContainerComposition.ResolveFormat(cfg, FormatTypes.NotFound);
 
-        // Why: with no Format set and a transport that declares no DefaultResponseFormat (arriving here
-        // as the NotFound sentinel), the result is NotFound — the no-fallback rule. The old node
-        // hardcoded Tabular here.
         format.Name.ShouldBe(FormatTypes.NotFound.Name);
     }
 

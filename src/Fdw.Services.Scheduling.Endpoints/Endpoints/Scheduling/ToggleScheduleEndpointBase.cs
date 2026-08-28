@@ -14,8 +14,6 @@ namespace Fdw.Services.Scheduling.Endpoints;
 public abstract class ToggleScheduleEndpointBase<TConfig> : Endpoint<ToggleScheduleRequest, ScheduleDetailDto>
     where TConfig : ScheduleConfiguration
 {
-    // Why: ScheduleConfigurationProvider replaces IOptionsMonitor<List<T>> with dual-source
-    // (ctrl + cfg) provider that merges system and user configurations.
     private readonly ScheduleConfigurationProvider _provider;
 
     /// <inheritdoc />
@@ -36,10 +34,6 @@ public abstract class ToggleScheduleEndpointBase<TConfig> : Endpoint<ToggleSched
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
     {
-        // Why POST: every other sub-resource action in this API is a POST — /connections/{Name}/test,
-        // /connections/{Name}/schema/refresh, /connections/test-config, /proxy/etl/trigger. This endpoint
-        // was the only one declaring PUT, and ScheduleHttpClient has always POSTed to it, so toggling a
-        // schedule returned 405 from the UI. The client follows the convention; the route did not.
         Post($"/{ResourceName}/{{Name}}/toggle");
 #if DEVELOP
         AllowAnonymous();

@@ -40,9 +40,6 @@ internal sealed class VsCodeShellMiddleware
         _manifest = manifest;
         _logger = logger ?? NullLogger<VsCodeShellMiddleware>.Instance;
 
-        // Why: the collection generates no ByCommandId lookup — [TypeLookup] is gathered from options in
-        // the collection's own compilation, and every command is declared downstream. Indexing the manifest
-        // once here is the equivalent, and the middleware is constructed once per pipeline.
         _declaredCommandIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (var command in manifest.Commands)
         {
@@ -88,8 +85,6 @@ internal sealed class VsCodeShellMiddleware
             return;
         }
 
-        // Why: keyed on CommandId by the option's own Register phase, so this is an O(1) resolve
-        // rather than scanning every handler and comparing a descriptor id it no longer carries.
         var handler = context.RequestServices.GetKeyedService<IVsCodeCommandHandler>(commandId);
         if (handler is null)
         {

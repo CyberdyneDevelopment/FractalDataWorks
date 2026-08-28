@@ -72,8 +72,6 @@ public sealed class AuthenticationRunner
     public async Task<IGenericResult<FlowResult>> Resume(
         AuthenticationFlow flow, string resumeToken, CancellationToken cancellationToken = default)
     {
-        // Why consume before anything else: the token is spent whether or not what follows succeeds,
-        // so a failed resume cannot be retried into a second attempt at the same half-built state.
         var consumed = await _executions.TryConsume(resumeToken, cancellationToken).ConfigureAwait(false);
         if (consumed.IsFailure)
             return consumed.ToNewResult<FlowResult>();

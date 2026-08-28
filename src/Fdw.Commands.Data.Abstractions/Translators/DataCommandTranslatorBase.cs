@@ -49,8 +49,6 @@ public abstract class DataCommandTranslatorBase<TCommand> : IDataCommandTranslat
     {
         if (string.IsNullOrEmpty(name))
         {
-            // Why: reported defect (see logging-pass report) — this method throws instead of the
-            // constructor returning an IGenericResult. Logged here per scope; throw left in place.
             DataCommandTranslatorBaseLog.TranslatorNameMissing(NullLogger<DataCommandTranslatorBase<TCommand>>.Instance);
             throw new ArgumentNullException(nameof(name));
         }

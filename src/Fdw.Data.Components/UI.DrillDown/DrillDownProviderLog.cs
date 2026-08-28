@@ -89,8 +89,6 @@ public static partial class DrillDownProviderLog
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>Logs when BuildTree produced an empty node list.</summary>
-    // Why Debug, not Warning (FDW-583): an empty tree is normal UI state (e.g. a leaf object with no
-    // drillable children) — not an abnormal or actionable condition.
     [MessageLogging(EventId = 31003, Level = LogLevel.Debug,
         Message = "DrillDownProvider: BuildTree returned an empty tree")]
     public static partial IGenericMessage EmptyTree(

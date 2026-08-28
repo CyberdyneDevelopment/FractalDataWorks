@@ -27,14 +27,12 @@ public static partial class MsSqlConfigurationSaveTranslatorLog
         string container,
         int columnCount);
 
-    // Why: reuses MsSqlDataResultCodes.ContainerNull's number (20000).
     [MessageLogging(
         EventId = 20000,
         Level = LogLevel.Error,
         Message = "MsSqlConfigurationSaveTranslator received a null container")]
     public static partial IGenericMessage ContainerNull(ILogger logger);
 
-    // Why: reuses MsSqlDataResultCodes.InvalidContainerPath's number (20001).
     [MessageLogging(
         EventId = 20001,
         Level = LogLevel.Error,
@@ -43,7 +41,6 @@ public static partial class MsSqlConfigurationSaveTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses MsSqlDataResultCodes.MissingInputData's number (21001).
     [MessageLogging(
         EventId = 21001,
         Level = LogLevel.Error,
@@ -56,8 +53,6 @@ public static partial class MsSqlConfigurationSaveTranslatorLog
     /// <summary>
     /// Logs the unrecoverable state where the container's database path declares no schema.
     /// </summary>
-    // Why: reuses the same number as MsSqlConfigurationDeleteTranslatorLog.NoSchemaDefined (62002) —
-    // identical meaning (a schema-less container path), different translator.
     [MessageLogging(
         EventId = 62002,
         Level = LogLevel.Critical,
@@ -91,8 +86,6 @@ public static partial class MsSqlConfigurationSaveTranslatorLog
         string typeName,
         string container);
 
-    // Why: reuses MsSqlDataResultCodes.InsertTranslationFailed's number (91005) — the save
-    // translator's catch block returns the same "InsertTranslationFailed" ResultCode.
     [MessageLogging(
         EventId = 91005,
         Level = LogLevel.Error,

@@ -55,7 +55,6 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
     /// <summary>
     /// Gets or sets the optional logger. Falls back to <see cref="NullLogger{T}.Instance"/> when not supplied.
     /// </summary>
-    // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions.
     [Parameter]
     public ILogger? Logger { get; set; }
 
@@ -111,10 +110,6 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
     private static string TruncateLabel(string label) =>
         label.Length > 14 ? string.Concat(label.AsSpan(0, 12), "..") : label;
 
-    // Why: port labels sit outside the body in a narrower gutter than the node's own label, so they
-    // truncate harder. Keeping them outside is what lets a lone centred port (the generic
-    // Input/Output pair every edit-mode node carries) label itself without colliding with the
-    // node label on the same centre line.
     private static string TruncatePortLabel(string label) =>
         label.Length > 10 ? string.Concat(label.AsSpan(0, 8), "..") : label;
 
@@ -123,9 +118,6 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
 
     // ── Port Geometry ─────────────────────────────────────────────────────────────
 
-    // Why: a self-loop edge (source node == target node) is the field-mapping shape — in:{field} →
-    // out:{field} on one Transform node. It renders inside that node's own translated group so it
-    // draws above the body it crosses and follows the node during a drag for free.
     private static bool IsSelfLoop(ICanvasEdge edge) =>
         string.Equals(edge.SourceNodeId, edge.TargetNodeId, StringComparison.Ordinal);
 
@@ -148,8 +140,6 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
         {
             var layout = SvgPortGeometry.BuildLayout(node, GetNodeAppearance(node).PortAnchorHalfWidth);
 
-            // Why: report ports this renderer cannot place, once per node per pass, here rather than
-            // in the markup — the layout is the one place that knows which ports were left out.
             foreach (var port in layout.UnplaceablePorts)
                 SvgCanvasRendererLog.PortDirectionNotRenderable(ResolvedLogger, node.Id, port.Id, port.Direction.Name);
 
@@ -168,8 +158,6 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
         var sourceNode = FindNode(edge.SourceNodeId);
         var targetNode = FindNode(edge.TargetNodeId);
 
-        // Why: an edge naming a node that is not on the canvas is skipped silently — this is the
-        // renderer's pre-existing behaviour for a half-applied model mutation mid-render pass.
         if (sourceNode is null || targetNode is null)
             return null;
 
@@ -199,9 +187,6 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
     {
         if (portId is null)
         {
-            // Why: the edge connects to the node as a whole (ICanvasEdge allows a null port id), so
-            // anchor on the node's horizontal edge — source on the right, target on the left. This
-            // is the renderer's original pre-port geometry, kept for node-level Flow/Reference edges.
             x = isSource ? node.X + SvgPortGeometry.NodeAnchorOffset : node.X - SvgPortGeometry.NodeAnchorOffset;
             y = node.Y;
             return true;
@@ -282,8 +267,6 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
 
     private void OnCanvasMouseDown(MouseEventArgs e)
     {
-        // Why: if a node mousedown already started a drag this event is suppressed by
-        // stopPropagation. Reaching here means the user clicked the canvas background.
         if (_draggingNode is not null) return;
         _isPanning = true;
         _panStartX = e.ClientX;
@@ -296,9 +279,6 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
     {
         if (_draggingNode is not null)
         {
-            // Why: convert client-space mouse position to canvas-space by dividing by scale.
-            // The drag offset (captured in OnNodeMouseDown) compensates for the initial cursor
-            // position within the node, so the node follows the cursor naturally.
             var newX = e.ClientX / _scale - _dragOffsetX;
             var newY = e.ClientY / _scale - _dragOffsetY;
             _draggingNode = PositionNode(_draggingNode, newX, newY);
@@ -318,8 +298,6 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
     {
         if (_draggingNode is not null && IsEditMode && Model.EditContext is not null)
         {
-            // Why: persist the final position through the edit context so the domain model is
-            // updated. The result is checked; failures are surfaced via the error banner.
             SvgCanvasRendererLog.MovingNode(ResolvedLogger, _draggingNode.Id, _draggingNode.X, _draggingNode.Y);
             var result = await Model.EditContext.MoveNode(
                 _draggingNode.Id, _draggingNode.X, _draggingNode.Y,
@@ -340,7 +318,6 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
 
     private void OnCanvasWheel(WheelEventArgs e)
     {
-        // Why: typical browser wheel delta is ±120 per notch; map to a smooth 0.1 step.
         var delta = -Math.Sign(e.DeltaY) * 0.1;
         _scale = Math.Clamp(_scale + delta, 0.3, 2.0);
         StateHasChanged();
@@ -348,7 +325,6 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
 
     private void OnNodeMouseDown(ICanvasNode node, MouseEventArgs e)
     {
-        // Why: capture drag offset from node origin so the node moves pinned to the cursor.
         _draggingNode = node;
         _dragOffsetX = e.ClientX / _scale - node.X;
         _dragOffsetY = e.ClientY / _scale - node.Y;
@@ -358,7 +334,6 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
     {
         if (_connectSourceId is not null)
         {
-            // Why: second click in connect-mode completes a Flow edge; clear connect state afterwards.
             _ = ConnectNodes(_connectSourceId, node.Id);
             _connectSourceId = null;
             StateHasChanged();
@@ -378,14 +353,10 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
 
     private void OnPortClick(ICanvasNode node, ICanvasPort port)
     {
-        // Why: ports are rendered in every mode so a view-only canvas still shows the graph's
-        // shape, but drawing an edge is an edit operation.
         if (!IsEditMode) return;
 
         if (IsPendingConnectSourcePort(node.Id, port.Id))
         {
-            // Why: clicking the pending source port a second time cancels the gesture — the only
-            // way out of connect-mode without creating an edge.
             SvgCanvasRendererLog.PortConnectCancelled(ResolvedLogger, node.Id, port.Id);
             ClearPortConnect();
             StateHasChanged();
@@ -401,11 +372,6 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
             return;
         }
 
-        // Why: second click completes the mapping. The clicked port is the TARGET and the pending
-        // one the SOURCE — the orientation is not inferred from the ports' directions, because the
-        // payload serializer requires source=in:{field}/target=out:{field} and silently re-orienting
-        // a backwards gesture would author a mapping the user did not draw. A backwards gesture
-        // instead fails loud through the edit context and surfaces in the error banner.
         _ = ConnectPorts(_connectSourcePortNodeId, _connectSourcePortId, node.Id, port.Id);
         ClearPortConnect();
         StateHasChanged();
@@ -459,8 +425,6 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
 
     private void BeginConnect()
     {
-        // Why: sets connect-mode — next node click will be the target. The source is the
-        // currently selected node (if any). If nothing is selected, wait for first node click.
         _connectSourceId = _selectedId;
         StateHasChanged();
     }
@@ -469,12 +433,9 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
     {
         if (Model.EditContext is null) return;
 
-        // Why: default to the Flow edge type for a generic connect affordance; domain-specific
-        // connect flows (field mapping, reference) are reserved for higher-level tooling.
         var edgeType = Fdw.UI.Abstractions.Canvas.CanvasEdgeTypes.ByName("Flow");
         if (edgeType == Fdw.UI.Abstractions.Canvas.CanvasEdgeTypes.NotFound)
         {
-            // Why: fatal — the framework-seeded Flow edge type is absent, so connections cannot be made.
             SvgCanvasRendererLog.FlowEdgeTypeNotRegistered(ResolvedLogger);
             _editErrorMessage = "Flow edge type is not registered.";
             return;
@@ -501,13 +462,9 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
     {
         if (Model.EditContext is null) return;
 
-        // Why: a port-to-port connection is a field mapping — the domain meaning of wiring one
-        // field's port to another. Node-level connect (BeginConnect) remains the Flow-edge gesture.
         var edgeType = Fdw.UI.Abstractions.Canvas.CanvasEdgeTypes.ByName("FieldMapping");
         if (edgeType == Fdw.UI.Abstractions.Canvas.CanvasEdgeTypes.NotFound)
         {
-            // Why: fatal — the framework-seeded FieldMapping edge type is absent, so mappings
-            // cannot be authored at all.
             SvgCanvasRendererLog.FieldMappingEdgeTypeNotRegistered(ResolvedLogger);
             _editErrorMessage = "FieldMapping edge type is not registered.";
             return;
@@ -532,10 +489,6 @@ public sealed partial class SvgCanvasRenderer : ComponentBase
 
     // ── Helper — immutable-record node position update ────────────────────────────
 
-    // Why: ICanvasNode is an interface backed by an immutable record in typical implementations.
-    // The renderer tracks the live visual position in the model snapshot during a drag;
-    // the domain model is updated via MoveNode on mouse-up. This helper creates a transient
-    // wrapper that shadows position for the visual drag preview.
     private static PositionedNode PositionNode(ICanvasNode node, double x, double y) =>
         new(node, x, y);
 

@@ -44,8 +44,6 @@ public class IssuedIdentityTokenTests
     [Trait("Category", "Security")]
     public void AuthorizationHeaderValueUsesTheProvidersOwnTokenType()
     {
-        // Why the provider's value rather than a hardcoded "Bearer": guessing it would produce a
-        // header the peer silently rejects.
         new IssuedIdentityToken("abc", "DPoP", "iss", "aud", DateTimeOffset.UtcNow.AddMinutes(5))
             .AuthorizationHeaderValue.ShouldBe("DPoP abc");
     }

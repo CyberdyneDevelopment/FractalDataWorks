@@ -6,7 +6,6 @@ namespace Fdw.UI.Themes.Clients.Models;
 /// <summary>
 /// Represents a summary of a theme for listing purposes.
 /// </summary>
-// Why: pure payload, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class ThemeSummaryPayload
 {

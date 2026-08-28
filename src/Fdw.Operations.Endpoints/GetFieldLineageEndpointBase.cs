@@ -25,14 +25,8 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest, LineageGraphResponse>
 {
-    // Why: IConfigurationGateway routes directly to ConfigurationDb via configurationSchema.json.
-    // Using plain IDataGateway would look for "ConfigurationDb" in the runtime DataStore table
-    // (data.DataStore), where it does not exist — it is only a bootstrap connection in the JSON.
     private readonly IConfigurationGateway _configurationGateway;
     private readonly ILogger<GetFieldLineageEndpointBase> _logger;
-    // Why: same composing-provider mechanism as GetLineageGraphEndpointBase. Also fixes a second latent
-    // bug — the local QueryAll<T> below hardcodes the "data" schema, so the OLD flat pipeline read
-    // queried the non-existent "data.Pipeline" (pipeline nodes never loaded).
     private readonly PipelineServiceConfigurationProvider _pipelineProvider;
 
     /// <inheritdoc />
@@ -291,7 +285,6 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
     /// <summary>Queries all field mappings for a DataSet by name, resolving through DataSetSource records.</summary>
     private async Task<IReadOnlyList<DataSetFieldMappingRecord>> QueryFieldMappings(string dataSetName, CancellationToken ct)
     {
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget.
         var dsCommand = new QueryCommand<DataSetRecord>
         {
             Filter = new FilterExpression
@@ -309,7 +302,6 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
         var dataSet = dsResult.IsSuccess ? dsResult.Value?.FirstOrDefault() : null;
         if (dataSet == null) return [];
 
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget.
         var srcCommand = new QueryCommand<DataSetSourceConfiguration>
         {
             Filter = new FilterExpression
@@ -329,7 +321,6 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
         var allMappings = new List<DataSetFieldMappingRecord>();
         foreach (var source in dsSources)
         {
-            // Why: Addressing moved off IDataCommand onto DataStoreTarget.
             var fmCommand = new QueryCommand<DataSetFieldMappingRecord>
             {
                 Filter = new FilterExpression
@@ -357,7 +348,6 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
         var results = new List<DataSetSourceConfiguration>();
         foreach (var id in sourceIds)
         {
-            // Why: Addressing moved off IDataCommand onto DataStoreTarget.
             var command = new QueryCommand<DataSetSourceConfiguration>
             {
                 Filter = new FilterExpression
@@ -381,7 +371,6 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
     /// <summary>Queries all records from a configuration table in the ConfigurationDb data schema.</summary>
     private async Task<IReadOnlyList<T>> QueryAll<T>(string containerName, CancellationToken ct) where T : class
     {
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget.
         var command = new QueryCommand<T>();
         var result = await _configurationGateway.Execute<IEnumerable<T>>(
             command, new DataStoreTarget("ConfigurationDb", "data", containerName), ct).ConfigureAwait(false);

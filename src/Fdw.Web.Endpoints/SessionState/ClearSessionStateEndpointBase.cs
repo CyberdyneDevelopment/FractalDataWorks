@@ -41,8 +41,6 @@ public abstract class ClearSessionStateEndpointBase : EndpointWithoutRequest
     /// <inheritdoc/>
     public override async Task HandleAsync(CancellationToken ct)
     {
-        // Why: JWT sub claim contains the user's durable GUID. Identity.Name is the username
-        // which can't query a UNIQUEIDENTIFIER column.
         var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                   ?? User.FindFirst("sub")?.Value ?? string.Empty;
         SessionStateEndpointLog.ClearingAll(_logger, userId);

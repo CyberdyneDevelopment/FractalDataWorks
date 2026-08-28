@@ -5,15 +5,6 @@ namespace Fdw.UI.Navigation;
 /// <summary>
 /// The rule deciding whether a caller may reach a page.
 /// </summary>
-// Why: an interface rather than the abstract class alone so IPage.Access is typed against an abstraction,
-// the same way IPage.NavItem is typed against INavItem — and so this assembly stays free of any Blazor
-// dependency, since the rule is answered from two plain facts a terminal renderer can supply as readily as
-// a web one.
-//
-// Why two arguments rather than one permission check: they are two different axes. "Must the caller be
-// authenticated at all" is axis 1; "given they are, what must they hold" is axis 2. Anonymous is a value on
-// axis 1 and cannot be expressed as a permission, because an anonymous visitor holds no token and therefore
-// no permission claim to check.
 public interface IPageAccess
 {
     /// <summary>

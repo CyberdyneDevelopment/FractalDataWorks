@@ -10,10 +10,6 @@ namespace Fdw.Services.Data.DataNodes;
 /// <c>data.DataContainerKeyField</c> rows, and by <c>MsSqlDataContainerDetailLoader</c>
 /// for lazy-loaded containers.
 /// </summary>
-// Why: public so MsSqlDataContainerDetailLoader in Services.Connections.MsSql can
-// construct ContainerKey instances. The type carries no encapsulation concern — it is
-// a pure data-node holder.
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ContainerKey : IContainerKey
 {

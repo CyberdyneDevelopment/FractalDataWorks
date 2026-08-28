@@ -38,8 +38,6 @@ public static partial class UserConfigurationProviderLog
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="count">The number of user configurations that were loaded.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why (FDW-583): a routine read-completion on a hot path, not a business milestone — noise at
-    // Info. Debug.
     [MessageLogging(EventId = 11002, Level = LogLevel.Debug,
         Message = "Loaded {count} user configurations")]
     public static partial IGenericMessage LoadAllLoaded(ILogger logger, int count);
@@ -70,8 +68,6 @@ public static partial class UserConfigurationProviderLog
     /// <param name="count">The number of tenant memberships that were loaded.</param>
     /// <param name="userId">The identifier of the user whose tenant memberships were loaded.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why (FDW-583): a routine read-completion on a hot path, not a business milestone — noise at
-    // Info. Debug.
     [MessageLogging(EventId = 11004, Level = LogLevel.Debug,
         Message = "Loaded {count} tenant memberships for user '{userId}'")]
     public static partial IGenericMessage LoadTenantsLoaded(ILogger logger, int count, Guid userId);

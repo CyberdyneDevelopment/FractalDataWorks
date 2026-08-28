@@ -14,8 +14,6 @@ public sealed class DelimitedRowSourceOptions : RowSourceOptions
     /// Gets or sets the ordered list of column names. The reader maps each parsed column position to
     /// the name at the same index. Required — a delimited reader cannot name columns it cannot see.
     /// </summary>
-    // Why: RecordParser's raw reader produces positional columns (Func&lt;int,string&gt;); the column
-    // names come from the container field schema, never inferred. IList&lt;string&gt; (mutable) for option binding; backed by List&lt;string&gt;.
     public IList<string> Columns { get; set; } = new List<string>();
 
     /// <summary>

@@ -17,9 +17,5 @@ public interface IPageType : ITypeOption<int, IPageType>
     /// <summary>
     /// Gets the distinct assemblies the declared pages live in, for the renderer's route discovery.
     /// </summary>
-    // Why: DERIVED from Pages, not declared. The previous hand-declared Assembly could name an assembly
-    // holding none of the declared pages, and it forced one page type per assembly even after the package
-    // reorg put many groups in ONE assembly — which is why the Blazor Router consumer had to Distinct()
-    // the result to avoid "Assembly already defined".
     IReadOnlyList<Assembly> PageAssemblies { get; }
 }

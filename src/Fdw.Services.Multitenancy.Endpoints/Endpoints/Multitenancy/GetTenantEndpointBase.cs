@@ -40,8 +40,6 @@ public abstract class GetTenantEndpointBase : Endpoint<GetTenantRequest, TenantD
     /// <inheritdoc />
     public override void Configure()
     {
-        // Why: route param renamed to {Name} and bound as string so callers can identify a tenant
-        // either by Guid (parsed inside the handler) or by slug — matches API client expectations.
         Get("/tenants/{Name}");
         ConfigureEndpoint();
     }
@@ -56,9 +54,6 @@ public abstract class GetTenantEndpointBase : Endpoint<GetTenantRequest, TenantD
     {
         EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
 
-        // Why: resolve tenant by Guid if the route value parses as one, otherwise treat as slug.
-        // GetTenantBySlug is the public name-lookup path on ITenantProvider; try the as-given
-        // value first, then a lowercase fallback so /tenants/Default matches a 'default' slug.
         IGenericResult<ITenant> tenantResult;
         if (Guid.TryParse(req.Name, out var parsedId))
         {

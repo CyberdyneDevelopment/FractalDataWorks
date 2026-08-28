@@ -18,6 +18,5 @@ namespace Fdw.Data.Abstractions;
 /// a text result rather than creating a separate client for each output format.
 /// </para>
 /// </remarks>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record RawText(string Text, RawTextLineRange? Lines = null);

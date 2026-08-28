@@ -35,7 +35,6 @@ namespace Fdw.Services.ExternalIdentityProviders.Tests;
 /// </remarks>
 public sealed class ProvisionerFactoryResolutionCycleTests
 {
-    // Why: the exact provider service type whose realization the factory must NOT re-enter.
     private static readonly Type ProviderServiceType =
         typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>);
 
@@ -60,9 +59,6 @@ public sealed class ProvisionerFactoryResolutionCycleTests
             + "killed (silently — StackGuard suppresses StackOverflowException). Use Lazy<T>.");
     }
 
-    // Why: the system rule is stronger than "defer the dependency" — a factory must be a PURE
-    // constructor that holds no provider at all (the provider passes itself to Create). A Lazy<provider>
-    // ctor param would also be rejected here: it makes the deviation survivable instead of removing it.
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
@@ -87,9 +83,6 @@ public sealed class ProvisionerFactoryResolutionCycleTests
             + string.Join(", ", nonLoggerParameters));
     }
 
-    // Why: generalises the guard to the whole assembly so a NEW option cannot reintroduce the same
-    // cycle. Any constructor parameter typed as a bare IPlatformServiceProvider<,> on a factory is the
-    // root risk signature; Lazy<>/Func<> wrapped dependencies are safe because they defer resolution.
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]

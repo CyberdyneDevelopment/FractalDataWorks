@@ -79,9 +79,6 @@ public sealed class DenySessionContext() : MsSqlSessionContextBase(3, "Deny")
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        // Why UserId only: TenantId / CrossTenant / CanReadSecrets are meaningless without a real
-        // resolved identity to match against tenant.TenantOrgAccess. Omitting them denies every
-        // tenant-scoped branch without needing a separate rule.
         await Execute(
             connection,
             "EXEC sp_set_session_context @key = N'UserId', @value = @userId, @read_only = 1;",

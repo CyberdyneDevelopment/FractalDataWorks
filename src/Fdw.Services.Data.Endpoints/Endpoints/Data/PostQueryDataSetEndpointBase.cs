@@ -25,15 +25,10 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class PostQueryDataSetEndpointBase : Endpoint<PostQueryDataSetRequest, DataSetQueryResponse>
 {
-    // Why: DataSetConfigurationProvider (config records) is injected here — not IDataSetProvider
-    // (runtime service). This endpoint needs DataSetConfiguration to inspect Fields and Sources
-    // for query construction. The provider's Get(name) composes Fields, Sources, and FieldMappings.
     private readonly DataSetConfigurationProvider _dataSetProvider;
     private readonly IDataGateway _dataGateway;
 
     /// <summary>Gets the logger.</summary>
-    // Why: FastEndpoints Endpoint<TReq,TRes> also exposes Logger; 'new' suppresses the hide warning
-    // while intentionally shadowing with a concrete ILogger for typed message-logging.
     protected new ILogger<PostQueryDataSetEndpointBase> Logger { get; }
 
     /// <inheritdoc cref="PostQueryDataSetEndpointBase"/>
@@ -44,8 +39,6 @@ public abstract class PostQueryDataSetEndpointBase : Endpoint<PostQueryDataSetRe
     {
         _dataSetProvider = dataSetProvider;
         _dataGateway = dataGateway;
-        // Why: NullLogger fallback ensures the endpoint is functional even if DI
-        // doesn't wire up logging (e.g. in tests without a full DI container).
         Logger = logger ?? NullLogger<PostQueryDataSetEndpointBase>.Instance;
     }
 
@@ -67,9 +60,6 @@ public abstract class PostQueryDataSetEndpointBase : Endpoint<PostQueryDataSetRe
     }
 
     /// <inheritdoc />
-    // Why: Sequential DataSet query pipeline — resolve config, validate filters, resolve source,
-    // build command, execute, shape response. Each branch is a distinct error path; extracting
-    // sub-methods would scatter the single-pass flow without reducing actual complexity.
 #pragma warning disable FDW006
     public override async Task HandleAsync(PostQueryDataSetRequest req, CancellationToken ct)
 #pragma warning restore FDW006
@@ -120,7 +110,6 @@ public abstract class PostQueryDataSetEndpointBase : Endpoint<PostQueryDataSetRe
                 appliedFilters[fieldName] = value;
         }
 
-        // Why: Sources are part of the composed aggregate returned by DataSetConfigurationProvider.Get.
         var primarySource = dataSetResult.Value.Sources?
             .Where(s => s.IsCurrent && !s.IsDeleted)
             .OrderBy(s => s.Priority)
@@ -141,15 +130,6 @@ public abstract class PostQueryDataSetEndpointBase : Endpoint<PostQueryDataSetRe
         }
 
         // Build and execute query.
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget. DataStoreName on the source
-        // is the data store connection — not the config connection. Path (schema) and ContainerName
-        // are passed separately so the translator can qualify the table name correctly.
-        // No fallback: if DataStoreName is missing the query will fail loud rather than silently
-        // routing to the wrong connection.
-        // Why: IDataRow is the framework's row -- a dataset's columns are known only at runtime, so the
-        // row carries its own schema rather than a compile-time type, and it is the shape the
-        // calculation pipeline already consumes. It needs no generated mapper, which is what made
-        // ExpandoObject unusable here: that reached ConvertToPocos, found none, and lost every row.
         var command = new QueryCommand<IDataRow>
         {
             Paging = new PagingExpression { Skip = skip, Take = take + 1 },

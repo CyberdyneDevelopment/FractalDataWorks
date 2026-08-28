@@ -173,8 +173,6 @@ public abstract class GetSchemaGraphEndpointBase : Endpoint<GetSchemaGraphReques
                 Name = f.Name,
                 DataType = f.FieldType.TypeName,
                 IsNullable = f.IsNullable,
-                // Why: IsPrimaryKey removed from IField — PK identity is now in DataContainerKeyField entries.
-                // Schema graph uses the container's SurrogateKeyFieldNames for key identification.
                 IsForeignKey = false,
                 IsIdentity = f.IsIdentity,
                 OrdinalPosition = i

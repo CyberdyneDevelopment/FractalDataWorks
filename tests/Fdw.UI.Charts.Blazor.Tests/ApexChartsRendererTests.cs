@@ -21,8 +21,6 @@ public sealed class ApexChartsRendererTests
     private static TestContext CreateContext()
     {
         var ctx = new TestContext();
-        // Why: ApexCharts uses ES-module JS interop. Configure bUnit in loose mode so any
-        // un-setup JS call is silently ignored, allowing the render to complete.
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         ctx.Services.AddApexCharts();
         return ctx;

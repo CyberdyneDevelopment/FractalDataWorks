@@ -4,7 +4,6 @@ namespace Fdw.Services.Connections.Clients.Models;
 /// Authentication property bag for connection requests.
 /// Auth type discriminator lives on <see cref="CreateConnectionClientRequest.AuthenticationType"/>.
 /// </summary>
-// Why: pure request DTO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ConnectionAuthenticationRequest
 {

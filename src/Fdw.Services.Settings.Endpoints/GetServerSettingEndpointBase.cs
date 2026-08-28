@@ -13,8 +13,6 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class GetServerSettingEndpointBase : CrudGetEndpointBase<SettingNameRequest, ServerSettingDetailDto>
 {
-    // Why: SettingsConfigurationProvider replaces IOptionsMonitor<List<ServerSettingConfiguration>>
-    // with dual-source (ctrl + cfg) provider that provides server/tenant/role settings.
     private readonly SettingsConfigurationProvider _provider;
 
     /// <inheritdoc />

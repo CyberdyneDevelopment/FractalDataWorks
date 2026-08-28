@@ -34,15 +34,6 @@ public sealed record FilterGroup : IFilterNode
     /// </summary>
     public required IReadOnlyList<IFilterNode> Nodes { get; init; }
 
-    // Why: the compiler-synthesized record Equals/GetHashCode compare Nodes via
-    // EqualityComparer<IReadOnlyList<IFilterNode>>.Default, which for a List<T>/array falls back to
-    // reference identity (List<T> does not override Equals/GetHashCode). Two structurally-identical
-    // filter trees built fresh per call (the common case — every query builder call constructs a new
-    // FilterGroup) therefore hash and compare as UNEQUAL. CacheKeyBuilder.ComputeCacheKey relies on
-    // GetHashCode() being value-based to key the DataGateway result cache; without this override the
-    // same logical filter (e.g. IsCurrent=1 AND IsDeleted=0) produces a different cache key on every
-    // call, so identical queries never hit the cache. Sequence-based (order-sensitive) equality matches
-    // how the tree is actually built and consumed (AND/OR operand order is preserved end-to-end).
     /// <inheritdoc/>
     public bool Equals(FilterGroup? other) =>
         other is not null && Operator == other.Operator && Nodes.SequenceEqual(other.Nodes);

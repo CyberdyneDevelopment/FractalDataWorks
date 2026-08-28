@@ -15,10 +15,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class ListDataStoresEndpointBase : CrudListEndpointBase<DataStoreSummaryResponse>
 {
-    // Why: DataStoreConfigurationProvider (dual-source) merges system (ctrl) and user (cfg) DataStore configs.
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
-    // Why: ConnectionConfigurationProvider (dual-source) replaces IConnectionProvider.GetAllConnectionConfigurations()
-    // which was removed. Used to resolve connection names for display.
     private readonly ConnectionConfigurationProvider? _configProvider;
 
     /// <inheritdoc />
@@ -48,8 +45,6 @@ public abstract class ListDataStoresEndpointBase : CrudListEndpointBase<DataStor
             return configsResult.ToNewResult<List<DataStoreSummaryResponse>>();
         }
 
-        // Why: Pre-load all connection configs once so MapToSummary can resolve names
-        // via dictionary lookup instead of per-item async calls.
         var connectionNameMap = await BuildConnectionNameMap(ct).ConfigureAwait(false);
 
         var configs = configsResult.Value ?? (IReadOnlyList<DataStoreConfiguration>)[];

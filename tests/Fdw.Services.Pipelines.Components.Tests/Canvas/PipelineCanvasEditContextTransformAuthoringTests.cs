@@ -248,8 +248,6 @@ public sealed class PipelineCanvasEditContextTransformAuthoringTests
         var ctx = (PipelineCanvasEditContext)model.EditContext!;
         var nodeId = await AddTransformNode(ctx, "Map");
 
-        // Why: source port id lacks the "in:" prefix — TransformConfigPayloadSerializer cannot
-        // resolve a field name, so the auto-reserialize step fails and Connect must roll back.
         var connectResult = await ctx.Connect(
             nodeId, nodeId, PipelineCanvasTestFixtures.FieldMappingEdgeType,
             "CustomerId", "out:CustomerName", TestContext.Current.CancellationToken);

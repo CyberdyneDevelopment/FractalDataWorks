@@ -67,8 +67,6 @@ public static partial class SettingsLog
     /// <summary>
     /// Logs when a setting value is clamped to the maximum bound.
     /// </summary>
-    // Why Information: a configured value did NOT take effect as written. Silent clamping is exactly the
-    // surprise an operator must be able to see without raising verbosity.
     [MessageLogging(EventId = 11008, Level = LogLevel.Information,
         Message = "Setting '{settingName}' value '{rawValue}' clamped to maximum '{clampedValue}' (max: {maxValue})")]
     public static partial IGenericMessage SettingClampedToMax(

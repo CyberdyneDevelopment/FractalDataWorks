@@ -15,10 +15,6 @@ namespace Fdw.Hosting.Cli;
 /// discovery factory so any CLI that consumes FDW providers can stand up with
 /// consistent wiring.
 /// </summary>
-// Why: every CLI built on FDW needs the same chunk of DI registrations — the
-// Spectre renderer, an audit accessor (so writes get audited even without
-// HttpContext), and the schema-discovery factory for `discover` verbs. Putting
-// this behind a single extension avoids each tool reimplementing the dance.
 public static class AddFrameworkCliExtensions
 {
     /// <summary>
@@ -39,16 +35,8 @@ public static class AddFrameworkCliExtensions
 
         services.AddFrameworkSpectreUI(defaultThemeId);
 
-        // Why: every write path will run through AuditingConfigurationWriter at some
-        // point. Registering the system accessor as the default ensures audits still
-        // record a deterministic user even before the CLI host supplies a profile-
-        // aware implementation.
         services.TryAddSingleton<IAuditContextAccessor, SystemAuditContextAccessor>();
 
-        // Why: DefaultSchemaDiscoveryFactory is a singleton bucket that connection
-        // packages (MsSql, PostgreSql, Http) register discoverers into at startup.
-        // Register it here so every CLI has the factory ready, and consumers can
-        // push registrations on boot.
         services.TryAddSingleton<DefaultSchemaDiscoveryFactory>();
         services.TryAddSingleton<ISchemaDiscoveryFactory>(
             sp => sp.GetRequiredService<DefaultSchemaDiscoveryFactory>());

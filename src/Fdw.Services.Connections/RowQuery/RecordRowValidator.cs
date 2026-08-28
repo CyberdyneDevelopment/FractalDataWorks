@@ -62,8 +62,6 @@ public static class RecordRowValidator
             if (fields[i].IsNullable)
                 continue;
 
-            // Why: absent key and present-but-null are the SAME violation of a non-nullable declaration —
-            // both would reach the mapper as DBNull and silently become the property's default.
             if (!row.TryGetValue(fields[i].Name, out var value) || value is null)
                 return GenericResult.Failure(
                     RecordQueryLog.RequiredFieldMissingInRow(logger, containerName, fields[i].Name, rowIndex));

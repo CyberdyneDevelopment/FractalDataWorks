@@ -10,7 +10,6 @@ namespace Fdw.VsCodeShell;
 /// <see cref="VsCodeWebviewDescriptor"/> still carries <c>OpenCommandId</c> — it is projected from the
 /// owning command when the manifest is serialized.
 /// </remarks>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record VsCodeWebview(
     string ViewType,

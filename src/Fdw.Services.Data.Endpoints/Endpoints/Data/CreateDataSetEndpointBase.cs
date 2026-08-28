@@ -65,9 +65,6 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
     {
         DataSetEndpointLog.CreatingDataSet(Logger, request.Name);
 
-        // Why: the strategy discriminator is authored, never defaulted — a dataset whose
-        // ServiceOptionType is not a registered DataSetTypes member (Simple/Compound/Federated) could
-        // not be dispatched at execution time. Fail loud at create rather than persist a dead dataset.
         if (string.IsNullOrWhiteSpace(request.ServiceOptionType)
             || ReferenceEquals(DataSetTypes.ByName(request.ServiceOptionType), DataSetTypes.NotFound))
         {
@@ -85,7 +82,6 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
 
         var config = new DataSetConfiguration
         {
-            // Why: Id is Guid.Empty — ImplementationConfigurationProviderBase.Save mints UUIDv7 on insert.
             Name = request.Name,
             Description = request.Description ?? string.Empty,
             Category = request.Category ?? "Dataset",
@@ -99,11 +95,7 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
                     Ordinal = i
                 })
                 .ToList(),
-            // Why: validated above to be a registered DataSetTypes member — bound off the request,
-            // never defaulted.
             ServiceOptionType = request.ServiceOptionType,
-            // Why: validated above (Federated requires a registered FederationStrategies member; every
-            // other strategy must leave it null) — bound off the request, never defaulted.
             FederationStrategy = request.FederationStrategy,
             TransformExpression = request.TransformExpression,
             SourceDataSetName = request.SourceDataSetName,
@@ -112,8 +104,6 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
             Sources = DataSetQueryHelper.MapSources(request.Sources, []),
             Joins = DataSetQueryHelper.MapJoins(request.Joins),
             Caching = DataSetQueryHelper.MapCaching(request.Caching),
-            // Why: validated above (each function name resolves against AggregationFunctions; every
-            // groupByFieldNames splits into non-empty elements) — bound off the request, never defaulted.
             Aggregates = DataSetQueryHelper.MapAggregates(request.Aggregates)
         };
 

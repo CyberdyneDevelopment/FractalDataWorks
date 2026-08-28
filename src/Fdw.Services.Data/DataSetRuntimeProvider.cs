@@ -145,8 +145,6 @@ public sealed class DataSetRuntimeProvider : IDataSetProvider
             }
             else
             {
-                // Why: A single failing DataSet does not block the rest of the list.
-                // The failure is logged by DataSetBuilder. We count and log at summary level.
                 failureCount++;
             }
         }

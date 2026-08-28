@@ -7,7 +7,6 @@ namespace Fdw.Services.Scheduling.Abstractions.Messages;
 /// <summary>
 /// Error message indicating that a trigger is null.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [Message("TriggerNull")]
 [MessageOption(typeof(SchedulingMessageCollectionBase))]

@@ -47,7 +47,6 @@ public abstract class GetThemeEndpointBase<TDetail> : Endpoint<ThemeNameRequest,
         var theme = FindTheme(req.Name);
         if (theme == null)
         {
-            // Why: API-62 — structured 404 envelope so clients can parse errorCode/messages.
             HttpContext.Response.StatusCode = 404;
             HttpContext.Response.ContentType = "application/json";
             await HttpContext.Response.WriteAsJsonAsync(

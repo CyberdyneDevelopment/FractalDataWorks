@@ -48,11 +48,8 @@ public class TypeOptionModuleInitializerGenerator : IIncrementalGenerator
         // Scan referenced assemblies for [TypeOption] types
         var (optionsFromReferences, diagnosticInfo) = DiscoverOptionsInReferencedAssembliesWithDiagnostics(compilation);
 
-        // Why: Build replacement map from [Replaces] attributes across all referenced assemblies.
-        // The executable has full visibility, so it builds the complete map before emitting registrations.
         var replacementMap = BuildReplacementMap(compilation, diagnosticInfo);
 
-        // Why: Filter out replaced types so the module initializer only registers the replacements.
         var filteredOptions = optionsFromReferences
             .Where(o => !replacementMap.ContainsKey(o.OptionFullTypeName))
             .ToList();
@@ -421,7 +418,6 @@ public class TypeOptionModuleInitializerGenerator : IIncrementalGenerator
             return map;
         }
 
-        // Why: Scan all referenced assemblies (not just system-skipped ones) for [Replaces] declarations.
         var rawReplacements = new List<(string ReplacementFullName, string OriginalFullName)>();
 
         foreach (var reference in compilation.References)
@@ -452,7 +448,6 @@ public class TypeOptionModuleInitializerGenerator : IIncrementalGenerator
             var replacers = group.ToList();
             if (replacers.Count > 1)
             {
-                // Why: Multiple [Replaces] targeting the same type is ambiguous — log it.
                 diagnostics.Add($"  WARNING: Multiple replacements for '{group.Key}': {string.Join(", ", replacers.Select(r => r.ReplacementFullName))}");
             }
             else
@@ -461,7 +456,6 @@ public class TypeOptionModuleInitializerGenerator : IIncrementalGenerator
             }
         }
 
-        // Why: Resolve chains — if A replaces B and B replaces C, then C maps to A.
         ResolveReplacementChains(map);
 
         return map;

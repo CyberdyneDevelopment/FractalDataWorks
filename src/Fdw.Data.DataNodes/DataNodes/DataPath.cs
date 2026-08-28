@@ -17,9 +17,6 @@ internal sealed class DataPath : IDataNodePath
     private System.Collections.Generic.Dictionary<string, IDataContainer> _containerIndex;
     private bool _containersFinalized;
 
-    // Why: the node holds a real ILogger so its container-not-found log calls actually emit. Passing
-    // NullLogger.Instance to a built log message is a no-op (the message never reaches a sink), so
-    // the builder threads its logger in via the constructor. NullLogger fallback is the only ?? allowed.
     private readonly ILogger _logger;
 
     /// <inheritdoc />
@@ -35,7 +32,6 @@ internal sealed class DataPath : IDataNodePath
     public string? Description { get; }
 
     /// <inheritdoc />
-    // Why: a path's child nodes ARE its containers — the typed Containers view over the uniform child surface.
     public IReadOnlyList<IDataNode> Nodes => Containers;
 
     /// <inheritdoc />
@@ -53,19 +49,11 @@ internal sealed class DataPath : IDataNodePath
         Store = store;
         Containers = containers;
         Description = description;
-        // Why: NullLogger keeps the node functional without DI logging — the only sanctioned ?? fallback.
         _logger = logger ?? NullLogger.Instance;
 
-        // Why: O(1) lookup dictionary — container names are unique within a path.
         _containerIndex = BuildIndex(containers);
     }
 
-    // Why (chicken-and-egg fix): a container needs its owning path at construction, but the path's
-    // container index needs the containers — so the builder constructs the FINAL path first (empty),
-    // builds every container under THIS path object, then calls SetContainers to wire the index. Without
-    // this, containers were parented to a throwaway empty placeholder path and container.Parent.Container(...)
-    // (sibling navigation, e.g. a typed-body JOIN) always missed. Set-once: the index is finalized exactly
-    // once (a second call is a wiring defect — fail loud), preserving node immutability after wiring.
     internal void SetContainers(IReadOnlyList<IDataContainer> containers)
     {
         if (containers is null)
@@ -98,10 +86,6 @@ internal sealed class DataPath : IDataNodePath
         return ContainerNotFoundResult<IDataContainer>(name);
     }
 
-    // Why: ONE construction point for "this path registers no such container", shared by Node and
-    // Container so the two navigation surfaces cannot drift — the mirror of DataStore.PathNotFoundResult.
-    // The typed ContainerNotFoundInPath code is CHAINED over the node's own Debug navigation message, so
-    // callers branch on Code/CodeChain while CurrentMessage and the Debug log line are unchanged.
     private IGenericResult<T> ContainerNotFoundResult<T>(string name) =>
         GenericResult<T>.Chain(
             DataStoresResultCodes.ContainerNotFoundInPath,

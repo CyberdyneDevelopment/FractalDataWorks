@@ -16,10 +16,6 @@ namespace Fdw.Services.Quality.Services;
 public sealed class PromotionService : IPromotionService
 {
     private readonly ILogger _logger;
-    // Why: QualityConfigurationProvider queries quality.Environment via IConfigurationGateway —
-    // the source of truth. The earlier _inMemoryEnvironments list was declared but never populated,
-    // so EnvironmentNotFound always fired. Promotion requests are still tracked in-memory because
-    // they're transient (created and resolved within a session).
     private readonly QualityConfigurationProvider _qualityProvider;
     private readonly List<PromotionRequestConfiguration> _inMemoryRequests = new();
 

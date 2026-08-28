@@ -75,8 +75,6 @@ internal static class PipelineLineageLoader
         return records;
     }
 
-    // Why: a compose-failed or body-less header still renders as a graph NODE (Name/Id/ServiceOptionType),
-    // just with no linkage-derived edges — the absence is visible via the Warning, never masked.
     private static PipelineLineageRecord NodeOnlyRecord(PipelineConfiguration header) => new()
     {
         Id = header.Id,

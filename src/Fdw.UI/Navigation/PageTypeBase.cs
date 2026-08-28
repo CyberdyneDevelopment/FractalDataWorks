@@ -9,10 +9,6 @@ namespace Fdw.UI.Navigation;
 /// <summary>
 /// Base class for a group of pages contributed to <see cref="PageTypes"/> by one package.
 /// </summary>
-// Why: the pages arrive through the constructor, like every other FDW option's values. The previous shape
-// declared an Assembly here and carried nav entries as an overridden property initializer defaulting to
-// an empty list — so a group contributing no nav registered itself and then said nothing, which is how
-// eight real pages ended up with no sidebar entry and nobody noticed.
 public abstract class PageTypeBase : TypeOptionBase<int, PageTypeBase>, IPageType
 {
     /// <summary>
@@ -29,8 +25,6 @@ public abstract class PageTypeBase : TypeOptionBase<int, PageTypeBase>, IPageTyp
         if (pages is null)
             throw new ArgumentNullException(nameof(pages));
 
-        // Why: a group that contributes no pages is a declaration mistake, not a valid state — it
-        // registers into the collection and then supplies nothing.
         if (pages.Count == 0)
             throw new ArgumentException($"Page type '{name}' declares no pages.", nameof(pages));
 

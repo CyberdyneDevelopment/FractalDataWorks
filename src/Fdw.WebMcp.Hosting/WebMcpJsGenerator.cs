@@ -40,9 +40,6 @@ public sealed class WebMcpJsGenerator
         WebMcpLog.ServingWebMcpJs(_logger, _registry.Tools.Count);
         WebMcpLog.GeneratingScript(_logger, _registry.Tools.Count);
 
-        // Why the decision is logged once here rather than per tool: it is a property of the served
-        // script, not of any one tool, and the value itself must never reach a log sink — this
-        // script is public, so the key's presence is the only auditable part.
         WebMcpLog.ClientKeyInjection(
             _logger,
             _options?.ApiKeyHeader ?? "X-Webmcp-Key",
@@ -205,9 +202,6 @@ public sealed class WebMcpJsGenerator
             var (jsonType, format) = MapClrTypeToJsonSchema(prop.PropertyType);
             if (string.IsNullOrEmpty(jsonType))
             {
-                // Why this is reported rather than skipped quietly: the property simply will not
-                // appear in the tool's schema, so the agent cannot supply it and gets no hint that
-                // the call it just made was structurally incomplete.
                 WebMcpLog.SchemaPropertySkipped(
                     logger,
                     toolName,

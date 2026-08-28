@@ -49,9 +49,6 @@ public sealed class EncryptionKeySqliteAuthentication : SqliteAuthenticationConf
     }
 
     /// <inheritdoc/>
-    // Why: EncryptionKey owns the SecretManagerName/SecretKeyName keys — it reads them from `values`,
-    // resolves the named manager via the FDW provider, and reads the secret. No "Default" fallback:
-    // a missing manager name fails validation above.
     public override async Task<IGenericResult<string?>> ResolvePassword(
         IReadOnlyDictionary<string, string?> values,
         IPlatformServiceProvider<ISecretManager> secretManagerProvider,

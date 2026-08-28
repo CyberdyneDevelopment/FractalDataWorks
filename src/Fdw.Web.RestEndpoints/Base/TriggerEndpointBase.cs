@@ -120,8 +120,6 @@ public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, Trigger
     }
 
     /// <inheritdoc/>
-    // Why: Trigger endpoint orchestration is inherently sequential — validate, create, transition, dispatch, respond.
-    // Extracting sub-methods would not reduce logical complexity; the extra lines come from the structured error response body.
     [ConventionOverride(MaxMethodLines = 70)]
     public override async Task HandleAsync(TRequest req, CancellationToken ct)
     {

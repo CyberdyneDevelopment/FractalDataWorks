@@ -35,8 +35,6 @@ internal static partial class ForeignTokenLog
     /// <param name="logger">The logger.</param>
     /// <param name="issuer">The authority it claimed.</param>
     /// <param name="failure">The kind of check that failed.</param>
-    // Why Warning: a bad token is what this step exists to reject. Expired, wrong audience, forged —
-    // all handled, none a defect here.
     [MessageLogging(EventId = 91162, Level = LogLevel.Warning,
         Message = "A token claiming issuer '{issuer}' was rejected: {failure}")]
     internal static partial IGenericMessage Rejected(
@@ -45,8 +43,6 @@ internal static partial class ForeignTokenLog
     /// <summary>A valid token carried no subject.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="issuer">The authority that issued it.</param>
-    // Why Error: a token that verifies and names nobody means the provider is misconfigured — most
-    // often a scope that omits the subject claim. Nothing downstream can proceed.
     [MessageLogging(EventId = 91163, Level = LogLevel.Error,
         Message = "A token from '{issuer}' verified but carried no subject claim")]
     internal static partial IGenericMessage NoSubjectClaim(

@@ -3,7 +3,6 @@ namespace Fdw.Operations.Clients.Models;
 /// <summary>
 /// Statistics for a dataflow graph.
 /// </summary>
-// Why: pure response DTO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class DataflowStatsResponse
 {

@@ -23,7 +23,6 @@ public static class ParentChildAnalyzer
         var graph = new ParentChildGraph();
 
         // Register all configurations as flat roots — no parent-child relationships
-        // Why: ParentTableName was removed from ConfigurationModel; IDataNode owns hierarchy.
         foreach (var config in configs)
         {
             graph.AddConfiguration(config);
@@ -53,7 +52,6 @@ public static class ParentChildAnalyzer
         ImmutableArray<ConfigurationModel> configs,
         string parentName)
     {
-        // Why: ParentTableName removed from ConfigurationModel; no children exist in the generator model.
         return [];
     }
 
@@ -65,7 +63,6 @@ public static class ParentChildAnalyzer
     /// </remarks>
     public static IEnumerable<ParentChildError> Validate(ImmutableArray<ConfigurationModel> configs)
     {
-        // Why: ParentTableName removed from ConfigurationModel; nothing to validate.
         return [];
     }
 }

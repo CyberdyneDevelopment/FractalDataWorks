@@ -87,9 +87,6 @@ public abstract class ListAgentKeysEndpointBase
                 return;
             }
 
-            // Why no projection: the endpoint DTO and the service type were two identical
-            // declarations of AgentKeySummary, so this mapped the type onto itself. They are now
-            // one type and the copy is redundant.
             IReadOnlyList<AgentKeySummary> response = result.Value!;
 
             await Send.OkAsync(response, ct).ConfigureAwait(false);

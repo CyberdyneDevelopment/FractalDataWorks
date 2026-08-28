@@ -23,10 +23,6 @@ public sealed class AegisCommandConfigurationJsonConverter : JsonConverter<Aegis
     private const string DiscriminatorPropertyName = "ServiceOptionType";
     private const string SettingsPropertyName = "Configuration";
 
-    // Why: CA1869 — inner options must be cached, not created per call. The inner options are built
-    // once after the parent options are fully constructed (on first Read/Write call) and exclude
-    // this converter to prevent infinite recursion. Lazy<T> ensures thread-safe one-time
-    // initialization without locking overhead on the hot path.
     private JsonSerializerOptions? _innerOptions;
 
     private JsonSerializerOptions GetInnerOptions(JsonSerializerOptions outerOptions)
@@ -51,9 +47,6 @@ public sealed class AegisCommandConfigurationJsonConverter : JsonConverter<Aegis
         var innerOptions = GetInnerOptions(options);
 
         // Build the parent-only JSON (everything EXCEPT the typed Configuration child).
-        // Why: STJ refuses to deserialize the IApprovalPolicyConfiguration interface property in one
-        // pass — the concrete type isn't known until we resolve it via the ServiceOptionType
-        // discriminator. Strip Configuration here and re-attach manually below.
         using var stream = new System.IO.MemoryStream();
         using (var writer = new Utf8JsonWriter(stream))
         {
@@ -75,9 +68,6 @@ public sealed class AegisCommandConfigurationJsonConverter : JsonConverter<Aegis
             && root.TryGetProperty(SettingsPropertyName, out var settingsElement)
             && settingsElement.ValueKind == JsonValueKind.Object)
         {
-            // Why: the JSON declares a Configuration body, so failing to bind it is never benign —
-            // silently leaving Configuration null defers the failure to policy evaluation, where it
-            // surfaces as an unrelated "could not resolve" far from the real cause.
             var policyType = ApprovalPolicyTypes.ByName(command.ServiceOptionType);
             if (ReferenceEquals(policyType, ApprovalPolicyTypes.NotFound))
             {

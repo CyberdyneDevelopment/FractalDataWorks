@@ -236,10 +236,6 @@ public class IEtlRowMapperTypeTests
         configConstraints.Length.ShouldBe(1);
         configConstraints[0].ShouldBe(typeof(EtlRowMapperConfiguration));
 
-        // Why: TConfiguration is constrained to EtlRowMapperConfiguration (a class),
-        // which is a base-type constraint — it does NOT set the `class`
-        // ReferenceTypeConstraint flag (that flag is only set for `where T : class`).
-        // The base type itself enforces reference-type semantics.
 
         var factoryConstraints = factoryParam.GetGenericParameterConstraints();
         factoryConstraints.Length.ShouldBe(1);

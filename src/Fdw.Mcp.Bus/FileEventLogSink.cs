@@ -49,8 +49,6 @@ public sealed class FileEventLogSink : IHostedService, IAsyncDisposable
         _cts = new CancellationTokenSource();
         var dir = _options.FileLogDirectory;
         var ct = _cts.Token;
-        // Why: long-lived background pump; StartAsync must return promptly so the host
-        // can finish wiring up other hosted services. StopAsync awaits this task.
         _pump = Task.Run(() => Pump(dir, ct), ct);
         return Task.CompletedTask;
     }

@@ -21,7 +21,6 @@ namespace Fdw.MessageLogging;
 /// <para>   - Must have an <see cref="ILogger"/> as one of its parameters.</para>
 /// <para>   - None of the parameters can be generic.</para>
 /// </remarks>
-// Why: pure attribute definition (declarative metadata only, consumed by the MessageLogging source generator) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Method)]
 [ExcludeFromCodeCoverage]
 public sealed class MessageLoggingAttribute : Attribute

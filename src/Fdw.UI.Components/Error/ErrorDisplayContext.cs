@@ -8,7 +8,6 @@ using Fdw.UI.Components.Models;
 /// <summary>
 /// Context for rendering a structured error display.
 /// </summary>
-// Why: pure DTO, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class ErrorDisplayContext
 {

@@ -303,8 +303,6 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
                 ? parametersResult.Value
                 : new List<ColumnInfo>();
 
-            // Why: the result-set schema is unknowable without execution; surface the discovered
-            // parameters as the container's fields so the discovered metadata is not dropped.
             return GenericResult<DataContainerConfiguration>.Success(
                 BuildContainer(sproc.ObjectName, "StoredProcedure", parameters));
         }
@@ -458,16 +456,12 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
 
     #region Container / Field Building
 
-    // Why: The persister minted a Guid Id per discovered DataStore/Path/Container/Field row. Preserve
-    // that by minting Ids on the config emitted here so the discovered side carries durable identity.
     private static DataContainerConfiguration BuildContainer(string objectName, string containerTypeId, List<ColumnInfo> columns)
     {
         var container = new DataContainerConfiguration
         {
             Id = Guid.NewGuid(),
             Name = objectName,
-            // Why: TypeId is the container-type discriminator (Table/View/StoredProcedure) — the
-            // table/view/sproc → supported-ops intent is carried by this discriminator.
             TypeId = containerTypeId
         };
 
@@ -483,7 +477,6 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
 
     private static DataContainerFieldConfiguration MapColumnToFieldConfig(ColumnInfo column, int ordinal)
     {
-        // Why: SINGLE lookup using MsSql converters (fixes the historical double-lookup issue).
         var converter = MsSqlConverters.BySourceType(column.DataType.ToLowerInvariant());
 
         var clrType = converter.TargetClrType;
@@ -498,12 +491,9 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
         {
             Id = Guid.NewGuid(),
             Name = column.Name,
-            // Why: DataType carries the resolved CLR type name — identical to what the legacy
-            // persister wrote (field.FieldType.TypeName), preserving persisted output.
             DataType = clrType.Name,
             IsNullable = column.IsNullable,
             Ordinal = ordinal,
-            // Why: IDENTITY / COMPUTED columns are system-provided and excluded from INSERTs.
             IsSystemProvided = column.IsIdentity || column.IsComputed
         };
     }
@@ -547,12 +537,6 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
 
             if (containerResult.IsSuccess && containerResult.Value != null)
             {
-                // Why look the path up first: a path is a database SCHEMA and a container is an
-                // object within it, which is the shape configurationSchema.json declares — path
-                // "agent" holding container "AgentAction". Creating a path per object instead named
-                // every path after its own single table and dropped the schema entirely, so a
-                // ten-table database came back as ten paths of one container and nothing recorded
-                // which schema anything lived in.
                 var path = dataStore.Paths.FirstOrDefault(p =>
                     string.Equals(p.Name, dbObject.SchemaName, StringComparison.Ordinal));
 
@@ -562,10 +546,6 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
                     {
                         Id = Guid.NewGuid(),
                         Name = dbObject.SchemaName,
-                        // Why empty: Name already IS the schema, and the schema files ReferenceApi
-                        // ships leave Path unset for a DatabasePath. PathValue is non-nullable, so
-                        // empty is the model's own default rather than the schema name repeated —
-                        // carrying the same string twice invites the two to disagree later.
                         PathValue = string.Empty,
                         PathType = "DatabasePath",
                         SourceDescription = null
@@ -734,8 +714,6 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
         }
         catch (Exception ex)
         {
-            // Why: extended properties are optional; log the failure and return a non-fatal result
-            // so callers can decide whether to treat the absence as an error.
             return GenericResult<Dictionary<string, List<ExtendedPropertyInfo>>>.Failure(
                 SqlServerSchemaImporterLogger.ExtendedPropertiesFailed(logger, ex));
         }

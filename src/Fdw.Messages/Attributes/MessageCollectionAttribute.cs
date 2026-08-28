@@ -7,7 +7,6 @@ namespace Fdw.Messages.Attributes;
 /// Marks a class as a message collection base type that should have a collection generated.
 /// The source generator will create a static collection class for all message types that inherit from this base.
 /// </summary>
-// Why: pure attribute definition (declarative metadata only, consumed by source generators) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 [ExcludeFromCodeCoverage]
 public sealed class MessageCollectionAttribute : Attribute

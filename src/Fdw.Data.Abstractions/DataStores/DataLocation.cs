@@ -226,14 +226,6 @@ public sealed class DataLocation : IEquatable<DataLocation>
     /// This method is the inverse of ToCanonicalString, allowing DataLocation
     /// instances to be reconstructed from string representations.
     /// </remarks>
-    // Why: A malformed-but-present canonical string is an EXPECTED failure (bad data from a
-    // connection-routing lookup, not a programmer error) — per the no-fallbacks/fail-loud
-    // discipline this returns IGenericResult<DataLocation> instead of throwing FormatException.
-    // Parse has zero production callers today (verified via repo-wide search) and doesn't
-    // implement IParsable<T> or any other BCL/FDW interface, so converting it carries no
-    // caller-ripple risk. The null/empty guard above remains a throw (matches the constructor's
-    // own ArgumentNullException guards in this same class) because a null/empty argument is a
-    // caller bug, not a data-format failure.
     public static IGenericResult<DataLocation> Parse(string canonicalString)
     {
         if (string.IsNullOrWhiteSpace(canonicalString))

@@ -15,8 +15,6 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class ListPermissionsEndpointBase : EndpointWithoutRequest<List<PermissionSummaryDto>>
 {
-    // Why: RoleConfigurationProvider replaces IOptionsMonitor<List<PermissionConfiguration>> with
-    // dual-source provider that exposes permissions via GetPermissions().
     private readonly RoleConfigurationProvider _roleProvider;
 
     /// <summary>
@@ -62,15 +60,9 @@ public abstract class ListPermissionsEndpointBase : EndpointWithoutRequest<List<
 
         var allPermissions = await _roleProvider.GetPermissions(ct).ConfigureAwait(false);
 
-        // Why: permission names are stored bare ("connections:read"). The API surface applies
-        // the current tenant's OrgPrefix at the DTO boundary so each tenant sees its branded
-        // form ("acme:connections:read"). Null/empty prefix → return bare name.
         var orgPrefix = Resolve<ITenantContext>()?.CurrentTenant?.OrgPrefix;
         var prefix = string.IsNullOrEmpty(orgPrefix) ? null : orgPrefix + ":";
 
-        // Why: the API contract returns permissions sorted by bare Name (ordinal-insensitive)
-        // so the listing is stable regardless of provider/DB ordering; the org prefix is a
-        // display concern applied after, and does not change the sort key.
         var permissions = allPermissions
             .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
             .Select(p => MapToSummary(p, prefix))

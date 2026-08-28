@@ -17,10 +17,6 @@ namespace Fdw.Calculations;
 /// Universal per-run fields (ExecutionId, StartTime, CancellationToken, Logger,
 /// Services, Parameters, SharedState) are inherited from <see cref="IExecutionContext"/>.
 /// </remarks>
-// Why: Previously redeclared ExecutionId, ExecutionTime (≅StartTime), Parameters, and State
-// (≅SharedState) independently. All universal fields are now inherited. The dataset and
-// calculation-result cache methods remain here because they are calculation-domain-specific
-// typed accessors over SharedState.
 public interface ICalculationContext : IExecutionContext
 {
     /// <summary>

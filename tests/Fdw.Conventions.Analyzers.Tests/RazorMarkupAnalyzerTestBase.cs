@@ -60,8 +60,6 @@ public abstract class RazorMarkupAnalyzerTestBase<TAnalyzer>
 
         test.TestState.AdditionalFiles.Add((RazorFile, razor));
 
-        // Why: these analyzers gate on the compilation's assembly name, and the testing harness names every
-        // project "TestProject" — without this the analyzer is out of scope and reports nothing.
         test.SolutionTransforms.Add((solution, projectId) => solution.WithProjectAssemblyName(projectId, assemblyName));
 
         test.ExpectedDiagnostics.AddRange(expected);

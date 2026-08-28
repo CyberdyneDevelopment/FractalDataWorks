@@ -82,8 +82,6 @@ public partial class DataStoreConfiguration : IGenericConfiguration
     /// Gets or sets the DataStore type discriminator (e.g., "MsSql", "Rest", "OData").
     /// Maps to the <c>TypeId</c> column on <c>data.DataStore</c>.
     /// </summary>
-    // Why: The SQL column is TypeId (Wave A DDL). [GenerateMapper] maps C# property names to SQL
-    // column names; this property must be named TypeId to bind the bootstrap loader's emitted key.
     [ValuesFrom(typeof(DataStoreTypes))]
     public string? TypeId { get; set; }
 
@@ -176,8 +174,6 @@ public partial class DataStoreConfiguration : IGenericConfiguration
     /// Gets or sets the human-facing display name. Transient — not persisted to data.DataStore (no column yet).
     /// Populated from the create/update request and echoed back in the response for round-trip fidelity.
     /// </summary>
-    // Why: [NotMapped] — data.DataStore has no DisplayName column; a future migration will add it.
-    // The field is on the DTO contract so the UI can send and receive it without silent loss.
     [NotMapped]
     public string? DisplayName { get; set; }
 
@@ -185,13 +181,10 @@ public partial class DataStoreConfiguration : IGenericConfiguration
     /// Gets or sets whether this data store is active. Transient — not persisted to data.DataStore.
     /// Echoed back from the create/update request for round-trip fidelity.
     /// </summary>
-    // Why: [NotMapped] — the DB uses IsCurrent/IsDeleted for soft-delete; IsActive is the API boolean.
     [NotMapped]
     public bool IsActive { get; set; }
 
     /// <summary>Gets or sets the typed configuration body. Not stored as a column — written separately and populated by the typed provider on read.</summary>
-    // Why: [NotMapped] — not a column on data.DataStore. Written separately via typed provider.
-    // Read path populates by dispatching on TypeId to the appropriate typed provider.
     [NotMapped]
     public IDataStoreConfiguration? Configuration { get; set; }
 }

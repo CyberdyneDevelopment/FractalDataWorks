@@ -5,7 +5,6 @@ namespace Fdw.Data;
 /// <summary>
 /// Implementation of IPagingExpression for SKIP/TAKE representation.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class PagingExpression : IPagingExpression
 {

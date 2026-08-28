@@ -56,8 +56,6 @@ public sealed class SyntheticSecretManager
 
         var variable = _prefix + get.SecretKey;
 
-        // Why fail rather than return an empty SecretValue: an absent secret is a missing required
-        // input, and the non-exposure tests depend on that failure never reaching downstream.
         var value = Environment.GetEnvironmentVariable(variable);
         if (string.IsNullOrEmpty(value))
             return Task.FromResult(GenericResult<TResult>.Failure(

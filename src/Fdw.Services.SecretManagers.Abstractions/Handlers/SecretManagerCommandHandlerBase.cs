@@ -27,8 +27,6 @@ namespace Fdw.Services.SecretManagers.Abstractions.Handlers;
 /// handler discovery is assembly-local and requires no cross-assembly wiring.
 /// </para>
 /// </remarks>
-// Why no Justification argument: this package targets netstandard2.0, where the attribute has no
-// such property — it arrived in .NET 5.
 [ExcludeFromCodeCoverage]
 public abstract class SecretManagerCommandHandlerBase
     : TypeOptionBase<int, SecretManagerCommandHandlerBase>, ISecretManagerCommandHandler

@@ -7,7 +7,6 @@ namespace Fdw.Services.Connections.MsSql.Results;
 /// <summary>
 /// The secret manager named by this connection is not registered. Cannot resolve the connection secret.
 /// </summary>
-// Why: the provider was asked for the declared manager by name and returned no match.
 [TypeOption(typeof(MsSqlConnectionResultCodes), "SecretManagerNotFound", RestrictToCurrentCompilation = true)]
 [ExcludeFromCodeCoverage]
 public sealed class SecretManagerNotFoundCode : MsSqlConnectionResultCodeBase

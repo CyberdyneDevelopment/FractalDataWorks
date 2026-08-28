@@ -12,10 +12,6 @@ namespace Fdw.Services.Data.Discovery;
 /// keyed on the concrete connection runtime type. Connection-type packages register
 /// their adapter via <see cref="Register"/> at startup.
 /// </summary>
-// Why: The factory has to live in a project both connection packages can reference,
-// hence Services.Data. Registration is push-style (each package registers itself)
-// so the abstractions package doesn't need to know anything about specific
-// connection types.
 public sealed class DefaultSchemaDiscoveryFactory : ISchemaDiscoveryFactory
 {
     private readonly ConcurrentDictionary<Type, ISchemaDiscoverer> _byConnectionType = new();

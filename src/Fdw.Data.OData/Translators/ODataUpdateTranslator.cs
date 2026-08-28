@@ -136,7 +136,6 @@ public sealed class ODataUpdateTranslator : ODataCommandTranslatorBase
             filterObj is IFilterExpression filter &&
             filter.Root != null)
         {
-            // Why: IsPrimaryKey removed from IField — use GetPrimaryKeyFieldName() to locate the PK field.
             var pkFieldName = container.GetPrimaryKeyFieldName();
             var idValue = FindIdValue(filter.Root, pkFieldName);
             if (idValue != null)

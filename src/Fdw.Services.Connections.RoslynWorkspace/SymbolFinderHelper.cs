@@ -34,8 +34,6 @@ internal static class SymbolFinderHelper
         var query = name;
         string? memberPart = null;
 
-        // Why: "Type.Member" shape — narrow to types whose name matches the head,
-        //      then look up the member by name on each candidate.
         var dotIndex = name.LastIndexOf('.');
         if (dotIndex > 0 && dotIndex < name.Length - 1)
         {
@@ -149,8 +147,6 @@ internal static class SymbolFinderHelper
                 return GenericResult<IReadOnlyList<RoslynSymbolMatch>>.Failure(
                     RoslynWorkspaceConnectionLog.SymbolNotFound(logger, connectionName, symbolId));
 
-            // Why: Roslyn has no built-in "find callees" — walk the symbol's declaration syntax,
-            //      ask the semantic model for each invocation/member-access target, dedupe.
             var callees = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
             foreach (var declRef in target.DeclaringSyntaxReferences)
             {

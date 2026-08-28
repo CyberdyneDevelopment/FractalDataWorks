@@ -54,9 +54,6 @@ public abstract class DeleteSecretManagerEndpointBase : Endpoint<DeleteSecretMan
         {
             SecretManagerEndpointLog.DeletingSecretManager(_logger, req.Name);
 
-            // Why: use the header-only lookup so the existence check works even when the header's
-            // ServiceOptionType has no typed provider registered (stale config, plugin removed).
-            // The DELETE itself only needs the parent's Id and the typed body is untouched.
             var existingResult = await _configProvider.GetHeader(req.Name, ct).ConfigureAwait(false);
             var existing = existingResult.IsSuccess ? existingResult.Value : null;
 

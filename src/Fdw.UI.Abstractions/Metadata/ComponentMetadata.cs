@@ -9,7 +9,6 @@ namespace Fdw.UI.Abstractions;
 /// Metadata about a component.
 /// Used by source generators and framework adapters.
 /// </summary>
-// Why: pure DTO, only auto-properties, no logic.
 [ExcludeFromCodeCoverage]
 public class ComponentMetadata
 {

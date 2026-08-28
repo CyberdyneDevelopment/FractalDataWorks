@@ -11,7 +11,6 @@ namespace Fdw.WebMcp.Abstractions;
 /// from the router at <c>MapWebMcp</c>, which is why this is a separate type from the descriptor
 /// that is finally served rather than one type with the route left null in between.
 /// </remarks>
-// Why: pure positional-record DTO, no logic.
 [ExcludeFromCodeCoverage]
 public sealed record WebMcpToolDeclaration(
     Type EndpointType,

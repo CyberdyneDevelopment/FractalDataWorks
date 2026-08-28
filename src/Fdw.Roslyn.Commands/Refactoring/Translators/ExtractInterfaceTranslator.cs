@@ -144,8 +144,6 @@ public sealed class ExtractInterfaceTranslator : RoslynCommandTranslatorBase<Ext
             }
         };
 
-        // Why: for an Added symbol change, "old" is the source symbol it was extracted FROM and
-        // "new" is the created symbol, so the guide reads "extracted from X → created Y".
         var oldFqn = SymbolFqn.Of(typeSymbol);
         var newFqn = SymbolFqn.OfRenamed(typeSymbol, interfaceName);
         var symbolChanges = new List<SymbolChange>

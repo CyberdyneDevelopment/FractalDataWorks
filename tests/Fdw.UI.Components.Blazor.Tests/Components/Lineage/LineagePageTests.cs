@@ -60,8 +60,6 @@ public sealed class LineagePageTests : IDisposable
     public void NameSelectDisabledWhenNoTypeSelected()
     {
         var cut = RenderDefault();
-        // Why: the second <select> binds disabled to string.IsNullOrEmpty(_entityType); no type is
-        // selected on first render so it must be disabled.
         cut.FindAll("select")[1].HasAttribute("disabled").ShouldBeTrue();
     }
 
@@ -118,7 +116,6 @@ public sealed class LineagePageTests : IDisposable
         var cut = RenderWith(new LineageContext(),
             DataflowWithGraph(("DataSet_x", "DataSet", "ThisIsAVeryLongLabelName")));
         cut.FindAll("button").First(b => b.TextContent.Contains("Show All", StringComparison.Ordinal)).Click();
-        // Why: TruncateLabel cuts labels >14 chars to 12 chars + "..".
         cut.Markup.ShouldContain("ThisIsAVeryL..", Case.Sensitive);
     }
 
@@ -190,7 +187,6 @@ public sealed class LineagePageTests : IDisposable
             DataflowWithGraph(("DataStore_warehouse", "DataStore", "warehouse")));
         cut.FindAll("button").First(b => b.TextContent.Contains("Show All", StringComparison.Ordinal)).Click();
         cut.Find("g.cursor-move").Click();
-        // Why: the detail-panel card header hosts a btn-ghost close button that nulls _selectedNode.
         cut.Find(".card-h .btn-ghost").Click();
         cut.Markup.ShouldNotContain("Open Detail Page");
     }
@@ -226,7 +222,6 @@ public sealed class LineagePageTests : IDisposable
     public void ZoomInChangesTransform()
     {
         var cut = RenderDefault();
-        // Why: ZoomIn steps scale +0.1 from the 0.85 default -> 0.95.
         cut.FindAll("button")[^3].Click();
         cut.Markup.ShouldContain("scale(0.95)", Case.Sensitive);
     }
@@ -235,7 +230,6 @@ public sealed class LineagePageTests : IDisposable
     public void ZoomOutChangesTransform()
     {
         var cut = RenderDefault();
-        // Why: ZoomOut steps scale -0.1 from the 0.85 default -> 0.75.
         cut.FindAll("button")[^2].Click();
         cut.Markup.ShouldContain("scale(0.75)", Case.Sensitive);
     }

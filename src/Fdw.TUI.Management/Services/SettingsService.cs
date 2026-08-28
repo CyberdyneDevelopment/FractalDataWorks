@@ -47,8 +47,6 @@ public sealed class SettingsService : ISettingsService
         }
         catch (JsonException ex)
         {
-            // Why: corrupt settings file → use defaults; ex is observed via Debug.WriteLine
-            // so the failure is traceable in debug sessions without requiring a logger dependency.
             System.Diagnostics.Debug.WriteLine($"[FDW] Settings file contains invalid JSON, using defaults: {ex.Message}");
             _cachedSettings = new ApplicationSettings();
             return _cachedSettings;

@@ -46,9 +46,6 @@ public sealed class HttpHealthMonitorClientType
             builder.Services.AddOptions<HealthMonitorSelectionOptions>()
                 .BindConfiguration(HealthMonitorSelectionOptions.SectionName);
 
-            // Why the client name is a literal rather than this option's Name: the registration is keyed by
-            // the CLIENT registered here ("HealthMonitorClient"), not by the option's own Name ("HttpClient"),
-            // so a host can point health monitoring at a different endpoint from its other API clients.
             builder.Services.AddApiHttpClient(builder.Configuration, "HealthMonitorClient");
     
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
@@ -58,13 +55,6 @@ public sealed class HttpHealthMonitorClientType
         {
             HealthMonitorProvider.Register(Name, sp => sp.GetRequiredService<HttpHealthMonitorFactory>());
 
-            // Why this line exists at all: the call above writes into a STATIC registry that nothing
-            // else narrates. Until the provider drains it — much later, in another scope — a
-            // registration that never happened and one that happened and was then discarded are
-            // byte-identical in the log, because both are silence. This says which type registered
-            // what, for which option, at the moment it happened. It matters more for this option than
-            // for its sibling: this one lives in a different assembly from the domain, so its absence
-            // is also the signature of the host never having referenced the package.
             ServiceLogger.FactoryRegistrationDeferred(
                 loggerFactory?.CreateLogger<HttpHealthMonitorClientType>()
                     ?? NullLogger<HttpHealthMonitorClientType>.Instance,

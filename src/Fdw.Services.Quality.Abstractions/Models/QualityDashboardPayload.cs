@@ -3,7 +3,6 @@ namespace Fdw.Services.Quality.Clients.Models;
 /// <summary>
 /// Quality dashboard data.
 /// </summary>
-// Why: pure data-transfer POCO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class QualityDashboardPayload
 {

@@ -35,7 +35,6 @@ namespace Fdw.Configuration;
 /// }
 /// </code>
 /// </example>
-// Why: pure attribute definition (declarative metadata only, consumed by UI generators) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
 [ExcludeFromCodeCoverage]
 public sealed class ConfigurationSectionAttribute : Attribute

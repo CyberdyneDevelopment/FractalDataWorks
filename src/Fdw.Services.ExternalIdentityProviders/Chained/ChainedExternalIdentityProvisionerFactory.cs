@@ -44,9 +44,6 @@ internal sealed class ChainedExternalIdentityProvisionerFactory
     }
 
     /// <inheritdoc />
-    // Why: the parameterless-provider overload cannot build a working Chained provisioner — a chain
-    // MUST be able to resolve its steps' sibling provisioners at Provision time. Fail loud rather than
-    // hand back a provisioner with a null provider that would NRE at the first Provision call.
     public IGenericResult<IExternalIdentityProvisioner> Create(IExternalIdentityProvisionerImplementationConfiguration configuration)
         => GenericResult<IExternalIdentityProvisioner>.Failure(
             ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.Name ?? "(null)",

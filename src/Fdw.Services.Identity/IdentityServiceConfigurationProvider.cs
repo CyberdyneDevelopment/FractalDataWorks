@@ -15,9 +15,6 @@ namespace Fdw.Services.Identity;
 /// Configuration provider for IdentityServiceConfiguration rows in sec.Identity.
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
-// Why: IdentityServiceConfiguration is loaded from ConfigurationDb at runtime via
-// Lazy<IConfigurationGateway>, not through BindConfiguration("Identities:..."). Mirrors
-// TokenManagerConfigurationProvider / SecretManagerConfigurationProvider exactly.
 public class IdentityServiceConfigurationProvider
     : ServiceConfigurationProviderBase<
           IdentityServiceConfiguration,

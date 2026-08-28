@@ -12,9 +12,6 @@ namespace Fdw.UI.Rendering.Spectre.Extensions;
 /// (web app, CLI, tools) call <c>AddFrameworkSpectreUI</c> to wire the renderer and
 /// its supporting services.
 /// </summary>
-// Why: SpectreUIRenderer + SpectreRenderContext + IAnsiConsole are all consumable from
-// any host; centralising the registration here removes duplication in CLI/Web bootstrap
-// and keeps the assembly self-describing.
 public static class SpectreRegistrationExtensions
 {
     /// <summary>
@@ -35,9 +32,6 @@ public static class SpectreRegistrationExtensions
 
         services.TryAddSingleton<IAnsiConsole>(_ => AnsiConsole.Console);
 
-        // Why: registered as transient so callers can override the theme per render
-        // without mutating shared state. The factory respects MenuThemes.ById fallback
-        // so the registration is safe even before the theme system is fully initialized.
         services.TryAddTransient<SpectreRenderContext>(sp =>
         {
             var console = sp.GetRequiredService<IAnsiConsole>();

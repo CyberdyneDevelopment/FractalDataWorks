@@ -33,7 +33,6 @@ public static class DevSessionServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // Why: the ledger is the bus, so a dev session cannot function without one.
         services.AddMcpEventBus();
 
         services.TryAddSingleton<IGitRunner, GitProcessRunner>();

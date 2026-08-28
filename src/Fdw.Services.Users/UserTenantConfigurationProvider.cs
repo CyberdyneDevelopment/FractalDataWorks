@@ -47,7 +47,6 @@ public class UserTenantConfigurationProvider : ImplementationConfigurationProvid
     /// <summary>
     /// Gets all tenant identifiers for the specified user.
     /// </summary>
-    // Why: virtual allows Moq to override in unit tests.
     public virtual async Task<IGenericResult<IReadOnlyList<Guid>>> GetUserTenants(
         Guid userId, CancellationToken cancellationToken = default)
     {
@@ -78,7 +77,6 @@ public class UserTenantConfigurationProvider : ImplementationConfigurationProvid
     /// Gets the user's default tenant (the row where <c>IsDefault=1</c>).
     /// Returns a null Value when the user has no active default tenant row.
     /// </summary>
-    // Why: virtual — same test-isolation rationale.
     public virtual async Task<IGenericResult<Guid?>> GetDefaultTenant(
         Guid userId, CancellationToken cancellationToken = default)
     {
@@ -101,8 +99,6 @@ public class UserTenantConfigurationProvider : ImplementationConfigurationProvid
                 : GenericResult<Guid?>.Failure(UserConfigurationProviderLog.LoadDefaultTenantFailed(_logger, userId));
         }
 
-        // Why: FirstOrDefault because UX_UserTenants_UserId_IsDefault_Current guarantees at most one
-        // active default row per user. Null means no active tenant rows — caller treats as no-tenant.
         var defaultRow = result.Value?.FirstOrDefault();
         return GenericResult<Guid?>.Success(defaultRow?.TenantId);
     }
@@ -110,7 +106,6 @@ public class UserTenantConfigurationProvider : ImplementationConfigurationProvid
     /// <summary>
     /// Grants a user access to a tenant by inserting a new <c>tenant.UserTenants</c> row.
     /// </summary>
-    // Why: virtual — same test-isolation rationale.
     public virtual async Task<IGenericResult> GrantTenantAccess(
         Guid userId, Guid tenantId, bool isDefault = false, CancellationToken cancellationToken = default)
     {
@@ -142,7 +137,6 @@ public class UserTenantConfigurationProvider : ImplementationConfigurationProvid
     /// <summary>
     /// Revokes a user's access to a tenant by deleting all matching rows.
     /// </summary>
-    // Why: virtual — same test-isolation rationale.
     public virtual async Task<IGenericResult> RevokeTenantAccess(
         Guid userId, Guid tenantId, CancellationToken cancellationToken = default)
     {
@@ -166,7 +160,6 @@ public class UserTenantConfigurationProvider : ImplementationConfigurationProvid
     /// <summary>
     /// Sets the specified tenant as the user's default, clearing any prior default flag.
     /// </summary>
-    // Why: virtual — same test-isolation rationale.
 #pragma warning disable MA0051 // Why: sequential fail-loud steps read top-to-bottom; splitting hurts the row-by-row update flow.
     public virtual async Task<IGenericResult> SetDefaultTenant(
         Guid userId, Guid tenantId, CancellationToken cancellationToken = default)

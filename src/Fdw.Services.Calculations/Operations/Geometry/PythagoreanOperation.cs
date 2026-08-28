@@ -52,8 +52,6 @@ public sealed class PythagoreanOperation : CalculationOperationBase
             var b = Convert.ToDouble(parameters["B"], CultureInfo.InvariantCulture);
             var sumOfSquares = (a * a) + (b * b);
 
-            // Why: C is optional (IsRequired=false) — include it only when supplied and non-null so the
-            // same op serves the planar (A,B) and spatial (A,B,C) cases without a fallback default.
             if (parameters.TryGetValue("C", out var cRaw) && cRaw is not null)
             {
                 var c = Convert.ToDouble(cRaw, CultureInfo.InvariantCulture);

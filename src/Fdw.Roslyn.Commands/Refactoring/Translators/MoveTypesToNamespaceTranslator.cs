@@ -69,8 +69,6 @@ public sealed class MoveTypesToNamespaceTranslator
                 RoslynResultCodes.ByName("NoTypesMatchedSelector"),
                 ResultDetails.Create().With("Selector", string.Join(", ", command.FilePaths)));
 
-        // Why: a type already declaring the target namespace has nothing to do, and rewriting it would
-        // count as work that did not happen.
         var moving = selected
             .Where(s => !string.Equals(s.Namespace, command.NewNamespace, StringComparison.Ordinal))
             .ToList();
@@ -84,10 +82,6 @@ public sealed class MoveTypesToNamespaceTranslator
 
         var movedTypeNames = moving.Select(m => m.TypeName).Distinct(StringComparer.Ordinal).ToList();
 
-        // Why: baselined against the ORIGINAL solution for the SAME projects. Without this the probe
-        // reports every error those projects already had, so a solution with any pre-existing break —
-        // most real ones mid-refactor — refuses the move for damage it did not do. ProjectIds survive
-        // WithDocumentSyntaxRoot, so the two counts are directly comparable.
         var affectedProjectIds = ChangedProjectIds(outcome);
         var baseline = await DiagnosticDiff.Counts(
             affectedProjectIds.Select(solution.GetProject).Where(p => p is not null).Select(p => p!),
@@ -98,15 +92,7 @@ public sealed class MoveTypesToNamespaceTranslator
             .ConfigureAwait(false);
 
 
-        // Why: "cannot verify" is not "your change is broken". Letting a ProbeUnavailable finding fall
-        // through to the would-not-compile failure sends the caller hunting for a defect in their edit
-        // that may not exist — the defect is in the build environment.
         var unverifiable = probed.Where(b => string.Equals(b.Kind, "ProbeUnavailable", StringComparison.Ordinal)).ToList();
-        // Why: a preview writes nothing and cannot break anything, so there is nothing here for a refusal
-        // to protect — and refusing it removes the caller's only way to SEE what the change would do.
-        // Fail-loud is satisfied by REPORTING the unverifiable projects in the result, which the preview
-        // does; it is a real run, which would write an unchecked rewrite to disk and record it in the
-        // ledger as though it had been verified, that must still refuse.
         foreach (var u in unverifiable)
             MoveCommandLog.ProjectUnverifiable(Logger, u.FilePath);
 
@@ -181,8 +167,6 @@ public sealed class MoveTypesToNamespaceTranslator
 
                 if (document.FilePath is null || !wanted.Contains(Normalise(document.FilePath))) continue;
 
-                // Why: the caller named this path explicitly. Skipping it silently would surface as
-                // "selector matched zero types" — false, and it sends them hunting for a typo.
                 if (command.IsGeneratedDocument(document))
                 {
                     generated.Add(document.FilePath);
@@ -244,10 +228,6 @@ public sealed class MoveTypesToNamespaceTranslator
                 NamespaceLayout.RelativePosition(moved.Project, moved.Document.FilePath)));
         }
 
-        // Why: computed AFTER the declarations move, so "does anything still declare this namespace" is a
-        // fact about the rewritten solution rather than a prediction. A namespace nothing declares any
-        // more is a guaranteed CS0234 for every file that still imports it — which is exactly the break
-        // this command used to leave behind and then refuse itself over.
         var emptied = await EmptiedNamespaces(
             outcome.Solution,
             moving.Select(m => m.Namespace).Distinct(StringComparer.Ordinal).ToList(),
@@ -422,21 +402,12 @@ public sealed class MoveTypesToNamespaceTranslator
     {
         if (root is not CompilationUnitSyntax unit) return root;
 
-        // Why: snapshotted BEFORE any removal below. Deleting the dead import first would erase the only
-        // evidence that this file used to resolve the moved type through it, and the resolvesToday guard
-        // would then decline to add the replacement — leaving CS0246 where there had been CS0234. Found
-        // by running the command, not by reading it.
         var importsBefore = unit.Usings
             .Select(u => u.Name?.ToString())
             .Where(u => u is not null)
             .Select(u => u!)
             .ToList();
 
-        // Why: BEFORE the moved-document and names-used guards below, and unconditionally. An import of a
-        // namespace that no longer exists is a hard CS0234 whether or not this file mentions a moved type
-        // — a file whose only tie to the old namespace was the import itself still fails to compile. This
-        // is the break the command previously created and then refused itself over: it added the new
-        // using and left the old one pointing at a namespace it had just emptied.
         if (emptiedNamespaces.Count > 0)
         {
             var dead = unit.Usings
@@ -454,9 +425,6 @@ public sealed class MoveTypesToNamespaceTranslator
 
         if (isMovedDocument) return unit;
 
-        // Why: SimpleNameSyntax, not IdentifierNameSyntax — a moved GENERIC type appears as
-        // GenericNameSyntax ("IHandler<Foo>"), which is a sibling of IdentifierNameSyntax, so matching
-        // only identifiers silently misses every generic type. descendIntoTrivia reaches doc-comment crefs.
         var namesUsed = unit.DescendantNodes(descendIntoTrivia: true)
             .OfType<SimpleNameSyntax>()
             .Any(i => typeNames.Contains(i.Identifier.ValueText));
@@ -470,26 +438,16 @@ public sealed class MoveTypesToNamespaceTranslator
             .Select(n => n.Name.ToString())
             .ToList();
 
-        // Why: the reference must currently resolve WITHOUT the new namespace, which happens two ways —
-        // an explicit `using <old>;`, or the file sitting inside the old namespace (or a descendant of
-        // it), where C# name lookup walks enclosing scopes and no using is needed at all. The original
-        // guard tested only the first, so the common case — the types that use an interface living in
-        // the same namespace as it — added nothing and reported ReferencesFollowed: 0.
         var resolvesToday =
             importsBefore.Any(oldNamespaces.Contains) ||
             declared.Any(d => oldNamespaces.Any(old => IsSelfOrDescendant(d, old)));
 
         if (!resolvesToday) return unit;
 
-        // Why: adding a using the file does not need leaves an unused import, which this build treats as
-        // an error. If the file already sits inside the NEW namespace (or a descendant of it), the moved
-        // type is in scope implicitly and the using would be exactly that.
         if (declared.Any(d => IsSelfOrDescendant(d, newNamespace))) return unit;
 
         followed++;
 
-        // Why: UsingDirective emits the `using` keyword with no trailing trivia, so the raw node renders
-        // as "usingFdw.Sample.New;". NormalizeWhitespace puts the separator in.
         return unit.AddUsings(
             SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(newNamespace))
                 .NormalizeWhitespace()
@@ -549,8 +507,6 @@ public sealed class MoveTypesToNamespaceTranslator
         };
     }
 
-    // Why: the count that distinguishes this from MoveNamespace — how many types legitimately share the
-    // old namespace and were deliberately left where they are.
     private static int CountLeftBehind(
         Solution solution,
         IReadOnlyList<string> fromNamespaces,

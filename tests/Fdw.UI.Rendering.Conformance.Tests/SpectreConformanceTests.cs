@@ -39,8 +39,6 @@ public sealed class SpectreConformanceTests
     public async Task RenderPageValidSaveReturnsSuccessAndSavesPage()
     {
         var (renderer, context, console) = CreateHarness();
-        // Why: PromptForPageAction reads a SelectionPrompt<string> whose first choice is "Save";
-        // pushing Enter alone accepts the default (first) choice.
         console.Input.PushKey(ConsoleKey.Enter);
         var page = ConformanceFixtures.CreateSavablePage();
 

@@ -14,8 +14,6 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class ListPermissionsGroupedEndpointBase : EndpointWithoutRequest<List<PermissionGroupResponse>>
 {
-    // Why: RoleConfigurationProvider replaces IOptionsMonitor<List<PermissionConfiguration>> with
-    // dual-source provider that exposes permissions via GetPermissions().
     private readonly RoleConfigurationProvider _roleProvider;
 
     /// <summary>
@@ -61,9 +59,6 @@ public abstract class ListPermissionsGroupedEndpointBase : EndpointWithoutReques
 
         var allPermissions = await _roleProvider.GetPermissions(ct).ConfigureAwait(false);
 
-        // Why: Group by Domain (the service domain) instead of Resource. Domain is the
-        // high-level grouping key (e.g., "connections"), while Resource is the specific
-        // sub-resource within that domain (e.g., "mssql", "*").
         var grouped = allPermissions
             .GroupBy(p => p.Domain, StringComparer.Ordinal)
             .Select(g => new PermissionGroupResponse

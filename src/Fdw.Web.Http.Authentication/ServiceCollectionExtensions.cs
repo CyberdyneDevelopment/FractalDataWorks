@@ -44,12 +44,6 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="builder">The HTTP client builder.</param>
     /// <returns>The HTTP client builder for chaining.</returns>
-    // Why this registers as well as attaches: AddHttpMessageHandler only puts the type in the named
-    // client's pipeline — the handler is resolved from DI when the client is first created, so an
-    // attach without a matching registration is a latent failure that surfaces far from its cause
-    // ("No service for type 'BearerTokenHandler' has been registered", thrown at first client use).
-    // The call that introduces the dependency is the call that satisfies it. TryAdd so a host or
-    // service type that registered its own handler first still wins.
     public static IHttpClientBuilder AddBearerTokenHandler(this IHttpClientBuilder builder)
     {
         if (builder is null) throw new System.ArgumentNullException(nameof(builder));

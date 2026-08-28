@@ -88,10 +88,6 @@ public sealed class PipelineCanvasEditContext : ICanvasEditContext
         var edge = new PipelineCanvasEdge(edgeId, sourceNodeId, targetNodeId, edgeType, sourcePortId, targetPortId);
         _model.MutableEdges.Add(edge);
 
-        // Why: keep ConfigPayload in sync the moment the graph shape it's derived from changes,
-        // rather than requiring a separate explicit "save" step that could drift out of sync. Roll
-        // the edge back on failure so Connect stays atomic — either both the edge and the refreshed
-        // payload land, or neither does.
         var reserializeResult = ReserializeMapPayloadIfNeeded(sourceNodeId, targetNodeId, edgeType);
         if (!reserializeResult.IsSuccess)
         {
@@ -134,7 +130,6 @@ public sealed class PipelineCanvasEditContext : ICanvasEditContext
         if (node is null)
             return Task.FromResult(GenericResult.Failure(PipelineCanvasLog.NodeNotFound(_logger, nodeId)));
 
-        // Why: remove all edges connected to this node so the graph stays consistent.
         var connectedEdges = _model.MutableEdges
             .Where(e => string.Equals(e.SourceNodeId, nodeId, StringComparison.Ordinal)
                         || string.Equals(e.TargetNodeId, nodeId, StringComparison.Ordinal))
@@ -161,8 +156,6 @@ public sealed class PipelineCanvasEditContext : ICanvasEditContext
 
         _model.MutableEdges.Remove(edge);
 
-        // Why: see the matching Why: on Connect — keep ConfigPayload in sync with the current edge
-        // set. Re-insert the edge on failure so DeleteEdge stays atomic.
         var reserializeResult = ReserializeMapPayloadIfNeeded(edge.SourceNodeId, edge.TargetNodeId, edge.EdgeType);
         if (!reserializeResult.IsSuccess)
         {
@@ -186,8 +179,6 @@ public sealed class PipelineCanvasEditContext : ICanvasEditContext
             return Task.FromResult(GenericResult.Failure(
                 PipelineCanvasLog.NodeMetadataUpdateNodeNotFound(_logger, nodeId)));
 
-        // Why: merge — overwrite matching keys, leave absent keys unchanged so callers
-        // can write a single field without needing to supply the full metadata bag.
         foreach (var kv in metadata)
             node.MutableMetadata[kv.Key] = kv.Value;
 
@@ -303,10 +294,6 @@ public sealed class PipelineCanvasEditContext : ICanvasEditContext
 
     private static IReadOnlyList<ICanvasPort> BuildPorts(ICanvasNodeType nodeType)
     {
-        // Why: DataSet source has only an output port; DataSet sink has only an input port;
-        // both roles are initially unknown when a node is added via AddNode — ports are symmetric
-        // (in + out) for DataSet nodes added at edit time, and the validator enforces role constraints.
-        // Transform nodes always have both in and out ports.
         var inPort = new PipelineCanvasPort("in", "Input", Fdw.UI.Abstractions.Canvas.PortDirections.ByName("In")!);
         var outPort = new PipelineCanvasPort("out", "Output", Fdw.UI.Abstractions.Canvas.PortDirections.ByName("Out")!);
 
@@ -316,9 +303,6 @@ public sealed class PipelineCanvasEditContext : ICanvasEditContext
 
     private static Dictionary<string, string> BuildMetadataForNewNode(ICanvasNodeType nodeType)
     {
-        // Why: return empty metadata for dynamically added nodes; the caller is responsible for
-        // setting domain-specific keys (DataSetName, OperationType, etc.) after AddNode returns.
-        // This avoids the edit context having to understand domain semantics.
         return new Dictionary<string, string>(StringComparer.Ordinal);
     }
 
@@ -342,9 +326,6 @@ public sealed class PipelineCanvasEditContext : ICanvasEditContext
 
     private IGenericResult ReserializeMapPayloadIfNeeded(string sourceNodeId, string targetNodeId, ICanvasEdgeType edgeType)
     {
-        // Why: only a self-loop FieldMapping edge on a Map Transform node carries a mapping payload —
-        // every other edge kind/shape (Flow edges, Reference edges, cross-node edges) is a no-op here,
-        // not a failure: this method only reacts to the one graph shape the Map gesture produces.
         if (!string.Equals(edgeType.Name, "FieldMapping", StringComparison.Ordinal))
             return GenericResult.Success();
 

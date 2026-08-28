@@ -141,8 +141,6 @@ public class BytePoco
     [Trait("Category", "SourceGen")]
     public void HandlesNonNullableReferenceTypeWithDefault()
     {
-        // Why: Collection properties are filtered out by the generator (IsCollectionType check).
-        // Use a non-collection reference type to exercise the default! code path.
         var source = @"
 #nullable enable
 using Fdw.Data;
@@ -443,9 +441,6 @@ public class ErrorPoco
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "ErrorPocoPocoMapper.g.cs");
 
         generated.ShouldNotBeNull();
-        // Why: mapping failures now emit the categorized MapperResultCodes.MappingFailed code
-        // plus ResultDetails carrying the type name and source, instead of a plain failure string.
-        // The diagnostic must still surface the type name ("ErrorPoco") and the source channel.
         generated.ShouldContain("MapperResultCodes.MappingFailed");
         generated.ShouldContain("\"Type\", \"ErrorPoco\", \"Source\", \"reader\"");
         generated.ShouldContain("\"Type\", \"ErrorPoco\", \"Source\", \"dictionary\"");

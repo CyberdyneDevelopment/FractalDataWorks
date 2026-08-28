@@ -6,7 +6,6 @@ namespace Fdw.VsCodeShell;
 /// to the host as the command body. Fields are populated according to the command's
 /// <see cref="IVsCodeCommandDescriptor.ContextKind"/>; unused fields are <c>null</c>.
 /// </summary>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record EditorContext(
     string? DocumentUri,

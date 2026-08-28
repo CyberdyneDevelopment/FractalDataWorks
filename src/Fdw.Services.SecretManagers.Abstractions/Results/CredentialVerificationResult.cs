@@ -5,7 +5,6 @@ namespace Fdw.Services.SecretManagers.Abstractions.Results;
 /// <summary>
 /// Result of a credential verification operation.
 /// </summary>
-// Why: pure result/warning POCO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class CredentialVerificationResult
 {

@@ -49,7 +49,6 @@ public sealed class GlossaryPageTests : IDisposable
     {
         Swap(new GlossaryContext { IsLoading = true, Terms = [] });
         var cut = _ctx.Render<GlossaryPage>();
-        // Why: current markup renders a "Loading terms..." card (no .animate-spin class).
         cut.Markup.ShouldContain("Loading terms...");
     }
 
@@ -88,7 +87,6 @@ public sealed class GlossaryPageTests : IDisposable
         var queries = new List<string>();
         Swap(new GlossaryContext { Terms = [Term("X", "y")], OnSearch = q => { queries.Add(q); return Task.CompletedTask; } });
         var cut = _ctx.Render<GlossaryPage>();
-        // Why: current markup search box is input.finput.mono with placeholder "Search glossary terms...".
         cut.FindAll("input").First(i => string.Equals(i.GetAttribute("placeholder"), "Search glossary terms...", StringComparison.Ordinal)).Input("kpi");
         cut.FindAll("button").First(b => b.TextContent.Contains("Search", StringComparison.Ordinal)).Click();
         await Task.Yield();

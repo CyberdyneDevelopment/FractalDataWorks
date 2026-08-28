@@ -44,7 +44,6 @@ public class FactoryProviderInjectionAnalyzer : DiagnosticAnalyzer
     private const string ScopeFactoryMetadataName = "Microsoft.Extensions.DependencyInjection.IServiceScopeFactory";
     private const string LazyMetadataName = "System.Lazy`1";
 
-    // Why: every declared arity of IPlatformServiceProvider — a factory must not ctor-inject any of them.
     private static readonly string[] ServiceProviderMetadataNames =
     [
         "Fdw.ServiceTypes.IPlatformServiceProvider`1",
@@ -110,7 +109,6 @@ public class FactoryProviderInjectionAnalyzer : DiagnosticAnalyzer
     {
         var classSymbol = (INamedTypeSymbol)context.Symbol;
 
-        // Why: only concrete classes implementing IServiceFactory are factories in scope.
         if (classSymbol.TypeKind != TypeKind.Class
             || classSymbol.IsAbstract
             || !classSymbol.AllInterfaces.Contains(serviceFactoryType, SymbolEqualityComparer.Default))
@@ -121,8 +119,6 @@ public class FactoryProviderInjectionAnalyzer : DiagnosticAnalyzer
         {
             foreach (var parameter in constructor.Parameters)
             {
-                // Why: Lazy<T> defers resolution past construction — it cannot re-enter the resolver
-                // lambda, so it is not flagged (see class remarks).
                 if (IsLazyWrapped(parameter.Type, lazyType))
                     continue;
 

@@ -150,7 +150,6 @@ public sealed class ThemeProviderTests : IDisposable
             new() { Name = "OldTheme" }
         };
 
-        // Why: Load themes first so list is populated, then delete removes the entry locally.
         var handler = new MockHttpHandler()
             .RespondWith("themes", items)
             .RespondOk("themes/OldTheme");

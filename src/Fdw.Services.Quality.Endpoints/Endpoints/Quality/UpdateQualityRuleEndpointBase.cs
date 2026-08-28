@@ -25,7 +25,6 @@ public abstract class UpdateQualityRuleEndpointBase : Endpoint<UpdateQualityRule
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
     {
-        // Why: the client (QualityApiClient.UpdateRule) PUTs here; there was previously no server route (404).
         Patch("/quality/rules/{Id}");
 #if DEVELOP
         AllowAnonymous();

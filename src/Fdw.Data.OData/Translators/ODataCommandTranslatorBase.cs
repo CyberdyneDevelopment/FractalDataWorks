@@ -74,9 +74,6 @@ public abstract class ODataCommandTranslatorBase : DataCommandTranslatorBase<Htt
             case FilterGroup group:
                 return BuildODataGroup(group);
             default:
-                // Why: reported as a defect (FDW rule) — a translator should return IGenericResult,
-                // not throw. Left in place per instructions; the caller's try/catch converts it to
-                // a Failure.
                 ODataCommandTranslatorBaseLog.UnknownFilterNodeType(
                     NullLogger<ODataCommandTranslatorBase>.Instance, node.GetType().Name);
                 throw new InvalidOperationException($"Unknown filter node type: {node.GetType().Name}");

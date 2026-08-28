@@ -113,12 +113,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
         IRenderContext renderContext)
         : base(console, theme, screenFactory)
     {
-        // Why: ArgumentNullException.ThrowIfNull keeps these guards branch-free, so the constructor's
-        // cyclomatic complexity no longer grows by one per injected client the way `?? throw` did —
-        // adding a configuration area stopped tripping the FDW007 gate. Identical fail-loud
-        // behaviour, no analyzer suppression. (net10.0 target, so CA1510's netstandard2.0 caveat
-        // does not apply here.) The structural fix — areas as DI-registered descriptors so this
-        // screen takes one collection instead of a client per area — remains the real answer.
         ArgumentNullException.ThrowIfNull(connectionManager);
         ArgumentNullException.ThrowIfNull(connectionApiClient);
         ArgumentNullException.ThrowIfNull(dataStoreApiClient);
@@ -255,7 +249,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
     private static async Task<NavigationResult> HandleSelection(
         (string Id, string Label, string Description, Func<Task>? Load) selected)
     {
-        // Why: "back" is the only entry without a loader — everything else paints its area and stays.
         if (selected.Load is null)
         {
             return NavigationResult.Pop();
@@ -290,8 +283,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
                 }
             }).ConfigureAwait(false);
 
-        // Why fail loud: a failed call must surface the instance's own message, never an empty list that
-        // reads like "no connections configured".
         if (error is not null)
         {
             RenderStatus(error, isError: true);
@@ -299,8 +290,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
             return;
         }
 
-        // Why: IsSuccess with a null payload is a contract breach, not "zero connections". Say so rather
-        // than papering over it with an empty collection.
         if (connections is null)
         {
             RenderStatus("The instance reported success but returned no connection data.", isError: true);
@@ -344,8 +333,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
                 ColumnCreated,
                 connection.CreatedAt.ToString("g", CultureInfo.CurrentCulture));
 
-            // Why a semantic status, not a colour: the renderer decides how to show a passing/failing
-            // test. Null (never tested) stays Normal so the row is not mislabelled as a failure.
             row.Status = connection.LastTestSuccess switch
             {
                 true => RowStatuses.Success,
@@ -657,8 +644,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
 
     private static string DescribeEnabled(bool isEnabled) => isEnabled ? "Yes" : "No";
 
-    // Why a semantic status, not a colour: the renderer decides how a disabled row reads. Disabled is
-    // a real state here (the record exists but is switched off), distinct from an error.
     private static IRowStatus DescribeEnabledStatus(bool isEnabled) =>
         isEnabled ? RowStatuses.Normal : RowStatuses.Disabled;
 
@@ -782,8 +767,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
             var row = new ListRowModel { Id = role.Name };
             row.SetValue(ColumnName, role.Name);
             row.SetValue(ColumnDisplayName, role.DisplayName);
-            // Why: IsTenantScoped is the only scope signal the DTO carries — surface it as the two
-            // states it actually represents rather than a bare bool.
             row.SetValue(ColumnScope, role.IsTenantScoped ? "Tenant" : "Global");
             row.SetValue(ColumnDescription, role.Description);
 
@@ -801,8 +784,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
         LoadAndRenderList<TenantSummaryPayload>(
             "Tenant",
             "Loading tenants from the instance...",
-            // Why: include inactive tenants so the Active column distinguishes a disabled tenant
-            // from an absent one — a list that silently hid them would misreport the instance.
             ct => _tenantApiClient.GetTenants(includeInactive: true, ct),
             BuildTenantsPage);
 
@@ -994,8 +975,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
                 }
             }).ConfigureAwait(false);
 
-        // Why fail loud: a failed call must surface the instance's own message, never an empty list
-        // that reads like "nothing configured".
         if (error is not null)
         {
             RenderStatus(error, isError: true);
@@ -1003,8 +982,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
             return;
         }
 
-        // Why: IsSuccess with a null payload is a contract breach, not "zero items". Say so rather
-        // than papering over it with an empty collection.
         if (items is null)
         {
             RenderStatus($"The instance reported success but returned no {entityTypeName} data.", isError: true);
@@ -1020,8 +997,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
         }
     }
 
-    // Why tri-state text, not a bool: null is "never tested" (distinct from a known failure), matching
-    // the DTO's deliberate nullable LastTestSuccess.
     private static string DescribeLastTest(bool? lastTestSuccess) => lastTestSuccess switch
     {
         true => "Passed",

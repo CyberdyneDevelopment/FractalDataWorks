@@ -9,7 +9,6 @@ namespace Fdw.Roslyn.Commands.Workspace.Results;
 /// Reported rather than guessed at. An error the ledger does not cover was not caused by a recorded move,
 /// so inventing a reference for it would paper over a different defect.
 /// </remarks>
-// Why: pure data holder, auto-properties only, no logic
 [ExcludeFromCodeCoverage]
 public sealed class UnresolvedReferenceError
 {

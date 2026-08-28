@@ -160,8 +160,6 @@ public static class ProjectFileEditor
             .Where(e => string.Equals(e.Name.LocalName, itemName, StringComparison.Ordinal))
             .Any(e => string.Equals((string?)e.Attribute("Include"), include, StringComparison.OrdinalIgnoreCase));
 
-    // Why: append into the last matching ItemGroup rather than creating a new one each time, so repeated
-    // repairs do not leave a project file littered with single-entry groups.
     private static void AddItem(XDocument document, XElement item)
     {
         var root = document.Root ?? throw new InvalidOperationException("Project file has no root element");

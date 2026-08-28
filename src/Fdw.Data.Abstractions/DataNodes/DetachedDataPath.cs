@@ -29,7 +29,6 @@ public sealed class DetachedDataPath : IDataNodePath
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         Store = store ?? throw new ArgumentNullException(nameof(store));
-        // Why: NullLogger keeps the path functional without DI logging — the only sanctioned ?? fallback.
         _logger = logger ?? NullLogger.Instance;
     }
 

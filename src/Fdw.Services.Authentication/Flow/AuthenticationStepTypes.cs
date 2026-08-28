@@ -70,10 +70,6 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
 
             builder.Services.TryAddSingleton<IAcrPolicy, StandardAcrPolicy>();
 
-            // Why in-memory by default and why that is safe here: a host running one process is the
-            // common case, and the alternative would be defaulting to a store that needs a database
-            // the host may not have. A multi-instance deployment names the Database option, and the
-            // remark on the in-memory type says plainly what breaks if it does not.
             builder.Services.TryAddSingleton<IAuthenticationExecutionStore>(sp =>
                 new InMemoryExecutionStore(sp.GetService<ILogger<InMemoryExecutionStore>>()));
 

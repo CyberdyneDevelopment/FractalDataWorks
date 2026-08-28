@@ -11,7 +11,6 @@ namespace Fdw.Data.UI.Components;
 /// Carries the current preview state and action callbacks for the embedded preview pane
 /// on the DataSet detail page.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class DataSetDetailPreviewContext : ProviderContextBase
 {

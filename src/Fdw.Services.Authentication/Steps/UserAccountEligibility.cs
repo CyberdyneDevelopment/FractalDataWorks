@@ -45,8 +45,6 @@ public sealed class UserAccountEligibility : IIssuanceEligibility
 
         var user = await _users.Get(principal.Id, cancellationToken).ConfigureAwait(false);
 
-        // Why a failure and not a denial: the read failing means the question was not answered,
-        // which is not the same as answering no — a caller retries one and not the other.
         if (user.IsFailure)
             return user.ToNewResult<Decision>();
 
@@ -63,8 +61,6 @@ public sealed class UserAccountEligibility : IIssuanceEligibility
             return Deny(principal.Id, "the account is locked out");
 
         if (user.Value.TenantId != principal.TenantId)
-            // Why refused: the principal was resolved with one tenant and the record says another.
-            // Proceeding would issue a token asserting a tenancy the user does not have.
             return Deny(principal.Id, "the principal's tenant does not match the account's");
 
         EligibilityLog.Permitted(_logger, principal.Id);

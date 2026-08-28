@@ -42,9 +42,6 @@ public sealed class DelimitedStreamRowSource : IRowSourceReader
         _options = options ?? new DelimitedRowSourceOptions();
         if (_options.Columns.Count == 0)
         {
-            // Why: NO FALLBACKS — a delimited reader cannot invent column names. The caller supplies
-            // them from the container field schema; an empty list is a configuration error, not a
-            // default-to-positional case.
             throw new ArgumentException(
                 "DelimitedRowSourceOptions.Columns must contain at least one column name.", nameof(options));
         }
@@ -133,7 +130,6 @@ public sealed class DelimitedStreamRowSource : IRowSourceReader
             Trim = _options.Trim
         };
 
-        // Why: getColumn(i) returns the i-th positional value; project it onto the configured name.
         var rows = VariableLengthReaderRawExtensions.ReadRecordsRaw(_reader, rawOptions, getColumn =>
         {
             var row = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);

@@ -36,8 +36,6 @@ public sealed class GetSecretManagerCommand : SecretManagerCommandBase, ISecretM
     {
         if (string.IsNullOrWhiteSpace(secretKey))
         {
-            // Why: reported as a defect (FDW rule) — a command should return IGenericResult, not
-            // throw. Left in place per instructions (constructors cannot return IGenericResult).
             GetSecretManagerCommandLog.RequiredValueMissing(NullLogger<GetSecretManagerCommand>.Instance, nameof(secretKey));
             throw new ArgumentException("Secret key cannot be null or empty for GetSecret operation.", nameof(secretKey));
         }
@@ -92,8 +90,6 @@ public sealed class GetSecretManagerCommand : SecretManagerCommandBase, ISecretM
     {
         if (string.IsNullOrWhiteSpace(version))
         {
-            // Why: same throw-instead-of-result defect as the constructor guard above — logged,
-            // not converted.
             GetSecretManagerCommandLog.RequiredValueMissing(NullLogger<GetSecretManagerCommand>.Instance, nameof(version));
             throw new ArgumentException("Version cannot be null or empty.", nameof(version));
         }

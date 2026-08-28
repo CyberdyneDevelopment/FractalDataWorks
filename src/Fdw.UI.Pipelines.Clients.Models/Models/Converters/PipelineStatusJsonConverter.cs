@@ -37,8 +37,6 @@ public sealed class PipelineStatusJsonConverter : JsonConverter<IPipelineStatus>
             return ResolveByName(ReadNameFromObject(ref reader));
         }
 
-        // Why: fail loud — the status arrived in a shape we do not understand, rather than
-        // silently substituting a default status.
         throw new JsonException(
             $"Unexpected token '{reader.TokenType}' when reading {nameof(IPipelineStatus)}.");
     }
@@ -61,8 +59,6 @@ public sealed class PipelineStatusJsonConverter : JsonConverter<IPipelineStatus>
 
     private static IPipelineStatus ResolveByName(string? name)
     {
-        // Why: the name is required to resolve a status; a missing name is a hard error, not a
-        // defaultable condition.
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new JsonException(

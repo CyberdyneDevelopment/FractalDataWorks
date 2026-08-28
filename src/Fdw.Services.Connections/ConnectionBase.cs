@@ -36,8 +36,6 @@ namespace Fdw.Services.Connections;
 /// </remarks>
 public abstract class ConnectionBase<TCommand, TConfiguration, TService>
     : ServiceBase<IDataCommand, TConfiguration, TService>, IDataConnection
-    // Why: typed body configs are standalone POCOs implementing IGenericConfiguration directly;
-    // they no longer inherit from ConnectionConfiguration after the config-split refactor.
     where TConfiguration : class, IGenericConfiguration
     where TService : class
 {
@@ -129,19 +127,12 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
         // Get translator for this command type via TypeCollection lookup
         var translator = GetTranslator(command.CommandType);
 
-        // Why: Only the _Empty sentinel indicates "no translator found". The name-equality check
-        // was wrong for HTTP (protocol adapters are named "Rest"/"OData"/etc., never matching the
-        // command type) and redundant for SQL (GetTranslator already returns _Empty for unknowns).
         if (string.Equals(translator.Name, "_Empty", StringComparison.Ordinal))
         {
             var message = ConnectionLogger.TranslatorNotFound(Logger, command.CommandType);
             return GenericResult<T>.Failure(message);
         }
 
-        // Why: the container is built complete — IDataContainer derives from IStorageContainer, so the
-        // translator and result-mapper read the container's schema, physical location, format, and keys
-        // directly off this one type. There is no materialization step and no adapter.
-        // Translate IDataCommand → TCommand using translator with the container metadata.
         var translationResult = await translator.Translate(command, container, cancellationToken).ConfigureAwait(false);
         if (!translationResult.IsSuccess || translationResult.Value == null)
         {

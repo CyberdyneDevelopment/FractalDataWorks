@@ -427,10 +427,6 @@ public class DataSetConfigurationValidatorTests
     [Trait("Category", "DataIntegrity")]
     public void Validate_WithKeyFieldNotInFields_PassesValidation()
     {
-        // Why: Name-matches-field-list validation was removed in FDW-395 Phase 6.
-        // Key field records are resolved by RowId via IDataNode at load time, not by matching
-        // KeyName against the Fields collection. A key field referencing a non-existent field
-        // name is now valid at the configuration layer.
         var config = new DataSetConfiguration
         {
             Name = "Test",

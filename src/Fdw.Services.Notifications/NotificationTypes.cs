@@ -68,33 +68,20 @@ public partial class NotificationTypes
     {
         var collectOptions = RegisterFunc;
 
-        // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
-        // three points below — the deferred declaration, the milestone, and the zero-option warning.
-        // Written out three times it is three chances for them to disagree.
         var providerService = typeof(INotificationServiceProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<NotificationTypes>() ?? NullLogger<NotificationTypes>.Instance;
 
-            // Why the result is read: this replacement calls the func it captured, and discarding
-            // what that returned meant an option that failed to register was followed by this body
-            // registering the provider anyway and reporting success.
             var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
                 return registered;
             // Notification configuration, registered once for the domain here rather
             // than by every caller that needs it.
 
-            // Why: per-user notification toggles are plain data in ConfigurationDb (notify schema),
-            // read/written via the standard DataGateway — this replaces the no-op echo endpoints.
             builder.Services.TryAddScoped<IUserNotificationPreferenceService, SqlUserNotificationPreferenceService>();
 
-            // Why the domain interface and not only the concrete class: this collection resolves
-            // INotificationConfigurationProvider to attach it to the domain provider, and a registration
-            // of the concrete type alone leaves that lookup empty — the domain then fails every
-            // lookup by name for the life of the scope. ConfigurationConnection is the one place that
-            // names which store these rows live in.
             builder.Services.TryAddSingleton<INotificationConfigurationProvider>(sp =>
                 new NotificationConfigurationProvider(
                     sp.GetService<ILogger<NotificationConfigurationProvider>>()!,
@@ -107,9 +94,6 @@ public partial class NotificationTypes
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<NotificationConfiguration>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
 
-            // Why literal "ConfigurationDb"/"notify": this child rule provider is a plain
-            // ImplementationConfigurationProviderBase<,> instance (not a domain-specific subclass), so there is no
-            // per-domain constructor default to fall back on — this is the domain's own default location.
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<NotificationRuleConfiguration>>(sp =>
                 new ImplementationConfigurationProviderBase<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>(
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>>()!,
@@ -129,10 +113,6 @@ public partial class NotificationTypes
                     sp.GetService<ILoggerFactory>()?.CreateLogger<NotificationServiceProvider>()
                     ?? NullLogger<NotificationServiceProvider>.Instance);
 
-                // Why ILogger<NotificationTypes> and not CreateLogger("NotificationTypes"): SourceContext then
-                // carries the namespace-qualified collection, and the category cannot drift from the
-                // type it claims to name. The provider logs its own lines under its own type, so the
-                // two layers read base-then-derived rather than collapsing onto one category.
                 var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<NotificationTypes>()
                     ?? NullLogger<NotificationTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(NotificationTypes), provider.GetType().Name);
@@ -140,8 +120,6 @@ public partial class NotificationTypes
                 {
                     if (sp.GetService<INotificationConfigurationProvider>() is { } cfgProvider)
                     {
-                        // Why the result is read: a provider that did not take its parent still constructs, and
-                        // every later read silently misses. The failure has to be said out loud here or nowhere.
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(NotificationTypes), provider.GetType().Name, cfgProvider.GetType().Name);
@@ -150,11 +128,6 @@ public partial class NotificationTypes
                     }
                     else
                     {
-                        // Why Critical, and why the collection says it rather than the provider: from
-                        // inside the provider a null parent is indistinguishable from a domain that needs
-                        // none. This is the one place that knows one was meant to arrive, and without it
-                        // the domain fails every lookup by name for the life of the scope with nothing
-                        // pointing back here.
                         ServiceTypeLog.DomainHasNoConfigurationSource(
                             stLogger,
                             nameof(NotificationTypes),
@@ -164,16 +137,12 @@ public partial class NotificationTypes
                 }
                 catch (Exception ex)
                 {
-                    // Why rethrow: a throw here was previously silent, and a provider that failed to take
-                    // its parent is unusable in a way that only surfaces much later.
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(NotificationTypes));
                     throw;
                 }
                 return provider;
             });
 
-            // Why the milestone comes after the registration and not before: it states that the domain
-            // finished phase 2, which is only true once the provider is actually in the container.
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(NotificationTypes), providerService);
             else

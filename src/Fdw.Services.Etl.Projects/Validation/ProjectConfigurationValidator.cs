@@ -26,7 +26,6 @@ public sealed class ProjectConfigurationValidator : AbstractValidator<ProjectCon
             .WithMessage("Project name must not exceed 200 characters.");
 
         // Policy fields: Project is the root level — validate against server defaults.
-        // Why: Project can be more strict than server defaults; it can never be less strict.
         RuleFor(x => x.StepFailurePolicy)
             .Must(val => val is null ||
                          string.Equals(val, "HaltStage", StringComparison.OrdinalIgnoreCase) ||

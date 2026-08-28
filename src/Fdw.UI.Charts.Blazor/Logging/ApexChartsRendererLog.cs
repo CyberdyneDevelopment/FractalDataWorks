@@ -10,8 +10,6 @@ namespace Fdw.UI.Charts.Blazor.Logging;
 /// MessageLogging for <c>ApexChartsRenderer</c> operations.
 /// EventId range: 4740–4749 (UI charts renderer layer).
 /// </summary>
-// Why: give every Fdw.UI.Charts.Blazor Log class its own TypeCode so its generated Code never
-// collides with the sibling Fdw.UI.Canvas.Blazor project, which shares the same 47xx EventId band.
 [ExcludeFromCodeCoverage]
 [MessageLoggingTypeCode("CHARTS")]
 public static partial class ApexChartsRendererLog

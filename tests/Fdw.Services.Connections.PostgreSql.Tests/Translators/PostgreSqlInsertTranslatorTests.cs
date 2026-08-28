@@ -54,8 +54,6 @@ public sealed class PostgreSqlInsertTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateInsertUsesDoubleQuoteQuotingAndReturningClause()
     {
-        // Why: PG INSERT uses RETURNING for identity, not SCOPE_IDENTITY(). Also verifies
-        // "col" double-quote quoting throughout.
         var fields = new[]
         {
             CreateField("id", isIdentity: true).Object,

@@ -86,8 +86,6 @@ public class RawSvgMarkupAnalyzerTests : RazorMarkupAnalyzerTestBase<RawSvgMarku
     [Trait("Category", "Analyzer")]
     public async Task SvgInsideRenderFragmentLambda_ReportsDiagnostic()
     {
-        // Why: markup written inside a RenderFragment lambda declared in @code is still markup, which is
-        // why the scanner excludes only literals and comments in a code block rather than the whole block.
         await VerifyRazor(
             """
             @code {
@@ -137,8 +135,6 @@ public class RawSvgMarkupAnalyzerTests : RazorMarkupAnalyzerTestBase<RawSvgMarku
     [Trait("Category", "Analyzer")]
     public async Task ComponentWhoseNameStartsWithSvg_ReportsNothing()
     {
-        // Why: a chart component named SvgGauge is markup already doing what this rule asks for; matching
-        // the needle inside a longer tag name would flag the fix as the defect.
         await VerifyRazor("<SvgGauge Value=\"1\" /><SvgSparkline Width=\"80\" />");
     }
 

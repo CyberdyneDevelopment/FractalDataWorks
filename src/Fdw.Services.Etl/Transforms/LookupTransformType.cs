@@ -58,8 +58,6 @@ public sealed class LookupTransformType : TransformTypeBase
     public static void ClearCache() => RecordCache.Clear();
 
     /// <inheritdoc />
-    // Why: a single-record lookup resolves only against the cache TransformBatch pre-populates via the
-    // real (awaited) DataGateway query — per-record resolution is pure CPU with no I/O of its own.
     public override Task<IGenericResult<IDictionary<string, object?>>> Transform(
         IDictionary<string, object?> input,
         IGenericConfiguration configuration,
@@ -215,8 +213,6 @@ public sealed class LookupTransformType : TransformTypeBase
             return;
         }
 
-        // Why: await the real DataGateway batch query directly — no sync-over-async, cancellation flows
-        // through, and the resolved records seed the shared cache for every column brought across.
         var batchResult = await PerformBatchLookup(dataGateway, sample, keysToLookup!, cancellationToken).ConfigureAwait(false);
         if (batchResult.IsSuccess && batchResult.Value != null)
         {
@@ -241,9 +237,6 @@ public sealed class LookupTransformType : TransformTypeBase
     {
         try
         {
-            // Why: Addressing moved off IDataCommand onto DataStoreTarget; path is null to search
-            // all paths in the store (documented DataStoreTarget behaviour). No Fields restriction —
-            // the full matched record is cached so every brought-across column can be read from it.
             var queryCommand = new QueryCommand<Dictionary<string, object?>>
             {
                 Filter = new FilterExpression

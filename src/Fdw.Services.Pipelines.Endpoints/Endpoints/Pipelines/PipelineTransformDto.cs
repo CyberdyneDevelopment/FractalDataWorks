@@ -15,9 +15,6 @@ public class PipelineTransformDto
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the transform type (e.g., "Map", "Filter", "Calculate").</summary>
-    // Why: named OperationType (not TransformType) so the GET response round-trips byte-for-byte into the
-    // create/update request shape. The source field IS OperationType; renaming it here made a saved pipeline
-    // unreadable by the client (it deserialized to "" and every transform-bearing pipeline failed to load).
     public string OperationType { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the execution order within the pipeline.</summary>

@@ -23,8 +23,6 @@ namespace Fdw.Collections;
 /// abstraction for options to satisfy.
 /// </para>
 /// </remarks>
-// Why it extends ITypeOption: Name is the option's discriminator and already lives there.
-// Redeclaring it here made every member ambiguous at 250 call sites.
 public interface IServiceTypeRegistration : ITypeOption
 {
     /// <summary>Gets the default DataStore name for this option's configuration provider.</summary>
@@ -58,13 +56,6 @@ public interface IServiceTypeRegistration : ITypeOption
     /// <returns>The builder on success; a failure carrying the reason otherwise.</returns>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
     /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
-    // Why the builder rather than (IServiceCollection, IConfiguration): it carries both, so an option
-    // that needs to read IConfiguration can, while the common case just uses builder.Services. Passing
-    // the narrower pair would decide for every option that it never needs anything else.
-    //
-    // Why the logger factory is here as well as on the other two phases: without it this phase alone
-    // could not say which body it ran, and a phase that cannot report is the one whose silent failure
-    // takes longest to find.
     IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false);
 
     /// <summary>Registers this option's factory and configuration provider.</summary>
@@ -73,8 +64,6 @@ public interface IServiceTypeRegistration : ITypeOption
     /// <returns>The builder on success; a failure carrying the reason otherwise.</returns>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
     /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
-    // Why the builder here too: Register runs before Build(), same as Configure, so an option that
-    // needs IConfiguration while registering can reach it rather than being handed Services alone.
     IGenericResult<IHostApplicationBuilder> Register(
         IHostApplicationBuilder builder,
         ILoggerFactory? loggerFactory = null,

@@ -43,15 +43,9 @@ public sealed class RestQueryTranslator : IDataCommandTranslator<HttpRequestMess
     /// </summary>
     /// <param name="command">The data command to translate.</param>
     /// <returns>An HttpRequestMessage configured as a GET request.</returns>
-    // Why: The static single-arg overload was used when addressing was on the command.
-    // Commands are now address-free; callers that previously used this overload must
-    // supply a container. This overload is kept for API surface compatibility but
-    // produces an empty path — any caller that matters uses the container overload.
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public static HttpRequestMessage Translate(IDataCommand command)
     {
-        // Why: No container available — cannot resolve a path. Return empty-path request.
-        // Real execution always flows through Translate(command, container, ct).
         return new HttpRequestMessage(HttpMethod.Get, string.Empty);
     }
 
@@ -65,7 +59,6 @@ public sealed class RestQueryTranslator : IDataCommandTranslator<HttpRequestMess
     {
         try
         {
-            // Why: Addressing comes from the container (resolved before translation), not the command.
             var path = container.Path?.PathValue ?? container.Name;
 
             var request = new HttpRequestMessage(HttpMethod.Get, path);

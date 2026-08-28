@@ -6,7 +6,6 @@ namespace Fdw.Commands.Data.Abstractions;
 /// Execute commands sequentially, one after another.
 /// Output of command N becomes input to command N+1.
 /// </summary>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(ExecutionStrategies), "Sequential", RestrictToCurrentCompilation = true)]
 public sealed class SequentialExecutionStrategy : ExecutionStrategyBase

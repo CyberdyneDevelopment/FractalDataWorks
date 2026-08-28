@@ -161,10 +161,6 @@ public class HttpProtocolBaseRowExtractionTests
     public void ExtractRowsFromContent_GeoJson_GeometryCoordinatesExpandedByIndex()
     {
         // Arrange
-        // Why: When FlattenNestedObjects=true, JsonStreamRowSource flattens nested objects AND
-        // expands arrays by index (FlattenArrayByIndex), so geometry.coordinates [-122.0, 37.0, 8.0]
-        // becomes geometry.coordinates.0/.1/.2. This documents the actual reader behavior the
-        // row→column mapping receives.
 
         // Act
         var result = TestableHttpProtocol.ExtractRows(
@@ -233,11 +229,6 @@ public class HttpProtocolBaseRowExtractionTests
     public void ExtractRowsFromContent_NonArraySelector_ReturnsFailure()
     {
         // Arrange — "type" resolves to a string value, not an array
-        // Why: JsonStreamRowSource sets _arrayEnumerator = default when the resolved element
-        // is not a JSON array. This means Read() immediately returns false and rows is empty.
-        // The test asserts that a selector pointing to a non-array produces an empty but
-        // successful result (the row source doesn't throw — it just yields 0 rows).
-        // If the desired behavior changes to an explicit failure, update this test.
         var result = TestableHttpProtocol.ExtractRows(
             GeoJsonFeatureCollection,
             recordSelector: "type",
@@ -348,11 +339,6 @@ internal sealed class TestableHttpProtocol : HttpProtocolBase
     {
     }
 
-    // Why: the old 4-arg static ExtractRowsFromContent was replaced by the container-driven instance
-    // method (the reader is resolved from the container's format via the TryCreateRowReader seam).
-    // This shim builds a JSON container carrying the same metadata so the existing assertions exercise
-    // the new mechanism unchanged. A throwaway instance is used because the new helper is an instance
-    // member (it calls the virtual TryCreateRowReader).
     public static IGenericResult<object?> ExtractRows(
         string content,
         string? recordSelector,

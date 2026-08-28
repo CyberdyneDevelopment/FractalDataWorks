@@ -115,8 +115,6 @@ public sealed class CalculationEntityService : ICalculationEntityService
             var entities = new List<ICalculationEntity>(headers.Count);
             foreach (var header in headers)
             {
-                // Why: the list read returns headers only; compose each aggregate by Id so callers get the
-                // full entity (Inputs + typed body), matching the prior per-row BuildEntity behaviour.
                 var full = await _provider.Get(header.Id, cancellationToken).ConfigureAwait(false);
                 if (!full.IsSuccess)
                     return full.ToNewResult<IReadOnlyList<ICalculationEntity>>();
@@ -216,11 +214,6 @@ public sealed class CalculationEntityService : ICalculationEntityService
             if (!build.IsSuccess)
                 return build.ToNewResult<ICalculationEntity>();
 
-            // Why: Save alone now version-on-writes (mints a new RowId) and cascades the WHOLE
-            // aggregate on every write — the prior Delete-then-Save was a workaround for a Save
-            // that used to update in place. Against the now fail-loud Delete (Delete errors when
-            // the record doesn't exist instead of silently succeeding), that workaround would abort
-            // every update outright.
             var saveResult = await _provider.Save(build.Value!, cancellationToken).ConfigureAwait(false);
             if (!saveResult.IsSuccess)
                 return saveResult.ToNewResult<ICalculationEntity>();
@@ -300,9 +293,6 @@ public sealed class CalculationEntityService : ICalculationEntityService
         }
     }
 
-    // Why: builds the CalculationEntityConfiguration aggregate (header + Inputs + typed body) from request
-    // primitives. The cascade sets each input's CalculationEntityId FK; the provider Save stamps the typed
-    // body's FK. Fails loud when the entity type is unknown or an input omits its required Kind (NO FALLBACKS).
     private IGenericResult<CalculationEntityConfiguration> BuildAggregate(
         Guid id,
         string name,
@@ -321,7 +311,6 @@ public sealed class CalculationEntityService : ICalculationEntityService
         for (var i = 0; i < inputs.Count; i++)
         {
             var input = inputs[i];
-            // Why: InputKind is the required discriminator — a fabricated default is a silent fallback.
             if (input.Kind is null)
                 return GenericResult<CalculationEntityConfiguration>.Failure(
                     CalculationEntityLog.CalculationValidationFailed(
@@ -345,8 +334,6 @@ public sealed class CalculationEntityService : ICalculationEntityService
         ICalculationTypedConfiguration? typedBody = null;
         if (typedConfiguration is not null)
         {
-            // Why: a calc typed body must implement ICalculationTypedConfiguration (Formula/Windowed). A
-            // non-conforming body is a defect, not a silently-dropped value (NO FALLBACKS).
             if (typedConfiguration is not ICalculationTypedConfiguration tc)
                 return GenericResult<CalculationEntityConfiguration>.Failure(
                     CalculationEntityLog.CalculationValidationFailed(
@@ -362,9 +349,6 @@ public sealed class CalculationEntityService : ICalculationEntityService
             Name = name,
             Description = description,
             CalculationEntityType = calculationEntityType,
-            // Why: stamps provenance — this is the one built-in write path for calc.CalculationEntity,
-            // so every row it persists is owned by the Configuration source. Couples to the generated
-            // option's own Name rather than a bare "Configuration" literal (NO FALLBACKS).
             CalculationSource = CalculationSourceTypes.Configuration.Name,
             OutputDataSetName = output.OutputDataSetName,
             ResultFieldName = output.ResultFieldName,
@@ -392,8 +376,6 @@ public sealed class CalculationEntityService : ICalculationEntityService
             CalculationEntityType = config.CalculationEntityType,
             CalculationSource = config.CalculationSource,
             Inputs = config.Inputs.Select(MapInputRecordToModel).ToList(),
-            // Why: steps compose as part of the aggregate; carry them on the runtime entity as their
-            // composed config (Fields/Operands included). Execution does not consume them yet (out of scope).
             Steps = config.Steps.Cast<IGenericConfiguration>().ToList(),
             Output = output,
             IsEnabled = config.IsEnabled,

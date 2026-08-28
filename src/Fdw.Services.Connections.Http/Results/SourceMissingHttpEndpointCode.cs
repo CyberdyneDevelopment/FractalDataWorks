@@ -8,8 +8,6 @@ namespace Fdw.Services.Connections.Http.Results;
 /// <summary>
 /// Source configuration is missing HttpEndpoint — cannot resolve to a container.
 /// </summary>
-// Why: ResolveSource requires HttpEndpoint to build the EndpointContainer.
-// Without it, the Http connection cannot determine which endpoint to target.
 [TypeOption(typeof(HttpResultCodes), "SourceMissingHttpEndpoint", RestrictToCurrentCompilation = true)]
 [ExcludeFromCodeCoverage]
 public sealed class SourceMissingHttpEndpointCode : HttpResultCodeBase

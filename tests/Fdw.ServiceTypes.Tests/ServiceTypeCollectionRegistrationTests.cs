@@ -79,10 +79,6 @@ public class ServiceTypeCollectionRegistrationTests
     [Trait("Category", "CoreFramework")]
     public void ReRegisteringAnAlreadyPresentOptionAfterTheSetClosesIsAlsoANoOp()
     {
-        // Why this is the regression: an option is offered from two directions — its own module
-        // initializer and the cross-assembly registration an entry point emits. When the second
-        // arrival landed after a read had closed the set, the frozen check fired before the
-        // duplicate check and threw, even though the collection already held that exact option.
         var option = new Option("Duplicate");
         BetaCollection.RegisterMember(option);
 
@@ -111,10 +107,6 @@ public class ServiceTypeCollectionRegistrationTests
     public void RegisteringNullThrows()
         => Should.Throw<ArgumentNullException>(() => AlphaCollection.RegisterMember(null!));
 
-    // Why a stub rather than Host.CreateApplicationBuilder().Build(): these tests close the member set
-    // and never reach into the container, so the only thing phase 3 needs here is *an* IHost. Building
-    // a real one would put a Microsoft.Extensions.Hosting reference on this project to no purpose —
-    // IHost itself comes from Hosting.Abstractions, which is already referenced.
     private sealed class NullHost : IHost
     {
         public IServiceProvider Services { get; } = new NullServiceProvider();

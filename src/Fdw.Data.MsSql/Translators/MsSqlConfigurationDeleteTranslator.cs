@@ -84,9 +84,6 @@ public sealed class MsSqlConfigurationDeleteTranslator : MsSqlDataCommandTransla
                         ResultDetails.Create("CommandType", "ConfigurationDeleteCommand")));
             }
 
-            // Why: a scoped delete retires every row belonging to an owner rather than one row keyed by its
-            // own [Id] — the only way to retire a KVP property-collection child, whose identity is
-            // (owner, Name) and which therefore has no [Id] column to key on.
             var ownerFk = (command as ConfigurationDeleteCommand)?.OwnerForeignKeyColumn;
             MsSqlConfigurationDeleteTranslatorLog.ResolvedDeleteKind(
                 NullLogger<MsSqlConfigurationDeleteTranslator>.Instance,
@@ -131,8 +128,6 @@ public sealed class MsSqlConfigurationDeleteTranslator : MsSqlDataCommandTransla
     {
         if (string.IsNullOrEmpty(dbPath.Schema))
         {
-            // Why: reported as a defect (FDW rule) — a translator should return IGenericResult, not
-            // throw. Left in place per instructions; the caller's try/catch converts it to a Failure.
             MsSqlConfigurationDeleteTranslatorLog.NoSchemaDefined(
                 NullLogger<MsSqlConfigurationDeleteTranslator>.Instance, container.Name);
             throw new InvalidOperationException(
@@ -145,7 +140,6 @@ public sealed class MsSqlConfigurationDeleteTranslator : MsSqlDataCommandTransla
 
         if (!TryResolveOwnerForeignKey(container, ownerLogicalFkColumn, out var physicalColumn, out var parentSchema, out var parentTable))
         {
-            // Why: same throw-instead-of-result defect as above — logged, not converted.
             MsSqlConfigurationDeleteTranslatorLog.UnresolvableOwnerForeignKey(
                 NullLogger<MsSqlConfigurationDeleteTranslator>.Instance, container.Name, ownerLogicalFkColumn);
             throw new InvalidOperationException(
@@ -193,8 +187,6 @@ public sealed class MsSqlConfigurationDeleteTranslator : MsSqlDataCommandTransla
 
             var fkColumn = key.KeyFields[0].LocalField.Name;
 
-            // Why: the same physical->logical mapping the save translator applies ({Owner}RowId -> {Owner}Id),
-            // so both halves of the cascade address the FK by the identical name.
             var logicalName = fkColumn.EndsWith("RowId", StringComparison.Ordinal)
                 ? string.Concat(fkColumn.AsSpan(0, fkColumn.Length - "RowId".Length), "Id")
                 : fkColumn;
@@ -223,8 +215,6 @@ public sealed class MsSqlConfigurationDeleteTranslator : MsSqlDataCommandTransla
 
         if (string.IsNullOrEmpty(dbPath.Schema))
         {
-            // Why: reported as a defect (FDW rule) — a translator should return IGenericResult, not
-            // throw. Left in place per instructions; the caller's try/catch converts it to a Failure.
             MsSqlConfigurationDeleteTranslatorLog.NoSchemaDefined(
                 NullLogger<MsSqlConfigurationDeleteTranslator>.Instance, tableName);
             throw new InvalidOperationException(
@@ -235,10 +225,6 @@ public sealed class MsSqlConfigurationDeleteTranslator : MsSqlDataCommandTransla
         Func<string, string> qi = dialect.QuoteIdentifier;
         var p = dialect.ParameterPrefix;
 
-        // Why: soft-delete by marking the current row IsDeleted=1 + IsCurrent=0 in a single
-        // UPDATE. The earlier tombstone-INSERT pattern reproduced only (Id, Name, IsCurrent,
-        // IsDeleted) which violated NOT NULL on columns like ServiceOptionType. Marking the
-        // existing row is simpler and avoids replicating per-table required-column lists.
         var sql = $@"UPDATE {qi(schema)}.{qi(tableName)}
   SET {qi("IsCurrent")} = 0, {qi("IsDeleted")} = 1, {qi("ModifyDate")} = SYSDATETIMEOFFSET()
   WHERE {qi("Id")} = {p}LogicalId AND {qi("IsCurrent")} = 1";

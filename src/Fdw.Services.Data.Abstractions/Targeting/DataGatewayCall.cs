@@ -15,6 +15,5 @@ namespace Fdw.Services.Data.Abstractions;
 /// </remarks>
 /// <param name="Command">The data command (query shape, filter, ordering, paging, metadata).</param>
 /// <param name="Target">The DataStore/Path/Container address for this command.</param>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public readonly record struct DataGatewayCall(IDataCommand Command, DataStoreTarget Target);

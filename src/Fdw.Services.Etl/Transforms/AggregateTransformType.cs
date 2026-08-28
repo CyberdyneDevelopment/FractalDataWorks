@@ -40,8 +40,6 @@ public sealed class AggregateTransformType : TransformTypeBase
     }
 
     /// <inheritdoc />
-    // Why: aggregation is set-based (N records -> M groups); a per-record Transform cannot express it.
-    // Fail loud rather than a silent single-record pass-through — the engine must call TransformBatch.
     public override Task<IGenericResult<IDictionary<string, object?>>> Transform(
         IDictionary<string, object?> input,
         IGenericConfiguration configuration,
@@ -54,8 +52,6 @@ public sealed class AggregateTransformType : TransformTypeBase
     }
 
     /// <inheritdoc />
-    // Why: grouping/aggregation is pure in-memory LINQ work (no I/O); Task.FromResult is honest
-    // sync-returning-Task — the contract is async so future I/O-backed aggregators are first-class.
     public override Task<IGenericResult<IEnumerable<IDictionary<string, object?>>>> TransformBatch(
         IEnumerable<IDictionary<string, object?>> inputs,
         IGenericConfiguration configuration,

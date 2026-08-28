@@ -130,8 +130,6 @@ public sealed class DataflowApiClientTests
 
         handler.LastRequest.ShouldNotBeNull();
         handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/dataflow/impact");
-        // Why the values are asserted unescaped: they travel in the body now, so a target with a
-        // space is carried as written rather than percent-encoded into a path segment.
         var body = await handler.LastRequest.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken);
         body.ShouldContain("Data Store");
         body.ShouldContain("My Conn");

@@ -22,8 +22,6 @@ public sealed class SchemaFieldDto
     /// <summary>Maps from configuration to DTO.</summary>
     public static SchemaFieldDto FromConfig(DataContainerFieldConfiguration config)
     {
-        // Why: IsNullable/Ordinal moved to data.MsSqlDataContainerField typed body after Wave A5.
-        // IsNullable and Ordinal will be sourced from the typed body in Wave B2.
         return new SchemaFieldDto
         {
             Name = config.Name,

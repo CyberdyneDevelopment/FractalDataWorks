@@ -88,8 +88,6 @@ public abstract class SchedulerBackgroundServiceBase : BackgroundService
                 var elapsed = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
                 SchedulerLoopLog.EvaluationCompleted(_logger, LastEvaluatedCount, elapsed);
 
-                // Why worth its own message: nothing has failed, but passes are now back-to-back and
-                // a due schedule fires late. It is the signal that precedes a real problem.
                 if (elapsed > (long)EvaluationInterval.TotalMilliseconds)
                 {
                     SchedulerLoopLog.EvaluationOverran(_logger, elapsed, (long)EvaluationInterval.TotalMilliseconds);

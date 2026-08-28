@@ -48,10 +48,6 @@ public sealed class GenericBuilderSelectorTests
     [Trait("Category", "CoreFramework")]
     public async Task SelectedBuilderResolvesContainerFormatToNotFoundWhenContainerHasNoExplicitFormat()
     {
-        // Why: verifies the defaultFormat decision — the UI has no transport registry / format hint on
-        // the display DTOs, so GenericBuilderSelector passes FormatTypes.NotFound as the transport
-        // default; a container without its own explicit Format therefore resolves to NotFound (fail
-        // loud at read time) rather than silently defaulting to Json/Tabular.
         var container = new DataContainerConfiguration { Id = Guid.NewGuid(), Name = "Customers" };
         var path = new DataPathConfiguration { Id = Guid.NewGuid(), Name = "dbo", Containers = [container] };
         var storeConfig = new DataStoreConfiguration { Name = "Store1", Paths = [path] };
@@ -86,10 +82,6 @@ public sealed class GenericBuilderSelectorTests
         var sut = new GenericBuilderSelector();
         var configuration = new DataStoreConfiguration { Name = "Store1" };
 
-        // Why: GenericBuilderSelector must not swallow the caller's logger — ConfiguredDataStoreProvider
-        // relies on Select(config, logger) threading its own logger into the selected builder for build
-        // diagnostics. No public accessor exists on GenericDataStoreBuilder to assert the captured
-        // instance directly, so this asserts the call succeeds with a non-null logger without throwing.
         var result = sut.Select(configuration, NullLoggerFactory.Instance.CreateLogger(nameof(GenericBuilderSelectorTests)));
 
         result.IsSuccess.ShouldBeTrue();

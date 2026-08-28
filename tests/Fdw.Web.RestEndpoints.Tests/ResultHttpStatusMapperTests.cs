@@ -36,8 +36,6 @@ public class ResultHttpStatusMapperTests
         return context;
     }
 
-    // Why: the mapper reads code.Id (the categorized number) to resolve the category; the string
-    // Code is echoed to the client. Both are set so the test exercises the real derivation path.
     private static IGenericResult CreateFailureWithCode(int id, string code)
     {
         var mockCode = new Mock<IResultCode>();

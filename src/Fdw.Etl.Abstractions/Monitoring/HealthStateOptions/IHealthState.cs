@@ -8,8 +8,6 @@ namespace Fdw.Etl.Abstractions.Monitoring.HealthStateOptions;
 /// Interface for health states.
 /// Extends ITypeOption to enable TypeCollection discovery.
 /// </summary>
-// Why: applying the converter on the interface makes every IHealthState-typed property
-// (de)serialize correctly wherever it appears, on the wire or on disk, without per-call wiring.
 [JsonConverter(typeof(HealthStateJsonConverter))]
 public interface IHealthState : ITypeOption<int, HealthStateBase>
 {

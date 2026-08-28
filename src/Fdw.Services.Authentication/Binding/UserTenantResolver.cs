@@ -39,9 +39,6 @@ public sealed class UserTenantResolver : ITenantResolver
         if (user.IsFailure)
             return user.ToNewResult<Guid>();
 
-        // Why a failure and not a default tenant: a user whose tenant is unknown would otherwise be
-        // authenticated into whichever one the default named, and that is a cross-tenant leak with
-        // a plausible-looking cause.
         return user.Value?.TenantId is { } tenantId && tenantId != Guid.Empty
             ? GenericResult<Guid>.Success(tenantId)
             : GenericResult<Guid>.Failure(BindingLog.TenantUnknown(_logger, userId));

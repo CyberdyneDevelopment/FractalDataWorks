@@ -79,8 +79,6 @@ public class PipelineLineageEdgeTests
     [Fact]
     public void ReadsFromEdgeCreatedFromSourceConnection()
     {
-        // Why: kind-4 edge — the source connection was previously collected only as a node,
-        // never given an edge. See GetLineageGraphEndpointBase.AddSourceAndPipelineEdges.
         var pipelines = new List<PipelineLineageRecord>
         {
             new() { Id = Guid.NewGuid(), Name = "P1", ServiceOptionType = "Etl", SourceConnectionName = "ConnA" }
@@ -98,8 +96,6 @@ public class PipelineLineageEdgeTests
     [Fact]
     public void DerivesFromEdgeCreatedFromSourceDataSetName()
     {
-        // Why: kind-5 edge — data.DataSetSource.SourceDataSetName expresses derived-DataSet lineage,
-        // never read by any graph before this fix.
         var ownerId = Guid.NewGuid();
         var dataSets = new List<DataSetRecord> { new() { Id = ownerId, Name = "DS_Owner" } };
         var sources = new List<DataSetSourcePayload>
@@ -119,8 +115,6 @@ public class PipelineLineageEdgeTests
     [Fact]
     public void NoEdgesWhenLinkageAbsent()
     {
-        // Why: absence-tolerance — a node-only pipeline (no composed engine body) must render as a
-        // graph NODE with zero fabricated edges. NO FALLBACKS: linkage is never invented.
         var pipelines = new List<PipelineLineageRecord>
         {
             new() { Id = Guid.NewGuid(), Name = "Orphan", ServiceOptionType = "Etl" }
@@ -158,8 +152,6 @@ public class PipelineLineageEdgeTests
     [Fact]
     public void DuplicateDerivesFromEdgesNotEmitted()
     {
-        // Why: a source DataSet can be reused by multiple sibling sources of the same owner DataSet
-        // (e.g. re-mapped per field-group); dedup so DerivesFrom is emitted once per distinct pair.
         var ownerId = Guid.NewGuid();
         var dataSets = new List<DataSetRecord> { new() { Id = ownerId, Name = "Owner" } };
         var sources = new List<DataSetSourcePayload>

@@ -99,8 +99,6 @@ public static partial class StatSetServiceLog
     /// <summary>
     /// Logs when a query succeeds but returns no data.
     /// </summary>
-    // Why Error, not Warning (FDW-583): the call site returns GenericResult.Failure for this
-    // condition — the operation could not complete, so the log severity must match the outcome.
     [MessageLogging(
         EventId = 31041,
         Level = LogLevel.Error,

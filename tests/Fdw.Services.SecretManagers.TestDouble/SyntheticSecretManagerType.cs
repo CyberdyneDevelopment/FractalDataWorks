@@ -55,14 +55,9 @@ public sealed class SyntheticSecretManagerType
         {
             builder.Services.AddSingleton<ISyntheticSecretManagerFactory, SyntheticSecretManagerFactory>();
 
-            // Why: this registers the shared header provider for the whole SecretManager domain — and
-            // with it ISecretManagerProvider, which AegisInjector takes as a constructor dependency.
-            // TryAddSingleton inside makes it idempotent; every option calls it, first registration wins.
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
-        // Why Initialization and not Registration: handing the factory to the provider needs a LIVE
-        // container, and Registration runs while the container is still being built.
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;

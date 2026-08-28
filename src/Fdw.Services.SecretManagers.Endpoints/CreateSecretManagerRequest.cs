@@ -25,7 +25,5 @@ public sealed class CreateSecretManagerRequest
     /// configuration (e.g. EnvironmentVariableConfiguration) and persists it alongside
     /// the header row.
     /// </summary>
-    // Why: callers must supply the typed body explicitly. Sparse bodies leave the typed
-    // child row missing and silently break subsequent Get/Update/Delete on the SM.
     public JsonElement? Configuration { get; set; }
 }

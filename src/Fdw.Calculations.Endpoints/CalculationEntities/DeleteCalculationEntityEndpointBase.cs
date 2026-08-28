@@ -11,10 +11,6 @@ public abstract class DeleteCalculationEntityEndpointBase : CrudDeleteEndpointBa
     /// <inheritdoc/>
     protected override string ResourceName => "calculation-entities";
 
-    // Why the route is declared rather than inherited: the base builds "/{ResourceName}/{Name}",
-    // and every endpoint here identifies a calculation entity by its id. The request this delete
-    // takes has no Name property at all, so the inherited route bound nothing from the URL and the
-    // id it looks up stayed empty.
     /// <inheritdoc />
     protected override string Route => $"/{ResourceName}/{{Id}}";
 

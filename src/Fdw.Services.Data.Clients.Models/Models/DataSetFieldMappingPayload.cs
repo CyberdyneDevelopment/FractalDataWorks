@@ -8,8 +8,6 @@ namespace Fdw.Services.Data.Clients.Models;
 public sealed class DataSetFieldMappingPayload
 {
     /// <summary>Gets or sets the durable logical identifier for this field mapping (FK to data.DataSetFieldMapping.Id).</summary>
-    // Why: TransformChainEditor's [EditorRequired] FieldMappingId requires the persisted logical Id from
-    // ConfigurationDb so the UI can load/manage the transform chain for a specific mapping row.
     public Guid Id { get; set; }
     /// <summary>Gets or sets the DataSet field name.</summary>
     public string DataSetFieldName { get; set; } = string.Empty;

@@ -65,8 +65,6 @@ public sealed class ConnectionsHealthCheckable : IHealthCheckable
         ConnectionsHealthLog.CheckStarting(_logger);
         var stopwatch = Stopwatch.StartNew();
 
-        // Why: resolved from the scope CheckHealth receives — see the class remarks. Never captured
-        // as instance fields.
         var configProvider = serviceProvider.GetRequiredService<ConnectionConfigurationProvider>();
         var connectionProvider = serviceProvider.GetRequiredService<IConnectionProvider>();
 
@@ -104,9 +102,6 @@ public sealed class ConnectionsHealthCheckable : IHealthCheckable
 
         stopwatch.Stop();
 
-        // Why (FDW-583): branch on outcome, not on whether anything threw — CheckHealth returns
-        // Success(Unhealthy) when every connection is down, so the completion record must print at
-        // Error for that outcome instead of Information.
         if (worstStatus.Id == HealthyState.Id)
             ConnectionsHealthLog.CheckCompleted(_logger, checkedConnections.Count, worstStatus.Name);
         else
@@ -120,8 +115,6 @@ public sealed class ConnectionsHealthCheckable : IHealthCheckable
         });
     }
 
-    // Why: one connection's outcome, isolated so a single resolution/probe failure never aborts the
-    // rest of the collect — every enabled connection gets its own line in the aggregate Description.
     private async Task<(IHealthState Status, string Detail)> ProbeOne(
         ConnectionConfiguration connection,
         IConnectionProvider connectionProvider,
@@ -135,10 +128,6 @@ public sealed class ConnectionsHealthCheckable : IHealthCheckable
             return (UnhealthyState, reason);
         }
 
-        // Why: a connection whose type does not implement ISupportsHealthProbe is neither healthy
-        // (unverified) nor a failure (nothing was wrong) — Degraded is the most honest representation
-        // the snapshot model allows for "enabled but unprobeable" (NO FALLBACKS: never silently
-        // reported as healthy).
         if (getResult.Value is not ISupportsHealthProbe probe)
         {
             ConnectionsHealthLog.NoProbeCapability(_logger, connection.Name);
@@ -159,8 +148,6 @@ public sealed class ConnectionsHealthCheckable : IHealthCheckable
     private static string FormatDetail(string name, IHealthState status, string detail)
         => $"connection:{name}: {status.Name} ({detail})";
 
-    // Why: mirrors HealthMonitorService's worst-of rule — Unhealthy always wins (most severe), then
-    // Degraded, then Healthy. Comparing TypeOption Ids (not string names) keeps this StringComparison-free.
     private static IHealthState WorseOf(IHealthState current, IHealthState candidate)
     {
         if (candidate.Id == UnhealthyState.Id || current.Id == UnhealthyState.Id)

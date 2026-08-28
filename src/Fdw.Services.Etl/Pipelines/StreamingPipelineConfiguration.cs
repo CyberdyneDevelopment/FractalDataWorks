@@ -29,10 +29,6 @@ public sealed partial class StreamingPipelineConfiguration : IEtlPipelineTypedCo
     public Guid Id { get; set; }
 
     /// <summary>Gets or sets the parent EtlPipeline's logical Id (FK to pipe.EtlPipeline.Id).</summary>
-    // Why: the keystone cascade stamps this from the EtlPipeline body's Id; the physical EtlPipelineRowId FK
-    // column is NOT a POCO property (per the connection convention) so the save translator resolves it by
-    // subquery on insert and the read JOIN uses the container's FK metadata. A POCO EtlPipelineRowId would
-    // defeat the subquery and insert an empty RowId (FK_StreamingPipeline_EtlPipeline violation).
     public Guid EtlPipelineId { get; set; }
 
     /// <inheritdoc/>

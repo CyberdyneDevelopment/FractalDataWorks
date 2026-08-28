@@ -16,7 +16,6 @@ namespace Fdw.Data;
 /// need no attribute. The foreign-key column is the standard physical <c>{Owner}RowId</c> convention
 /// and is supplied by the generator, not here.
 /// </remarks>
-// Why: pure attribute definition (declarative metadata only, consumed by the configuration read cascade) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 [ExcludeFromCodeCoverage]
 public sealed class ConfigurationChildTableAttribute : Attribute

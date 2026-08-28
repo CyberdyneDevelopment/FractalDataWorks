@@ -6,7 +6,6 @@ namespace Fdw.UI.Web.Abstractions;
 /// <summary>
 /// Read-only display render mode.
 /// </summary>
-// Why: pure TypeOption leaf — literal constructor values only, no logic to test.
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(RenderModes), "View", RestrictToCurrentCompilation = true)]
 public sealed class ViewWebRenderMode : WebRenderModeBase

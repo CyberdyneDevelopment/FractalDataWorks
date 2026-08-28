@@ -6,7 +6,6 @@ namespace Fdw.UI.Abstractions.Pages;
 /// <summary>
 /// Base class for service status.
 /// </summary>
-// Why: pure TypeOption base — trivial pass-through constructor, no logic to test.
 [ExcludeFromCodeCoverage]
 public abstract class ServiceStatusBase : TypeOptionBase<int, ServiceStatusBase>, IServiceStatus
 {

@@ -60,9 +60,6 @@ public sealed class AegisTestFixture : IAsyncLifetime
         Stub = await SyntheticEchoStub.Start(hostile: false).ConfigureAwait(false);
         HostileStub = await SyntheticEchoStub.Start(hostile: true).ConfigureAwait(false);
 
-        // Why: fresh random secrets per test run — never fixed literals — so a passing assertion
-        // can't be explained by coincidence. BadCharToken embeds a newline, making it invalid as an
-        // HTTP header value.
         Token = Guid.NewGuid().ToString("N");
         BadCharToken = $"bad\n{Guid.NewGuid():N}";
         Environment.SetEnvironmentVariable(TokenEnvironmentVariable, Token);
@@ -147,8 +144,6 @@ public sealed class AegisTestFixture : IAsyncLifetime
             },
         };
 
-        // Why: a PreApproved command that succeeds (200) against a downstream that ECHOES the token in
-        // its body — the adversarial case proving the gateway surfaces none of the reflected credential.
         var hostile = new AegisCommandConfiguration
         {
             Name = "echo_hostile",
@@ -165,8 +160,6 @@ public sealed class AegisTestFixture : IAsyncLifetime
             },
         };
 
-        // Why: a PreApproved command whose secret is invalid as an HTTP header value — proving the
-        // injector rejects it BEFORE any downstream call and never surfaces the value.
         var badChar = new AegisCommandConfiguration
         {
             Name = "echo_badchar",

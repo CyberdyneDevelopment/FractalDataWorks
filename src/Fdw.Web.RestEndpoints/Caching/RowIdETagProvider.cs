@@ -42,9 +42,6 @@ public sealed class RowIdETagProvider : IETagProvider
 
         try
         {
-            // Why: Addressing (DataStore/Container) was moved off IDataCommand onto DataStoreTarget
-            // in the target-typed-gateway refactor. The caller passes connectionName which is the
-            // DataStore name; path is null to search all paths in the store.
             var command = new QueryCommand<RowIdProjection>
             {
                 Projection = new ProjectionExpression
@@ -96,8 +93,6 @@ public sealed class RowIdETagProvider : IETagProvider
     /// <summary>
     /// Computes a quoted ETag string from the latest ModifyDate using SHA256 truncation.
     /// </summary>
-    // Why: RowId is DB-managed and invisible to the application, so the ETag is derived from the latest
-    // ModifyDate in the container (the newest change marker) rather than the physical RowId.
     private static string ComputeETag(DateTimeOffset modifyDate)
     {
         var bytes = BitConverter.GetBytes(modifyDate.UtcTicks);

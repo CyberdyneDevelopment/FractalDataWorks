@@ -56,12 +56,9 @@ public sealed class SqliteDatabasePath : PathBase, IDataPath<IStorageContainer>,
     public string QuotedIdentifier => $"\"{ObjectName}\"";
 
     // IDatabasePath explicit implementation
-    // Why: SQLite has no database segment in the path — single file = one database.
     string? IDatabasePath.Database => null;
-    // Why: SQLite has no schema namespace; Schema is always null per the schemaless-dialect rule.
     string? IDatabasePath.Schema => null;
     string IDatabasePath.ObjectName => ObjectName;
-    // Why: dialect is a compile-time fact for this class — SQLite paths always use the SQLite dialect.
     ISqlDialect IDatabasePath.Dialect => SqliteDialect.Instance;
 
     // IDataNodePath implementation — using fully qualified type to resolve ambiguity

@@ -37,8 +37,6 @@ public static class BlazorComponentRendererExtensions
                 continue;
             }
 
-            // Why keep scanning rather than take the first match: All() has no defined order, so
-            // the first hit is not necessarily the most specific one. Precedence is the contract.
             if (best is null || renderer.Precedence < best.Precedence)
             {
                 best = renderer;

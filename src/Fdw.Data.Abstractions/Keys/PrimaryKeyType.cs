@@ -13,9 +13,6 @@ namespace Fdw.Data.Abstractions;
 /// Retained for backward compatibility with existing seed data. The key picker treats
 /// PrimaryKey as equivalent to <see cref="LogicalKeyType"/>. Use Logical for new seed entries.
 /// </remarks>
-// Why: EditorBrowsable(Never) hides from IntelliSense without generating CS0618; [Obsolete] is
-// avoided because the TypeCollection source generator emits new PrimaryKeyType() and would
-// produce a CS0618 error in Release (TreatWarningsAsErrors) from generated code we cannot annotate.
 [EditorBrowsable(EditorBrowsableState.Never)]
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(KeyTypes), "PrimaryKey")]

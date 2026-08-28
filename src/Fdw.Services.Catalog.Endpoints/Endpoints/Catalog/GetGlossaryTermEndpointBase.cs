@@ -67,9 +67,6 @@ public abstract class GetGlossaryTermEndpointBase : Endpoint<GlossaryTermIdReque
             Definition = config.Definition,
             Category = config.Category,
             Owner = config.Owner
-            // Why: RelatedDataSets is not mapped back — GlossaryTermConfiguration.LinkedDataSets
-            // stores GlossaryTermLinkedDataSetConfiguration child objects (not plain strings),
-            // so there is no lossless round-trip without a deeper child query.
         };
     }
 }

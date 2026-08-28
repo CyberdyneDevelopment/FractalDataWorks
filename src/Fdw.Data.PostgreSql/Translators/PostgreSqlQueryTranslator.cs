@@ -92,8 +92,6 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
                     GenericResult<NpgsqlCommand>.Failure(PostgreSqlDataResultCodes.ByName("InvalidContainerPath")));
             }
 
-            // Why: refuse to emit SELECT *. If no projection, schema fields, or joins with field-level
-            // qualifiers are available, fail loud so the call site can be fixed. NO FALLBACKS.
             if (command.Projection?.PropertyNames?.Any() != true
                 && command.Projection?.Fields.Any(f => f.SourceContainer != null) != true
                 && container.Schema.Fields.Count == 0
@@ -103,7 +101,6 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
                     GenericResult<NpgsqlCommand>.Failure(PostgreSqlDataResultCodes.ByName("NoFieldsToProject")));
             }
 
-            // Why: a JOIN read qualifies all columns by table to avoid ambiguity. No JOIN → single-table path.
             var npgsqlCommand = command.Joins is { Count: > 0 }
                 ? BuildJoinedSelectStatement(container, dbPath, command.Joins, command.Filter, command.Projection)
                 : BuildSelectStatement(container, dbPath, command.Filter, command.Projection, command.Ordering, command.Paging);
@@ -166,7 +163,6 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
 
             if (fields.Count > 0)
             {
-                // Why: IsPrimaryKey removed from IField — use GetPrimaryKeyFieldName() to locate the PK field.
                 var pkName = container.GetPrimaryKeyFieldName();
                 orderByField = pkName ?? fields[0].Name;
             }
@@ -197,7 +193,6 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
         IFilterExpression? filter,
         IProjectionExpression? projection)
     {
-        // Why: with a JOIN every column must be table-qualified to avoid ambiguity across joined tables.
         var primaryTable = dbPath.ObjectName;
         var dialect = dbPath.Dialect;
 
@@ -214,7 +209,6 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
                     nameof(joins));
             }
 
-            // Why: PostgreSQL does not support 3-part naming in FROM/JOIN — schema.table only.
             var targetQuoted = string.IsNullOrEmpty(dbPath.Schema)
                 ? dialect.QuoteIdentifier(join.TargetContainerName)
                 : $"{dialect.QuoteIdentifier(dbPath.Schema)}.{dialect.QuoteIdentifier(join.TargetContainerName)}";
@@ -316,8 +310,6 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
         if (container.Schema.GetProjectableFields().Count > 0)
             return $"SELECT {string.Join(", ", container.Schema.GetProjectableFields().Select(f => Col(f.Name)))}";
 
-        // Why: this branch is unreachable — caller validates at least one source of column
-        // names exists before calling BuildSelectStatement. Defensive throw.
         throw new InvalidOperationException(
             $"Cannot build SELECT for container '{container.Name}': no columns available.");
     }

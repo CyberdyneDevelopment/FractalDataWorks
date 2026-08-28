@@ -5,7 +5,6 @@ namespace Fdw.Services.Multitenancy.Clients.Models;
 /// <summary>
 /// Data transfer object for updating an existing tenant.
 /// </summary>
-// Why: pure request DTO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class UpdateTenantRequest
 {

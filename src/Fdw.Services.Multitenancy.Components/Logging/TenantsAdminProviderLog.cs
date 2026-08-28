@@ -18,7 +18,6 @@ public static partial class TenantsAdminProviderLog
     [MessageLogging(EventId = 11001, Level = LogLevel.Information, Message = "TenantsAdminProvider: Loaded {count} tenants")]
     public static partial IGenericMessage LoadedTenants(ILogger logger, int count);
 
-    // Why (FDW-583): a caught exception reporting an operation that could not complete — Error, not Warning.
     [MessageLogging(EventId = 91000, Level = LogLevel.Error, Message = "TenantsAdminProvider: Failed to load tenants")]
     public static partial IGenericMessage LoadTenantsFailed(ILogger logger, Exception exception);
 

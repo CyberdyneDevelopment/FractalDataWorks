@@ -55,11 +55,6 @@ public class McpToolEventTests
         var bus = new InMemoryMcpEventBus();
         var silent = ViewIntents.ByName("Silent");
 
-        // Why subscribe HERE and not inside the Task.Run: Subscribe registers eagerly and returns an
-        // enumerable already wired to a live unbounded channel, so once this line has run the invoke
-        // cannot be missed. Calling it inside the task instead races the publish against the thread
-        // pool scheduling that task — lose the race and nothing is subscribed when the invoke is
-        // published, the responder never fires, and InvokeAndAwait waits on a result that never comes.
         var invokes = bus.Subscribe("mcp/mssql/echo/invoke", TestContext.Current.CancellationToken);
 
         // Simulate the MCP server: when an invoke arrives, publish a result.

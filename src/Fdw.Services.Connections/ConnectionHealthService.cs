@@ -58,9 +58,6 @@ public sealed class ConnectionHealthService : IConnectionHealthService
 
         try
         {
-            // Why: CheckedAt/CheckedBy are DB-defaulted (sysdatetimeoffset()/suser_sname()) per the
-            // audit-column convention — omitting them from the insert record lets those defaults
-            // apply instead of writing app-side zero/empty values over them.
             var insertRecord = new ConnectionHealthCheckInsertRecord
             {
                 ConnectionId = connectionId,
@@ -79,14 +76,10 @@ public sealed class ConnectionHealthService : IConnectionHealthService
 
             if (!insertResult.IsSuccess)
             {
-                // Why: return the gateway result itself — Code/CodeChain/Messages stay intact
-                // (FDW015); the domain context is logged, not re-wrapped into a new failure.
                 ConnectionHealthServiceLog.RecordHealthCheckCommandFailed(_logger, connectionName);
                 return insertResult;
             }
 
-            // Why (FDW-583): branch on the recorded outcome, not on whether the persist threw — the
-            // persist succeeded either way, but an Unhealthy result must print at Error.
             if (isHealthy)
                 ConnectionHealthServiceLog.HealthCheckRecorded(_logger, connectionName, isHealthy, responseTimeMs);
             else
@@ -120,14 +113,10 @@ public sealed class ConnectionHealthService : IConnectionHealthService
 
             if (!result.IsSuccess)
             {
-                // Why: ToNewResult preserves the full error chain across the type change
-                // (FDW015); the domain context is logged, not re-wrapped into a new failure.
                 ConnectionHealthServiceLog.QueryHistoryCommandFailed(_logger, connectionId);
                 return result.ToNewResult<IReadOnlyList<ConnectionHealthCheckRecord>>();
             }
 
-            // Why: ordering/paging happens in memory, mirroring MessageService.GetMessages —
-            // the query builder does not expose server-side ORDER BY/TOP.
             var history = (result.Value ?? [])
                 .OrderByDescending(r => r.CheckedAt)
                 .Take(count)

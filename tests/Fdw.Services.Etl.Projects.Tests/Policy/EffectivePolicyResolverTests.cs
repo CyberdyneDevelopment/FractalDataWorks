@@ -342,7 +342,6 @@ public sealed class EffectivePolicyResolverTests
         // Assert
         effective.MaxParallelPipelines.ShouldBe(1);
         effective.AllowResume.ShouldBeFalse();
-        // Why: fields not set on the step still inherit the parent stage's effective values.
         effective.StepFailurePolicy.ShouldBe(parentEffective.StepFailurePolicy);
         effective.StageFailurePolicy.ShouldBe(parentEffective.StageFailurePolicy);
     }

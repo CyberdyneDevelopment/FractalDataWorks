@@ -29,13 +29,6 @@ public sealed class GenericBuilderSelector : IDataStoreBuilderSelector
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
-        // Why: the UI has no transport registry to resolve a declared default response format from,
-        // and the display DTOs carry no format hint (DataStoreDetailPayload.StoreType is a connection/store
-        // discriminator like "SqlServer", not a serialization format) — FormatTypes.NotFound is passed
-        // as the default so a container without its own explicit Format
-        // (ContainerComposition.ResolveFormat) fails loud at read time rather than guessing Json/Tabular.
-        // A container's own Format (when the API starts exposing it — see the gap block in
-        // ClientsDataStoreConfigurationProvider) still takes priority over this default.
         return GenericResult<IDataStoreBuilder>.Success(new GenericDataStoreBuilder(FormatTypes.NotFound, logger));
     }
 }

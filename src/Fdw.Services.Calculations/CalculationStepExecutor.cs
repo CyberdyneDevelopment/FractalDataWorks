@@ -50,17 +50,12 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
         var orderedResult = OrderSteps(steps);
         if (orderedResult.IsFailure)
         {
-            // Why nothing is recorded here: the failure is with the step list itself, so there is
-            // no step whose derivation could be reported.
             return orderedResult.ToNewResult<object?>();
         }
 
         var ordered = orderedResult.Value!;
         CalculationStepExecutorLog.StepExecutionStarted(_logger, ordered.Count);
 
-        // Why Ordinal-keyed rather than positional: a later step may reference any earlier step's
-        // output alias, so results accumulate as the loop advances and a forward reference simply
-        // never resolves — which is reported, not silently treated as absent.
         var published = new Dictionary<string, object?>(StringComparer.Ordinal);
         var lastAlias = string.Empty;
 
@@ -70,10 +65,6 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
 
             var operandTrace = new List<CalculationOperandTrace>(step.Operands.Count);
 
-            // Why the duplicate-alias check runs BEFORE the step executes: a second step claiming a
-            // live alias would overwrite the value earlier steps already consumed, so the
-            // calculation is already ambiguous — running it first would burn work and, worse, put a
-            // step in the trace that the final value does not actually derive from.
             if (published.ContainsKey(step.OutputAlias))
             {
                 var duplicate = GenericResult<object?>.Failure(
@@ -85,10 +76,6 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
             var stepResult = await ExecuteStep(step, inputs, published, operandTrace, cancellationToken).ConfigureAwait(false);
             if (stepResult.IsFailure)
             {
-                // Why the partial step is recorded rather than dropped: a calculation that stops at
-                // step 7 of 12 has already produced six steps of derivation plus the exact point it
-                // could go no further, and that is the record most worth keeping — the caller holds
-                // the recorder, so it survives this failure return.
                 RecordFailedStep(recorder, step, operandTrace, stepResult);
                 return stepResult.ToNewResult<object?>();
             }
@@ -129,9 +116,6 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
             Operands = operandTrace,
             Completed = false,
 
-            // Why index 0 and why it may be absent: every failure this executor raises carries
-            // exactly one MessageLogging message, but an operation is free to fail with a result
-            // code instead, which carries none. The returned result remains the authority on why.
             Failure = failure.Messages.Count > 0 ? failure.Messages[0] : null,
         });
 
@@ -149,8 +133,6 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
         var typed = new List<CalculationStepConfiguration>(steps.Count);
         foreach (var element in steps)
         {
-            // Why fail instead of skip: a step the executor cannot interpret is a hole in the
-            // calculation, and a result computed from the remaining steps would be wrong silently.
             if (element is not CalculationStepConfiguration step)
             {
                 return GenericResult<List<CalculationStepConfiguration>>.Failure(
@@ -198,9 +180,6 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
 
         var parameters = parametersResult.Value!;
 
-        // Why check the operation's own declaration rather than a fixed arity: each operation
-        // publishes which parameters it requires, so an under-bound step is caught before the
-        // operation has to defend itself against a missing key.
         foreach (var definition in operation.Parameters)
         {
             if (definition.IsRequired && !parameters.ContainsKey(definition.Name))
@@ -227,8 +206,6 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
 
         foreach (var operand in step.Operands)
         {
-            // Why the operand name is mandatory: it is the key the operation reads its value by,
-            // so an unnamed operand cannot reach the operation at all.
             if (string.IsNullOrEmpty(operand.Name))
             {
                 return GenericResult<Dictionary<string, object?>>.Failure(
@@ -243,8 +220,6 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
 
             parameters[operand.Name] = valueResult.Value;
 
-            // Why record at the point of binding: this is the only moment both the configured
-            // source and the value it produced are in hand together.
             operandTrace.Add(new CalculationOperandTrace
             {
                 OperandName = operand.Name,
@@ -279,9 +254,6 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
 
         if (string.Equals(operand.OperandType, OperandTypeLiteral, StringComparison.Ordinal))
         {
-            // Why the raw string: the operation declares the parameter's Kind and performs its own
-            // conversion, failing loud on a value it cannot read. Converting here would either
-            // duplicate that knowledge or coerce a value the operation never asked for.
             return string.IsNullOrEmpty(operand.LiteralValue)
                 ? GenericResult<object?>.Failure(
                     CalculationStepExecutorLog.LiteralValueMissing(_logger, operand.Name, step.Name))
@@ -316,8 +288,6 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
         CalculationStepConfiguration step,
         IReadOnlyDictionary<string, object?> published)
     {
-        // Why this also covers forward references: only earlier steps have published, so a
-        // reference to a later (or non-existent) alias lands here and is reported.
         if (operand.StepAlias is not null && published.TryGetValue(operand.StepAlias, out var value))
         {
             return ExtractField(value, operand, step);
@@ -377,8 +347,6 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
             return GenericResult<object?>.Success(mutableField);
         }
 
-        // Why fail rather than hand back the whole value: the configuration asked for one field,
-        // and passing the container instead would feed the operation something it never requested.
         return GenericResult<object?>.Failure(
             CalculationStepExecutorLog.FieldNotAddressable(
                 _logger, operand.Name, step.Name, operand.FieldName!, value?.GetType().Name ?? "null"));

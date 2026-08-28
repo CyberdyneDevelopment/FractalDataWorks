@@ -26,10 +26,6 @@ public sealed class ChainedExternalIdentityProvisionerTests
     private const string Provider = "test-idp";
     private const string ExternalSubject = "ext-subject-1";
 
-    // Why: a standalone ResultCode reusing the canonical catalog NotFound number (30000) — the exact
-    // contract IExternalIdentityProvisioner's NOT-FOUND CONTRACT documents. Any package's own NotFound
-    // code (UserNotFoundCode, WorkflowNotFoundCode, ...) works identically here since the chain compares
-    // on the numeric Id, never the prefixed Code string.
     private sealed class TestNotFoundResultCode : ResultCodeBase
     {
         public TestNotFoundResultCode()
@@ -79,7 +75,6 @@ public sealed class ChainedExternalIdentityProvisionerTests
         var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(MockBehavior.Strict);
         providerMock.Setup(p => p.Get("First", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IExternalIdentityProvisioner>.Success(firstMock.Object));
-        // Why: Strict with no "Second" setup — a call to Get("Second") throws, proving the match short-circuited.
 
         var sut = BuildSut(typed, providerMock);
 
@@ -151,8 +146,6 @@ public sealed class ChainedExternalIdentityProvisionerTests
     [Trait("Category", "Security")]
     public async Task FullFallThroughReturnsNotFound()
     {
-        // Why: zero steps is the current shipped state (no leaf provisioner in this PR) — the chain
-        // must resolve to nothing, byte-identical to today's default-OFF.
         var typed = BuildTyped();
         var providerMock = new Mock<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(MockBehavior.Strict);
 
@@ -167,7 +160,6 @@ public sealed class ChainedExternalIdentityProvisionerTests
     [Trait("Priority", "P1")]
     public async Task StepsRunInExecutionOrderEvenWhenSuppliedUnordered()
     {
-        // Why: steps are added out of ExecutionOrder (2 then 1) — the chain must still walk 1 before 2.
         var typed = BuildTyped(("Second", 2), ("First", 1));
 
         var callOrder = new List<string>();
@@ -225,8 +217,6 @@ public sealed class ChainedExternalIdentityProvisionerTests
         var typed = BuildTyped(("NestedChain", 1), ("Second", 2));
         var userId = Guid.NewGuid();
 
-        // Why: Strict + ServiceType "Chained" + NO Provision setup — if the sut ever called Provision
-        // on this instance (i.e. recursed), Moq would throw, failing the test.
         var nestedMock = BuildLeafMock(serviceType: "Chained");
 
         var secondMock = BuildLeafMock();

@@ -35,10 +35,6 @@ public abstract class ApiClientTypeBase<TClient>
     protected ApiClientTypeBase(string name, string displayName)
         : base(name, "ApiClients", displayName, $"{displayName} HTTP client")
     {
-        // Why this constructor contributes nothing to a phase: a phase holds one body and the option
-        // that declares it owns it. BearerTokenHandler is needed by every client option and differs for
-        // none, so it belongs to the domain - ApiClientTypes.Register registers it once, before the
-        // options are collected.
 
     }
 

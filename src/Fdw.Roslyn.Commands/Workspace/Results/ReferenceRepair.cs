@@ -5,7 +5,6 @@ namespace Fdw.Roslyn.Commands.Workspace.Results;
 /// <summary>
 /// One reference error the ledger explained, and the reference that fixes it.
 /// </summary>
-// Why: pure data holder, auto-properties only, no logic
 [ExcludeFromCodeCoverage]
 public sealed class ReferenceRepair
 {

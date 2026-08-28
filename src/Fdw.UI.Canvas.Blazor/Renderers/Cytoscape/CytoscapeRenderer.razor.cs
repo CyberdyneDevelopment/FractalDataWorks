@@ -49,7 +49,6 @@ public sealed partial class CytoscapeRenderer : ComponentBase, IAsyncDisposable
     /// <summary>
     /// Gets or sets the optional logger. Falls back to <see cref="NullLogger{T}.Instance"/> when not supplied.
     /// </summary>
-    // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions.
     [Parameter]
     public ILogger? Logger { get; set; }
 
@@ -106,7 +105,6 @@ public sealed partial class CytoscapeRenderer : ComponentBase, IAsyncDisposable
         }
         catch (TaskCanceledException ex)
         {
-            // Why: cancellation during render (e.g. component disposed mid-render) — observe at Trace, no state change.
             CytoscapeRendererLog.TeardownInterrupted(ResolvedLogger, ex);
         }
     }
@@ -151,13 +149,9 @@ public sealed partial class CytoscapeRenderer : ComponentBase, IAsyncDisposable
 
     private string SelectLayout()
     {
-        // Why: honour the model's layout hint when provided rather than overriding with a positional guess.
         if (Model.LayoutHint is not null)
             return Model.LayoutHint;
 
-        // Why: use "preset" when at least one node has a non-origin position so Cytoscape respects
-        // the domain-assigned coordinates. Fall back to "breadthfirst" when all positions are zero
-        // (no explicit layout has been set) so Cytoscape auto-arranges the nodes sensibly.
         return Model.Nodes.Any(n => n.X != 0.0 || n.Y != 0.0) ? "preset" : "breadthfirst";
     }
 
@@ -177,12 +171,10 @@ public sealed partial class CytoscapeRenderer : ComponentBase, IAsyncDisposable
             }
             catch (JSDisconnectedException ex)
             {
-                // Why: the JS runtime has already disconnected (e.g. page unload) — dispose is best-effort, observe at Trace.
                 CytoscapeRendererLog.TeardownInterrupted(ResolvedLogger, ex);
             }
             catch (TaskCanceledException ex)
             {
-                // Why: cancellation during dispose — observe at Trace.
                 CytoscapeRendererLog.TeardownInterrupted(ResolvedLogger, ex);
             }
 

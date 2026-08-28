@@ -6,7 +6,6 @@ using System;
 /// Represents a cached HTTP response with metadata.
 /// </summary>
 /// <typeparam name="T">The type of the cached data.</typeparam>
-// Why: pure response DTO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class CachedResponse<T>
 {

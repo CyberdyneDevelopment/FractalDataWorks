@@ -214,7 +214,6 @@ public sealed class ScheduleNewPageTests : IDisposable
         cut.FindAll("select")
             .First(s => s.QuerySelectorAll("option").Any(o => o.GetAttribute("value") == "nightly-load"))
             .Change("nightly-load");
-        // Why: default interval value is 5 with unit "Minutes" -> 300 seconds.
         cut.FindAll("select")
             .First(s => s.QuerySelectorAll("option").Any(o => o.GetAttribute("value") == "Interval"))
             .Change("Interval");

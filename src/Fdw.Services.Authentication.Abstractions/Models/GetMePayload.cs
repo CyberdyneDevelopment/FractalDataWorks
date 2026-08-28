@@ -5,8 +5,6 @@ namespace Fdw.Services.Authentication.Clients.Models;
 /// <summary>
 /// Client-side response model for the current authenticated user's information.
 /// </summary>
-// Why not sealed: GetMeEndpointBase<TResponse> constrains TResponse to this type so a host can
-// return an extended response. Sealing it would close that extension point.
 public class GetMePayload
 {
     /// <summary>

@@ -63,9 +63,6 @@ public abstract class GetExecutionEndpointBase : Endpoint<ExecutionIdRequest, Ex
         {
             var errorMessage = result.CurrentMessage ?? "Unknown error";
 
-            // Why: tracker.GetItem returns IsSuccess=false with message 'not found' for missing
-            // executions. Map that to a structured 404 instead of 500 — the resource doesn't
-            // exist, that's not a server error.
             if (errorMessage.Contains("not found", System.StringComparison.OrdinalIgnoreCase))
             {
                 OnExecutionNotFound(req.Id);

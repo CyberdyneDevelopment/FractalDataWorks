@@ -12,7 +12,6 @@ namespace Fdw.Services.Pipelines.Components.Tests.Canvas;
 public sealed class PipelineCanvasEditContextTests
 {
     private static PipelineCanvasModel BuildEditableModel() =>
-        // Why: EditMode causes the model constructor to create a PipelineCanvasEditContext automatically.
         new("m1", "Test", PipelineCanvasTestFixtures.EditMode);
 
     // ── AddNode ───────────────────────────────────────────────────────────────

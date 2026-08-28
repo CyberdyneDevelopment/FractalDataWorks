@@ -18,9 +18,6 @@ public class RowWriterOptions
     /// When empty, text writers that require a fixed column order (delimited, fixed-width) must
     /// fail loud rather than guess an order from the first row.
     /// </summary>
-    // Why: column order is a real serializer input — a delimited file with a header MUST emit
-    // columns in a stable order. The order is supplied by the caller from the container schema,
-    // never inferred. IList<string> (mutable) so option binders can populate it; backed by List<string>.
     public IList<string> Columns { get; set; } = new List<string>();
 
     /// <summary>

@@ -82,7 +82,6 @@ public static partial class SecretManagerProviderLog
         Message = "Failed to load secret manager '{name}'")]
     public static partial IGenericMessage LoadSecretManagerFailed(ILogger logger, string name);
 
-    // Why (FDW-583): pre-action announcement, not a completed business milestone — noise at Info.
     /// <summary>
     /// Logs that a secret manager is being created.
     /// </summary>
@@ -119,7 +118,6 @@ public static partial class SecretManagerProviderLog
         Message = "Failed to create secret manager '{name}'")]
     public static partial IGenericMessage CreateSecretManagerFailed(ILogger logger, string name);
 
-    // Why (FDW-583): pre-action announcement, not a completed business milestone — noise at Info.
     /// <summary>
     /// Logs that a secret manager is being updated.
     /// </summary>
@@ -156,7 +154,6 @@ public static partial class SecretManagerProviderLog
         Message = "Failed to update secret manager '{name}'")]
     public static partial IGenericMessage UpdateSecretManagerFailed(ILogger logger, string name);
 
-    // Why (FDW-583): pre-action announcement, not a completed business milestone — noise at Info.
     /// <summary>
     /// Logs that a secret manager is being deleted.
     /// </summary>

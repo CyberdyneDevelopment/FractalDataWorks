@@ -5,7 +5,6 @@ namespace Fdw.Roslyn.Commands.Workspace.Helpers;
 /// <summary>
 /// The outcome of editing a project or props file.
 /// </summary>
-// Why: pure data holder with three factories, no logic
 [ExcludeFromCodeCoverage]
 public sealed class ProjectFileEditResult
 {

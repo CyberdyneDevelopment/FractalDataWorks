@@ -95,8 +95,6 @@ public static partial class CommandHandlerLog
     /// Both produce a success result and the same "Wrote 0 file(s)" summary, so the log line is the only
     /// thing that tells them apart.
     /// </remarks>
-    // Why Debug, not Trace: its remarks below make this the only record distinguishing a correct no-op
-    // from the silent data loss its Critical twin reports. Trace never prints, which would erase that.
     [MessageLogging(EventId = 12506, Level = LogLevel.Debug,
         Message = "No pending changes — nothing to write")]
     public static partial IGenericMessage NothingPendingToWrite(ILogger logger);

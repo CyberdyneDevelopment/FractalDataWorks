@@ -17,7 +17,6 @@ namespace Fdw.Services.Etl.Projects.Abstractions;
 /// The effective resiliency policy identifier, or null if no policy is configured at any level.
 /// When non-null, the orchestrator passes this to <c>IResiliencyExecutor.Execute</c> to wrap stage execution.
 /// </param>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record ExecutionPolicySnapshot(
     string StepFailurePolicy,

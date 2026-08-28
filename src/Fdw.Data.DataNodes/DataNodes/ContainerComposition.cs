@@ -39,14 +39,9 @@ public static class ContainerComposition
     /// </param>
     public static IFormatType ResolveFormat(DataContainerConfiguration cfg, IFormatType defaultResponseFormat)
     {
-        // Why: an explicit, invalid Format discriminator resolves to NotFound (observable as a failed
-        // read), not a guessed substitute — the no-fallback rule.
         if (!string.IsNullOrWhiteSpace(cfg.Format))
             return FormatTypes.ByName(cfg.Format);
 
-        // Why: an unset Format inherits the transport's declared default, supplied by the transport's
-        // SupplyBuilder at builder construction. A missing default arrives here as FormatTypes.NotFound
-        // and fails loud downstream — never a silent substitute.
         return defaultResponseFormat;
     }
 
@@ -59,8 +54,6 @@ public static class ContainerComposition
     {
         var meta = new Dictionary<string, object>(StringComparer.Ordinal);
 
-        // Why: each unset option is OMITTED (not defaulted) so the reader uses its own defaults; never
-        // an inline fallback value.
         if (!string.IsNullOrWhiteSpace(cfg.RecordSelector))
             meta["RecordSelector"] = cfg.RecordSelector!;
         if (cfg.FlattenNestedObjects.HasValue)

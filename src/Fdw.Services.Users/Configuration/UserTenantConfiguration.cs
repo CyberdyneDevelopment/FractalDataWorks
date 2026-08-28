@@ -15,8 +15,6 @@ namespace Fdw.Services.Users.Configuration;
 public partial class UserTenantConfiguration : IGenericConfiguration
 {
     /// <inheritdoc />
-    // Why: UserTenants has no business Name; synthesise one from UserId+TenantId for the IGenericConfiguration
-    // contract. The provider does not look up by Name — only by UserId (domain query).
     public Guid Id { get; set; }
 
     /// <inheritdoc />

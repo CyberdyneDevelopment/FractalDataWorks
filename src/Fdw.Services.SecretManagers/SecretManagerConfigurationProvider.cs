@@ -38,13 +38,7 @@ public class SecretManagerConfigurationProvider
       ISecretManagerConfigurationProvider
 {
 
-    // Why: tracks the concrete typed-body CLR type for each discriminator. Endpoints
-    // deserialize the incoming JSON Configuration body into the correct strongly-typed
-    // object before save; the header provider also uses this for cascade-save when the
-    // caller didn't supply Configuration on a Create request.
 
-    // Why: captured parameterless factory per discriminator — reflection-free replacement for
-    // Activator.CreateInstance(typedType) when building a default typed body on Create.
 
     private readonly ILogger<SecretManagerConfigurationProvider> _logger;
 

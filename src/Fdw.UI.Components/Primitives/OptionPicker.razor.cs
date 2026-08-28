@@ -112,7 +112,6 @@ public partial class OptionPicker<TTypeOption>
     /// <summary>
     /// Gets or sets the optional logger. Falls back to <see cref="NullLogger{T}.Instance"/> when not supplied.
     /// </summary>
-    // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions.
     [Parameter] public ILogger? Logger { get; set; }
 
     // ── Parameters: search + grouping (new, optional, backward-compatible) ────────
@@ -149,18 +148,10 @@ public partial class OptionPicker<TTypeOption>
     private bool _isLoading;
     private string? _errorMessage;
     private bool _initialized;
-    // Why: Track the last StaticOptions reference so we only rebuild _options when the source
-    // collection reference changes. Rebuilding on every OnParametersSet call creates a new list
-    // object each render cycle; the Blazor interactive circuit sees the @foreach iterate a
-    // different list reference mid-batch and throws "error applying batch 2". Stable reference
-    // comparison avoids the diff instability without losing reactivity when the caller swaps sources.
     private IEnumerable<TTypeOption>? _lastStaticOptions;
     private string _searchText = string.Empty;
     private readonly HashSet<string> _collapsedGroups = new(StringComparer.OrdinalIgnoreCase);
 
-    // Why: cache filtered results so the template accesses the same list object throughout a
-    // single render pass, rather than re-running LINQ on each @if / @foreach reference.
-    // Rebuilt whenever _searchText or _options changes (tracked via SetSearchText / LoadFromSource).
     private IReadOnlyList<TTypeOption> _filteredOptions = [];
     private IReadOnlyDictionary<string, List<TTypeOption>> _filteredGroups =
         new Dictionary<string, List<TTypeOption>>(StringComparer.OrdinalIgnoreCase);
@@ -172,10 +163,6 @@ public partial class OptionPicker<TTypeOption>
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
-        // Why: StaticOptions are cheap synchronous enumerations from TypeCollection.All().
-        // Assign directly without an async round-trip. Only rebuild _options when the reference
-        // changes — rebuilding every cycle caused "error applying batch 2" on interactive circuits
-        // because the @foreach was iterating a fresh list reference on each parameter pass.
         if (StaticOptions is not null && !ReferenceEquals(StaticOptions, _lastStaticOptions))
         {
             _lastStaticOptions = StaticOptions;
@@ -211,7 +198,6 @@ public partial class OptionPicker<TTypeOption>
         }
         catch (OperationCanceledException ex)
         {
-            // Why: cancellation is expected when the component is disposed; ex is named to satisfy FDW022.
             _ = ex;
             return;
         }
@@ -228,9 +214,6 @@ public partial class OptionPicker<TTypeOption>
         }
     }
 
-    // Why: called from both OnParametersSet (StaticOptions change) and LoadFromSource.
-    // Keeps _filteredOptions and _filteredGroups in sync with the current _options + _searchText
-    // without allocating on every render-pass (the template references each exactly once).
     private void RebuildFilter()
     {
         _filteredOptions = string.IsNullOrEmpty(_searchText)
@@ -241,8 +224,6 @@ public partial class OptionPicker<TTypeOption>
 
         if (GroupSelector is not null)
         {
-            // Why: capture GroupSelector locally to avoid capturing 'this' in the lambda
-            // (Roslyn CS8636 can fire for captured generic type parameters in certain analyzers).
             var selector = GroupSelector;
             _filteredGroups = _filteredOptions
                 .GroupBy(o => { var g = selector(o); return string.IsNullOrEmpty(g) ? "Other" : g; }, StringComparer.OrdinalIgnoreCase)
@@ -258,15 +239,12 @@ public partial class OptionPicker<TTypeOption>
         }
     }
 
-    // Why: @bind:set delivers the select's chosen value as a string (not ChangeEventArgs). Normalise the
-    // empty placeholder to null and raise ValueChanged so the parent two-way binding stays in sync.
     private Task HandleChange(string? newValue)
     {
         Value = string.IsNullOrEmpty(newValue) ? null : newValue;
         return ValueChanged.InvokeAsync(Value);
     }
 
-    // Why: grouped view uses button @onclick instead of <select> @bind:set; same normalisation applies.
     private Task HandleGroupedSelect(string optName)
     {
         Value = string.IsNullOrEmpty(optName) ? null : optName;
@@ -279,8 +257,6 @@ public partial class OptionPicker<TTypeOption>
             _collapsedGroups.Add(groupKey);
     }
 
-    // Why: explicit @oninput handler keeps RebuildFilter as the single rebuild site and makes
-    // the trigger visible in the code-behind rather than hidden inside a @bind expression.
     private void HandleSearchInput(ChangeEventArgs e)
     {
         var newText = e.Value?.ToString() ?? string.Empty;

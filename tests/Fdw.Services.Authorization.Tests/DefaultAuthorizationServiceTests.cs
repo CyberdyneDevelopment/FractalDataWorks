@@ -19,18 +19,12 @@ namespace Fdw.Services.Authorization.Tests;
 /// <summary>
 /// Tests for <see cref="DefaultAuthorizationService"/> claim-based enforcement.
 /// </summary>
-// Why: Enforcement evaluates against the baked "perm" claims carried by the token
-// (IAuthenticationContext.Permissions). The 3-tier union is resolved once at token-issue time
-// by EffectivePermissionResolver, not re-queried per request, so these tests assert grant/deny
-// purely from the permission set on the context.
 public sealed class DefaultAuthorizationServiceTests
 {
     private readonly DefaultAuthorizationService _sut;
 
     public DefaultAuthorizationServiceTests()
     {
-        // Why: the providers/tenant/org dependencies remain on the ctor for DI-shape stability but
-        // are unused by enforcement. Loose mocks satisfy the null checks without behavior setup.
         _sut = new DefaultAuthorizationService(
             CreateProviderMock<RoleConfiguration, RoleConfigurationCommand>(),
             CreateProviderMock<PermissionConfiguration, PermissionConfigurationCommand>(),
@@ -384,9 +378,6 @@ public sealed class DefaultAuthorizationServiceTests
         return mock.Object;
     }
 
-    // Why: ImplementationConfigurationProviderBase<T, TCommand> has 10 constructor params (params 7-10 are optional).
-    // All must be passed explicitly to Moq — Castle DynamicProxy uses reflection-based instantiation
-    // and cannot resolve C# optional parameter defaults.
     private static ImplementationConfigurationProviderBase<T, TCommand> CreateProviderMock<T, TCommand>()
         where T : class, Fdw.Configuration.IGenericConfiguration
         where TCommand : Fdw.Services.Configuration.ConfigurationCommandBase<T>
@@ -401,11 +392,6 @@ public sealed class DefaultAuthorizationServiceTests
             .Object;
     }
 
-    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
-    // connection it was told its rows live on, so the fake has to answer to that name to be found.
-    // Why a double rather than the real provider: these tests exercise what a configuration provider
-    // does with its gateway, not which gateway it selects, so the double answers for whatever
-    // connection is asked. Selection itself is covered where the real provider is under test.
     private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 

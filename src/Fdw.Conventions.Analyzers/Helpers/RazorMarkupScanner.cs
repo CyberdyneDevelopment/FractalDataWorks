@@ -24,8 +24,6 @@ namespace Fdw.Conventions.Analyzers.Helpers;
 /// </remarks>
 internal sealed class RazorMarkupScanner
 {
-    // Why: regions are appended in ascending, non-overlapping document order by the constructor's
-    // single forward pass, which is what lets IsMarkup stop early instead of scanning them all.
     private readonly List<(int Start, int End)> nonMarkupRegions = [];
 
     /// <summary>
@@ -141,8 +139,6 @@ internal sealed class RazorMarkupScanner
         return afterKeyword < source.Length && source[afterKeyword] == '{';
     }
 
-    // Why: brace matching must ignore braces inside C# string/char literals and comments, otherwise a
-    // literal "{" inside an @code method ends the block early and the rest of the file is misread.
     private static int FindMatchingBrace(string source, int openBrace)
     {
         var depth = 0;

@@ -43,9 +43,6 @@ public sealed class MsSqlSessionContextCachePartitionTests
     [Trait("Category", "Security")]
     public void DistinguishesTwoUsersInTheSameTenant()
     {
-        // Why this matters even with a tenant discriminator: Modes 2 and 3 both gate through
-        // tenant.TenantOrgAccess joined on a.UserId, so two users in ONE tenant with different org
-        // grants legitimately see different rows. A tenant-only partition collapses them.
         PartitionFor(Principal(UserA, TenantA))
             .ShouldNotBe(PartitionFor(Principal(UserB, TenantA)));
     }
@@ -167,9 +164,6 @@ public sealed class MsSqlSessionContextCachePartitionTests
         bool canReadSecrets = false)
         => new StubAuthenticationContext(userId.ToString(), tenantId, isCrossTenant, canReadSecrets);
 
-    // Why a stub rather than WorkAuthenticationContext: that type hard-codes Permissions to empty and
-    // IsCrossTenant to false, so it cannot express the CanReadSecrets or CrossTenant axes at all —
-    // exactly the two a tenant-only discriminator already misses.
     private sealed class StubAuthenticationContext(
         string userId,
         Guid? activeTenantId,

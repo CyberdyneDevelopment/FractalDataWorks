@@ -101,10 +101,6 @@ public sealed class MethodTooLongAnalyzer : DiagnosticAnalyzer
                 methodName = local.Identifier.Text;
                 location = local.Identifier.GetLocation();
                 break;
-            // Why a lambda is measured as its own unit: CountExecutableLines excludes nested function
-            // bodies from the declaring method's count, so without a case here a phase func would escape
-            // the threshold entirely. Its body is real code someone has to read - it is simply not the
-            // declaring method's code.
             case AnonymousFunctionExpressionSyntax lambda:
                 body = lambda.Block;
                 methodName = DescribeLambda(lambda);
@@ -114,12 +110,6 @@ public sealed class MethodTooLongAnalyzer : DiagnosticAnalyzer
                 return;
         }
 
-        // Why an authoring class is exempt: a [TypeOption] / [TypeCollection] class exists to declare
-        // phase funcs, and the body of a phase func is a registration manifest, not a procedure. Its
-        // length is the count of things the domain contributes, so a threshold on it does not measure
-        // complexity - it measures how much the domain has, and the only way to satisfy it is to move
-        // registrations somewhere they do not belong. FDW049 constrains these classes on the axis that
-        // does matter: that they set their own phase func rather than composing onto someone else's.
         if ((node is AnonymousFunctionExpressionSyntax || node is LocalFunctionStatementSyntax)
             && IsPhaseAuthoringType(node, context.SemanticModel))
             return;
@@ -187,14 +177,6 @@ public sealed class MethodTooLongAnalyzer : DiagnosticAnalyzer
         var openBraceEnd = body.OpenBraceToken.Span.End;
         var closeBraceStart = body.CloseBraceToken.SpanStart;
 
-        // Why nested function bodies do not count against their declaring method: a lambda or local
-        // function is a separate body with its own caller and its own lifetime, so reading the
-        // declaring method does not mean reading it. Counting the two together made this analyzer
-        // hostile to the framework's own primary authoring pattern - a ServiceTypeOption constructor
-        // exists to assign phase funcs, so every option that registers anything real was measured as
-        // one enormous method and had to shed cohesive registration code into one-call-site private
-        // statics purely to get under the threshold. Each nested body is analyzed as its own unit, so
-        // nothing escapes the threshold; it is measured as the unit it actually is.
         var nested = new List<TextSpan>();
         foreach (var descendant in body.DescendantNodes())
         {

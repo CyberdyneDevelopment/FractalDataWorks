@@ -27,7 +27,6 @@ public sealed class XmlRowWriterType : RecordWriterTypeBase
     public override string Format => "Xml";
 
     /// <inheritdoc />
-    // Why: XML is an ITEM writer — XmlStreamRowWriter implements IRecordWriter<DataRecord> (not IRowWriter).
     public override IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions? options)
         => new XmlStreamRowWriter(target, options as XmlRowWriterOptions);
 }

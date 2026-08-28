@@ -54,11 +54,6 @@ public abstract class AuthenticationServiceTypeBase
                defaultPathName: "auth",
                defaultContainerName: "Authentication")
     {
-        // Why this constructor contributes nothing to a phase: a phase holds one body and the option
-        // that declares it owns it. Reading the declared entries and turning each into a scheme is the
-        // same procedure for every mechanism - only RegisterScheme differs, and that is a public abstract
-        // here - so it belongs to the domain. AuthenticationServiceTypes.Register does it once, over the
-        // option set, calling each mechanism's RegisterScheme.
     }
 
     /// <inheritdoc />

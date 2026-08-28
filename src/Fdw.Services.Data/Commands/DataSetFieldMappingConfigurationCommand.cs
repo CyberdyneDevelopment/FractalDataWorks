@@ -15,7 +15,6 @@ namespace Fdw.Services.Data.Commands;
 /// logical DataSetSourceId, so a caller never supplies a row key — which is the reason writing
 /// these rows directly could not work.
 /// </remarks>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(ConfigurationCommands), "DataSetFieldMapping")]
 public sealed class DataSetFieldMappingConfigurationCommand : ConfigurationCommandBase<DataSetFieldMappingConfiguration>

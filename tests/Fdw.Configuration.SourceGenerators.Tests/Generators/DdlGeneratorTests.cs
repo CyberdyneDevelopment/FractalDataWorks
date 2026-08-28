@@ -32,8 +32,6 @@ namespace Test
         var ddl = CompilationHelper.GetGeneratedOutput(compilation, "TestConfiguration.Ddl.g.cs");
         ddl.ShouldNotBeNull();
         ddl.ShouldContain("Name = \"RowId\"");
-        // Why: IsPrimaryKey removed from ColumnDefinition — RowId is the surrogate PK by FDW convention,
-        // not via a bool property. Assert that DefaultValue is set instead.
         ddl.ShouldNotContain("IsPrimaryKey");
         ddl.ShouldContain("DefaultValue = \"NEWID()\"");
     }
@@ -63,8 +61,6 @@ namespace Test
         ddl.ShouldNotBeNull();
         ddl.ShouldContain("Name = \"Id\"");
         ddl.ShouldContain("SqlType = \"uniqueidentifier\"");
-        // Why: IsPrimaryKey removed from ColumnDefinition — RowId is the surrogate PK by FDW convention.
-        // Id is the logical identity column; assert it does not have a DefaultValue (unlike RowId).
         ddl.ShouldNotContain("IsPrimaryKey");
     }
 
@@ -101,9 +97,6 @@ namespace Test
     [Trait("Category", "SourceGen")]
     public void GenerateDdlAllTablesAreRootTables()
     {
-        // Why: ParentTableName was removed from [ManagedConfiguration] in FDW-395 Phase 6.
-        // All configuration types are flat root tables — there are no child tables from the attribute.
-        // IDataNode owns parent-child structure. All generated DDL includes Id and Name columns.
         var source = @"
 
 namespace Test
@@ -262,9 +255,6 @@ namespace Test
     public void GenerateDdlUsesNewKeywordWhenParentHasManagedConfiguration()
     {
         // Arrange
-        // Why: ParentTableName removed from [ManagedConfiguration]. ParentHasManagedConfiguration
-        // is now detected via Roslyn base class analysis. Child inherits from a class with [ManagedConfiguration]
-        // so the generated DDL should use 'new' to avoid CS0108.
         var source = @"
 
 namespace Test
@@ -359,9 +349,6 @@ namespace Test
     [Trait("Category", "SourceGen")]
     public void GenerateDdlHandlesExplicitTableName()
     {
-        // Why: TableName was removed from [ManagedConfiguration] in FDW-395 Phase 6.
-        // Table name is now derived from the class name (strips "Configuration" suffix).
-        // "TestConfiguration" → table name "Test".
         var source = @"
 
 namespace Test
@@ -413,9 +400,6 @@ namespace Test
     [Trait("Category", "SourceGen")]
     public void GenerateDdlUsesSpecifiedSchema()
     {
-        // Why: Schema was removed from [ManagedConfiguration] in FDW-395 Phase 6.
-        // IDataNode owns schema. The generated DDL no longer emits Schema = "..." in DdlDefinition.
-        // DdlDefinition.Schema defaults to "cfg" (defined in the DdlDefinition class).
         var source = @"
 
 namespace Test
@@ -442,8 +426,6 @@ namespace Test
     [Trait("Category", "SourceGen")]
     public void GenerateDdlUsesDefaultSchemaWhenNotSpecified()
     {
-        // Why: Schema was removed from [ManagedConfiguration] in FDW-395 Phase 6.
-        // IDataNode owns schema. DdlDefinition.Schema always defaults to "cfg" without generator emitting it.
         var source = @"
 
 namespace Test
@@ -552,9 +534,6 @@ namespace Test
     [Trait("Category", "SourceGen")]
     public void GenerateDdlSkipsNameColumnForChildTables()
     {
-        // Why: ParentTableName was removed from [ManagedConfiguration] in FDW-395 Phase 6.
-        // All tables are now flat root tables — all generated DDL includes a Name column.
-        // IDataNode owns the parent-child structure; the DDL generator no longer handles it.
         var source = @"
 
 namespace Test
@@ -583,7 +562,6 @@ namespace Test
         childDdl.ShouldNotBeNull();
 
         parentDdl.ShouldContain("Name = \"Name\"");
-        // Why: Child is now a flat root table (no ParentTableName), so it also gets a Name column.
         childDdl.ShouldContain("Name = \"Name\"");
     }
 }

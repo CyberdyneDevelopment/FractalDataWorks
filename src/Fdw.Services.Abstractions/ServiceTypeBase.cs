@@ -56,17 +56,12 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// share a name without colliding in that lookup first.
     /// </para>
     /// </remarks>
-    // Why MD5: deterministic hashing for a stable id, not security.
 #pragma warning disable CA5351, SCS0006, CA1850
     protected static Guid DeriveId(string name) => OptionId.Derive(name);
 
     private Guid? _id;
 
     /// <inheritdoc />
-    // Why the fully-qualified type name and not the option's name: Id is global across every
-    // collection, and a bare name is not. Fifteen collections each declare an option named "Default",
-    // and MD5 over the name alone hands all fifteen the same Guid; "MsSql", "Sqlite", "Http", "Sql" and
-    // "OpenIddict" collide across two apiece. A type's FQN is unique by construction, so the id is too.
     public override Guid Id => _id ??= OptionId.Derive(GetType().FullName ?? Name);
 #pragma warning restore CA5351, SCS0006, CA1850
 
@@ -107,10 +102,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     //
     // Defaults are set HERE, in the declaration, so a func is never null and the invoker never guards.
     //
-    // Why funcs rather than virtual methods to override: there is exactly one body per option, and it
-    // can be replaced at runtime by whoever composes the app without subclassing. The shape this
-    // replaced needed a virtual, an override, a nullable override field and an Invoke wrapper that
-    // checked the field before falling through to virtual dispatch — four moving parts for one body.
 
     private PhaseState _configure;
     private PhaseState _register;
@@ -247,8 +238,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return;
         }
 
-        // Why setting resets the count: this is the service type stating what it contributes, so whatever
-        // was installed before is gone and the body being set is the phase's first and only segment.
         _registrationSegments = 1;
         var origin = Origin(filePath, lineNumber, memberName);
         RegistrationMethod = (builder, loggerFactory) =>
@@ -358,8 +347,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return;
         }
 
-        // Why setting resets the count: this is the service type stating what it contributes, so whatever
-        // was installed before is gone and the body being set is the phase's first and only segment.
         _initializationSegments = 1;
         var origin = Origin(filePath, lineNumber, memberName);
         InitializationMethod = (host, loggerFactory) =>
@@ -444,11 +431,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
 
 
     // ── Segment bookkeeping ─────────────────────────────────────────────────────────────────────
-    // Why a phase counts its segments: a phase assembled from more than one contributor reports "Register
-    // failed" without saying whose body failed, and the funcs are closures, so a stack trace names the
-    // lambda and not the place it was written. The count and the run position give the failure a position
-    // in the order, and the origin captured at the call site gives it the file and line of the Append or
-    // Prepend that put it there — the one point that still knows.
 
     private int _registrationSegments = 1;
     private int _initializationSegments = 1;
@@ -496,15 +478,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     }
 
     // ── The bodies themselves ───────────────────────────────────────────────────────────────────
-    // Why they sit below the setters: the setters are the surface a service type writes against, and
-    // these are where what it wrote ends up. Reading the file in that order matches the order the
-    // question is usually asked in - what do I call, and then what does it hold.
-    //
-    // Each defaults to a body that does nothing but succeed, so a service type that has nothing to say
-    // in a phase says nothing, and the phase still reports that it ran. An option that never set a body
-    // is otherwise indistinguishable, from outside, from one whose body ran and did nothing - which is
-    // the first fact worth having when a service fails to resolve later, and the hardest to recover
-    // after the fact.
 
     /// <summary>Gets this option's Configure body.</summary>
     protected Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> ConfigurationMethod { get; private set; }
@@ -526,9 +499,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     protected Func<IHost, ILoggerFactory?, IGenericResult<IHost>> InitializationMethod { get; private set; }
         = static (host, loggerFactory) => GenericResult<IHost>.Success(host);
 
-    // Why none of these is virtual: an override is invisible to the chain, which invokes the func a
-    // level holds. The reason one used to be needed — a base contributing wiring that a derived
-    // Registration(...) would clobber — is what Append and Prepend remove.
 
     /// <inheritdoc />
     /// <remarks>
@@ -543,8 +513,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
-        // Why the claim happens before the work and not after: a deferred phase must look done to the
-        // collect without having run, which is the one thing a bool latch cannot express.
         if (defer)
         {
             _configure = PhaseState.Deferred;
@@ -553,12 +521,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
 
         var result = RunPhase(loggerFactory, "Configure", ServiceTypePhaseSequence.Configure,
             () => ConfigurationMethod(builder));
-        // Why the latch is only set on success: this flag is what makes the phase run-once, and the
-        // early return above turns an already-latched phase into an unconditional Success. Setting it
-        // after a failure therefore records a phase that did not happen as done, and every later call
-        // reports success for work that never ran - the failure is logged once and then permanently
-        // papered over. Returning first leaves the phase un-latched so a caller that retries actually
-        // retries.
         if (result.IsFailure)
         {
             return result;
@@ -584,8 +546,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
-        // Why the claim happens before the work and not after: a deferred phase must look done to the
-        // collect without having run, which is the one thing a bool latch cannot express.
         if (defer)
         {
             _register = PhaseState.Deferred;
@@ -595,12 +555,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
         _registrationRunPosition = 0;
         var result = RunPhase(loggerFactory, "Register", ServiceTypePhaseSequence.Register,
             () => RegistrationMethod(builder, loggerFactory));
-        // Why the latch is only set on success: this flag is what makes the phase run-once, and the
-        // early return above turns an already-latched phase into an unconditional Success. Setting it
-        // after a failure therefore records a phase that did not happen as done, and every later call
-        // reports success for work that never ran - the failure is logged once and then permanently
-        // papered over. Returning first leaves the phase un-latched so a caller that retries actually
-        // retries.
         if (result.IsFailure)
         {
             return result;
@@ -621,8 +575,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return GenericResult<IHost>.Success(host);
         }
 
-        // Why the claim happens before the work and not after: a deferred phase must look done to the
-        // collect without having run, which is the one thing a bool latch cannot express.
         if (defer)
         {
             _initialize = PhaseState.Deferred;
@@ -632,12 +584,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
         _initializationRunPosition = 0;
         var result = RunPhase(loggerFactory, "Initialize", ServiceTypePhaseSequence.Initialize,
             () => InitializationMethod(host, loggerFactory));
-        // Why the latch is only set on success: this flag is what makes the phase run-once, and the
-        // early return above turns an already-latched phase into an unconditional Success. Setting it
-        // after a failure therefore records a phase that did not happen as done, and every later call
-        // reports success for work that never ran - the failure is logged once and then permanently
-        // papered over. Returning first leaves the phase un-latched so a caller that retries actually
-        // retries.
         if (result.IsFailure)
         {
             return result;
@@ -647,17 +593,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
         return result;
     }
 
-    // Why the body arrives as a thunk rather than the func itself: the three phases take different
-    // arguments, and closing over them here keeps one logging contract instead of three that drift.
-    //
-    // Why catch-log-return rather than log-and-rethrow: an exception decides for the application that
-    // the process ends. A framework does not get to make that call — the host may want to abort on a
-    // failed domain or run without it, and it can only choose if the failure arrives as a value. The
-    // catch is the boundary where an option that still throws is converted into the result everything
-    // above this expects, so one badly-behaved option cannot unwind a collect that was handling failures.
-    //
-    // A body that returns a failure is passed through untouched: it already carries its own domain's
-    // code, which is more specific than anything this could substitute. Only the throw needs a code.
     private IGenericResult<T> RunPhase<T>(
         ILoggerFactory? loggerFactory,
         string phase,
@@ -666,8 +601,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     {
         var logger = loggerFactory?.CreateLogger(GetType().FullName ?? Name) ?? (ILogger)NullLogger.Instance;
         var ordinal = sequence.NextOption();
-        // Why one message rather than a custom/default split: a body that has been appended to is
-        // neither, so the distinction stopped describing anything real.
         ServiceTypeLog.OptionPhaseCustom(logger, Name, phase, ordinal, sequence.CurrentCollectionName, ServiceTypeLog.PhaseDocumentation);
 
         try

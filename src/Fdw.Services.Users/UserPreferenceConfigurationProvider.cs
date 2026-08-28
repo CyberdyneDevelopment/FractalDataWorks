@@ -46,7 +46,6 @@ public class UserPreferenceConfigurationProvider
     /// <summary>
     /// Gets the preferences for the specified user (returns null when none exist yet).
     /// </summary>
-    // Why: virtual allows Moq to override in unit tests without a real IOptionsMonitor or gateway.
     public virtual async Task<IGenericResult<UserPreferencesConfiguration?>> GetPreferences(
         Guid userId, CancellationToken cancellationToken = default)
     {

@@ -47,8 +47,6 @@ public sealed class FilterTransformType : TransformTypeBase
     }
 
     /// <inheritdoc />
-    // Why: filter evaluation is pure in-memory predicate work (no I/O); Task.FromResult is honest
-    // sync-returning-Task — the contract is async so future I/O-backed filters are first-class.
     public override Task<IGenericResult<IDictionary<string, object?>>> Transform(
         IDictionary<string, object?> input,
         IGenericConfiguration configuration,
@@ -61,8 +59,6 @@ public sealed class FilterTransformType : TransformTypeBase
                 EtlLog.WrongConfigurationType(context.Logger, "Filter", configuration.GetType().Name)));
         }
 
-        // Why: a Filter transform with no expression must fail loud, never silently pass every
-        // record through — a param-less combine op is a configuration defect, not a no-op.
         if (string.IsNullOrWhiteSpace(config.FilterExpression))
         {
             return Task.FromResult(GenericResult<IDictionary<string, object?>>.Failure(
@@ -81,8 +77,6 @@ public sealed class FilterTransformType : TransformTypeBase
     }
 
     /// <inheritdoc />
-    // Why: filter evaluation is pure in-memory predicate work (no I/O); Task.FromResult is honest
-    // sync-returning-Task — the contract is async so future I/O-backed filters are first-class.
     public override Task<IGenericResult<IEnumerable<IDictionary<string, object?>>>> TransformBatch(
         IEnumerable<IDictionary<string, object?>> inputs,
         IGenericConfiguration configuration,
@@ -95,8 +89,6 @@ public sealed class FilterTransformType : TransformTypeBase
                 EtlLog.WrongConfigurationType(context.Logger, "Filter", configuration.GetType().Name)));
         }
 
-        // Why: a Filter transform with no expression must fail loud, never silently pass every
-        // record through — a param-less combine op is a configuration defect, not a no-op.
         if (string.IsNullOrWhiteSpace(config.FilterExpression))
         {
             return Task.FromResult(GenericResult<IEnumerable<IDictionary<string, object?>>>.Failure(
@@ -194,9 +186,6 @@ public sealed class FilterTransformType : TransformTypeBase
     private static bool TryEvaluateLogicalOperators(IDictionary<string, object?> record, string expression, out bool result)
     {
         // OR operator: "Condition1 || Condition2"
-        // Why: only match a separator at parenthesis depth 0 — an unqualified IndexOf would split
-        // through a grouped sub-clause (e.g. "(Age>=18 && Active) || Name==Bob" would tear the "&&"
-        // out of its parens and evaluate the wrong tree). Depth-tracking keeps grouped clauses intact.
         if (TryFindTopLevelSeparator(expression, OrSeparator, out var orIndex, out var orSepLength))
         {
             var left = expression[..orIndex].Trim();

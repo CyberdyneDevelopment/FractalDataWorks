@@ -20,9 +20,6 @@ public sealed class SecretManagerConfigurationJsonConverter : JsonConverter<Secr
     private const string DiscriminatorPropertyName = "ServiceOptionType";
     private const string SettingsPropertyName = "Configuration";
 
-    // Why: CA1869 — cached inner options exclude this converter to prevent infinite recursion.
-    // Thread-safe via volatile write: the options object is immutable once constructed so
-    // a data race produces at most two identical objects, one of which is discarded.
     private JsonSerializerOptions? _innerOptions;
 
     private JsonSerializerOptions GetInnerOptions(JsonSerializerOptions outerOptions)
@@ -67,9 +64,6 @@ public sealed class SecretManagerConfigurationJsonConverter : JsonConverter<Secr
             && root.TryGetProperty(SettingsPropertyName, out var settingsElement)
             && settingsElement.ValueKind == JsonValueKind.Object)
         {
-            // Why: the JSON declares a Configuration body, so failing to bind it is never benign —
-            // silently leaving Configuration null defers the failure to service construction, where
-            // it surfaces as an unrelated "could not resolve" far from the real cause.
             var secretManagerType = SecretManagerTypes.ByName(secretManager.ServiceOptionType);
             if (ReferenceEquals(secretManagerType, SecretManagerTypes.NotFound))
             {

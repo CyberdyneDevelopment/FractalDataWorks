@@ -12,7 +12,6 @@ namespace Fdw.Data.Components.DataStores;
 /// Wraps the <see cref="ConfigurationDrillDownContext"/> with DataStore-specific selection state
 /// and domain actions (schema import, sync).
 /// </summary>
-// Why: pure view-model — state + callback delegates + a trivial pass-through property, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class DataStoreDetailContext : ProviderContextBase
 {

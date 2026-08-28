@@ -10,7 +10,6 @@ namespace Fdw.Data;
 /// Full aggregation support will be implemented in future phases.
 /// This provides basic structure for group by and aggregation functions.
 /// </remarks>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class AggregationExpression : IAggregationExpression
 {

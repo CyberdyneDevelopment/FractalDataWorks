@@ -63,8 +63,6 @@ public sealed class WorkspaceCoordinatorTests
         var result = await harness.Coordinator.FenceStrand(
             sessionId, new ScopeRequest("strand-b", ["src/Nested/Thing.cs"]), Token);
 
-        // Why: "src" is an ancestor of the requested path, so the two strands would write the same
-        // subtree. The claim is refused rather than narrowed.
         result.IsFailure.ShouldBeTrue();
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("strand-a");
     }
@@ -105,8 +103,6 @@ public sealed class WorkspaceCoordinatorTests
 
         var result = await harness.Coordinator.FenceStrand(sessionId, new ScopeRequest("strand-a", []), Token);
 
-        // Why: an empty claim fences nothing while reading as granted, so every later overlap check
-        // would pass and the strand would look safely scoped when it is not.
         result.IsFailure.ShouldBeTrue();
     }
 
@@ -131,8 +127,6 @@ public sealed class WorkspaceCoordinatorTests
 
         var result = await harness.Coordinator.FenceStrand(second, new ScopeRequest("strand-a", ["src/Foo.cs"]), Token);
 
-        // Why: separate sessions have separate isolated copies, so the same relative path is a
-        // different file in each.
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
     }
 
@@ -163,7 +157,6 @@ public sealed class WorkspaceCoordinatorTests
 
         var result = await harness.Coordinator.Reconcile(sessionId, "strand-a", Token);
 
-        // Why: reconciling twice would re-release a claim another strand may already hold.
         result.IsFailure.ShouldBeTrue();
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("terminal");
     }
@@ -190,8 +183,6 @@ public sealed class WorkspaceCoordinatorTests
 
         var result = await harness.Coordinator.Route(sessionId, strands.Single(), Token);
 
-        // Why: StrandHandlers ships EMPTY on purpose — the framework owns routing, handlers are
-        // consumer domain work. An unroutable strand is a real configuration gap, reported as one.
         result.IsFailure.ShouldBeTrue();
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("strand-a");
         claim.Paths.Count.ShouldBe(1);

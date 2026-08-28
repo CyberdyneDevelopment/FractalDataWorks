@@ -68,8 +68,6 @@ public static partial class OrchestrationNodeConfigurationLog
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="nodeId">The logical id of the orchestration node that was not found.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why: takes Guid (not string) so MessageLogging defers id.ToString() until the log level
-    // check passes — no allocation when Warning is filtered.
     [MessageLogging(
         EventId = 31001,
         Level = LogLevel.Warning,

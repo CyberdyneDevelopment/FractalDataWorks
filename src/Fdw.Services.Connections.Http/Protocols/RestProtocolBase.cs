@@ -145,17 +145,8 @@ public abstract class RestProtocolBase : HttpProtocolBase
             return GenericResult<object?>.Success(null);
         }
 
-        // Why: Row-collection check intercepts before ExtractResultFromResponse so that
-        // GeoJSON/FeatureCollections and similar envelope formats are correctly unwrapped into flat
-        // row dictionaries. The container reference is available here (but not inside
-        // ExtractResultFromResponse), making this the correct seam — mirrors HttpProtocolBase. The
-        // format is no longer a hardcoded "Json" literal: HasRowReaderForFormat (overridden below)
-        // consults the RecordSourceTypes TypeCollection so any registered format is handled.
         if (IsRowCollectionType(resultType) && HasRowReaderForFormat(container))
         {
-            // Why: ExtractRowsFromContent produces List<Dictionary<string,object?>>, which IS the
-            // framework's generic row shape — the same one every other connection returns. Nothing
-            // converts it further.
             return ExtractRowsFromContent(content, container);
         }
 
@@ -629,9 +620,6 @@ public abstract class RestProtocolBase : HttpProtocolBase
     #region Format-driven row reader resolution
 
     /// <inheritdoc />
-    // Why: this net10 assembly CAN reference the RecordSourceTypes TypeCollection, so the dispatch is
-    // fully format-driven — "is a record source registered for container.Format.Name?" — rather than
-    // the netstandard2.0 base's JSON-only default. NO hardcoded format string remains.
     protected override bool HasRowReaderForFormat(IStorageContainer container)
     {
         if (container.Format is null) return false;
@@ -639,10 +627,6 @@ public abstract class RestProtocolBase : HttpProtocolBase
     }
 
     /// <inheritdoc />
-    // Why: resolve the reader from the TypeCollection by format name and create it via the type's
-    // CreateReader cursor seam, passing options built from the container metadata + field schema. No
-    // concrete reader type is referenced here — adding a new format adds a RecordSourceType, not a
-    // branch in this method. (A later stage adopts the record-source Create(context) surface here.)
     protected override IRowSourceReader? TryCreateRowReader(IStorageContainer container, Stream content)
     {
         if (container.Format is null) return null;
@@ -653,10 +637,6 @@ public abstract class RestProtocolBase : HttpProtocolBase
         return sourceType.CreateReader(content, BuildRowSourceOptions(container));
     }
 
-    // Why: each format's options are populated from the container the same way: JSON record
-    // selector/flatten knobs from Metadata; delimited/fixed-width column layout from the field
-    // schema. The format name selects which option shape to build — the only place format names are
-    // matched, and only to map config onto the matching library options (not to pick a reader type).
     private static RowSourceOptions? BuildRowSourceOptions(IStorageContainer container)
         => container.Format.Name switch
         {
@@ -702,8 +682,6 @@ public abstract class RestProtocolBase : HttpProtocolBase
         {
             HasHeader = meta.TryGetValue("HasHeader", out var hh) && hh is bool hb && hb
         };
-        // Why: fixed-width offsets/widths must come from per-field metadata; when absent the reader
-        // fails loud (empty Fields → ArgumentException) rather than guessing widths.
         options.Fields = new List<FixedWidthField>(FixedWidthFields(container));
         return options;
     }

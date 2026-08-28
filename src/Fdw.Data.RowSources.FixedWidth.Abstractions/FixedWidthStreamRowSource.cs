@@ -41,7 +41,6 @@ public sealed class FixedWidthStreamRowSource : IRowSourceReader
         _options = options ?? new FixedWidthRowSourceOptions();
         if (_options.Fields.Count == 0)
         {
-            // Why: NO FALLBACKS — a fixed-width reader cannot slice columns without offsets/widths.
             throw new ArgumentException(
                 "FixedWidthRowSourceOptions.Fields must contain at least one field definition.", nameof(options));
         }

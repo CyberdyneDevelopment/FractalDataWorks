@@ -189,8 +189,6 @@ public static partial class ServiceLogger
     /// <summary>
     /// Logs when service is created successfully.
     /// </summary>
-    // Why Debug, not Information: service construction is per-call plumbing, not an operator event —
-    // it fired 6x per health-check cycle (~2,600/day on an idle host) and drowned the Information tier.
     [MessageLogging(EventId = 11029, Level = LogLevel.Debug, Message = "Service created: '{name}' (type: {serviceOptionType})")]
     public static partial IGenericMessage ServiceCreated(ILogger logger, string name, string serviceOptionType);
 
@@ -247,18 +245,12 @@ public static partial class ServiceLogger
     /// <summary>
     /// Logs the inputs to a typed-configuration lookup before it runs.
     /// </summary>
-    // Why: domainConfigurationId is the discriminator between the two ways this lookup fails — "the parent record
-    // carried no Id" (mapper problem) versus "the parent had an Id but the child query matched no rows"
-    // (data/tenant problem). Without it in the trace the two are indistinguishable from the outside.
     [MessageLogging(EventId = 11038, Level = LogLevel.Trace, Message = "Creating '{name}' from typed configuration: ServiceOptionType='{serviceOptionType}', domainConfigurationId={domainConfigurationId}")]
     public static partial IGenericMessage CreatingFromTypedConfiguration(ILogger logger, string name, string serviceOptionType, Guid domainConfigurationId);
 
     /// <summary>
     /// Logs when the provider was constructed without the container it resolves factories from.
     /// </summary>
-    // Why: the generated resolver always passes sp, so this only fires if a provider is constructed by
-    // hand. Every Get() will fail to resolve a factory afterwards, and this names the reason once at
-    // construction instead of leaving each call site to report a missing factory it cannot explain.
     [MessageLogging(EventId = 91009, Level = LogLevel.Error, Message = "Provider '{providerType}' was constructed without a service provider — factories cannot be resolved")]
     public static partial IGenericMessage ContainerNotSupplied(ILogger logger, string providerType);
 
@@ -275,14 +267,6 @@ public static partial class ServiceLogger
     public static partial IGenericMessage FactoryTypeNotResolved(ILogger logger, string factoryType, string serviceOptionType);
 
     // ── The factory-registry lifecycle ──────────────────────────────────────────────────────────
-    // Why these exist: the registry is what Get(name) dispatches on, and until now NOTHING on the
-    // path that fills it said anything. A registration that never happened and one that happened
-    // and was later discarded produced byte-identical logs — silence — which is how six connection
-    // kinds went unregistered through several releases without a single line naming the gap.
-    //
-    // Volume thins as severity rises, deliberately: Trace names every individual registration and
-    // where it came from, Debug and Information summarise per provider, and Critical fires once for
-    // the condition under which the domain cannot function at all.
 
     /// <summary>
     /// Logs, at the moment an option declares its factory, that the registration is deferred until
@@ -313,8 +297,6 @@ public static partial class ServiceLogger
     /// <summary>
     /// Logs that a provider is ready to serve.
     /// </summary>
-    // Why Debug, not Information: provider readiness is recomputed per scope, not once at startup —
-    // an operator has no action to take on it. See ServiceCreated above.
     [MessageLogging(EventId = 11037, Level = LogLevel.Debug, Message = "{providerType} ready: {count} service option(s) creatable — [{serviceOptionTypes}]")]
     public static partial IGenericMessage ProviderReady(ILogger logger, string providerType, int count, string serviceOptionTypes);
 

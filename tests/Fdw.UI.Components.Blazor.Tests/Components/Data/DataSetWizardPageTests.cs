@@ -39,9 +39,6 @@ public sealed class DataSetWizardPageTests : IDisposable
 
     private void Swap(DataSetWizardContext? wizSeed = null, DataSetContext? dsSeed = null)
     {
-        // Why: the wizard captures DataSetWizardProvider via @ref="_wizardProvider".
-        // Use concrete subclass stubs (IS-A the real providers) so the @ref cast succeeds;
-        // both nested providers are seeded via cascading values.
         _wizSeed = wizSeed ?? new DataSetWizardContext();
         _dsSeed = dsSeed ?? new DataSetContext();
         _ctx.RegisterProviderInfrastructure();
@@ -67,7 +64,6 @@ public sealed class DataSetWizardPageTests : IDisposable
     {
         for (var i = 0; i < times; i++)
         {
-            // Why: the "Continue" next button text contains a trailing arrow entity; match on the word only.
             cut.FindAll("button").First(b => b.TextContent.Contains("Continue", StringComparison.Ordinal)).Click();
         }
     }
@@ -89,9 +85,6 @@ public sealed class DataSetWizardPageTests : IDisposable
     {
         Swap();
         var cut = RenderWizard(p => p.Add(x => x.Name, "Customers"));
-        // Why: `_isEdit` is driven purely by the Name parameter; the identity input is
-        // disabled in edit mode. (The header name only appears after the provider loads
-        // the existing model, which the stub deliberately skips, so it is not asserted.)
         cut.Find("input").HasAttribute("disabled").ShouldBeTrue();
     }
 
@@ -100,8 +93,6 @@ public sealed class DataSetWizardPageTests : IDisposable
     [Fact]
     public void Step0RendersWithoutThrowingOptionPickerCategoryBranch()
     {
-        // Why: this is the suspected live-crash branch (OptionPicker<IDataSetCategory>
-        // with StaticOptions = DataSetCategories.All()). Rendering must not throw.
         Swap();
         var cut = RenderWizard();
         cut.Markup.ShouldContain("Classification");
@@ -120,9 +111,6 @@ public sealed class DataSetWizardPageTests : IDisposable
     [Fact]
     public void Step0ServiceOptionSelectShowsNoFabricatedTypesWhenNoneLoaded()
     {
-        // Why: the strategy options come exclusively from the DataSetTypes TypeCollection. An empty
-        // set means types failed to load — the wizard must surface that, NOT fabricate a hardcoded
-        // list (which previously offered the deleted "Standard" type). No-fallback rule.
         Swap(new DataSetWizardContext { DataSetTypes = [] });
         var cut = RenderWizard();
         cut.Markup.ShouldNotContain("Standard");

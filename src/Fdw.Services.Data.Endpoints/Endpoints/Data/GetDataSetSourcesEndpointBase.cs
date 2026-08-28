@@ -53,7 +53,6 @@ public abstract class GetDataSetSourcesEndpointBase : CrudGetEndpointBase<DataSe
             return GenericResult<List<DataSetSourcePayload>?>.Success((List<DataSetSourcePayload>?)null);
         }
 
-        // Why: Sources are part of the composed aggregate returned by DataSetConfigurationProvider.Get.
         var sources = dsResult.Value.Sources?.Select(DataSetQueryHelper.MapToSourceDto).ToList() ?? [];
         return GenericResult<List<DataSetSourcePayload>?>.Success((List<DataSetSourcePayload>?)sources);
     }

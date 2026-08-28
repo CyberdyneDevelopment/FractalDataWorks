@@ -7,7 +7,6 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public class AddDataStoreContainerRequest
 {
-    // Why: FastEndpoints binds this from the {Name} route segment in /datastores/{Name}/containers.
     /// <summary>Gets or sets the data store name (from route).</summary>
     public string Name { get; set; } = string.Empty;
 

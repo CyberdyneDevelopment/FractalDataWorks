@@ -6,7 +6,6 @@ namespace Fdw.Commands.Data.Abstractions;
 /// <summary>
 /// Message indicating that a command is required.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [Message("CommandRequired")]
 public sealed class CommandRequiredMessage : DataCommandMessage

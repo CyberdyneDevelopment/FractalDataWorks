@@ -33,10 +33,6 @@ public sealed class PipelineServiceConfigurationProviderTests
         // Arrange
         var builder = Host.CreateApplicationBuilder();
         builder.Services.AddLogging();
-        // Why: the gateway is never dereferenced by this test - PipelineServiceConfigurationProvider's
-        // constructor only stores the Lazy<T>, it does not resolve .Value.
-        // Why the interface and not the concrete type: the collections resolve
-        // IConfigurationGatewayProvider, which ConfigurationGatewayTypes would normally supply.
         builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
 
         // Act
@@ -44,9 +40,6 @@ public sealed class PipelineServiceConfigurationProviderTests
 
         // Assert
         using var provider = builder.Services.BuildServiceProvider();
-        // Why the domain interface is asserted first: it is what the collection resolves to attach the
-        // provider, so a registration that publishes only the concrete type leaves the domain unable to
-        // resolve any configuration by name.
         var byInterface = provider.GetRequiredService<IPipelineConfigurationProvider>();
         var concrete = provider.GetRequiredService<PipelineServiceConfigurationProvider>();
         var asBase = provider.GetRequiredService<ImplementationConfigurationProviderBase<PipelineConfiguration, PipelineConfigurationCommand>>();

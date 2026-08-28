@@ -4,10 +4,6 @@ using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-// Why: DataFieldConfiguration lives in Fdw.Data.DataSets.Abstractions namespace
-// but Data.DataSets.Abstractions also defines IDataField (DataSets domain). To avoid ambiguity
-// with Data.Abstractions.IDataField (IDataNode hierarchy — the one we implement here),
-// use the fully-qualified name for DataFieldConfiguration.
 using DataFieldConfiguration = Fdw.Data.DataSets.Abstractions.DataFieldConfiguration;
 
 namespace Fdw.Services.Data.Runtime;
@@ -26,10 +22,6 @@ internal sealed class DataSetRuntimeField : IDataField
         ArgumentNullException.ThrowIfNull(config);
         Name = config.Name;
         Description = config.Description;
-        // Why: ExplicitType and Binding are not populated from configuration — the configuration
-        // carries TypeName as a plain string, not a resolved IDataType. Full type resolution
-        // requires a type registry not available at this layer. The field is in Described state
-        // (Name present, ExplicitType null) until a higher-level component resolves the type.
         ExplicitType = null;
         Binding = null;
         Ordinal = config.Ordinal;
@@ -55,11 +47,9 @@ internal sealed class DataSetRuntimeField : IDataField
     public bool IsNullable { get; }
 
     /// <inheritdoc />
-    // Why: a field is a leaf IDataNode — it has no children.
     public IReadOnlyList<IDataNode> Nodes => [];
 
     /// <inheritdoc />
-    // Why: a leaf field never has child nodes, so Node(name) always fails (no Try*, no nullable).
     public IGenericResult<IDataNode> Node(string name) =>
         GenericResult<IDataNode>.Failure(
             DataStoreLoaderLog.LeafFieldHasNoChild(NullLogger.Instance, Name, name));

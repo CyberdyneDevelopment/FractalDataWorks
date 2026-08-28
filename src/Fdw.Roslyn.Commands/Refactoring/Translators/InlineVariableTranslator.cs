@@ -145,9 +145,6 @@ public sealed class InlineVariableTranslator : RoslynCommandTranslatorBase<Inlin
             }
         };
 
-        // Why: no SymbolChange recorded — locals aren't migration surface (nothing outside this
-        // method can reference them), so file-level recording via the handler's ledger hook is
-        // sufficient here.
         InlineVariableTranslatorLog.Inlined(Logger, variableName, referenceLocations.Count);
 
         return GenericResult<MutationResult>.Success(

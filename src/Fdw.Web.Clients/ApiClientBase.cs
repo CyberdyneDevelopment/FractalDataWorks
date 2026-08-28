@@ -154,14 +154,6 @@ public abstract class ApiClientBase
     /// </summary>
     private async Task<IGenericMessage> NonSuccessDetail(string method, string path, HttpResponseMessage response, CancellationToken ct)
     {
-        // Why: endpoints return the real failure reason in the body. Reporting only the status code
-        // discarded it, so providers/UI could never surface the actual error.
-        //
-        // Why parsed rather than pasted: the body is RFC 7807 ProblemDetails, so detail/title carry a
-        // sentence meant for a human and the extensions carry the result code. Dumping the raw JSON
-        // into the message put braces and quoting in front of the operator - and in front of an agent
-        // that then has to guess which field mattered. A body that is not ProblemDetails falls through
-        // to the capped raw text, because something unparseable is still better than a bare status.
         string detail;
         try
         {

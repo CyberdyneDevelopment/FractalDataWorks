@@ -37,8 +37,6 @@ public sealed class HealthStateJsonConverter : JsonConverter<IHealthState>
             return ResolveByName(ReadNameFromObject(ref reader));
         }
 
-        // Why: fail loud — the state arrived in a shape we do not understand, rather than
-        // silently substituting a default state.
         throw new JsonException(
             $"Unexpected token '{reader.TokenType}' when reading {nameof(IHealthState)}.");
     }
@@ -61,8 +59,6 @@ public sealed class HealthStateJsonConverter : JsonConverter<IHealthState>
 
     private static IHealthState ResolveByName(string? name)
     {
-        // Why: the name is required to resolve a health state; a missing name is a hard error,
-        // not a defaultable condition.
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new JsonException(
@@ -72,8 +68,6 @@ public sealed class HealthStateJsonConverter : JsonConverter<IHealthState>
         var state = HealthStates.ByName(name!);
         if (state == HealthStates.NotFound)
         {
-            // Why: fail loud — an unrecognized state name is a hard error, not a defaultable
-            // condition. TypeCollection.ByName returns the NotFound sentinel (never null).
             throw new JsonException(
                 $"Unrecognized health state name '{name}' when reading {nameof(IHealthState)}.");
         }

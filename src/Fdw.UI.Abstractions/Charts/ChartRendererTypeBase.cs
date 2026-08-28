@@ -34,8 +34,6 @@ public abstract class ChartRendererTypeBase : TypeOptionBase<int, ChartRendererT
     /// renderers with no component-tree representation (e.g. an SVG-export renderer implementing
     /// <see cref="IChartRenderer"/> directly). A Blazor renderer passes its component type here.
     /// </param>
-    // Why: DisplayName comes from TypeOptionBase via its 6-arg ctor; the capability flags and
-    // SupportedChartTypes are net-new. Mirrors CanvasRendererTypeBase exactly.
     protected ChartRendererTypeBase(
         int id,
         string name,
@@ -50,8 +48,6 @@ public abstract class ChartRendererTypeBase : TypeOptionBase<int, ChartRendererT
         SupportsInteraction = supportsInteraction;
         SupportsLargeSeries = supportsLargeSeries;
         SupportsEditing = supportsEditing;
-        // Why: nullable-defaulted + `?? []` so the generated TypeCollection sentinel constructs without
-        // a collection argument (TC009); sanctioned empty-collection fallback.
         SupportedChartTypes = supportedChartTypes ?? [];
         RenderComponentType = renderComponentType;
     }

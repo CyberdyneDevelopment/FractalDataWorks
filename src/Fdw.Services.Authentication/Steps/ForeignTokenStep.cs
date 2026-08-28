@@ -93,8 +93,6 @@ public sealed class ForeignTokenStep : IAuthenticationStep
 
         if (!validated.IsValid)
         {
-            // Why the exception type and not its message: the message can carry token content, and
-            // a log is the wrong place for a credential. The type says which check failed.
             return GenericResult<StepOutcome>.Failure(
                 ForeignTokenLog.Rejected(_logger, _configuration.Issuer,
                     validated.Exception?.GetType().Name ?? "unknown"));
@@ -109,18 +107,10 @@ public sealed class ForeignTokenStep : IAuthenticationStep
 
         return GenericResult<StepOutcome>.Success(new StepOutcome.Contributed(new ContextContribution
         {
-            // Why read rather than assume: the provider is the only authority on how someone proved
-            // themselves to it. A configured value is a guess that survives a user switching to a
-            // passkey, or the provider starting to enforce a second factor, and quietly understates
-            // or overstates every assurance decision downstream. The runner intersects this with
-            // AssertableMethods, so reading it cannot inflate anything.
             ObservedMethods = [.. validated.ClaimsIdentity.FindAll("amr").Select(c => c.Value)],
 
             Subject = new Subject
             {
-                // Why the configured issuer and not the token's: validation already proved they
-                // match, and taking ours keeps the binding key stable if a provider ever varies
-                // the claim's form.
                 Issuer = _configuration.Issuer,
                 SubjectId = subjectId,
                 AuthenticatedAt = DateTimeOffset.UtcNow,

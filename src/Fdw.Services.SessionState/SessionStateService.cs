@@ -29,8 +29,6 @@ public sealed class SessionStateService : ISessionStateService
         WriteIndented = false
     };
 
-    // Why: SessionStateConfigurationProvider is the domain-owned gateway path for all
-    // SessionState data. Services inject the provider, never IConfigurationGateway directly.
     private readonly SessionStateConfigurationProvider _provider;
     private readonly ILogger<SessionStateService> _logger;
 
@@ -254,8 +252,6 @@ public sealed class SessionStateService : ISessionStateService
         }
     }
 
-    // Why: The interface accepts string userId (from JWT sub claim). The DDL column is
-    // UNIQUEIDENTIFIER. Parse once and pass the Guid to all provider calls.
     private static bool TryParseUserId(string userId, out Guid parsed)
         => Guid.TryParse(userId, out parsed);
 }

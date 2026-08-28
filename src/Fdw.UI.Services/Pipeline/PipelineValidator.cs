@@ -78,8 +78,6 @@ public sealed class PipelineValidator : IPipelineValidator
 
         if (errors.Count > 0)
         {
-            // Why: consolidated validation errors carried as an ErrorMessage (IGenericMessage) —
-            // the Failure(string) overload is gone; ErrorMessage avoids FDW004 (manual GenericMessage).
             return GenericResult.Failure(new ErrorMessage(string.Join(" ", errors)));
         }
 

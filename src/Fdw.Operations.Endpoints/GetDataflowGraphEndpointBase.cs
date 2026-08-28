@@ -48,8 +48,6 @@ public abstract class GetDataflowGraphEndpointBase : EndpointWithoutRequest<Data
     {
         EndpointLog.ListingResources(_logger, "dataflow graph");
 
-        // Why: callers can scope the graph with ?pipelineName=. When supplied, validate the
-        // pipeline exists so a typo gets a 404 instead of a misleading full-graph 200.
         var pipelineFilter = Query<string>("pipelineName", isRequired: false);
         if (!string.IsNullOrWhiteSpace(pipelineFilter))
         {
@@ -72,9 +70,6 @@ public abstract class GetDataflowGraphEndpointBase : EndpointWithoutRequest<Data
         var edges = new List<DataflowEdgeDto>();
         var stats = new DataflowStatsDto();
 
-        // Why each of these three is checked rather than defaulted to empty: a failed read and a
-        // store that genuinely holds nothing produce the same empty graph, so a broken query was
-        // answered with 200 and no nodes. The caller cannot tell those apart; this can.
         var dataSetsResult = await _provider.LoadDataSets(ct).ConfigureAwait(false);
         if (!dataSetsResult.IsSuccess)
         {
@@ -268,8 +263,6 @@ public abstract class GetDataflowGraphEndpointBase : EndpointWithoutRequest<Data
         }
     }
 
-    // Why a 500 and not an empty graph: the read did not happen, so no answer about the graph is
-    // available. Naming which read failed is what turns "the page is blank" into a cause.
     private Task WriteReadFailure(string what, string? reason, CancellationToken ct)
     {
         HttpContext.Response.StatusCode = 500;

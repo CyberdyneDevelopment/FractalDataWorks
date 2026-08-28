@@ -33,7 +33,6 @@ public class DataSetSummaryResponse : ResourceSummary
     public int SourceCount { get; set; }
 
     /// <summary>Gets or sets the creation timestamp.</summary>
-    // Why: DateTimeOffset serializes with timezone offset (ISO 8601 compliant).
     public DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>Gets or sets the last modification timestamp.</summary>

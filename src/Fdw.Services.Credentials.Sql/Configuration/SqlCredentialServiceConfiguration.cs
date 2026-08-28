@@ -32,8 +32,6 @@ public partial class SqlCredentialServiceConfiguration : ICredentialServiceImple
     /// <summary>
     /// Gets or sets the unique identifier for this typed body row (sec.SqlCredentialService.Id).
     /// </summary>
-    // Why: NO Guid.NewGuid() default — the provider mints this before INSERT.
-    // A random default would bypass the provider's Id-mint logic and create orphaned rows.
     public Guid Id { get; set; }
 
 
@@ -47,9 +45,6 @@ public partial class SqlCredentialServiceConfiguration : ICredentialServiceImple
     /// </summary>
     public bool IsDeleted { get; set; }
 
-    // Why: IGenericConfiguration members below satisfy the interface contract.
-    // Name, SectionName, ServiceType, ServiceOptionType are not meaningful on the typed
-    // body — the canonical identity lives on the parent CredentialServiceConfiguration header.
     string IGenericConfiguration.Name
     {
         get => string.Empty;
@@ -67,8 +62,6 @@ public partial class SqlCredentialServiceConfiguration : ICredentialServiceImple
     /// <summary>
     /// Gets or sets the FK to <c>sec.CredentialService.Id</c> (the parent header row).
     /// </summary>
-    // Why: CredentialServiceId links this typed body back to its sec.CredentialService parent row.
-    // No Guid.NewGuid() default — the caller must explicitly supply the parent's Id.
     public Guid CredentialServiceId { get; set; }
 
     // ========================================
@@ -102,9 +95,5 @@ public partial class SqlCredentialServiceConfiguration : ICredentialServiceImple
     /// <summary>
     /// Gets or sets the maximum number of active personal access tokens allowed per user.
     /// </summary>
-    // Why: plain { get; set; } — NO `= 10` initializer. The no-fallback rule (and the
-    // SqlDataVaultConfiguration exemplar, whose value-type properties are all plain) forbid a
-    // baked-in default; the value is supplied by the sec.SqlCredentialService row (seeded to 10).
-    // PatVaultCommands fails loud if the resolved value is not a positive limit.
     public int MaxTokensPerUser { get; set; }
 }

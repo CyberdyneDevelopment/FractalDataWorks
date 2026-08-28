@@ -36,16 +36,11 @@ namespace Fdw.Services.Data;
 public sealed class SchemaInformationService : ISchemaInformationService
 {
     private readonly IConnectionProvider _connectionProvider;
-    // Why: ConnectionConfigurationProvider (dual-source) replaces IConnectionProvider.GetAllConnectionConfigurations()
-    // which was removed. Used for resolving connection configs by name.
     private readonly ConnectionConfigurationProvider _configProvider;
-    // Why: DataStoreConfigurationProvider (dual-source) merges system (ctrl) and user (cfg) DataStore configs.
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
     private readonly ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand> _dataPathProvider;
     private readonly ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand> _containerProvider;
     private readonly ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand> _fieldProvider;
-    // Why: IOptionsMonitor holds the in-memory config cache so upsert checks do not
-    // require extra database round-trips on every field write.
     private readonly IOptionsMonitor<List<DataPathConfiguration>> _dataPathOptions;
     private readonly IOptionsMonitor<List<DataContainerConfiguration>> _containerOptions;
     private readonly IOptionsMonitor<List<DataContainerFieldConfiguration>> _fieldOptions;
@@ -93,8 +88,6 @@ public sealed class SchemaInformationService : ISchemaInformationService
 
         if (!config.DiscoveryEnabled)
         {
-            // Why (FDW-583): a single emission — DiscoveryDisabled was previously logged bare here AND
-            // again inside the Failure(...) call, printing the same record twice.
             return GenericResult<SchemaInformation>.Failure(
                 SchemaInformationLog.DiscoveryDisabled(_logger, connectionName));
         }
@@ -126,13 +119,10 @@ public sealed class SchemaInformationService : ISchemaInformationService
 
         if (!config.DiscoveryEnabled)
         {
-            // Why (FDW-583): a single emission — DiscoveryDisabled was previously logged bare here AND
-            // again inside the Failure(...) call, printing the same record twice.
             return GenericResult<SchemaInformation>.Failure(
                 SchemaInformationLog.DiscoveryDisabled(_logger, connectionName));
         }
 
-        // Why: RefreshSchema always re-discovers — cache check is intentionally skipped.
         return await DiscoverAndReturn(config, cancellationToken).ConfigureAwait(false);
     }
 
@@ -173,8 +163,6 @@ public sealed class SchemaInformationService : ISchemaInformationService
                 SchemaInformationLog.ConnectionTypeMissing(_logger, connectionName));
         }
 
-        // Why: ISchemaDiscovery is the marker interface on connection types that support discovery.
-        // Checking it here prevents attempting discovery on REST, HTTP, or other non-SQL types.
         var connType = ConnectionTypes.ByName(connectionType);
         if (connType == ConnectionTypes.NotFound || connType is not ISchemaDiscovery schemaDiscovery)
         {
@@ -221,8 +209,6 @@ public sealed class SchemaInformationService : ISchemaInformationService
         if (!persistResult.IsSuccess)
             return persistResult.ToNewResult<SchemaInformation>();
 
-        // Why: DataGateway manages its own cache — no manual eviction needed.
-        // Reload from provider now that persistence is complete.
         var reloadedConfigResult = await _dataStoreProvider.Get(config.Name, cancellationToken).ConfigureAwait(false);
         var reloadedConfig = reloadedConfigResult.IsSuccess ? reloadedConfigResult.Value : null;
         if (reloadedConfig == null)
@@ -236,8 +222,6 @@ public sealed class SchemaInformationService : ISchemaInformationService
         return GenericResult<SchemaInformation>.Success(info);
     }
 
-    // Why: Schema scope is expressed by DataStore/DataPath/DataContainer (db/schema/table),
-    // and access is gated by RBAC. Connection itself carries no include/exclude schema lists.
     private static DataStoreDiscoveryOptions BuildDiscoveryOptions(ConnectionConfiguration config)
         => DataStoreDiscoveryOptions.Default;
 
@@ -393,10 +377,6 @@ public sealed class SchemaInformationService : ISchemaInformationService
             return savedPathResult.ToNewResult<Guid>();
         }
 
-        // Why: no tree invalidation needed — the eager full-tree singleton is deleted; container
-        // lookups go through ConfigurationGatewayDataStoreProvider.GetContainer over DataGatewayService
-        // (caching built in, tag-invalidated by the config-write path), so the new DataPath surfaces on
-        // next read.
         return GenericResult<Guid>.Success(savedPathResult.Value.Id);
     }
 
@@ -419,17 +399,12 @@ public sealed class SchemaInformationService : ISchemaInformationService
 
             if (existingContainers.TryGetValue(container.Name, out var existingContainerRef))
             {
-                // Why: re-read the COMPOSED container (Fields/Keys populated from the DB cascade)
-                // before mutating — _containerOptions is a bare IOptionsMonitor snapshot with empty
-                // Fields/Keys, and saving that directly would re-point an EMPTY child set at the new
-                // RowId version, stranding the container's real fields.
                 var composedResult = await containerWriter.Get(existingContainerRef.Id, ct).ConfigureAwait(false);
                 if (!composedResult.IsSuccess || composedResult.Value == null)
                     return composedResult;
 
                 var existingContainer = composedResult.Value;
 
-                // Why: ContainerType renamed to TypeId after Wave A5 DDL restructure.
                 if (!string.Equals(existingContainer.TypeId, container.ContainerType.Name, StringComparison.Ordinal))
                 {
                     existingContainer.TypeId = container.ContainerType.Name;
@@ -446,7 +421,6 @@ public sealed class SchemaInformationService : ISchemaInformationService
                 {
                     Name = container.Name,
                     DataPathId = savedPathId,
-                    // Why: TypeId replaces ContainerType after Wave A5 DDL rename.
                     TypeId = container.ContainerType.Name
                 };
                 var savedContainerResult = await containerWriter.Save(containerConfig, ct).ConfigureAwait(false);
@@ -455,16 +429,10 @@ public sealed class SchemaInformationService : ISchemaInformationService
 
                 savedContainerId = savedContainerResult.Value.Id;
                 currentFields = [];
-                // Why: no tree invalidation needed — the eager full-tree singleton is deleted;
-                // ConfigurationGatewayDataStoreProvider.GetContainer reads through DataGatewayService
-                // (caching built in, tag-invalidated on write), so the new container is found on the
-                // next lookup.
             }
 
             SchemaDiscoveryLog.PersistingFields(_logger, container.Schema.Fields.Count, container.Name);
 
-            // Why: derived from the just re-read composed container (or empty for a brand-new one),
-            // NOT from _fieldOptions — the same stale-snapshot risk applies to the field diff source.
             var existingFields = currentFields
                 .ToDictionary(f => f.Name, StringComparer.OrdinalIgnoreCase);
 
@@ -474,9 +442,6 @@ public sealed class SchemaInformationService : ISchemaInformationService
                 if (existingFields.TryGetValue(field.Name, out var existingField))
                 {
                     var dataType = field.FieldType.TypeName;
-                    // Why: IsNullable and Ordinal moved to data.MsSqlDataContainerField typed body (Wave A5).
-                    // Structural change detection on the base record now uses DataType only;
-                    // IsNullable/Ordinal sync will be handled by the typed-body writer in Wave B2.
                     if (!string.Equals(existingField.DataType, dataType, StringComparison.Ordinal))
                     {
                         existingField.DataType = dataType;
@@ -491,12 +456,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
                     {
                         Name = field.Name,
                         DataContainerId = savedContainerId,
-                        // Why: IsNullable/Ordinal now live on data.MsSqlDataContainerField (typed body).
                         DataType = field.FieldType.TypeName,
-                        // Why propagated rather than decided here: whatever produced this field already
-                        // knows whether it is a storage detail - discovery reads the source catalog and
-                        // marks an identity primary key NotVisible. Re-deriving it here would be a second
-                        // opinion, and the two would drift.
                         VisibilityId = field.Visibility.Name
                     };
                     var savedFieldResult = await fieldWriter.Save(fieldConfig, ct).ConfigureAwait(false);
@@ -543,7 +503,6 @@ public sealed class SchemaInformationService : ISchemaInformationService
             _fieldProvider));
     }
 
-    // Why: pure data holder, no logic beyond trivial construction/assignment
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private sealed class ConfigurationWriters
     {

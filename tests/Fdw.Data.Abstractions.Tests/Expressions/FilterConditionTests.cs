@@ -204,13 +204,6 @@ public sealed class FilterConditionTests
     [Trait("Category", "Regression")]
     public void RecordEqualityAndHashCodeAreValueBasedForDistinctEnumerableValueInstances()
     {
-        // Why: FilterConditionBuilder.In(...) sets Value to the caller's IEnumerable (e.g. a List<T> or
-        // array built fresh per call). Two SEPARATE collection instances with equal content used to
-        // compare/hash unequal — the compiler-synthesized record Equals/GetHashCode delegate to
-        // EqualityComparer<object>.Default, which for a List<T>/array falls back to reference identity.
-        // That is the same defect fixed on FilterGroup.Nodes, and for the same reason:
-        // CacheKeyBuilder.ComputeCacheKey needs GetHashCode() to be value-based so an IN-clause query
-        // built fresh per call still hits the DataGateway result cache.
         var operator1 = new TestFilterOperator();
         var condition1 = new FilterCondition
         {

@@ -38,8 +38,6 @@ public sealed class TrimFieldTransformer : FieldTransformationBase
     }
 
     /// <inheritdoc/>
-    // Why: string trimming is a pure CPU operation (no I/O); Task.FromResult is honest
-    // sync-returning-Task — the contract is async so future I/O-backed transformers are first-class.
     public override Task<IGenericResult<object?>> Transform(
         object? input,
         TransformationContext context,

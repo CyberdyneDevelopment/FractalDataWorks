@@ -70,8 +70,6 @@ public sealed class ConnectionProvider
         return GenericResult<IReadOnlyList<IDataConnection>>.Success(typed);
     }
 
-    // Why explicit: the constraint here is T : IDataConnection, and IPlatformServiceProvider.Get<T>
-    // constrains T : IGenericService. Explicit implementation lets both exist on one class.
     async Task<IGenericResult<T>> IDataConnectionProvider.Get<T>(string name, CancellationToken cancellationToken)
         => Cast<T>(await Get(name, cancellationToken).ConfigureAwait(false));
 }

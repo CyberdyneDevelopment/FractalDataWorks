@@ -48,13 +48,6 @@ public class DataRow : IDataRow
     /// <returns>The typed field value.</returns>
     /// <exception cref="KeyNotFoundException">Field not found.</exception>
     /// <exception cref="InvalidCastException">Type mismatch.</exception>
-    // Why: LEFT throwing (not converted to IGenericResult<T>) — GetValue<T> is a widely-used
-    // typed-accessor contract member declared on IDataRow (mirrors the ADO.NET
-    // IDataRecord.GetValue convention) called in tight per-row hot loops (aggregation in
-    // RuntimeDataSet.Sum/Average/Min/Max, CompiledFieldAccessor). Converting the interface
-    // signature would ripple into every IDataRow consumer across the framework and force every
-    // hot-loop caller to unwrap a result per field per row. Per the "indexer/contract that must
-    // throw" carve-out, this stays as-is.
     public T GetValue<T>(string fieldName)
     {
         var ordinal = _schema.GetOrdinal(fieldName);
@@ -69,8 +62,6 @@ public class DataRow : IDataRow
     /// <returns>The typed field value.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Invalid ordinal.</exception>
     /// <exception cref="InvalidCastException">Type mismatch.</exception>
-    // Why: LEFT throwing — same IDataRow hot-loop/interface-contract reasoning as the
-    // string-keyed overload above (see its Why comment).
     public T GetValue<T>(int ordinal)
     {
         if (ordinal < 0 || ordinal >= _values.Length)
@@ -155,22 +146,18 @@ public class DataRow : IDataRow
         }
         catch (InvalidCastException ex)
         {
-            // Why: conversion between incompatible types is a known failure for TryGetValue — return false.
-            // ex is observed so the exception is not silently discarded.
             _ = ex;
             value = default!;
             return false;
         }
         catch (OverflowException ex)
         {
-            // Why: numeric overflow during conversion is a known failure for TryGetValue — return false.
             _ = ex;
             value = default!;
             return false;
         }
         catch (FormatException ex)
         {
-            // Why: format mismatch during conversion is a known failure for TryGetValue — return false.
             _ = ex;
             value = default!;
             return false;

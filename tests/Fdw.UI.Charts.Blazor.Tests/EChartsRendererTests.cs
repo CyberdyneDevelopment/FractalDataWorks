@@ -19,9 +19,6 @@ public sealed class EChartsRendererTests
     private static TestContext CreateContext()
     {
         var ctx = new TestContext();
-        // Why: EChartsRenderer uses IJSRuntime for the echarts-interop.js module import.
-        // Configure bUnit in loose mode so any un-setup JS call is silently ignored,
-        // allowing the render to complete without a real browser environment.
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         return ctx;
     }

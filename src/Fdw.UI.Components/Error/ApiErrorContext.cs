@@ -6,7 +6,6 @@ using System.Diagnostics.CodeAnalysis;
 /// <summary>
 /// Context for rendering API error display.
 /// </summary>
-// Why: pure DTO, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class ApiErrorContext
 {

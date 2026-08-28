@@ -27,11 +27,6 @@ public sealed class GatewayCacheInvalidationTests
     [Trait("Category", "Caching")]
     public void TagFromACommandAndTagFromAnAddressAreTheSameString()
     {
-        // Why this is worth a test of its own: the whole design is that a write invalidates itself
-        // through the tag the gateway computes from its command, while a post-commit caller
-        // invalidates the same rows through the tag computed from the address. If those two ever
-        // drift apart, nothing errors - invalidation simply stops matching what was cached, and the
-        // symptom is stale reads nobody can trace back to here.
         CacheKeyBuilder.GetInvalidationTags(new InsertCommand<object>(new object()), Target)
             .ShouldHaveSingleItem()
             .ShouldBe(CacheKeyBuilder.TagFor(Target));
@@ -50,12 +45,6 @@ public sealed class GatewayCacheInvalidationTests
     [Trait("Category", "Caching")]
     public void TwoDifferentWritesToOneContainerComputeTheSameCacheKey()
     {
-        // Why this is asserted rather than avoided: it is the reason a write must never be served
-        // from cache. ComputeCacheKey varies only by filter, ordering and paging - fields a write
-        // does not carry - so every insert into a container is the same key. Caching a write result
-        // therefore meant the SECOND insert was answered from the first one's result and never
-        // executed. The gateway now excludes non-query commands from both the read and the write of
-        // the cache; this pins down what would happen if that exclusion were ever removed.
         CacheKeyBuilder.ComputeCacheKey(new InsertCommand<object>(new object()), Target)
             .ShouldBe(CacheKeyBuilder.ComputeCacheKey(new InsertCommand<object>(new object()), Target));
     }
@@ -104,8 +93,6 @@ public sealed class GatewayCacheInvalidationTests
     [Trait("Category", "Caching")]
     public void ACommandsOwnInvalidationTagsWinOverTheAddress()
     {
-        // Why: a write that touches rows another container projects declares its blast radius on the
-        // command. The gateway honours that instead of the address it was addressed by.
         var command = new InsertCommand<object>(new object())
         {
             Metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)

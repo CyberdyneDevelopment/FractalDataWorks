@@ -5,7 +5,6 @@ using System;
 /// <summary>
 /// Summary execution information for listing.
 /// </summary>
-// Why: pure data-transfer POCO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class ExecutionSummaryPayload
 {

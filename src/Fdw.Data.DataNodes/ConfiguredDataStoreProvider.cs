@@ -46,7 +46,6 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
         IServiceConfigurationProvider<DataStoreConfiguration> configurationProvider,
         IDataStoreBuilderSelector builderSelector)
     {
-        // Why: NullLogger<T>.Instance is the only sanctioned ?? fallback (functional without DI logging).
         _logger = logger ?? NullLogger<ConfiguredDataStoreProvider>.Instance;
         ArgumentNullException.ThrowIfNull(configurationProvider);
         ArgumentNullException.ThrowIfNull(builderSelector);
@@ -90,9 +89,6 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
         if (!configResult.IsSuccess)
             return GenericResult<IReadOnlyList<IDataStore>>.Failure(ConfiguredDataStoreProviderLog.LoadAllFailed(_logger));
 
-        // Why: the list Get() returns shallow headers; compose each store's full aggregate
-        // (Paths→Containers→Fields) via the base provider's single Get(name), whose recursive mapper-FK
-        // cascade populates the children — mirrors DataStoreProvider.Load minus the gateway merge.
         var shallowConfigs = configResult.Value ?? [];
         var stores = new List<IDataStore>(shallowConfigs.Count);
         foreach (var shallowCfg in shallowConfigs)
@@ -110,10 +106,6 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
             }
             else
             {
-                // Why: a single store failing to build must not abort the whole list (partial-success
-                // aggregate), but the failure is OBSERVED here rather than silently dropped — the
-                // per-store builder/selector already logged the cause; this records which store the
-                // aggregate omitted so the gap is traceable.
                 ConfiguredDataStoreProviderLog.StoreSkippedInLoad(_logger, shallowCfg.Name);
             }
         }
@@ -144,10 +136,6 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
         return pathResult.Value.Container(containerName);
     }
 
-    // Why: resolve the store's transport builder via the injected selector, Configure with the
-    // resolved store config, and Build the IDataNode tree. Selector/Configure/Build failures are
-    // already MessageLogging-instrumented by their own implementations, so they propagate via
-    // ToNewResult rather than being re-logged here (no double-logging).
     private async Task<IGenericResult<IDataStore>> BuildStore(DataStoreConfiguration storeCfg, CancellationToken cancellationToken)
     {
         var selectResult = _builderSelector.Select(storeCfg, _logger);

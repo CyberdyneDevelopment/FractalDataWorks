@@ -73,7 +73,6 @@ public class UserTenantConfigurationProviderTests
         var tenantB = Guid.NewGuid();
 
         var gw = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
         gw.Setup(g => g.Execute<IEnumerable<UserTenantConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
@@ -100,7 +99,6 @@ public class UserTenantConfigurationProviderTests
     public async Task GetUserTenantsReturnsEmptyWhenNoMemberships()
     {
         var gw = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
         gw.Setup(g => g.Execute<IEnumerable<UserTenantConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
@@ -127,7 +125,6 @@ public class UserTenantConfigurationProviderTests
         var defaultTenantId = Guid.NewGuid();
 
         var gw = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
         gw.Setup(g => g.Execute<IEnumerable<UserTenantConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
@@ -150,11 +147,7 @@ public class UserTenantConfigurationProviderTests
     [Trait("Category", "Users")]
     public async Task GetDefaultTenantReturnsNullValueWhenNoDefaultRow()
     {
-        // Why: a user with no default tenant row is a valid state immediately after creation
-        // (before GrantTenantAccess runs). The provider MUST return Success(null) — callers
-        // handle the absence; it is NOT a failure to have no default tenant row.
         var gw = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
         gw.Setup(g => g.Execute<IEnumerable<UserTenantConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
@@ -180,11 +173,8 @@ public class UserTenantConfigurationProviderTests
         var tenantId = Guid.NewGuid();
 
         var gw = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
-        // Why: GrantTenantAccess uses an Insert command that routes through Execute<int>.
-        // Return 1 (one row inserted) to indicate success.
         gw.Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
           .ReturnsAsync(GenericResult<int>.Success(1));
 
@@ -203,7 +193,6 @@ public class UserTenantConfigurationProviderTests
     public async Task GrantTenantAccessReturnsFailureWhenGatewayFails()
     {
         var gw = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
         gw.Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
           .ReturnsAsync(GenericResult<int>.Failure());
@@ -216,11 +205,6 @@ public class UserTenantConfigurationProviderTests
         result.IsSuccess.ShouldBeFalse();
     }
 
-    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
-    // connection it was told its rows live on, so the fake has to answer to that name to be found.
-    // Why a double rather than the real provider: these tests exercise what a configuration provider
-    // does with its gateway, not which gateway it selects, so the double answers for whatever
-    // connection is asked. Selection itself is covered where the real provider is under test.
     private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 

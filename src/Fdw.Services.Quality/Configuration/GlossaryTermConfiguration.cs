@@ -14,15 +14,12 @@ namespace Fdw.Services.Quality.Configuration;
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Catalog",
     ServiceType = "GlossaryTerm")]
-// Why: IGenericConfiguration is required by ImplementationConfigurationProviderBase<T>
-// for dual-source (ctrl+cfg) provider pattern.
 public sealed partial class GlossaryTermConfiguration : IGenericConfiguration
 {
     /// <inheritdoc />
     public string SectionName => "Catalogs";
 
     /// <inheritdoc />
-    // Why: Matches ServiceCategory from [ManagedConfiguration] attribute for IOptions binding path.
     public string ServiceType => "Catalog";
 
     /// <inheritdoc />

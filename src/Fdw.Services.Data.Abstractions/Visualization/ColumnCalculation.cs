@@ -25,8 +25,6 @@ public sealed class ColumnCalculation
     /// field list, or DataSet name) collected by the UI builder and interpreted by the
     /// operation's <c>Calculate</c> method.
     /// </summary>
-    // Why: string→string avoids a dependency on Services.Calculations.Abstractions here; the
-    // operation implementation owns deserialization of each value from its string form.
     public IDictionary<string, string> Parameters { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
 
     /// <summary>Gets or sets an optional parameter for the calculation (e.g., percentile value).</summary>

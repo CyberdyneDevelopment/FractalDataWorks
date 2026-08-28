@@ -10,7 +10,6 @@ namespace Fdw.Services.Etl.Abstractions.Execution;
 /// work item where the execution ID comes from IExecutionTracker before being enqueued.
 /// <c>required</c> enforces construction correctness without a constructor with many parameters.
 /// </remarks>
-// Why: pure request DTO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class PipelineExecutionRequest
 {

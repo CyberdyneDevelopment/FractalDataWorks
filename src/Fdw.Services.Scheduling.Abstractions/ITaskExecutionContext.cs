@@ -12,9 +12,6 @@ namespace Fdw.Services.Scheduling.Abstractions;
 /// Universal per-run fields (ExecutionId, CancellationToken, Logger, Services,
 /// StartTime, Parameters, SharedState) are inherited from <see cref="IExecutionContext"/>.
 /// </remarks>
-// Why: Previously redeclared ExecutionId/CancellationToken/Logger/ServiceProvider/StartTime
-// independently. All universal fields are now inherited. ServiceProvider is exposed as
-// IExecutionContext.Services to maintain consistency across the execution context hierarchy.
 public interface ITaskExecutionContext : IExecutionContext
 {
     /// <summary>

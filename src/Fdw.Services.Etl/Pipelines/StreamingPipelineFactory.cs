@@ -21,10 +21,6 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
     private readonly ILogger<StreamingPipelineFactory> _logger;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IDataGateway? _dataGateway;
-    // Why: Lazy so the factory stays pure (FDW045). The connection provider is a cross-collection
-    // dependency only used at Create() time (passed to the pipeline); a direct provider param would let
-    // the factory hold another collection's provider — the shape that risks resolver-lambda re-entrancy.
-    // Lazy defers resolution past construction and is dereferenced only when a pipeline is built.
     private readonly Lazy<IConnectionProvider>? _connectionProvider;
 
     /// <summary>
@@ -80,10 +76,6 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
                 EtlLog.PipelineCreationFailed(_logger, "unknown", "Configuration is null"));
         }
 
-        // Why: the runtime service provider composes and hands the ROOT header
-        // (PipelineConfiguration → .Configuration EtlPipelineConfiguration → .Configuration
-        // StreamingPipelineConfiguration). Unwrap to the engine body the pipeline consumes.
-        // A bare engine body (test/system-context caller) is accepted directly.
         var engine = UnwrapEngineBody(configuration);
         if (engine is StreamingPipelineConfiguration streamingConfig)
         {
@@ -95,12 +87,6 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
                 $"Invalid configuration type. Expected StreamingPipelineConfiguration, got {configuration.GetType().Name}"));
     }
 
-    // Why: peel the typed-body chain by declared marker properties — header.Configuration is the
-    // ETL-kind body (EtlPipelineConfiguration), whose .Configuration is the engine body. Transforms are
-    // a KIND-level child collection (FK EtlPipelineId) composed onto EtlPipelineConfiguration; the engine
-    // body exposes a [NotMapped] Transforms the runtime pipeline reads. Carry the composed transforms
-    // across the kind→engine seam (the engine cannot load them via its own FK), else the pipeline runs
-    // with "0 transforms" and the Map step is a silent passthrough.
     private IGenericConfiguration UnwrapEngineBody(IGenericConfiguration configuration)
     {
         var kind = configuration switch

@@ -6,7 +6,6 @@ namespace Fdw.Roslyn.Commands.Workspace.Helpers;
 /// <summary>
 /// The result of asking the ledger where a missing type went.
 /// </summary>
-// Why: pure data holder with two factories, no logic
 [ExcludeFromCodeCoverage]
 public sealed class LedgerLookup
 {

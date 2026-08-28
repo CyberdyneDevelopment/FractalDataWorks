@@ -18,12 +18,7 @@ namespace Fdw.Services.Connections.Endpoints;
 public abstract class TestConnectionEndpointBase : Endpoint<TestConnectionRequest, TestConnectionResponse>
 {
     private readonly IConnectionProvider _connectionProvider;
-    // Why: ConnectionConfigurationProvider replaces IOptionsMonitor<List<T>> with dual-source
-    // (ctrl + cfg) provider that merges system and user configurations.
     private readonly ConnectionConfigurationProvider _configProvider;
-    // Why: no longer nullable — ConnectionHealthService is registered by every connection-kind
-    // option's RegisterDomainConfiguration cascade (see ConnectionConfigurationProvider), so history
-    // recording is a real dependency, not an optional no-op.
     private readonly IConnectionHealthService _healthService;
     private readonly ILogger<TestConnectionEndpointBase> _logger;
 
@@ -76,7 +71,6 @@ public abstract class TestConnectionEndpointBase : Endpoint<TestConnectionReques
 
         var connection = getResult.Value!;
 
-        // Why: Stopwatch captures response time for the health check history record
         var stopwatch = Stopwatch.StartNew();
         var testResult = await connection.TestConnection(ct).ConfigureAwait(false);
         stopwatch.Stop();

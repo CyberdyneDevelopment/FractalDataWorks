@@ -31,8 +31,6 @@ public interface IDataContainer : IDataNode, IStorageContainer
     /// <summary>
     /// Gets the unique name of this container.
     /// </summary>
-    // Why: IDataNode.Name and IStorageContainer.Name both declare string Name — merging them
-    // here into a single declaration eliminates CS0229 ambiguity for callers.
     new string Name { get; }
 
     /// <summary>

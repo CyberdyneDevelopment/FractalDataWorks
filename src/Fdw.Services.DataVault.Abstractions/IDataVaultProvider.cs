@@ -8,9 +8,6 @@ namespace Fdw.Services.DataVault.Abstractions;
 /// <summary>
 /// Provider for configured data vault instances.
 /// </summary>
-// Why: vault providers provide VAULTS, not configurations — configuration comes from the
-// vault domain's configuration provider, and the vault resolves its single connection from
-// that configuration once (system context), never by request-time name lookup.
 public interface IDataVaultProvider : IPlatformServiceProvider<IDataVault, IDataVaultImplementationConfiguration>
 {
     /// <summary>

@@ -218,9 +218,6 @@ public sealed class WorkspaceManager : IWorkspaceManager
                 ResultDetails.Create().With("WorkspaceId", workspaceId));
         }
 
-        // Why: the same gate as the async paths, taken inside the Task.Run so the blocking wait happens
-        // on the thread pool rather than on the caller's thread. Without it a sync caller and an async
-        // caller could wake the same workspace simultaneously, which is the identical race.
 #pragma warning disable VSTHRD002 // Avoid problematic synchronous waits — documented sync-over-async.
         Task.Run(async () =>
         {
@@ -348,8 +345,6 @@ public sealed class WorkspaceManager : IWorkspaceManager
         if (!_workspaces.TryGetValue(workspaceId, out var state))
             return false;
 
-        // Why: TimeSpan.Zero, so the Timer thread never blocks behind an in-flight wake. A workspace
-        // being woken right now is by definition not idle, and the next tick will reconsider it.
         if (!state.Gate.Wait(TimeSpan.Zero))
         {
             RoslynWorkspaceLog.WorkspaceSleepSkippedBusy(_logger, workspaceId);
@@ -361,11 +356,6 @@ public sealed class WorkspaceManager : IWorkspaceManager
             if (state.IsSleeping)
                 return true; // Already sleeping
 
-            // Why: eviction discards the in-memory Solution, and pending edits live nowhere else. A
-            // refactor followed by an ApplyWorkspaceChanges across an idle tick used to return
-            // success: true / "Wrote 0 file(s) to disk" with the work silently gone — two successes and
-            // no effect. Memory reclamation is not a reason to destroy uncommitted work; a workspace
-            // holding changes stays resident until they are written or explicitly discarded.
             var pending = state.Workspace!.GetChangesFromBaseline().Count;
             if (pending > 0)
             {
@@ -396,10 +386,6 @@ public sealed class WorkspaceManager : IWorkspaceManager
         if (!_workspaces.TryGetValue(workspaceId, out var state))
             return null;
 
-        // Why: the re-check inside the gate is the whole fix. Three callers racing one sleeping
-        // workspace each saw IsSleeping==true, each reloaded the solution, and the last assignment won —
-        // leaving two orphaned IRoslynWorkspace instances for a single id and discarding anything the
-        // losers had already been handed.
         await state.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -424,12 +410,6 @@ public sealed class WorkspaceManager : IWorkspaceManager
         if (_disposed)
             return;
 
-        // Why: SleepTimeout can be TimeSpan.MaxValue when a caller disables sleeping
-        // (the stdio MCP host does exactly this). DateTime.UtcNow - TimeSpan.MaxValue is
-        // un-representable and throws ArgumentOutOfRangeException; because this runs on a
-        // Timer thread with no caller to observe it, the unhandled exception tears down
-        // the whole host. When the timeout exceeds UtcNow's distance from DateTime.MinValue,
-        // no workspace can ever be older than the cutoff, so there is nothing to sleep.
         if (SleepTimeout >= DateTime.UtcNow - DateTime.MinValue)
             return;
 

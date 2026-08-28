@@ -63,9 +63,6 @@ public sealed class PredicatePushdownAnalyzer
     /// Conditions are grouped by source and combined with the appropriate logical operator.
     /// Only sources that support predicate pushdown will have filters generated.
     /// </remarks>
-    // Why: Field mappings are passed in pre-resolved instead of accepting IDataSetSourceResolver.
-    // The caller (DataGatewayService) already resolves field mappings via PreResolveFieldMappings,
-    // so the analyzer no longer needs a dependency on the source resolver interface.
     public IGenericResult<Dictionary<string, IFilterExpression>> DecomposeBySource(
         IFilterExpression? filter,
         DataSetConfiguration dataset,

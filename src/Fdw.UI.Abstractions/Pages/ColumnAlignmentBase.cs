@@ -6,7 +6,6 @@ namespace Fdw.UI.Abstractions.Pages;
 /// <summary>
 /// Base class for column text alignment.
 /// </summary>
-// Why: pure TypeOption base — trivial pass-through constructor, no logic to test.
 [ExcludeFromCodeCoverage]
 public abstract class ColumnAlignmentBase : TypeOptionBase<int, ColumnAlignmentBase>, IColumnAlignment
 {

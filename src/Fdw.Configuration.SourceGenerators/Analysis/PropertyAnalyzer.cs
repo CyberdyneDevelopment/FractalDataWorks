@@ -246,7 +246,6 @@ public static class PropertyAnalyzer
                     break;
 
                 case "KeyAttribute":
-                    // Why: IsPrimaryKey removed from PropertyModel — PK identity now in KeyField tables.
                     model.IsRequired = true;
                     break;
 

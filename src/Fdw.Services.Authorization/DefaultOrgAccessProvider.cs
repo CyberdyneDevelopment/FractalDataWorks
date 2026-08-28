@@ -16,8 +16,6 @@ namespace Fdw.Services.Authorization;
 /// </summary>
 public sealed class DefaultOrgAccessProvider : IOrgAccessProvider
 {
-    // Why: TenantOrgAccessConfigurationProvider is the domain-owned gateway path for
-    // TenantOrgAccess data. Providers inject the configuration provider — never IConfigurationGateway directly.
     private readonly TenantOrgAccessConfigurationProvider _provider;
     private readonly ILogger<DefaultOrgAccessProvider> _logger;
 

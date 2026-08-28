@@ -40,15 +40,12 @@ public sealed class StoreCredentialCommand : SecretManagerCommandBase, ISecretMa
         UserId = userId;
         if (credentialType is null)
         {
-            // Why: reported as a defect (FDW rule) — a command should return IGenericResult, not
-            // throw. Left in place per instructions (constructors cannot return IGenericResult).
             StoreCredentialCommandLog.RequiredValueMissing(NullLogger<StoreCredentialCommand>.Instance, nameof(credentialType));
             throw new ArgumentNullException(nameof(credentialType));
         }
 
         if (plaintextValue is null)
         {
-            // Why: same throw-instead-of-result defect as above — logged, not converted.
             StoreCredentialCommandLog.RequiredValueMissing(NullLogger<StoreCredentialCommand>.Instance, nameof(plaintextValue));
             throw new ArgumentNullException(nameof(plaintextValue));
         }

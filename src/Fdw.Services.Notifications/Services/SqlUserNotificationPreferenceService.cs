@@ -103,8 +103,6 @@ public sealed class SqlUserNotificationPreferenceService : IUserNotificationPref
                         userId));
             }
 
-            // Why: notification-type/channel is the natural key for a user's preference row,
-            // so an upsert keyed on that pair gives the UI a stable "replace this toggle" write.
             var existing = (existingResult.Value ?? Enumerable.Empty<UserNotificationPreferenceConfiguration>())
                 .ToDictionary(r => Key(r.NotificationType, r.Channel), StringComparer.OrdinalIgnoreCase);
 
@@ -116,9 +114,6 @@ public sealed class SqlUserNotificationPreferenceService : IUserNotificationPref
                 {
                     var updateCommand = CmdBuilders.Update.In<UserNotificationPreferenceConfiguration>(ContainerName)
                         .DataStore(DataStoreName).Path(PathName)
-                        // Why: this row has no surrogate Id — its durable identity is the natural key
-                        // (UserId + NotificationType + Channel), enforced by a unique filtered index. RowId is
-                        // DB-managed and invisible, so the in-place update keys on the natural key + IsCurrent.
                         .Where(nameof(UserNotificationPreferenceConfiguration.UserId), row.UserId)
                         .Where(nameof(UserNotificationPreferenceConfiguration.NotificationType), row.NotificationType)
                         .Where(nameof(UserNotificationPreferenceConfiguration.Channel), row.Channel)
@@ -142,8 +137,6 @@ public sealed class SqlUserNotificationPreferenceService : IUserNotificationPref
                         .DataStore(DataStoreName).Path(PathName)
                         .Value(new UserNotificationPreferenceConfiguration
                         {
-                            // Why: no surrogate Id on this row (natural-keyed); the physical RowId is a
-                            // DB-managed INT IDENTITY assigned on INSERT — invisible, never supplied here.
                             UserId = userId,
                             NotificationType = preference.NotificationType,
                             Channel = preference.Channel,
@@ -166,8 +159,6 @@ public sealed class SqlUserNotificationPreferenceService : IUserNotificationPref
 
             UserNotificationPreferenceLog.PreferencesPersisted(_logger, preferences.Count, userId);
 
-            // Why: read back from storage so the caller (and the UI) observes the persisted
-            // state, not the echoed request — the round-trip the audit flagged as missing.
             return await GetPreferences(userId, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)

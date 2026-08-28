@@ -6,7 +6,6 @@ namespace Fdw.Commands.Data.Abstractions;
 /// Execute commands sequentially but stop on first failure.
 /// Useful for critical pipelines where a failure should halt all subsequent operations.
 /// </summary>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(ExecutionStrategies), "SequentialStopOnFailure", RestrictToCurrentCompilation = true)]
 public sealed class SequentialStopOnFailureExecutionStrategy : ExecutionStrategyBase

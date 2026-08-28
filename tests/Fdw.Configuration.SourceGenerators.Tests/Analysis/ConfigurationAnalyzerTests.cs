@@ -15,8 +15,6 @@ public class ConfigurationAnalyzerTests
     public void AnalyzeExtractsBasicMetadata()
     {
         // Arrange
-        // Why: Schema and TableName are no longer attribute arguments — IDataNode owns schema and
-        // table names are now derived from the class name. Only UI/generation metadata is on the attribute.
         var source = @"
 using Fdw.Configuration;
 
@@ -41,11 +39,7 @@ namespace Test
         model.ShouldNotBeNull();
         model.Namespace.ShouldBe("Test");
         model.ClassName.ShouldBe("TestConfiguration");
-        // Why: Schema is hardcoded to "cfg" in ConfigurationModel — attribute no longer carries it.
         model.Schema.ShouldBe("cfg");
-        // Why: TableName is null on the model because the attribute no longer carries it.
-        // The effective table name is derived from class name via GetEffectiveTableName():
-        // "TestConfiguration" → strips "Configuration" suffix → "Test".
         model.TableName.ShouldBeNull();
         model.GetEffectiveTableName().ShouldBe("Test");
         model.DisplayName.ShouldBe("Test Display");
@@ -57,9 +51,6 @@ namespace Test
     [Trait("Category", "SourceGen")]
     public void AnalyzeIgnoresRemovedStructuralAttributeArgs()
     {
-        // Why: ParentTableName, ParentSchema, Schema were removed from [ManagedConfiguration] in FDW-395 Phase 6.
-        // IDataNode now owns parent-child structure and schema metadata.
-        // The attribute ignores unknown named args silently; ConfigurationModel retains default values.
         var source = @"
 
 namespace Test
@@ -297,9 +288,6 @@ namespace Test
     public void AnalyzeDetectsParentHasManagedConfigurationAttribute()
     {
         // Arrange
-        // Why: ParentHasManagedConfiguration is now detected via Roslyn symbol analysis on the base class,
-        // not via the attribute argument. The child class inherits from ParentConfiguration which has
-        // [ManagedConfiguration], so ParentHasManagedConfiguration should be true.
         var source = @"
 
 namespace Test
@@ -334,8 +322,6 @@ namespace Test
     public void AnalyzeHandlesParentWithoutManagedConfigurationAttribute()
     {
         // Arrange
-        // Why: ParentHasManagedConfiguration is detected via Roslyn symbol analysis.
-        // A plain base class (without [ManagedConfiguration]) should yield false.
         var source = @"
 
 namespace Test
@@ -368,9 +354,6 @@ namespace Test
     [Trait("Category", "SourceGen")]
     public void AnalyzeHandlesParentClassWithManagedConfigurationAttributeDetection()
     {
-        // Why: ParentForeignKeyColumn was removed from [ManagedConfiguration] in FDW-395 Phase 6.
-        // ParentHasManagedConfiguration is now detected via Roslyn symbol analysis on the base class.
-        // A class without a [ManagedConfiguration] base should have ParentHasManagedConfiguration = false.
         var source = @"
 
 namespace Test

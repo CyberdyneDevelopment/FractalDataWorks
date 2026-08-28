@@ -7,7 +7,6 @@ namespace Fdw.UI.Themes;
 /// Abstract base class for menu themes.
 /// Inherit from this class and apply [TypeOption] attribute to create custom themes.
 /// </summary>
-// Why: pure TypeOption base — constructor only assigns properties, no logic to test.
 [ExcludeFromCodeCoverage]
 public abstract class MenuThemeBase : TypeOptionBase<int, MenuThemeBase>, IMenuTheme
 {

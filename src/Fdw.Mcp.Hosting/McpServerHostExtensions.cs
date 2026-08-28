@@ -41,8 +41,6 @@ public static class McpServerHostExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // Why: NullLogger fallback is the one sanctioned ?? default — it keeps the method usable
-        // before logging is wired without hiding a missing value.
         var resolvedLogger = logger ?? NullLogger.Instance;
 
         var toolClasses = new List<Type>();

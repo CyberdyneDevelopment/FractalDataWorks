@@ -5,8 +5,6 @@ using Microsoft.Extensions.Options;
 
 namespace Fdw.Validation;
 
-// Why: Cross-cutting infrastructure with no owning ServiceTypeOption. When the hosting builder
-// adds validation support, move AddFrameworkValidation into that registration.
 /// <summary>
 /// Extension methods for registering FDW validation services.
 /// </summary>

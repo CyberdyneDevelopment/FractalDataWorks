@@ -51,8 +51,6 @@ public sealed class ApiTestSuiteScreen : ScreenBase
         var folders = await suite.GetFolders().ConfigureAwait(false);
         if (folders.IsFailure)
         {
-            // Why the message rather than a paraphrase: the service already built one that names
-            // the directory or the missing file, and rewording it here loses the path.
             RenderWarning(folders.CurrentMessage ?? "The suite could not be read.");
             Console.WriteLine();
 

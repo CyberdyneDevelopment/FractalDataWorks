@@ -30,8 +30,6 @@ public sealed class DefaultAgentActionServiceType : AgentActionTypeBase<IGeneric
         Registration((builder, loggerFactory) =>
         {
 
-            // Why Scoped: AgentActionService requires IDataGateway (scoped) via constructor injection.
-            // Consumed directly by per-request endpoints — no parent provider indirection to preserve.
             builder.Services.AddScoped<IAgentActionService, AgentActionService>();
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

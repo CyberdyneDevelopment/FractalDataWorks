@@ -18,15 +18,9 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, UserRolesResponse>
 {
-    // Why: RoleConfigurationProvider replaces IOptionsMonitor<List<RoleConfiguration>> for role lookups.
     private readonly RoleConfigurationProvider _roleProvider;
-    // Why: UserRoleConfigurationProvider replaces IOptionsMonitor<List<UserRoleConfiguration>>
-    // for dual-source (ctrl + cfg) user-role queries.
     private readonly UserRoleConfigurationProvider _userRoleProvider;
-    // Why: IConfigurationGateway is the single connection used by the authorization domain; opening
-    // a transaction on it ensures the role write is atomic.
     private readonly IConfigurationGateway _configurationGateway;
-    // Why: owns the shared id-or-name resolution every user-scoped route goes through.
     private readonly UserConfigurationProvider _userProvider;
 
     /// <summary>
@@ -65,11 +59,6 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "users:write".
     /// </summary>
-    // Why: the standard CRUD tier for this resource. This endpoint previously required ":delete"
-    // as an ad-hoc "Admin-only" tier, because the seeded Operator role is granted ":write" on
-    // every resource by a blanket rule and would otherwise have inherited user administration.
-    // The grant was the wrong thing to work around: user/role admin is now carved out of
-    // Operator in the seed, so these permissions can mean exactly what they say (FDW-634).
     protected virtual string WritePolicy => "users:write";
 
     /// <inheritdoc />
@@ -90,9 +79,6 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
     {
         EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
 
-        // Why: resolve through the shared id-or-name resolver so this route accepts exactly what the
-        // revoke and get-roles routes accept. Assign previously bound a raw Guid while those two
-        // resolved a username, so a caller could add a role it was then unable to remove.
         var lookup = await _userProvider.ResolveUser(req.IdOrName, ct).ConfigureAwait(false);
         if (!lookup.IsSuccess || lookup.Value is null)
         {
@@ -129,8 +115,6 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
 
             var allRoles = await _roleProvider.GetAllRoles(ct).ConfigureAwait(false);
             var userRolesResult = await _userRoleProvider.GetByUser(userIdString, ct).ConfigureAwait(false);
-            // Why: FDW-532 — GetByUser now returns IGenericResult; after a successful assignment
-            // we still need to return the updated role list. If the load fails, return 500.
             if (!userRolesResult.IsSuccess || userRolesResult.Value is null)
             {
                 await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
@@ -157,8 +141,6 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
         }
     }
 
-    // Why: Extracted to keep HandleAsync below the FDW007 cyclomatic-complexity threshold.
-    // Returns success when the transaction commits; on failure, the HTTP response is already sent.
     private async Task<Fdw.Results.IGenericResult> AssignRoleAtomically(
         Guid userId, UserRoleConfiguration config, string userIdString, CancellationToken ct)
     {

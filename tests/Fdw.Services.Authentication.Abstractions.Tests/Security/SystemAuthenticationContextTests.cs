@@ -42,8 +42,6 @@ public class SystemAuthenticationContextTests
         var context = new SystemAuthenticationContext();
 
         // Assert
-        // Why: system elevation is not scoped to a single tenant — it grants visibility across
-        // every tenant via RLS Mode 1, so there is no "active" tenant to report.
         context.ActiveTenantId.ShouldBeNull();
     }
 
@@ -56,8 +54,6 @@ public class SystemAuthenticationContextTests
         var context = new SystemAuthenticationContext();
 
         // Assert
-        // Why: this value is intentionally NOT a parseable Guid — MsSqlConnection dispatches on
-        // IsSystemContext before it would ever attempt Guid.TryParse(UserId, ...).
         context.UserId.ShouldBe("system");
     }
 

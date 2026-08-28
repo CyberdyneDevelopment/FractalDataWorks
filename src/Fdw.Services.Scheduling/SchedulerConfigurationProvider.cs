@@ -17,9 +17,6 @@ namespace Fdw.Services.Scheduling;
 /// Configuration provider for SchedulerConfiguration rows in sched.Scheduler.
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
-// Why: SchedulerConfiguration is loaded from ConfigurationDb at runtime via Lazy<IConfigurationGateway>,
-// not through BindConfiguration("Schedulers:..."). The empty IOptionsMonitor passed to the base class
-// means the provider's gateway-backed query path is the only source.
 public class SchedulerConfigurationProvider
     : ServiceConfigurationProviderBase<
           SchedulerConfiguration,

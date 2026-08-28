@@ -115,9 +115,6 @@ public sealed class ValidateResultHandlingTranslator
             }
             catch (Exception ex)
             {
-                // Why: per-project failures are tolerated by design (best-effort scan), but
-                // record the failure in the result data so it isn't silently swallowed —
-                // FDW014 demands the exception be visible in the returned GenericResult.
                 ValidateResultHandlingTranslatorLog.ProjectScanFailed(Logger, project.Name, ex.GetType().Name, ex.Message);
                 issues.Add(new ResultHandlingIssue
                 {

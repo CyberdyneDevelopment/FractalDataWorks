@@ -81,21 +81,12 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
             SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions |
             SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
 
-        // Why: Walk the entire base type chain to collect all public settable properties.
-        // Derived types (e.g., MsSqlConnectionConfiguration) must include inherited properties
-        // (e.g., Id, Name from ConnectionConfiguration) so that MsSqlConfigurationSaveTranslator
-        // can intersect the PocoMapper property names with parent table container fields and
-        // produce a non-empty INSERT column list for the parent table write.
         var seenNames = new System.Collections.Generic.HashSet<string>(System.StringComparer.Ordinal);
         var allProperties = new System.Collections.Generic.List<PropertyInfo>();
         var children = new System.Collections.Generic.List<ChildInfo>();
         string? typedBodyTypeFqn = null;
 
-        // Why: the cascade stamps the parent's logical Id onto each level-1 child's FK property,
-        // named {Strip(parentType)}Id (mirrors ImplementationConfigurationProviderBase.StripConfigurationSuffix).
         var parentFkName = StripConfigurationSuffix(typeSymbol.Name) + "Id";
-        // Why: the READ cascade filters child rows by the PHYSICAL {Strip(parentType)}RowId FK
-        // (e.g. DataStoreRowId, MsSqlConnectionRowId) = owner.RowId — version-pinned, no schema lookup.
         var parentFkRowId = StripConfigurationSuffix(typeSymbol.Name) + "RowId";
 
         var current = typeSymbol;
@@ -183,11 +174,6 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
             direction);
     }
 
-    // Why: int enum — cannot switch on MapperDirection from Data.Abstractions in a Roslyn
-    // source generator without taking a package reference that causes a circular dependency.
-    // Mirror the enum values locally so the generator stays self-contained.
-    // FDW017 disabled: source generators are explicitly exempt from the TypeCollection rule because
-    // they compile against netstandard2.0 and cannot reference the TypeCollection infrastructure.
 #pragma warning disable FDW017
     private enum MapperDirection
     {
@@ -210,9 +196,6 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         // Strip global:: from the string key so it matches Type.FullName at runtime
         var typeFullName = typeInfo.FullyQualifiedName.Replace("global::", "");
 
-        // Why: input-side methods are only emitted when Direction is Input or Both.
-        // Output-only mappers have no need for DbDataReader or Dictionary materialisation;
-        // including them would pull unused using statements and dead code into output assemblies.
         var emitInput = typeInfo.Direction == MapperDirection.Input || typeInfo.Direction == MapperDirection.Both;
 
         var inputMethods = emitInput ? $$"""
@@ -259,10 +242,8 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                 }
             """ : string.Empty;
 
-        // Why: helper methods (GetReaderValue_*) are only needed when input mapping is emitted.
         var helperMethods = emitInput ? GenerateHelperMethods(typeInfo) : string.Empty;
 
-        // Why: data-reader using directives are only emitted for input-side mappers.
         var readerUsings = emitInput
             ? "using System.Data.Common;\r\n"
             : string.Empty;
@@ -373,8 +354,6 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         return sb.ToString();
     }
 
-    // Why: reflection-free property setter by column name — the generated switch replaces
-    // GetProperty(name).SetValue used by the save cascade to stamp a child's runtime-named FK column.
     private static string GenerateSetValue(TypeInfo typeInfo)
     {
         var sb = new StringBuilder();
@@ -386,8 +365,6 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
 
         foreach (var prop in typeInfo.Properties)
         {
-            // Why: init-only properties can only be set in an object initializer (MapFromReader does
-            // that); a post-construction SetValue cannot assign them, so they are not emitted here.
             if (prop.IsInitOnly)
                 continue;
             var baseType = prop.TypeName.TrimEnd('?');
@@ -402,8 +379,6 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         return sb.ToString();
     }
 
-    // Why: emits the reflection-free cascade surface (CreateList/CreateArray/GetTypedBody/CascadeChildren).
-    // Emitted unconditionally (the members are abstract on PocoMapperBase), independent of Direction.
     private static string GenerateCascadeSurface(TypeInfo t)
     {
         var fqn = t.FullyQualifiedName;
@@ -420,12 +395,6 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         sb.AppendLine($"            public override global::Fdw.Configuration.IGenericConfiguration? GetTypedBody(object parent) => {typedBody};");
         sb.AppendLine();
 
-        // Why: reflection-free mirror of GetTypedBody used by the read path to attach a composed typed
-        // body. When the type has no typed-body property the setter is a no-op; otherwise it casts the
-        // incoming IGenericConfiguration to the declared Configuration property type and assigns it.
-        // Why: cast to the NULLABLE typed-body type — body is IGenericConfiguration? and the Configuration
-        // property is nullable, so the '?' on the cast avoids CS8600 (null → non-nullable) under nullable
-        // reference types. The captured FQN is non-annotated, so the '?' is appended here.
         var setTypedBody = t.TypedBodyTypeFqn is null
             ? "{ }"
             : $"=> (({fqn})parent).Configuration = ({t.TypedBodyTypeFqn}?)body;";
@@ -472,10 +441,6 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         if (c.Kind == ChildKind.PropertyCollection)
         {
             // KVP child: fetched by the consumer as KeyValueRow (a fixed type); ChildType unused.
-            // Why: build a dictionary whose value-nullability matches the parent property. When the
-            // property's value side is non-nullable (IDictionary<string, string>), the loaded values
-            // are copied with the null-forgiving operator — a compile-time assertion, not a runtime
-            // fallback (no substitute value is introduced).
             var valType = c.KvpValueNullable ? "string?" : "string";
             var nullForgive = c.KvpValueNullable ? string.Empty : "!";
             return $$"""
@@ -643,8 +608,6 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         return false;
     }
 
-    // Why: detects the typed-body / typed-list-child element types so the cascade descriptor can be
-    // emitted. A type "implements IGenericConfiguration" if it (or a base/interface) is that interface.
     private static bool ImplementsGenericConfiguration(ITypeSymbol type)
     {
         if (IsGenericConfiguration(type))
@@ -660,7 +623,6 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
     private static bool IsGenericConfiguration(ITypeSymbol type)
         => string.Equals(type.ToDisplayString(), GenericConfigurationFullName, StringComparison.Ordinal);
 
-    // Why: extracts X from List<X>/IEnumerable<X>/X[] so the descriptor knows the child element type.
     private static ITypeSymbol? GetEnumerableElementType(ITypeSymbol type)
     {
         if (type is IArrayTypeSymbol array)
@@ -687,9 +649,6 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         return null;
     }
 
-    // Why: detects a property-collection (KVP) child — IDictionary<string, string> or
-    // IDictionary<string, string?> — and reports whether the value side is nullable so the generated
-    // FillDictionary builds a dictionary whose value-nullability matches the parent property.
     private static bool TryGetStringDictionary(ITypeSymbol type, out bool valueNullable)
     {
         valueNullable = false;
@@ -717,8 +676,6 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         return false;
     }
 
-    // Why: the cascade stamps domainConfigurationId onto the child's {Strip(parent)}Id property; only emit the
-    // typed assignment when the child actually declares a public-settable Guid property of that name.
     private static bool ChildHasFkSetter(ITypeSymbol childType, string fkName)
     {
         var current = childType;
@@ -740,8 +697,6 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         return false;
     }
 
-    // Why: mirrors ImplementationConfigurationProviderBase.StripConfigurationSuffix so the FK column name the
-    // generator resolves matches the runtime cascade's logical FK ({Strip(parentType)}Id).
     private static string StripConfigurationSuffix(string typeName)
     {
         const string suffix = "Configuration";
@@ -785,19 +740,9 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         string PhysicalFkColumn,
         string ChildContainerName);
 
-    // Why: Property name == column name by default. When a POCO property's SQL column name
-    // differs, the author decorates with [Column("SomeOtherName")] from
-    // System.ComponentModel.DataAnnotations.Schema. The generator picks up the override here
-    // so that reader.GetOrdinal(), GetPropertyNames(), MapToParameters keys, and the dictionary
-    // mapping path all use the SQL column name, not the C# property name.
     private const string ColumnAttributeFullName = "System.ComponentModel.DataAnnotations.Schema.ColumnAttribute";
     private const string ChildTableAttributeFullName = "Fdw.Data.ConfigurationChildTableAttribute";
 
-    // Why: a KVP property-collection child's table name is not derivable from the property/owner type
-    // (e.g. "Properties" -> conn.MsSqlConnectionAuthentication), so the author declares it with
-    // [ConfigurationChildTable("...")]. Emitted onto the descriptor's ChildContainerName so the read
-    // cascade can query it with no schema lookup. Empty string when absent — the read then skips the
-    // child (an unwired KVP bag) rather than guessing a table (NO FALLBACKS).
     private static string ResolveChildContainerName(IPropertySymbol prop)
     {
         foreach (var attr in prop.GetAttributes())

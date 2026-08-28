@@ -80,9 +80,6 @@ public sealed class FindDerivedTypesTranslator : RoslynCommandTranslatorBase<Fin
 
         var derivedTypes = new List<TypeInfoResult>();
 
-        // Why: the workspace strips UnresolvedAnalyzerReference at the load boundary
-        // (RoslynWorkspaceFactory + SolutionExtensions.WithoutUnresolvedAnalyzers), so the
-        // DependentTypeFinder checksum path no longer throws here — no defensive catch needed.
         var foundTypes = await SymbolFinder.FindDerivedClassesAsync(
             typeSymbol, solution, command.Transitive, cancellationToken: cancellationToken).ConfigureAwait(false);
 

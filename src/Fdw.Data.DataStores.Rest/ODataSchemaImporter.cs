@@ -339,13 +339,11 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
 
     private static string MapEdmTypeName(string edmType)
     {
-        // Why: strip the "Edm." namespace prefix OData services emit before looking up in the converter collection.
         var typeName = edmType.StartsWith("Edm.", StringComparison.Ordinal)
             ? edmType.Substring(4)
             : edmType;
 
         var converter = ODataConverters.BySourceType(typeName);
-        // Why: check the NotFound sentinel, never null — TypeCollection lookups return sentinel on miss.
         if (converter == ODataConverters.NotFound)
             return typeof(object).Name;
 

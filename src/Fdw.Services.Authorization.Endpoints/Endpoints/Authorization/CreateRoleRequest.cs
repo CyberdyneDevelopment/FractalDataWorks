@@ -5,10 +5,6 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// <summary>
 /// Request to create a new role.
 /// </summary>
-// Why the DataAnnotations duplicate CreateRoleRequestValidator: OpenAPI/Swagger generates the
-// published schema from DataAnnotations, not from FluentValidation. Without them this type
-// advertised no constraints at all to API consumers even though the validator rejected the input.
-// The two must be kept in step -- ContractParityTests asserts it.
 public class CreateRoleRequest
 {
     /// <summary>

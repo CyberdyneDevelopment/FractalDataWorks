@@ -7,7 +7,6 @@ namespace Fdw.DevSession.Abstractions;
 /// concurrently with other strands without conflict. The paths describe the files or directories the
 /// strand intends to touch.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ScopeRequest
 {

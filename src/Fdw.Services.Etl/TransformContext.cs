@@ -64,9 +64,6 @@ public sealed class TransformContext : ITransformContext
     public IServiceProvider Services { get; }
 
     /// <inheritdoc />
-    // Why: ITransformContext exposes Variables for ETL-specific pipeline variable access.
-    // IExecutionContext.Parameters is the universal key/value store — kept empty at this
-    // layer since ETL callers pass data via Variables, not Parameters.
     public IReadOnlyDictionary<string, object?> Parameters => EmptyParameters;
 
     /// <inheritdoc />
@@ -100,9 +97,6 @@ public sealed class TransformContext : ITransformContext
     /// <summary>
     /// Minimal service provider returned when no DI container is available.
     /// </summary>
-    // Why: TransformContext is constructed by the ETL executor which may not have a
-    // full DI container in all scenarios. EmptyServiceProvider prevents null reference
-    // exceptions while making the absence of services explicit.
     private sealed class EmptyServiceProvider : IServiceProvider
     {
         /// <summary>Gets the singleton instance.</summary>

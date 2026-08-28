@@ -25,10 +25,6 @@ namespace Fdw.Services.Pipelines.Tests;
 [Trait("Category", "Etl")]
 public sealed class DataSetSchemaServiceTests
 {
-    // Why: DataSetConfigurationProvider is a concrete class (not an interface), so Moq mocks it
-    // directly via its virtual GetFields/SaveFields members. The gateway provider is
-    // never dereferenced because those two members are fully overridden by the mock (CallBase is
-    // false by default), so a throwing factory proves the gateway was never touched.
     private static Mock<DataSetConfigurationProvider> CreateProviderMock()
     {
         return new Mock<DataSetConfigurationProvider>(

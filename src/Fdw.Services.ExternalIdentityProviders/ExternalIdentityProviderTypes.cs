@@ -60,18 +60,12 @@ public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
     {
         var collectOptions = RegisterFunc;
 
-        // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
-        // three points below — the deferred declaration, the milestone, and the zero-option warning.
-        // Written out three times it is three chances for them to disagree.
         var providerService = typeof(IPlatformServiceProvider<IExternalIdentityProvider, IExternalIdentityProviderImplementationConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<ExternalIdentityProviderTypes>() ?? NullLogger<ExternalIdentityProviderTypes>.Instance;
 
-            // Why the result is read: this replacement calls the func it captured, and discarding
-            // what that returned meant an option that failed to register was followed by this body
-            // registering the provider anyway and reporting success.
             var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
                 return registered;
@@ -82,11 +76,6 @@ public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(ExternalIdentityProviderTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(ExternalIdentityProviderTypes), providerService);
 
-            // Why the domain interface and not only the concrete class: this collection resolves
-            // IExternalIdentityProviderConfigurationProvider to attach it to the domain provider, and a registration of
-            // the concrete type alone leaves that lookup empty — the domain then fails every lookup by
-            // name for the life of the scope. ConfigurationConnection is the one place that names which
-            // store these rows live in.
             builder.Services.TryAddSingleton<IExternalIdentityProviderConfigurationProvider>(sp =>
                 new ExternalIdentityProviderConfigurationProvider(
                     sp.GetService<ILogger<ExternalIdentityProviderConfigurationProvider>>()!,
@@ -99,9 +88,6 @@ public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProviderConfiguration>>(
                 sp => sp.GetRequiredService<ExternalIdentityProviderConfigurationProvider>());
 
-            // Why the resolver is registered by the domain and not by an option: ConnectTokenEndpointBase
-            // takes it as a required dependency, so registering it from one concrete option makes the
-            // core token endpoint unresolvable — password grant included — whenever that option is absent.
             ExternalIdentityProviderResolver.RegisterDomainServices(builder.Services);
 
             builder.Services.AddScoped<IPlatformServiceProvider<IExternalIdentityProvider, IExternalIdentityProviderImplementationConfiguration>>(sp =>
@@ -111,10 +97,6 @@ public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ExternalIdentityProviderServiceProvider>()
                     ?? NullLogger<ExternalIdentityProviderServiceProvider>.Instance);
 
-                // Why ILogger<ExternalIdentityProviderTypes> and not CreateLogger("ExternalIdentityProviderTypes"): SourceContext then
-                // carries the namespace-qualified collection, and the category cannot drift from the
-                // type it claims to name. The provider logs its own lines under its own type, so the
-                // two layers read base-then-derived rather than collapsing onto one category.
                 var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<ExternalIdentityProviderTypes>()
                     ?? NullLogger<ExternalIdentityProviderTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(ExternalIdentityProviderTypes), provider.GetType().Name);
@@ -122,8 +104,6 @@ public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
                 {
                     if (sp.GetService<IExternalIdentityProviderConfigurationProvider>() is { } cfgProvider)
                     {
-                        // Why the result is read: a provider that did not take its parent still constructs, and
-                        // every later read silently misses. The failure has to be said out loud here or nowhere.
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(ExternalIdentityProviderTypes), provider.GetType().Name, cfgProvider.GetType().Name);
@@ -132,11 +112,6 @@ public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
                     }
                     else
                     {
-                        // Why Critical, and why the collection says it rather than the provider: from
-                        // inside the provider a null parent is indistinguishable from a domain that needs
-                        // none. This is the one place that knows one was meant to arrive, and without it
-                        // the domain fails every lookup by name for the life of the scope with nothing
-                        // pointing back here.
                         ServiceTypeLog.DomainHasNoConfigurationSource(
                             stLogger,
                             nameof(ExternalIdentityProviderTypes),
@@ -146,16 +121,12 @@ public partial class ExternalIdentityProviderTypes : ServiceTypeCollectionBase<
                 }
                 catch (Exception ex)
                 {
-                    // Why rethrow: a throw here was previously silent, and a provider that failed to take
-                    // its parent is unusable in a way that only surfaces much later.
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(ExternalIdentityProviderTypes));
                     throw;
                 }
                 return provider;
             });
 
-            // Why the milestone comes after the registration and not before: it states that the domain
-            // finished phase 2, which is only true once the provider is actually in the container.
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(ExternalIdentityProviderTypes), providerService);
             else

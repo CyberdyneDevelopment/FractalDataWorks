@@ -9,7 +9,6 @@ namespace Fdw.Web.Analytics.Components.Health.Gauge;
 /// <summary>
 /// Immutable context for the Gauge headless provider.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class GaugeContext : ProviderContextBase
 {

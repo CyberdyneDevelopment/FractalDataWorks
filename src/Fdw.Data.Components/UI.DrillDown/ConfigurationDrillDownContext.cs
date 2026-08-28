@@ -11,7 +11,6 @@ namespace Fdw.UI.DrillDown;
 /// Immutable context object passed to the consumer RenderFragment by <see cref="ConfigurationDrillDownProvider"/>.
 /// Carries tree state, configuration metadata for the selected node, and callback delegates.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class ConfigurationDrillDownContext : ProviderContextBase
 {

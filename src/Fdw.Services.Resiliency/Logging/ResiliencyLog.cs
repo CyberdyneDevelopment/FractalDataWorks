@@ -73,8 +73,6 @@ public static partial class ResiliencyLog
     /// <summary>
     /// Logs when a circuit breaker opens (starts rejecting requests).
     /// </summary>
-    // Why Warning, not Error (FDW-583): a circuit opening is the resiliency mechanism doing its job —
-    // abnormal but handled, matching OrchestrationLogger's existing Warning for the same condition.
     [MessageLogging(
         EventId = 81002,
         Level = LogLevel.Warning,
@@ -381,8 +379,6 @@ public static partial class ResiliencyLog
     /// <summary>
     /// Logs when RetryNotify strategy sends a terminal-failure notification.
     /// </summary>
-    // Why Information, not Warning (FDW-583): the notification itself succeeded — the thing being
-    // reported ABOUT was a failure, but this record is the deliberate notify action completing.
     [MessageLogging(
         EventId = 81008,
         Level = LogLevel.Information,

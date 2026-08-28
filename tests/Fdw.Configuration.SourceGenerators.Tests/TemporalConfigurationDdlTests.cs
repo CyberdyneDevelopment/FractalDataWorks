@@ -79,9 +79,6 @@ namespace Test
         var (compilation, _) = CompilationHelper.RunGenerator(TemporalSource);
         var ddl = CompilationHelper.GetGeneratedOutput(compilation, "RateConfiguration.Ddl.g.cs");
 
-        // Why this index is not optional: every other index on these tables is filtered
-        // WHERE IsCurrent = 1, so none of them serves a historical lookup — an as-of read would
-        // scan the entity's entire version history on every restatement.
         ddl.ShouldNotBeNull();
         ddl!.ShouldContain("IX_Rate_Id_Effective");
         ddl!.ShouldContain("new[] { \"Id\", \"EffectiveStart\", \"EffectiveEnd\" }");

@@ -146,8 +146,4 @@ public static partial class DataSetEndpointLog
     [MessageLogging(EventId = 71002, Level = LogLevel.Error, Message = "POST DataSet query failed for '{dataSetName}': {message}")]
     public static partial IGenericMessage PostQueryFailed(ILogger logger, string dataSetName, string message);
 
-    // Why: FederationStrategy/Aggregate guard validation (previously EventIds 21002-21007 here) now
-    // fails loud via DataSetsResultCodes (ServiceOptionTypeInvalid/FederationStrategy*/Aggregate*, in
-    // Fdw.Data.DataSets.Results) — GenericResult.Failure(IResultCode, ILogger) both logs AND sets
-    // .Code so ResultHttpStatusMapper can map the Validation category to HTTP 400. See DataSetQueryHelper.
 }

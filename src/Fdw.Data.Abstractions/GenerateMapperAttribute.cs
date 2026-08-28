@@ -35,7 +35,6 @@ namespace Fdw.Data;
 /// }
 /// </code>
 /// </example>
-// Why: pure attribute definition (declarative metadata only, consumed by the PocoMapperGenerator) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false)]
 [ExcludeFromCodeCoverage]
 public sealed class GenerateMapperAttribute : Attribute

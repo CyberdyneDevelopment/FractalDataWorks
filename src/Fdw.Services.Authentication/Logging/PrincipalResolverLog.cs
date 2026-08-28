@@ -14,8 +14,6 @@ namespace Fdw.Services.Authentication.Logging;
 [MessageLoggingTypeCode("AUTHENTICATION")]
 internal static partial class PrincipalResolverLog
 {
-    // Why: dedicated resolver-scoped denial for the IsCrossTenant+TenantId conflict — replaces the
-    // former reuse of the issuance-specific IssuanceFailed message, which stays in OpenIddict.
     [MessageLogging(EventId = 21001, Level = LogLevel.Warning,
         Message = "Principal resolve rejected for userId={userId}: IsCrossTenant and TenantId are mutually exclusive — a cross-tenant token has no single active tenant.")]
     internal static partial IGenericMessage CrossTenantTenantConflict(ILogger logger, string userId);
@@ -44,12 +42,10 @@ internal static partial class PrincipalResolverLog
         Message = "Default org resolution failed for tenantId={tenantId}: {message}")]
     internal static partial IGenericMessage OrgResolutionFailed(ILogger logger, string tenantId, string message);
 
-    // Why: Expected security denial (user not a member of the requested tenant), not a system fault.
     [MessageLogging(EventId = 51000, Level = LogLevel.Warning,
         Message = "Tenant access denied: userId={userId} requested tenantId={tenantId} but is not a member of that tenant.")]
     internal static partial IGenericMessage TenantAccessDenied(ILogger logger, string userId, string tenantId);
 
-    // Why: Expected security denial (missing tenants:view-all), not a system fault.
     [MessageLogging(EventId = 51001, Level = LogLevel.Warning,
         Message = "Cross-tenant access denied: userId={userId} does not hold 'tenants:view-all' permission.")]
     internal static partial IGenericMessage CrossTenantAccessDenied(ILogger logger, string userId);

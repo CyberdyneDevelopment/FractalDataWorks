@@ -15,8 +15,6 @@ public sealed class NoServiceToExecuteCode : ServiceTypeResultCodeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="NoServiceToExecuteCode"/> class.
     /// </summary>
-    // Why 61015: ServiceTypeLog.NoServiceToExecute is EventId 61015. One event, one number,
-    // whichever record of it you are holding.
     public NoServiceToExecuteCode()
         : base(61015, "NoServiceToExecute",
             ResultSeverities.ByName("Error"),

@@ -205,8 +205,6 @@ public class TenantConfigurationTests
         var config = new TenantConfiguration();
 
         // Assert
-        // Why: per the no-default-values-on-configuration-properties rule, AvailableRoles
-        // is initialized to an empty (non-null) collection, not seeded with Admin/User.
         config.AvailableRoles.ShouldNotBeNull();
         config.AvailableRoles.Count.ShouldBe(0);
     }

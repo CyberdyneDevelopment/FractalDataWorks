@@ -21,11 +21,6 @@ namespace Fdw.UI.Canvas.Blazor.Renderers.Svg;
 /// </remarks>
 internal sealed class SvgNodeAppearanceMap
 {
-    // Why: the half-width of each silhouette across the band its ports occupy — a port has to land
-    // on its own node's edge, and the shapes are not all the same width. Box shapes span the full
-    // ±60; the Hexagon's parallel waist is ±40; the Circle's is its radius. The Diamond and
-    // Parallelogram taper, so their ports inset to sit on the sloped face instead of hanging in
-    // space beside the widest point.
     private const double BoxHalfWidth = 60.0;
     private const double ParallelogramHalfWidth = 55.0;
     private const double DiamondHalfWidth = 45.0;
@@ -35,7 +30,6 @@ internal sealed class SvgNodeAppearanceMap
     private static readonly NodeAppearance _default =
         new(NodeShape.RoundedRect, "#e2e8f0", "#0f172a", BoxHalfWidth);
 
-    // Why: keyed Ordinal because ICanvasNodeType.Name is an exact string, not user input.
     private readonly Dictionary<string, NodeAppearance> _map =
         new(StringComparer.Ordinal);
 
@@ -45,10 +39,6 @@ internal sealed class SvgNodeAppearanceMap
     /// </summary>
     public SvgNodeAppearanceMap()
     {
-        // Why: appearance seeding is done inline here rather than via TypeOption attributes so
-        // that visual metadata (colour strings, SVG shape choices) stays in the Blazor renderer
-        // package — not in the render-agnostic UI.Abstractions contract package.
-        // Colours mirror Lineage.razor so users see a consistent palette across views.
         Seed("Connection",    NodeShape.Rectangle,    "#9ca3af", "#0f172a", BoxHalfWidth);
         Seed("DataStore",     NodeShape.RoundedRect,  "#3b82f6", "#0f172a", BoxHalfWidth);
         Seed("DataSet",       NodeShape.Parallelogram,"#06b6d4", "#0f172a", ParallelogramHalfWidth);
@@ -61,7 +51,6 @@ internal sealed class SvgNodeAppearanceMap
         Seed("CalcOutput",    NodeShape.RoundedRect,  "#34d399", "#0f172a", BoxHalfWidth);
     }
 
-    // Why: shape is a NodeShape.* const string (NodeShape is a static holder of string keys, not a type).
     private void Seed(string name, string shape, string stroke, string fill, double portAnchorHalfWidth) =>
         _map[name] = new NodeAppearance(shape, stroke, fill, portAnchorHalfWidth);
 

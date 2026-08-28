@@ -17,8 +17,6 @@ namespace Fdw.Services.Connections.Http.Abstractions;
 public abstract class HttpConnectionTypeBase<TService, TConfiguration, TFactory> :
     ConnectionTypeBase<TService, TFactory, TConfiguration>
     where TService : IGenericConnection
-    // Why: typed body configs are standalone POCOs implementing IGenericConfiguration directly;
-    // they no longer inherit from ConnectionConfiguration after the config-split refactor.
     where TConfiguration : class, IGenericConfiguration
     where TFactory : IConnectionFactory<TService, TConfiguration>
 {

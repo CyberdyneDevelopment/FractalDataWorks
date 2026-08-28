@@ -118,8 +118,6 @@ public sealed class TextInputModel : IInputComponentModel<string>
             }
             catch (ArgumentException ex)
             {
-                // Why: the regex pattern itself is malformed; include the exception detail so the
-                // consumer can diagnose the bad pattern without a logger being available here.
                 return ValidationResult.Error($"Invalid validation pattern for {Label ?? Id}: {ex.Message}");
             }
         }

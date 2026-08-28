@@ -55,14 +55,9 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
     public override int Priority => 50;
 
     /// <inheritdoc />
-    // Why false: the roles are declared per issuer, not per tenant, so one of these schemes speaks for
-    // one identity. A tenant-aware external issuer would be a different mechanism, declaring how it
-    // carries the tenant.
     public override bool SupportsMultiTenant => false;
 
     /// <inheritdoc />
-    // Why false: this validates a token that is presented to it. Nothing here acquires or holds one —
-    // that is the outbound side, and it is IIdentityService's.
     public override bool SupportsTokenCaching => false;
 
     /// <inheritdoc />
@@ -100,15 +95,9 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
         {
             options.Authority = authority;
             options.Audience = body.Audience;
-            // Why the authority's own scheme decides this rather than a setting: an https authority can
-            // and must have its metadata fetched over https, and an http one cannot. A knob here would
-            // only let the two disagree. The header already proved the authority is absolute.
             options.RequireHttpsMetadata = string.Equals(
                 new Uri(authority).Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal);
 
-            // Why mapping is off: with it on, the handler renames the token's claims to the WS-* URIs,
-            // so the sub this framework reads by name arrives under a different type and the principal
-            // it builds carries no name. Everything downstream reads the claims by their real names.
             options.MapInboundClaims = false;
 
             options.TokenValidationParameters.ValidateIssuer = true;
@@ -118,9 +107,6 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
             options.TokenValidationParameters.ValidateLifetime = true;
             options.TokenValidationParameters.ValidateIssuerSigningKey = true;
 
-            // Why the FDW claim names: everything downstream of authentication — User.IsInRole, the
-            // permission pre-processor, ClaimsPrincipalAuthenticationContext — reads these, and a
-            // principal built with the handler's defaults is invisible to all of them.
             options.TokenValidationParameters.RoleClaimType = ClaimDefinitions.roles.Name;
             options.TokenValidationParameters.NameClaimType = ClaimDefinitions.sub.Name;
 
@@ -145,10 +131,6 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
     /// </remarks>
     public static string SchemeNameFor(string serviceName) => "Fdw.JwtBearer." + serviceName;
 
-    // Why the roles are put on the principal here rather than checked at each endpoint: the rest of the
-    // framework authorizes off perm claims, so a principal without them is authenticated and powerless.
-    // Baking them at validation is the same shape OpenIddict uses at issuance — the difference is only
-    // that a remote issuer will not bake FDW's claims, so this side does it on the way in.
     private static async Task ConferDeclaredRoles(
         TokenValidatedContext context,
         string serviceName,
@@ -168,8 +150,6 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
         var permissions = await services.GetRequiredService<IRolePermissionResolver>()
             .Resolve(roles, context.HttpContext.RequestAborted).ConfigureAwait(false);
 
-        // Why the resolver's own reason is what fails the request: it says whether the role does not
-        // exist or the catalogue could not be read, and those want different fixes.
         if (permissions.IsFailure)
         {
             AuthenticationValidationLog.DeclaredRolesNotResolved(

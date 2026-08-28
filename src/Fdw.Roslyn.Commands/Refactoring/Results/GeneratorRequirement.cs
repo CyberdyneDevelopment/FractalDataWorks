@@ -5,7 +5,6 @@ namespace Fdw.Roslyn.Commands.Refactoring.Results;
 /// <summary>
 /// A source generator the moved code needs referenced in order to be complete.
 /// </summary>
-// Why: pure data holder, auto-properties only, no logic
 [ExcludeFromCodeCoverage]
 public sealed class GeneratorRequirement
 {

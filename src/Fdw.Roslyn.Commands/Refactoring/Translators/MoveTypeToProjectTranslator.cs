@@ -58,9 +58,6 @@ public sealed class MoveTypeToProjectTranslator
         var targetProject = solution.Projects.FirstOrDefault(p =>
             string.Equals(p.Name, targetName, StringComparison.Ordinal));
 
-        // Why: "move it into the project its namespace names" is only actionable when that project exists.
-        // Silently redirecting to the nearest ancestor project would send the caller somewhere nobody chose,
-        // so the failure names the two real options instead.
         if (targetProject is null)
             return GenericResult<IRoslynCommandResult>.Failure(
                 RoslynResultCodes.ByName("TargetProjectDoesNotExist"),
@@ -93,10 +90,6 @@ public sealed class MoveTypeToProjectTranslator
         var move = await ApplyMove(solution, sources, targetProject, command, cancellationToken).ConfigureAwait(false);
         FixProjectReferences(move, sourceProject.Id, targetProject.Id, required, droppable);
 
-        // Why: ask the COMPILER whether the move binds, rather than inferring from names or paths. A path
-        // check answers "is that file taken", which misses a type declared in a differently-named file, a
-        // partial, a generated source, and the namespace-segment-that-is-also-a-type case where A.B.C
-        // stops resolving because B binds to a type. Scoped to the two affected projects, not the solution.
         var movedTypeNames = sources.SelectMany(s => s.Declarations.Select(d => d.TypeName)).Distinct(StringComparer.Ordinal).ToList();
 
         // Baselined against the original solution for the same two projects — see MoveTypesToNamespace.
@@ -110,11 +103,6 @@ public sealed class MoveTypeToProjectTranslator
                 probeBaseline, cancellationToken)
             .ConfigureAwait(false);
         var unverifiable = collisions.Where(b => string.Equals(b.Kind, "ProbeUnavailable", StringComparison.Ordinal)).ToList();
-        // Why: a preview writes nothing and cannot break anything, so there is nothing here for a refusal
-        // to protect — and refusing it removes the caller's only way to SEE what the change would do.
-        // Fail-loud is satisfied by REPORTING the unverifiable projects in the result, which the preview
-        // does; it is a real run, which would write an unchecked rewrite to disk and record it in the
-        // ledger as though it had been verified, that must still refuse.
         if (!command.DryRun && !command.AcceptUnverified && unverifiable.Count > 0)
             return GenericResult<IRoslynCommandResult>.Failure(
                 RoslynResultCodes.ByName("ChangeCannotBeVerified"),
@@ -134,15 +122,9 @@ public sealed class MoveTypeToProjectTranslator
                     .With("CollisionCount", collisions.Count.ToString(System.Globalization.CultureInfo.InvariantCulture))
                     .With("FirstCollision", collisions[0].Detail));
 
-        // Why: a symbol closure answers "what does this code USE" and cannot answer "what does it need to
-        // EXIST". Generator-backed members only appear when the generator runs, and the generator is an
-        // ANALYZER reference, so it is invisible to symbol scanning — it has to come from the attributes.
         var generators = await GeneratorRequirementScanner
             .Scan(sources.Select(x => x.Document).ToList(), cancellationToken).ConfigureAwait(false);
 
-        // Why: a correct reference closure is still unusable if the target cannot legally reference it.
-        // netstandard2.0 cannot reference net10.0 — NU1201 — and the closure being right makes that
-        // failure more confusing, not less, because everything the tool reported was accurate.
         var incompatible = IncompatibleReferences(move.ReferencesToWrite, targetProject);
 
         var referencesWritten = command.DryRun
@@ -195,10 +177,6 @@ public sealed class MoveTypeToProjectTranslator
     {
         var results = new List<DocumentInProject>();
 
-        // Why: counted separately from the other rejections. A document that declares a namespace
-        // BENEATH the selector is the one rejection a caller almost never intends — it is how a move
-        // silently takes half a package — so it is reported on its own rather than buried in a Trace
-        // stream nobody had running at the time.
         var stranded = 0;
 
         foreach (var project in solution.Projects)
@@ -343,8 +321,6 @@ public sealed class MoveTypeToProjectTranslator
     /// <returns>The framework moniker, or <see langword="null"/> when it cannot be determined.</returns>
     private static string? FrameworkOf(Project project)
     {
-        // Why: Roslyn does not surface the TFM directly, but the MSBuild-loaded project name carries it
-        // for multi-targeted projects and the output path contains it otherwise.
         var separator = project.Name.IndexOf('(', StringComparison.Ordinal);
         if (separator > 0)
             return project.Name[(separator + 1)..].TrimEnd(')');
@@ -542,9 +518,6 @@ public sealed class MoveTypeToProjectTranslator
             target = outcome.Solution.GetProject(targetId)!;
             if (target.ProjectReferences.Any(r => r.ProjectId == referenced.Id)) continue;
 
-            // Why: Roslyn holds a cyclic project graph without complaint; MSBuild refuses to build it. So
-            // a move that closes a loop looks clean in the tool and fails on the command line. Flag it
-            // ahead of time with the chain that closes it, so it can be planned around.
             var cycle = ProjectReferenceCycle.DescribeCycle(outcome.Solution, targetId, referenced.Id);
             if (cycle is not null)
             {

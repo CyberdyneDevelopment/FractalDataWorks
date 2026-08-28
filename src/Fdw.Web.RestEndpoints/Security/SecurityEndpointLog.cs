@@ -60,8 +60,6 @@ public static partial class SecurityEndpointLog
         string endpointName,
         string route);
 
-    // Why: authorization is being DISABLED for this endpoint — an abnormal-but-handled state that
-    // should be visible above Info, not blend in with routine startup announcements.
     /// <summary>
     /// Logs when development mode bypasses authentication/authorization for an endpoint.
     /// </summary>

@@ -326,8 +326,6 @@ public sealed class WindowedCalculationEntityType : CalculationEntityBase<Window
             }
             catch (FormatException ex)
             {
-                // Why: non-convertible field values yield 0 for windowed aggregates;
-                // ex is observed so FDW022 does not fire.
                 _ = ex;
                 return 0m;
             }

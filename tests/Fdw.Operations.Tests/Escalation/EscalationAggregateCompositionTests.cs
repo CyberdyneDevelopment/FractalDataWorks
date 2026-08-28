@@ -69,10 +69,6 @@ public sealed class EscalationAggregateCompositionTests
     }
 
     // ── Fake gateway: a tiny in-memory ConfigurationDb.workflow tree + row tables ──────────────────
-    // Why hand-written (not Moq for Execute): the base ComposeChildren issues a header read, then per-FK
-    // child reads as a JOIN to the owner filtered by the owner's DURABLE Id. RowId is never materialized,
-    // so children are keyed/returned by the OWNER's Id resolved from the JOIN filter — exercising the real
-    // descriptor / key-metadata / JOIN wiring.
     private sealed class AggregateGateway : IConfigurationGateway
     {
         /// <summary>The connection this fake stands in for.</summary>
@@ -118,7 +114,6 @@ public sealed class EscalationAggregateCompositionTests
 
         public IReadOnlyList<IDataStore> DataStores => _stores;
 
-        // Why: test double — useCache not exercised in escalation composition tests; delegates to existing implementation.
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, bool useCache, CancellationToken cancellationToken = default)
             => Execute<T>(command, target, cancellationToken);
 
@@ -152,17 +147,12 @@ public sealed class EscalationAggregateCompositionTests
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<T>.Failure(new GenericMessage("DataSet routing not used in this test")));
 
-        // Why: streaming record-source cursor is not exercised by this test double.
         public Task<IGenericResult<Fdw.Data.RowSources.Abstractions.IRecordSource<Fdw.Data.RowSources.Abstractions.DataRecord>>> OpenRecordSource(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
             => throw new System.NotImplementedException();
 
         public Task<IGenericResult<IDataGatewayTransaction>> BeginTransaction(string connectionName, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<IDataGatewayTransaction>.Failure(new GenericMessage("Transactions not used in this test")));
 
-        // Why: the child JOIN query filters by owner.{LogicalCol} (e.g. "EscalationLevel.Id") = ownerId.
-        // Pull that Guid out of the filter tree (a FilterGroup of IsCurrent/IsDeleted/owner.Id conditions)
-        // by matching the condition whose property ends with ".Id" and whose value is a Guid — never by
-        // assuming a single RowId condition.
         private static Guid ExtractOwnerIdFromJoinFilter(IDataCommand command)
         {
             if (command is not QueryCommand<object> q || q.Filter?.Root is not IFilterNode root)
@@ -216,7 +206,6 @@ public sealed class EscalationAggregateCompositionTests
                     ? GenericResult<IDataContainer>.Failure(new GenericMessage("not found"))
                     : GenericResult<IDataContainer>.Success(c);
             });
-            // Why: containers' Parent points back at this path (child target path resolution reads it).
             foreach (var c in containers)
                 Mock.Get(c).Setup(x => x.Parent).Returns(path.Object);
 
@@ -254,9 +243,6 @@ public sealed class EscalationAggregateCompositionTests
             return new ReferencingKeyBinding(key.Object, owner);
         }
 
-        // Why: model owner containers' Physical/Logical keys exactly as the schema metadata exposes them —
-        // ResolveOwnerKeyColumns reads the field NAME of the "Physical" and "Logical" keys to build the JOIN.
-        // Use the real concrete KeyTypeBase TypeOptions so FindKeyFieldName reads the genuine KeyType.Name.
         private static IContainerKey Key(string keyType, string keyName, string localField)
         {
             var field = new Mock<IDataField>();
@@ -273,18 +259,11 @@ public sealed class EscalationAggregateCompositionTests
             key.Setup(k => k.KeyType).Returns(kt);
             key.Setup(k => k.KeyName).Returns(keyName);
             key.Setup(k => k.KeyFields).Returns(new List<IContainerKeyField> { keyField.Object });
-            // Why: the Logical key here is the table's OWN durable Id, not an FK — leave ReferencedContainer
-            // null so FindKeyFieldName("Logical") accepts it (an FK-as-logical would be skipped).
             key.Setup(k => k.ReferencedContainer).Returns((IDataContainer?)null);
             return key.Object;
         }
     }
 
-    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
-    // connection it was told its rows live on, so the fake has to answer to that name to be found.
-    // Why a double rather than the real provider: these tests exercise what a configuration provider
-    // does with its gateway, not which gateway it selects, so the double answers for whatever
-    // connection is asked. Selection itself is covered where the real provider is under test.
     private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 

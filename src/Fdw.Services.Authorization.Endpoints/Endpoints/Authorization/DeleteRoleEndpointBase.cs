@@ -13,8 +13,6 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
 {
-    // Why: RoleConfigurationProvider replaces IOptionsMonitor<List<RoleConfiguration>> with dual-source
-    // (ctrl + cfg) provider that merges system and user configurations.
     private readonly RoleConfigurationProvider _roleProvider;
 
     /// <summary>

@@ -52,9 +52,6 @@ public sealed class RepairMovedReferencesTranslator
 
         RepairMovedReferencesTranslatorLog.Repairing(Logger, command.Scope ?? "(whole solution)", command.DryRun);
 
-        // Why: two sources, one repair path. The producer has a session ledger; a consumer who merely
-        // bumped a version has only the published guide. Neither is guessed at — if the caller named a
-        // guide it must be usable, and otherwise a ledger must be present.
         LedgerAssemblyIndex index;
         if (!string.IsNullOrWhiteSpace(command.GuidePath))
         {
@@ -110,8 +107,6 @@ public sealed class RepairMovedReferencesTranslator
 
         var outcome = Classify(errors, index);
 
-        // Why: one missing assembly usually produces many diagnostics in the same project. The caller is
-        // approving REFERENCES, not error lines, so collapse to one decision per project+assembly.
         var proposals = outcome.Repairs
             .GroupBy(r => r.Id, StringComparer.Ordinal)
             .Select(g => g.First())
@@ -242,12 +237,6 @@ public sealed class RepairMovedReferencesTranslator
         return errors;
     }
 
-    // Why: read the name from the SOURCE at the diagnostic location rather than parsing the message text.
-    // Diagnostic messages are localised and their wording is not a contract; the span is.
-    //
-    // The span alone is not enough though. For a qualified name the compiler reports the first segment it
-    // cannot bind — CS0234 on `Data` in `Fdw.Data.MsSql.Marker` — and a bare "Data" matches nothing in the
-    // ledger. Ascending to the outermost enclosing qualified name recovers the full name the ledger keys on.
     private static string? MissingNameOf(Diagnostic diagnostic)
     {
         var tree = diagnostic.Location.SourceTree;
@@ -285,10 +274,6 @@ public sealed class RepairMovedReferencesTranslator
                 continue;
             }
 
-            // Why: a project cannot reference itself, and MSBuild rejects the csproj outright if you try.
-            // This fires when the moved type's NEW assembly IS the project reporting the error — the type
-            // landed here and the diagnostic is about something else entirely, so proposing a reference is
-            // not just useless, it produces a plan that breaks the build when applied verbatim.
             if (string.Equals(error.Project.AssemblyName, lookup.Change!.NewAssembly, StringComparison.Ordinal))
                 continue;
 
@@ -308,9 +293,6 @@ public sealed class RepairMovedReferencesTranslator
         return outcome;
     }
 
-    // Why: rejection wins over approval so a thumbs-down is never overridden by a broad ApproveAll —
-    // an explicit veto is the more specific instruction. A pruned plan file supersedes both, because a
-    // reviewed file is the most explicit instruction of the three.
     private static bool IsApprovedBy(
         RepairMovedReferencesCommand command,
         IReadOnlyList<string>? fromFile,

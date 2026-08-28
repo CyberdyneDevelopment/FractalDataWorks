@@ -188,9 +188,6 @@ public sealed class MapTransformType : TransformTypeBase
             return value;
         }
 
-        // Why the chain and not a single name: a field mapping's transforms are stored as ordered
-        // rows, each with its own parameters. Reading only the first name meant a Map transform could
-        // say WHICH transform to run but never WHAT to run it with.
         foreach (var step in transforms.OrderBy(s => s.Ordinal))
         {
             if (TransformationTypes.ByName(step.TransformType) is not FieldTransformationBase transformer)
@@ -199,12 +196,6 @@ public sealed class MapTransformType : TransformTypeBase
                 return value;
             }
 
-            // Why this is checked instead of letting the transform cope: the previous arrangement
-            // handed every transform an empty parameter bag, and each one quietly fell back to its
-            // own idea of a default - BoolToString returned the empty string for every row rather
-            // than either configured label. A missing required parameter is a configuration error,
-            // and naming it is the only way anyone finds out. It is reported against the field, so
-            // the message identifies the mapping to fix.
             var missing = transformer.ExpectedParameters
                 .Where(definition => definition.IsRequired && !step.Parameters.ContainsKey(definition.Name))
                 .Select(definition => definition.Name)
@@ -218,10 +209,6 @@ public sealed class MapTransformType : TransformTypeBase
                 return value;
             }
 
-            // Why the context is built here and passed whole: it carries both what the step was
-            // configured with and the record the step may read siblings from. This is the same
-            // context the dataset source mappers build - one calling convention, so a transform
-            // cannot behave differently depending on which reader invoked it.
             var transformResult = await transformer.Transform(
                 value,
                 new TransformationContext
@@ -373,17 +360,9 @@ public sealed class MapTransformType : TransformTypeBase
         {
             DateTime dt => dt,
             DateTimeOffset dto => dto.UtcDateTime,
-            // Why: the exact 'Z'-suffixed ISO-8601 arm MUST be checked before the generic TryParse
-            // arm below — a generic DateTime.TryParse with DateTimeStyles.None silently converts a
-            // UTC 'Z' timestamp to HOST-LOCAL time (Kind=Local), which is non-deterministic across
-            // machines/timezones. AdjustToUniversal here forces a stable UTC result.
             string s when DateTime.TryParseExact(s, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out var utc) => utc,
             string s when DateTime.TryParseExact(s, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) => date,
             string s when DateTime.TryParseExact(s, "yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var iso) => iso,
-            // Why: generic ISO-8601 fallback is also forced deterministic — AssumeUniversal treats an
-            // offset-less string as already UTC, AdjustToUniversal converts an explicit offset/'Z'
-            // string to UTC — so every parsed value is a stable UTC DateTime regardless of host
-            // timezone (never DateTimeStyles.None, which yields host-local, non-deterministic Kind).
             string s when DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var result) => result,
             long ticks when ticks > 0 => new DateTime(ticks, DateTimeKind.Utc),
             _ => Convert.ToDateTime(value, CultureInfo.InvariantCulture)

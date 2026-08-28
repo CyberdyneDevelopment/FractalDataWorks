@@ -40,7 +40,6 @@ public abstract class GetDataSetAnnotationEndpointBase : Endpoint<DataSetAnnotat
     /// <summary>Retrieves the annotation for the specified DataSet, returning 404 if not found.</summary>
     public override async Task HandleAsync(DataSetAnnotationRequest req, CancellationToken ct)
     {
-        // Why: Annotations are identified by DataSetName (the config Name field mirrors DataSetName).
         var result = await _provider.GetAnnotation(req.DataSetName, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
@@ -66,11 +65,8 @@ public abstract class GetDataSetAnnotationEndpointBase : Endpoint<DataSetAnnotat
         return new DataSetAnnotationPayload
         {
             DataSetName = config.DataSetName,
-            // Why: BusinessOwner → Owner (reverse of the create mapping: Owner→BusinessOwner).
             Owner = config.BusinessOwner,
-            // Why: TechnicalOwner → Steward (reverse of Steward→TechnicalOwner on create).
             Steward = config.TechnicalOwner,
-            // Why: DataClassification → Classification (reverse of Classification→DataClassification).
             Classification = config.DataClassification,
             Tags = config.Tags.Select(t => t.Tag).ToList()
         };

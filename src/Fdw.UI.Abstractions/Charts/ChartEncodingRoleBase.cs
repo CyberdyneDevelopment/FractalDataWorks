@@ -20,9 +20,6 @@ public abstract class ChartEncodingRoleBase : TypeOptionBase<int, ChartEncodingR
     /// <param name="name">The registry name (used by <c>ChartEncodingRoles.ByName()</c>).</param>
     /// <param name="displayName">The human-readable name shown in the field-binding UI.</param>
     /// <param name="isSpatial">Whether this role is a spatial (axis) channel.</param>
-    // Why: TypeOptionBase already exposes DisplayName + Category; pass them through its
-    // 6-arg ctor (id, name, configurationKey, displayName, description, category) rather than
-    // redeclaring. IsSpatial is net-new.
     protected ChartEncodingRoleBase(int id, string name, string displayName, bool isSpatial)
         : base(id, name, name, displayName, displayName, category: null)
     {

@@ -10,7 +10,6 @@ namespace Fdw.Web.Analytics.Components.PromotionReview;
 /// Immutable context object passed to the consumer RenderFragment by <see cref="PromotionReviewProvider"/>.
 /// Carries a single promotion request detail with approve/reject callbacks.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class PromotionReviewContext : ProviderContextBase
 {

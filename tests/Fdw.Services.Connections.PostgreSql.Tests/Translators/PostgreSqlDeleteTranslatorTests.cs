@@ -43,7 +43,6 @@ public sealed class PostgreSqlDeleteTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateDeleteUsesDoubleQuoteQuoting()
     {
-        // Why: regression guard — PG must emit DELETE FROM "public"."customers" not [dbo].[customers].
         var container = CreateContainer();
         var filter = new FilterExpression
         {

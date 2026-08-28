@@ -16,11 +16,6 @@ namespace Fdw.Services.Resiliency;
 /// resiliency policies. Callers that pass <c>null</c> as <c>policyId</c> to
 /// <see cref="IResiliencyExecutor.Execute"/> bypass this provider entirely (pass-through).
 /// </summary>
-// Why: ResiliencyExecutor requires IResiliencyPolicyProvider in its constructor. A real dual-source
-// (ctrl + ConfigurationDb) provider with ManagedConfiguration records is tracked as FDW-400 and is
-// non-trivial; this implementation lets the system boot today without policies. When a non-null
-// policyId reaches Execute() it returns PolicyNotFound, which the executor surfaces as a config
-// error — fail-loud, never silent fallback.
 public sealed class EmptyResiliencyPolicyProvider : IResiliencyPolicyProvider
 {
     private readonly ILogger<EmptyResiliencyPolicyProvider> _logger;

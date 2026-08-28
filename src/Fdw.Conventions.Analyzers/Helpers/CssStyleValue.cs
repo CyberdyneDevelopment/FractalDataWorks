@@ -26,10 +26,6 @@ internal static class CssStyleValue
         if (valueEnd <= valueStart)
             return;
 
-        // Why an expression value is read through its string literals: `@(ok ? "color:var(--a);" :
-        // "color:var(--b);")` states both of its outcomes in the markup, and each is an ordinary
-        // declaration list. Reading the expression as one run of text instead would parse `ok ? "color`
-        // as a property name and settle nothing.
         if (text[valueStart] == '@')
         {
             CollectFromExpression(text, valueStart, valueEnd, declarations);
@@ -84,8 +80,6 @@ internal static class CssStyleValue
 
         for (var i = start; i < end; i++)
         {
-            // Why a transition disqualifies the whole declaration and not just its value: the property
-            // name can be the computed part too, and either way there is no written value to judge.
             if (text[i] == '@')
                 return;
 

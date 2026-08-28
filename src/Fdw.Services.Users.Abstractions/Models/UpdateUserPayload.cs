@@ -5,7 +5,6 @@ namespace Fdw.Services.Users.Clients.Models;
 /// <summary>
 /// Data transfer object payload for updating an existing user.
 /// </summary>
-// Why: pure payload payload, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class UpdateUserPayload
 {

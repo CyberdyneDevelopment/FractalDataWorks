@@ -34,9 +34,6 @@ internal static partial class RunnerLog
     /// <param name="executionId">The execution.</param>
     /// <param name="recorded">The flow it was suspended under.</param>
     /// <param name="presented">The flow it was resumed against.</param>
-    // Why Warning: a token presented against the wrong flow is either a bug or someone probing, and
-    // the two are indistinguishable from here. Either way it was refused, so the system behaved —
-    // Error would say something broke.
     [MessageLogging(EventId = 91101, Level = LogLevel.Warning,
         Message = "Execution {executionId} was suspended under flow '{recorded}' and cannot resume as '{presented}'")]
     internal static partial IGenericMessage ExecutionFlowMismatch(
@@ -56,8 +53,6 @@ internal static partial class RunnerLog
     /// <param name="logger">The logger.</param>
     /// <param name="stepName">The step.</param>
     /// <param name="element">What it tried to contribute.</param>
-    // Why Error: a step breaking its own declaration is a defect in that step. It was contained, but
-    // nothing about it is expected, and a package doing this should not pass unnoticed.
     [MessageLogging(EventId = 91103, Level = LogLevel.Error,
         Message = "Step '{stepName}' contributed {element}, which it does not declare — discarded")]
     internal static partial IGenericMessage UndeclaredContribution(
@@ -67,8 +62,6 @@ internal static partial class RunnerLog
     /// <param name="logger">The logger.</param>
     /// <param name="stepName">The step.</param>
     /// <param name="reason">Why it does not apply.</param>
-    // Why Debug and not Trace: a step declining changes what the flow establishes, so it is worth
-    // seeing when diagnosing a flow without turning full tracing on.
     [MessageLogging(EventId = 91104, Level = LogLevel.Debug,
         Message = "Step '{stepName}' does not apply: {reason}")]
     internal static partial IGenericMessage StepNotApplicable(
@@ -168,8 +161,6 @@ internal static partial class RunnerLog
     /// <param name="logger">The logger.</param>
     /// <param name="flowName">The flow.</param>
     /// <param name="stepName">The step that suspended it.</param>
-    // Why Information: a suspended flow is a normal outcome an operator counts — how many logins
-    // start and never come back is a real signal, and it should not need tracing enabled to see.
     [MessageLogging(EventId = 91117, Level = LogLevel.Information,
         Message = "Flow '{flowName}' suspended at step '{stepName}', awaiting the caller")]
     internal static partial IGenericMessage FlowSuspended(ILogger<AuthenticationRunner> logger, string flowName, string stepName);
@@ -179,8 +170,6 @@ internal static partial class RunnerLog
     /// <param name="flowName">The flow.</param>
     /// <param name="methods">The methods proved.</param>
     /// <param name="acr">The assurance level reached.</param>
-    // Why Information: the one event that says authentication succeeded. An operator wants the rate
-    // and the assurance mix without tracing, and an auditor wants the methods.
     [MessageLogging(EventId = 91118, Level = LogLevel.Information,
         Message = "Flow '{flowName}' issued a token; methods [{methods}], assurance '{acr}'")]
     internal static partial IGenericMessage FlowCompleted(

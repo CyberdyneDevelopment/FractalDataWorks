@@ -38,9 +38,6 @@ public class ExternalIdentityProvisionerBindingConfigurationProvider
                gatewayProvider,
                dataStoreName, pathName)
     {
-        // Why: the base class's own ILogger field is private — this provider's extra
-        // ResolveProvisionerName method needs its own reference to the same logger for its
-        // domain-specific MessageLogging calls.
         _logger = logger ?? NullLogger<ExternalIdentityProvisionerBindingConfigurationProvider>.Instance;
     }
 
@@ -69,9 +66,6 @@ public class ExternalIdentityProvisionerBindingConfigurationProvider
                 ExternalIdentityProvisionerLog.BindingReadFailed(
                     _logger, tenantLabel, providerName, allResult.CurrentMessage ?? "binding read failed."));
 
-        // Why: EXACT equality only, including null==null for the global row — no tenant->global
-        // fall-through. That would be a forbidden implicit fallback (see NO FALLBACKS WITHOUT EXPLICIT
-        // APPROVAL): a caller that wants the global binding must pass tenantId: null itself.
         var matches = (allResult.Value ?? [])
             .Where(b => b.TenantId == tenantId
                 && string.Equals(b.ProviderName, providerName, StringComparison.OrdinalIgnoreCase))

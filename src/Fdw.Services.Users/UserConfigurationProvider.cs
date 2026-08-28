@@ -49,7 +49,6 @@ public class UserConfigurationProvider : ImplementationConfigurationProviderBase
     /// <summary>
     /// Gets a user by their unique identifier.
     /// </summary>
-    // Why: virtual allows Moq to override in unit tests without a real IOptionsMonitor or gateway.
     public virtual async Task<IGenericResult<UserConfiguration?>> GetUser(
         Guid userId, CancellationToken cancellationToken = default)
     {
@@ -63,11 +62,6 @@ public class UserConfigurationProvider : ImplementationConfigurationProviderBase
     /// <summary>
     /// Gets a user by their username.
     /// </summary>
-    // Why: virtual — same test-isolation rationale as GetUser(Guid).
-    // Why: Does NOT delegate to base.Get(string) — that method filters on the [Name] column via
-    // ConfigurationCommandBase.NameColumn. usr.Users has no [Name] column; the natural-key column
-    // is [Username]. An explicit QueryCommandBuilder<UserConfiguration> with .Where("Username", ...)
-    // is the only correct path. This mirrors the pre-provider SqlUserService username query.
     public virtual async Task<IGenericResult<UserConfiguration?>> GetUser(
         string username, CancellationToken cancellationToken = default)
     {
@@ -90,13 +84,6 @@ public class UserConfigurationProvider : ImplementationConfigurationProviderBase
     /// <param name="idOrName">The route value: a Guid id, or a username.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The resolved user, or a failure carrying <c>UserNotFound</c> when no user matches.</returns>
-    // Why: THE single id-or-name resolution point for every user-scoped route. This resolution used to
-    // be copy-pasted inline into each endpoint, and the copies drifted — the user-role endpoints ended
-    // up binding a raw Guid on assign but a username-only lookup on revoke/get-roles, so a client that
-    // sent an id could add a role but never remove it (the username query silently matched nothing).
-    // One resolver means a new user-scoped endpoint cannot reinvent that inconsistency.
-    // Why: fails loud with UserNotFound rather than returning a null Value on a miss — callers get a
-    // failed result they must handle, not a null they can accidentally treat as "no user, carry on".
     public virtual async Task<IGenericResult<UserConfiguration>> ResolveUser(
         string idOrName, CancellationToken cancellationToken = default)
     {
@@ -115,7 +102,6 @@ public class UserConfigurationProvider : ImplementationConfigurationProviderBase
     /// <summary>
     /// Gets all users.
     /// </summary>
-    // Why: virtual — same test-isolation rationale as GetUser(Guid).
     public virtual async Task<IGenericResult<IReadOnlyList<UserConfiguration>>> GetAllUsers(
         CancellationToken cancellationToken = default)
     {
@@ -135,10 +121,6 @@ public class UserConfigurationProvider : ImplementationConfigurationProviderBase
     /// Does NOT grant tenant membership — callers must call
     /// <see cref="UserTenantConfigurationProvider.GrantTenantAccess"/> after this returns success.
     /// </summary>
-    // Why: tenant membership grant is the caller's responsibility so this method stays single-purpose
-    // and testable without a tenant provider dependency. Callers (e.g. CreateUserEndpointBase)
-    // orchestrate provider calls in order.
-    // Why: virtual — same test-isolation rationale as GetUser.
     public virtual async Task<IGenericResult<Guid>> CreateUser(
         string username,
         string? email,
@@ -181,7 +163,6 @@ public class UserConfigurationProvider : ImplementationConfigurationProviderBase
     /// <summary>
     /// Updates an existing user record from the <see cref="IUser"/> contract.
     /// </summary>
-    // Why: virtual — same test-isolation rationale as GetUser.
     public virtual async Task<IGenericResult> UpdateUser(
         IUser user, CancellationToken cancellationToken = default)
     {
@@ -217,7 +198,6 @@ public class UserConfigurationProvider : ImplementationConfigurationProviderBase
     /// <summary>
     /// Soft-deletes a user by setting <c>IsActive=false</c>, <c>IsCurrent=false</c>, and <c>IsDeleted=true</c>.
     /// </summary>
-    // Why: virtual — same test-isolation rationale as GetUser.
     public virtual async Task<IGenericResult> DeleteUser(
         Guid userId, CancellationToken cancellationToken = default)
     {
@@ -252,7 +232,6 @@ public class UserConfigurationProvider : ImplementationConfigurationProviderBase
     /// <summary>
     /// Updates the <c>LastLoginAt</c> timestamp for a user to the current UTC time.
     /// </summary>
-    // Why: virtual — same test-isolation rationale as GetUser.
     public virtual async Task<IGenericResult> UpdateLastLogin(
         Guid userId, CancellationToken cancellationToken = default)
     {

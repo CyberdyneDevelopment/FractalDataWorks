@@ -29,9 +29,6 @@ public sealed class DataPreviewPageContext : ProviderContextBase
     /// <summary>Gets the callback raised when the picker selection chain changes.</summary>
     public Func<IReadOnlyList<DataStoreNode>, Task> OnPickerSelectionChanged { get; init; }
         = _ => Task.CompletedTask;
-    // Why: exposed as IList<T> (not IReadOnlyList<T>) so QueryPanel.AddFilter() can mutate it
-    // in-place. The provider assigns its own _filters list directly; mutations in the child
-    // component are reflected back to the provider state without needing a round-trip callback.
     public IList<PreviewFilterCondition> Filters { get; init; } = [];
     public IReadOnlyList<string> Columns { get; init; } = [];
     public IReadOnlyList<IReadOnlyDictionary<string, object?>> Rows { get; init; } = [];

@@ -104,8 +104,6 @@ public abstract class SignalRBroadcaster<THub, TClient>
         catch (Exception ex)
         {
             var eventName = typeof(TEvent).Name;
-            // Why: Pass the full Exception (not just ex.Message) so the stack trace is
-            // captured in structured logs and available for post-mortem diagnosis.
             SignalRLog.BroadcastFailed(Logger, ex, BroadcasterName, eventName);
         }
     }
@@ -135,8 +133,6 @@ public abstract class SignalRBroadcaster<THub, TClient>
         catch (Exception ex)
         {
             var eventName = typeof(TEvent).Name;
-            // Why: Pass the full Exception (not just ex.Message) so the stack trace is
-            // captured in structured logs and available for post-mortem diagnosis.
             SignalRLog.BroadcastFailed(Logger, ex, BroadcasterName, eventName);
         }
     }
@@ -164,8 +160,6 @@ public abstract class SignalRBroadcaster<THub, TClient>
         catch (Exception ex)
         {
             var eventName = typeof(TEvent).Name;
-            // Why: Pass the full Exception (not just ex.Message) so the stack trace is
-            // captured in structured logs and available for post-mortem diagnosis.
             SignalRLog.BroadcastFailed(Logger, ex, BroadcasterName, eventName);
         }
     }

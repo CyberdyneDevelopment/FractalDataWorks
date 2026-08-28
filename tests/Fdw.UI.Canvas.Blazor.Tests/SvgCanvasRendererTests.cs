@@ -20,8 +20,6 @@ public sealed class SvgCanvasRendererTests
     private static TestContext CreateContext()
     {
         var ctx = new TestContext();
-        // Why: SvgCanvasRenderer uses Blazor mouse/wheel event handlers. Configure bUnit in
-        // loose JS interop mode so any un-setup JS call is silently ignored.
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         return ctx;
     }
@@ -44,9 +42,6 @@ public sealed class SvgCanvasRendererTests
         // Assert: each node produces a <g> with a translate(...) transform inside the SVG.
         // The nodes in FakeCanvasModel have labels "Source" and "Target".
         var allG = cut.FindAll("g[transform]");
-        // Why: count only the node groups (translate transform) — exclude the outer pan/zoom group
-        // which carries a "translate(...) scale(...)" transform. The node groups have the pattern
-        // "translate(X, Y)" without a scale component.
         var nodeGroups = allG
             .Where(g =>
             {
@@ -76,11 +71,7 @@ public sealed class SvgCanvasRendererTests
             .Add(r => r.Model, model));
 
         // Assert: the label "Source" from node-1 must appear in the SVG markup as a <text> element.
-        // Why: SVG <text> is emitted via MarkupString (reserved Razor tag), so the text is directly
-        // present in the DOM and queryable via markup assertions.
         var renderedMarkup = cut.Markup;
-        // Why: single-arg string ShouldContain — the (expected, customMessage) overload binds to
-        // Shouldly's IEnumerable<char> predicate overload and fails to compile.
         renderedMarkup.ShouldContain("Source");
         renderedMarkup.ShouldContain("Target");
     }

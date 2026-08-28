@@ -7,6 +7,5 @@ namespace Fdw.Services.Connections.Abstractions;
 /// <param name="Name">The canonical type name used in code (e.g. "varchar").</param>
 /// <param name="DbTypeName">The native database type expression (e.g. "varchar(max)").</param>
 /// <param name="DisplayName">The human-readable label shown in the UI (e.g. "Text (varchar)").</param>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record FieldTypeInfo(string Name, string DbTypeName, string DisplayName);

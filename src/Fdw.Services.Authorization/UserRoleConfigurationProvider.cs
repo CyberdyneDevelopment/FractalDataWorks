@@ -52,15 +52,8 @@ public class UserRoleConfigurationProvider : ImplementationConfigurationProvider
     {
         var allResult = await Get(cancellationToken).ConfigureAwait(false);
         if (!allResult.IsSuccess || allResult.Value is null)
-            // Why: FDW-532 — failing to load user role assignments must propagate as a failure
-            // result, not silently become an empty list. Callers must fail-closed on this.
-            // ToNewResult() preserves the full error chain from the underlying Get() failure.
             return allResult.ToNewResult<IReadOnlyList<UserRoleConfiguration>>();
 
-        // Why: FDW-532 follow-up — userId (token subject) and the stored authz.UserRole.UserId are
-        // both GUIDs but differ in case (the DB stores uppercase; Guid.ToString() emits lowercase),
-        // so a case-SENSITIVE Ordinal compare matched nobody and zeroed every user's roles (admin
-        // included). GUID identity is case-insensitive — compare with OrdinalIgnoreCase.
         var filtered = allResult.Value
             .Where(ur => string.Equals(ur.UserId, userId, StringComparison.OrdinalIgnoreCase))
             .ToList();

@@ -63,9 +63,6 @@ public sealed class MoveNamespaceTranslator
                 ResultDetails.Create().With("Namespace", command.OldNamespace));
         }
 
-        // Why: this rewrite is solution-wide. A workspace loaded without its test projects would produce a
-        // rewrite that is incomplete BY CONSTRUCTION and — worse — record it in the ledger as complete.
-        // Refusing is the only honest option; silently narrowing the blast radius of a rename is not.
         if (!solution.Projects.Any(p => TestProjectDetector.IsTestProject(p.Name)))
         {
             MoveNamespaceTranslatorLog.TestProjectsNotLoaded(Logger);
@@ -84,10 +81,6 @@ public sealed class MoveNamespaceTranslator
                 ResultDetails.Create().With("Selector", command.OldNamespace));
         }
 
-        // Why: this rewrite touches the whole solution, so it is the LAST place to guess. Compile what it
-        // changed and say what broke — collisions the caller must resolve, and references the rewrite
-        // failed to follow, which are the ones still pointing at the old name.
-        // Baselined against the original solution for the same projects — see MoveTypesToNamespace.
         var affectedProjectIds = ChangedProjectIds(rewrite);
         var baseline = await DiagnosticDiff.Counts(
             affectedProjectIds.Select(solution.GetProject).Where(p => p is not null).Select(p => p!),
@@ -98,15 +91,7 @@ public sealed class MoveNamespaceTranslator
             .ConfigureAwait(false);
 
 
-        // Why: "cannot verify" is not "your change is broken". Letting a ProbeUnavailable finding fall
-        // through to the would-not-compile failure sends the caller hunting for a defect in their edit
-        // that may not exist — the defect is in the build environment.
         var unverifiable = probed.Where(b => string.Equals(b.Kind, "ProbeUnavailable", StringComparison.Ordinal)).ToList();
-        // Why: a preview writes nothing and cannot break anything, so there is nothing here for a refusal
-        // to protect — and refusing it removes the caller's only way to SEE what the change would do.
-        // Fail-loud is satisfied by REPORTING the unverifiable projects in the result, which the preview
-        // does; it is a real run, which would write an unchecked rewrite to disk and record it in the
-        // ledger as though it had been verified, that must still refuse.
         if (!command.DryRun && !command.AcceptUnverified && unverifiable.Count > 0)
         {
             MoveNamespaceTranslatorLog.ChangeCannotBeVerified(Logger, command.NewNamespace, unverifiable.Count);
@@ -143,8 +128,6 @@ public sealed class MoveNamespaceTranslator
             TypesRenamed = rewrite.DeclaredTypes.Count,
             TypeOptionIdsChanged = rewrite.TypeOptionCount,
             WasDryRun = command.DryRun,
-            // Why: stated on EVERY run, per the FDW-595 hazard. TypeOption Id is FNV-1a of the fully-qualified
-            // name, so a namespace rename silently re-keys every option it touches. MoveTypeToProject does not.
             ConsumerImpact = rewrite.TypeOptionCount > 0
                 ? $"CONSUMER-BREAKING: {rewrite.DeclaredTypes.Count} type(s) change fully-qualified name; {rewrite.TypeOptionCount} carry a TypeOption whose FNV-1a Id changes with the FQN."
                 : $"CONSUMER-BREAKING: {rewrite.DeclaredTypes.Count} type(s) change fully-qualified name. No TypeOption Ids affected.",
@@ -260,9 +243,6 @@ public sealed class MoveNamespaceTranslator
         }
     }
 
-    // Why: matching on EXACT full text means two matches can never nest (a name equal to the old namespace
-    // cannot contain another name equal to it), which is what makes a single ReplaceNodes call safe.
-    // descendIntoTrivia reaches XML doc crefs, which are references a consumer's build will fail on too.
     private static List<NameSyntax> MatchingNames(SyntaxNode root, string oldNamespace) =>
         root.DescendantNodes(descendIntoTrivia: true)
             .OfType<NameSyntax>()

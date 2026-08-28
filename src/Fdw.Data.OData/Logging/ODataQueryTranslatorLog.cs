@@ -27,17 +27,12 @@ public static partial class ODataQueryTranslatorLog
         string container,
         string url);
 
-    // Why: reuses ODataResultCodes.ContainerNull's number (20000).
     [MessageLogging(
         EventId = 20000,
         Level = LogLevel.Error,
         Message = "ODataQueryTranslator received a null container")]
     public static partial IGenericMessage ContainerNull(ILogger logger);
 
-    // Why: a fresh number, NOT ODataResultCodes.QueryTranslationFailed's own 91002 — that number
-    // is already occupied in the REST TypeCode pool by the pre-existing (orphaned) ODataLog's
-    // generic TranslationFailed/TranslationException methods. Reusing 91002 here would emit a
-    // duplicate REST-91002 code with a different meaning.
     [MessageLogging(
         EventId = 92000,
         Level = LogLevel.Error,

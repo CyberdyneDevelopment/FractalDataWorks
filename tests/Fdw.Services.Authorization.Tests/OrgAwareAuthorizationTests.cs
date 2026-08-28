@@ -35,8 +35,6 @@ public sealed class OrgAwareAuthorizationTests
     private static readonly Guid TenantPermId = Guid.NewGuid();
     private static readonly Guid TenantId = Guid.NewGuid();
     private static readonly Guid OrgId = Guid.NewGuid();
-    // Why: real user IDs are Guids (JWT sub claim); tests must use parseable Guid strings
-    // so that EffectivePermissionResolver.ApplyOrgTier succeeds Guid.TryParse and reaches the org tier.
     private static readonly Guid User1Id = Guid.NewGuid();
     private static readonly Guid User2Id = Guid.NewGuid();
     private static readonly Guid User3Id = Guid.NewGuid();
@@ -180,10 +178,6 @@ public sealed class OrgAwareAuthorizationTests
     // Helpers
     // ──────────────────────────────────────────────────────────────────────────────
 
-    // Why: catalog gives user "1" both GlobalAdmin (global tier → global:admin) and TenantUser
-    // (tenant-scoped to TenantId → tenant:read). FDW-532 fix requires explicit UserRole assignments
-    // — the resolver no longer iterates the full catalog without scoping to the user's assignments.
-    // Users "2", "3" etc. have no role assignments; they receive permissions only from the org tier.
     private static EffectivePermissionResolver BuildResolver(
         IReadOnlyList<TenantOrgAccessConfiguration> orgGrants)
     {
@@ -199,9 +193,6 @@ public sealed class OrgAwareAuthorizationTests
             new() { RoleId = TenantRoleId, PermissionId = TenantPermId }
         };
 
-        // Why: User1Id is explicitly assigned both GlobalAdmin (global scope) and TenantUser
-        // (scoped to TenantId). GetByUser filters the full list by userId, so only User1Id
-        // gets these roles; other userIds resolve to zero role-tier assignments (org-tier only).
         var userRoleAssignments = new List<UserRoleConfiguration>
         {
             new() { UserId = User1Id.ToString(), RoleId = GlobalRoleId, TenantId = null },
@@ -220,8 +211,6 @@ public sealed class OrgAwareAuthorizationTests
             NullLogger<UserRoleConfigurationProvider>.Instance,
             new ConfigurationGatewayProvider(),
             "TestStore", "authz");
-        // Why: CallBase = true lets GetByUser() delegate to its real body (calls Get() which is mocked).
-        // Without CallBase, Loose mock returns null for the virtual GetByUser() causing NullRef.
         userRoleProviderMock.CallBase = true;
         userRoleProviderMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleConfiguration>>.Success(userRoleAssignments));

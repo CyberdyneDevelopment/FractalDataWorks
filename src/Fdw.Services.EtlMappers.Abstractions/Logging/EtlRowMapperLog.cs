@@ -52,9 +52,6 @@ public static partial class EtlRowMapperLog
     /// <summary>
     /// Logs that a field was not found in the result set during ordinal lookup; ordinal set to -1.
     /// </summary>
-    // Why Error, not Debug (FDW-583): CompiledFieldAccessor returns null for this field on every row
-    // once the ordinal is -1 — silent, permanent NULL-per-row data corruption whose only record was
-    // previously below the print threshold.
     [MessageLogging(
         EventId = 11002,
         Level = LogLevel.Error,

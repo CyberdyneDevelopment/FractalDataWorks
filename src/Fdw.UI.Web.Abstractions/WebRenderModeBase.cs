@@ -6,7 +6,6 @@ namespace Fdw.UI.Web.Abstractions;
 /// <summary>
 /// Base class for render mode types.
 /// </summary>
-// Why: pure TypeOption base — trivial pass-through constructor, no logic to test.
 [ExcludeFromCodeCoverage]
 public abstract class WebRenderModeBase : TypeOptionBase<int, WebRenderModeBase>, IRenderMode
 {

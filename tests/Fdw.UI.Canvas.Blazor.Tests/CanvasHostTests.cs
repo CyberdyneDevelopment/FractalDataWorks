@@ -20,9 +20,6 @@ public sealed class CanvasHostTests
     private static TestContext CreateContext()
     {
         var ctx = new TestContext();
-        // Why: SvgCanvasRenderer uses no JS interop, but Blazor component infrastructure
-        // may invoke JS in some test paths. Configure bUnit's JSInterop in loose mode so
-        // any un-setup JS call is silently ignored rather than throwing.
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         return ctx;
     }
@@ -114,8 +111,6 @@ public sealed class CanvasHostTests
         // Simulate the dropdown being changed to an unregistered renderer name by invoking
         // the change handler via the select element.
         var select = cut.Find("select");
-        // Why: setting input to an unknown value triggers OnRendererChanged("UnknownRenderer") inside
-        // the component; the component should set _errorMessage and NOT throw.
         Should.NotThrow(() => select.Change("UnknownRenderer"));
 
         // Assert: an error span (colour #ef4444) is rendered.

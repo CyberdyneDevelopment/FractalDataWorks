@@ -21,8 +21,6 @@ public sealed class FieldConverter : JsonConverter<IField>
         IFieldType? fieldType = null;
         IPropertyRole role = PropertyRoles.ByName("Attribute");
         bool isNullable = false;
-        // Why: IsPrimaryKey removed from runtime Field model. The local variable is retained
-        // so the ReadProperty switch can consume the JSON token for backwards-compat deserialization.
         bool isIdentity = false;
         bool isComputed = false;
         bool isSystemProvided = false;
@@ -90,8 +88,6 @@ public sealed class FieldConverter : JsonConverter<IField>
                 isNullable = reader.GetBoolean();
                 break;
             case "IsPrimaryKey":
-                // Why: IsPrimaryKey removed from runtime Field model. Skip this property when
-                // deserializing persisted data that may still contain the old field to avoid errors.
                 reader.GetBoolean();
                 break;
             case "IsIdentity":
@@ -137,16 +133,12 @@ public sealed class FieldConverter : JsonConverter<IField>
             FieldType = fieldType,
             Role = role,
             IsNullable = isNullable,
-            // Why: IsPrimaryKey removed from Field — PK identity is now stored in KeyField tables.
             IsIdentity = isIdentity,
             IsComputed = isComputed,
             IsSystemProvided = isSystemProvided,
             Description = description,
             TypeSystemId = typeSystemId,
             ConverterTypeId = converterTypeId,
-            // Why resolved here: the schema carries the option's name, and the runtime field carries
-            // the option. A name the collection does not know is a declaration error, and ByName
-            // answers with the NotFound sentinel rather than null so it surfaces as one.
             Visibility = visibilityId is null
                 ? FieldVisibilities.ByName("Visible")
                 : FieldVisibilities.ByName(visibilityId)
@@ -165,8 +157,6 @@ public sealed class FieldConverter : JsonConverter<IField>
         // Write role name directly
         writer.WriteString("Role", value.Role.Name);
         writer.WriteBoolean("IsNullable", value.IsNullable);
-        // Why: IsPrimaryKey not written — removed from runtime Field model (PK in KeyField tables).
-        // Old persisted JSON containing IsPrimaryKey will be silently skipped on Read.
         writer.WriteBoolean("IsIdentity", value.IsIdentity);
         writer.WriteBoolean("IsComputed", value.IsComputed);
         writer.WriteBoolean("IsSystemProvided", value.IsSystemProvided);

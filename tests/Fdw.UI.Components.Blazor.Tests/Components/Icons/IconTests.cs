@@ -96,8 +96,6 @@ public sealed class IconTests : IDisposable
     [Fact]
     public void EmptyStrokeWidthDrawsNoAttributeSoTheWeightIsInherited()
     {
-        // Why this matters: console.css sets stroke-width on the svg for some containers, and a path
-        // only inherits it when it carries none of its own.
         _ctx.Render<Icon>(p => p
             .Add(x => x.Name, "Check")
             .Add(x => x.StrokeWidth, string.Empty)).Find("path")

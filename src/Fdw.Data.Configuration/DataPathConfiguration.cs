@@ -80,8 +80,6 @@ public partial class DataPathConfiguration : IGenericConfiguration
     /// Gets or sets the DataPath type discriminator (e.g., "Schema", "Directory", "UrlPrefix").
     /// Maps to the <c>TypeId</c> column on <c>data.DataPath</c>.
     /// </summary>
-    // Why: The SQL column is TypeId (Wave A DDL). [GenerateMapper] maps C# property names to SQL
-    // column names; this property must be named TypeId to bind correctly.
     public string? TypeId { get; set; }
 
     /// <summary>

@@ -23,9 +23,6 @@ internal static class DataSetQueryHelper
         ?? throw new InvalidOperationException("FilterOperators.Equal not found");
 
     /// <summary>Builds filter for active rows (IsCurrent=true AND IsDeleted=false).</summary>
-    // Why a property name is passed rather than another named helper per column: the callers that
-    // need this are looking up one row by an id that differs per container — the transform's own id
-    // in one case, its parent's in another — and the shape of the filter is identical either way.
     internal static FilterExpression ActiveFilterFor(string propertyName, object value) => new()
     {
         Root = new FilterGroup
@@ -97,8 +94,6 @@ internal static class DataSetQueryHelper
         TransformExpression = config.TransformExpression,
         SourceDataSetName = config.SourceDataSetName,
         RecordTypeName = config.RecordTypeName,
-        // Why: MapToFieldDto/MapToSourceDto already existed but were never called here — Fields and
-        // Sources were always empty on GET (Requirement 4 round-trip gap; see plan §1).
         Fields = config.Fields
             .OrderBy(f => f.Ordinal)
             .Select(MapToFieldDto)
@@ -130,7 +125,6 @@ internal static class DataSetQueryHelper
                 DataType = f.DataType
             })
             .ToList(),
-        // Why: project joins + caching so the editor can round-trip them (see DataSetDetailResponse.Joins/Caching).
         Joins = config.Joins
             .Select(j => new DataSetJoinPayload
             {
@@ -261,12 +255,6 @@ internal static class DataSetQueryHelper
         IList<CreateDataSetSourceRequest> sources,
         IEnumerable<DataSetSourceConfiguration> existing)
     {
-        // Why: version-on-write is keyed on the row's durable Id — the save retires
-        // "WHERE Id=@LogicalId AND IsCurrent=1" and then inserts. An update re-composes this collection
-        // from the request, so without linking each source back to the row it already is, the save minted
-        // a new Id, retired nothing, and collided with the still-current row on
-        // UX_DataSetSource_DataSetId_SourceName_Current. Matched on SourceName because that is the column
-        // that index is built on; Name is NOT a column on data.DataSetSource, so it cannot carry identity.
         var priorIds = existing
             .Where(e => !string.IsNullOrEmpty(e.SourceName))
             .GroupBy(e => e.SourceName, StringComparer.Ordinal)
@@ -317,8 +305,6 @@ internal static class DataSetQueryHelper
             {
                 Enabled = caching.Enabled,
                 DurationMinutes = caching.DurationMinutes,
-                // Why: leave KeyPattern at the POCO's own default when the request omits it
-                // (no invented value here — the default lives on CachingConfiguration).
                 KeyPattern = caching.KeyPattern ?? new CachingConfiguration().KeyPattern
             };
 

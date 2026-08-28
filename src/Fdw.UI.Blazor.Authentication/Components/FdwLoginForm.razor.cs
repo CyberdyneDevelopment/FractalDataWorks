@@ -12,14 +12,6 @@ using Microsoft.AspNetCore.Components;
 /// Headless login form component. Manages login state and delegates rendering
 /// to the consuming application via <see cref="FormContent"/>.
 /// </summary>
-// Why: a Blazor component's continuations must stay on the renderer's synchronisation context.
-// ConfigureAwait(false) moves them off it, and a bare StateHasChanged() then throws "The current
-// thread is not associated with the Dispatcher", terminating the circuit — so a recoverable failure
-// destroyed the user's whole session instead of rendering an error. Observed in reference-ui
-// 2026-08-14. No analyzer catches this - MA0004 is severity=none in .editorconfig - so the rule
-// holds by convention only. The alternative, used by DataCommandProvider, is to keep
-// ConfigureAwait(false) and marshal every state touch through InvokeAsync; either is
-// correct, mixing them is what breaks.
 public sealed partial class FdwLoginForm : ComponentBase, IDisposable
 {
     [Inject]

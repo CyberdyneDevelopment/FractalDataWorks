@@ -27,8 +27,6 @@ namespace Fdw.UI.Charts.Blazor.Renderers.ECharts;
 [ExcludeFromCodeCoverage]
 public static class EChartsStrategyMap
 {
-    // Why: static initializer for the strategy dictionary. Each entry is a named method
-    // factory keyed on the ChartTypes registry name (Ordinal comparison at lookup time).
     private static readonly Dictionary<string, Func<IChartModel, IReadOnlyList<IReadOnlyDictionary<string, object?>>, Dictionary<string, object?>>> _strategies =
         new Dictionary<string, Func<IChartModel, IReadOnlyList<IReadOnlyDictionary<string, object?>>, Dictionary<string, object?>>>(StringComparer.Ordinal)
         {
@@ -56,13 +54,10 @@ public static class EChartsStrategyMap
 
     // ── Helpers ──────────────────────────────────────────────────────────────────────────────
 
-    // Why: resolve a field name from the Encodings list by role name (Ordinal comparison).
     private static string? FieldForRole(IChartModel model, string roleName)
         => model.Encodings.FirstOrDefault(
             e => string.Equals(e.Role.Name, roleName, StringComparison.Ordinal))?.FieldName;
 
-    // Why: extract a double value from a row field for numeric chart axes. Non-numeric values
-    // resolve to null so the chart renders a gap rather than throwing.
     private static double? NumericValue(IReadOnlyDictionary<string, object?> row, string? field)
     {
         if (field is null || !row.TryGetValue(field, out var raw) || raw is null)
@@ -80,7 +75,6 @@ public static class EChartsStrategyMap
         };
     }
 
-    // Why: extract a string display value from a row field for axis labels and category names.
     private static string StringValue(IReadOnlyDictionary<string, object?> row, string? field)
     {
         if (field is null || !row.TryGetValue(field, out var raw))
@@ -88,9 +82,6 @@ public static class EChartsStrategyMap
         return raw?.ToString() ?? string.Empty;
     }
 
-    // Why: build shared ECharts title / legend / tooltip / dataZoom sections from IChartModel
-    // flags so all strategies share one coherent option-building path without duplicating
-    // property sets.
     private static Dictionary<string, object?> BaseOption(IChartModel model)
     {
         var opt = new Dictionary<string, object?>(StringComparer.Ordinal);
@@ -106,11 +97,9 @@ public static class EChartsStrategyMap
         if (model.ShowLegend)
             opt["legend"] = new Dictionary<string, object?>(StringComparer.Ordinal) { ["show"] = true };
 
-        // Why: tooltip trigger is set per chart type in each strategy; base sets enabled only.
         if (model.EnableTooltips)
             opt["tooltip"] = new Dictionary<string, object?>(StringComparer.Ordinal) { ["trigger"] = "axis" };
 
-        // Why: dataZoom allows axis pan/zoom when EnableZoom is true.
         if (model.EnableZoom)
             opt["dataZoom"] = new List<object?>
             {
@@ -121,8 +110,6 @@ public static class EChartsStrategyMap
         return opt;
     }
 
-    // Why: Bar, Line, and Area share the same x-category / y-value axis structure; only the
-    // series type and optional areaStyle differ. Factoring avoids duplicating the grouping logic.
     private static Dictionary<string, object?> BuildXyOption(
         IChartModel model,
         IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
@@ -134,8 +121,6 @@ public static class EChartsStrategyMap
         var yField      = FieldForRole(model, "Y");
         var seriesField = FieldForRole(model, "Series");
 
-        // Why: collect ordered unique X values to build the category axis data array; order
-        // is preserved (first-occurrence) so the axis labels match the data order.
         var xCategories = rows
             .Select(r => StringValue(r, xField))
             .Distinct(StringComparer.Ordinal)
@@ -160,8 +145,6 @@ public static class EChartsStrategyMap
 
         if (seriesField is not null)
         {
-            // Why: group by distinct series values so multi-series charts split correctly without
-            // a conditional branch per chart type.
             foreach (var group in rows.GroupBy(r => StringValue(r, seriesField), StringComparer.Ordinal))
             {
                 var data = BuildCategoryData(group.ToList(), xCategories, xField, yField);
@@ -194,9 +177,6 @@ public static class EChartsStrategyMap
         return opt;
     }
 
-    // Why: build a category-aligned data array so each series entry lines up with the shared
-    // xAxis.data. For each x-category, find the first matching row and extract the Y value.
-    // Non-matching categories resolve to null (rendered as a gap).
     private static List<object?> BuildCategoryData(
         List<IReadOnlyDictionary<string, object?>> rows,
         List<string> xCategories,
@@ -232,7 +212,6 @@ public static class EChartsStrategyMap
     {
         var opt = BaseOption(model);
 
-        // Why: pie/donut charts use item-trigger tooltip, not axis-trigger.
         if (model.EnableTooltips)
             opt["tooltip"] = new Dictionary<string, object?>(StringComparer.Ordinal) { ["trigger"] = "item" };
 
@@ -265,12 +244,10 @@ public static class EChartsStrategyMap
     {
         var opt = BaseOption(model);
 
-        // Why: pie/donut charts use item-trigger tooltip, not axis-trigger.
         if (model.EnableTooltips)
             opt["tooltip"] = new Dictionary<string, object?>(StringComparer.Ordinal) { ["trigger"] = "item" };
 
         var xField = FieldForRole(model, "X");
-        // Why: donut uses Measure role first if bound (KPI pattern), falls back to Y.
         var yField = FieldForRole(model, "Measure") ?? FieldForRole(model, "Y");
 
         var data = rows
@@ -287,7 +264,6 @@ public static class EChartsStrategyMap
             {
                 ["name"]   = model.Title,
                 ["type"]   = "pie",
-                // Why: radius array with inner/outer percentage produces the donut hole.
                 ["radius"] = new List<object?> { "40%", "70%" },
                 ["data"]   = data,
             },
@@ -301,7 +277,6 @@ public static class EChartsStrategyMap
     {
         var opt = BaseOption(model);
 
-        // Why: scatter axes are value-type (numeric), not category.
         var xField      = FieldForRole(model, "X");
         var yField      = FieldForRole(model, "Y");
         var seriesField = FieldForRole(model, "Series");
@@ -355,7 +330,6 @@ public static class EChartsStrategyMap
     {
         var opt = BaseOption(model);
 
-        // Why: heatmap tooltip uses item-trigger to show individual cell values.
         if (model.EnableTooltips)
             opt["tooltip"] = new Dictionary<string, object?>(StringComparer.Ordinal)
             {
@@ -364,8 +338,6 @@ public static class EChartsStrategyMap
             };
 
         var xField      = FieldForRole(model, "X");
-        // Why: the Series encoding becomes the y-axis (row dimension) of the heatmap grid,
-        // matching ApexCharts' heatmap convention where series names are the row labels.
         var seriesField = FieldForRole(model, "Series");
         var yField      = FieldForRole(model, "Y");
 
@@ -386,8 +358,6 @@ public static class EChartsStrategyMap
 
         var minVal = values.Count > 0 ? values.Min() : 0.0;
         var maxVal = values.Count > 0 ? values.Max() : 1.0;
-        // Why: a zero-range visualMap causes ECharts to render without colour differentiation;
-        // bump the max by 1 when all values are identical.
         if (Math.Abs(maxVal - minVal) < double.Epsilon)
             maxVal = minVal + 1.0;
 
@@ -438,7 +408,6 @@ public static class EChartsStrategyMap
     {
         var opt = BaseOption(model);
 
-        // Why: Sankey tooltip uses item-trigger to show link values on hover.
         if (model.EnableTooltips)
             opt["tooltip"] = new Dictionary<string, object?>(StringComparer.Ordinal) { ["trigger"] = "item" };
 
@@ -446,8 +415,6 @@ public static class EChartsStrategyMap
         var targetField = FieldForRole(model, "Target");
         var weightField = FieldForRole(model, "Weight");
 
-        // Why: nodes are derived from the union of all source and target values so the caller
-        // does not need a separate "nodes" dataset — the link rows are self-describing.
         var nodeNames = rows
             .SelectMany(r => new[]
             {
@@ -470,8 +437,6 @@ public static class EChartsStrategyMap
             {
                 ["source"] = StringValue(r, sourceField),
                 ["target"] = StringValue(r, targetField),
-                // Why: weight defaults to 1.0 when the Weight encoding is unbound so the
-                // Sankey renders with equal-width links rather than failing.
                 ["value"]  = NumericValue(r, weightField) ?? 1.0,
             })
             .ToList();

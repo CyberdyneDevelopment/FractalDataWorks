@@ -5,7 +5,6 @@ namespace Fdw.Orchestration.Pipelines.Abstractions;
 /// <summary>
 /// Represents a validation error.
 /// </summary>
-// Why: pure result/warning POCO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class ValidationError
 {

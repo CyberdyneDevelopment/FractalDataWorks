@@ -16,7 +16,6 @@ namespace Fdw.UI.Canvas.Blazor.Renderers.Svg;
 /// </remarks>
 internal sealed class NodePortLayout
 {
-    // Why: Ordinal — ICanvasPort.Id is an exact internal key (e.g. "in:CustomerId"), not user text.
     private readonly Dictionary<string, PortPlacement> _byPortId;
 
     /// <summary>

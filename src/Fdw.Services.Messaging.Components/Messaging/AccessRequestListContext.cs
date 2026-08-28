@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Fdw.UI.Providers;
-// Why: Fdw.Services.Messaging.AccessRequestPayload (server-side) is accessible via
-// ancestor-namespace lookup from this namespace. Namespace alias bypasses ancestor lookup.
 using ClientModels = Fdw.Services.Messaging.Clients.Models;
 
 namespace Fdw.Services.Messaging.Components.Messaging;

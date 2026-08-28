@@ -26,10 +26,6 @@ public abstract class RecordWriterTypeBase : TypeOptionBase<int, RecordWriterTyp
     public abstract IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions? options);
 
     /// <inheritdoc />
-    // Why: the config-driven surface delegates to CreateWriter with the context's target + options; the
-    // field children flow into the writer's column order via the options the caller built from the
-    // container (delimited/fixed-width read column order from RowWriterOptions.Columns). Item writers
-    // (Json/Xml) ignore column order. No second writer path.
     public virtual IRecordWriter<DataRecord> Create(RecordWriterContext context)
         => CreateWriter(context.Target, context.Options);
 }

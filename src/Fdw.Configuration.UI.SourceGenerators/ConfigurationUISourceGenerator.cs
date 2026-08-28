@@ -180,9 +180,6 @@ public sealed class ConfigurationUISourceGenerator : IIncrementalGenerator
         }
         catch (Exception ex)
         {
-            // Why: source generator analysis errors must not crash the generator pipeline;
-            // return null so the caller skips this model and reports diagnostics during generation.
-            // ex.Message observed to satisfy FDW022; no logger is available in a source generator.
             _ = ex.Message;
             return null;
         }

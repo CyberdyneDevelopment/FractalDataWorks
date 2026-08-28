@@ -31,12 +31,6 @@ public abstract class ListDataSetTypesEndpointBase : CrudListEndpointBase<DataSe
     /// <summary>Loads all registered DataSet types as summary DTOs.</summary>
     protected override Task<IGenericResult<List<DataSetTypeSummaryPayload>>> LoadItems(CancellationToken ct)
     {
-        // Why: DataSetTypes is a MutableTypeCollection; .All() returns IReadOnlyCollection<IDataSetType>
-        // (direct elements, not dictionary KVPs). Contrast with ServiceTypeCollections (e.g. ConnectionTypes)
-        // which return ImmutableDictionary<Guid, IConnectionType> and require kvp.Value.
-        // Why: IDataSetType exposes Name (from ITypeOption) + Description; it has no DisplayName/Category
-        // members, so Name doubles as the display label (connection-types pattern) and the category is the
-        // fixed domain name. No fabricated values.
         var items = DataSetTypes.All()
             .Select(t => new DataSetTypeSummaryPayload
             {

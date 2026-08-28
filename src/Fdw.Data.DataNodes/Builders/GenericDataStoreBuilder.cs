@@ -42,8 +42,6 @@ public sealed class GenericDataStoreBuilder : DataStoreBuilderBase
 
     /// <inheritdoc />
     protected override IDataField BuildField(DataContainerFieldConfiguration fieldCfg)
-        // Why: generic transports carry no native-type system; the field's explicit type is null
-        // (resolved by a higher layer if needed). The leaf node still participates in Schema/Nodes.
         => new DataField(fieldCfg.Name, fieldCfg.Description, explicitType: null, fieldCfg.Ordinal, fieldCfg.IsNullable);
 
     /// <inheritdoc />
@@ -54,10 +52,6 @@ public sealed class GenericDataStoreBuilder : DataStoreBuilderBase
         IReadOnlyList<IContainerKey> keys,
         IGenericResult<IReadOnlyList<ReferencingKeyBinding>> referencingKeys)
     {
-        // Why: ContainerType for a generic container is resolved from the config discriminator when
-        // present; otherwise the Endpoint type (the only generic container kind in use). Format +
-        // metadata come from the resolved FormatConfig aggregate via the shared composition helper —
-        // never a silent Tabular fallback.
         var containerType = string.IsNullOrEmpty(containerCfg.TypeId)
             ? ContainerTypes.ByName("Endpoint")
             : ContainerTypes.ByName(containerCfg.TypeId);

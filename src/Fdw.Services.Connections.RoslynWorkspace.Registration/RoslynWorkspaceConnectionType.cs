@@ -44,16 +44,9 @@ public sealed class RoslynWorkspaceConnectionType
         description: "Roslyn MSBuildWorkspace for source code analysis and navigation",
         category: "Development")
     {
-        // Why Initialize and not Register: this wiring needs a LIVE container (it resolves the
-        // domain provider and its typed-body providers), and Register runs while the container
-        // is still being built. Initialize runs after Build() with a real IServiceProvider.
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            // Why: attach the typed-body provider to the HEADER provider so conn.RoslynWorkspaceConnection is
-            // reachable by discriminator dispatch, exactly as every other connection type does. This was the
-            // only ConnectionTypes option missing the call, and its absence was not inert: a live
-            // conn.Connection row with ServiceOptionType 'RoslynWorkspace' could not be read (ComposeTypedBody
             services.GetRequiredService<ConnectionConfigurationProvider>()
                 .Register(
                     Name, services.GetRequiredService<RoslynWorkspaceConnectionConfigurationProvider>());
@@ -68,17 +61,9 @@ public sealed class RoslynWorkspaceConnectionType
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
-        // Why Append and not Registration: Registration REPLACES the phase body, and
-        // ConnectionTypeBase's constructor has already prepended this option's factory registration
-        // onto it. Replacing therefore silently discards the base's contribution — which is exactly
-        // how every connection kind stopped being creatable while each option's own wiring kept
-        // working and logging success. Appending composes onto what the base put there.
         Registration((builder, loggerFactory) =>
         {
             builder.Services.AddSingleton<IRoslynWorkspaceFactory, RoslynWorkspaceFactory>();
-            // Why: a Roslyn workspace is opened from a solution path on disk and declares no authentication
-            // type, so this is the ONE connection kind that legitimately gets the no-secret-manager
-            // constructor. DI picks it because there is no other.
             builder.Services.AddSingleton<IRoslynWorkspaceConnectionFactory, RoslynWorkspaceConnectionFactory>();
             builder.Services.TryAddSingleton<RoslynWorkspaceConnectionConfigurationProvider>(sp =>
                 new RoslynWorkspaceConnectionConfigurationProvider(
@@ -89,10 +74,6 @@ public sealed class RoslynWorkspaceConnectionType
                     PathName));
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<RoslynWorkspaceConnectionConfiguration>>(
                 sp => sp.GetRequiredService<RoslynWorkspaceConnectionConfigurationProvider>());
-            // Why: RegisterFactory (below) requires ConnectionConfigurationProvider (the shared header
-            // provider for the whole Connections domain) to already be registered. Every other connection
-            // kind calls this; RoslynWorkspace did not, so in a host where it was the only registered
-            // connection kind the header provider was never registered at all.
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
@@ -107,7 +88,6 @@ public sealed class RoslynWorkspaceConnectionType
     /// <summary>
     /// RoslynWorkspace supports WorkspaceGraph and GetSymbolSource capabilities.
     /// </summary>
-    // Why: ByName() returns the TypeCollection singleton — never instantiate capabilities inline.
     public override IReadOnlyList<ICommandCapabilityType> SupportedCommands =>
     [
         CommandCapabilityTypes.ByName("WorkspaceGraph"),

@@ -57,10 +57,6 @@ public abstract class GetQualityDashboardEndpointBase : EndpointWithoutRequest<Q
 
         var rules = result.Value ?? [];
 
-        // Why: the quality rule configuration has no "last run result" field in the current
-        // schema — executions are one-shot fire-and-forget. Until execution history is wired,
-        // derive passing/failing from IsEnabled state: enabled rules are passing, disabled (non-
-        // enabled) ones are counted as failing. This gives a meaningful baseline health metric.
         var passingRules = rules.Count(r => r.IsEnabled);
         var failingRules = rules.Count - passingRules;
 

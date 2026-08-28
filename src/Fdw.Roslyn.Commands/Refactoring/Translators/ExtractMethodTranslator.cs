@@ -190,8 +190,6 @@ public sealed class ExtractMethodTranslator : RoslynCommandTranslatorBase<Extrac
             }
         };
 
-        // Why: for an Added symbol change, "old" is the source method it was extracted FROM and
-        // "new" is the created method, so the guide reads "extracted from X → created Y".
         var symbolChanges = new List<SymbolChange>
         {
             new SymbolChange(

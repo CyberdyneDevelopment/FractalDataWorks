@@ -197,8 +197,6 @@ public sealed class UsersPageContentTests : IDisposable
         cut.FindAll("input[placeholder='Min 8 characters']").Count.ShouldBe(0);
     }
 
-    // Why: documents a product guard — an empty username must not crash the avatar-initial
-    // (Username[0]); the page renders a placeholder instead of throwing IndexOutOfRange.
     [Fact]
     public void EmptyUsernameRendersSafelyWithoutThrowing()
     {

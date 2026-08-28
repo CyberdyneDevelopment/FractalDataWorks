@@ -36,7 +36,6 @@ public sealed class ODataUpdateTranslatorGapTests
     {
         var field = new Mock<IField>();
         field.Setup(f => f.Name).Returns(name);
-        // Why: IsPrimaryKey removed from IField — PK identity resolved from container Metadata["SurrogateKeyField"].
         return field;
     }
 
@@ -49,8 +48,6 @@ public sealed class ODataUpdateTranslatorGapTests
         schema.Setup(s => s.Fields).Returns(fields ?? []);
         schema.Setup(s => s.GetProjectableFields()).Returns(fields ?? []);
 
-        // Why: GetPrimaryKeyFieldName() reads Metadata["SurrogateKeyField"] — set up here
-        // to replace the removed IField.IsPrimaryKey approach.
         var metadata = new Dictionary<string, object>();
         if (primaryKeyFieldName != null)
             metadata["SurrogateKeyField"] = primaryKeyFieldName;

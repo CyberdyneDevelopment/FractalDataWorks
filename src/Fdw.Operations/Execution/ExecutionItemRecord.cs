@@ -86,9 +86,6 @@ public sealed class ExecutionItemRecord : IExecutionItem
             }
             catch (JsonException ex)
             {
-                // Why: a data record property getter must not throw on corrupt stored JSON; an empty
-                // dictionary is returned to keep callers functional. No ILogger is available here
-                // (data record context).
                 _ = ex;
                 _parameters = new Dictionary<string, object?>(StringComparer.Ordinal);
             }
@@ -126,7 +123,6 @@ public sealed class ExecutionItemRecord : IExecutionItem
             parametersJson = JsonSerializer.Serialize(parameters);
         }
 
-        // Why CreateVersion7: app-minted sequential id, matching the ExecutionItem POCO default.
         return new ExecutionItem
         {
             Id = Guid.CreateVersion7(),

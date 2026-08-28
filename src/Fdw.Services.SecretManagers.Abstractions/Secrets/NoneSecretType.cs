@@ -5,7 +5,6 @@ namespace Fdw.Services.SecretManagers.Abstractions.Secrets;
 /// <summary>
 /// Represents a secret type for services that don't require any secrets.
 /// </summary>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(SecretTypes), "None", RestrictToCurrentCompilation = true)]
 public sealed class NoneSecretType : SecretTypeBase, ISecretType

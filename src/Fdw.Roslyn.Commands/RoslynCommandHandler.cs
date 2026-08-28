@@ -188,12 +188,6 @@ public sealed class RoslynCommandHandler : IRoslynCommandHandler
                     _logger, commandName, result.Value is MutationResult mutation ? mutation.ChangedFiles.Count : 0);
             }
 
-            // Why these dispatch on the command's TYPE, not on its name: each of the four effects below
-            // lives on the workspace, which a stateless translator cannot reach, so the handler performs
-            // it. Matching on the literal string "SetBaseline" meant renaming a command — or adding a
-            // second command that legitimately wants the same effect — silently stopped the effect from
-            // happening, with a successful result and no log line to say so. The capability interfaces
-            // put that in the type system, where a rename is a compile error.
 
             // The ONLY place the history is discarded, and it happens because someone asked for it by
             // name. Everything else that used to clear it — loading a solution, closing a workspace,
@@ -246,10 +240,6 @@ public sealed class RoslynCommandHandler : IRoslynCommandHandler
 #pragma warning restore CA1031
     }
 
-    // Why: the ledger records WHAT changed; the caller's Reason is the only thing that records WHY, and a
-    // migration guide that cannot say which slice or issue caused a move is not auditable. Declared via
-    // IReasonedCommand rather than probed for by name — a command that spelled the property differently
-    // used to lose its reason silently, and the ledger entry simply had no WHY.
     private static string? ReasonOf(IRoslynCommand command) =>
         command is IReasonedCommand reasoned ? reasoned.Reason : null;
 
@@ -324,16 +314,8 @@ public sealed class RoslynCommandHandler : IRoslynCommandHandler
     private async Task<IGenericResult<IRoslynCommandResult>> ApplyPendingWorkspaceChanges(
         string commandName, IWorkspaceCommitCommand command, CancellationToken cancellationToken)
     {
-        // Why: the translator cannot reach IRoslynWorkspace (see ApplyWorkspaceChangesTranslator), so the
-        // handler performs the commit — which means it also has to carry the caller's delete decision.
-        // Read off the interface: the reflection probe this replaces silently defaulted to false when the
-        // property could not be found, so a caller who asked for deletion got a source file left behind
-        // next to its moved copy — the duplicate-type build break the flag exists to prevent.
         var deleteRemovedFiles = command.DeleteRemovedFiles;
 
-        // Why: captured BEFORE the write, because the write is what consumes it. Afterwards there is no
-        // way to tell "nothing was pending" from "something was pending and is now gone" — the two
-        // produce an identical success result, and only the second is a catastrophe.
         var pending = _workspace.GetChangesFromBaseline().Count;
         CommandHandlerLog.ApplyingWorkspaceChanges(_logger, pending, deleteRemovedFiles);
 

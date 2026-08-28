@@ -6,7 +6,6 @@ namespace Fdw.Aui;
 /// <summary>
 /// Marks a UI component or action as accessible via the Agent User Interface (AUI).
 /// </summary>
-// Why: pure attribute definition (declarative metadata only) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false)]
 [ExcludeFromCodeCoverage]
 public sealed class AuiAttribute : Attribute

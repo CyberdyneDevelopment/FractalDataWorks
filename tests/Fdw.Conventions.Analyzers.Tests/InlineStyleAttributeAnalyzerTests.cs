@@ -95,8 +95,6 @@ public class InlineStyleAttributeAnalyzerTests : RazorMarkupAnalyzerTestBase<Inl
     [Trait("Category", "Analyzer")]
     public async Task StyleInsideRenderFragmentLambda_ReportsDiagnostic()
     {
-        // Why: markup written inside a RenderFragment lambda declared in @code is still markup, which is
-        // why the scanner excludes only literals and comments in a code block rather than the whole block.
         await VerifyRazor(
             """
             @code {

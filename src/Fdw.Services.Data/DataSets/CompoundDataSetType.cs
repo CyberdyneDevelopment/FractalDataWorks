@@ -56,8 +56,6 @@ public sealed class CompoundDataSetType : DataSetTypeBase
         if (sources is null || sources.Count == 0)
             return GenericResult<T>.Failure(DataGatewayLogger.DataSetNoSources(ctx.Logger, ctx.Config.Name));
 
-        // Why: a Compound join is pushed down to a single store; sources spanning stores cannot be
-        // pushed down (that is a Federated dataset). Fail loud.
         var storeCount = sources.Select(s => s.DataStoreName).Distinct(StringComparer.OrdinalIgnoreCase).Count();
         if (storeCount > 1)
             return GenericResult<T>.Failure(
@@ -108,8 +106,6 @@ public sealed class CompoundDataSetType : DataSetTypeBase
                 return (true, null, GenericResult<T>.Failure(
                     DataGatewayLogger.SourceNoContainer(ctx.Logger, rightSource.SourceName, ctx.Config.Name)));
 
-            // Why: FieldMappings key=logical, value=physical. Use physical column in JOIN ON clause.
-            // If no mapping exists for the join field, use the logical name as the physical name (one-to-one column).
             joinExpressions.Add(new JoinExpression
             {
                 TargetContainerName = rightContainerName,
@@ -152,8 +148,6 @@ public sealed class CompoundDataSetType : DataSetTypeBase
                 }
             }
 
-            // Why: unmapped fields fall through to the primary source using the logical name as physical.
-            // This is the common case when a column name matches the field name directly.
             if (owningSource == null)
             {
                 owningSource = primarySource;
@@ -168,7 +162,6 @@ public sealed class CompoundDataSetType : DataSetTypeBase
             projectionFields.Add(new ProjectionField
             {
                 PropertyName = physicalColumn!,
-                // Why: Alias = logical name so result rows carry logical names; no post-query rename needed.
                 Alias = field.Name,
                 SourceContainer = sourceContainerName,
             });
@@ -187,9 +180,6 @@ public sealed class CompoundDataSetType : DataSetTypeBase
         if (command is not QueryCommand<T> { Filter: not null } queryCommand)
             return (false, null, null);
 
-        // Why: use primary source FieldMappings for filter translation. Compound datasets with
-        // cross-source filter conditions must author the field in the primary source's FieldMappings
-        // or use unambiguous physical names already.
         var fieldMappings = primarySource.FieldMappings.Count > 0 ? primarySource.FieldMappings : null;
         var filterResult = ctx.Pushdown.TranslateToPhysical(queryCommand.Filter, fieldMappings);
         if (!filterResult.IsSuccess)
@@ -225,13 +215,6 @@ public sealed class CompoundDataSetType : DataSetTypeBase
         if (!containerResult.IsSuccess || containerResult.Value == null)
             return GenericResult<T>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, primarySource.SourceName));
 
-        // Why the connection is walked off the container rather than read from the source: a DataStore
-        // owns its connection (data.DataStore.ConnectionRowId) and the container reaches it through
-        // Parent.Store, so the container resolved a line above ALREADY carries the answer. Reading a
-        // ConnectionName off the source made a second source of truth that had to be kept in step by
-        // hand, and any source composed from a request DTO leaves it empty. Simple and Federated
-        // resolve it this way too; this was the third strategy and it was missed, which is why a
-        // compound pushdown threw a NullReferenceException here instead of running.
         var connectionId = containerResult.Value.Parent?.Store?.ConnectionId ?? Guid.Empty;
         if (connectionId == Guid.Empty)
             return GenericResult<T>.Failure(

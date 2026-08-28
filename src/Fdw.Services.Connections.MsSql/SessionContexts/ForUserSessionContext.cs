@@ -36,13 +36,8 @@ namespace Fdw.Services.Connections.MsSql;
 [TypeOption(typeof(MsSqlSessionContextTypes), "ForUser")]
 public sealed class ForUserSessionContext() : MsSqlSessionContextBase(2, "ForUser")
 {
-    // Why: matches the permission checked by the security.fn_TenantFilter RLS predicate that reads
-    // SESSION_CONTEXT('CanReadSecrets') to show restricted system rows (Mode 4). Keep this const in
-    // sync with the fn_TenantFilter predicate in the databases repo.
     private const string ReadSecretsPermission = "connections:read-secrets";
 
-    // Why: the longest a result read under a live-grant-joining branch may outlive the grant that
-    // permitted it. Keep this in sync with the security posture, not with the gateway's own default.
     private static readonly TimeSpan RevocationCeiling = TimeSpan.FromSeconds(30);
 
     /// <inheritdoc />
@@ -52,9 +47,6 @@ public sealed class ForUserSessionContext() : MsSqlSessionContextBase(2, "ForUse
     /// <inheritdoc />
     public override SessionContextPlan Plan(IAuthenticationContext? authenticationContext)
     {
-        // Why not a fallback: Governs already established this context is a Guid-identified,
-        // authenticated, non-system user, so the parse cannot fail here. Plan is only ever called
-        // for the context that governs it.
         if (!IsResolvedUser(authenticationContext))
         {
             throw new InvalidOperationException(
@@ -108,9 +100,6 @@ public sealed class ForUserSessionContext() : MsSqlSessionContextBase(2, "ForUse
             new("@userId", SqlDbType.UniqueIdentifier) { Value = userId },
         };
 
-        // Why the XOR: Modes 3 and 2 are alternatives in security.fn_TenantFilter — a strict
-        // single-tenant caller sets TenantId, a cross-tenant-authorized caller sets CrossTenant, and
-        // no caller sets both.
         if (plan.TenantId.HasValue)
         {
             sql += " EXEC sp_set_session_context @key = N'TenantId', @value = @tenantId, @read_only = 1;";

@@ -168,8 +168,6 @@ public sealed class MessageServiceTests
 
         var result = await fixture.Service.CreateMessage(MakeRequest(Guid.NewGuid()), TestContext.Current.CancellationToken);
 
-        // Why: recipient-insert failure is logged (not propagated) - this documents current
-        // best-effort behavior; see defectsFound for the fail-loud gap this represents.
         result.IsSuccess.ShouldBeTrue();
         fixture.Client.Verify(c => c.NewMessage(It.IsAny<Guid>()), Times.Once);
     }
@@ -681,10 +679,6 @@ public sealed class MessageServiceTests
     [Trait("Category", "DataIntegrity")]
     public async Task MarkAllReadWhenGatewayThrowsReturnsMessageQueryFailedCode()
     {
-        // Why: MarkAllRead's catch(Exception) logs via MessagingLog.MessageQueryFailed (code
-        // MESSAGING-71001) rather than MessageUpdateFailed (MESSAGING-71002) used by every sibling
-        // update method (MarkDelivered/MarkRead/Dismiss/Archive) - documents the current (likely
-        // copy-paste) inconsistency; see defectsFound.
         var fixture = CreateService();
         fixture.Gateway
             .Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))

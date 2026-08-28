@@ -20,9 +20,6 @@ public sealed class MsSqlQueryTranslatorTests
 {
     private readonly MsSqlQueryTranslator _sut = new();
 
-    // Why: translator requires IDataContainer (not just IStorageContainer) to access
-    // TypedBodyParent, Fields (IDataNode), and Keys. Root containers return failure on
-    // TypedBodyParent — the translator treats IsSuccess=false as "no typed-body parent".
     private static Mock<IDataContainer> CreateContainer(
         string name = "Customers",
         string schema = "dbo",
@@ -31,17 +28,11 @@ public sealed class MsSqlQueryTranslatorTests
     {
         var dbPath = new DatabasePath(database, schema, name);
         var containerSchema = new Mock<IContainerSchema>();
-        // Why: SELECT * is forbidden, so the translator now requires schema fields. Default
-        // helper supplies a single Id field so the existing test suite (which doesn't care
-        // about the column list, only the SELECT/FROM shape) continues to compile.
         containerSchema.Setup(s => s.Fields).Returns(fields ?? new[] { CreateField("Id").Object });
         containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? new[] { CreateField("Id").Object });
 
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns(name);
-        // Why: translator reads container.Path via IStorageContainer.Path (returns IPath) for the
-        // `is not DatabasePath` guard. IDataContainer.Path (DataNodes IDataNodePath) is a different
-        // interface member — use .As<IStorageContainer>() to target the correct overload.
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
         container.Setup(c => c.Schema).Returns(containerSchema.Object);
         container.Setup(c => c.ReferencingKeys)
@@ -58,7 +49,6 @@ public sealed class MsSqlQueryTranslatorTests
     {
         var field = new Mock<IField>();
         field.Setup(f => f.Name).Returns(name);
-        // Why: IsPrimaryKey removed from IField — PK identity resolved from container Metadata["SurrogateKeyField"].
         field.Setup(f => f.IsIdentity).Returns(isIdentity);
         field.Setup(f => f.IsComputed).Returns(isComputed);
         return field;
@@ -69,8 +59,6 @@ public sealed class MsSqlQueryTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslatorFailsLoudWhenContainerHasNoFields()
     {
-        // Why: SELECT * is forbidden. A container with no schema fields, no projection, and
-        // no metadata field-name lists is a misconfiguration — fail loud, never emit *.
         var container = CreateContainer(fields: []);
         var queryCommand = new Mock<IQueryCommand>();
         queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
@@ -113,11 +101,6 @@ public sealed class MsSqlQueryTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateTypedBodyJoinReadByParentDurableId()
     {
-        // Why: the typed-body read joins the child to its parent on the FK from metadata
-        // (child.ConnectionRowId = parent.RowId) and filters by the parent's DURABLE Id — not its
-        // RowId (which is never projected). Every column is qualified by table name so the joined
-        // tables' shared columns (Id/IsCurrent/IsDeleted) are unambiguous. Locks the SQL shape so a
-        // future change can't silently revert to a single-table WHERE on an unmaterialized RowId.
         var domainConfigurationId = Guid.Parse("8383b1b2-c3d4-5e6f-7a8b-9c0d1e2f3a4b");
         var fields = new[] { CreateField("Id").Object, CreateField("ServerName").Object };
         var container = CreateContainer(name: "MsSqlConnection", schema: "conn", fields: fields);
@@ -441,7 +424,6 @@ public sealed class MsSqlQueryTranslatorTests
     [Trait("Category", "DataIntegrity")]
     public async Task TranslateBaseOverloadDispatchesToQueryOverloadForIQueryCommand()
     {
-        // Why: schema fields required now that SELECT * is forbidden.
         var container = CreateContainer(fields: [CreateField("Id").Object]);
         var queryCommand = new Mock<IQueryCommand>();
         queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
@@ -462,8 +444,6 @@ public sealed class MsSqlQueryTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateSelectWithDatabaseQualifiedPath()
     {
-        // Why: SELECT * removed. With explicit schema fields the translator emits explicit
-        // columns, qualified by the three-part DatabasePath when present.
         var dbPath = new DatabasePath("Northwind", "dbo", "Customers");
         var fields = new[] { CreateField("Id").Object, CreateField("Name").Object };
         var containerSchema = new Mock<IContainerSchema>();
@@ -544,8 +524,6 @@ public sealed class MsSqlQueryTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task BuildSelectClauseEmitsExplicitColumnsForRootContainer()
     {
-        // Why: even a root (non-typed-body) container must emit explicit columns. SELECT *
-        // is forbidden across the board.
         var fields = new[]
         {
             CreateField("Id").Object,

@@ -15,10 +15,6 @@ namespace Fdw.UI.Charts.Blazor.Logging;
 /// to ChartHostLog per EVENTID-ALLOCATION.md. This class uses 4750–4759, the first free
 /// block after the ApexCharts renderer (4740–4749).
 /// </remarks>
-// Why: default TypeCode ("FDW") collided with Fdw.UI.Canvas.Blazor's BlazorDiagramsRendererLog,
-// which independently reused EventIds 4750-4752 — both generated "FDW-4750"/"FDW-4751"/"FDW-4752"
-// for unrelated messages. A distinct per-project TypeCode makes the generated Code unique even
-// though the numeric EventId ranges still overlap across the two sibling UI projects.
 [ExcludeFromCodeCoverage]
 [MessageLoggingTypeCode("CHARTS")]
 public static partial class RadzenChartsRendererLog

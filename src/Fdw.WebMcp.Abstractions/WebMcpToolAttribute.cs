@@ -17,7 +17,6 @@ namespace Fdw.WebMcp.Abstractions;
 /// copy here would be a second source of truth free to drift from the one the router actually uses.
 /// It is resolved at <c>MapWebMcp</c> from the live endpoint data source instead.
 /// </remarks>
-// Why: pure attribute definition (declarative metadata only) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 [ExcludeFromCodeCoverage]
 public sealed class WebMcpToolAttribute : Attribute

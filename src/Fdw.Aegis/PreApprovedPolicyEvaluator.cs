@@ -45,8 +45,6 @@ public sealed class PreApprovedPolicyEvaluator : IApprovalPolicyEvaluator
             }
         }
 
-        // Why fail-closed: only a declared command whose policy is the PreApproved option is approved;
-        // an undeclared command or any other policy kind is denied — there is no "default = allow".
         if (command is not null)
             AegisLog.PolicyEvaluated(_logger, command.ServiceOptionType, request.CommandName);
 

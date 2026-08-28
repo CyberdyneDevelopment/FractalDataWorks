@@ -36,17 +36,12 @@ namespace Fdw.Services.Etl.Execution;
 public sealed class PipelineExecutionBackgroundService : BackgroundService
 {
     private const string EtlContainerName = "PipelineExecution";
-    // Why OpsDb: the etl.PipelineExecution container lives in OpsDb (not "EtlDb").
     private const string EtlDataStore = "OpsDb";
     private const string EtlSchemaPath = "etl";
 
     private readonly PipelineExecutionQueue _queue;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<PipelineExecutionBackgroundService> _logger;
-    // Why optional: PipelineExecutionBackgroundService lives in Services.Etl which ships
-    // independently. When Services.Etl.Projects is registered, the signaler is present and
-    // pipelines enqueued by the project orchestrator get their completion signaled.
-    // When Services.Etl.Projects is not registered, the field is null and nothing changes.
     private readonly IExecutionCompletionSignaler? _completionSignaler;
 
     /// <summary>
@@ -60,8 +55,6 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
     {
         _queue = queue;
         _scopeFactory = scopeFactory;
-        // Why NullLogger fallback: per FDW convention, ensures the service remains functional
-        // if DI does not wire up logging.
         _logger = logger ?? NullLogger<PipelineExecutionBackgroundService>.Instance;
         _completionSignaler = completionSignaler;
     }
@@ -71,9 +64,6 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
     {
         EtlLog.BackgroundExecutorStarted(_logger);
 
-        // Why ReadAllAsync with ConfigureAwait: respects the stoppingToken — when the host
-        // shuts down, the loop exits after the current item completes. This is the graceful
-        // shutdown mechanism that Task.Run lacked. In-flight work is not abandoned.
         await foreach (var request in _queue.Reader.ReadAllAsync(stoppingToken).ConfigureAwait(false))
         {
             await ProcessRequest(request, stoppingToken).ConfigureAwait(false);
@@ -86,23 +76,11 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
     {
         EtlLog.ExecutionDequeued(_logger, request.PipelineName, request.ExecutionId);
 
-        // Why CreateAsyncScope: each execution needs its own DI scope so scoped services
-        // (IExecutionTracker, IDataGateway) have correct lifetimes. CreateAsyncScope supports
-        // async disposal of scoped services.
-        // Why ConfigureAwait(false) on the await using block: DisposeAsync on the scope does not
-        // need to resume on the original SynchronizationContext.
         var scope = _scopeFactory.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
             EtlLog.ExecutionScopeCreated(_logger, request.ExecutionId);
 
-            // Why here, before any DataGateway/connection use in this scope: a background execution has
-            // no ClaimsPrincipal, so without this the scoped IAuthenticationContext stays absent, RLS
-            // SESSION_CONTEXT is never set, and the run reads/writes across every tenant (system-bypass).
-            // WorkAuthenticationContext carries the execution's own TenantId instead of a token claim.
-            // Only set when the scope has no caller-established context yet (Current is null) — a
-            // background execution never has one, but this keeps the check explicit and safe if this
-            // scope is ever reused for a caller-attributed flow.
             EstablishWorkAuthenticationContext(scope.ServiceProvider, request);
 
             var executionTracker = scope.ServiceProvider.GetRequiredService<IExecutionTracker>();
@@ -111,10 +89,6 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             var dataGateway = scope.ServiceProvider.GetRequiredService<IDataGateway>();
             var broadcaster = scope.ServiceProvider.GetRequiredService<IPipelineStatusBroadcaster>();
 
-            // Why: the realtime firehose is scoped to the pipeline's OWNING org (org:{OrgId}:
-            // pipeline-updates). Resolve it once per execution from the parent PipelineConfiguration
-            // and thread it to every lifecycle broadcast. An unresolvable config yields null org —
-            // no org firehose (there is no global cross-org group), never a fallback.
             var orgId = await ResolveOwningOrg(scope.ServiceProvider, request, stoppingToken).ConfigureAwait(false);
 
             try
@@ -130,7 +104,6 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             catch (Exception ex)
             {
                 EtlLog.ExecutionExceptionInBackground(_logger, ex, request.PipelineName, request.ExecutionId);
-                // Why CancellationToken.None: unhandled exceptions must still record failure state.
                 await CompleteWithMetrics(dataGateway, executionTracker, broadcaster, _completionSignaler, _logger,
                     request.ExecutionId, request.PipelineName, orgId,
                     false, "Exception", ex.Message, 0, 0, 0, 0).ConfigureAwait(false);
@@ -138,13 +111,6 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         }
     }
 
-    // Why: stamps the per-execution scope's ambient IAuthenticationContext (via the AsyncLocal-backed
-    // IAuthenticationContextAccessor) with a WorkAuthenticationContext carrying request.TenantId, so
-    // every MsSqlConnection created for the rest of this scope sets RLS SESSION_CONTEXT('TenantId').
-    // No-op when the accessor isn't registered (Connections.MsSql not loaded), the request carries no
-    // TenantId, or the scope already has a caller-established context.
-    // Why internal (not private): unit-tested directly by Fdw.Services.Etl.Tests via
-    // InternalsVisibleTo, rather than standing up the full ProcessRequest dependency graph.
     internal void EstablishWorkAuthenticationContext(IServiceProvider services, PipelineExecutionRequest request)
     {
         if (!request.TenantId.HasValue)
@@ -162,9 +128,6 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         EtlLog.WorkAuthenticationContextEstablished(_logger, request.ExecutionId, request.TenantId.Value);
     }
 
-    // Why: the owning org for firehose scoping comes from the parent PipelineConfiguration
-    // (pipe.Pipeline.OrgId). Resolved through the standard config provider (cached), so it is not an
-    // extra uncached DB hit per execution. A missing/unresolvable config yields null — no org firehose.
     private static async Task<Guid?> ResolveOwningOrg(
         IServiceProvider services,
         PipelineExecutionRequest request,
@@ -183,9 +146,6 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         ILogger logger,
         CancellationToken stoppingToken)
     {
-        // Why full walk: the state machine only allows Scheduled→Triggered, Triggered→Initialized,
-        // Initialized→Running; a direct Scheduled→Running jump is rejected. Each step failure is
-        // logged as Warning and stops the walk — execution proceeds regardless (non-fatal lifecycle).
         var toTriggered = await executionTracker.TransitionState(
             request.ExecutionId,
             ExecutionStateTypes.Triggered,
@@ -286,8 +246,6 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         IExecutionCompletionSignaler? completionSignaler,
         ILogger logger)
     {
-        // Why CancellationToken.None: the stopping token is already cancelled. We still need
-        // to record the cancellation state; using the stopping token would prevent cleanup writes.
         var completeResult = await executionTracker.Complete(
             request.ExecutionId, false, "Cancelled", "Execution was cancelled",
             CancellationToken.None).ConfigureAwait(false);
@@ -300,7 +258,6 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             request.PipelineName, request.ExecutionId, "Cancelled",
             "Execution was cancelled", orgId).ConfigureAwait(false);
 
-        // Why: signal completion even for cancellation so the waiting orchestrator is unblocked.
         completionSignaler?.Signal(request.ExecutionId, false, "Cancelled");
     }
 
@@ -338,7 +295,6 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             .Where("Id", executionId)
             .Value(updateRecord);
 
-        // Why CancellationToken.None: completion writes must succeed even during shutdown.
         var updateResult = await dataGateway.Execute<int>(updateCommand, CancellationToken.None).ConfigureAwait(false);
         if (!updateResult.IsSuccess)
         {
@@ -366,8 +322,6 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             ErrorMessage = resultMessage
         }, orgId).ConfigureAwait(false);
 
-        // Why: signal AFTER BroadcastCompletion so the orchestrator only proceeds after the
-        // broadcast has been sent — consistent ordering of observable effects.
         completionSignaler?.Signal(executionId, success, resultMessage);
     }
 }

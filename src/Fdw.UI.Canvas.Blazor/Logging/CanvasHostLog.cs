@@ -10,8 +10,6 @@ namespace Fdw.UI.Canvas.Blazor.Logging;
 /// MessageLogging for <c>CanvasHost</c> operations.
 /// EventId range: 4700–4719 (UI canvas host layer).
 /// </summary>
-// Why: give every Fdw.UI.Canvas.Blazor Log class its own TypeCode so its generated Code never
-// collides with the sibling Fdw.UI.Charts.Blazor project, which shares the same 47xx EventId band.
 [ExcludeFromCodeCoverage]
 [MessageLoggingTypeCode("CANVAS")]
 public static partial class CanvasHostLog
@@ -46,8 +44,6 @@ public static partial class CanvasHostLog
         Message = "Resolving Blazor component for canvas renderer '{rendererName}'")]
     public static partial IGenericMessage ResolvingRendererComponent(ILogger logger, string rendererName);
 
-    // Why: Error, not Critical — the host survives (it falls through without rendering) rather than
-    // taking down the process; this is a deployment/registration failure the component handles.
     [MessageLogging(
         EventId = 4705,
         Level = LogLevel.Error,

@@ -59,9 +59,6 @@ public abstract class ResolveDataSetAnnotationEndpointBase : Endpoint<DataSetAnn
             return;
         }
 
-        // Why: Re-saving the unchanged record triggers an UPDATE via the provider which lets
-        // the DB DEFAULT (sysdatetimeoffset()) on ModifiedAt advance to the current timestamp —
-        // this is the "resolve" signal (the annotation was reviewed at this point in time).
         var saveResult = await _provider.SaveAnnotation(getResult.Value, ct).ConfigureAwait(false);
 
         if (!saveResult.IsSuccess)

@@ -25,16 +25,8 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest, LineageGraphResponse>
 {
-    // Why: IConfigurationGateway routes directly to ConfigurationDb via configurationSchema.json.
-    // Using plain IDataGateway would look for "ConfigurationDb" in the runtime DataStore table
-    // (data.DataStore), where it does not exist — it is only a bootstrap connection in the JSON.
     private readonly IConfigurationGateway _configurationGateway;
     private readonly ILogger<GetLineageGraphEndpointBase> _logger;
-    // Why: pipelines are a 3-level polymorphic typed-body aggregate (Pipeline -> EtlPipeline -> engine);
-    // a flat QueryAll<PipelineLineageRecord> against pipe.Pipeline cannot see the engine-body linkage
-    // columns (SourceDataSet/DestinationDataSet/SourceConnectionName/DestinationConnectionName/
-    // IsEnabled). Resolving through the composing provider reuses the ONE-provider mechanism instead
-    // of re-implementing the join here. See PipelineLineageLoader.
     private readonly PipelineServiceConfigurationProvider _pipelineProvider;
 
     /// <inheritdoc />
@@ -128,12 +120,6 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
         IReadOnlyList<DataSetFieldMappingRecord> fieldMappings,
         ILogger logger)
     {
-        // Why: QueryAll returns every version-on-write row of data.DataSet (one per saved version, all
-        // sharing one logical Id). The lineage graph is a current-state view keyed by logical Id, so
-        // collapse to one record per Id first — otherwise the Id→Name ToDictionary in AddEdges throws
-        // "An item with the same key has already been added" on the first DataSet that has ever been
-        // updated (e.g. a compound DataSet whose sources were bound via /map), and AddNodes would emit
-        // a duplicate node per historical version. All versions share the same Name, so First() is safe.
         dataSets = dataSets.GroupBy(ds => ds.Id).Select(g => g.First()).ToList();
 
         var graph = new LineageGraph();
@@ -244,8 +230,6 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
         var writesToCount = 0;
         var readsFromCount = 0;
         var derivesFromCount = 0;
-        // Why: a source DataSet can be reused by multiple sibling sources of the same owner DataSet
-        // (e.g. re-mapped per field-group); dedup so DerivesFrom is emitted once per distinct pair.
         var derivesFromEdgeKeys = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var src in sources)
@@ -262,8 +246,6 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
                 readsFromCount++;
             }
 
-            // Why: data.DataSetSource.SourceDataSetName expresses derived-DataSet lineage
-            // (POST /datasets/{p}/sources/{s}/map) — never read by any graph before this fix.
             if (!string.IsNullOrEmpty(src.SourceDataSetName) &&
                 dataSetNameById.TryGetValue(src.DataSetId, out var ownerName) &&
                 derivesFromEdgeKeys.Add($"{src.SourceDataSetName}→{ownerName}"))
@@ -317,8 +299,6 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
                 writesToCount++;
             }
 
-            // Why: the source connection was collected as a NODE but no edge was ever drawn to it —
-            // a genuine missing edge. Populated when the pipeline's source is a Connection (ETL, not ELT).
             if (!string.IsNullOrEmpty(p.SourceConnectionName))
             {
                 graph.Edges.Add(new LineageEdge
@@ -472,7 +452,6 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
 
     private static readonly TimeSpan LineageCacheDuration = TimeSpan.FromMinutes(5);
 
-    // Why static readonly: CA1861 — avoids allocating new string[] arrays on every call.
     private static readonly string[] DataSetTags = ["data.DataSet"];
     private static readonly string[] DataSetSourceTags = ["data.DataSetSource"];
     private static readonly string[] ChainDefinitionTags = ["transform.ChainDefinition"];
@@ -491,13 +470,8 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
         string[] invalidationTags,
         CancellationToken ct) where T : class
     {
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget; path is passed explicitly
-        // so the correct schema segment (data/pipe/transform) is preserved per-container.
         var command = new QueryCommand<T>
         {
-            // Why: add CachePolicy metadata so DataGatewayService caches this result for 5 minutes.
-            // Lineage graph data changes infrequently; caching removes repeated full-table scans
-            // on every graph request.
             Metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
             {
                 [CachePolicy.CacheEnabledKey] = true,

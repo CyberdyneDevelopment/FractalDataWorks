@@ -22,8 +22,6 @@ namespace Fdw.Services.Connections.Endpoints;
 /// </remarks>
 public abstract class DeleteConnectionEndpointBase : CrudDeleteEndpointBase<ConnectionNameRequest>
 {
-    // Why: the connection provider owns the whole aggregate delete — header, typed body, and everything
-    // hanging off either of them.
     private readonly ConnectionConfigurationProvider _connectionProvider;
     private readonly IConnectionProvider _connectionLookupProvider;
     private readonly ILogger<DeleteConnectionEndpointBase> _logger;
@@ -55,9 +53,6 @@ public abstract class DeleteConnectionEndpointBase : CrudDeleteEndpointBase<Conn
     /// <summary>Soft-deletes the connection aggregate.</summary>
     protected override async Task<IGenericResult> Delete(ConnectionNameRequest request, CancellationToken ct)
     {
-        // Why the name overload: it resolves the record and delegates to Delete(Guid), so the cascade
-        // and the audit columns happen in the one place that owns them. A name that resolves to nothing
-        // fails loud from the provider rather than reporting a delete that never ran.
         return await _connectionProvider.Delete(request.Name, ct).ConfigureAwait(false);
     }
 }

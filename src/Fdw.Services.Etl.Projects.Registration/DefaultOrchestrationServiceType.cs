@@ -83,23 +83,11 @@ public sealed class DefaultOrchestrationServiceType : PipelineServiceTypeBase
             services.TryAddSingleton<OrchestrationNodeConfigurationWriter>();
 
             // Execution infrastructure.
-            // Why Singleton for the queues: each Channel is shared between all callers — endpoints
-            // and the background service both hold the same instance.
             services.TryAddSingleton<OrchestrationNodeExecutionQueue>();
             services.TryAddSingleton<ProjectExecutionQueue>();
 
-            // Why this registers the pipeline queue rather than assuming a pipeline option is present:
-            // OrchestrationNodeOrchestrator takes IPipelineExecutionQueue as a non-nullable constructor
-            // parameter to dispatch leaf-node pipeline runs. The BatchCopy and Streaming options
-            // register it for their own use; the helper guards against an existing registration, so
-            // any order of the three callers is safe.
             Fdw.Services.Etl.EtlPipelineTypes.RegisterPipelineExecutionQueue(services);
 
-            // Why: same gap, same fix — the orchestrator also hard-requires IExecutionCompletionSignaler
-            // to await pipeline completion. It is a singleton TCS registry shared with
-            // PipelineExecutionBackgroundService. A host that lacked this line left the orchestrator
-            // with an unresolvable dependency, and DI validation reported only the queue failure above
-            // because it stops at the first unresolvable parameter.
             services.TryAddSingleton<IExecutionCompletionSignaler, ExecutionCompletionSignaler>();
             services.TryAddScoped<IOrchestrationNodeOrchestrator, OrchestrationNodeOrchestrator>();
             services.AddHostedService<OrchestrationNodeOrchestratorBackgroundService>();
@@ -114,8 +102,6 @@ public sealed class DefaultOrchestrationServiceType : PipelineServiceTypeBase
         {
             var services = host.Services;
 
-            // Why: eagerly resolve so a registration error surfaces at startup rather than at the
-            // first request that needs one of these.
             _ = services.GetRequiredService<IServerPolicyDefaults>();
             _ = services.GetRequiredService<IPolicyElevationValidator>();
             _ = services.GetRequiredService<IEffectivePolicyResolver>();
@@ -123,9 +109,6 @@ public sealed class DefaultOrchestrationServiceType : PipelineServiceTypeBase
             _ = services.GetRequiredService<OrchestrationNodeConfigurationWriter>();
             _ = services.GetRequiredService<OrchestrationNodeExecutionQueue>();
 
-            // Why a throwaway scope: IProjectExecutionStatusReader is scoped, and resolving it from
-            // the root provider throws under ValidateScopes. A scope is the minimal-lifetime way to
-            // fail-fast validate it, mirroring ConfigurationGatewayDataStoreProvider.Initialize.
             using var scope = services.CreateScope();
             _ = scope.ServiceProvider.GetRequiredService<IProjectExecutionStatusReader>();
 

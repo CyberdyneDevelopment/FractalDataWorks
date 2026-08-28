@@ -59,8 +59,6 @@ public sealed class ODataConvertersTests
     public void BySourceTypeComparisonIsCaseSensitive()
     {
         // Act
-        // Why: BySourceType compares with StringComparison.Ordinal — EDM type names are
-        // PascalCase ("Boolean") and a lowercase variant must not accidentally match.
         var converter = ODataConverters.BySourceType("boolean");
 
         // Assert

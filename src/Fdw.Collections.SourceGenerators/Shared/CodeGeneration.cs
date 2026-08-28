@@ -270,10 +270,6 @@ internal static class CodeGeneration
         {
             foreach (var tp in typeParameters)
             {
-                // Why: IReadOnlyList<T> and IList<T> need Array.Empty<T>() (which implements both).
-                // IEnumerable<T> uses Enumerable.Empty<T>() which is lighter.
-                // Check specific collection interfaces before the broad IEnumerable catch-all.
-                // Use global:: to avoid ambiguity with types whose names start with "System".
                 if (returnType.Contains($"IReadOnlyList<{tp}>") ||
                     returnType.Contains($"IList<{tp}>") ||
                     returnType.Contains($"IReadOnlyCollection<{tp}>") ||

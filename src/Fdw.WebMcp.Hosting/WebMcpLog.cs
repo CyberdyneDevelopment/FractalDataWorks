@@ -23,9 +23,6 @@ internal static partial class WebMcpLog
     [MessageLogging(EventId = 61004, Level = LogLevel.Warning, Message = "WebMCP tool skipped (no route resolved): '{typeName}'")]
     public static partial IGenericMessage ToolSkipped(ILogger logger, string typeName);
 
-    // Why Warning rather than a quiet skip: an endpoint mapping several routes or verbs is a real
-    // question about which one an agent should call, and WebMcpTool.HttpMethod is how it is answered.
-    // Dropping the tool silently looks identical to never having declared it.
     [MessageLogging(EventId = 61006, Level = LogLevel.Warning, Message = "WebMCP tool skipped (ambiguous route): '{typeName}' maps {candidateCount} route/verb pair(s); set WebMcpTool.HttpMethod to choose one")]
     public static partial IGenericMessage ToolRouteAmbiguous(ILogger logger, string typeName, int candidateCount);
 
@@ -62,14 +59,9 @@ internal static partial class WebMcpLog
     [MessageLogging(EventId = 11030, Level = LogLevel.Trace, Message = "WebMCP mapped schema property '{toolName}.{propertyName}' to type '{jsonType}' format '{format}'")]
     public static partial IGenericMessage SchemaPropertyMapped(ILogger logger, string toolName, string propertyName, string jsonType, string format);
 
-    // Why the key value is never a parameter: this script is served publicly, and the whole point of
-    // logging here is to make the injection decision auditable without putting the secret in a log sink.
     [MessageLogging(EventId = 11031, Level = LogLevel.Debug, Message = "WebMCP client API key injection for header '{headerName}': {injected}")]
     public static partial IGenericMessage ClientKeyInjection(ILogger logger, string headerName, bool injected);
 
-    // Why Warning rather than a silent skip: an omitted property is invisible to the agent, which
-    // then cannot supply it and cannot be told why its call was incomplete. Saying so at build-up
-    // time is the difference between a known limitation and a mystery.
     [MessageLogging(EventId = 61005, Level = LogLevel.Warning, Message = "WebMCP omitted schema property '{toolName}.{propertyName}' - CLR type '{clrType}' has no JSON Schema mapping, so an agent cannot supply it")]
     public static partial IGenericMessage SchemaPropertySkipped(ILogger logger, string toolName, string propertyName, string clrType);
 }

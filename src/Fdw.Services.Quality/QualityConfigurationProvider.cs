@@ -45,12 +45,8 @@ public class QualityConfigurationProvider
         string dataStoreName)
     #pragma warning restore MA0051
     {
-        // Why: ILogger<T> is invariant — the QualityConfigurationProvider logger can't be passed
-        // to inner DCP<TConfig,TCommand> constructors. Each DCP falls back to NullLogger internally
-        // when logger is null, which is the right behavior for these composed inner providers.
         _ = logger;
 
-        // Why: All quality/catalog providers are cfg-tier — cfg-tier; loaded from ConfigurationDb at runtime.
         _qualityRuleProvider = new ImplementationConfigurationProviderBase<QualityRuleConfiguration, QualityRuleConfigurationCommand>(
             logger: null, gatewayProvider, dataStoreName, "quality");
         _annotationProvider = new ImplementationConfigurationProviderBase<DataSetAnnotationConfiguration, DataSetAnnotationConfigurationCommand>(
@@ -174,23 +170,14 @@ public class QualityConfigurationProvider
     /// <summary>
     /// Maps a DataSetAnnotationPayload to a DataSetAnnotationConfiguration for upsert via the provider.
     /// </summary>
-    // Why: Owner → BusinessOwner (the "owner" in the API is the accountable business role).
-    // Why: Steward → TechnicalOwner (data stewards are the technical custodians of the data).
-    // Why: Classification → DataClassification (field renamed in config for clarity).
-    // Why: Tags (IList<string>) → Tags (IList<DataSetAnnotationTagConfiguration>), each string
-    //      becomes a TagConfiguration with TagValue set. This preserves round-trip fidelity when
-    //      the annotation is read back and the tags are presented as strings by the endpoint.
     public static DataSetAnnotationConfiguration MapAnnotationFromDto(string dataSetName, string? owner, string? steward, string? classification, IEnumerable<string>? tags)
         => new()
         {
-            // Why: Id is Guid.Empty so ImplementationConfigurationProviderBase.Save mints a UUIDv7 on insert.
             Name = dataSetName,
             DataSetName = dataSetName,
             BusinessOwner = owner,
             TechnicalOwner = steward,
             DataClassification = classification,
-            // Why: Each string tag from the DTO maps to a TagConfiguration with Tag=value and Name=value.
-            // TagConfiguration.Tag is the stored value; Name satisfies IGenericConfiguration's display contract.
             Tags = tags?.Select(t => new DataSetAnnotationTagConfiguration { Tag = t, Name = t }).ToList()
                 ?? []
         };
@@ -202,9 +189,6 @@ public class QualityConfigurationProvider
         string? pattern, string? expression, string? name = null)
         => new()
         {
-            // Why: Id is Guid.Empty so ImplementationConfigurationProviderBase.Save mints a UUIDv7 on insert.
-            // Use the caller-supplied Name when present; otherwise synthesize the conventional
-            // "{dataSet}:{ruleType}" identifier (existing behavior, not a new fallback value).
             Name = string.IsNullOrWhiteSpace(name) ? $"{dataSetName}:{ruleType}" : name,
             DataSetName = dataSetName,
             FieldName = fieldName,

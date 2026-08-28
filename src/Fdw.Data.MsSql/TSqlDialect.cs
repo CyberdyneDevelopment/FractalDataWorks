@@ -19,8 +19,6 @@ public sealed class TSqlDialect : ISqlDialect
     /// </summary>
     public static readonly TSqlDialect Instance = new TSqlDialect();
 
-    // Why: private constructor enforces singleton usage — the dialect carries no state,
-    // so creating multiple instances would be pointless allocation.
     private TSqlDialect()
     {
     }

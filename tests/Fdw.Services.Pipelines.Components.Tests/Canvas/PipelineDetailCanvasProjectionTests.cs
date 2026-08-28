@@ -119,9 +119,6 @@ public sealed class PipelineDetailCanvasProjectionTests
     [Trait("Category", "CoreFramework")]
     public void ToCanvasMapFieldMappingsRoundTripThroughSaveProjection()
     {
-        // Why: proves a loaded Map transform's field mappings survive as real, editable canvas state —
-        // re-projecting the loaded canvas through PipelineCreateRequestProjection (the Save path)
-        // must reproduce the same mapping, not an empty list.
         var detail = BuildDetail(
         [
             new PipelineTransformClientRequest

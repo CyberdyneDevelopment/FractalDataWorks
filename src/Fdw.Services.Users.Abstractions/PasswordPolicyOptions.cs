@@ -21,8 +21,6 @@ public sealed class PasswordPolicyOptions
     /// Gets or sets the number of consecutive failed login attempts that triggers a temporary lockout.
     /// Zero or negative disables lockout (the counter is still tracked but never locks).
     /// </summary>
-    // Why: no hardcoded threshold in code — the value comes from policy. Zero/negative = lockout
-    // disabled (same "0 = off" convention as PasswordMaxAgeDays), not a fail-loud condition.
     public int MaxFailedLoginAttempts { get; set; }
 
     /// <summary>

@@ -12,7 +12,6 @@ namespace Fdw.Services.Data;
 /// and do not require a database row. This class handles the DB-backed side of the
 /// Model C hybrid (compile-time defaults + deployment-specific runtime extensions).
 /// </remarks>
-// Why: data-bearing option/category; ctor only forwards literal data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class RuntimeDataSetCategory : DataSetCategoryBase
 {

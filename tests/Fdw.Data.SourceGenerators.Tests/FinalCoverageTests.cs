@@ -172,8 +172,6 @@ public class NonNullableStringPoco
     [Trait("Category", "SourceGen")]
     public void GetDefaultValueExpression_HandlesNonNullableReferenceTypeCorrectly()
     {
-        // Why: Collection properties are filtered out by the generator (IsCollectionType check).
-        // Use a non-collection reference type to exercise the default! code path.
         var source = @"
 #nullable enable
 using Fdw.Data;

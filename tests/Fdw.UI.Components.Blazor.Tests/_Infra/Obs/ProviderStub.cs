@@ -21,8 +21,6 @@ public sealed class ProviderStub<TContext> : ComponentBase
     private TContext _context = new();
 
     protected override void OnInitialized() =>
-        // Why: context seed is held in the non-generic ProviderStubState keyed by TContext type so
-        // the generic stub stays CA1000-clean (no static state on a generic type).
         _context = ProviderStubState.Take<TContext>() ?? new TContext();
 
     protected override void BuildRenderTree(RenderTreeBuilder builder)

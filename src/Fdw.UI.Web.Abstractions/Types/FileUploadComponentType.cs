@@ -6,7 +6,6 @@ namespace Fdw.UI.Web.Abstractions;
 /// <summary>
 /// File upload component type.
 /// </summary>
-// Why: pure TypeOption leaf — literal constructor values only, no logic to test.
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(ComponentTypes), "FileUpload", RestrictToCurrentCompilation = true)]
 public sealed class FileUploadComponentType : ComponentTypeBase

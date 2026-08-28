@@ -46,8 +46,6 @@ public abstract class ListThemesEndpointBase<TSummary> : EndpointWithoutRequest<
     {
         Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
 
-        // Why: Newman/clients expect a paginated envelope {items, skip, take, totalCount, hasMore}
-        // matching the response shape from /pipelines and other Crud-list endpoints.
         var items = LoadThemes();
         var list = items.ToList();
         return Send.OkAsync(PaginatedResponse<TSummary>.Create(list, 0, list.Count, list.Count), ct);

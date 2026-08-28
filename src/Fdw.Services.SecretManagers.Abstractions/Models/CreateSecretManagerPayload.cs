@@ -22,9 +22,5 @@ public sealed class CreateSecretManagerPayload
     /// The server validator requires this field to be non-null. Pass at minimum an empty object
     /// so the server can deserialize and persist the typed-body child row with default values.
     /// </summary>
-    // Why: the server endpoint requires a non-null Configuration body to persist the typed-body
-    // child record. An empty object {} deserializes correctly into any typed configuration with
-    // default property values, which is valid for types like EnvironmentVariable that have no
-    // required fields.
     public object? Configuration { get; set; }
 }

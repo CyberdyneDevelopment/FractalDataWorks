@@ -8,9 +8,6 @@ namespace Fdw.Roslyn.Commands.Compilation.Commands;
 /// <summary>
 /// Command to get diagnostics for a document or project via compilation.
 /// </summary>
-// Why: renamed from GetDiagnostics to GetCompilationDiagnostics to avoid TypeOption name collision
-// with Fdw.Roslyn.Commands.Analysis.Commands.GetDiagnosticsCommand (both registered on
-// RoslynCommands) when the two packages were folded into one assembly.
 [TypeOption(typeof(RoslynCommands), "GetCompilationDiagnostics")]
 public sealed class GetCompilationDiagnosticsCommand : RoslynCommandBase
 {

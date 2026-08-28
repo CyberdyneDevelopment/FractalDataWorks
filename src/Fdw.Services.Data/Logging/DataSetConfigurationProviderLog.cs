@@ -217,8 +217,6 @@ public static partial class DataSetConfigurationProviderLog
     /// <param name="dataSetId">The identifier of the DataSet whose key fields were saved.</param>
     /// <param name="count">The number of key field records saved for the DataSet.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why: 9351 used (from the available 9351-9379 band) because 9393-9399 were fully consumed
-    // before the need for a SaveKeyFieldsSaved Information log was identified.
     [MessageLogging(EventId = 11063, Level = LogLevel.Information,
         Message = "Key fields saved for DataSet {dataSetId}: {count} record(s)")]
     public static partial IGenericMessage SaveKeyFieldsSaved(ILogger logger, System.Guid dataSetId, int count);

@@ -70,9 +70,6 @@ public class ServiceTypeOptionModuleInitializerGenerator : IIncrementalGenerator
             (options, diagnosticInfo) = DiscoverOptionsInReferencedAssembliesWithDiagnostics(compilation);
         }
 
-        // Why: Build replacement map from [Replaces] attributes and filter out replaced types.
-        // Both DLL and executable modes need this — a DLL may define a replacement for
-        // a ServiceTypeOption in another assembly.
         var replacementMap = BuildReplacementMap(compilation, diagnosticInfo);
         options = options
             .Where(o => !replacementMap.ContainsKey(o.OptionFullTypeName))

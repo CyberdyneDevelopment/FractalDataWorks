@@ -15,12 +15,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
 using Xunit;
 
-// Why: the 3-level test hierarchy (TestRootConfiguration -> TestBodyConfiguration -> TestOpConfiguration
-// -> TestMapConfiguration), its ConfigurationCommand TypeOptions, and its generated PocoMappers already
-// exist as public nested types on RecursiveCascadeSaveTests and are already registered once, for the
-// whole test collection, by ServicesTypeCollectionFixture. Aliasing them here reuses that exact fixture
-// (no duplicate [TypeOption]/[GenerateMapper] registration) while reading like the unqualified names used
-// in RecursiveCascadeSaveTests itself.
 using TestRootConfiguration = Fdw.Services.Tests.Configuration.RecursiveCascadeSaveTests.TestRootConfiguration;
 using TestRootCommand = Fdw.Services.Tests.Configuration.RecursiveCascadeSaveTests.TestRootCommand;
 using TestBodyConfiguration = Fdw.Services.Tests.Configuration.RecursiveCascadeSaveTests.TestBodyConfiguration;
@@ -59,10 +53,6 @@ public sealed class AggregateWriteCascadeTests
     // 1. Cascade runs on a repeat save (the update case)
     // ========================================================================
 
-    // Why: the OLD cascade ran only when the record did not already exist (an implicit "is new" probe),
-    // so the SECOND save of an already-persisted aggregate persisted the header alone — the typed body and
-    // every collection child silently vanished from every update. Saving the SAME aggregate twice must
-    // persist the full tree BOTH times.
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Cascade")]
@@ -92,10 +82,6 @@ public sealed class AggregateWriteCascadeTests
     // 2. There is only one write shape
     // ========================================================================
 
-    // Why: the OLD write path probed Get(record.Id) and branched to a plain in-place UpdateCommand
-    // whenever the probe reported "exists" — a command with no version-on-write semantics that also
-    // skipped the cascade entirely. The header command recorded for the header's own table must be the
-    // SAME ConfigurationSaveCommand shape on every save, never a different command type.
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Cascade")]
@@ -122,9 +108,6 @@ public sealed class AggregateWriteCascadeTests
     // 3. Fail loud on an incomplete aggregate
     // ========================================================================
 
-    // Why: a polymorphic header IS its typed body — the two rows are ONE aggregate. A header whose
-    // discriminator HAS a registered typed provider but whose typed-body property is null must fail
-    // rather than persist half an aggregate, and NOTHING may reach the gateway.
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Cascade")]
@@ -155,9 +138,6 @@ public sealed class AggregateWriteCascadeTests
     // 4. A header with no registered typed provider still saves
     // ========================================================================
 
-    // Why: the completeness gate must NOT catch every header carrying a discriminator — only ones for
-    // which a typed provider is actually registered. A discriminator with no registered provider is the
-    // leaf/nested-body case and must save successfully on the header alone.
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Cascade")]
@@ -178,10 +158,6 @@ public sealed class AggregateWriteCascadeTests
     // 5. Delete cascades in REVERSE order
     // ========================================================================
 
-    // Why: Save persists the owner row and THEN its children; Delete must retire the children and THEN
-    // the owner, because every child is reached through the owner and retiring the owner first makes its
-    // subtree unreachable, leaving it live at rest. The recorded delete order must be deepest child, then
-    // typed body, then header — never the other way round.
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Cascade")]
@@ -262,11 +238,6 @@ public sealed class AggregateWriteCascadeTests
     // 7. Delete retires by the record's OWN durable Id, not the argument used to find it
     // ========================================================================
 
-    // Why: a typed-body provider resolves Get(Guid) by the PARENT's durable Id (see
-    // ImplementationConfigurationProviderBase.Get(Guid)) — the row it returns carries its OWN distinct Id. Passing
-    // the caller's id straight through to the delete command targets [Id]=<the argument>, which matches
-    // nothing on the child table and silently retires no row. The delete command must carry the resolved
-    // row's own Id.
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Cascade")]
@@ -330,16 +301,12 @@ public sealed class AggregateWriteCascadeTests
         /// </summary>
         public TestBodyConfiguration? BodyHeader { get; set; }
 
-        // Why: kept empty — every scenario in this file uses providers with no parent FK (ResolveParentJoin
-        // degrades to the no-join sentinel) and root types with no typed-list CascadeChildren of their own,
-        // so no schema-tree mock is needed to exercise the write/delete cascade mechanism under test.
         public IReadOnlyList<IDataStore> DataStores { get; } = [];
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, CancellationToken cancellationToken = default)
             => Execute<T>(command, default(DataStoreTarget)!, cancellationToken);
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, bool useCache, CancellationToken cancellationToken = default)
-            // Why: test double — useCache not exercised by these cascade tests; delegates to the existing implementation.
             => Execute<T>(command, target, cancellationToken);
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
@@ -377,16 +344,12 @@ public sealed class AggregateWriteCascadeTests
             return Task.FromResult<IGenericResult>(GenericResult.Success());
         }
 
-        // Why: by-type child read — none of these tests exercise typed-list child composition on the
-        // read side (every owner's own CascadeChildren resolution here bottoms out with an empty schema
-        // tree), so an empty result satisfies the interface without building a mock schema tree.
         public Task<IGenericResult<IEnumerable<object>>> Execute(IDataCommand command, DataStoreTarget target, Type rowType, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<IEnumerable<object>>.Success(Array.Empty<object>()));
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<T>.Failure(new GenericMessage("DataSet routing not supported in RecordingGateway test double")));
 
-        // Why: streaming record-source cursor is not exercised by these tests.
         public Task<IGenericResult<Fdw.Data.RowSources.Abstractions.IRecordSource<Fdw.Data.RowSources.Abstractions.DataRecord>>> OpenRecordSource(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
@@ -394,11 +357,6 @@ public sealed class AggregateWriteCascadeTests
             => Task.FromResult(GenericResult<IDataGatewayTransaction>.Failure(new GenericMessage("Transactions not supported in test double")));
     }
 
-    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
-    // connection it was told its rows live on, so the fake has to answer to that name to be found.
-    // Why a double rather than the real provider: these tests exercise what a configuration provider
-    // does with its gateway, not which gateway it selects, so the double answers for whatever
-    // connection is asked. Selection itself is covered where the real provider is under test.
     private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 

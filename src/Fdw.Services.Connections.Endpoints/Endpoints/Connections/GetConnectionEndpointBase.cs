@@ -18,10 +18,6 @@ namespace Fdw.Services.Connections.Endpoints;
 /// </summary>
 public abstract class GetConnectionEndpointBase : CrudGetEndpointBase<ConnectionNameRequest, ConnectionDetailDto>
 {
-    // Why: the parent provider reads conn.Connection via the configuration gateway AND populates
-    // header.Configuration with the typed body (PopulateTypedBody dispatches on ServiceOptionType).
-    // There is no second typed-provider read here — the polymorphic body comes back on the header,
-    // so the GET path renders any connection type without being closed to one TConfig.
     private readonly ConnectionConfigurationProvider _configProvider;
 
     /// <inheritdoc />
@@ -51,9 +47,6 @@ public abstract class GetConnectionEndpointBase : CrudGetEndpointBase<Connection
         var parent = domainResult.Value;
         if (parent is null) return GenericResult<ConnectionDetailDto?>.Success(null);
 
-        // Why: parent.Configuration is the typed body already loaded by PopulateTypedBody for this
-        // connection's ServiceOptionType — no redundant per-type read. May be null when the header
-        // has no typed body yet; MapToDetail renders header-only in that case.
         return GenericResult<ConnectionDetailDto?>.Success(MapToDetail(parent, parent.Configuration));
     }
 

@@ -58,12 +58,6 @@ public sealed class ConfiguredTransformTests
     [Trait("Category", "DataIntegrity")]
     public async Task WithNoParametersTheResultIsEmptyRatherThanEitherLabel()
     {
-        // Why this is asserted rather than fixed here: it is what EVERY row got when a caller reached
-        // this transform through the deleted parameterless seam, which supplied an empty bag. The
-        // transform itself is not wrong - it was handed nothing. Callers are now stopped before this
-        // point: the ETL Map transform checks the transform's required parameters against the step's
-        // configured values and reports the missing names instead of invoking it. This test exists so
-        // that if a path ever again reaches a transform unconfigured, the cost is written down.
         var result = await new BoolToStringFieldTransformer().Transform(
             true,
             new TransformationContext(),

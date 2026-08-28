@@ -27,7 +27,6 @@ namespace Fdw.Services.Connections.Http.Abstractions;
 /// <param name="ResolvedCertificate">X.509 certificate resolved from secret manager (for WS-Security).</param>
 /// <param name="ResolvedPassword">Password resolved from secret manager.</param>
 /// <param name="ResolvedApiKey">API key resolved from secret manager.</param>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public readonly record struct HttpProtocolContext(
     IGenericConfiguration Configuration,

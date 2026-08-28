@@ -35,8 +35,6 @@ public abstract class ListPromotionsEndpointBase : EndpointWithoutRequest<IReadO
     public override void Configure()
     {
         Get("/promotion/requests");
-        // Why: listing promotion requests is a read-shaped operation. Viewer needs visibility into
-        // pending promotions to know what's queued; write/approve are separately gated.
         Policies("datasets:read");
         Summary(s => s.Summary = "List promotion requests");
         ConfigureEndpoint();

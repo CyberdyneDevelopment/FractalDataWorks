@@ -17,11 +17,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Quality.Endpoints;
 
-// Why: ExecuteAllQualityChecksEndpointBase is a RUNTIME EXECUTION endpoint, not a configuration endpoint.
-// It uses QualityConfigurationProvider to look up rule configurations, then uses IDataGateway
-// to query live DataSet data and execute each check. The IDataGateway reference here
-// is for live-data queries — not configuration writes — and is not subject to the
-// "endpoints must not touch IDataGateway for config" rule.
 
 /// <summary>Endpoint that executes all enabled quality checks for a specified DataSet.</summary>
 public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQueryRequest, List<QualityCheckResultResponse>>
@@ -69,9 +64,6 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
             return;
         }
 
-        // Why: Load all rules and filter by DataSetName + IsEnabled in-memory.
-        // QualityConfigurationProvider.GetAllQualityRules returns all rules; filtering
-        // here is acceptable because quality rule counts are small.
         var rulesResult = await _provider.GetAllQualityRules(ct).ConfigureAwait(false);
 
         if (!rulesResult.IsSuccess)
@@ -93,8 +85,6 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
             return;
         }
 
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget; path is null to search
-        // all paths in the store (documented DataStoreTarget behaviour).
         var dataCommand = new QueryCommand<Dictionary<string, object>>();
 
         var dataResult = await _dataGateway.Execute<IEnumerable<Dictionary<string, object>>>(
@@ -337,8 +327,6 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
             }
             catch (System.Text.RegularExpressions.RegexMatchTimeoutException ex)
             {
-                // Why: timeout on a single row is treated as a pattern failure for that row.
-                // ex is observed (referenced below) so the exception is not silently discarded.
                 _ = ex;
                 return true;
             }

@@ -130,7 +130,6 @@ public sealed class PostgreSqlUpdateTranslator : PostgreSqlDataCommandTranslator
     {
         var dialect = dbPath.Dialect;
 
-        // Why: IsPrimaryKey removed from IField — use GetPrimaryKeyFieldName() and exclude by name instead.
         var pkFieldName = container.GetPrimaryKeyFieldName();
         // Get columns from schema (exclude PK, identity, and computed columns)
         var updateFields = container.Schema.Fields
@@ -181,7 +180,6 @@ public sealed class PostgreSqlUpdateTranslator : PostgreSqlDataCommandTranslator
         }
         else
         {
-            // Why: IsPrimaryKey removed from IField — use GetPrimaryKeyFieldName() extension instead.
             var pkName = container.GetPrimaryKeyFieldName();
             var pkField = pkName != null ? container.Schema?.Fields?.FirstOrDefault(f => string.Equals(f.Name, pkName, StringComparison.OrdinalIgnoreCase)) : null;
             if (pkField == null)

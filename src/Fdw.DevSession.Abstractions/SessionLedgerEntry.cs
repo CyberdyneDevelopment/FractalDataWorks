@@ -9,7 +9,6 @@ namespace Fdw.DevSession.Abstractions;
 /// publish them; the ledger is the replay of these events. This type is deliberately transport-free so
 /// publisher and subscriber share one shape without coupling the abstractions to a bus.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class SessionLedgerEntry
 {

@@ -10,7 +10,6 @@ namespace Fdw.Services.SessionState.Components;
 /// Immutable context object passed to the consumer RenderFragment by <see cref="SessionStateProvider"/>.
 /// Carries the current session state snapshot and callback delegates for state manipulation.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class SessionStateContext : ProviderContextBase
 {

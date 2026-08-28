@@ -33,9 +33,6 @@ public sealed class ApiClientBaseUrlResolutionTests
         return new ConfigurationBuilder().AddInMemoryCollection(data).Build();
     }
 
-    // Why the options are inspected rather than IHttpClientFactory.CreateClient: the registration also
-    // attaches BearerTokenHandler, whose own DI graph is irrelevant here. Replaying the configured
-    // HttpClientActions asserts exactly what Configure decided, and nothing else.
     private static Uri? ConfiguredBaseAddress(IConfiguration configuration)
     {
         var builder = Host.CreateApplicationBuilder();
@@ -44,9 +41,6 @@ public sealed class ApiClientBaseUrlResolutionTests
 
         using var provider = builder.Services.BuildServiceProvider();
 
-        // Why GetRequiredService: registration is now unconditional, so the factory's options services are
-        // always present. An undeclared endpoint shows up as an unset BaseAddress plus a logged error, not
-        // as a missing registration.
         var options = provider.GetRequiredService<IOptionsMonitor<HttpClientFactoryOptions>>().Get(ClientName);
 
         using var client = new HttpClient();
@@ -84,8 +78,6 @@ public sealed class ApiClientBaseUrlResolutionTests
             .ShouldBe(new Uri("http://per-client/"));
     }
 
-    // Why: a per-client entry for a DIFFERENT client must not leak into this one — that is the whole
-    // point of splitting a host's clients across endpoints.
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
@@ -97,13 +89,6 @@ public sealed class ApiClientBaseUrlResolutionTests
             .ShouldBe(new Uri("http://host-wide/"));
     }
 
-    // Why the client is still registered, with no BaseAddress: NO FALLBACKS — no endpoint is invented when
-    // the host declares none. Registration itself is unconditional so that "required" can mean "something
-    // resolved it": a host registers every client type in every package it references, and demanding an
-    // endpoint at registration would force it to invent URLs for clients it never calls. The absence is
-    // reported by ApiEndpointLog.EndpointNotDeclared at resolution, naming the client and every key that
-    // would satisfy it, rather than by throwing — this delegate runs while a scope realizes a client, often
-    // inside a Blazor render, where an exception tears down the circuit and buries the cause.
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]

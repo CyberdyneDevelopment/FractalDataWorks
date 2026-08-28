@@ -31,8 +31,6 @@ public abstract class DataCommandBase : IDataCommand
     {
         if (commandType is null)
         {
-            // Why: reported defect (see logging-pass report) — this constructor throws instead of
-            // returning IGenericResult. Logged here per scope; the throw below is left in place.
             DataCommandBaseLog.CommandTypeMissing(NullLogger<DataCommandBase>.Instance);
         }
 

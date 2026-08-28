@@ -33,7 +33,6 @@ public partial class CalculationEntityInputRecord : IGenericConfiguration
     public Guid Id { get; set; }
 
     /// <summary>Gets or sets the input name (alias). Mirrors <see cref="InputAlias"/> to satisfy IGenericConfiguration.</summary>
-    // Why: IGenericConfiguration requires a settable Name; an input's identity is its alias.
     public string Name { get => InputAlias; set => InputAlias = value; }
 
     /// <summary>Gets or sets the parent calculation entity identifier.</summary>

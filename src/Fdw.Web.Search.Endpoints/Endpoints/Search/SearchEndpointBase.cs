@@ -23,8 +23,6 @@ namespace Fdw.Web.Search.Endpoints;
 public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchResponse>
 {
     private readonly IDataGateway _dataGateway;
-    // Why: ConnectionConfigurationProvider (dual-source) replaces IConnectionProvider.GetAllConnectionConfigurations()
-    // which was removed. The provider merges system (ctrl) and user (cfg) connection configs.
     private readonly ConnectionConfigurationProvider _configProvider;
     private readonly ILogger<SearchEndpointBase> _logger;
 
@@ -64,7 +62,6 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
         var startTime = DateTime.UtcNow;
         EndpointLog.ListingResources(_logger, "search results");
 
-        // Why: q= is mandatory — empty/missing query returns 400 instead of an empty 200.
         if (string.IsNullOrWhiteSpace(req.Query))
         {
             AddError("Query parameter 'q' is required");
@@ -109,7 +106,6 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
         }
         catch (Exception ex)
         {
-            // Why: Return 500 rather than partial search results — the caller cannot tell data is incomplete.
             EndpointLog.OperationFailed(_logger, ex, "search", "all", req.Query);
             AddError("An error occurred while executing the search");
             await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
@@ -165,7 +161,6 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
         }
         catch (Exception ex)
         {
-            // Why: Re-throw so Task.WhenAll propagates the error to HandleAsync → 500.
             EndpointLog.OperationFailed(_logger, ex, "search", "pipelines", query);
             throw;
         }
@@ -237,7 +232,6 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
         }
         catch (Exception ex)
         {
-            // Why: Re-throw so Task.WhenAll propagates the error to HandleAsync → 500.
             EndpointLog.OperationFailed(_logger, ex, "search", "datasets", query);
             throw;
         }
@@ -282,7 +276,6 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
         }
         catch (Exception ex)
         {
-            // Why: Re-throw so Task.WhenAll propagates the error to HandleAsync → 500.
             EndpointLog.OperationFailed(_logger, ex, "search", "schedules", query);
             throw;
         }

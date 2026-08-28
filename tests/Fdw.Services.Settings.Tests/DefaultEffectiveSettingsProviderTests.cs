@@ -27,9 +27,6 @@ public sealed class DefaultEffectiveSettingsProviderTests
 
     private static readonly Guid TenantA = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
 
-    // Why: Creates a minimal ImplementationConfigurationProviderBase<T, TCommand> for SettingsConfigurationProvider
-    // constructor. Moq invokes the real constructor even with CallBase=false, so we need valid
-    // non-null arguments. Uses IConfigurationGateway (the marker subinterface required by the provider).
     private static ImplementationConfigurationProviderBase<ServerSettingConfiguration, ServerSettingConfigurationCommand> MakeServerProvider()
     {
         var lazyGateway = new ConfigurationGatewayProvider();
@@ -62,9 +59,6 @@ public sealed class DefaultEffectiveSettingsProviderTests
 
     public DefaultEffectiveSettingsProviderTests()
     {
-        // Why: SettingsConfigurationProvider is a concrete class with dependencies.
-        // We mock it to isolate the hierarchy resolution logic in DefaultEffectiveSettingsProvider.
-        // Moq invokes the real constructor for proxy creation, so we supply valid empty providers.
         _provider = new Mock<SettingsConfigurationProvider>(
             MakeServerProvider(),
             MakeTenantProvider(),

@@ -5,7 +5,6 @@ namespace Fdw.Roslyn.Commands.Analysis.Helpers;
 /// <summary>
 /// A top-level type declaration read syntactically from a document.
 /// </summary>
-// Why: pure data holder, auto-properties only, no logic
 [ExcludeFromCodeCoverage]
 public sealed class TypeDeclarationInfo
 {

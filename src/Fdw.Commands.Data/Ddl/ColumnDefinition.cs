@@ -11,7 +11,6 @@ namespace Fdw.Commands.Data.Ddl;
 /// Translators convert this to backend-specific DDL syntax.
 /// </para>
 /// </remarks>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ColumnDefinition
 {

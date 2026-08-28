@@ -8,7 +8,6 @@ namespace Fdw.UI.Components.Icons;
 /// Base class for icon glyphs. Carries the path data and the svg attributes the glyph is drawn with;
 /// size and colour are the call site's business and arrive on the <see cref="Icon"/> component instead.
 /// </summary>
-// Why: pure TypeOption base — trivial pass-through constructor, no logic to test.
 [ExcludeFromCodeCoverage]
 public abstract class IconGlyphBase : TypeOptionBase<int, IconGlyphBase>, IIconGlyph
 {

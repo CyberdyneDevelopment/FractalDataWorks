@@ -63,9 +63,6 @@ public static partial class TokenManagerLog
         Message = "Expected exactly one active token manager but found {count}")]
     public static partial IGenericMessage MultipleActiveTokenManagers(ILogger logger, int count);
 
-    // Why: reached only AFTER every user-driven denial (bad credential, invalid subject) has already
-    // returned — this means AuthDb is unreachable, the signing key is gone, or another dependency
-    // failed. The operation could not complete, so it is Error, not Warning.
     /// <summary>Logs that token issuance failed.</summary>
     [MessageLogging(
         EventId = 7444,
@@ -108,8 +105,6 @@ public static partial class TokenManagerLog
         Message = "Bearer token validated successfully")]
     public static partial IGenericMessage ValidationSucceeded(ILogger logger);
 
-    // Why: the token has already been validated — claims extraction failing here is an internal
-    // invariant violation, not an expected user-driven outcome. Error, not Warning.
     /// <summary>Logs that claims extraction failed for a validated token.</summary>
     [MessageLogging(
         EventId = 7450,
@@ -131,8 +126,6 @@ public static partial class TokenManagerLog
         Message = "Logout failed: presented token carries no subject claim")]
     public static partial IGenericMessage LogoutSubjectMissing(ILogger logger);
 
-    // Why: sessions remain live after a successful-looking logout when this fires — the operation
-    // could not complete, so it is Error, not Warning.
     /// <summary>Logs that revoking the subject's sessions failed.</summary>
     [MessageLogging(
         EventId = 7453,

@@ -10,7 +10,6 @@ namespace Fdw.MessageLogging;
 /// <c>"FDW"</c>. Set once per Log class so all its methods emit <c>"{TypeCode}-{EventId}"</c>
 /// codes that align with the owning package's result-code prefix.
 /// </summary>
-// Why: pure attribute definition (declarative metadata only, consumed by the MessageLogging source generator) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Class)]
 [ExcludeFromCodeCoverage]
 public sealed class MessageLoggingTypeCodeAttribute : Attribute

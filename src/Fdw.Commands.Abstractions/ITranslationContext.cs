@@ -14,8 +14,6 @@ namespace Fdw.Commands.Abstractions;
 /// Translation context carries schema information and optimization hints that help
 /// translators make optimal decisions during the translation process.
 /// </remarks>
-// Why: Inheriting IExecutionContext ensures translation operations carry a run ID,
-// cancellation support, and logger — previously absent from ITranslationContext.
 public interface ITranslationContext : IExecutionContext
 {
     /// <summary>

@@ -10,9 +10,6 @@ namespace Fdw.Orchestration.Abstractions;
 /// Universal per-run fields (ExecutionId, StartTime, CancellationToken, Logger,
 /// Services, Parameters, SharedState) are inherited from <see cref="IExecutionContext"/>.
 /// </remarks>
-// Why: IOrchestrationContext previously redeclared all IExecutionContext fields.
-// Now it composes them via inheritance, keeping the surface area focused on
-// orchestration-specific concerns.
 public interface IOrchestrationContext : IExecutionContext
 {
     /// <summary>

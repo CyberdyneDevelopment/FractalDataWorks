@@ -23,8 +23,5 @@ public sealed class CredentialsSqlOptions
     /// Gets or sets the name of the credential service whose vault and PAT policy back the SQL
     /// PAT and agent-key services.
     /// </summary>
-    // Why: No default value — a missing or blank name must fail loud on first credential operation,
-    // never silently resolve to the wrong service or skip credential storage. Matches the no-fallback
-    // rule and the existing UsersServiceOptions.CredentialServiceName behaviour.
     public string? CredentialServiceName { get; set; }
 }

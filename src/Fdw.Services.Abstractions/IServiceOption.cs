@@ -15,9 +15,5 @@ public interface IServiceOption : IGenericService
     /// <summary>
     /// Gets the configured name this instance was resolved by.
     /// </summary>
-    // Why: this interface's whole contract is "resolved through its provider BY NAME". Anything
-    // resolved by name must be able to state which name it is, or a caller holding one cannot verify
-    // it got what it asked for — which is exactly what a connection needs before it reads a secret
-    // out of a store the configuration named.
     string Name { get; }
 }

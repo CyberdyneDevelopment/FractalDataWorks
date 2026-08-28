@@ -26,9 +26,6 @@ public sealed class LookupTransformTypeTests
 
     public LookupTransformTypeTests()
     {
-        // Why: the record cache is a static, process-wide dictionary keyed by connection+dataset+keys.
-        // Without clearing it, a cache entry populated by one test would leak into another and make
-        // the DataGateway mock verification in a later test silently skip the call it expects.
         LookupTransformType.ClearCache();
     }
 

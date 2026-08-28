@@ -283,8 +283,6 @@ namespace Unrelated
         }
         catch (Exception ex)
         {
-            // Why: reference assembly may not be present in all SDK installations; skip gracefully.
-            // ex.Message observed to satisfy FDW022 without a logger in this static test helper.
             _ = ex.Message;
         }
     }

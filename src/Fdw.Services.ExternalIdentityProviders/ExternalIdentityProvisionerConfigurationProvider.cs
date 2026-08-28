@@ -17,9 +17,6 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// sec.ExternalIdentityProvisioner. Reads through IConfigurationGateway — no IConfiguration binding
 /// section.
 /// </summary>
-// Why: ExternalIdentityProvisionerConfiguration is loaded from ConfigurationDb at runtime via
-// Lazy<IConfigurationGateway>, not through BindConfiguration("ExternalIdentityProvisioners:..."). Mirrors
-// ExternalIdentityProviderConfigurationProvider exactly, targeting sec instead of auth.
 public class ExternalIdentityProvisionerConfigurationProvider
     : ServiceConfigurationProviderBase<
           ExternalIdentityProvisionerConfiguration,

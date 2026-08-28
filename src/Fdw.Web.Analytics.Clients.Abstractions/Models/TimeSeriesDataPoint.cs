@@ -5,7 +5,6 @@ namespace Fdw.Web.Analytics.Clients.Models;
 /// <summary>
 /// Represents a single data point in a time series of execution metrics.
 /// </summary>
-// Why: pure data-transfer POCO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class TimeSeriesDataPoint
 {

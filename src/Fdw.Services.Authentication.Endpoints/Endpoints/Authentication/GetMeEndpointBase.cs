@@ -42,7 +42,6 @@ public abstract class GetMeEndpointBase<TResponse> : EndpointWithoutRequest<TRes
     /// <summary>
     /// Gets the route for this endpoint. Defaults to "/users/me".
     /// </summary>
-    // Why: All other user endpoints use /users/me/* — keep the base consistent.
     protected virtual string Route => "/users/me";
 
     /// <summary>

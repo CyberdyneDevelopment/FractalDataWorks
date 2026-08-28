@@ -18,9 +18,6 @@ internal sealed class DataStore : IDataStore
     private Dictionary<string, IDataNodePath> _pathIndex;
     private bool _pathsFinalized;
 
-    // Why: the node holds a real ILogger so its navigation-miss log calls actually emit. Passing
-    // NullLogger.Instance to a built log message is a no-op (the message never reaches a sink), so
-    // the builder threads its logger in via the constructor. NullLogger fallback is the only ?? allowed.
     private readonly ILogger _logger;
 
     /// <inheritdoc />
@@ -36,7 +33,6 @@ internal sealed class DataStore : IDataStore
     public string? Description { get; }
 
     /// <inheritdoc />
-    // Why: a store's child nodes ARE its paths — the typed Paths view over the uniform child surface.
     public IReadOnlyList<IDataNode> Nodes => Paths;
 
     /// <inheritdoc />
@@ -54,20 +50,11 @@ internal sealed class DataStore : IDataStore
         ConnectionId = connectionId;
         Paths = paths;
         Description = description;
-        // Why: NullLogger keeps the node functional without DI logging — the only sanctioned ?? fallback.
         _logger = logger ?? NullLogger.Instance;
 
-        // Why: O(1) lookup dictionary — path names are unique within a store.
         _pathIndex = BuildIndex(paths);
     }
 
-    // Why (chicken-and-egg fix, one level up from DataPath.SetContainers): a path needs its owning store
-    // at construction, but the store's path index needs the paths — so the builder constructs the FINAL
-    // store first (empty), builds every path under THIS store object, then calls SetPaths to wire the
-    // index. Without this both DataPath sites were built with `store: null!`, leaving IDataNodePath.Store —
-    // declared NON-nullable, and enforced as such by DetachedDataPath — null on every runtime path, which
-    // turned DataPath.ContainerNotFoundResult into a NullReferenceException instead of a failure result.
-    // Set-once: finalized exactly once (a second call is a wiring defect — fail loud).
     internal void SetPaths(IReadOnlyList<IDataNodePath> paths)
     {
         if (paths is null)
@@ -100,11 +87,6 @@ internal sealed class DataStore : IDataStore
         return PathNotFoundResult<IDataNodePath>(name);
     }
 
-    // Why: ONE construction point for "this store registers no such path", shared by Node and Path so the
-    // two navigation surfaces cannot drift. The failure carries the typed DataPathNotFound code CHAINED
-    // over the node's own Debug navigation message: callers that need to branch on the structural cause
-    // read Code/CodeChain (never message text — see DataPathNotFoundCode), while CurrentMessage and the
-    // Debug log line stay exactly what they were before the code was attached.
     private IGenericResult<T> PathNotFoundResult<T>(string name) =>
         GenericResult<T>.Chain(
             DataStoresResultCodes.DataPathNotFound,

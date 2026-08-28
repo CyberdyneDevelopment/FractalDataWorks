@@ -75,9 +75,6 @@ public sealed class RolePermissionResolverTests
             .ShouldBe(["pipelines:execute", "pipelines:read"]);
     }
 
-    // Why this is a failure and not an empty set: a role name matching nothing is a declaration
-    // pointing at a row that is not there, and returning nothing turns it into a 403 that reads as a
-    // missing grant.
     [Fact]
     public async Task Resolve_fails_when_a_named_role_is_not_in_the_catalogue()
     {

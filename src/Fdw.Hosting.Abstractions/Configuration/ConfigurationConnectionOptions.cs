@@ -10,7 +10,6 @@ namespace Fdw.Hosting.Abstractions.Configuration;
 /// The configuration connection is used for storing and retrieving FDW configuration
 /// such as DataSet definitions, connection metadata, and other runtime configuration.
 /// </remarks>
-// Why: pure DTO, only auto-properties bound from IOptions, no logic.
 [ExcludeFromCodeCoverage]
 public class ConfigurationConnectionOptions
 {

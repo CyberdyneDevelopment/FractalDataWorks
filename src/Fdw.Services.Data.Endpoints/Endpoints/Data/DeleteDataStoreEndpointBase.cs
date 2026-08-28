@@ -16,7 +16,6 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class DeleteDataStoreEndpointBase<TConfig> : CrudDeleteEndpointBase<DataStoreNameRequest>
     where TConfig : DataStoreConfiguration
 {
-    // Why: DataStoreConfigurationProvider (dual-source) merges system (ctrl) and user (cfg) DataStore configs.
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
 
     /// <inheritdoc />
@@ -55,7 +54,6 @@ public abstract class DeleteDataStoreEndpointBase<TConfig> : CrudDeleteEndpointB
             return deleteResult;
         }
 
-        // Why: DataGateway manages its own cache — no manual eviction needed.
         return GenericResult.Success();
     }
 }

@@ -5,7 +5,6 @@ namespace Fdw.Schema.Clients.Models;
 /// <summary>
 /// Request for importing schema into DataStore configuration via the API client.
 /// </summary>
-// Why: pure request payload, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ImportSchemaRequestPayload
 {

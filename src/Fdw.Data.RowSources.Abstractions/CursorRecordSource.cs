@@ -53,10 +53,7 @@ public class CursorRecordSource : IRecordSource<DataRecord>
         _reader = reader ?? throw new ArgumentNullException(nameof(reader));
         Schema = new RecordSchema(fields ?? throw new ArgumentNullException(nameof(fields)));
         _asyncReader = reader as IAsyncRowSourceReader;
-        // Why: NullLogger keeps the record source functional without DI logging — the only sanctioned ?? fallback.
         _logger = logger ?? NullLogger.Instance;
-        // Why: one Debug line at construction records the schema shape; per-record logging is forbidden on this
-        // hot path (the projection in Project() is per-row and must stay allocation/log free).
         RowSourceLog.RecordSourceCreated(_logger, GetType().Name, Schema.Fields.Count);
     }
 
@@ -92,8 +89,6 @@ public class CursorRecordSource : IRecordSource<DataRecord>
             yield break;
         }
 
-        // Why: the reader is sync-only — drive the sync cursor but still honor cancellation between
-        // records. No blocking-over-async sin (there is no async work to block on).
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -106,9 +101,6 @@ public class CursorRecordSource : IRecordSource<DataRecord>
         }
     }
 
-    // Why: build the record's value array by reading every schema field's value from the cursor by its
-    // own ordinal (the cursor's ordinal for that name), so the record's positions align to the flyweight
-    // schema regardless of the cursor's internal column order. A field absent from the cursor reads null.
     private IGenericResult<DataRecord> Project()
     {
         var fields = Schema.Fields;

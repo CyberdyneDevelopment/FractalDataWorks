@@ -43,9 +43,6 @@ public class PipelineLineageLoaderTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             times);
 
-    // Why: PipelineServiceConfigurationProvider is a concrete class (not an interface); Moq mocks it
-    // via its public virtual Get(ct)/Get(id, ct) overloads. The gateway provider is never
-    // dereferenced because both overloads are fully replaced by the mock setups below.
     private static Mock<PipelineServiceConfigurationProvider> CreateProviderMock()
     {
         return new Mock<PipelineServiceConfigurationProvider>(
@@ -137,8 +134,6 @@ public class PipelineLineageLoaderTests
     [Fact]
     public async Task FailedHeaderListReturnsEmptyRecordsWithoutThrow()
     {
-        // Why: NO FALLBACKS — a failed header list renders as an empty (honest) record set, never a
-        // fabricated placeholder pipeline.
         var providerMock = CreateProviderMock();
         providerMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<PipelineConfiguration>>.Failure(new GenericMessage("list failed")));

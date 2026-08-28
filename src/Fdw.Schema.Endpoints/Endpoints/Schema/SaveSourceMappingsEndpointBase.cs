@@ -32,7 +32,6 @@ namespace Fdw.Schema.Endpoints;
 /// </remarks>
 public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappingsRequest, List<FieldMappingResponsePayload>>
 {
-    // Why: IDataGateway retained for FieldMapping child record operations only.
     private readonly IDataGateway _dataGateway;
     private readonly DataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<SaveSourceMappingsEndpointBase> _logger;
@@ -82,7 +81,6 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
             return;
         }
 
-        // Why: Sources are part of the composed aggregate returned by DataSetConfigurationProvider.Get.
         var source = dsResult.Value.Sources?
             .FirstOrDefault(s => string.Equals(s.SourceName, req.SourceName, StringComparison.OrdinalIgnoreCase));
 
@@ -93,18 +91,9 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
             return;
         }
 
-        // Why the whole set is assigned and the data set saved, rather than the rows being written
-        // here: a mapping is a child of its source, and the provider's save is what cascades an
-        // aggregate's children — including the row key that ties a child to its parent. Writing the
-        // rows directly had no way to supply that key, so every insert was refused.
-        //
-        // Assigning the collection is what makes this a replacement: mappings left out are retired
-        // by the same cascade that inserts the new ones, so there is no separate delete step.
         source.Mappings = req.Mappings
             .Select((m, i) => new DataSetFieldMappingConfiguration
             {
-                // Why: default id means insert, and these are the mappings as the caller now states
-                // them — an existing one keeps its identity through the cascade's own matching.
                 Id = default,
                 DataSetSourceId = source.Id,
                 // The field it fills is what identifies it within the source.
@@ -179,7 +168,6 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
             }
         };
 
-        // Why: DataStoreName and PathName come from the provider to avoid hardcoding "ConfigurationDb"/"data".
         var fieldMappingTarget = new DataStoreTarget(_dataSetProvider.DataStoreName, _dataSetProvider.PathName, "DataSetFieldMapping");
         var existingResult = await _dataGateway.Execute<IEnumerable<FieldMappingDbRecord>>(existingCommand, fieldMappingTarget, ct).ConfigureAwait(false);
         if (existingResult.IsFailure)
@@ -207,8 +195,6 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
                 }
             };
 
-            // Why the result is read: discarding it left a mapping current that the save believed
-            // it had retired, so the insert that followed collided with a row nobody thought existed.
             var retire = await _dataGateway.Execute<int>(updateCommand, fieldMappingTarget, ct).ConfigureAwait(false);
             if (retire.IsFailure)
             {
@@ -232,8 +218,6 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
         {
             var newMapping = new FieldMappingDbRecord
             {
-                // Why: Id = default (Guid.Empty) signals INSERT with UUIDv7 from the gateway.
-                // No Guid.NewGuid() — the DB/gateway mints the ID.
                 Id = default,
                 DataSetSourceId = sourceId,
                 LogicalFieldName = mapping.LogicalFieldName,
@@ -248,10 +232,6 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
             var fieldMappingTarget = new DataStoreTarget(_dataSetProvider.DataStoreName, _dataSetProvider.PathName, "DataSetFieldMapping");
             var insertResult = await _dataGateway.Execute<int>(insertCommand, fieldMappingTarget, ct).ConfigureAwait(false);
 
-            // Why a failed row ends the save: skipping it returned the mappings that happened to
-            // land, and when none did the caller got 200 and an empty list — a save that saved
-            // nothing, reported as success. The gateway already says what went wrong; this passes
-            // it back rather than dropping it.
             if (insertResult.IsFailure)
             {
                 return insertResult.ToNewResult<IReadOnlyList<FieldMappingResponsePayload>>();

@@ -53,8 +53,6 @@ public sealed class InstanceRoutingHandler : DelegatingHandler
             return Task.FromResult(NotConnected(request));
         }
 
-        // Why PathAndQuery: the registered placeholder base contributed only the authority, so carry the
-        // client's own path and query across to the live instance untouched.
         if (request.RequestUri is not null)
         {
             request.RequestUri = new Uri(baseUri, request.RequestUri.PathAndQuery.TrimStart('/'));

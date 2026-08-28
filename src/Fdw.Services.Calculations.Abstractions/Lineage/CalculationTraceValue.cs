@@ -50,9 +50,6 @@ public sealed class CalculationTraceValue
     /// <returns>The recorded form of <paramref name="value"/>.</returns>
     public static CalculationTraceValue From(object? value)
     {
-        // Why null is not an error here: an operand legitimately resolving to null is part of what
-        // happened, and the trace's job is to report execution faithfully, not to judge it. The
-        // executor's own fail-loud checks decide whether a calculation may proceed.
         if (value is null)
         {
             return new CalculationTraceValue();
@@ -75,9 +72,6 @@ public sealed class CalculationTraceValue
             return text;
         }
 
-        // Why IFormattable first: every numeric and temporal type the operations deal in implements
-        // it, and this is the branch that pins them to invariant culture. Without it a decimal
-        // traced in one locale and re-read in another disagree about where the separator goes.
         if (value is IFormattable formattable)
         {
             return formattable.ToString(null, CultureInfo.InvariantCulture);
@@ -88,9 +82,6 @@ public sealed class CalculationTraceValue
             return RenderRow(row);
         }
 
-        // Why the mutable row shape too: the executor reads a referenced field out of either, so a
-        // row that rendered as a bare list of key/value pairs here would describe the same input
-        // two different ways depending on which dictionary type the caller happened to supply.
         if (value is IDictionary<string, object> mutableRow)
         {
             var copy = new Dictionary<string, object?>(mutableRow.Count, StringComparer.Ordinal);

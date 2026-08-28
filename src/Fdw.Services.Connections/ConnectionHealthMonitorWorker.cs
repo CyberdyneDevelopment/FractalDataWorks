@@ -54,12 +54,6 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ConnectionHealthMonitorWorker> _logger;
 
-    // Why (FDW-623): in-memory scheduling cursors keyed by the connection's durable Id. This worker is a
-    // singleton, so they survive across scan ticks. They replace the LastTested*/LastTestSuccess columns
-    // that used to live on conn.Connection — health status now lives ONLY in conn.ConnectionHealthCheck,
-    // and re-reading history every tick just to schedule would be wasteful. On restart the maps start
-    // empty: every enabled connection is due once (like a fresh probe), then its own interval applies.
-    // Access is single-threaded (the execute loop probes sequentially), so no synchronization is needed.
     private readonly Dictionary<Guid, DateTimeOffset> _lastChecked = new();
     private readonly Dictionary<Guid, bool> _lastHealthy = new();
 
@@ -79,15 +73,8 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
     {
         ConnectionHealthMonitorWorkerLog.WorkerStarted(_logger);
 
-        // Why HealthCheckOnStartup runs once, up front, before the periodic loop: it is the
-        // Initialize-phase probe every row asked for at host startup, independent of whether that
-        // row also has a periodic HealthCheckIntervalSeconds.
         if (!await RunStartupProbes(stoppingToken).ConfigureAwait(false))
         {
-            // Why the periodic loop is never entered: this host's configuration store registers no
-            // connection container, so there is nothing for this worker to monitor and — the tree being
-            // built once from configurationSchema.json — nothing that can appear later. Stating it once
-            // at Information is the whole report; the loop would only restate it every ScanTick forever.
             ConnectionHealthMonitorWorkerLog.MonitoringIdleNoConnectionContainer(_logger);
             return;
         }
@@ -97,10 +84,6 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
         {
             while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
             {
-                // Why the same early exit is honored per tick and not only at startup: the startup collect
-                // can miss the condition when the very first load fails transiently (that path logs the
-                // usual Error and keeps monitoring), so the first tick that resolves to container-absence
-                // is where the idle state is recognized instead.
                 if (!await RunScheduledProbes(stoppingToken).ConfigureAwait(false))
                 {
                     ConnectionHealthMonitorWorkerLog.MonitoringIdleNoConnectionContainer(_logger);
@@ -110,10 +93,6 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
         }
         catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
         {
-            // Why: graceful shutdown — PeriodicTimer.WaitForNextTickAsync throws when the linked
-            // token is cancelled; this is the expected exit path, not a fault. Observed via
-            // MessageLogging (FDW022 requires the caught exception be logged, returned, or rethrown)
-            // rather than swallowed silently, mirroring DailyLimitResetJob's shutdown handling.
             ConnectionHealthMonitorWorkerLog.WorkerCancelledDuringShutdown(_logger, ex);
         }
 
@@ -184,9 +163,6 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
 
             var now = DateTimeOffset.UtcNow;
 
-            // Why: a row is due when it has never been probed by this worker instance, or enough time has
-            // elapsed since its last probe relative to ITS OWN HealthCheckIntervalSeconds — never a
-            // worker-wide default. Last-probe time is the in-memory cursor, not a config column (FDW-623).
             var dueConnections = (allResult.Value ?? [])
                 .Where(c => c.HealthCheckEnabled
                     && c.HealthCheckIntervalSeconds.HasValue
@@ -206,16 +182,6 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
         return true;
     }
 
-    // Why branch on the TYPED code and never on message text: "this store does not register the
-    // connection container" is a distinct OUTCOME, not a flavour of failure, and the framework already
-    // models outcomes as IResultCode. The node lookup (DataStore.Path / DataPath.Container) attaches
-    // DataPathNotFound / ContainerNotFoundInPath, and ConfigurationGateway.Execute propagates the result
-    // rather than flattening it, so the code arrives here intact in CodeChain. Matching
-    // CurrentMessage strings instead would silently re-break the moment a message is reworded.
-    // Why CodeChain and not Code: the cause is raised at the innermost node lookup and reaches this
-    // caller wrapped by the provider's ToNewResult conversions, so it is a link in the chain, not the head.
-    // Anything else — a dropped connection, a timeout, a malformed row — carries neither code and keeps
-    // the existing per-tick Error, so a genuinely broken load in reference-api still fails loud.
     private static bool IsConnectionContainerAbsent(IGenericResult result) =>
         result.CodeChain.Any(code => code is DataPathNotFoundCode or ContainerNotFoundInPathCode);
 
@@ -223,8 +189,6 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
     {
         ConnectionHealthMonitorWorkerLog.ProbingConnection(_logger, connection.Name);
 
-        // Why (FDW-623): mark this connection probed for the current cycle up front, keyed by its durable
-        // Id, so the due-calc's interval is measured from now regardless of the probe outcome below.
         _lastChecked[connection.Id] = DateTimeOffset.UtcNow;
 
         var connectionProvider = services.GetRequiredService<IConnectionProvider>();
@@ -239,9 +203,6 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
             return;
         }
 
-        // Why: a connection whose type does not implement ISupportsHealthProbe is neither persisted
-        // healthy nor unhealthy — mirrors ConnectionsHealthCheckable's Degraded handling. Skipping the
-        // persist here leaves LastTested* untouched rather than recording a misleading result.
         if (getResult.Value is not ISupportsHealthProbe probe)
         {
             ConnectionHealthMonitorWorkerLog.NoProbeCapability(_logger, connection.Name);
@@ -272,11 +233,6 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
         int? responseTimeMs,
         CancellationToken ct)
     {
-        // Why (FDW-623): the probe result is written ONLY to conn.ConnectionHealthCheck via the health
-        // service — never back onto the connection configuration. Persisting LastTested* on the config and
-        // calling Save re-versioned the whole connection aggregate on every probe (version-on-write) and
-        // stranded its child rows; the health table is a plain, non-versioned record, so a probe is a
-        // single insert with no cascade.
         var recordResult = await healthService.RecordHealthCheck(
             connection.Id, connection.Name, success, responseTimeMs, message, ct).ConfigureAwait(false);
         if (!recordResult.IsSuccess)
@@ -285,9 +241,6 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
             return;
         }
 
-        // Why (FDW-583): branch on outcome — a transition TO healthy (recovery) is Information; a
-        // transition TO unhealthy is Error. The previous outcome is tracked in-memory (this worker is a
-        // singleton) rather than re-read from config, since health status no longer lives on the connection.
         var hadPrevious = _lastHealthy.TryGetValue(connection.Id, out var wasHealthy);
         _lastHealthy[connection.Id] = success;
         if (hadPrevious && wasHealthy != success)

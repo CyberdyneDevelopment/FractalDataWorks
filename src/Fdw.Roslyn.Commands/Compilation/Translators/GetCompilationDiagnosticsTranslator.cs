@@ -19,8 +19,6 @@ namespace Fdw.Roslyn.Commands.Compilation.Translators;
 /// <summary>
 /// Translator for getting compilation diagnostics.
 /// </summary>
-// Why: renamed from GetDiagnostics to GetCompilationDiagnostics to match the renamed command (avoids
-// TypeOption name collision when Analysis and Compilation packages were folded into one assembly).
 [TypeOption(typeof(RoslynCommandTranslators), "GetCompilationDiagnostics")]
 public sealed class GetCompilationDiagnosticsTranslator
     : RoslynCommandTranslatorBase<GetCompilationDiagnosticsCommand, QueryResult<CompilationDiagnosticsData>>

@@ -15,9 +15,6 @@ namespace Fdw.Services.Scheduling;
 [ManagedConfiguration(ServiceCategory = "Scheduler")]
 public partial class SchedulerConfiguration : ISchedulerConfiguration
 {
-    // Why no generated default: the database assigns identity. A value minted here reaches
-    // Get(domainId) as a real-looking id that matches no row, and the miss reads as a data problem
-    // rather than an unsaved record.
     /// <summary>Gets or sets the durable logical identifier (matches sched.Scheduler.Id).</summary>
     public Guid Id { get; set; }
 

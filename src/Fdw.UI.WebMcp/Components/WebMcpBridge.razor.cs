@@ -33,8 +33,6 @@ namespace Fdw.UI.WebMcp.Components;
 /// removes the page's tools instead of leaving an agent holding stale ones.
 /// </para>
 /// </remarks>
-// Why: Blazor lifecycle methods and JS interop callbacks run on the renderer's synchronisation
-// context — ConfigureAwait(false) would move continuations off it and break StateHasChanged.
 [SuppressMessage("Meziantou.Analyzer", "MA0004",
     Justification = "Blazor lifecycle and interop callbacks run on the renderer sync context")]
 public sealed partial class WebMcpBridge : ComponentBase, IAsyncDisposable
@@ -52,8 +50,6 @@ public sealed partial class WebMcpBridge : ComponentBase, IAsyncDisposable
     /// <summary>
     /// Gets or sets the route label recorded in the registration log entry.
     /// </summary>
-    // Why: a log label only — it never selects behaviour, so an unset value costs nothing but a
-    // less specific log line. Nothing downstream reads it.
     [Parameter]
     public string Route { get; set; } = string.Empty;
 
@@ -73,7 +69,6 @@ public sealed partial class WebMcpBridge : ComponentBase, IAsyncDisposable
     /// <summary>
     /// Gets or sets the optional logger. Falls back to <see cref="NullLogger{T}.Instance"/>.
     /// </summary>
-    // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions.
     [Parameter]
     public ILogger? Logger { get; set; }
 
@@ -119,8 +114,6 @@ public sealed partial class WebMcpBridge : ComponentBase, IAsyncDisposable
 
         if (FindTool(tool.Name) is not null)
         {
-            // Why: two tools sharing a name would make the agent's call ambiguous — reject the
-            // duplicate loudly rather than silently letting one shadow the other.
             WebMcpUiLog.DuplicateToolName(ResolvedLogger, tool.Name);
             return;
         }
@@ -180,8 +173,6 @@ public sealed partial class WebMcpBridge : ComponentBase, IAsyncDisposable
     {
         if (!outcome.Supported)
         {
-            // Why: no model context is the ordinary case outside the Chrome origin trial — it is a
-            // browser capability report, not an application failure, so it logs at Debug.
             WebMcpUiLog.ModelContextUnavailable(ResolvedLogger, _tools.Count);
             return;
         }
@@ -231,9 +222,6 @@ public sealed partial class WebMcpBridge : ComponentBase, IAsyncDisposable
         }
         catch (JsonException ex)
         {
-            // Why fail-loud, not a default schema: substituting {} would publish a tool that
-            // accepts anything, so the agent would call it with arguments the handler never
-            // expects. Refusing to register it is the safe, visible outcome.
             WebMcpUiLog.InvalidInputSchema(ResolvedLogger, tool.Name, ex.Message);
             return null;
         }
@@ -272,8 +260,6 @@ public sealed partial class WebMcpBridge : ComponentBase, IAsyncDisposable
     [JSInvokable]
     public async Task<string> ExecuteTool(string name, string argumentsJson)
     {
-        // Why every call gets an id: attempt, gate decision and outcome are separate lines, and with
-        // several agents on one page nothing else pairs them back together afterwards.
         var invocationId = Guid.CreateVersion7().ToString("N", CultureInfo.InvariantCulture);
         var agent = AgentIdentity;
 
@@ -298,9 +284,6 @@ public sealed partial class WebMcpBridge : ComponentBase, IAsyncDisposable
             if (!await handler(new WebMcpConfirmationRequest { ToolName = name, ArgumentsJson = argumentsJson }))
                 return ErrorPayload(WebMcpUiLog.ConfirmationDeclined(ResolvedLogger, agent, name, invocationId).Message);
 
-            // Why an approval is recorded and not just a refusal: this is the moment responsibility
-            // for an autonomous action transfers to a person, and it is the line that answers "who
-            // let it do that".
             WebMcpUiLog.ConfirmationGranted(ResolvedLogger, agent, name, invocationId);
         }
 
@@ -339,9 +322,6 @@ public sealed partial class WebMcpBridge : ComponentBase, IAsyncDisposable
             }
             catch (Exception ex)
             {
-                // Why catch broadly: this is the JS interop boundary. An escaping exception would
-                // surface to the agent as an opaque interop failure with no server-side record, so
-                // every failure is logged here and returned as a structured payload instead.
                 return ErrorPayload(WebMcpUiLog.ToolExecutionFailed(ResolvedLogger, ex, agent, tool.Name, invocationId).Message);
             }
         }
@@ -370,8 +350,6 @@ public sealed partial class WebMcpBridge : ComponentBase, IAsyncDisposable
         {
             try
             {
-                // Why: abort the page's registrations before releasing the module reference, so an
-                // agent cannot call a tool belonging to a component that is already gone.
                 await _module.InvokeVoidAsync("unregister", _handle);
                 WebMcpUiLog.ToolsUnregistered(ResolvedLogger, _handle);
             }
@@ -386,17 +364,6 @@ public sealed partial class WebMcpBridge : ComponentBase, IAsyncDisposable
 
             try
             {
-                // Why this needs the same guard as the unregister above: releasing a JS object
-                // reference is itself an interop call. The ordinary reason this component is being
-                // disposed is that the circuit died, and on a dead circuit this throws exactly like
-                // the unregister does. Unguarded it escaped DisposeAsync and surfaced as a SECOND
-                // unhandled circuit exception stacked on top of whatever killed the circuit —
-                // observed in production, where it followed an unrelated SchemaProvider failure and
-                // buried the real cause under a WebMCP stack trace.
-                //
-                // Why a separate try rather than extending the one above: the unregister failing
-                // must not skip the release, or the reference leaks on every teardown that trips
-                // the first call.
                 await _module.DisposeAsync();
             }
             catch (JSDisconnectedException ex)

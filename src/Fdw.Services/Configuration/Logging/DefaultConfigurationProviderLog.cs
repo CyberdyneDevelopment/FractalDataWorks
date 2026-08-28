@@ -351,8 +351,6 @@ public static partial class DefaultConfigurationProviderLog
     /// <param name="typeName">The configuration type being resolved.</param>
     /// <param name="identifier">The name or Id that resolved to nothing.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why: EventId 30000 is the canonical NotFound number and pairs with ServicesResultCodes
-    // ConfigurationNotFound (also 30000) — a result-code-paired log shares the code's number.
     [MessageLogging(EventId = 30000, Level = LogLevel.Error,
         Message = "{typeName} '{identifier}' was not found")]
     public static partial IGenericMessage ConfigurationNotFound(ILogger logger, string typeName, string identifier);
@@ -365,8 +363,6 @@ public static partial class DefaultConfigurationProviderLog
     /// <param name="name">The name of the record being saved.</param>
     /// <param name="serviceOptionType">The discriminator whose typed provider is registered.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why: EventId 20000 is the canonical RequiredValueMissing number — for a polymorphic header the typed
-    // body IS a required value, so this reuses that meaning rather than minting a new number.
     [MessageLogging(EventId = 20000, Level = LogLevel.Error,
         Message = "{typeName} '{name}' declares '{serviceOptionType}' but carries no typed body; the aggregate is incomplete and cannot be saved")]
     public static partial IGenericMessage TypedBodyMissingOnSave(ILogger logger, string typeName, string name, string serviceOptionType);
@@ -394,9 +390,6 @@ public static partial class DefaultConfigurationProviderLog
     /// <param name="childContainerName">The child container that declares the inbound FK.</param>
     /// <param name="ownerTypeName">The owner configuration type name being composed.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why Debug, not Error: with relationship-aware descriptor matching, a null descriptor is the EXPECTED
-    // case for 1:1 typed bodies (loaded separately by the typed-body composition) and cross-cutting FKs
-    // (TenantRowId/VisibilityGroupRowId) — these legitimately have no child collection on the owner.
     [MessageLogging(EventId = 11012, Level = LogLevel.Debug,
         Message = "Child composition: FK key '{keyName}' from child container '{childContainerName}' has no descriptor on {ownerTypeName} — skipped (typed-body or cross-cutting FK)")]
     public static partial IGenericMessage ChildBindingSkippedNoDescriptor(ILogger logger, string keyName, string childContainerName, string ownerTypeName);

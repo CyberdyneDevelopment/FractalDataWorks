@@ -9,10 +9,6 @@ namespace Fdw.UI.Components.Blazor.Tests.DataInfra;
 /// </summary>
 internal static class ProviderStubState
 {
-    // Why AsyncLocal: xUnit runs test collections in parallel, so a single static store is shared by
-    // tests running at the same moment - one test's Set is taken by another's Take, and both render
-    // the wrong context. AsyncLocal flows the pending value into the render call's own execution
-    // context and nowhere else, so each test hands off only to itself.
     private static readonly AsyncLocal<Dictionary<Type, object?>?> s_pending = new();
 
     internal static void Set<TContext>(TContext? value)

@@ -8,7 +8,6 @@ using Fdw.UI.Providers;
 
 namespace Fdw.Services.Pipelines.Components.Pipelines;
 
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class PipelineContext : ProviderContextBase
 {

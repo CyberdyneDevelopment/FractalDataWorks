@@ -26,8 +26,6 @@ public static class MigrationGuideMarkdownFormatter
         if (entries is null) throw new ArgumentNullException(nameof(entries));
 
         var builder = new StringBuilder();
-        // Why: an in-memory solution has no file path — render a nameless header rather than
-        // inventing a placeholder name.
         builder.AppendLine(string.IsNullOrWhiteSpace(solutionName)
             ? "# Migration Guide"
             : $"# Migration Guide — {solutionName}");
@@ -116,9 +114,6 @@ public static class MigrationGuideMarkdownFormatter
         builder.AppendLine();
         builder.AppendLine("## Renames");
         builder.AppendLine();
-        // Why: a rename changes the fully-qualified name, so every downstream consumer that names the old
-        // FQN stops compiling. That is the opposite of a Move, which preserves the FQN. The reader must be
-        // able to tell the two apart at a glance, so the consumer impact is stated here rather than implied.
         builder.AppendLine("**These are consumer-breaking**: the fully-qualified name changed, so consumers naming the old FQN must be updated. For `[TypeOption]` types the FNV-1a `Id` derived from the FQN changes too.");
         builder.AppendLine();
         builder.AppendLine("| Old | New | Kind |");
@@ -144,9 +139,6 @@ public static class MigrationGuideMarkdownFormatter
         builder.AppendLine();
         builder.AppendLine("**These are NOT consumer-breaking**: the fully-qualified name is unchanged, so a consumer hitting CS0246 needs a package reference to the new assembly, not a code edit.");
         builder.AppendLine();
-        // Why: a consumer reads this in THEIR repo. Absolute file paths from the author's machine tell
-        // them nothing actionable — "Fdw.Data.MsSql.VarCharType is now in Fdw.Data.MsSql" is what maps a
-        // CS0246 to a package reference, which is the entire purpose of the table.
         builder.AppendLine("| Type | From package | To package | Kind |");
         builder.AppendLine("|---|---|---|---|");
         foreach (var pathMove in pathMoves)
@@ -165,9 +157,6 @@ public static class MigrationGuideMarkdownFormatter
         AppendAssemblyHops(builder, symbolMoves);
     }
 
-    // Why: this is the table a consumer actually reads when CS0246 fires — it maps the type to the
-    // assembly (package) that now carries it. RelativePosition is carried alongside so a later split
-    // slice can verify the programme's positional invariant against what an earlier slice recorded.
     private static void AppendAssemblyHops(StringBuilder builder, IReadOnlyList<SymbolChange> symbolMoves)
     {
         var hops = symbolMoves.Where(s => s.CrossesAssembly).ToList();

@@ -11,7 +11,6 @@ namespace Fdw.Services.Multitenancy.Components.Tenants;
 /// Immutable context provided by <see cref="TenantsAdminProvider"/> to its render template.
 /// Exposes the list of tenants and operations for admin management (create, update, list).
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class TenantsAdminContext : ProviderContextBase
 {

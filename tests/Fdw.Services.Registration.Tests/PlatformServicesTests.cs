@@ -81,9 +81,6 @@ public sealed class PlatformServicesTests : IDisposable
     [Fact]
     public void EntriesKeepRegistrationOrderAndDoNotReorderThemselves()
     {
-        // Why this is asserted rather than left implicit: there is no sort any more, so the ONLY thing
-        // a caller can rely on is the order things registered in. A host that needs a different order
-        // states it by running a domain early or deferring it — not by expecting the collect to know.
         var counter = new CallCounter();
         PlatformServices.Add("Second", counter.Descriptor("Second", typeof(string)));
         PlatformServices.Add("First", counter.Descriptor("First", typeof(int)));
@@ -141,9 +138,6 @@ public sealed class PlatformServicesTests : IDisposable
         entry.Configured.ShouldBeTrue();
     }
 
-    // Why this test exists: running a domain early to put it ahead of the others is the documented
-    // reason the run-tracking exists at all. Configure previously had no skip, so the early call was
-    // paid for twice — once manually and once by the aggregate pass.
     [Fact]
     public void ConfigureSweepSkipsAlreadyManuallyConfiguredEntry()
     {
@@ -346,10 +340,6 @@ public sealed class PlatformServicesTests : IDisposable
         counter.RegisterCalls.ShouldBe(0);
     }
 
-    // Why this test exists separately from ConfigurationReplacesDescriptorConfigureDelegate: that one
-    // calls entry.Configure directly, so it passed while the SWEEP reached past the entry to the
-    // descriptor and ran the default instead. A replacement that works when invoked by hand and is
-    // ignored by the sweep is the failure worth pinning, and only a sweep-level test sees it.
     [Fact]
     public void ConfigureSweepUsesTheSelectedReplacement()
     {

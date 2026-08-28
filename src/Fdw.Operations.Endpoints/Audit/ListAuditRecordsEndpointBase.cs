@@ -60,8 +60,6 @@ public abstract class ListAuditRecordsEndpointBase : Endpoint<ListAuditRecordsRe
 
         if (!result.IsSuccess)
         {
-            // Why: CurrentMessage may be null if the service returned a failure with no messages;
-            // use the no-arg overload to avoid a fallback string that masks missing failure detail.
             if (result.CurrentMessage is { } msg)
                 OperationsEndpointLog.ListAuditRecordsFailed(_logger, msg);
             else

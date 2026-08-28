@@ -25,8 +25,6 @@ public sealed class ValuesFromSchemaDocumentProcessor : IDocumentProcessor
     /// <inheritdoc />
     public void Process(DocumentProcessorContext context)
     {
-        // Why: BuildValuesFromLookup returns empty after Wave C5 deletes ConfigurationTypes.
-        // The processor is a no-op until Wave A6 adds ValuesFromReferences to IDataContainer.
         var referencesByTypeName = BuildValuesFromLookup();
         if (referencesByTypeName.Count == 0)
             return;
@@ -38,9 +36,6 @@ public sealed class ValuesFromSchemaDocumentProcessor : IDocumentProcessor
 
             foreach (var (propertyName, allowedValues) in propertyReferences)
             {
-                // Why: NSwag serializes property names using the CLR name directly
-                // (FastEndpoints doesn't apply camelCase by default in schema defs).
-                // Try exact match first, then case-insensitive.
                 if (!TryGetSchemaProperty(schema, propertyName, out var propSchema))
                     continue;
 
@@ -65,7 +60,6 @@ public sealed class ValuesFromSchemaDocumentProcessor : IDocumentProcessor
     /// </remarks>
     private static Dictionary<string, Dictionary<string, IReadOnlyList<string>>> BuildValuesFromLookup()
     {
-        // Why: ConfigurationTypes.All() deleted in Wave C5. Return empty so Process() short-circuits.
         return new Dictionary<string, Dictionary<string, IReadOnlyList<string>>>(StringComparer.Ordinal);
     }
 
@@ -110,8 +104,6 @@ public sealed class ValuesFromSchemaDocumentProcessor : IDocumentProcessor
         if (type is not null)
             return type;
 
-        // Why: Type.GetType only searches mscorlib and the calling assembly.
-        // TypeCollections live in various FDW assemblies, so we search all loaded assemblies.
         return AppDomain.CurrentDomain.GetAssemblies()
             .Select(a => a.GetType(fullTypeName))
             .FirstOrDefault(t => t is not null);
@@ -128,7 +120,6 @@ public sealed class ValuesFromSchemaDocumentProcessor : IDocumentProcessor
             return true;
         }
 
-        // Why: some serializers use camelCase property names
         var camelCase = char.ToLowerInvariant(propertyName[0]) + propertyName[1..];
         if (schema.Properties.TryGetValue(camelCase, out property))
         {

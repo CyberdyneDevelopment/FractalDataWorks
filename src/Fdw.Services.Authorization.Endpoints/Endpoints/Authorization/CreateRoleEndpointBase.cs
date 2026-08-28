@@ -12,8 +12,6 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleSummaryResponse>
 {
-    // Why: RoleConfigurationProvider replaces IOptionsMonitor<List<RoleConfiguration>> with dual-source
-    // (ctrl + cfg) provider that merges system and user configurations, plus child permission assembly.
     private readonly RoleConfigurationProvider _roleProvider;
 
     /// <summary>
@@ -35,11 +33,6 @@ public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleS
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:write".
     /// </summary>
-    // Why: the standard CRUD tier for this resource. This endpoint previously required ":delete"
-    // as an ad-hoc "Admin-only" tier, because the seeded Operator role is granted ":write" on
-    // every resource by a blanket rule and would otherwise have inherited user administration.
-    // The grant was the wrong thing to work around: user/role admin is now carved out of
-    // Operator in the seed, so these permissions can mean exactly what they say (FDW-634).
     protected virtual string WritePolicy => "settings/role:write";
 
     /// <inheritdoc />

@@ -92,8 +92,6 @@ public sealed class IfThenElseOperation : CalculationOperationBase
         }
         catch (FormatException ex)
         {
-            // Why: non-numeric non-bool values that cannot be parsed as decimal are treated as truthy;
-            // ex is observed so FDW022 does not fire.
             _ = ex;
             return true;
         }

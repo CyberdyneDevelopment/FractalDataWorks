@@ -15,9 +15,6 @@ public static partial class ApiEndpointLog
     /// Reports that a client was resolved but the host declares no endpoint for it, naming every key
     /// that would satisfy it.
     /// </summary>
-    // Why the remediation is in the message rather than a doc comment: this is emitted at the moment a
-    // client is resolved, in a host whose operator is reading logs and not source. The message names the
-    // client and every key that would fix it, so the log line alone is actionable.
     [MessageLogging(
         EventId = 60100,
         Level = LogLevel.Error,

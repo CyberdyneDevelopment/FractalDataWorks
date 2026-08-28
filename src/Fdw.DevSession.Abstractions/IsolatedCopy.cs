@@ -5,7 +5,6 @@ namespace Fdw.DevSession.Abstractions;
 /// works in for the life of a dev session, kept apart from the base until it is submitted for
 /// review. This is the "spin up a copy of the project" artifact.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class IsolatedCopy
 {

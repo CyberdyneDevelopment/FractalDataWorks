@@ -305,7 +305,6 @@ public sealed class FieldTests
         };
 
         // Assert
-        // Why: IsPrimaryKey removed from Field — PK identity now in KeyField tables. Role=Attribute is the default for non-PK fields.
         field.Role.Name.ShouldBe("Attribute");
     }
 
@@ -323,7 +322,6 @@ public sealed class FieldTests
         };
 
         // Assert
-        // Why: IsPrimaryKey removed from Field — PK fields are now identified by Role=Surrogate instead.
         field.Role.Name.ShouldBe("Surrogate");
     }
 

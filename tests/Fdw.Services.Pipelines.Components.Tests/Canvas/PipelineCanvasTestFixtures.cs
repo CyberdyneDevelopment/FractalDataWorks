@@ -96,7 +96,6 @@ internal static class PipelineCanvasTestFixtures
 
     internal static PipelineCanvasNode BuildTransformNodeNoOperationType(string id = "t1")
     {
-        // Why: deliberately omits OperationType to trigger the validator rule.
         var meta = new Dictionary<string, string>(StringComparer.Ordinal);
         return new PipelineCanvasNode(id, TransformNodeType, "BadTransform", null, 200, 100, TransformPorts(), meta);
     }

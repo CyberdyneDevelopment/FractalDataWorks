@@ -74,8 +74,6 @@ public sealed class OAuth2TokenEndpointClient
         foreach (var parameter in credentialForm)
             form[parameter.Key] = parameter.Value;
 
-        // Why the audience goes on the wire: the provider scopes the issued token to it, and a token
-        // that names no audience is one any peer would have to accept on trust.
         form["audience"] = request.Audience;
 
         if (request.Scopes.Count > 0)
@@ -100,9 +98,6 @@ public sealed class OAuth2TokenEndpointClient
         }
         catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            // Why this is unreachable-and-not-cancelled: the caller's token was not signalled, so the
-            // timeout came from the transport. Reporting it as a cancellation would hide a provider
-            // that is up but not answering.
             return GenericResult<IssuedIdentityToken>.Failure(
                 IdentityLog.ProviderUnreachable(_logger, ex, configurationName, tokenEndpoint));
         }
@@ -114,9 +109,6 @@ public sealed class OAuth2TokenEndpointClient
 
             if (!response.IsSuccessStatusCode)
             {
-                // Why 400/401 read as a rejected credential rather than a transport fault: providers
-                // answer a bad client secret or an untrusted assertion with those, and an operator
-                // needs "the provider refused us" to be distinguishable from "the provider is down".
                 return GenericResult<IssuedIdentityToken>.Failure(
                     response.StatusCode is System.Net.HttpStatusCode.BadRequest or System.Net.HttpStatusCode.Unauthorized
                         ? IdentityLog.CredentialRejected(_logger, configurationName, issuer, DescribeError(configurationName, body))
@@ -152,9 +144,6 @@ public sealed class OAuth2TokenEndpointClient
             return GenericResult<IssuedIdentityToken>.Failure(
                 IdentityLog.TokenResponseIncomplete(_logger, configurationName, issuer, "expires_in"));
 
-        // Why token_type is required rather than assumed to be Bearer: the Authorization header this
-        // token goes into is built from it, and guessing it would be a fallback that produces a
-        // header the peer silently rejects.
         if (!root.TryGetProperty("token_type", out var tokenType) || tokenType.GetString() is not { Length: > 0 } tokenTypeValue)
             return GenericResult<IssuedIdentityToken>.Failure(
                 IdentityLog.TokenResponseIncomplete(_logger, configurationName, issuer, "token_type"));
@@ -191,11 +180,6 @@ public sealed class OAuth2TokenEndpointClient
         }
         catch (JsonException ex)
         {
-            // Why the exception is logged rather than swallowed: a non-JSON error body means the
-            // request did not reach the provider's OAuth handler at all (a proxy error page, a wrong
-            // endpoint path), which is a different fault from a rejected credential and would
-            // otherwise be reported as one. Why the raw body is not returned: an arbitrary error page
-            // is not guaranteed to be free of sensitive content.
             IdentityLog.ErrorResponseUnparseable(_logger, ex, configurationName);
             return "unparseable error response";
         }

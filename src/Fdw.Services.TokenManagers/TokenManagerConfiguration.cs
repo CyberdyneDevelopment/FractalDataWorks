@@ -67,15 +67,10 @@ public partial class TokenManagerConfiguration : ITokenManagerConfiguration
     /// Populated on the read path by the provider after loading the typed body table row. Not
     /// persisted — the typed body is saved separately.
     /// </summary>
-    // Why: [NotMapped] — this property is not a column on auth.TokenManager. The write path saves
-    // the typed body independently via its own provider. The read path populates this by dispatching
-    // on ServiceOptionType to the appropriate typed provider.
     [NotMapped]
     public ITokenManagerImplementationConfiguration? Configuration { get; set; }
 
     // ── Tenant / visibility / audit ──────────────────────────────────────────
-    // Why: no value defaults — a missing tenant/visibility/audit value must read as its
-    // DB-configured null, never a silently-assumed default.
 
     /// <summary>
     /// Gets or sets the tenant identifier for tenant isolation. Null means system-wide (visible to

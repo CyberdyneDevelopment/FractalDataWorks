@@ -49,8 +49,6 @@ public class PipelineStatusHub : RealTimeHubBase<IPipelineStatusHubClient>
     /// </remarks>
     protected override Task OnJoin()
     {
-        // Why: literal "org_id" matches the JWT org claim name used elsewhere for org scoping
-        // (e.g. DataGatewayService), keeping this hub free of an auth-abstractions dependency.
         var orgId = Context.User?.FindFirst("org_id")?.Value;
         if (string.IsNullOrEmpty(orgId))
         {

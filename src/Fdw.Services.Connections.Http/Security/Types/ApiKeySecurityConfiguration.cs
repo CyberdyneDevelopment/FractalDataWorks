@@ -11,8 +11,6 @@ namespace Fdw.Services.Connections.Http.Security.Types;
 [TypeOption(typeof(HttpAuthenticationTypes), "ApiKey")]
 public sealed class ApiKeySecurityConfiguration : HttpAuthenticationConfiguration
 {
-    // Why: SecretManagerName is a key THIS secret-backed method owns and requires (it resolves the
-    // API-key secret name). It is NOT on the base — non-secret methods declare no such key.
     private static readonly string[] ExpectedList = ["SecretManagerName", "ApiKeySecretName", "ApiKeyHeaderName"];
     private static readonly string[] RequiredList = ["SecretManagerName", "ApiKeySecretName"];
 

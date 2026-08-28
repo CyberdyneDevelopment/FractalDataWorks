@@ -18,11 +18,8 @@ namespace Fdw.Services.Data.Limits;
 /// </summary>
 internal sealed class ConnectionLimitCounterStore
 {
-    // Why: ConcurrentDictionary<Guid, CounterEntry> provides lock-free reads and
-    // Interlocked increment for the hot path. The Guid key is the Connection.Id.
     private readonly ConcurrentDictionary<Guid, CounterEntry> _counters = new();
 
-    // Why: pure data holder, no logic beyond trivial construction/assignment
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private sealed class CounterEntry
     {

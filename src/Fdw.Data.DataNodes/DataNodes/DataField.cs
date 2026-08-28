@@ -36,11 +36,9 @@ public sealed class DataField : IDataField
     public bool IsNullable { get; }
 
     /// <inheritdoc />
-    // Why: a field is a leaf node — it has no children.
     public IReadOnlyList<IDataNode> Nodes => [];
 
     /// <inheritdoc />
-    // Why: a leaf field never has child nodes, so Node(name) always fails (no Try*, no nullable).
     public IGenericResult<IDataNode> Node(string name) =>
         GenericResult<IDataNode>.Failure(
             DataStoreLoaderLog.LeafFieldHasNoChild(NullLogger.Instance, Name, name));

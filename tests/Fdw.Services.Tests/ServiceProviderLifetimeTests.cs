@@ -181,7 +181,6 @@ public class ServiceProviderLifetimeTests
         public Task<IGenericResult> Delete(string name, CancellationToken ct = default)
             => throw new NotSupportedException("Test provider does not support Delete.");
 
-        // Why: IsSystemProtected is on the interface; test provider has no ctrl configs.
         public bool IsSystemProtected(string name) => false;
     
         // Type-erased surface — delegates to the typed members.
@@ -231,8 +230,6 @@ public class ServiceProviderLifetimeTests
     /// <summary>
     /// Aggregates multiple config providers into one for parent provider registration.
     /// </summary>
-    // Why: PlatformServiceProviderBase.Get(name/id) now requires a parent provider for O(1)
-    // name-to-type resolution. Tests with multiple type registrations need an aggregate.
     public class AggregateConfigProvider : IServiceConfigurationProvider<TestServiceConfiguration>, IServiceConfigurationProvider, IDomainConfigurationProvider<TestServiceConfiguration>
     {
         private readonly IServiceConfigurationProvider<TestServiceConfiguration>[] _providers;
@@ -283,7 +280,6 @@ public class ServiceProviderLifetimeTests
         public Task<IGenericResult> Delete(string name, CancellationToken ct = default)
             => throw new NotSupportedException("Aggregate test provider does not support Delete.");
 
-        // Why: IsSystemProtected is on the interface; aggregate provider has no ctrl configs.
         public bool IsSystemProtected(string name) => false;
     
         // Type-erased surface — delegates to the typed members.
@@ -819,10 +815,6 @@ public class ServiceProviderLifetimeTests
     [Trait("Category", "CoreFramework")]
     public async Task CreateWithMissingServiceOptionTypeReturnsFailure()
     {
-        // Why: Get(name) now uses parent provider to resolve ServiceOptionType for O(1)
-        // dispatch. A null ServiceOptionType means the parent can't route to a per-type
-        // provider, so Get must return failure. This changed from the old behavior where
-        // the factory was found via the config-provider registration key.
         var configs = new List<TestServiceConfiguration>
         {
             new() { Name = "Service1", ServiceOptionType = null, Value = "Value" }
@@ -868,8 +860,6 @@ public class ServiceProviderLifetimeTests
         provider.Register("TypeA", new TestServiceFactory());
 
         // Act - Get services concurrently using Parallel.For
-        // Why: Parallel.For is sync; .GetAwaiter().GetResult() is safe here because
-        // TestServiceConfigurationProvider uses Task.FromResult (no real I/O, no deadlock risk).
         var results = new IGenericResult<ITestService>[configs.Count];
         Parallel.For(0, configs.Count, i =>
         {

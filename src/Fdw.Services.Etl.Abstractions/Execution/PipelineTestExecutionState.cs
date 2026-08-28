@@ -11,8 +11,6 @@ public sealed class PipelineTestExecutionState
     /// Gets the <see cref="ManualResetEventSlim"/> used to pause/resume the batch loop.
     /// Initially set (not paused). The pipeline awaits this between batches.
     /// </summary>
-    // Why: ManualResetEventSlim is the plan-specified primitive for per-execution pause.
-    // It is thread-safe and supports both async (via Task.Run wrapper) and sync Wait.
     public ManualResetEventSlim PauseEvent { get; } = new ManualResetEventSlim(initialState: true);
 
     /// <summary>
@@ -21,10 +19,6 @@ public sealed class PipelineTestExecutionState
     /// </summary>
     public CancellationTokenSource Cts { get; } = new CancellationTokenSource();
 
-    // Why: Long field used with Interlocked.Exchange/Read instead of volatile bool to avoid
-    // CA1051 (visible instance field) while preserving the memory visibility guarantee that
-    // volatile provides. Interlocked.Read only has a long overload so we store 1L/0L.
-    // 1 = step pending, 0 = not pending.
     private long _stepPending;
 
     /// <summary>

@@ -55,8 +55,6 @@ public class FixedWidthRoundTripTests
         readBack[0]["Name"].ShouldBe("Alice");
         readBack[0]["City"].ShouldBe("NYC");
         readBack[1]["Name"].ShouldBe("Bob");
-        // Why: Id field is left-padded with '0' to width 5, then read back trimming '0' (its
-        // padding char), so "42" round-trips to "42" and "1" to "1".
         readBack[0]["Id"].ShouldBe("1");
         readBack[1]["Id"].ShouldBe("42");
     }

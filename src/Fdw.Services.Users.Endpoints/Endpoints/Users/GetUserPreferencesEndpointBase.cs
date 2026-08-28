@@ -60,11 +60,6 @@ public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<Us
     /// <inheritdoc/>
     public override async Task HandleAsync(CancellationToken ct)
     {
-        // Why: the FDW access token carries the durable user GUID in the standard JWT `sub`
-        // claim (ClaimDefinitions defines no `name`/`preferred_username` claim), so
-        // User.Identity.Name is empty and resolving identity from it 401s every authenticated
-        // caller. Read `sub` directly — the canonical pattern the SessionState endpoints use —
-        // and fail loud (401) when it is absent or not a GUID. No username round-trip, no fallback.
         if (!PreferenceEndpointIdentity.TryGetUserId(User, out var userId))
         {
             await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
@@ -82,10 +77,6 @@ public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<Us
                 return;
             }
 
-            // Why: when no preference row exists yet (result.Value is null) the caller
-            // still gets a valid response so the client doesn't have to handle null.
-            // DarkMode defaults to false (off) because that is the absence-of-preference
-            // semantic, not a silent config fallback.
             var prefs = result.Value;
             var response = prefs is not null
                 ? new UserPreferencesResponse

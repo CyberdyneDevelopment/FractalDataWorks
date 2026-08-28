@@ -10,9 +10,6 @@ namespace Fdw.Services.Users.Abstractions;
 /// Service for managing user credentials stored in auth.UserSecret.
 /// Handles hashing at the service boundary — plaintext never leaves these methods.
 /// </summary>
-// Why: This is NOT a secret manager. Secret managers handle external secrets
-// (connection passwords, API keys for integrations). This service owns the
-// auth.UserSecret table — user passwords, API keys, service tokens.
 public interface IUserCredentialService
 {
     /// <summary>

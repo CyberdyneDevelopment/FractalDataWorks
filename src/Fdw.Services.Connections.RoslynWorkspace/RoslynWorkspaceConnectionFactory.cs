@@ -44,12 +44,7 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
     /// <inheritdoc />
     public IGenericResult<IGenericConnection> Create(IGenericConfiguration configuration)
     {
-        // Why: synchronous create cannot load the workspace (async-only). Return failure;
-        // callers that need a connection should use the async overload.
 
-        // Why: After config-split, ConnectionProvider passes a composed ConnectionConfiguration
-        // header. Extract connectionName from the header; typed body is irrelevant here since we
-        // always return failure (sync creation is not supported for workspace connections).
         if (configuration is ConnectionConfiguration composedHeader
             && composedHeader.Configuration is RoslynWorkspaceConnectionConfiguration)
         {
@@ -78,8 +73,6 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
         ISecretManager? secretManager,
         CancellationToken cancellationToken = default)
     {
-        // Why: After config-split, ConnectionProvider passes a composed ConnectionConfiguration
-        // header. Extract connectionName and typed body from the header.
         if (configuration is ConnectionConfiguration header
             && header.Configuration is RoslynWorkspaceConnectionConfiguration typedBody)
         {
@@ -97,9 +90,6 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
     }
 
     /// <inheritdoc />
-    // Why: a Roslyn workspace is opened from a solution path on disk — it declares no authentication
-    // type, so there is never a secret to resolve. Route through the same async path as the bootstrap
-    // overload.
     public Task<IGenericResult<IGenericConnection>> Create(
         IGenericConfiguration configuration,
         CancellationToken cancellationToken = default)
@@ -108,7 +98,6 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
     /// <inheritdoc />
     public IGenericResult<IGenericConnection> Create(RoslynWorkspaceConnectionConfiguration configuration)
     {
-        // Why: same as the IGenericConfiguration overload — workspace loading is async-only.
         return GenericResult<IGenericConnection>.Failure(
             RoslynWorkspaceConnectionLog.FactoryValidationFailed(
                 _logger, configuration.ConnectionId.ToString(),
@@ -196,8 +185,6 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
         if (result.Value is T typedResult)
             return GenericResult<T>.Success(typedResult);
 
-        // Why: configuration.Name is explicit interface (returns string.Empty) on typed body.
-        // Use GetType().Name as identifier for this error message — it's the type context we care about.
         return GenericResult<T>.Failure(
             RoslynWorkspaceConnectionLog.FactoryValidationFailed(
                 _logger, configuration?.GetType().Name ?? "null",

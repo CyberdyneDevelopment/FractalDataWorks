@@ -11,7 +11,6 @@ namespace Fdw.Services.Pipelines.Components.Pipelines;
 /// Immutable context object passed to the consumer RenderFragment by <see cref="SchedulePipelineProvider"/>.
 /// Carries both state snapshots and callback delegates so that markup can stay free of logic.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class SchedulePipelineContext : ProviderContextBase
 {

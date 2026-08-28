@@ -11,7 +11,6 @@ namespace Fdw.Collections.Attributes;
 /// <param name="baseType">The base type to collect (e.g., typeof(MyBaseType)).</param>
 /// <param name="defaultReturnType">The default return type for generated methods (e.g., typeof(IMyInterface)).</param>
 /// <param name="collectionType">The partial class type being generated (e.g., typeof(MyTypes)).</param>
-// Why: pure attribute definition (declarative metadata only, consumed by source generators) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 [ExcludeFromCodeCoverage]
 public sealed class MutableTypeCollectionAttribute(Type baseType, Type defaultReturnType, Type collectionType) : Attribute

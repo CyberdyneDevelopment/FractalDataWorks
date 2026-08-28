@@ -58,8 +58,6 @@ public sealed class NavTreeAccessTests
     [Trait("Category", "Registration")]
     public void AnUnauthenticatedCallerSeesOnlyTheAnonymousPage()
     {
-        // Why the assertion is an exact set rather than "contains Public": showing the public page is only
-        // half the requirement. Withholding the other two is the half that makes it safe to serve a visitor.
         NamesFor(isAuthenticated: false, HoldsNothing).ShouldBe(new[] { "Public" });
     }
 
@@ -68,8 +66,6 @@ public sealed class NavTreeAccessTests
     [Trait("Category", "Registration")]
     public void AnUnauthenticatedCallerSeesNoMoreWhenThePredicateIsPermissive()
     {
-        // Why: guards against the two axes collapsing. If Build only ever consulted hasPermission, a
-        // permissive predicate would leak the gated page to a caller with no session at all.
         NamesFor(isAuthenticated: false, _ => true).ShouldBe(new[] { "Public" });
     }
 
@@ -93,8 +89,6 @@ public sealed class NavTreeAccessTests
     [Trait("Category", "Registration")]
     public void APageWithNoNavEntryIsExcludedEvenWhenAnyoneMayReachIt()
     {
-        // Why kept alongside the access cases: the Empty sentinel and the access rule are two independent
-        // filters, and a page can be both public and deliberately absent from the sidebar.
         var hidden = new TestPage("Hidden", PageAccess.Anonymous, NavItem.Empty);
 
         NavTree.Build([hidden], isAuthenticated: false, HoldsNothing).ShouldBeEmpty();
@@ -104,8 +98,6 @@ public sealed class NavTreeAccessTests
     [Trait("Category", "Registration")]
     public void BuildStillRequiresAPermissionPredicate()
     {
-        // Why unchanged by this work: a missing predicate means the caller cannot answer the permission
-        // question, and rendering every link is the wrong way to cope with not knowing.
         Should.Throw<ArgumentNullException>(() => NavTree.Build(ThreePages(), isAuthenticated: true, null!));
     }
 }

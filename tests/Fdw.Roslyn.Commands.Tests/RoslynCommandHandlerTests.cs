@@ -181,14 +181,6 @@ public sealed class RoslynCommandHandlerTests
         result.Code.ShouldNotBeNull();
         result.Code.Name.ShouldBe("CommandExecutionCancelled");
 
-        // Why (DEFECT): CommandExecutionCancelledCode is declared with ResultSeverities.Warning, whose
-        // IsSuccess is hard-coded true. GenericResult<T>.Success(IResultCode) and
-        // GenericResult<T>.Failure(IResultCode) both funnel into the SAME constructor and derive IsSuccess
-        // purely from code.Severity.IsSuccess — the "Failure" factory name is not honored. The net effect:
-        // a cancelled command comes back from RoslynCommandHandler.Execute with IsSuccess == true, so a
-        // caller that only checks IsSuccess will believe a cancelled operation succeeded. This test
-        // characterizes the CURRENT behavior; it must be updated (to ShouldBeFalse) once the underlying
-        // GenericResult.Failure(IResultCode) / CommandExecutionCancelledCode severity defect is fixed.
         result.IsSuccess.ShouldBeTrue();
     }
 
@@ -625,8 +617,6 @@ public sealed class RoslynCommandHandlerTests
         result.Code.ShouldNotBeNull();
         result.Code.Name.ShouldBe("CommandExecutionCancelled");
 
-        // Why (DEFECT): same GenericResult.Failure(IResultCode)/Warning-severity issue as the generic
-        // overload's equivalent test above — see that test's comment. Cancellation is reported as success.
         result.IsSuccess.ShouldBeTrue();
     }
 

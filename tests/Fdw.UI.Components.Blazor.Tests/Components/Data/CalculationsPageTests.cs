@@ -80,7 +80,6 @@ public sealed class CalculationsPageTests : IDisposable
         var c = Calc("Sum");
         Swap(new CalculationContext { Calculations = [c], FilteredCalculations = [c] });
         var cut = _ctx.Render<CalculationsPage>();
-        // Why: the row now has a single action button (delete) — index 0.
         cut.Find("tbody tr").QuerySelectorAll("button")[0].Click();
         cut.Markup.Contains("Confirm Delete", StringComparison.Ordinal).ShouldBeTrue();
     }

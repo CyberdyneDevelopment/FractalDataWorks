@@ -64,9 +64,6 @@ public abstract class GetSourceMappingsEndpointBase : Endpoint<GetSourceMappings
     {
         EndpointLog.GettingResource(_logger, "source mappings", req.Name);
 
-        // Why each read is checked before its result is inspected: a read that failed and a name
-        // that does not exist both arrived here as null, so a broken query answered 404 "this data
-        // set does not exist". They are different answers and the caller needs to tell them apart.
         var dataSetResult = await FindDataSet(req.Name, ct).ConfigureAwait(false);
         if (!dataSetResult.IsSuccess)
         {
@@ -226,9 +223,6 @@ public abstract class GetSourceMappingsEndpointBase : Endpoint<GetSourceMappings
         };
     }
 
-    // Why a 500 rather than an empty list: the read did not happen, so nothing is known about what
-    // it would have returned. Answering [] claims the data set has no mappings, which is a different
-    // and possibly false statement.
     private Task SendReadFailure(string what, string? reason, CancellationToken ct)
     {
         HttpContext.Response.StatusCode = 500;

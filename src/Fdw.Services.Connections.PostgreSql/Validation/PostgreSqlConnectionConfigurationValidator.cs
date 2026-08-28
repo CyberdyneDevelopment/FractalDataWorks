@@ -13,9 +13,6 @@ public sealed class PostgreSqlConnectionConfigurationValidator : FdwConfiguratio
     /// </summary>
     public PostgreSqlConnectionConfigurationValidator()
     {
-        // Why: Name is a header field on ConnectionConfiguration after config-split.
-        // PostgreSqlConnectionConfiguration exposes it as an explicit IGenericConfiguration member
-        // returning string.Empty — it cannot be validated here.
 
         RuleFor(x => x.Host)
             .NotEmpty()

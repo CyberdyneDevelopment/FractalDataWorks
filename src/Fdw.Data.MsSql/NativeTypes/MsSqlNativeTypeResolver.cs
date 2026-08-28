@@ -16,8 +16,6 @@ namespace Fdw.Data.MsSql;
 /// </remarks>
 public static class MsSqlNativeTypeResolver
 {
-    // Why: Static dictionary initialized once — maps SQL Server DDL lowercase names to
-    // TypeCollection PascalCase names. Built from all known MsSqlNativeTypes entries.
     private static readonly Dictionary<string, string> _sqlToPascalMap =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -60,25 +58,15 @@ public static class MsSqlNativeTypeResolver
     /// </returns>
     public static DataTypeOptionBase Resolve(string? dbNativeTypeName)
     {
-        // Why: ByName/NotFound return IMsSqlDataType (TGeneric); cast to DataTypeOptionBase (TBase)
-        // because callers hold fields typed as DataTypeOptionBase. Every TypeOption in MsSqlNativeTypes
-        // derives from DataTypeOptionBase, so the cast is always safe.
         if (string.IsNullOrWhiteSpace(dbNativeTypeName))
             return (DataTypeOptionBase)MsSqlNativeTypes.NotFound;
 
-        // Why: ByName uses the TypeCollection's source-generated O(1) lookup.
-        // We pass the original name directly — ByName is case-sensitive so we
-        // normalize via the lookup map first.
         var normalized = _sqlToPascalMap.TryGetValue(dbNativeTypeName, out var mapped)
             ? mapped
             : dbNativeTypeName;
 
-        // Why: ByName returns IMsSqlDataType (the interface); cast to the concrete base class
-        // because MsSqlDataField.NativeType is typed as DataTypeOptionBase.
         var found = (DataTypeOptionBase)MsSqlNativeTypes.ByName(normalized);
 
-        // Why: Fall back to the original value in case the caller already passed PascalCase
-        // or a variant not in our pre-built map.
         if (ReferenceEquals(found, MsSqlNativeTypes.NotFound)
             && !string.Equals(normalized, dbNativeTypeName, StringComparison.Ordinal))
         {

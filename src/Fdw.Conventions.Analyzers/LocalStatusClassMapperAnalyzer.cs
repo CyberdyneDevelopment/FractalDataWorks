@@ -117,11 +117,6 @@ public sealed class LocalStatusClassMapperAnalyzer : DiagnosticAnalyzer
     /// <inheritdoc/>
     public override void Initialize(AnalysisContext context)
     {
-        // Why: a Razor @code block reaches an analyzer only through the Razor source generator's
-        // *_razor.g.cs syntax tree, which Roslyn classifies as generated code. The
-        // GeneratedCodeAnalysisFlags.None used by the other analyzers in this project makes every
-        // .razor member invisible; opting in is what lets this rule see the shape it exists to
-        // catch. Provenance is re-checked per diagnostic so real generated code stays exempt.
         context.ConfigureGeneratedCodeAnalysis(
             GeneratedCodeAnalysisFlags.Analyze | GeneratedCodeAnalysisFlags.ReportDiagnostics);
         context.EnableConcurrentExecution();
@@ -136,23 +131,11 @@ public sealed class LocalStatusClassMapperAnalyzer : DiagnosticAnalyzer
         if (!HasMapperShape(method))
             return;
 
-        // Why there is no name-vocabulary gate: an earlier revision required the method name,
-        // parameter name or parameter type to contain status/state/severity/health/badge. That made
-        // the rule "a CSS mapper whose NAME happens to contain one of five words" -- it fired on
-        // MethodBadgeClass (HTTP verbs) and GetNodeTypeBadge (node types), where the suggested
-        // StatusVariants remedy is wrong, and stayed silent on GetRolePillClass and GetNodeColor,
-        // which are the identical anti-pattern. The asymmetry was arbitrary: 'badge' and 'pill' are
-        // both class markers, only 'badge' was a status word. The defect is component-local
-        // presentation mapping regardless of what is being mapped, so the shape and the payload
-        // decide it and the name is not consulted.
         if (!ReturnsOnlyStylingLiterals(method))
             return;
 
         var location = method.Identifier.GetLocation();
 
-        // Why: with generated-code analysis enabled the analyzer also walks genuine generator
-        // output. A Razor @code member maps back to the .razor file; anything still pointing at a
-        // *.g.cs after mapping is code no one can edit, so reporting it would be noise.
         if (IsGeneratedPath(location.GetMappedLineSpan().Path))
             return;
 
@@ -223,8 +206,6 @@ public sealed class LocalStatusClassMapperAnalyzer : DiagnosticAnalyzer
         if (method.Body is not { } body)
             return;
 
-        // Why: nested lambdas and local functions have their own return semantics, so their
-        // literals are not this method's result.
         foreach (var node in body.DescendantNodes(descendIntoChildren: n => !IsNestedFunction(n)))
         {
             if (node is ReturnStatementSyntax { Expression: { } returned })
@@ -430,7 +411,6 @@ public sealed class LocalStatusClassMapperAnalyzer : DiagnosticAnalyzer
 
     private static bool IsGeneratedPath(string path)
     {
-        // Why: an in-memory tree has no path; there is nothing to disqualify it, so it is analysed.
         if (string.IsNullOrEmpty(path))
             return false;
 

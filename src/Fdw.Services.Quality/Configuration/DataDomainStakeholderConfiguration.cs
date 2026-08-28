@@ -25,7 +25,6 @@ public sealed partial class DataDomainStakeholderConfiguration
     public string UserId { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the stakeholder role: "Owner", "Steward", "Consumer", or "Contributor".</summary>
-    // Why: StakeholderRole is a TypeCollection-backed enum constrained at the DB level.
     public string StakeholderRole { get; set; } = string.Empty;
 
     /// <summary>Gets or sets whether this is the current active version.</summary>

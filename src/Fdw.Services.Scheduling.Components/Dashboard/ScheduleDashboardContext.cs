@@ -8,7 +8,6 @@ namespace Fdw.Services.Scheduling.Components.Dashboard;
 /// <summary>
 /// Immutable context for the schedule dashboard widget.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class ScheduleDashboardContext : ProviderContextBase
 {

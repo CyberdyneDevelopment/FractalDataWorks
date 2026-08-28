@@ -92,7 +92,6 @@ public static partial class TenantTypesLog
     /// Returned by <see cref="Fdw.Services.Multitenancy.Abstractions.NullOrganizationProvider"/>
     /// when org lookup is attempted but multitenancy is not enabled.
     /// </summary>
-    // Why: EventId 4417 — next available in the TenantTypesLog range (4410-4429).
     [MessageLogging(
         EventId = 11006,
         Level = LogLevel.Debug,

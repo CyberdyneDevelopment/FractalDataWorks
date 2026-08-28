@@ -13,9 +13,6 @@ namespace Fdw.Services.Connections.Tests.RowQuery;
 /// </summary>
 public sealed class RecordQueryValidatorTests
 {
-    // Why: a marker IFilterNode implementation this validator's grammar does not recognise — proves
-    // ValidateShape fails loud (fix #3) instead of the old `default: return GenericResult.Success()`
-    // which validated an unrecognised node as "supported" and let it match NOTHING downstream.
     private sealed class UnrecognisedFilterNode : IFilterNode
     {
     }

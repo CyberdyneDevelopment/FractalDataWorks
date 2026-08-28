@@ -11,8 +11,6 @@ public sealed class DataSetAnnotationConfigurationCommand : ConfigurationCommand
     /// <inheritdoc/>
     public DataSetAnnotationConfigurationCommand() : base("DataSetAnnotation") { }
 
-    // Why: catalog.DataSetAnnotation keys on DataSetName, not Name — the default "Name" column does not
-    // exist there (SQL 207). Get(name) filters by DataSetName so the annotation (and its cascade) loads.
     /// <inheritdoc/>
     protected override string NameColumn => "DataSetName";
 }

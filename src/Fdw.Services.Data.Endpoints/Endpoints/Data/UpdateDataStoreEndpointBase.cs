@@ -20,11 +20,7 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointBase<UpdateDataStoreRequest, DataStoreDetailResponse>
     where TConfig : DataStoreConfiguration
 {
-    // Why: DataStoreConfigurationProvider provides dual-source (ctrl + cfg) merging
-    // with full hierarchy assembly.
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
-    // Why: ConnectionConfigurationProvider replaces IOptionsMonitor<List<ConnectionConfiguration>>
-    // for resolving ConnectionName -> ConnectionId.
     private readonly ConnectionConfigurationProvider _connectionProvider;
 
     /// <inheritdoc />
@@ -67,8 +63,6 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointB
             return GenericResult<DataStoreDetailResponse>.Failure(EndpointLogger.ResourceNotFound(Logger, "DataStore", request.Name));
         }
 
-        // Why: Only resolve ConnectionId if the request provides a new ConnectionName.
-        // Null/empty means "keep the existing connection" -- same partial-update semantics as other fields.
         Guid? resolvedConnectionId = null;
         if (!string.IsNullOrEmpty(request.ConnectionName))
         {
@@ -82,10 +76,6 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointB
 
         var updated = UpdateConfiguration(existingConfig, request, resolvedConnectionId);
 
-        // Why the paths are applied here and not left to UpdateConfiguration: every store type
-        // implements that method for its own typed body, and the paths a store exposes are the same
-        // shape whichever type it is. Applying them once keeps a new store type from having to
-        // remember, which is how they came to be dropped in the first place.
         ApplyPaths(updated, request);
 
         var saveResult = await _dataStoreProvider.Save(updated, ct).ConfigureAwait(false);
@@ -118,11 +108,6 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointB
             return;
         }
 
-        // Why the existing id is carried over: the gateway reads Id = default as "insert", and a
-        // path the store already has under that name is still current — so rebuilding every path as
-        // a new record makes the cascade insert a duplicate and the unique index on
-        // (DataStoreId, Name, IsCurrent) refuses it. Matching by name is what makes this an update
-        // of the paths that stayed and an insert of only the ones that are new.
         var byName = target.Paths?.ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase)
             ?? new Dictionary<string, DataPathConfiguration>(StringComparer.OrdinalIgnoreCase);
 
@@ -142,7 +127,6 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointB
     /// <summary>Maps the saved configuration to a detail DTO. Override for type-specific fields.</summary>
     protected abstract DataStoreDetailResponse MapToDetail(TConfig savedConfig, UpdateDataStoreRequest request);
 
-    // Why: Resolves connection name to ID via ConnectionConfigurationProvider instead of IOptionsMonitor.
     private async Task<Guid?> ResolveConnectionId(string connectionName, CancellationToken ct)
     {
         var connectionResult = await _connectionProvider.Get(connectionName, ct).ConfigureAwait(false);

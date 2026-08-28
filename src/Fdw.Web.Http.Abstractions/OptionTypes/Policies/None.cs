@@ -5,7 +5,6 @@ namespace Fdw.Web.Http.Abstractions.Policies;
 /// <summary>
 /// No rate limiting applied.
 /// </summary>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(RateLimitPolicies), "None", RestrictToCurrentCompilation = true)]
 public sealed class None : RateLimitPolicyBase

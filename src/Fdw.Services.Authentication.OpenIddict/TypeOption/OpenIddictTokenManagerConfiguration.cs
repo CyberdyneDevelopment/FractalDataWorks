@@ -33,14 +33,8 @@ public sealed partial class OpenIddictTokenManagerConfiguration : ITokenManagerI
     /// Gets or sets the unique identifier for this typed-body row
     /// (<c>auth.OpenIddictTokenManager.Id</c>).
     /// </summary>
-    // Why: No Guid.NewGuid() default — the provider mints this before INSERT.
     public Guid Id { get; set; }
 
-    // Why: IGenericConfiguration members below satisfy the interface contract via EXPLICIT
-    // interface implementation so [GenerateMapper] does NOT map them — they are not columns on
-    // auth.OpenIddictTokenManager. The canonical Name/SectionName/ServiceType/
-    // ServiceOptionType live on the parent TokenManagerConfiguration row; the typed body
-    // is identified solely by TokenManagerId. Mirrors MsSqlConnectionConfiguration.
     string IGenericConfiguration.Name
     {
         get => string.Empty;

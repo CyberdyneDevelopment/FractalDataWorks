@@ -114,8 +114,6 @@ public static partial class AuthorizationLog
         ILogger logger, int count, string userId);
 
     /// <summary>Logs when role provider query fails during permission resolution — authorization denied.</summary>
-    // Why: Fails-closed. If we cannot load roles from the database, we must deny access
-    // rather than proceeding with an empty set (which would skip all permission checks).
     [MessageLogging(EventId = 71000, Level = LogLevel.Error,
         Message = "Authorization denied: failed to load roles from provider")]
     public static partial IGenericMessage RoleProviderQueryFailed(ILogger logger);
@@ -138,9 +136,6 @@ public static partial class AuthorizationLog
     public static partial IGenericMessage OrgAccessQueryStarted(ILogger logger, Guid userId, Guid orgId);
 
     /// <summary>Logs when the org-access query fails — org tier contributes zero grants.</summary>
-    // Why: The org-access tier failure is non-fatal (we still have global and tenant tiers).
-    // Log at Error so ops can detect a schema mismatch or missing TenantOrgAccess table,
-    // but do not deny access entirely — missing org grants != zero permissions from all tiers.
     [MessageLogging(EventId = 71003, Level = LogLevel.Error,
         Message = "Org access query failed for userId={userId} orgId={orgId} — org tier contributes no grants")]
     public static partial IGenericMessage OrgAccessQueryFailed(ILogger logger, Guid userId, Guid orgId);
@@ -171,13 +166,10 @@ public static partial class AuthorizationLog
         Message = "Cannot parse userId '{userId}' as Guid for org-access query — org tier skipped")]
     public static partial IGenericMessage OrgTierSkippedNonGuidUserId(ILogger logger, string userId);
 
-    // Why: EventIds 3130-3136 (SecurityStamp*) retired with SecurityStampService purge. Not reused.
 
     // -- User-role assignment tier (FDW-532 fix) -- EventId range 3137-3142
 
     /// <summary>Logs when user-role assignment load fails — fail-closed, token not issued.</summary>
-    // Why: FDW-532 fix. If we cannot load the user's role assignments, we MUST fail
-    // rather than falling back to the full catalog (which was the privilege-escalation bug).
     [MessageLogging(EventId = 71004, Level = LogLevel.Error,
         Message = "Authorization denied: failed to load role assignments for user '{userId}'")]
     public static partial IGenericMessage UserRoleAssignmentLoadFailed(ILogger logger, string userId);

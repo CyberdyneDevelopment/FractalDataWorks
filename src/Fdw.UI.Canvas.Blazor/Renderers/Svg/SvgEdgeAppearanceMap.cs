@@ -12,7 +12,6 @@ internal sealed class SvgEdgeAppearanceMap
     private static readonly EdgeAppearance _default =
         new(StrokeColor: "#64748b", StrokeWidth: 1.5, DashArray: string.Empty, MarkerRef: "url(#fdw-svg-arrow)");
 
-    // Why: Ordinal key — edge type names are exact strings, not user input.
     private readonly Dictionary<string, EdgeAppearance> _map =
         new(StringComparer.Ordinal);
 
@@ -21,10 +20,6 @@ internal sealed class SvgEdgeAppearanceMap
     /// </summary>
     public SvgEdgeAppearanceMap()
     {
-        // Why: colours match the Lineage.razor palette for visual consistency. Each type's marker
-        // is seeded alongside its stroke colour because the two must agree — the arrowhead is drawn
-        // from a <defs> marker with a baked-in fill, so a colour change here without the matching
-        // marker leaves a mismatched arrow.
         Seed("Flow",         "#06b6d4", 1.5, string.Empty, "url(#fdw-svg-arrow-flow)");
         Seed("Reference",    "#64748b", 1.5, "4 2",        "url(#fdw-svg-arrow-reference)");
         Seed("FieldMapping", "#a855f7", 1.0, "2 2",        "url(#fdw-svg-arrow-fieldmapping)");

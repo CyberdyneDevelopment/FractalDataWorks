@@ -24,8 +24,6 @@ public sealed class ExecuteCalculationRequestValidator : FdwEndpointValidator<Ex
             .Must(name => CalculationTypes.ByName(name).Id != 0)
             .WithMessage(req => $"Unknown calculation type: {req.CalculationType}");
 
-        // Why: either path is valid — inline Values, or a DataSet projection.
-        // Both empty is a contract violation; surface a single composite error.
         RuleFor(x => x)
             .Must(req => req.Values.Count > 0 || (req.DataSetName.Length > 0 && req.FieldName.Length > 0))
             .WithMessage("Provide either inline Values, or DataSetName + FieldName to project from.");

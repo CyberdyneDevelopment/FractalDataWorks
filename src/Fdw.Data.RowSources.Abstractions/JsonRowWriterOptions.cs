@@ -7,7 +7,6 @@ namespace Fdw.Data.RowSources.Json.Abstractions;
 /// every knob maps 1:1 to a <see cref="System.Text.Json.JsonWriterOptions"/> /
 /// <see cref="System.Text.Json.Utf8JsonWriter"/> setting.
 /// </summary>
-// Why: pure options POCO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class JsonRowWriterOptions : RowWriterOptions
 {

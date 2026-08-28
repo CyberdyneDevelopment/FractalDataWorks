@@ -428,12 +428,6 @@ public sealed class FilterTransformTypeTests
     [Trait("Category", "Etl")]
     public async Task TransformEvaluatesTopLevelOrAroundParenthesizedAndClause()
     {
-        // Why: regression guard for the fixed TryEvaluateLogicalOperators depth-tracking bug
-        // (FilterTransformType.cs ~209-250, TryFindTopLevelSeparator/IndexOfAtDepthZero). The OR/AND
-        // separator search now only matches at parenthesis depth 0, so "||" is found AFTER the
-        // "(Age>=18 && Active)" group closes instead of tearing the "&&" out of its parens. Age=10
-        // makes the parenthesized left side false, so the record passes ONLY if the right-hand
-        // "Name==Bob" operand of the top-level OR is evaluated correctly on its own.
         var record = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
         {
             ["Age"] = 10,

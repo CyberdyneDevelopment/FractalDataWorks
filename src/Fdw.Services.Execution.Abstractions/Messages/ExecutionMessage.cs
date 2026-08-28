@@ -6,7 +6,6 @@ namespace Fdw.Services.Execution.Abstractions.Messages;
 /// <summary>
 /// Base class for all Execution-related messages.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public abstract class ExecutionMessage : MessageTemplate<MessageSeverity>, IServiceMessage
 {

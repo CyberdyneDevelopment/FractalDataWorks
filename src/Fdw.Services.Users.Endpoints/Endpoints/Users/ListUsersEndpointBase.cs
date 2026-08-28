@@ -58,8 +58,6 @@ public abstract class ListUsersEndpointBase : EndpointWithoutRequest<PaginatedRe
 
         var result = await _userProvider.GetAllUsers(ct).ConfigureAwait(false);
 
-        // Why: Newman/clients expect a paginated envelope {items, skip, take, totalCount, hasMore}
-        // matching the response shape from /pipelines and other Crud-list endpoints.
         if (!result.IsSuccess || result.Value is null)
         {
             await Send.OkAsync(PaginatedResponse<UserResponse>.Create([], 0, 0, 0), ct).ConfigureAwait(false);

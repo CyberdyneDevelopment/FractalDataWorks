@@ -5,7 +5,6 @@ namespace Fdw.DevSession.Abstractions;
 /// state. A strand is a parallel line of work (e.g. a side agent handling a non-conflicting aspect)
 /// that the coordinator fences, routes, and later reconciles back into the session.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class StrandInfo
 {

@@ -33,9 +33,6 @@ public static partial class ConnectionHealthMonitorWorkerLog
     public static partial IGenericMessage ConnectionResolutionFailed(ILogger logger, string connectionName, string reason);
 
     /// <summary>Logs that a connection has health checks enabled but its type does not support probing.</summary>
-    // Why Debug, not Warning (FDW-583): whether a connection type implements ISupportsHealthProbe is a
-    // permanent static property of that type — this fires on every collect forever and can never be
-    // "fixed" at runtime, so it is not an actionable warning.
     [MessageLogging(EventId = 12205, Level = LogLevel.Debug, Message = "Connection '{connectionName}' has health checks enabled but its connection type does not support health probing — skipping")]
     public static partial IGenericMessage NoProbeCapability(ILogger logger, string connectionName);
 
@@ -52,8 +49,6 @@ public static partial class ConnectionHealthMonitorWorkerLog
     public static partial IGenericMessage HealthStateChanged(ILogger logger, string connectionName, bool isHealthy);
 
     /// <summary>Logs a transition FROM healthy (or unknown) TO unhealthy for a connection.</summary>
-    // Why Error, not Information (FDW-583): a transition to unhealthy means the connection just went
-    // down — the operation cannot complete, unlike the recovery transition above.
     [MessageLogging(EventId = 12213, Level = LogLevel.Error, Message = "Connection '{connectionName}' health state changed: now {isHealthy}")]
     public static partial IGenericMessage HealthStateChangedUnhealthy(ILogger logger, string connectionName, bool isHealthy);
 
@@ -70,15 +65,6 @@ public static partial class ConnectionHealthMonitorWorkerLog
     public static partial IGenericMessage WorkerCancelledDuringShutdown(ILogger logger, Exception ex);
 
     /// <summary>Logs that this host's configuration store registers no connection container, so the monitor is idle.</summary>
-    // Why Information, not Error, and emitted exactly once: whether the store registers the connection
-    // container is a STRUCTURAL property of THIS host's configurationSchema.json — the IDataStore tree is
-    // built once through a Lazy, so a container absent at startup cannot appear later in the process. A
-    // host that manages zero connections by design (the normal shape for a FileSystem-gateway client whose
-    // only connection is the bootstrap one in configurationSchema.json) is not an incident, and a store
-    // truthfully answering "this container does not exist here" is not a defect. Reporting it every scan
-    // tick at Error produced thousands of identical LoadConnectionsFailed pairs a day, burying real
-    // errors. Fail-loud is for defects; this is neither transient nor a defect, so the worker states the
-    // condition once and stops rather than restating it forever.
     [MessageLogging(EventId = 12214, Level = LogLevel.Information, Message = "No connection container in this host's configuration store — connection health monitoring idle")]
     public static partial IGenericMessage MonitoringIdleNoConnectionContainer(ILogger logger);
 }

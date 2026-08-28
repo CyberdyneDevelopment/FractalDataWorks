@@ -15,9 +15,6 @@ namespace Fdw.Services.TokenManagers;
 /// Configuration provider for TokenManagerConfiguration rows in auth.TokenManager.
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
-// Why: TokenManagerConfiguration is loaded from ConfigurationDb at runtime via
-// Lazy<IConfigurationGateway>, not through BindConfiguration("TokenManagers:..."). Mirrors
-// SchedulerConfigurationProvider/AuthenticationServiceConfigurationProvider exactly.
 public class TokenManagerConfigurationProvider
     : ServiceConfigurationProviderBase<
           TokenManagerConfiguration,

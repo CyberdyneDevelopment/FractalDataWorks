@@ -14,7 +14,6 @@ namespace Fdw.Services.Etl.Execution;
 public sealed class PipelineTestController : IPipelineTestController
 {
     private readonly ILogger<PipelineTestController> _logger;
-    // Why: ConcurrentDictionary for thread-safe per-execution state without a global lock.
     private readonly ConcurrentDictionary<Guid, PipelineTestExecutionState> _states = new();
 
     /// <summary>
@@ -49,7 +48,6 @@ public sealed class PipelineTestController : IPipelineTestController
     public void Pause(Guid executionId)
     {
         if (!_states.TryGetValue(executionId, out var state)) return;
-        // Why: Reset sets the event to non-signaled (blocking) state.
         state.PauseEvent.Reset();
         EtlLog.TestExecutionPaused(_logger, executionId);
     }
@@ -59,7 +57,6 @@ public sealed class PipelineTestController : IPipelineTestController
     {
         if (!_states.TryGetValue(executionId, out var state)) return;
         state.StepPending = false;
-        // Why: Set allows waiters to proceed.
         state.PauseEvent.Set();
         EtlLog.TestExecutionResumed(_logger, executionId);
     }
@@ -68,7 +65,6 @@ public sealed class PipelineTestController : IPipelineTestController
     public void Step(Guid executionId)
     {
         if (!_states.TryGetValue(executionId, out var state)) return;
-        // Why: StepPending=true tells the pipeline to re-pause after exactly one batch.
         state.StepPending = true;
         state.PauseEvent.Set();
         EtlLog.TestExecutionStepped(_logger, executionId);
@@ -78,8 +74,6 @@ public sealed class PipelineTestController : IPipelineTestController
     public void Abort(Guid executionId)
     {
         if (!_states.TryGetValue(executionId, out var state)) return;
-        // Why: Set PauseEvent first so the pipeline wakes from any await and then observes
-        // the cancellation token — avoids a deadlock if the pipeline is paused during Abort.
         state.PauseEvent.Set();
         if (!state.Cts.IsCancellationRequested)
         {

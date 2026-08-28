@@ -10,11 +10,6 @@ namespace Fdw.Services.Authorization.Components.Logging;
 /// Provider-specific messages with domain context baked into the templates.
 /// EventId range: 8915-8919
 /// </summary>
-// Why: the provider/entity context is baked into each message literal ("UserProvider: …"), so the
-// methods take only the values the template actually references — every declared parameter must appear
-// in the Message (SYSLIB1015 fails the build otherwise).
-// Why (FDW-583): every method below reports an operation that could not complete (the caught
-// exception path and the non-exception failure path report the SAME outcome) — Error, not Warning.
 [MessageLoggingTypeCode("COMPONENTS6")]
 public static partial class UserProviderLog
 {

@@ -16,8 +16,6 @@ namespace Fdw.Services.Pipelines.Endpoints;
 public abstract class UpdatePipelineEndpointBase<TConfig> : CrudUpdateEndpointBase<UpdatePipelineRequest, PipelineDetailResponse>
     where TConfig : PipelineConfiguration
 {
-    // Why: PipelineServiceConfigurationProvider replaces IOptionsMonitor<List<T>> with dual-source
-    // (ctrl + cfg) provider for pipeline configuration management.
     private readonly PipelineServiceConfigurationProvider _provider;
 
     /// <inheritdoc />
@@ -59,9 +57,6 @@ public abstract class UpdatePipelineEndpointBase<TConfig> : CrudUpdateEndpointBa
     /// <summary>Updates the pipeline configuration and persists it via the DataGateway.</summary>
     protected override async Task<IGenericResult<PipelineDetailResponse>> Update(UpdatePipelineRequest request, PipelineDetailResponse existing, CancellationToken ct)
     {
-        // Why: dispatch every transform spec through TransformTypes.ByName(...).MapSpecToConfiguration
-        // BEFORE applying updates — a param-less combine op must fail the update call loudly, never
-        // silently persist an inert transform. A null Transforms list means "don't touch"; skip mapping.
         if (request.Transforms != null)
         {
             var transformsResult = PipelineTransformConfigurationMapper.Map(request.Transforms, Logger);

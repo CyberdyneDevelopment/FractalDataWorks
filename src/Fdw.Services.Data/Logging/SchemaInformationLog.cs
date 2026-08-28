@@ -46,8 +46,6 @@ public static partial class SchemaInformationLog
     /// <summary>
     /// Logs when schema discovery is disabled for a connection.
     /// </summary>
-    // Why Warning, not Info (FDW-583): the call site returns GenericResult.Failure for this
-    // condition — a deliberate configuration choice that nonetheless means the request failed.
     [MessageLogging(EventId = 11257, Level = LogLevel.Warning, Message = "Schema discovery is disabled for connection '{connectionName}' — returning failure")]
     public static partial IGenericMessage DiscoveryDisabled(ILogger logger, string connectionName);
 

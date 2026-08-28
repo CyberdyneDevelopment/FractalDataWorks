@@ -55,9 +55,6 @@ public partial class ConnectionConfiguration : IConnectionConfiguration
     /// <summary>
     /// Gets or sets the durable logical identifier (matches conn.Connection.Id).
     /// </summary>
-    // Why: NO Guid.NewGuid() default — DB owns identity assignment. A random default propagates
-    // to child Get(domainConfigurationId) lookups when the mapper/IOptions binder fails to populate Id,
-    // causing the typed-body picker to fall through to broken WHERE [Name] queries.
     public Guid Id { get; set; }
 
     /// <summary>
@@ -97,12 +94,6 @@ public partial class ConnectionConfiguration : IConnectionConfiguration
     [ValuesFrom(typeof(EnvironmentTypes))]
     public string? Environment { get; set; }
 
-    // Why: these three map the opt-in check-settings columns on conn.Connection — they configure
-    // WHETHER and HOW OFTEN the automated per-connection health check probes this row. The probe RESULT
-    // is deliberately NOT on this configuration type: health status is state, not versioned config, so it
-    // is written to conn.ConnectionHealthCheck (via IConnectionHealthService) instead of back onto the
-    // connection — writing it here re-versioned the whole aggregate on every probe (FDW-623). No default
-    // values — a missing row value must read as its DB-configured false/null, never a silently-assumed default.
 
     /// <summary>
     /// Gets or sets whether the automated Connections domain health check
@@ -123,17 +114,11 @@ public partial class ConnectionConfiguration : IConnectionConfiguration
     /// </summary>
     public int? HealthCheckIntervalSeconds { get; set; }
 
-    // Why: Different connections to the same database can have different discovery scopes
-    // depending on the schemas they expose. DiscoveryEnabled=false means this connection's
-    // schema is never auto-discovered (e.g., system-only or non-SQL connections).
 
     /// <summary>
     /// Gets or sets whether schema discovery is enabled for this connection.
     /// When false, ISchemaInformationService will return a failure without attempting discovery.
     /// </summary>
-    // Why: Schema *scope* (which schemas this connection exposes) is represented by the
-    // DataStore(s) bound to this connection, not by lists on Connection. RBAC gates which
-    // users/roles can see/discover each schema via DataStore permissions.
     public bool DiscoveryEnabled { get; set; } = true;
 
     /// <summary>

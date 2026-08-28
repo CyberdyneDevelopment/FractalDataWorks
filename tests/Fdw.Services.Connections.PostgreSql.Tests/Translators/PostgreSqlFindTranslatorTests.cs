@@ -59,8 +59,6 @@ public sealed class PostgreSqlFindTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateGeneratesILikeForCaseInsensitiveSearch()
     {
-        // Why: PG uses ILIKE (not LIKE + COLLATE) for case-insensitive search.
-        // Regression guard: do NOT emit "COLLATE Latin1_General_CS_AS".
         var container = CreateMockContainer(fields: new[]
         {
             CreateMockField("name", typeof(string))
@@ -98,7 +96,6 @@ public sealed class PostgreSqlFindTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateFromClauseUsesDoubleQuotedSchemaAndTable()
     {
-        // Why: regression guard — FROM must emit "sales"."orders", not [sales].[orders].
         var container = CreateMockContainer(schema: "sales", tableName: "orders", fields: new[]
         {
             CreateMockField("name", typeof(string))
@@ -116,8 +113,6 @@ public sealed class PostgreSqlFindTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateReturnsNoRowsWhenNoSearchableColumnsUsesFALSE()
     {
-        // Why: PG always-false predicate is "FALSE" not "1 = 0". Guards the dialect seam
-        // for the no-searchable-columns path.
         var container = CreateMockContainer(fields: new[]
         {
             CreateMockField("id", typeof(int)),
@@ -260,7 +255,6 @@ public sealed class PostgreSqlFindTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslateDoesNotEmitTopClause()
     {
-        // Why: TOP is T-SQL; PG uses LIMIT. Guard against T-SQL leaking through.
         var container = CreateMockContainer(fields: new[]
         {
             CreateMockField("name", typeof(string))

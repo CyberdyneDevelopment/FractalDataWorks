@@ -87,7 +87,6 @@ public sealed class DataflowPageTests : IDisposable
                 Node("DataSet", "customers"),
                 Node("Connection", "primary")),
         });
-        // Why: nodes group by NodeType; each group header shows a <span class="meta"> with its count.
         cut.Markup.ShouldContain("DataSet", Case.Sensitive);
         cut.Markup.ShouldContain("Connection", Case.Sensitive);
         cut.Markup.ShouldContain(">2<", Case.Sensitive);
@@ -105,8 +104,6 @@ public sealed class DataflowPageTests : IDisposable
     [InlineData("Source", "badge b-idle")]
     public void RendersNodeTypeBadgeClass(string nodeType, string expectedClass)
     {
-        // Why: GetNodeTypeBadge maps NodeType -> badge class. The old reference-ui test asserted
-        // stale fragments (text-cyan-500/badge-running); the CURRENT page emits b-run/b-ok/b-warn/b-idle.
         var cut = RenderWith(new DataflowContext
         {
             Graph = Graph(new DataflowStatsResponse(), Node(nodeType, "n1")),
@@ -150,8 +147,6 @@ public sealed class DataflowPageTests : IDisposable
     [Fact]
     public void RendersErrorMessageWhenPresent()
     {
-        // Why: the CURRENT page DOES render ctx.ErrorMessage (Dataflow.razor lines 24-26) — the old
-        // reference-ui "documented bug" where the error was swallowed no longer applies here.
         var cut = RenderWith(new DataflowContext { LastResult = GenericResult.Failure(new GenericMessage("graph load failed")) });
         cut.Markup.ShouldContain("graph load failed", Case.Sensitive);
     }

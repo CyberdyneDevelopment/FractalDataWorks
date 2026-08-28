@@ -51,7 +51,6 @@ public partial class AegisCommandConfiguration : IGenericConfiguration
     /// <summary>
     /// Gets or sets the durable logical identifier.
     /// </summary>
-    // Why: NO Guid.NewGuid() default — DB owns identity assignment (strip-poco-defaults).
     public Guid Id { get; set; }
 
     /// <summary>

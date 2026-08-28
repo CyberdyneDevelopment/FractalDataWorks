@@ -36,9 +36,6 @@ public class GetDataSetLineageDownstreamConsumersTests
             BuildDownstreamConsumers(dataSetName, ct);
     }
 
-    // Why: PipelineServiceConfigurationProvider is a concrete class (not an interface); Moq mocks it
-    // via its public virtual Get(ct)/Get(id, ct) overloads. The gateway provider is never
-    // dereferenced because both overloads are fully replaced by the mock setups below.
     private static Mock<PipelineServiceConfigurationProvider> CreateProviderMock()
     {
         return new Mock<PipelineServiceConfigurationProvider>(

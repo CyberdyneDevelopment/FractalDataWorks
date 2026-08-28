@@ -183,8 +183,6 @@ public class ServiceTypePhaseFuncTests
         serviceType.Name.ShouldBe("Test");
     }
 
-    // Why this pair exists: it reproduces the ApiClientTypeBase shape — an intermediate base that must
-    // contribute wiring on EVERY option, under a concrete option that sets its own Registration body.
     private abstract class InvariantWiringBase : ServiceTypeBase<SimpleService, SimpleFactory, IServiceConfiguration>
     {
         protected InvariantWiringBase()

@@ -24,9 +24,6 @@ namespace Fdw.Data.DataSets;
 [TypeOption(typeof(DataSetSourceMapperTypes), "XPath")]
 public sealed class XPathDataSetSourceMapper : DataSetSourceMapperTypeBase
 {
-    // Why: TypeOptions are singletons discovered by source generation — they have no DI-injected logger.
-    // NullLogger ensures MessageLogging methods can create IGenericMessage instances for results.
-    // The message content is still returned in the IGenericResult for the caller to observe.
     private static readonly ILogger Logger = NullLogger.Instance;
 
     /// <summary>
@@ -58,8 +55,6 @@ public sealed class XPathDataSetSourceMapper : DataSetSourceMapperTypeBase
                 DataSetSourceMapperLog.PayloadParseFailed(Logger, Name, ex.Message));
         }
 
-        // Why: Stripping namespaces as preprocessing simplifies all downstream XPath evaluation.
-        // A future NamespaceAwareXPath TypeOption can handle namespace-sensitive scenarios.
         StripNamespaces(root);
 
         IEnumerable<XElement> recordElements;
@@ -67,7 +62,6 @@ public sealed class XPathDataSetSourceMapper : DataSetSourceMapperTypeBase
         {
             var evaluated = root.XPathEvaluate(context.RecordSelector);
 
-            // Why: XPathEvaluate returns IEnumerable for node-set results, so we cast and filter.
             recordElements = evaluated is IEnumerable<object> enumerable
                 ? enumerable.OfType<XElement>().ToList()
                 : Array.Empty<XElement>();
@@ -94,8 +88,6 @@ public sealed class XPathDataSetSourceMapper : DataSetSourceMapperTypeBase
 
                 if (string.IsNullOrEmpty(mapping.PhysicalFieldName))
                 {
-                    // Why: Empty PhysicalFieldName signals constant injection — the transform chain
-                    // handles it via Constant (id 500) or Parameter (id 501) transforms.
                     record[logicalName] = null;
                     continue;
                 }
@@ -175,7 +167,6 @@ public sealed class XPathDataSetSourceMapper : DataSetSourceMapperTypeBase
     {
         foreach (var element in root.DescendantsAndSelf())
         {
-            // Why: Setting the name to local name only removes the namespace prefix.
             element.Name = element.Name.LocalName;
 
             var attributes = element.Attributes()
@@ -190,7 +181,6 @@ public sealed class XPathDataSetSourceMapper : DataSetSourceMapperTypeBase
                 }
                 else
                 {
-                    // Why: Non-declaration attributes with a namespace get their namespace stripped.
                     var value = attr.Value;
                     attr.Remove();
                     element.SetAttributeValue(attr.Name.LocalName, value);
@@ -219,7 +209,6 @@ public sealed class XPathDataSetSourceMapper : DataSetSourceMapperTypeBase
             };
         }
 
-        // Why: XPathEvaluate returns scalar types (string, double, bool) for non-node-set expressions.
         return result?.ToString();
     }
 }

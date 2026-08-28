@@ -54,9 +54,6 @@ public abstract class SecretManagerCommandBase : ISecretManagerCommand
     {
         if (string.IsNullOrWhiteSpace(commandType))
         {
-            // Why: reported as a defect (FDW rule) — a command should return IGenericResult, not
-            // throw. Left in place per instructions (constructors cannot return IGenericResult);
-            // logged via the sanctioned NullLogger fallback since _logger isn't assigned yet.
             SecretManagerCommandBaseLog.RequiredValueMissing(
                 logger ?? NullLogger<SecretManagerCommandBase>.Instance, nameof(commandType));
             throw new ArgumentException("ManagementCommand type cannot be null or empty.", nameof(commandType));
@@ -73,7 +70,6 @@ public abstract class SecretManagerCommandBase : ISecretManagerCommand
         SecretKey = secretKey;
         if (expectedResultType is null)
         {
-            // Why: same throw-instead-of-result defect as above — logged, not converted.
             SecretManagerCommandBaseLog.RequiredValueMissing(
                 logger ?? NullLogger<SecretManagerCommandBase>.Instance, nameof(expectedResultType));
             throw new ArgumentNullException(nameof(expectedResultType));

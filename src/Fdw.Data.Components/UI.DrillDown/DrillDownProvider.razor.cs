@@ -187,8 +187,6 @@ public partial class DrillDownProvider<T> : ComponentBase
                     .Concat(ExceptionResultExtensions.FlattenException(ex)));
         }
 
-        // Why: RebuildTree records its own failure in _lastResult without throwing, so the refresh
-        // reports whatever the rebuild actually produced rather than an unconditional success.
         return _lastResult ?? GenericResult.Success();
     }
 

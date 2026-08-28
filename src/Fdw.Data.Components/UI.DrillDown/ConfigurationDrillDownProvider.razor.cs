@@ -374,8 +374,6 @@ public partial class ConfigurationDrillDownProvider : ComponentBase
                     .Concat(ExceptionResultExtensions.FlattenException(ex)));
         }
 
-        // Why: LoadMetadataAndBuildTree records its own failure in _lastResult without throwing, so
-        // the refresh reports what the load actually produced rather than an unconditional success.
         return _lastResult ?? GenericResult.Success();
     }
 

@@ -43,9 +43,6 @@ public sealed class PipelineStatusBroadcasterTests
         return (broadcaster, targeted, client);
     }
 
-    // Why: BroadcastHz/SampleBufferMaxBytes resolution has no public getter, so reflection is the
-    // only way to assert the private-field outcome of the constructor's `> 0 ? value : default`
-    // fallback branch without relying on real-time sleeps to prove the coalescing window width.
     private static int GetBroadcastHz(PipelineStatusBroadcaster broadcaster) =>
         (int)typeof(PipelineStatusBroadcaster)
             .GetField("_broadcastHz", BindingFlags.NonPublic | BindingFlags.Instance)!
@@ -199,8 +196,6 @@ public sealed class PipelineStatusBroadcasterTests
             u.RecordsFailed == 10 &&
             u.DurationMs == 1234.5 &&
             u.ErrorMessage == "transform step threw")), Times.Exactly(2));
-        // Why: BroadcastCompletion targets two groups (pipeline:{name} + execution:{id}); the test
-        // mock returns the same client for every group, so the unchanged payload arrives twice.
     }
 
     // ------------------------------------------------------------------
@@ -285,8 +280,6 @@ public sealed class PipelineStatusBroadcasterTests
         await broadcaster.BroadcastTaskStatus(executionId, taskId, terminalStatus, 1, 1, 0, 0, false);
         await broadcaster.BroadcastTaskStatus(executionId, taskId, terminalStatus, 2, 2, 0, 0, false);
 
-        // Why: a terminal status always sends regardless of the Hz cadence, so both calls above must
-        // reach the client — proving IsTerminalStatus (case-insensitive) short-circuits ShouldCoalesce.
         client.Verify(c => c.OnTaskStatusChanged(It.IsAny<PipelineTaskStatusUpdate>()), Times.Exactly(2));
     }
 
@@ -367,8 +360,6 @@ public sealed class PipelineStatusBroadcasterTests
         await broadcaster.BroadcastEdgeFlow(executionId, taskA, taskB, 10);
         await broadcaster.BroadcastEdgeFlow(executionId, taskB, taskC, 20);
 
-        // Why: the coalescing key includes source+target task IDs, so two distinct edges must not
-        // suppress each other even though both broadcasts land in the same Hz window.
         client.Verify(c => c.OnEdgeFlow(It.IsAny<PipelineEdgeFlowUpdate>()), Times.Exactly(2));
     }
 }

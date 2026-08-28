@@ -32,8 +32,6 @@ public partial class CalculationStepFieldConfiguration : IGenericConfiguration
     public Guid Id { get; set; }
 
     /// <summary>Gets or sets the field role/name. Mirrors <see cref="StepFieldRole"/> to satisfy IGenericConfiguration.</summary>
-    // Why: IGenericConfiguration requires a settable Name; a step field has no independent name, so it
-    // mirrors the role discriminator. Not a persisted column (column-intersection drops it on save).
     public string Name { get => StepFieldRole; set => StepFieldRole = value; }
 
     /// <summary>Gets or sets the parent CalculationStep's logical Id.</summary>

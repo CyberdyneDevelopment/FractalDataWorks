@@ -53,8 +53,6 @@ public abstract class DeleteMessageEndpointBase : Endpoint<MessageIdRequest>
     {
         try
         {
-            // Why: validate the message exists so a missing Id returns 404
-            // (Newman contract) instead of a success on a no-op delete.
             var getResult = await _messageService.GetMessage(req.Id, ct).ConfigureAwait(false);
             if (!getResult.IsSuccess || getResult.Value is null)
             {

@@ -7,7 +7,6 @@ namespace Fdw.Mcp.Bus;
 /// A publisher-supplied event payload that the bus will assign an <see cref="McpEvent.EventId"/>
 /// and <see cref="McpEvent.Timestamp"/> to on <see cref="IMcpEventBus.Publish"/>.
 /// </summary>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record McpEventDraft(
     string         Topic,

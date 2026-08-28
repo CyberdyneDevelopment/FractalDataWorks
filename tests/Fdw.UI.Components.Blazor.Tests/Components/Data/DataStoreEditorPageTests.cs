@@ -221,8 +221,6 @@ public sealed class DataStoreEditorPageTests : IDisposable
     [Fact]
     public void Step1RendersStep0SelectionSummary()
     {
-        // Why: the schema/table target fields were removed from the page; Step 1 now shows a
-        // selection summary (kv list) of the Step 0 choices. Assert that current markup instead.
         Swap(new DataStoreEditorContext
         {
             Step = 1,
@@ -238,7 +236,6 @@ public sealed class DataStoreEditorPageTests : IDisposable
     [Fact]
     public void Step1RendersManualStoreTypeInputForUnknownConnectionType()
     {
-        // Why: with no loadable DataStoreTypes the page falls back to a manual store-type input.
         Swap(new DataStoreEditorContext
         {
             Step = 1,

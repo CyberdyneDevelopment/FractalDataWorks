@@ -90,10 +90,6 @@ public sealed class MsSqlConfigurationSaveTranslator : MsSqlDataCommandTranslato
                         ResultDetails.Create("CommandType", "ConfigurationSaveCommand")));
             }
 
-            // Why: AdditionalColumnValues carries a KVP child's logical owner FK (e.g. MsSqlConnectionId)
-            // — a column the POCO has no property for. Merged into the candidate column/param sets
-            // before the container-field intersection so it flows through the same INSERT pipeline as
-            // mapped columns, and so ResolveForeignKeys can subquery the matching physical RowId FK.
             var extra = (command as IConfigurationSaveCommand)?.AdditionalColumnValues;
 
             var sqlCommand = BuildVersionOnWriteSaveStatement(dbPath, container, dataObj, extra);
@@ -157,8 +153,6 @@ public sealed class MsSqlConfigurationSaveTranslator : MsSqlDataCommandTranslato
 
         if (string.IsNullOrEmpty(dbPath.Schema))
         {
-            // Why: reported as a defect (FDW rule) — a translator should return IGenericResult, not
-            // throw. Left in place per instructions; the caller's try/catch converts it to a Failure.
             MsSqlConfigurationSaveTranslatorLog.NoSchemaDefined(
                 NullLogger<MsSqlConfigurationSaveTranslator>.Instance, container.Name);
             throw new InvalidOperationException(
@@ -173,34 +167,22 @@ public sealed class MsSqlConfigurationSaveTranslator : MsSqlDataCommandTranslato
         Func<string, string> qi = dialect.QuoteIdentifier;
         var p = dialect.ParameterPrefix;
 
-        // Why: Source-generated mapper — no reflection needed
         var mapper = PocoMapperCollection.ByName(dataType.Name);
         if (mapper == PocoMapperCollection.NotFound)
         {
-            // Why: same throw-instead-of-result defect as above — logged, not converted.
             MsSqlConfigurationSaveTranslatorLog.NoPocoMapperRegistered(
                 NullLogger<MsSqlConfigurationSaveTranslator>.Instance, dataType.Name);
             throw new InvalidOperationException(
                 $"No PocoMapper registered for type {dataType.Name}. Ensure it has [GenerateMapper].");
         }
 
-        // Why: copy the mapper's read-only outputs into mutable collections so AdditionalColumnValues
-        // (e.g. a KVP child's owner FK) can be merged in BEFORE the container-field intersection below —
-        // the injected column must flow through the same candidate set as mapped columns.
         var allParameters = new Dictionary<string, object?>(mapper.MapToParameters(data), StringComparer.Ordinal);
         var allPropertyNames = new List<string>(mapper.GetPropertyNames());
         var mapperPropertySet = new HashSet<string>(allPropertyNames, StringComparer.Ordinal);
         MergeAdditionalColumns(extra, allParameters, allPropertyNames, mapperPropertySet);
 
-        // Why: Intersect mapper properties with container fields. Only INSERT columns
-        // that the container actually has. Parent container → parent columns only.
-        // Child container → child columns only. No hardcoded column lists.
         var containerFields = BuildInsertableFieldSet(container);
 
-        // Why: NOT NULL columns with a DB default (e.g. sched.Schedule.TimeZoneId DEFAULT 'UTC')
-        // must be OMITTED from INSERT when the POCO value is null — otherwise the translator emits
-        // explicit NULL and SQL Server rejects with 515. Omitting lets the DB default apply.
-        // Columns without a default also fail loud — that's correct (caller didn't provide a value).
         var notNullFieldNames = BuildNotNullFieldSet(container);
 
         var columnNames = allPropertyNames
@@ -209,14 +191,10 @@ public sealed class MsSqlConfigurationSaveTranslator : MsSqlDataCommandTranslato
                         && !(notNullFieldNames.Contains(n) && IsParamValueNull(allParameters, n)))
             .ToList();
 
-        // Why: FK RowId columns exist in the child table but not on the POCO. The PocoMapper
-        // only has the logical Id (e.g., ConnectionId). Resolve the physical RowId at write time
-        // via a subquery against the parent's current version row.
         var fkResolutions = ResolveForeignKeys(container, containerFields, mapperPropertySet);
 
         if (columnNames.Count == 0 && fkResolutions.Count == 0)
         {
-            // Why: same throw-instead-of-result defect as above — logged, not converted.
             MsSqlConfigurationSaveTranslatorLog.NoInsertableColumns(
                 NullLogger<MsSqlConfigurationSaveTranslator>.Instance, dataType.Name, table);
             throw new InvalidOperationException(
@@ -226,9 +204,6 @@ public sealed class MsSqlConfigurationSaveTranslator : MsSqlDataCommandTranslato
 
         allParameters.TryGetValue("Id", out var logicalId);
 
-        // Why: typed-body tables (e.g. conn.MsSqlConnection) have no [Id] column — their logical
-        // identity is the parent FK (e.g. ConnectionId). Detect by checking container metadata
-        // (no Id field) and use the FK column as the version-on-write predicate instead.
         var tableHasIdColumn = containerFields is null
             || containerFields.Contains("Id", StringComparer.Ordinal);
         var hasIdInColumns = columnNames.Any(n => string.Equals(n, "Id", StringComparison.Ordinal));
@@ -249,8 +224,6 @@ public sealed class MsSqlConfigurationSaveTranslator : MsSqlDataCommandTranslato
             insertValues.Add($"{p}{name}");
         }
 
-        // Why: FK RowId columns need the current RowId of the parent, not a POCO property.
-        // Subquery fetches the live IsCurrent=1 row so the FK always points to the active version.
         foreach (var fk in fkResolutions)
         {
             insertColumns.Add(qi(fk.FkColumnName));
@@ -305,9 +278,6 @@ COMMIT";
         if (TryGetPropertyCollectionKeyField(container, out var ownerFkCol)
             && columnNames.Contains(ownerFkCol) && columnNames.Contains("Name"))
         {
-            // Why: KVP child — the natural key is (ownerFk, Name), not the owner FK alone. Scoping
-            // the predicate to the owner FK only would deactivate EVERY sibling KVP row for that
-            // owner on each new-entry insert (the bag collapses to just the last-written entry).
             return $"{qi(ownerFkCol)} = {p}{ownerFkCol} AND {qi("Name")} = {p}Name";
         }
 
@@ -358,9 +328,6 @@ COMMIT";
     {
         var result = new List<ForeignKeyResolution>();
 
-        // Why: ConfigurationSave requires FK key metadata from IDataContainer.Keys.
-        // IDataContainer : IStorageContainer — downcast from generic storage to structured data.
-        // ConfigurationSave is only valid for MsSql containers; non-SQL containers never reach here.
         if (container is not IDataContainer dataContainer)
             return result;
         var keys = dataContainer.Keys;
@@ -388,25 +355,11 @@ COMMIT";
                 ? fkColName[..^"RowId".Length] + "Id"
                 : fkColName;
 
-            // Why this is checked and not assumed: the subquery below resolves the parent RowId from
-            // the parent's logical Id, and that Id arrives as a parameter bound from the record. If the
-            // record carries no such property there is nothing to bind, and the emitted SQL referenced
-            // a variable that was never declared — SQL Server rejected the whole statement with error
-            // 137 rather than the one column.
-            //
-            // data.DataSetKeyField reaches this with DataSetFieldRowId: a key can name a field the
-            // dataset has not declared, so there is no field Id to resolve from. Skipping the
-            // resolution leaves the column out of the insert entirely, and it is nullable precisely
-            // because "no field yet" is a real state.
             if (!mapperPropertySet.Contains(logicalIdParam))
                 continue;
 
             result.Add(new ForeignKeyResolution(
                 fkColName,
-                // Why (Stage 3): the owning-schema name is the tree-navigation parent path's name.
-                // The container's physical IStorageContainer.Path is the typed address (DatabasePath/
-                // HttpPath/FilePath) and no longer exposes a schema-name string; Parent is the IDataNodePath
-                // tree node whose Name is the schema. Migrated from the old container.Path.Name read.
                 referencedContainer.Parent.Name,
                 referencedContainer.Name,
                 logicalIdParam));
@@ -482,7 +435,6 @@ COMMIT";
 
         foreach (var field in fields)
         {
-            // Why: Skip system-provided, identity, and computed — source system provides these
             if (field.IsSystemProvided || field.IsIdentity || field.IsComputed)
                 continue;
 

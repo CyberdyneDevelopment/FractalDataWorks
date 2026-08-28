@@ -51,8 +51,6 @@ public class CalculationHub : RealTimeHubBase<ICalculationHubClient>
     /// Subscribes the connection to all calculation updates (admin only).
     /// </summary>
     /// <returns>A task representing the subscription operation.</returns>
-    // Why: use the named policy "system:admin" so the admin role name resolves from
-    // ISystemRoleConfiguration via FdwAuthorizationPolicyProvider, not a hardcoded string.
     [Authorize(Policy = "system:admin")]
     public Task SubscribeToAllCalculations() => JoinScope("all-calculations");
 }

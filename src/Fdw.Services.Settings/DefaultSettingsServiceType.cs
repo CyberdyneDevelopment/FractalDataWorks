@@ -61,9 +61,6 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
 
     }
 
-    // Why: the three setting tiers differ only by config/command type — one generic registrar keeps the
-    // provider + its IServiceConfigurationProvider<T> forward in lockstep across all three. Mirrors
-    // DefaultCalculationServiceType.RegisterTypedBodyProvider.
     private static void RegisterSettingProvider<TConfig, TCommand>(IServiceCollection services)
         where TConfig : class, IGenericConfiguration
         where TCommand : ConfigurationCommandBase<TConfig>

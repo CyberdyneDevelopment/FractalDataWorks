@@ -11,6 +11,5 @@ namespace Fdw.Services.Data.Abstractions;
 /// command-only route.
 /// </param>
 /// <param name="Container">The container (table) name.</param>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record DataStoreTarget(string DataStore, string? Path, string Container);

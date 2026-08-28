@@ -35,14 +35,10 @@ public class UserRoleConfigurationProviderGetByUserTests
     private const string AdminIdUpper = "CA520AE5-1234-4ABC-9DEF-0123456789AB";
     private static readonly string AdminIdLower = AdminIdUpper.ToLowerInvariant();
 
-    // Why: Build the REAL UserRoleConfigurationProvider with a faked gateway that returns the
-    // supplied stored rows for the no-arg Get() (List) command. The provider's GetByUser filter
-    // is the code under test and runs unmocked.
     private static UserRoleConfigurationProvider MakeProvider(params UserRoleConfiguration[] storedRows)
     {
 
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
         gateway
             .Setup(g => g.Execute<IEnumerable<UserRoleConfiguration>>(
@@ -131,7 +127,6 @@ public class UserRoleConfigurationProviderGetByUserTests
     [Trait("Issue", "FDW-532")]
     public async Task GetByUserReturnsEmptyForGenuinelyDifferentUser()
     {
-        // Why: case-insensitivity must NOT collapse distinct GUIDs — a different user still gets none.
         var provider = MakeProvider(Assignment(AdminIdUpper));
 
         var result = await provider.GetByUser(
@@ -142,11 +137,6 @@ public class UserRoleConfigurationProviderGetByUserTests
         result.Value.ShouldBeEmpty();
     }
 
-    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
-    // connection it was told its rows live on, so the fake has to answer to that name to be found.
-    // Why a double rather than the real provider: these tests exercise what a configuration provider
-    // does with its gateway, not which gateway it selects, so the double answers for whatever
-    // connection is asked. Selection itself is covered where the real provider is under test.
     private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 

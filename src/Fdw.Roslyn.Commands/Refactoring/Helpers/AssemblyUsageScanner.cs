@@ -77,8 +77,6 @@ public static class AssemblyUsageScanner
         };
     }
 
-    // Why: the BCL is supplied by the target framework, not by a project reference, so listing it as a
-    // "required reference" would be noise the caller has to filter out every time.
     private static bool IsFrameworkAssembly(string assembly) =>
         assembly.StartsWith("System", StringComparison.Ordinal)
         || assembly.StartsWith("Microsoft.CodeAnalysis", StringComparison.Ordinal)

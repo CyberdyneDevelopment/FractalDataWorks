@@ -130,9 +130,6 @@ public sealed class SqlWorkspace : ISqlWorkspace, IDisposable
         }
         if (failures.Count > 0)
         {
-            // Why: each per-file failure already carries the exception type + message via
-            // ResultDetails. Aggregate by joining the messages so callers see all failures
-            // in a single result without losing the per-file context.
             var aggregated = string.Join(" || ",
                 failures.Select(f => f.CurrentMessage ?? f.Details?.ToString() ?? "Unknown error"));
             return GenericResult<IReadOnlyList<string>>.Failure(
@@ -222,9 +219,6 @@ public sealed class SqlWorkspace : ISqlWorkspace, IDisposable
         }
 
         var ws = new SqlWorkspace(Path.GetFullPath(sqlprojPath), model, scripts, logger);
-        // Why: unparseable scripts are kept in the workspace because analyzer/diagnostics
-        // commands surface the errors separately. Parse failures are summarised on the
-        // otherwise-Success result so callers can see the count + paths via the message.
         if (parseFailures.Count > 0)
         {
             var summary = string.Join(" || ",

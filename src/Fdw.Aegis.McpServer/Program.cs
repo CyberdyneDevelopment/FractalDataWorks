@@ -19,12 +19,6 @@ public static class Program
     {
         var builder = Host.CreateApplicationBuilder(args);
 
-        // Why the logging story is file-based: MCP stdio framing owns stdout, so ANY provider that
-        // writes there interleaves log text with JSON-RPC and breaks every client. Two things
-        // enforce that here: (1) the configured sink is a file, and (2) Serilog.Sinks.Console is
-        // deliberately NOT referenced by this project, so a "Console" sink named in configuration
-        // cannot resolve even if someone adds one. Levels come from configuration too, so raising
-        // verbosity to Debug/Verbose is a config edit rather than a code change.
         if (!builder.Configuration.GetSection("Serilog").Exists())
         {
             // NO FALLBACKS: appsettings.json ships alongside this app and declares the sink and the
@@ -44,9 +38,6 @@ public static class Program
         builder.Logging.ClearProviders();
         builder.Logging.AddSerilog(serilogLogger, dispose: true);
 
-        // Why: aegisSchema.json is the entire "directory" this standalone host needs — the
-        // declared connections, secret managers, and commands. There is no ConfigurationDb
-        // connection here — see AegisHostRegistration.Register.
         var schema = AegisHostRegistration.LoadSchema("aegisSchema.json");
 
         // Phase 1a/1b (before Build). Why the results are checked: a phase that fails returns a
@@ -56,8 +47,6 @@ public static class Program
         var configured = AegisHostRegistration.Configure(builder, loggerFactory: null);
         if (configured.IsFailure)
         {
-            // Why stderr and not a logger: this mirrors the Serilog guard above — stdout is the
-            // MCP protocol channel, so a startup failure has exactly one safe place to go.
             await Console.Error.WriteLineAsync(
                 "Aegis MCP server: host registration failed: " + (configured.CurrentMessage ?? string.Empty))
                 .ConfigureAwait(false);
@@ -67,8 +56,6 @@ public static class Program
         var registered = AegisHostRegistration.Register(builder, schema, loggerFactory: null);
         if (registered.IsFailure)
         {
-            // Why stderr and not a logger: this mirrors the Serilog guard above — stdout is the
-            // MCP protocol channel, so a startup failure has exactly one safe place to go.
             await Console.Error.WriteLineAsync(
                 "Aegis MCP server: host registration failed: " + (registered.CurrentMessage ?? string.Empty))
                 .ConfigureAwait(false);
@@ -86,17 +73,12 @@ public static class Program
         var initialized = AegisHostRegistration.Initialize(app, loggerFactory: null);
         if (initialized.IsFailure)
         {
-            // Why stderr and not a logger: this mirrors the Serilog guard above — stdout is the
-            // MCP protocol channel, so a startup failure has exactly one safe place to go.
             await Console.Error.WriteLineAsync(
                 "Aegis MCP server: host registration failed: " + (initialized.CurrentMessage ?? string.Empty))
                 .ConfigureAwait(false);
             return 1;
         }
 
-        // Why AegisLog rather than a raw stderr write: this is the server's one startup fact, and it
-        // belongs in the same structured stream (carrying the same AEG-prefixed Code) as every other
-        // Aegis message, so an operator greps one file instead of two channels.
         AegisLog.ServerReady(
             app.Services.GetRequiredService<ILogger<AegisToolService>>(),
             schema.Commands.Count,

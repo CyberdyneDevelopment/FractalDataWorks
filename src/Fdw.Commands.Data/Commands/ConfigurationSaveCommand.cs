@@ -44,8 +44,6 @@ namespace Fdw.Commands.Data;
 public sealed class ConfigurationSaveCommand<T> : DataCommandBase<int, T>, IConfigurationSaveCommand
     where T : class
 {
-    // Why: the ONLY sanctioned default — an empty-collection sentinel (not a value fallback) so the
-    // single-arg constructor need not allocate a new dictionary per ordinary (non-KVP-child) save.
     private static readonly IReadOnlyDictionary<string, object?> EmptyReadOnlyDictionary =
         new Dictionary<string, object?>(0, StringComparer.Ordinal);
 
@@ -79,9 +77,6 @@ public sealed class ConfigurationSaveCommand<T> : DataCommandBase<int, T>, IConf
     }
 
     /// <inheritdoc/>
-    // Why: Exposes the closed generic T as a runtime Type so the cascade handler in
-    // DataGatewayService can call ConfigurationTypes.ByName(type.Name) without needing
-    // an open-generic branch per T. No reflection on the caller side.
     public Type ConfigurationType => typeof(T);
 
     /// <inheritdoc/>

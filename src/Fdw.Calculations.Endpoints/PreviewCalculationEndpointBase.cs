@@ -28,8 +28,6 @@ public abstract class PreviewCalculationEndpointBase : Endpoint<PreviewCalculati
 #if DEVELOP
         AllowAnonymous();
 #else
-        // Why: preview computes a calculation result for an ad-hoc spec without persisting it.
-        // It's a read-shaped operation (no state change), so Viewer with calculations:read is allowed.
         Policies("calculations:read");
 #endif
         ConfigureEndpoint();

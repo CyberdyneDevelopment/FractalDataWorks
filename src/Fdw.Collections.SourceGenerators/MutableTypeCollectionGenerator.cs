@@ -144,7 +144,6 @@ public class MutableTypeCollectionGenerator : IIncrementalGenerator
         var (collections, allOptions) = source.Data;
         var compilation = source.Compilation;
 
-        // Why: Build replacement map to filter out replaced types from static constructor registration.
         var replacementMap = ReplacesDiscovery.BuildReplacementMap(compilation, context);
 
         foreach (var collection in collections)
@@ -153,8 +152,6 @@ public class MutableTypeCollectionGenerator : IIncrementalGenerator
                 .Where(o => string.Equals(o.CollectionMatchKey, collection.MatchKey, StringComparison.Ordinal))
                 .ToImmutableArray();
 
-            // Why: Remove replaced types — for mutable collections the static constructor should only
-            // register the replacement, not the original that has been overridden.
             options = ReplacesDiscovery.FilterReplacedTypeOptions(options, replacementMap, context);
 
             // Find child collections for this parent
@@ -342,9 +339,6 @@ public class MutableTypeCollectionGenerator : IIncrementalGenerator
         sb.AppendLine($"        public static void RegisterMember({collection.InterfaceTypeName} option)");
         sb.AppendLine("        {");
         sb.AppendLine("            if (option == null) throw new ArgumentNullException(nameof(option));");
-        // Why: dedup by Name, not GetType(). Runtime-instanced collections register many distinct
-        // members of the SAME class (e.g. one ConfiguredDataSetType per configured DataSet); a
-        // GetType() check collapses them to one. Name is the unique key for a type option.
         sb.AppendLine("            // Idempotent: skip if already registered (by reference or Name)");
         sb.AppendLine("            foreach (var existing in _all)");
         sb.AppendLine("            {");

@@ -6,7 +6,6 @@ namespace Fdw.Commands.Data.Abstractions;
 /// Execute commands in parallel where possible.
 /// Requires commands to be independent (no data dependencies).
 /// </summary>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(ExecutionStrategies), "Parallel", RestrictToCurrentCompilation = true)]
 public sealed class ParallelExecutionStrategy : ExecutionStrategyBase

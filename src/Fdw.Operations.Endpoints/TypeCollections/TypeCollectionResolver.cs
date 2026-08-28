@@ -21,8 +21,6 @@ namespace Fdw.Operations.Endpoints.TypeCollections;
 /// </remarks>
 internal static class TypeCollectionResolver
 {
-    // Why: cache resolved (and unresolved, stored as null) names so the assembly scan runs at most
-    // once per distinct collection name across the process lifetime.
     private static readonly ConcurrentDictionary<string, Type?> ResolvedCache =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -49,7 +47,6 @@ internal static class TypeCollectionResolver
     {
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
-            // Why: dynamic assemblies have no statically-enumerable exported types.
             if (assembly.IsDynamic)
                 continue;
 
@@ -60,7 +57,6 @@ internal static class TypeCollectionResolver
             }
             catch (ReflectionTypeLoadException ex)
             {
-                // Why: a partially-loadable assembly still yields its loaded types — scan those.
                 types = ex.Types.Where(t => t is not null).Cast<Type>().ToArray();
             }
 
@@ -72,8 +68,6 @@ internal static class TypeCollectionResolver
                 if (!string.Equals(type.Name, collectionName, StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                // Why: a TypeCollection is identified by its static parameterless All() accessor;
-                // requiring it prevents matching an unrelated class that shares the simple name.
                 if (type.GetMethod("All", BindingFlags.Public | BindingFlags.Static, null, Type.EmptyTypes, null) is not null)
                     return type;
             }
@@ -100,11 +94,6 @@ internal static class TypeCollectionResolver
         var values = new List<ITypeOption>();
         foreach (var item in (System.Collections.IEnumerable)result)
         {
-            // Why: plain TypeCollections expose All() as an array/IEnumerable of the option instances,
-            // so each item is directly an ITypeOption. ServiceTypeCollections (e.g. ConnectionTypes,
-            // SchedulerTypes) expose All() as a FrozenDictionary<Guid, TOption>, whose enumerator yields
-            // KeyValuePair<Guid, TOption> — the option is the .Value. Without unwrapping the KVP the
-            // "is ITypeOption" check fails for every entry and the endpoint returns an empty list.
             var candidate = UnwrapKeyValuePair(item);
 
             if (candidate is ITypeOption typeOption)

@@ -15,8 +15,6 @@ namespace Fdw.Services.Settings;
 /// </summary>
 public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvider
 {
-    // Why: SettingsConfigurationProvider replaces 3x IOptionsMonitor<List<T>> with a single
-    // composite dual-source provider that provides server/tenant/role settings.
     private readonly SettingsConfigurationProvider _provider;
     private readonly ILogger<DefaultEffectiveSettingsProvider> _logger;
 
@@ -45,10 +43,6 @@ public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvide
         return ConvertValue<T>(settingName, clampedValue, serverSetting.DataType);
     }
 
-    // Why: VSTHRD002 suppressed because IEffectiveSettingsProvider.GetEffectiveValue<T> is a synchronous
-    // interface by design -- settings are resolved from in-memory provider indexes, not remote I/O.
-    // The provider's Get methods are async but the underlying system index lookup is synchronous for
-    // ctrl configs. Changing the interface to async would be a breaking change across all consumers.
 #pragma warning disable VSTHRD002 // Synchronously waiting on tasks
 #pragma warning disable FDW007 // Why: Sequential layered resolution (server -> tenant -> role) is inherently branchy but straightforward
     private (string Value, ServerSettingConfiguration? ServerSetting) ResolveSettingValue(

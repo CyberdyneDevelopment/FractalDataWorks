@@ -65,8 +65,6 @@ public abstract class ListTenantsEndpointBase : Endpoint<ListTenantsRequest, Lis
             return;
         }
 
-        // Why: Resolve the user's default tenant once so MapTenant can set IsDefault
-        // without a per-tenant store call. Null when admin list or userId missing.
         var defaultTenantId = !isAdmin && !string.IsNullOrEmpty(userId)
             ? await GetDefaultTenantId(userId, ct).ConfigureAwait(false)
             : null;

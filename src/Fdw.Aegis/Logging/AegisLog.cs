@@ -22,10 +22,6 @@ namespace Fdw.Aegis.Logging;
 public static partial class AegisLog
 {
     // ── Category 1 (10000–19999): non-error operational trace ────────────────────────────────────
-    // Why 11000+: 10000–10999 is the FDW-reserved canonical band (Succeeded/Informational/Cancelled);
-    // 11000–19999 is the open per-package custom band, which is where the info-heavy operational
-    // EventIds belong. These are log-only — they are NOT AegisResultCodes, because a non-failure
-    // trace point is never a returnable result.
 
     /// <summary>Logs that the stdio server finished bootstrapping and is ready to serve tools.</summary>
     [MessageLogging(
@@ -105,11 +101,6 @@ public static partial class AegisLog
         EventId = 11010,
         Level = LogLevel.Debug,
         Message = "Policy '{policyType}' evaluated for command '{commandName}'.")]
-    // Why string?: AegisCommandConfiguration.ServiceOptionType is nullable (a config row may not carry
-    // a discriminator), and this is a diagnostic line, not a decision point. Logging the absence
-    // truthfully is correct here — substituting a placeholder would report a policy kind that was
-    // never configured. The approval decision below is unaffected: string.Equals(null, "PreApproved")
-    // is false, so a row without a discriminator stays denied, fail-closed.
     public static partial IGenericMessage PolicyEvaluated(ILogger logger, string? policyType, string commandName);
 
     // ── Categories 2–9: failure codes, one-for-one with AegisResultCodes ──────────────────────────
@@ -122,11 +113,6 @@ public static partial class AegisLog
     public static partial IGenericMessage RequiredValueMissing(ILogger logger, string name);
 
     // ── Host registration phases ────────────────────────────────────────────────────────────────
-    // Why this host logs its phases at all: it registers secret managers and nothing else, so when a
-    // phase fails silently the first symptom is a secret that will not resolve — a runtime error far
-    // from the startup step that actually broke. Volume thins as severity rises: Trace names each
-    // phase as it begins, Debug reports it completing, Critical fires when one fails, because a
-    // failed phase means this host cannot serve a single secret for the rest of its life.
 
     /// <summary>Trace: one line per phase as it begins. The finest grain — three lines per startup.</summary>
     [MessageLogging(

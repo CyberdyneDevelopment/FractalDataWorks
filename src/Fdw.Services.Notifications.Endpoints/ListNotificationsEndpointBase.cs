@@ -42,8 +42,6 @@ public abstract class ListNotificationsEndpointBase : CrudListEndpointBase<Notif
             return allResult.ToNewResult<List<NotificationSummaryDto>>();
         }
 
-        // Why: ListNotifications reads parent header rows (notify.Notification) which are identity-only
-        // per the polymorphic configuration pattern. IsEnabled lives on the typed-body tables.
         var items = (allResult.Value ?? (IReadOnlyList<NotificationConfiguration>)[])
             .Select(n => new NotificationSummaryDto
             {

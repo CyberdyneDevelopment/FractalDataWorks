@@ -26,14 +26,12 @@ public static partial class ODataDeleteTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses ODataResultCodes.ContainerNull's number (20000).
     [MessageLogging(
         EventId = 20000,
         Level = LogLevel.Error,
         Message = "ODataDeleteTranslator received a null container")]
     public static partial IGenericMessage ContainerNull(ILogger logger);
 
-    // Why: reuses ODataResultCodes.DeleteFilterRequired's number (21000).
     [MessageLogging(
         EventId = 21000,
         Level = LogLevel.Error,
@@ -42,7 +40,6 @@ public static partial class ODataDeleteTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses ODataResultCodes.DeleteFilterInvalid's number (20001).
     [MessageLogging(
         EventId = 20001,
         Level = LogLevel.Error,
@@ -51,7 +48,6 @@ public static partial class ODataDeleteTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses ODataResultCodes.DeleteResourceIdNotFound's number (21003).
     [MessageLogging(
         EventId = 21003,
         Level = LogLevel.Error,
@@ -60,9 +56,6 @@ public static partial class ODataDeleteTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: a fresh number, not ODataResultCodes.DeleteTranslationFailed's own 91000 — see
-    // ODataQueryTranslatorLog.QueryTranslationFailed's remark: 91000 already belongs to the
-    // pre-existing (orphaned) ODataLog in this same REST TypeCode pool.
     [MessageLogging(
         EventId = 92003,
         Level = LogLevel.Error,

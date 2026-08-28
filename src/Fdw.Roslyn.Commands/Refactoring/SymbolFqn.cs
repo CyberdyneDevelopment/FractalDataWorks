@@ -7,10 +7,6 @@ namespace Fdw.Roslyn.Commands.Refactoring;
 /// </summary>
 internal static class SymbolFqn
 {
-    // Why: SymbolDisplayFormat.FullyQualifiedFormat omits containing types for MEMBER symbols
-    // (a method renders as bare "M") and renders the global namespace as the literal string
-    // "<global namespace>" — both corrupt migration-guide FQNs. This format qualifies members
-    // with their containing types/namespaces and omits the global:: prefix.
     private static readonly SymbolDisplayFormat Format = new(
         globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Omitted,
         typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,

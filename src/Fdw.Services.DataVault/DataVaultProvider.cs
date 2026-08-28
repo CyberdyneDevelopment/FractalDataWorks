@@ -44,18 +44,9 @@ public sealed class DataVaultProvider
 {
     private readonly ILogger<DataVaultProvider> _logger;
 
-    // Why: vault instances are expensive to build (resolve + cache a connection and pepper) so we
-    // cache them by name. ConcurrentDictionary<string, Lazy<...>> mirrors ConnectionProvider —
-    // the Lazy ensures a single resolution per name even under concurrent first-access. The Lazy
-    // stores the Task itself, so .Value returns the Task without blocking. Entries are evicted on
-    // failure so a transient/misconfig error is re-attempted on the next Get.
     private readonly ConcurrentDictionary<string, Lazy<Task<IGenericResult<IDataVault>>>> _cache
         = new(StringComparer.OrdinalIgnoreCase);
 
-    // Why: the ServiceTypeCollection generator constructs this provider with logger ONLY
-    // (new DataVaultProvider(providerLogger)); it cannot inject these. They are wired ONCE
-    // during the phase-3 RegisterFactory hook (CredentialVaultType.RegisterFactory), which receives
-    // the built IServiceProvider — exactly like RegisterDomainConfigurationProvider. They are immutable thereafter.
     private IDataConnectionProvider? _connectionProvider;
     private ISecretManagerProvider? _secretManagerProvider;
 
@@ -99,9 +90,6 @@ public sealed class DataVaultProvider
         return Get(request.Name!, cancellationToken);
     }
 
-    // Why: THE single resolve-once path. Validates the providers + typed body, resolves the
-    // connection + pepper (delegated to keep this under the complexity gate), then hands both to the
-    // registered factory — a pure constructor. The pepper bytes never touch the cache key or any log.
     private async Task<IGenericResult<IDataVault>> ResolveVault(
         IDataVaultImplementationConfiguration body, CancellationToken cancellationToken)
     {
@@ -129,9 +117,6 @@ public sealed class DataVaultProvider
         return createResult;
     }
 
-    // Why: resolves the vault's single connection + its pepper from the typed-body pointers, in system
-    // context, fail-loud on every missing input. The pepper bytes never leave this method except into
-    // the vault the factory builds.
     private async Task<IGenericResult<(IDataConnection Connection, byte[] Pepper)>> ResolveConnectionAndPepper(
         IDataVaultImplementationConfiguration body, string vaultName, CancellationToken cancellationToken)
     {
@@ -156,8 +141,6 @@ public sealed class DataVaultProvider
         if (!secretResult.IsSuccess || secretResult.Value is not SecretValue secret)
             return GenericResult<(IDataConnection, byte[])>.Failure(DataVaultLog.PepperReadFailed(_logger, vaultName, body.SecretManagerName, body.PepperSecretName));
 
-        // Why: binary secret → raw key bytes; string secret → its UTF-8 bytes as the HMAC key.
-        // The SecretValue is disposed immediately; the pepper lives only in the vault from here.
         byte[] pepper;
         using (secret)
         {

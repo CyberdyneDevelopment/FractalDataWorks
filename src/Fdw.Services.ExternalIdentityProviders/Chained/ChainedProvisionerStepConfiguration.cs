@@ -21,11 +21,9 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 public sealed partial class ChainedProvisionerStepConfiguration : IGenericConfiguration
 {
     /// <inheritdoc />
-    // Why: ServiceCategory matches the MsSqlConfigurationSource key generation convention.
     public string SectionName => "ExternalIdentityProvisioners";
 
     /// <inheritdoc />
-    // Why: matches ServiceCategory from [ManagedConfiguration] for IOptions binding path.
     public string ServiceType => "ExternalIdentityProvisioner";
 
     /// <inheritdoc />
@@ -39,8 +37,6 @@ public sealed partial class ChainedProvisionerStepConfiguration : IGenericConfig
     /// <summary>
     /// Gets or sets the unique identifier for this step.
     /// </summary>
-    // Why: no default GUID — child Ids are minted by the save cascade on insert when empty (the single
-    // sanctioned place). Pre-minting here is a forbidden default-GUID fallback.
     public Guid Id { get; set; }
 
     /// <summary>

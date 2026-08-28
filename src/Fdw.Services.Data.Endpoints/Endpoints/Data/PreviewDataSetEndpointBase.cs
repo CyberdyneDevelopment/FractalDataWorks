@@ -23,8 +23,6 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class PreviewDataSetEndpointBase : CrudGetEndpointBase<PreviewDataSetRequest, PreviewDataSetResponse>
 {
-    // Why: DataSetConfigurationProvider.Get(name) composes Fields, Sources, and FieldMappings —
-    // no separate source resolver or secondary IDataGateway config reads needed.
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
     /// <summary>Gets the data gateway for executing live data preview queries.</summary>
@@ -68,7 +66,6 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpointBase<PreviewDa
     {
         DataSetEndpointLog.LoadingDataSet(Logger, dataSetName, string.Empty);
 
-        // Why: Get(name) calls AssembleHierarchy which populates Fields and SourceIds in parallel.
         var dsResult = await _dataSetProvider.Get(dataSetName, ct).ConfigureAwait(false);
         if (dsResult.IsFailure) return dsResult.ToNewResult<PreviewDataSetResponse?>();
 
@@ -91,7 +88,6 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpointBase<PreviewDa
             })
             .ToList();
 
-        // Why: Sources are part of the composed aggregate returned by DataSetConfigurationProvider.Get.
         DataSetEndpointLog.LoadingSources(Logger, dataSetName);
         var (rows, hasMore) = await FetchPreviewRows(
             dataSetName,
@@ -122,9 +118,6 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpointBase<PreviewDa
         if (source is null || string.IsNullOrEmpty(source.DataStoreName) || string.IsNullOrEmpty(source.ContainerName))
             return ([], false);
 
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget. Path and ContainerName
-        // are passed separately so the MsSql translator can qualify the table name as schema.table.
-        // Why: the framework's row shape -- see PostQueryDataSetEndpointBase.
         var previewCommand = new QueryCommand<IDataRow>
         {
             Paging = new PagingExpression { Skip = 0, Take = maxRows + 1 }

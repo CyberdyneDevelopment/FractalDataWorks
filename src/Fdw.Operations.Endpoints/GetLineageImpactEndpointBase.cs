@@ -21,14 +21,8 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public abstract class GetLineageImpactEndpointBase : Endpoint<LineageImpactRequest, ImpactAnalysisResponse>
 {
-    // Why: IConfigurationGateway routes directly to ConfigurationDb via configurationSchema.json.
-    // Using plain IDataGateway would look for "ConfigurationDb" in the runtime DataStore table
-    // (data.DataStore), where it does not exist — it is only a bootstrap connection in the JSON.
     private readonly IConfigurationGateway _configurationGateway;
     private readonly ILogger<GetLineageImpactEndpointBase> _logger;
-    // Why: same composing-provider mechanism as GetLineageGraphEndpointBase. This also fixes a second
-    // latent bug — the local QueryAll<T> below hardcodes the "data" schema for every container, so the
-    // OLD flat pipeline read queried the non-existent "data.Pipeline" (pipelines never loaded at all).
     private readonly PipelineServiceConfigurationProvider _pipelineProvider;
 
     /// <inheritdoc />
@@ -273,8 +267,6 @@ public abstract class GetLineageImpactEndpointBase : Endpoint<LineageImpactReque
                 });
             }
 
-            // Why: parity with GetLineageGraphEndpointBase's kind-4 edge — the source connection was
-            // collected as a node but no edge was ever drawn to it.
             if (!string.IsNullOrEmpty(p.SourceConnectionName))
             {
                 graph.Edges.Add(new LineageEdge
@@ -291,7 +283,6 @@ public abstract class GetLineageImpactEndpointBase : Endpoint<LineageImpactReque
     /// <summary>Queries all records from a configuration table in the ConfigurationDb data schema.</summary>
     private async Task<IReadOnlyList<T>> QueryAll<T>(string containerName, CancellationToken ct) where T : class
     {
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget.
         var command = new QueryCommand<T>();
         var result = await _configurationGateway.Execute<IEnumerable<T>>(
             command, new DataStoreTarget("ConfigurationDb", "data", containerName), ct).ConfigureAwait(false);

@@ -172,20 +172,16 @@ public sealed class Window : TriggerTypeBase
         }
         catch (CronFormatException ex)
         {
-            // Why: an invalid cron expression at calculation time is logged and treated as
-            // "no next execution" rather than propagated to the scheduler.
             SchedulingLogger.CalculateNextRunCronFormatFailed(_logger, ex, cronExpression);
             return null;
         }
         catch (TimeZoneNotFoundException ex)
         {
-            // Why: unrecognised timezone during window calculation; fall back to UTC-based next open.
             SchedulingLogger.CalculateNextRunTimeZoneFailed(_logger, ex, cronExpression);
             return CalculateNextWindowOpenUtcFallback(cronExpression, _logger);
         }
         catch (ArgumentException ex)
         {
-            // Why: argument/conversion errors are logged and treated as "no next execution".
             SchedulingLogger.CalculateNextRunArgumentFailed(_logger, ex, cronExpression);
             return null;
         }
@@ -377,8 +373,6 @@ public sealed class Window : TriggerTypeBase
             }
             catch (TimeZoneNotFoundException ex)
             {
-                // Why: timezone not found at calculation time; log and fall through to UTC so
-                // the calculation can still produce a result.
                 SchedulingLogger.TimezoneConversionSkippedInValidation(logger, ex);
             }
         }
@@ -426,8 +420,6 @@ public sealed class Window : TriggerTypeBase
         }
         catch (Exception ex)
         {
-            // Why: log so the exception is observed; return null so the scheduler treats this
-            // trigger as having no calculable next execution time.
             SchedulingLogger.CalculateNextRunFallbackFailed(logger, ex);
             return null;
         }

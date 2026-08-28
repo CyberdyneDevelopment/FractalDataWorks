@@ -14,9 +14,6 @@ namespace Fdw.UI.Rendering.Spectre.PageRenderers;
 /// centred on the active one; the caller re-renders after each action and is
 /// responsible for populating the next column on drill.
 /// </summary>
-// Why: Spectre's native Layout handles multi-pane rendering well. The selection
-// loop is a single SelectionPrompt over the active column's items — simple,
-// keyboard-driven, and reuses Spectre's highlight semantics.
 public static class BrowsePageRenderer
 {
     /// <summary>Default number of columns visible at once in the layout.</summary>
@@ -85,8 +82,6 @@ public static class BrowsePageRenderer
 
         var active = Math.Clamp(page.ActiveColumnIndex, 0, columns.Count - 1);
 
-        // Why: slide a window of `visibleColumns` ending at the active column so the
-        // user always sees the active column plus its parents on the left.
         var end = active + 1;
         var start = Math.Max(0, end - visibleColumns);
         var window = columns.Skip(start).Take(end - start).ToList();

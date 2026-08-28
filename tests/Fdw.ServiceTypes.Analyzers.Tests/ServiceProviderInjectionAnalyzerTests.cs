@@ -11,10 +11,6 @@ namespace Fdw.ServiceTypes.Analyzers.Tests;
 
 public class ServiceProviderInjectionAnalyzerTests
 {
-    // Why: stand-ins for the real Fdw.Services.Abstractions.IServiceOption /
-    // Fdw.ServiceTypes.IPlatformServiceProvider<...> types — the test project references only the analyzer
-    // assembly, not the framework, so each test source declares minimal shapes that satisfy the
-    // analyzer's semantic (AllInterfaces-based) checks.
     private const string CommonScaffolding = """
         namespace Fdw.Abstractions
         {
@@ -149,8 +145,6 @@ public class ServiceProviderInjectionAnalyzerTests
     [Trait("Category", "SourceGen")]
     public async Task DerivedServiceOptionInterface_ClassInjectsServiceOptionDirectly_ReportsDiagnostic()
     {
-        // Why: proves transitivity — IDerived is never marked with IServiceOption itself, it only
-        // extends an interface that IS marked. AllInterfaces must still catch it.
         var test = CommonScaffolding + """
             namespace TestNamespace
             {
@@ -185,8 +179,6 @@ public class ServiceProviderInjectionAnalyzerTests
     [Trait("Category", "SourceGen")]
     public async Task ServiceOptionService_InjectsParameterTypedAsDerivedServiceOptionInterface_ReportsDiagnostic()
     {
-        // Why: proves transitivity on the injected-parameter side — the parameter is typed as
-        // IDerived (which is never marked directly), not as the marked ISecretManager itself.
         var test = CommonScaffolding + """
             namespace TestNamespace
             {
@@ -247,8 +239,6 @@ public class ServiceProviderInjectionAnalyzerTests
     [Trait("Category", "SourceGen")]
     public async Task ServiceOptionService_InjectsServiceOptionWithoutOptOutAttribute_ReportsDiagnostic()
     {
-        // Why: same shape as the opt-out test above but without [ServiceOptionDependency] — proves the
-        // attribute (not some other property of the parameter) is what suppresses the diagnostic.
         var test = CommonScaffolding + """
             namespace TestNamespace
             {

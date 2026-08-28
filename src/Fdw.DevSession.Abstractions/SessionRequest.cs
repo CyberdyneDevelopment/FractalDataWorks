@@ -5,7 +5,6 @@ namespace Fdw.DevSession.Abstractions;
 /// its isolated working copy. There are no silent defaults — the key, isolation request, and isolation
 /// level name are all required and the manager fails loud when any is missing.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class SessionRequest
 {

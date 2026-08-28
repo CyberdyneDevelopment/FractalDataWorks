@@ -56,8 +56,6 @@ public static class RecordQueryEvaluator
         if (!shapeResult.IsSuccess)
             return shapeResult.ToNewResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>();
 
-        // Why (fix #1): a declared non-nullable field missing/null on ANY primary row is a schema
-        // violation in the source data — fail loud before the row is ever matched or materialized.
         var primaryRowsValid = RecordRowValidator.Validate(rows, primaryContainer, logger);
         if (!primaryRowsValid.IsSuccess)
             return primaryRowsValid.ToNewResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>();
@@ -68,8 +66,6 @@ public static class RecordQueryEvaluator
 
         var join = joinResult.Value;
 
-        // Why (fix #2): every column the filter references must be a declared field on its target
-        // container — an undeclared column is a configuration error, not a "no match" condition.
         var filterColumnsValid = RecordColumnValidator.ValidateFilterColumns(
             filter?.Root, primaryContainer, join?.Container, join?.ParentContainerName, logger);
         if (!filterColumnsValid.IsSuccess)
@@ -77,10 +73,6 @@ public static class RecordQueryEvaluator
 
         var matched = MatchRows(rows, join, filter);
 
-        // Why here and not in the caller: a source whose translator cannot express ORDER BY or
-        // OFFSET has to have them applied to the rows instead, and this is the one place that
-        // already holds every matched row. Order before page, the same sequence SQL uses — paging
-        // an unordered set returns an arbitrary window and calls it page one.
         var ordered = ApplyOrdering(matched, ordering);
         var paged = ApplyPaging(ordered, paging);
 
@@ -88,11 +80,6 @@ public static class RecordQueryEvaluator
         return GenericResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>.Success(paged);
     }
 
-    // Why: isolates the join-target load + its own row/column validation from Evaluate's top-level
-    // control flow (keeps Evaluate a flat sequence of "validate, else return" steps — extracted partly
-    // to stay under the FDW007 complexity threshold, but also because "resolve the join" is a genuinely
-    // separate concern from "match the rows"). Returns null (success, no join) when the command carries
-    // no join at all.
     private static async Task<IGenericResult<JoinResolution?>> ResolveJoin(
         IReadOnlyList<IJoinExpression> joins,
         IDataContainer primaryContainer,
@@ -114,14 +101,10 @@ public static class RecordQueryEvaluator
         var parentRows = joinedResult.Value!.Rows;
         RecordQueryLog.JoinTargetResolved(logger, joinedContainer.Name, parentRows.Count);
 
-        // Why (fix #1, joined side): the same required-field guard applies to the joined container's
-        // rows — this is exactly what closes finding #2's proof (deleting IsCurrent from
-        // SecretManager.json silently excluded the row instead of failing loud).
         var joinedRowsValid = RecordRowValidator.Validate(parentRows, joinedContainer, logger);
         if (!joinedRowsValid.IsSuccess)
             return joinedRowsValid.ToNewResult<JoinResolution?>();
 
-        // Why (fix #2): the join's own field pair must be declared columns before it is evaluated.
         var joinColumnsValid = RecordColumnValidator.ValidateJoinColumns(leftField, rightField, primaryContainer, joinedContainer, logger);
         if (!joinColumnsValid.IsSuccess)
             return joinColumnsValid.ToNewResult<JoinResolution?>();
@@ -130,10 +113,6 @@ public static class RecordQueryEvaluator
             new JoinResolution(joinedContainer, parentRows, leftField, rightField, join.TargetContainerName));
     }
 
-    // Why (fix #4): real INNER JOIN semantics via RecordRowMatcher.MatchesJoinedRow — ALL matching
-    // parent rows are considered; the child row survives if ANY pairing satisfies the parent-qualified
-    // filter. Two parent rows sharing a join key (files carry no PK enforcement) each get a pairing
-    // attempt, exactly as SQL's INNER JOIN would.
     private static List<IReadOnlyDictionary<string, object?>> MatchRows(
         IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
         JoinResolution? join,
@@ -156,8 +135,6 @@ public static class RecordQueryEvaluator
         return matched;
     }
 
-    // Why: carries the join target's resolved container + rows + field pair + name together, so
-    // ResolveJoin/MatchRows pass one value instead of five loose locals.
     private sealed class JoinResolution
     {
         public JoinResolution(
@@ -185,9 +162,6 @@ public static class RecordQueryEvaluator
         public string ParentContainerName { get; }
     }
 
-    // Why a stable sort chained per field: OrderBy/ThenBy preserve the order of equal elements, so a
-    // secondary key is honoured rather than overwritten, and rows the sort cannot distinguish keep the
-    // order the file gave them instead of shuffling between runs.
     private static IReadOnlyList<IReadOnlyDictionary<string, object?>> ApplyOrdering(
         IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
         IOrderingExpression? ordering)
@@ -215,9 +189,6 @@ public static class RecordQueryEvaluator
         return sorted!.ToList();
     }
 
-    // Why Take is nullable and Skip is not: a page with no size is "everything from here", which is
-    // how a caller asks for the remainder. A negative skip is treated as none rather than throwing —
-    // it constrains nothing, and failing a read over it would be worse than ignoring it.
     private static IReadOnlyList<IReadOnlyDictionary<string, object?>> ApplyPaging(
         IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
         IPagingExpression? paging)
@@ -234,9 +205,6 @@ public static class RecordQueryEvaluator
         return ReferenceEquals(window, rows) ? rows : window.ToList();
     }
 
-    // Why the comparer lives here rather than reusing the filter operators: ordering needs a total
-    // order over mixed CLR types coming out of a file, where a filter only needs a yes or no. Nulls
-    // sort first, matching SQL Server's default for ASC.
     private sealed class RowValueComparer : IComparer<object?>
     {
         public static readonly RowValueComparer Instance = new();

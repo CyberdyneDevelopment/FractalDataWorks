@@ -58,7 +58,6 @@ public sealed class DefaultCalculationSource : CalculationSourceTypeBase
     }
 
     /// <inheritdoc/>
-    // Why: codified operators have no calc.CalculationEntity row — there is no Guid to resolve against.
     public override Task<IGenericResult<CalculationCatalogItem>> Resolve(
         Guid id,
         CalculationSourceContext context,
@@ -70,8 +69,6 @@ public sealed class DefaultCalculationSource : CalculationSourceTypeBase
                 ResultDetails.Create("Name", id.ToString())));
     }
 
-    // Why: a codified scalar operator has no configured output field — it always produces exactly
-    // one value, labeled by the operator's own name (Sum/Average/...); not a fabricated placeholder.
     private CalculationCatalogItem ToCatalogItem(ICalculationType operatorType) => new()
     {
         Name = operatorType.Name,

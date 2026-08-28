@@ -28,8 +28,6 @@ public sealed class FixedWidthRowWriterType : RecordWriterTypeBase
     public override string Format => "FixedWidth";
 
     /// <inheritdoc />
-    // Why: fixed-width is a ROW writer — FixedWidthStreamRowWriter implements IRowWriter (itself an
-    // IRecordWriter<DataRecord>).
     public override IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions? options)
         => new FixedWidthStreamRowWriter(target, options as FixedWidthRowWriterOptions);
 }

@@ -68,7 +68,6 @@ public sealed partial class ChartHost : ComponentBase
     /// <summary>
     /// Gets or sets the optional logger. Falls back to <see cref="NullLogger{T}.Instance"/>.
     /// </summary>
-    // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions.
     [Parameter]
     public ILogger? Logger { get; set; }
 
@@ -78,12 +77,9 @@ public sealed partial class ChartHost : ComponentBase
     private string _selectedChartTypeName = string.Empty;
     private string? _errorMessage;
 
-    // Why: cache lists so OnParametersSet does not re-allocate on every render.
     private List<IChartRendererType> _renderers = [];
     private List<IChartType> _compatibleChartTypes = [];
 
-    // Why: DynamicComponent parameters must be Dictionary<string,object?>; rebuild only when
-    // selectedRendererName or model changes to avoid allocating a new dictionary every render.
     private Dictionary<string, object?> _dynamicParams = new(StringComparer.Ordinal);
 
     private ILogger ResolvedLogger => Logger ?? NullLogger<ChartHost>.Instance;
@@ -93,11 +89,8 @@ public sealed partial class ChartHost : ComponentBase
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
-        // Why: rebuild the renderer list each time parameters change so the dropdown reflects
-        // any dynamically-loaded renderer assemblies.
         _renderers = ChartRendererTypes.All().ToList();
 
-        // Why: fatal — no registered renderers means the host has nothing to render with.
         if (_renderers.Count == 0)
             ChartHostLog.NoRenderersRegistered(ResolvedLogger);
 
@@ -128,8 +121,6 @@ public sealed partial class ChartHost : ComponentBase
         return chosen;
     }
 
-    // Why: re-compute the compatible chart type list each time the renderer selection changes
-    // so the chart-type dropdown always reflects what the current renderer supports.
     private void RebuildCompatibleChartTypes(string rendererName)
     {
         if (string.IsNullOrEmpty(rendererName))
@@ -149,26 +140,20 @@ public sealed partial class ChartHost : ComponentBase
 
         if (descriptor.SupportedChartTypes.Count == 0)
         {
-            // Why: empty SupportedChartTypes means "supports all" — no filtering needed.
             _compatibleChartTypes = all.ToList();
             return;
         }
 
-        // Why: filter uses Ordinal comparison (registry names are case-sensitive by convention).
         _compatibleChartTypes = all
             .Where(ct => descriptor.SupportedChartTypes.Contains(ct.Name, StringComparer.Ordinal))
             .ToList();
     }
 
-    // Why: param is nullable to match the @bind:set Action<string?> delegate; a null/empty
-    // selection is a no-op (the dropdown only ever emits registered renderer names).
     private void OnRendererChanged(string? newName)
     {
         if (string.IsNullOrEmpty(newName)) return;
         if (string.Equals(_selectedRendererName, newName, StringComparison.Ordinal)) return;
 
-        // Why: validate the new name resolves to a renderer with a Blazor component — fail loud
-        // (no silent fallback) if the descriptor is missing or has no component type.
         if (ResolveComponentType(newName) is null)
         {
             _errorMessage = $"No Blazor component registered for renderer '{newName}'.";
@@ -210,9 +195,6 @@ public sealed partial class ChartHost : ComponentBase
 
     private void RebuildDynamicParams()
     {
-        // Why: DynamicComponent requires the parameter dictionary to contain the actual
-        // parameter values keyed by parameter name (exact case). Pass Model + Rows so the
-        // renderer component receives both the spec and the data to plot.
         _dynamicParams = new Dictionary<string, object?>(StringComparer.Ordinal)
         {
             ["Model"]  = Model,
@@ -226,9 +208,6 @@ public sealed partial class ChartHost : ComponentBase
             ? null
             : ResolveComponentType(_selectedRendererName);
 
-    // Why: resolve the Blazor component straight from the enumerable ChartRendererTypes registry
-    // (the descriptor carries its RenderComponentType) — no separate map, no reflection.
-    // ByName returns the NotFound sentinel for an unknown name (never null).
     private Type? ResolveComponentType(string rendererName)
     {
         ChartHostLog.ResolvingRendererComponent(ResolvedLogger, rendererName);

@@ -9,8 +9,6 @@ namespace Fdw.Services.Connections.Endpoints;
 /// <summary>
 /// Forces re-discovery of schema for a connection, persists the results, and returns the updated metadata.
 /// </summary>
-// Why: The "Re-discover" button in the UI calls this endpoint. Unlike GET /schema which
-// returns cached results, this always runs discovery against the live database.
 public abstract class RefreshConnectionSchemaEndpointBase : Endpoint<ConnectionNameRequest, SchemaInformationDto>
 {
     private readonly ISchemaInformationService _schemaService;

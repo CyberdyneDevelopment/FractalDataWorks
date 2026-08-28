@@ -8,7 +8,6 @@ namespace Fdw.Messages;
 /// Applied to concrete message classes that inherit from MessageTemplate to enable
 /// automatic discovery and collection generation.
 /// </summary>
-// Why: pure attribute definition (declarative metadata only, consumed by source generators) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 [ExcludeFromCodeCoverage]
 public sealed class MessageAttribute : Attribute

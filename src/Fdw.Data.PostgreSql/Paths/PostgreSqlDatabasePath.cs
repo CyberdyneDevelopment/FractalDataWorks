@@ -87,9 +87,6 @@ public sealed class PostgreSqlDatabasePath : PathBase, IDataPath<IStorageContain
     /// </summary>
     public string SchemaQualifiedName => $"\"{Schema}\".\"{ObjectName}\"";
 
-    // Why: IDatabasePath uses nullable string? for Database and Schema so that schemaless
-    // dialects (e.g., SQLite) can return null. PostgreSqlDatabasePath stores non-nullable
-    // strings, so explicit interface implementations bridge the nullability mismatch.
     string? IDatabasePath.Database => Database;
     string? IDatabasePath.Schema => Schema;
     string IDatabasePath.ObjectName => ObjectName;

@@ -592,8 +592,6 @@ public sealed class Trigger : IGenericTrigger
             throw new ArgumentException("Trigger name cannot be null or empty", nameof(name));
         }
 
-        // Why: the event name IS the binding — a blank one names no event and could never fire,
-        // so reject it at construction rather than build a trigger that is dead on arrival.
         if (string.IsNullOrWhiteSpace(eventName))
         {
             throw new ArgumentException("Event name cannot be null or empty", nameof(eventName));

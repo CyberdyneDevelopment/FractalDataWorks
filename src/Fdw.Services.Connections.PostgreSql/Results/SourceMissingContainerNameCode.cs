@@ -7,8 +7,6 @@ namespace Fdw.Services.Connections.PostgreSql.Results;
 /// <summary>
 /// Source configuration is missing ContainerName — cannot resolve to a PostgreSQL table container.
 /// </summary>
-// Why: ResolveContainer requires ContainerName (table name) to build the PostgreSqlTableContainer.
-// Without it, the PostgreSQL connection cannot determine which table to target.
 [TypeOption(typeof(PostgreSqlResultCodes), "SourceMissingContainerName", RestrictToCurrentCompilation = true)]
 [ExcludeFromCodeCoverage]
 public sealed class SourceMissingContainerNameCode : PostgreSqlResultCodeBase

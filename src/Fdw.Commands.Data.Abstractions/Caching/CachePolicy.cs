@@ -7,9 +7,6 @@ namespace Fdw.Commands.Data.Abstractions.Caching;
 /// Typed accessor over IDataCommand.Metadata for command-level caching.
 /// The DataGateway caching decorator reads these keys to decide whether/how to cache a command result.
 /// </summary>
-// Why: QueryCommand<T> is sealed with init-only properties — we can't add ICacheable.
-// Metadata already exists on IDataCommand with documented intent for "connection hints, caching."
-// This static helper gives compile-time safety without changing sealed command types.
 public static class CachePolicy
 {
     /// <summary>Metadata key for cache duration (TimeSpan).</summary>

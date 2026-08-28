@@ -11,7 +11,6 @@ namespace Fdw.Roslyn.Commands;
 /// <summary>
 /// No-op <see cref="IChangeLedger"/> used when no ledger has been registered via DI.
 /// </summary>
-// Why: NullLogger/NullRoslynWorkspace null-object idiom for direct construction without DI — not a value fallback.
 public sealed class NullChangeLedger : IChangeLedger
 {
     /// <summary>

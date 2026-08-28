@@ -27,7 +27,6 @@ namespace Fdw.Services.Connections.Abstractions;
 /// Whether the field must have a non-empty value before the task can be saved.
 /// Default <c>false</c>.
 /// </param>
-// Why: pure positional record (DTO), auto-generated properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed record ConfigurationFieldDescriptor(
     string Key,

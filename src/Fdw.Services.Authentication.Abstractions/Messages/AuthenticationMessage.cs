@@ -7,7 +7,6 @@ namespace Fdw.Services.Authentication.Abstractions.Messages;
 /// <summary>
 /// Base class for all authentication-related messages.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [MessageCollection("AuthenticationMessages")]
 public abstract class AuthenticationMessage : MessageTemplate<MessageSeverity>, IServiceMessage

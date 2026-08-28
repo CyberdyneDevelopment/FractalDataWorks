@@ -27,10 +27,6 @@ public abstract class CreatePipelineRequestValidator : FdwEndpointValidator<Crea
             .NotEmpty()
             .WithMessage("DestinationConnectionName is required");
 
-        // Why: transforms are optional, but any supplied transform must be fully specified — a transform
-        // with a missing OperationType or a field mapping with missing source/destination would silently
-        // drop data at runtime, so validate the whole submitted hierarchy up front rather than fail-loud
-        // deep in the cascade-save.
         RuleForEach(x => x.Transforms).ChildRules(transform =>
         {
             transform.RuleFor(t => t.Name)

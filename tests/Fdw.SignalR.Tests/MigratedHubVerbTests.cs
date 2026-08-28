@@ -44,9 +44,6 @@ public sealed class MigratedHubVerbTests
     [Fact]
     public async Task PipelineHubOnConnectJoinsOrgFirehoseFromClaim()
     {
-        // Why: the per-org firehose replaces the removed global "pipeline-updates" group — a connection
-        // joins only its own org's group org:{orgId}:pipeline-updates, read from the JWT org_id claim
-        // (FDW-545). No cross-org global firehose exists.
         var groups = HubFixtures.GroupManager();
         const string orgId = "22222222-2222-2222-2222-222222222222";
         var hub = new PipelineStatusHub(new RecordingLogger<PipelineStatusHub>())
@@ -65,8 +62,6 @@ public sealed class MigratedHubVerbTests
     [Fact]
     public async Task PipelineHubOnConnectWithNoOrgClaimJoinsNoGroup()
     {
-        // Why: a connection with no org_id claim joins no firehose — there is no global cross-org
-        // group and no placeholder org is substituted (NO FALLBACKS).
         var groups = HubFixtures.GroupManager();
         var hub = new PipelineStatusHub(new RecordingLogger<PipelineStatusHub>())
         {

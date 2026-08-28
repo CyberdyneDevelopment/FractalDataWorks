@@ -11,10 +11,6 @@ namespace Fdw.ServiceTypes.Analyzers.Tests;
 
 public class TypeOptionConstructorAnalyzerTests
 {
-    // Why: a throwaway stand-in for Fdw.Collections.Attributes.TypeOptionAttribute, matched by
-    // the analyzer purely on short name ("TypeOptionAttribute") — the same self-contained-fixture
-    // style already used by this test project's other analyzer tests, so the test doesn't need a
-    // reference to the real Fdw.Collections assembly.
     private const string TypeOptionAttributeDeclaration = """
         using System;
 
@@ -163,9 +159,6 @@ public class TypeOptionConstructorAnalyzerTests
     [Trait("Category", "SourceGen")]
     public async Task TypeOption_AbstractClass_NoDiagnostic()
     {
-        // Why: the module initializer skips abstract types before it ever reaches the constructor
-        // check (new() can't instantiate one), so the analyzer must not flag it either — even
-        // though it also has no parameterless constructor of its own.
         var test = TypeOptionAttributeDeclaration + """
             namespace TestNamespace
             {
@@ -194,11 +187,6 @@ public class TypeOptionConstructorAnalyzerTests
     [Trait("Category", "SourceGen")]
     public async Task TypeOption_RestrictToCurrentCompilation_WithOptionalOnlyConstructor_NoDiagnostic()
     {
-        // Why: RestrictToCurrentCompilation = true options are registered by the TypeCollection's
-        // own same-compilation static constructor (a plain `new T()` against whatever constructor
-        // exists), not by the cross-assembly module initializer this analyzer targets — an
-        // all-optional-parameter constructor (the standard ILogger? logger = null pattern) works
-        // fine there, confirmed empirically against TriggerTypes.Cron in the real codebase.
         var test = TypeOptionAttributeDeclaration + """
             namespace TestNamespace
             {
@@ -222,8 +210,6 @@ public class TypeOptionConstructorAnalyzerTests
     [Trait("Category", "SourceGen")]
     public async Task TypeOption_GenericClass_NoDiagnostic()
     {
-        // Why: the module initializer skips generic types too (can't instantiate with new() at a
-        // fixed type argument), so the analyzer must not flag them either.
         var test = TypeOptionAttributeDeclaration + """
             namespace TestNamespace
             {

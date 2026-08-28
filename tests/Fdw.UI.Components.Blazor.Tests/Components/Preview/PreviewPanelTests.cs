@@ -25,7 +25,6 @@ public sealed class PreviewPanelTests : IDisposable
     public void RendersLoadingSpinner()
     {
         var cut = _ctx.Render<PreviewPanel>(p => p.Add(x => x.IsLoading, true));
-        // Why: current markup renders a `.loadwrap > .spin` spinner (no "Executing query" text).
         cut.Find(".loadwrap .spin").ShouldNotBeNull();
     }
 
@@ -48,7 +47,6 @@ public sealed class PreviewPanelTests : IDisposable
         var cut = _ctx.Render<PreviewPanel>(p => p
             .Add(x => x.Columns, ["id", "missing"])
             .Add(x => x.Rows, Rows(Row(("id", 7)))));
-        // Why: "missing" column absent from the row → empty cell, no exception.
         cut.FindAll("tbody td").Count.ShouldBe(2);
         cut.Markup.ShouldContain("7");
     }

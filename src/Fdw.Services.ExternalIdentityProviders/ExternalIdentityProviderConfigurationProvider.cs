@@ -16,9 +16,6 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// Configuration provider for ExternalIdentityProviderConfiguration rows in auth.ExternalIdentityProvider.
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
-// Why: ExternalIdentityProviderConfiguration is loaded from ConfigurationDb at runtime via
-// Lazy<IConfigurationGateway>, not through BindConfiguration("ExternalIdentityProviders:..."). Mirrors
-// TokenManagerConfigurationProvider exactly.
 public class ExternalIdentityProviderConfigurationProvider
     : ServiceConfigurationProviderBase<
           ExternalIdentityProviderConfiguration,

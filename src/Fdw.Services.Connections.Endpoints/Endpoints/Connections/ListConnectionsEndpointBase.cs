@@ -15,8 +15,6 @@ namespace Fdw.Services.Connections.Endpoints;
 /// </summary>
 public abstract class ListConnectionsEndpointBase : CrudListEndpointBase<ConnectionSummaryDto>
 {
-    // Why: ConnectionConfigurationProvider (dual-source) replaces IConnectionProvider.GetAllConnectionConfigurations()
-    // which was removed. The provider merges system (ctrl) and user (cfg) connection configs.
     private readonly ConnectionConfigurationProvider _configProvider;
 
     /// <inheritdoc />
@@ -52,10 +50,6 @@ public abstract class ListConnectionsEndpointBase : CrudListEndpointBase<Connect
     /// <summary>Maps a single connection configuration to a summary DTO.</summary>
     protected virtual ConnectionSummaryDto MapToSummary(ConnectionConfiguration config)
     {
-        // Why (FDW-623): last-test status is no longer a column on the connection config — it lives in
-        // conn.ConnectionHealthCheck. This summary leaves LastTested*/LastTestSuccess unset (null); the
-        // current status is served by GetConnectionHealthEndpoint / the conn.ConnectionHealthCurrent view.
-        // TODO(FDW-623): populate these from a bulk current-status read if the list needs inline health.
         return new ConnectionSummaryDto
         {
             Id = config.Id,

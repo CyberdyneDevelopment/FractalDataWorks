@@ -43,8 +43,6 @@ public sealed class DelimitedStreamRowWriter : IRowWriter
         _options = options ?? new DelimitedRowWriterOptions();
         if (_options.Columns.Count == 0)
         {
-            // Why: NO FALLBACKS — column order is a real serializer input. An empty list is a
-            // configuration error, not a default-to-first-row-keys case.
             throw new ArgumentException(
                 "DelimitedRowWriterOptions.Columns must contain at least one column name.", nameof(options));
         }
@@ -85,9 +83,6 @@ public sealed class DelimitedStreamRowWriter : IRowWriter
     }
 
     /// <inheritdoc />
-    // Why: the typed IRecordWriter<DataRecord> surface projects the row record's field-array onto the
-    // existing dictionary write path; the flyweight schema names the columns (and RowWriterOptions.Columns
-    // pins their stable emit order).
     public void Write(DataRecord record) => Write(record.ToDictionary());
 
     /// <inheritdoc />
@@ -123,16 +118,12 @@ public sealed class DelimitedStreamRowWriter : IRowWriter
         _headerWritten = true;
         if (_options.WriteHeader)
         {
-            // Why: the header is itself a delimited line of the column names — format it through the
-            // same row formatter so quoting rules are identical to the data rows.
             var headerRow = new Dictionary<string, object?>(StringComparer.Ordinal);
             foreach (var c in _columns) headerRow[c] = c;
             WriterExtensions.WriteRecords(_target, [headerRow], _formatRow);
         }
     }
 
-    // Why: RecordParser's TryFormat contract — lay the formatted line into the destination span and
-    // report the char count, returning false (grow buffer) when the span is too small.
     private bool FormatRow(IReadOnlyDictionary<string, object?> row, Span<char> destination, out int charsWritten)
     {
         var line = BuildLine(row);

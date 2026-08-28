@@ -63,7 +63,6 @@ public abstract class BulkPipelineStatusEndpointBase : EndpointWithoutRequest<Bu
 
         try
         {
-            // Why: Addressing moved off IDataCommand onto DataStoreTarget.
             var command = new QueryCommand<PipelineStatusRecord>();
 
             var result = await _dataGateway.Execute<IEnumerable<PipelineStatusRecord>>(

@@ -52,8 +52,6 @@ public class IdentityTokenCacheTests
     [Trait("Category", "Security")]
     public async Task GetOrAcquireDoesNotServeATokenInsideTheRefreshSkew()
     {
-        // Why 30s of life against a 60s skew: the token has not expired, but it would expire
-        // mid-flight. Serving it is the failure this skew exists to prevent.
         var cache = Cache(TimeSpan.FromSeconds(60));
         var request = new IdentityTokenRequest(Audience);
         var acquisitions = 0;
@@ -97,8 +95,6 @@ public class IdentityTokenCacheTests
     [Trait("Category", "Security")]
     public async Task GetOrAcquireAcquiresOnceWhenManyCallersArriveTogether()
     {
-        // Why this matters: without the per-key gate, a token ageing out makes every in-flight
-        // request hit the identity provider at the same instant.
         var cache = Cache();
         var request = new IdentityTokenRequest(Audience);
         var acquisitions = 0;

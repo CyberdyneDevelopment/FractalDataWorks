@@ -30,9 +30,6 @@ public sealed class CalculatedDesignerPageTests : IDisposable
 
     private void SwapProvider(CalculatedDataSetContext? seed = null)
     {
-        // Why: the current FDW CalculatedDesigner injects DataStoreApiClient (used only on
-        // Source-node selection). Register a no-op handler-backed client so DI can satisfy the
-        // page; none of these tests select a Source node, so no HTTP call is made.
         PipeInfra.PageHost.RegisterPageInfrastructure(_ctx);
         _ctx.Services.AddSingleton(new DataStoreApiClient(
             new HttpClient(new MockHttpHandler()) { BaseAddress = new Uri("http://localhost/") },
@@ -55,7 +52,6 @@ public sealed class CalculatedDesignerPageTests : IDisposable
     [Fact]
     public void LoadingRendersPaletteHeaderNoSelection()
     {
-        // Why: when IsLoading, SyncFromContext returns early — no nodes projected.
         SwapProvider(new CalculatedDataSetContext { IsLoading = true });
         var cut = _ctx.Render<CalculatedDesignerPage>();
         cut.Markup.ShouldContain("OPERATIONS PALETTE", Case.Sensitive);

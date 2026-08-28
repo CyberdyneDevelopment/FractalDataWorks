@@ -37,8 +37,6 @@ public class ConnectionProviderTests
         _configProvider = new TestConnectionConfigurationProvider(_configurations);
 
         _provider = new ConnectionProvider(new ServiceCollection().BuildServiceProvider(), _mockLogger.Object);
-        // Why: the header provider is the provider's ONLY configuration source — it composes the
-        // aggregate (header + typed body) and ConnectionProvider dispatches straight off it.
         _provider.Register(_configProvider);
     }
 
@@ -47,10 +45,6 @@ public class ConnectionProviderTests
     /// <see cref="IConnectionFactory"/> (which owns secret resolution itself) that also satisfies the
     /// <see cref="IServiceFactory{T}"/> registration signature.
     /// </summary>
-    // Why: a bare IServiceFactory<IGenericConnection> mock is rejected by design
-    // (FactoryNotConnectionFactory) — the async Create overload is the domain's only creation path.
-    // Why the mock also wears IAsyncServiceFactory: a real connection factory implements
-    // IConnectionFactory<,>, which carries it, and that is the surface the provider prefers.
     private static Mock<IConnectionFactory> FactoryReturning(IGenericConnection connection)
     {
         var factory = new Mock<IConnectionFactory>();
@@ -110,9 +104,6 @@ public class ConnectionProviderTests
 
         private static ConnectionConfiguration AttachStubConfig(ConnectionConfiguration cfg)
         {
-            // Why: Real header providers populate Configuration via PopulateTypedBody on read.
-            // The test provider stores plain configs, so attach a stub here so the factory-dispatch
-            // path in ConnectionProvider.CreateFromHeader sees a non-null Configuration.
             if (cfg.Configuration is null)
                 cfg.Configuration = new StubConnectionConfiguration { Id = cfg.Id, Name = cfg.Name, ServiceOptionType = cfg.ServiceOptionType };
             return cfg;
@@ -147,7 +138,6 @@ public class ConnectionProviderTests
         public Task<IGenericResult> Delete(string name, CancellationToken cancellationToken = default)
             => throw new NotSupportedException("Test provider does not support Delete.");
 
-        // Why: IsSystemProtected is on the interface; test provider has no ctrl configs.
         public bool IsSystemProtected(string name) => false;
     
         // Type-erased surface — delegates to the typed members.
@@ -411,7 +401,6 @@ public class ConnectionProviderTests
         _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
 
         // Act
-        // Why: Get<T> is an explicit IDataConnectionProvider interface implementation — cast required.
         var result = await ((IDataConnectionProvider)_provider).Get<IDataConnection>("TestConnection", TestContext.Current.CancellationToken);
 
         // Assert
@@ -442,7 +431,6 @@ public class ConnectionProviderTests
         _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
 
         // Act - Request IDataConnection but get IGenericConnection
-        // Why: Get<T> is an explicit IDataConnectionProvider interface implementation — cast required.
         var result = await ((IDataConnectionProvider)_provider).Get<IDataConnection>("TestConnection", TestContext.Current.CancellationToken);
 
         // Assert
@@ -647,7 +635,6 @@ public class ConnectionProviderTests
         _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
 
         // Act - IDataConnectionProvider.Get(Guid) casts to IDataConnection; incompatible type → failure
-        // Why: No Get<T>(Guid) on IDataConnectionProvider; use non-generic Get(Guid) which casts to IDataConnection.
         var result = await ((IDataConnectionProvider)_provider).Get(connectionId);
 
         // Assert
@@ -739,9 +726,6 @@ public class ConnectionProviderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Configuration")]
-    // Why: renamed from MultipleServiceOptionTypesSearchesAllProviders, which described a mechanism
-    // that does not exist — there is ONE header provider, and the header's ServiceOptionType selects
-    // the FACTORY. Nothing searches a set of providers.
     public async Task GetByNameSelectsFactoryByHeaderServiceOptionType()
     {
         // Arrange
@@ -802,9 +786,6 @@ public class ConnectionProviderTests
         result.Messages.ShouldNotBeEmpty();
     }
 
-    // Why: the three creation prerequisites used to collapse into one "no factory registered" message,
-    // so a header that simply had no ServiceOptionType reported a missing factory — the wrong problem.
-    // Each gate must now name what is actually absent.
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Configuration")]
@@ -817,8 +798,6 @@ public class ConnectionProviderTests
             Name = "NoOptionType",
             ServiceOptionType = null,
         });
-        // Why not a real kind: a sibling test registers a PostgreSql factory into the static registry,
-        // so naming PostgreSql here would find one and "NoFactory" would stop meaning what it says.
         _configurations.Add(new ConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
@@ -831,7 +810,6 @@ public class ConnectionProviderTests
             Name = "NotAConnectionFactory",
             ServiceOptionType = "MsSql",
         });
-        // Why: a bare IServiceFactory<IGenericConnection> cannot expose the async, secret-aware Create.
         _provider.Register("MsSql", new Mock<IServiceFactory<IGenericConnection>>().Object);
 
         // Act

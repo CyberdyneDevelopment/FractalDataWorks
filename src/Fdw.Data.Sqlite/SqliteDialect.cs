@@ -19,7 +19,6 @@ public sealed class SqliteDialect : ISqlDialect
     /// </summary>
     public static readonly SqliteDialect Instance = new SqliteDialect();
 
-    // Why: private constructor enforces singleton usage — the dialect carries no state.
     private SqliteDialect()
     {
     }

@@ -121,12 +121,6 @@ public class DataSchema : IDataSchema
     /// <summary>
     /// Gets the ordinal position of a field.
     /// </summary>
-    // Why: LEFT throwing (not converted to IGenericResult<int>) — this implements
-    // IDataSchema.GetOrdinal(string), a documented interface contract member (XML doc declares
-    // <exception cref="ArgumentException">) called directly by DataRow.GetValue<T>(string) and
-    // by ExpressionBuilder in per-field/per-row hot paths. Converting the interface signature
-    // would ripple into every IDataSchema consumer across the framework. Per the
-    // "indexer/contract that must throw" carve-out, this stays as-is.
     public int GetOrdinal(string fieldName)
     {
         if (!_ordinalMap.TryGetValue(fieldName, out var ordinal))

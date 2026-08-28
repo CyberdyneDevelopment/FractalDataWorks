@@ -10,9 +10,6 @@ namespace Fdw.Services.Authorization.Components.Logging;
 /// Provider-specific messages with domain context baked into templates.
 /// EventId range: 8900-8919
 /// </summary>
-// Why (FDW-583): every *Failed/*Exception method below reports an operation that could not
-// complete (the caught exception path and the non-exception failure path report the SAME
-// outcome) — Error, not Warning.
 [MessageLoggingTypeCode("COMPONENTS6")]
 public static partial class RoleProviderLog
 {

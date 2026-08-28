@@ -38,8 +38,6 @@ public sealed class SyntheticSecretManagerFactory : ISyntheticSecretManagerFacto
     /// <inheritdoc />
     public IGenericResult<ISecretManager> Create(IGenericConfiguration configuration)
     {
-        // Why the header unwrap: PlatformServiceProviderBase hands over the composed header with its typed
-        // body attached, so the settings come from the body and the logical name from the header.
         if (configuration is SecretManagerConfiguration header
             && header.Configuration is SyntheticSecretManagerConfiguration body)
         {

@@ -79,7 +79,6 @@ public sealed class TextTransformTests
     [Fact]
     public async Task SplitPastTheEndIsEmptyRatherThanAnError()
     {
-        // Why this is the documented behaviour and not a failure: a short row is data, not a fault.
         var result = await new SplitFieldTransformer().Transform(
             "a,b", TransformTestContext.With(("delimiter", ","), ("index", "9")),
             TestContext.Current.CancellationToken);

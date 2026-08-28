@@ -1144,10 +1144,6 @@ using Fdw.Data;
 
 namespace Fdw.Configuration
 {
-    // Why: PocoMapperGenerator detects a typed-list cascade child purely by the element type's
-    // fully qualified name ""Fdw.Configuration.IGenericConfiguration"" (ImplementsGenericConfiguration) —
-    // a minimal same-named stand-in exercises that check without pulling in the real Fdw.Configuration
-    // assembly (not referenced by this generator test project).
     public interface IGenericConfiguration
     {
     }

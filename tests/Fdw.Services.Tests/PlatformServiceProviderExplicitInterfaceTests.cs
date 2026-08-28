@@ -35,8 +35,6 @@ public class DefaultServiceProviderExplicitInterfaceTests
         _mockConfigProvider = new Mock<IDomainConfigurationProvider<TestConfiguration>>();
         _mockFactory = new Mock<IServiceFactory<IGenericService>>();
 
-        // Why: PlatformServiceProviderBase.Get(name/id) now requires a parent provider for
-        // O(1) name-to-type resolution. Register _mockConfigProvider as the parent.
         _provider.Register(_mockConfigProvider.Object);
     }
 
@@ -53,7 +51,6 @@ public class DefaultServiceProviderExplicitInterfaceTests
 
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
-        // Why: CreateFromType calls Get(config.Id) first; must be set up to avoid NRE.
         _mockConfigProvider.Setup(cp => cp.Get(config.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
 
@@ -82,7 +79,6 @@ public class DefaultServiceProviderExplicitInterfaceTests
 
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
-        // Why: CreateFromType calls Get(config.Id) first; must be set up to avoid NRE.
         _mockConfigProvider.Setup(cp => cp.Get(config.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
         _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
@@ -105,7 +101,6 @@ public class DefaultServiceProviderExplicitInterfaceTests
 
         _mockConfigProvider.Setup(cp => cp.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
-        // Why: CreateFromType calls Get(Guid) first; catch-all prevents NRE from unmocked async.
         _mockConfigProvider.Setup(cp => cp.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
         _provider.Register(_mockConfigProvider.Object);
@@ -198,8 +193,6 @@ public class DefaultServiceProviderExplicitInterfaceTests
 
         _mockConfigProvider.Setup(cp => cp.Get(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
-        // Why: Get(id) resolves name via parentConfig.Name ?? id.ToString(), then CreateFromType
-        // calls configProvider.Get(name, TestContext.Current.CancellationToken). With null Name, the id string is used as name.
         _mockConfigProvider.Setup(cp => cp.Get(id.ToString(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
         _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
@@ -221,7 +214,6 @@ public class DefaultServiceProviderExplicitInterfaceTests
         var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", ServiceOptionType = "TestType" };
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
-        // Why: CreateFromType calls Get(config.Id) first; must be set up to avoid NRE.
         _mockConfigProvider.Setup(cp => cp.Get(config.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
         _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
@@ -265,7 +257,6 @@ public class DefaultServiceProviderExplicitInterfaceTests
     {
         _mockConfigProvider.Setup(cp => cp.Get("Missing", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
-        // Why: CreateFromType calls Get(Guid) first; catch-all prevents NRE from unmocked async.
         _mockConfigProvider.Setup(cp => cp.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
         _provider.Register(_mockConfigProvider.Object);

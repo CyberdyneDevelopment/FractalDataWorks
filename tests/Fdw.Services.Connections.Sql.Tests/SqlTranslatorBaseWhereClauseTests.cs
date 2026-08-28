@@ -37,8 +37,6 @@ public sealed class SqlTranslatorBaseWhereClauseTests
     [Trait("Category", "DataGateway")]
     public void BuildWhereClauseQuotesColumnViaDialect()
     {
-        // Why: column quoting must go through ISqlDialect.QuoteIdentifier — no hardcoded
-        // bracket or backtick style in the shared base. FakeDialect uses double-quote form.
         var filter = new FilterExpression
         {
             Root = new FilterCondition
@@ -60,9 +58,6 @@ public sealed class SqlTranslatorBaseWhereClauseTests
     [Trait("Category", "DataGateway")]
     public void BuildWhereClauseInvokesAddParamWithNameWithoutAtSign()
     {
-        // Why: the addParam delegate receives the key WITHOUT the leading @ marker so the
-        // backend can prepend it (SqlParameter("@name", value)). The @ appears in SQL text
-        // only — never in the key passed to addParam.
         var filter = new FilterExpression
         {
             Root = new FilterCondition
@@ -86,9 +81,6 @@ public sealed class SqlTranslatorBaseWhereClauseTests
     [Trait("Category", "DataGateway")]
     public void BuildWhereClauseEmptyInListUsesAlwaysFalsePredicate()
     {
-        // Why: an empty IN list must not emit "col IN ()" (invalid SQL) — the base collapses
-        // it to "col IN (SELECT NULL WHERE <AlwaysFalsePredicate>)". For FakeDialect that is
-        // FALSE; for T-SQL it would be "1 = 0". This test proves the dialect seam is honoured.
         var filter = new FilterExpression
         {
             Root = new FilterCondition
@@ -110,8 +102,6 @@ public sealed class SqlTranslatorBaseWhereClauseTests
     [Trait("Category", "DataGateway")]
     public void BuildWhereClauseNonEmptyInListExpandsAllItemsAsParams()
     {
-        // Why: each IN-list item becomes a numbered param p{cond}_{item} so the SQL stays
-        // parameterized. Three items → three addParam calls.
         var filter = new FilterExpression
         {
             Root = new FilterCondition
@@ -136,8 +126,6 @@ public sealed class SqlTranslatorBaseWhereClauseTests
     [Trait("Category", "DataGateway")]
     public void BuildWhereClauseReturnsEmptyStringWhenFilterIsNull()
     {
-        // Why: a null filter root must produce an empty string (no WHERE clause),
-        // not throw or produce bogus SQL.
         var filter = new FilterExpression { Root = null };
 
         var (sql, captured) = BuildWhere(filter);
@@ -201,9 +189,6 @@ public sealed class SqlTranslatorBaseWhereClauseTests
     [Trait("Category", "DataGateway")]
     public void BuildWhereClauseCustomParameterPrefixUsedInSqlAndAddParamKey()
     {
-        // Why: UPDATE translators namespace WHERE params as "@where_p0" so they don't collide
-        // with SET-clause params (@set_name). The prefix appears in the SQL text; the addParam
-        // key strips the leading "@" but keeps the namespace ("where_p0").
         var filter = new FilterExpression
         {
             Root = new FilterCondition
@@ -226,9 +211,6 @@ public sealed class SqlTranslatorBaseWhereClauseTests
     [Trait("Category", "DataGateway")]
     public void BuildWhereClauseNullValuePassedToAddParam()
     {
-        // Why: SQL NULL must become a DBNull parameter, not be omitted. The base passes
-        // null through; the backend-specific AddParameter maps null → DBNull.Value.
-        // (This test proves the base doesn't silently discard null values.)
         var filter = new FilterExpression
         {
             Root = new FilterCondition
@@ -250,7 +232,6 @@ public sealed class SqlTranslatorBaseWhereClauseTests
     [Trait("Category", "DataGateway")]
     public void BuildWhereClauseIsNotNullOperatorProducesNoParam()
     {
-        // Why: IS NOT NULL doesn't use a value parameter — it is a unary operator.
         var filter = new FilterExpression
         {
             Root = new FilterCondition

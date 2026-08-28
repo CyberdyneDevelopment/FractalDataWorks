@@ -6,7 +6,6 @@ namespace Fdw.Services.Notifications.Abstractions;
 /// Console/log notification channel for development and test environments.
 /// Emits notification content via structured logging at Information level.
 /// </summary>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(NotificationChannels), "Console", RestrictToCurrentCompilation = true)]
 public sealed class ConsoleChannel : NotificationChannelBase

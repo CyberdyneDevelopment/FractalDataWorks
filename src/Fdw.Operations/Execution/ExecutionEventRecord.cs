@@ -74,8 +74,6 @@ public sealed class ExecutionEventRecord : IExecutionEvent
             }
             catch (JsonException ex)
             {
-                // Why: a data record property getter must not throw on corrupt stored JSON; null
-                // indicates the field is unavailable. No ILogger is available here (data record context).
                 _ = ex;
                 _eventData = null;
             }
@@ -111,7 +109,6 @@ public sealed class ExecutionEventRecord : IExecutionEvent
             dataJson = JsonSerializer.Serialize(data);
         }
 
-        // Why CreateVersion7: app-minted sequential id, matching the ExecutionEvent POCO default.
         return new ExecutionEvent
         {
             Id = Guid.CreateVersion7(),

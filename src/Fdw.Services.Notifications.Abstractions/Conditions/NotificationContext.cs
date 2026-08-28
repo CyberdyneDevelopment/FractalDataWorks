@@ -5,7 +5,6 @@ namespace Fdw.Services.Notifications.Abstractions;
 /// <summary>
 /// Context for evaluating notification conditions.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class NotificationContext
 {

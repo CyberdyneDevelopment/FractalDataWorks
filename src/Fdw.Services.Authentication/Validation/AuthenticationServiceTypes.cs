@@ -55,39 +55,20 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
             if (registered.IsFailure)
                 return registered;
 
-            // Why the collection can legitimately have no options: this assembly carries the domain, and
-            // a host that references it for anything else picks the domain up with it. A domain with no
-            // mechanism has nothing to route between and registers nothing.
             if (Options.Length == 0)
             {
                 AuthenticationValidationLog.NoMechanismsRegistered(log);
                 return GenericResult<IHostApplicationBuilder>.Success(builder);
             }
 
-            // Why the collection registers the schemes and AuthenticationServiceTypeBase no longer does:
-            // reading the declared entries and turning each into a scheme is the same procedure for every
-            // mechanism - only RegisterScheme differs, and that is already a public abstract on the option.
-            // Run from the base it occupied each option's own phase body, so a derived option could not
-            // state its own registration without silently discarding it (STC002).
-            //
-            // Why AddAuthentication() is called even when a mechanism declares no entries: it is what
-            // brings the ASP.NET authentication services into the container, and the selector scheme below
-            // is added through the same builder.
             var authenticationBuilder = builder.Services.AddAuthentication();
 
             foreach (var option in Options)
             {
-                // Why this fails loud: Options is IServiceTypeRegistration[], and an option in this
-                // collection that is not a mechanism cannot produce a scheme. Skipping it would leave the
-                // host trusting fewer issuers than it declared, which surfaces only as tokens being
-                // rejected at runtime with nothing naming the mechanism that never registered.
                 if (option is not AuthenticationServiceTypeBase mechanism)
                     return GenericResult<IHostApplicationBuilder>.Failure(
                         AuthenticationValidationLog.SectionUnreadable(log, option.Name));
 
-                // Why the read's own reason travels rather than a restatement: it names which entry and
-                // which field, and a caller told only "authentication configuration is invalid" has to go
-                // find that out again.
                 var declared = AuthenticationServiceConfiguration.Read(builder.Configuration, mechanism.Name, log);
                 if (declared.IsFailure)
                     return declared.ToNewResult<IHostApplicationBuilder>();
@@ -110,15 +91,8 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
                 }
             }
 
-            // Why the descriptor scan: each option registered one binding per entry it read, and the
-            // count is the only statement of how many issuers this host ended up trusting. Building a
-            // second container to ask would be worse than counting descriptors.
             var bindings = builder.Services.Count(d => d.ServiceType == typeof(AuthenticationSchemeBinding));
 
-            // Why a failure and not a quiet skip: a mechanism IS registered, so this host means to
-            // validate tokens, and no issuer was declared for it to trust. Every protected route would
-            // then reject everything, and doing that silently reads at runtime as a token problem rather
-            // than the missing section it is.
             if (bindings == 0)
                 return GenericResult<IHostApplicationBuilder>.Failure(
                     AuthenticationValidationLog.NoAuthenticationServicesDeclared(
@@ -132,11 +106,6 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
                     displayName: null,
                     configureOptions: options => options.ForwardDefaultSelector = IssuerSchemeSelector.Select);
 
-            // Why post-configure rather than another AddAuthentication(o => ...): the default scheme is
-            // also set by whichever mechanisms register one of their own, and Configure delegates run in
-            // registration order — which is option-discovery order, so the winner would depend on which
-            // package happened to be loaded last. Post-configure runs after all of them, so the request
-            // is routed by issuer no matter what order the mechanisms arrived in.
             builder.Services.AddSingleton<IPostConfigureOptions<AuthenticationOptions>, SelectorIsDefaultScheme>();
 
             AuthenticationValidationLog.RoutingRegistered(log, bindings, IssuerSchemeSelector.SchemeName);
@@ -145,9 +114,6 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
         });
     }
 
-    // Why a named type rather than PostConfigure<T>(...): the lambda overload registers an
-    // IPostConfigureOptions per call and gives the reader nothing to look up when the default scheme
-    // turns out not to be what they expected.
     private sealed class SelectorIsDefaultScheme : IPostConfigureOptions<AuthenticationOptions>
     {
         public void PostConfigure(string? name, AuthenticationOptions options)

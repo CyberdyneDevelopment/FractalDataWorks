@@ -40,7 +40,6 @@ public abstract class UpdateDataSetAnnotationEndpointBase : Endpoint<DataSetAnno
     /// <summary>Updates the DataSet annotation matching the request and returns the updated DTO.</summary>
     public override async Task HandleAsync(DataSetAnnotationPayload req, CancellationToken ct)
     {
-        // Why: Load existing to preserve the Id so Save() issues an UPDATE rather than INSERT.
         var getResult = await _provider.GetAnnotation(req.DataSetName, ct).ConfigureAwait(false);
 
         if (!getResult.IsSuccess)
@@ -54,7 +53,6 @@ public abstract class UpdateDataSetAnnotationEndpointBase : Endpoint<DataSetAnno
         var config = QualityConfigurationProvider.MapAnnotationFromDto(
             req.DataSetName, req.Owner, req.Steward, req.Classification, req.Tags);
 
-        // Why: Carry forward the existing Id so ImplementationConfigurationProviderBase.Save routes to UPDATE.
         if (getResult.Value is not null)
             config.Id = getResult.Value.Id;
 

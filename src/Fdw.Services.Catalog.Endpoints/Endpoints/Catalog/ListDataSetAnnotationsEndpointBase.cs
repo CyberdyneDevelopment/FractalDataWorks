@@ -40,9 +40,6 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
     /// <summary>Retrieves all annotations for the specified DataSet.</summary>
     public override async Task HandleAsync(DataSetAnnotationRequest req, CancellationToken ct)
     {
-        // Why: a request for annotations on a DataSet that doesn't exist should 404, not return
-        // an empty list — the latter would mask typos in the DataSet name. Resolve the provider
-        // via DI (FastEndpoints) so we don't break the existing single-arg constructor contract.
         var dataSetProvider = TryResolve<Fdw.Services.Data.DataSetConfigurationProvider>();
         if (dataSetProvider is not null && !string.IsNullOrEmpty(req.DataSetName))
         {
@@ -60,9 +57,6 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
             }
         }
 
-        // Why: The provider's Get(all) returns every annotation; we filter client-side by DataSetName
-        // because ImplementationConfigurationProviderBase has no per-field filter overload and DataSetName is
-        // a domain-specific filter. This is acceptable since annotation counts are small.
         var result = await _provider.GetAllAnnotations(ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)

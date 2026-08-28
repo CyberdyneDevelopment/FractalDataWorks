@@ -19,9 +19,6 @@ namespace Fdw.Services.Pipelines.Tests;
 [Trait("Category", "CoreFramework")]
 public sealed class PipelineStatusBroadcasterOrgFirehoseTests
 {
-    // Why: capture the group names the broadcaster targets by recording every Clients.Group(name)
-    // call. Moq returns a completed Task for the client's async methods by default, so no per-method
-    // setup is needed.
     private static (PipelineStatusBroadcaster Broadcaster, List<string> Groups) CreateBroadcaster()
     {
         var targeted = new List<string>();

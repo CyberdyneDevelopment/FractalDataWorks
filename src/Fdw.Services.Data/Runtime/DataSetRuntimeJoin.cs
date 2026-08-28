@@ -2,9 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Fdw.Data.Abstractions;
-// Why: Use alias to avoid IDataField ambiguity — both Fdw.Data.Abstractions and
-// Fdw.Data.DataSets.Abstractions define IDataField with different contracts.
-// JoinTypes lives in Fdw.Data.Abstractions and is already available via that import.
 using JoinConfiguration = Fdw.Data.DataSets.Abstractions.JoinConfiguration;
 
 namespace Fdw.Services.Data.Runtime;
@@ -44,9 +41,6 @@ internal sealed class DataSetRuntimeJoin : IDataSetJoin
         Left = left;
         Right = right;
 
-        // Why: JoinConfiguration uses plain string "Inner"/"Left"/"Right"/"Full".
-        // JoinTypes.ByName resolves to the canonical TypeCollection entry. NotFound sentinel
-        // is handled below — rather than silently defaulting to Inner, we fail loudly.
         var resolvedType = JoinTypes.ByName(config.JoinType);
         if (ReferenceEquals(resolvedType, JoinTypes.NotFound))
             throw new ArgumentException(
@@ -55,12 +49,6 @@ internal sealed class DataSetRuntimeJoin : IDataSetJoin
 
         Type = resolvedType;
 
-        // Why: Condition is a field-equality filter between Left.Node.{LeftField} and Right.Node.{RightField}.
-        // A concrete IFilterExpression is not built here because the filter expression model requires
-        // resolved field references (IDataField), which are only available after the DataStore tree is
-        // loaded. The factory sets this to null; the DataGatewayService uses LeftFieldName/RightFieldName
-        // directly from configuration when building the physical join query.
-        // This matches the pattern used in DataSet sources: physical details are resolved at query time.
         Condition = NullFilterExpression.Instance;
     }
 

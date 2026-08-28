@@ -56,7 +56,6 @@ public sealed class RetryNotifyResiliencyType : ResiliencyTypeBase
 
         for (var attempt = 0; attempt <= rnConfig.MaxRetries; attempt++)
         {
-            // Why: use ThrowIfCancellationRequested per CA2250 — more idiomatic than manual check+throw.
             cancellationToken.ThrowIfCancellationRequested();
 
             lastResult = await runStage(cancellationToken).ConfigureAwait(false);
@@ -88,8 +87,6 @@ public sealed class RetryNotifyResiliencyType : ResiliencyTypeBase
 
         ResiliencyLog.NotificationSent(rnCtx.Logger, ctx.ExecutionId, rnConfig.NotificationTargetId);
 
-        // Why: lastResult is always non-null here because the loop always runs at least once
-        // (MaxRetries >= 0 ensures one attempt). Return via explicit check to satisfy FDW012.
         if (lastResult is not null)
             return lastResult;
 
@@ -106,13 +103,10 @@ public sealed class RetryNotifyResiliencyType : ResiliencyTypeBase
 
         if (string.Equals(config.BackoffKind, "Random", StringComparison.OrdinalIgnoreCase))
         {
-            // Why: use RandomNumberGenerator.GetInt32 to avoid SCS0005 — SecurityCodeScan flags
-            // System.Random regardless of use-case; cryptographic RNG satisfies the analyzer.
             var jitter = RandomNumberGenerator.GetInt32(0, Math.Max(1, baseMs));
             return TimeSpan.FromMilliseconds(baseMs + jitter);
         }
 
-        // Why: default exponential — 2^attempt * baseMs, capped at 30 seconds.
         var exponentialMs = (int)Math.Min(Math.Pow(2, attempt) * baseMs, 30000);
         return TimeSpan.FromMilliseconds(exponentialMs);
     }

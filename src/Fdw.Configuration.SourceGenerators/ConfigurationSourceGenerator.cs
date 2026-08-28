@@ -80,10 +80,6 @@ public sealed class ConfigurationSourceGenerator : IIncrementalGenerator
                 }
             });
 
-        // Why: Individual ConfigurationType class generation removed in Wave C5.
-        // ConfigurationTypeBase, IConfigurationType, and ConfigurationTypes TypeCollection are deleted.
-        // The ConfigurationTypesGenerator.Generate() path no longer exists. The DDL generation
-        // (RegisterSourceOutput above) and TypeCollection DDL (below) remain unaffected.
 
         // Generate TypeCollection DDL and registry
         context.RegisterSourceOutput(

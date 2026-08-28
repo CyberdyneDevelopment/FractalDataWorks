@@ -10,8 +10,6 @@ using Fdw.Services.Scheduling.Abstractions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-// Why: Aliases disambiguate from Fdw.Services.Scheduling.Commands.Data
-// and Fdw.Services.Scheduling.Data namespace segments.
 using FilterGroup = Fdw.Data.FilterGroup;
 using IFilterCondition = Fdw.Data.Abstractions.IFilterCondition;
 using IFilterNode = Fdw.Data.Abstractions.IFilterNode;
@@ -104,9 +102,6 @@ public sealed class TenantIsolationTests
 
         capturedCommand.ShouldNotBeNull("a command must have been sent to the DataGateway");
 
-        // Why: The filter expression is the authoritative evidence that the correct tenant reached
-        // the query builder. We inspect the command's FilterExpression to confirm that a TenantId
-        // filter targeting TenantA's GUID is present.
         var commandText = capturedCommand!.ToString() ?? string.Empty;
         // The command captures filters — confirm TenantA's ID appears somewhere in the command
         // representation (either ToString or via reflection on FilterExpression).
@@ -251,9 +246,6 @@ public sealed class TenantIsolationTests
     /// </remarks>
     private static void AssertTenantFilterPresent(IDataCommand command, Guid tenantId)
     {
-        // Why: QueryCommand<T>.Filter is the typed IFilterExpression — cast via the public interface
-        // defined on the concrete command type. IDataCommand itself does not expose Filter, so we
-        // cast to the known type. This is test-internal — it does not escape the test boundary.
         var queryCommand = command as ScheduleQueryCommand;
         queryCommand.ShouldNotBeNull(
             $"Expected QueryCommand<ScheduleQueryRecord> but got {command.GetType().Name}");
@@ -282,9 +274,6 @@ public sealed class TenantIsolationTests
 
     private static void AssertNoTenantFilterPresent(IDataCommand command)
     {
-        // Why: Without a tenant context (background worker, no HttpContext), the service
-        // must not apply any GUID-valued TenantId filter. The filter may still exist for
-        // other conditions (e.g., IsEnabled) but must not contain any GUID values.
         var queryCommand = command as ScheduleQueryCommand;
         if (queryCommand?.Filter is null)
             return; // No filter — correct for no-tenant case

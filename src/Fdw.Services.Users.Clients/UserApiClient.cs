@@ -54,7 +54,6 @@ public class UserApiClient : ApiClientBase
     /// Updates an existing user.
     /// </summary>
     /// <returns>A result containing the updated user detail.</returns>
-    // Why: server route is PUT /users/{Name} (string), not /users/{Guid}. Callers must pass the username.
     public virtual Task<IGenericResult<UserDetailPayload>> UpdateUser(string name, UpdateUserPayload request, CancellationToken ct = default)
         => Patch<UpdateUserPayload, UserDetailPayload>($"users/{name}", request, ct);
 
@@ -90,9 +89,6 @@ public class UserApiClient : ApiClientBase
     /// Resets a user's password without requiring their current one (admin operation).
     /// </summary>
     /// <returns>A result indicating whether the reset succeeded.</returns>
-    // Why: the server has exposed POST /users/{IdOrName}/reset-password all along, but nothing called
-    // it — an admin could not reset a password from the UI at all. Requires the endpoint's users:write
-    // policy, which is a LOWER bar than editing the same user (users:delete); see FDW-634.
     public virtual Task<IGenericResult> ResetPassword(Guid id, string newPassword, CancellationToken ct = default)
         => Post($"users/{id}/reset-password", new ResetPasswordPayload { NewPassword = newPassword }, ct);
 }

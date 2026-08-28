@@ -6,7 +6,6 @@ namespace Fdw.Collections.Attributes;
 /// <summary>
 /// Marks a concrete type option with explicit collection targeting.
 /// </summary>
-// Why: pure attribute definition (declarative metadata only, consumed by source generators) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 [ExcludeFromCodeCoverage]
 public sealed class TypeOptionAttribute : Attribute

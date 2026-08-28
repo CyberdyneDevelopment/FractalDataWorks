@@ -17,8 +17,6 @@ using Fdw.Roslyn.Commands.Refactoring.Results;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-// Why: Fdw.Roslyn.Commands.Compilation namespace now lives in this assembly; alias
-// disambiguates the Roslyn Compilation type from the sibling namespace.
 using MsCompilation = Microsoft.CodeAnalysis.Compilation;
 
 namespace Fdw.Roslyn.Commands.Refactoring.Translators;
@@ -31,8 +29,6 @@ namespace Fdw.Roslyn.Commands.Refactoring.Translators;
 [TypeOption(typeof(RoslynCommandTranslators), "ResolveInheritDoc")]
 public sealed class ResolveInheritDocTranslator : RoslynCommandTranslatorBase<ResolveInheritDocCommand, MutationResult<ResolveInheritDocResult>>
 {
-    // Why: only these top-level tags carry real documentation; their presence (with content or an
-    // attribute such as cref) is what distinguishes a successful resolution from a bare <inheritdoc/>.
     private static readonly HashSet<string> MeaningfulTags = new(StringComparer.Ordinal)
     {
         "summary", "param", "returns", "typeparam", "value", "remarks", "example", "exception", "seealso",
@@ -73,8 +69,6 @@ public sealed class ResolveInheritDocTranslator : RoslynCommandTranslatorBase<Re
             if (document is null || IsSkippable(document.FilePath))
                 continue;
 
-            // Why: multi-targeted projects expose the same physical file once per TFM; processing it
-            // more than once would apply overlapping text edits to identical spans.
             if (!processedPaths.Add(document.FilePath!))
                 continue;
 
@@ -215,8 +209,6 @@ public sealed class ResolveInheritDocTranslator : RoslynCommandTranslatorBase<Re
         if (symbol is not null)
             return symbol;
 
-        // Why: fields and field-like events declare their symbol on the variable declarator, not the
-        // BaseFieldDeclarationSyntax that carries the doc comment.
         if (member is BaseFieldDeclarationSyntax field && field.Declaration.Variables.Count > 0)
             return model.GetDeclaredSymbol(field.Declaration.Variables[0], cancellationToken);
 
@@ -234,8 +226,6 @@ public sealed class ResolveInheritDocTranslator : RoslynCommandTranslatorBase<Re
         }
         catch (XmlException ex)
         {
-            // Why: malformed XML from Roslyn's GetDocumentationCommentXml is an expected failure;
-            // return null so the caller treats it as unresolved. ex.Message observed to satisfy FDW022.
             _ = ex.Message;
             return null;
         }
@@ -280,10 +270,6 @@ public sealed class ResolveInheritDocTranslator : RoslynCommandTranslatorBase<Re
         return slashIndex >= 0 ? string.Concat(lineText.AsSpan(0, slashIndex), "///") : "///";
     }
 
-    // Why: Roslyn's symbol API does NOT expand <inheritdoc/> — GetDocumentationCommentXml returns the
-    // literal <inheritdoc/> (expandIncludes only expands <include file=...>). inheritdoc resolution lives
-    // in the IDE Features layer, so we walk the override/interface/cref chain ourselves and read each base
-    // member's own doc XML (which DOES return concrete <summary>/<param>/... tags) until we find real docs.
     private static Resolution ResolveInheritDoc(ISymbol symbol, XmlNodeSyntax node, SemanticModel model, CancellationToken cancellationToken)
     {
         var visited = new HashSet<ISymbol>(SymbolEqualityComparer.Default) { symbol };
@@ -395,7 +381,6 @@ public sealed class ResolveInheritDocTranslator : RoslynCommandTranslatorBase<Re
         if (string.IsNullOrEmpty(filePath) || !filePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
             return true;
 
-        // Why: never rewrite generated output — it is regenerated each build, so edits are lost and meaningless.
         if (filePath.Contains($"{System.IO.Path.DirectorySeparatorChar}obj{System.IO.Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             return true;
 

@@ -248,7 +248,6 @@ public static partial class EndpointLogger
     /// Logs when the PermissionClaimsPreProcessor denies a request because the required
     /// permission is absent from the token's baked <c>perm</c> claims.
     /// </summary>
-    // Why: EventId 8016 — next available in the 8001-8097 API Endpoints block.
     [MessageLogging(
         EventId = 51001,
         Level = LogLevel.Warning,

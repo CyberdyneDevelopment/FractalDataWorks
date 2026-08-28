@@ -57,9 +57,6 @@ public sealed class RoundFieldTransformer : FieldTransformationBase
                 "Round transform requires a valid 'precision' parameter (integer).");
         }
 
-        // Why a type and not a MidpointRounding literal: which way a midpoint goes is a decision the
-        // configuration makes, the same way the duration unit and the timezone are. AwayFromZero when
-        // unspecified is the behaviour every existing Round config was written against.
         var modeName = context.Parameters.TryGetValue("mode", out var configured) && !string.IsNullOrWhiteSpace(configured)
             ? configured
             : "AwayFromZero";

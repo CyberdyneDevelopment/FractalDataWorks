@@ -141,7 +141,6 @@ public static class PipelineGraphValidator
             issues.Add(new PipelineGraphValidationIssue(
                 ValidationSeverities.Error,
                 "The pipeline graph contains a cycle in the Flow edges."));
-            // Why: orphan/path checks are meaningless once a cycle exists — return early.
             return;
         }
 
@@ -160,8 +159,6 @@ public static class PipelineGraphValidator
         CheckOrphanNodes(model, source, sink, adj, reachable, issues);
     }
 
-    // Why: extracted from CheckFlowPath to keep that method under the FDW007 complexity threshold.
-    // Flags nodes that are not on any source→sink Flow path (ignored at execution).
     private static void CheckOrphanNodes(
         PipelineCanvasModel model,
         ICanvasNode source,

@@ -23,7 +23,6 @@ public sealed partial class DataDomainMembershipConfiguration
 
 
     /// <summary>Gets or sets the resource type: "DataSet", "Pipeline", or "DataStore".</summary>
-    // Why: ResourceType is a TypeCollection-backed enum constrained at the DB level.
     public string ResourceType { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the identifier of the resource being linked.</summary>

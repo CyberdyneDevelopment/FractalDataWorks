@@ -11,8 +11,6 @@ public sealed class AssignRolePayload
     /// <summary>
     /// Gets or sets the role name to assign.
     /// </summary>
-    // Why: kept in step with the server contract and the Users client copy, both of which
-    // require a role name.
     [Required]
     public string RoleName { get; set; } = "";
 

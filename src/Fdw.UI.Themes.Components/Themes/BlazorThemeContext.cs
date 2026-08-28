@@ -13,7 +13,6 @@ namespace Fdw.UI.Themes.Components.Themes;
 /// Cascaded to child components so they can read the current theme
 /// and request theme switches.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class BlazorThemeContext : ProviderContextBase
 {

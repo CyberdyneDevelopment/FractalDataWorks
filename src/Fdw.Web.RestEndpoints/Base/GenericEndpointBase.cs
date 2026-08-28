@@ -87,8 +87,6 @@ public abstract class GenericEndpointBase<TRequest, TResponse> : Endpoint<TReque
                 }
                 else
                 {
-                    // Why: orchestration failures carry structured status; log via EndpointLogger so the
-                    // error gets a MessageLog code that can be correlated in Seq.
                     var orchMsg = EndpointLogger.EndpointError(Logger, new InvalidOperationException(orchestrationResult.Status.ToString()), GetType().Name);
                     HttpContext.Response.StatusCode = 500;
                     HttpContext.Response.ContentType = "application/json";

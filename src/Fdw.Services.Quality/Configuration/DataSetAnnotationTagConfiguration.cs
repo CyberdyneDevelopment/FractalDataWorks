@@ -32,9 +32,6 @@ public sealed partial class DataSetAnnotationTagConfiguration : IGenericConfigur
     /// Gets or sets the logical FK to the owning DataSetAnnotation (catalog.DataSetAnnotation.Id). The
     /// configuration save translator resolves the physical DataSetAnnotationRowId from this via subquery.
     /// </summary>
-    // Why: a type-valued field row must carry the parent's logical identity so the write path can persist
-    // it; the cascade sets this from the parent record's Id (in memory) and the translator resolves the
-    // version-specific RowId FK on insert.
     public Guid DataSetAnnotationId { get; set; }
 
     /// <summary>

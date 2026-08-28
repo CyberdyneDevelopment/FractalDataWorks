@@ -44,11 +44,6 @@ public static partial class RoleConfigurationProviderLog
         Message = "Role '{roleName}' not found")]
     public static partial IGenericMessage RoleNotFound(ILogger logger, string roleName);
 
-    // Why: split from RoleNotFound (FDW-583) — the prior single method fired on
-    // `!result.IsSuccess || result.Value is null`, conflating "no such role" (query succeeded, zero
-    // rows) with "ConfigurationDb query failed" (role permissions silently vanish for an unrelated
-    // reason). This method is the query-failed branch only — Error, since the operation could not
-    // complete.
     /// <summary>
     /// Logs that the role query itself failed (e.g. ConfigurationDb unreachable) while resolving a
     /// role with its permissions — distinct from a successful query that found no role.
@@ -82,8 +77,6 @@ public static partial class RoleConfigurationProviderLog
         Message = "Loaded {count} permissions")]
     public static partial IGenericMessage AllPermissionsLoaded(ILogger logger, int count);
 
-    // Why: Security-critical — these methods must log errors when data access fails,
-    // so callers know authorization data is unavailable rather than silently empty.
 
     /// <summary>
     /// Logs that authorization data is unavailable because the Gateway or DataStoreName is not initialized.

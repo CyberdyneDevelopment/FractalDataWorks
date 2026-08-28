@@ -31,8 +31,6 @@ internal static class ReplacesDiscovery
         if (replacesAttrType == null)
             return new Dictionary<string, string>(StringComparer.Ordinal);
 
-        // Why: Collect all [Replaces] declarations across the entire compilation (current + referenced assemblies)
-        // so that downstream assemblies can override upstream TypeOptions.
         var rawReplacements = new List<(string ReplacementFullName, string OriginalFullName)>();
 
         // Scan current assembly
@@ -55,7 +53,6 @@ internal static class ReplacesDiscovery
         {
             if (kvp.Value.Count > 1)
             {
-                // Why: Multiple [Replaces] targeting the same type is ambiguous — report an error.
                 var replacers = string.Join(", ", kvp.Value.Select(r => r.ReplacementFullName));
                 context.ReportDiagnostic(Diagnostic.Create(
                     TypeCollectionGeneratorDiagnostics.DuplicateReplacesTarget,
@@ -69,8 +66,6 @@ internal static class ReplacesDiscovery
             }
         }
 
-        // Why: Resolve chains — if A replaces B, and B replaces C, then A is the final replacement for C.
-        // Walk the chain from each original to its terminal replacement.
         ResolveChains(replacementMap);
 
         return replacementMap;
@@ -82,7 +77,6 @@ internal static class ReplacesDiscovery
     /// </summary>
     private static void ResolveChains(Dictionary<string, string> map)
     {
-        // Why: Walk each chain to its terminal replacement. Use a visited set to detect cycles.
         var resolved = new Dictionary<string, string>(StringComparer.Ordinal);
 
         foreach (var key in map.Keys.ToList())
@@ -174,7 +168,6 @@ internal static class ReplacesDiscovery
         if (replacementMap.Count == 0)
             return options;
 
-        // Why: Check that each replaced original actually exists in the options list.
         var optionsByFullName = new HashSet<string>(
             options.Select(o => o.FullTypeName),
             StringComparer.Ordinal);
@@ -191,8 +184,6 @@ internal static class ReplacesDiscovery
             }
         }
 
-        // Why: Remove replaced types from the options list. The replacement type is already in the list
-        // (it has its own [TypeOption] attribute), so we only need to remove the originals.
         return options
             .Where(o => !replacementMap.ContainsKey(o.FullTypeName))
             .ToImmutableArray();

@@ -58,9 +58,6 @@ public sealed class UserInfo : IUser
     public Guid? TenantId { get; set; }
 
     // ── Credential security fields (edge-owned; map to usr.Users columns the DDL wave adds) ──
-    // Why: salt + algorithm live at the EDGE (the service does the KDF on arrival; the vault stores
-    // only the peppered hash — README §4/§8). FailedLoginCount/LockoutEnd are non-secret lockout
-    // counters the edge maintains; the vault is never the rate-limiter (README §7).
 
     /// <summary>Gets or sets the Base64 salt for this user's password KDF (edge-owned, not secret).</summary>
     public string? Salt { get; set; }

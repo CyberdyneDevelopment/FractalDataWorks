@@ -30,8 +30,6 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         string schema = "dbo")
     {
         var dbPath = new DatabasePath("", schema, name);
-        // Why: translator rejects empty-field containers (SELECT * is forbidden); supply a
-        // default Id field so WHERE/ORDER BY/PAGING tests reach the clause-building logic.
         var mockField = new Mock<IField>();
         mockField.Setup(f => f.Name).Returns("Id");
         mockField.Setup(f => f.IsIdentity).Returns(false);
@@ -42,8 +40,6 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
 
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns(name);
-        // Why: translator reads container.Path via IStorageContainer.Path for the
-        // `is not DatabasePath` guard; use .As<IStorageContainer>() to target that member.
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
         container.Setup(c => c.Schema).Returns(containerSchema.Object);
         container.Setup(c => c.ReferencingKeys)
@@ -314,7 +310,6 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         // Arrange
         var fields = new Mock<IField>();
         fields.Setup(f => f.Name).Returns("Id");
-        // Why: IsPrimaryKey removed from IField — PK identity resolved from container Metadata["SurrogateKeyField"].
 
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(new[] { fields.Object });

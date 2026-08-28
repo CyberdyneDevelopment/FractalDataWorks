@@ -82,10 +82,8 @@ public class DataContainer : IDataContainer
         _physicalPath = physicalPath ?? throw new ArgumentNullException(nameof(physicalPath));
         _supportedOperations = supportedOperations ?? throw new ArgumentNullException(nameof(supportedOperations));
         _metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
-        // Why: NullLogger keeps the container functional when DI logging is not wired — the only sanctioned ?? fallback.
         _logger = logger ?? NullLogger.Instance;
 
-        // Why: O(1) lookup dictionary — field names are unique within a container.
         _fieldIndex = new Dictionary<string, IDataField>(StringComparer.Ordinal);
         for (var i = 0; i < fields.Count; i++)
         {
@@ -151,8 +149,6 @@ public class DataContainer : IDataContainer
     public IDataNodePath Parent { get; }
 
     /// <inheritdoc />
-    // Why: a container's children ARE its fields — the uniform IDataNode child surface over the
-    // same field set that Schema projects. IReadOnlyList<IDataField> is covariant to IReadOnlyList<IDataNode>.
     public IReadOnlyList<IDataNode> Nodes => _fields;
 
     /// <inheritdoc />
@@ -185,10 +181,6 @@ public class DataContainer : IDataContainer
     public virtual IFormatType Format => _format;
 
     /// <inheritdoc />
-    // Why: Schema is a SYNCHRONOUS projection over the field children — the runtime field types
-    // implement IField, so the schema fields are the field children cast to IField. A field that is
-    // not an IField is a contract violation (fail loud), not a runtime data condition. When the
-    // container carries no field schema (generic HTTP), the projection is empty.
     public virtual IContainerSchema Schema => ProjectSchema();
 
     /// <inheritdoc />
@@ -200,14 +192,11 @@ public class DataContainer : IDataContainer
     /// <inheritdoc />
     public virtual IReadOnlyDictionary<string, object> Metadata => _metadata;
 
-    // Why: concrete return type (not IContainerSchema) per CA1859 — Data.Abstractions treats it as an error.
     private ContainerSchema ProjectSchema()
     {
         var projected = new IField[_fields.Count];
         for (var i = 0; i < _fields.Count; i++)
         {
-            // Why: every runtime field implements IField; a field that does not is a contract
-            // violation — throw rather than silently skip (no fallback).
             projected[i] = _fields[i] as IField
                 ?? throw new InvalidOperationException(
                     $"Field '{_fields[i].Name}' on container '{Name}' does not implement IField.");

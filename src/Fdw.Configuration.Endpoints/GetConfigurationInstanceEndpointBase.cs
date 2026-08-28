@@ -52,8 +52,6 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
     {
         ConfigurationEndpointLog.GettingInstance(_logger, req.Category, req.Name);
 
-        // Why: IConfigurationContainerLookup.ByCategory() replaces ConfigurationTypes.GetByServiceCategory().
-        // Returns empty until Wave A6 populates typed-body SectionPath metadata on IDataContainer.
         var containers = _containerLookup.ByCategory(req.Category);
         if (containers.Count == 0)
         {
@@ -110,8 +108,6 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
             }
             catch (Exception ex)
             {
-                // Why: Re-throw so HandleAsync can return 500 — a DB error on the matching table
-                // would otherwise silently fall through to 404, hiding the real failure.
                 ConfigurationEndpointLog.TableQueryFailed(_logger, ex, container.Name, $"instance {req.Name}");
                 throw;
             }
@@ -129,8 +125,6 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
             ? guidId : Guid.Empty;
         var name = record.TryGetValue("Name", out var nameValue)
             ? nameValue?.ToString() ?? string.Empty : string.Empty;
-        // Why: IDataContainer.Name is the type discriminator (e.g., "MsSqlConnection").
-        // ServiceType in the response is best-effort from the record's "Type" column or the container name.
         var serviceType = record.TryGetValue("Type", out var typeValue)
             ? typeValue?.ToString() ?? container.Name
             : container.Name;
@@ -162,9 +156,6 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
                 continue;
             }
 
-            // Why: IDataContainer does not yet expose a CLR Type for property-level secret annotation
-            // (pending Wave A6 typed-body promotion). Fall back to name-based heuristic — the same
-            // check used in MapToDetail for the top-level fields.
             var isSecret = IsSecretProperty(kvp.Key);
             values[kvp.Key] = isSecret && kvp.Value is not null ? "********" : kvp.Value;
         }

@@ -39,11 +39,6 @@ namespace Fdw.Services.Pipelines.Components.Canvas.Projection;
 public static class PipelineCanvasProjection
 {
     // ── Port id convention ───────────────────────────────────────────────────────
-    // Why: task nodes are edit-context symmetric (one "in" + one "out" port each — see
-    // PipelineCanvasEditContext.BuildPorts). TaskConnectionPayload.SourcePort/TargetPort are 0-based
-    // port indices; index 0 is the (currently only) in/out port every node exposes, so it maps to
-    // the "in"/"out" port id. Any non-zero index is preserved losslessly as its numeric string so a
-    // future multi-port node type round-trips without silently collapsing to port 0.
 
     private const string InPortId = "in";
     private const string OutPortId = "out";
@@ -117,9 +112,6 @@ public static class PipelineCanvasProjection
 
         return GenericResult<PipelineDetailPayload>.Success(new PipelineDetailPayload
         {
-            // Why: Guid.Empty is the established "not yet assigned" sentinel for a pipeline id in
-            // this package (mirrors PipelineBuilderProvider.PipelineConfigurationId) — a canvas
-            // model for a not-yet-saved pipeline carries a non-Guid model.Id (e.g. "empty"/"pipe-1").
             Id = Guid.TryParse(model.Id, out var pipelineId) ? pipelineId : Guid.Empty,
             Name = model.Title,
             Tasks = tasks,
@@ -138,9 +130,6 @@ public static class PipelineCanvasProjection
             var nodeType = CanvasNodeTypes.ByName(task.TaskType);
             if (nodeType == CanvasNodeTypes.NotFound)
             {
-                // Why: fail loud — an unregistered task type is a data/configuration error, not
-                // something to paper over with a placeholder node type. Skip the node; the task is
-                // simply absent from the resulting canvas rather than silently misrepresented.
                 PipelineCanvasLog.UnknownTaskNodeType(log, task.TaskType);
                 continue;
             }
@@ -168,8 +157,6 @@ public static class PipelineCanvasProjection
             var edgeType = CanvasEdgeTypes.ByName(connection.EdgeKind);
             if (edgeType == CanvasEdgeTypes.NotFound)
             {
-                // Why: fail loud — an unregistered edge kind is a data/configuration error; skip the
-                // connection rather than silently defaulting it to some other edge type.
                 PipelineCanvasLog.UnknownEdgeKind(log, connection.EdgeKind);
                 continue;
             }
@@ -198,10 +185,6 @@ public static class PipelineCanvasProjection
 
     private static Dictionary<string, string> BuildTaskMetadata(TaskPayload task)
     {
-        // Why: ICanvasNode.Metadata is a string-only bag (the canvas contract has no notion of
-        // TaskPayload's per-task CLR-typed Configuration values). Every entry — including id-shaped
-        // (Guid) values — is stringified with invariant formatting; the reverse direction
-        // (BuildConfiguration) restores plain strings, which is a known, accepted precision loss.
         var metadata = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var entry in task.Configuration)
             metadata[entry.Key] = ToMetadataValue(entry.Value);
@@ -231,10 +214,6 @@ public static class PipelineCanvasProjection
 
         foreach (var node in model.Nodes.OfType<PipelineCanvasNode>())
         {
-            // Why: a loaded task's canvas node id is its original TaskPayload.Id (round-tripped from
-            // ToCanvas). A node added during this editing session carries an edit-context-assigned
-            // sequence id (e.g. "pnode-1" — see PipelineCanvasEditContext.NextNodeId) which has never
-            // been persisted, so a fresh identity is minted for it here.
             var taskId = Guid.TryParse(node.Id, out var parsedId) ? parsedId : Guid.CreateVersion7();
             taskIdByNodeId[node.Id] = taskId;
 
@@ -290,10 +269,6 @@ public static class PipelineCanvasProjection
 
     private static Dictionary<string, object?> BuildConfiguration(IReadOnlyDictionary<string, string> metadata)
     {
-        // Why: the reverse of BuildTaskMetadata — the canvas metadata bag is string-only, so the
-        // original CLR type of each TaskPayload.Configuration value (int/bool/Guid/etc.) cannot be
-        // recovered here. Values come back as plain strings; a caller needing a typed value must
-        // re-parse using TaskType-specific knowledge this projection intentionally doesn't have.
         var configuration = new Dictionary<string, object?>(StringComparer.Ordinal);
         foreach (var entry in metadata)
             configuration[entry.Key] = entry.Value;

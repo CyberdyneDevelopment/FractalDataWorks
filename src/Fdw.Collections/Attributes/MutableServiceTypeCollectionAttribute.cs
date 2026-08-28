@@ -18,7 +18,6 @@ namespace Fdw.Collections;
 /// - Register(IServiceCollection, ILoggerFactory?) invoker over the swappable RegistrationMethod field
 /// - Child collection support via ParentCollection parameter
 /// </remarks>
-// Why: pure attribute definition (declarative metadata only, consumed by source generators) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 [ExcludeFromCodeCoverage]
 public sealed class MutableServiceTypeCollectionAttribute : Attribute

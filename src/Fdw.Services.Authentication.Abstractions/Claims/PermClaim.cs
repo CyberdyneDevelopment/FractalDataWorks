@@ -3,7 +3,6 @@ using Fdw.Collections.Attributes;
 namespace Fdw.Services.Authentication.Abstractions;
 
 /// <summary>One claim per resolved permission string (e.g. <c>data.read</c>). Baked at issue time.</summary>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(ClaimDefinitions), "perm")]
 public sealed class PermClaim : ClaimDefinitionBase

@@ -13,8 +13,6 @@ public sealed class PermissionConfigurationValidator : FdwConfigurationValidator
 {
     private static readonly string[] ValidActions = ["read", "write", "execute", "delete", "admin"];
 
-    // Why: Scope replaces the old RequiresTenant boolean. Three values capture the full
-    // permission visibility model: tenant-scoped, system-wide, or global (both).
     private static readonly string[] ValidScopes = ["tenant", "system", "global"];
 
     /// <summary>

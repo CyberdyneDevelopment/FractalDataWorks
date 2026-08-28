@@ -84,12 +84,9 @@ public class RowSourceTypeBaseTests
         public override int TypicalAllocationsPerRow => 2;
         public override string Format => "TestFormat";
 
-        // Why: test double — the base now requires a CreateReader factory; this fixture exercises the
-        // metadata properties, not reading, so the factory throws to signal it isn't the unit under test.
         public override IRowSourceReader CreateReader(System.IO.Stream content, RowSourceOptions? options)
             => throw new System.NotSupportedException("Test fixture does not create readers.");
 
-        // Why: the base also requires the config-driven Create surface; same test-double rationale.
         public override IRecordSource<DataRecord> Create(RecordSourceContext context)
             => throw new System.NotSupportedException("Test fixture does not create record sources.");
     }

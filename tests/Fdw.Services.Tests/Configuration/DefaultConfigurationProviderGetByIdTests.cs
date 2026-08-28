@@ -73,9 +73,6 @@ public class DefaultConfigurationProviderGetByIdTests
     // Helpers
     // ========================================================================
 
-    // Why: Walks past the IsCurrent/IsDeleted conditions to find the key-specific predicate.
-    // When the filter is a FilterGroup (AND group), the last node is the key condition.
-    // When the filter is a leaf FilterCondition, it IS the key condition.
     private static FilterCondition? ExtractKeyPredicate(IFilterExpression? filter)
     {
         if (filter?.Root is null) return null;
@@ -127,10 +124,6 @@ public class DefaultConfigurationProviderGetByIdTests
             string containerName,
             string fkColumn)
     {
-        // Why: real metadata exposes FK keys via the PHYSICAL column name (e.g. SecretManagerRowId).
-        // FindForeignKeyColumn returns that physical column directly — no string-stripping needed.
-        // The fixture mirrors that shape: FK on "{fkColumn-without-Id}RowId". The logical field
-        // (SecretManagerId) is kept in the Fields list but is no longer used by the resolver.
         var fkBase = fkColumn.EndsWith("Id", StringComparison.Ordinal)
             ? fkColumn[..^"Id".Length]
             : fkColumn;
@@ -147,9 +140,6 @@ public class DefaultConfigurationProviderGetByIdTests
         mockKeyField.Setup(k => k.Ordinal).Returns(0);
         mockKeyField.Setup(k => k.ReferencedField).Returns((IDataField?)null);
 
-        // Why: ResolveParentJoin reads the FK's ReferencedContainer (the parent) and joins on the
-        // parent's Physical key (RowId — the FK target) while filtering by the parent's Logical key
-        // (the durable Id). The fixture supplies a parent container carrying both keys.
         var parentName = fkBase;
         var mockParentPhysicalField = new Mock<IDataField>();
         mockParentPhysicalField.Setup(f => f.Name).Returns("RowId");
@@ -194,9 +184,6 @@ public class DefaultConfigurationProviderGetByIdTests
         mockContainer.Setup(c => c.Description).Returns((string?)null);
 
         // Build IDataNodePath with Container() lookup — returns IGenericResult<IDataContainer>.
-        // Why: the typed-body parent lives in the SAME path as the child (e.g. sec.SecretManager and
-        // sec.AzureKeyVaultSecretManager), so the path resolves BOTH the child and its parent. The FK
-        // selector uses this to distinguish the parent FK from a cross-path data reference.
         var mockPath = new Mock<IDataNodePath>();
         mockPath.Setup(p => p.Name).Returns(pathName);
         mockPath.Setup(p => p.Containers).Returns(new List<IDataContainer> { mockContainer.Object, mockParentContainer.Object });
@@ -225,9 +212,6 @@ public class DefaultConfigurationProviderGetByIdTests
 
         IReadOnlyList<IDataStore> stores = new List<IDataStore> { mockStore.Object };
 
-        // Why: ResolveParentJoin now reads the bounded ConfigurationDb schema tree from
-        // IConfigurationGateway.DataStores (the eager full-tree singleton is gone), so the fixture
-        // exposes the mock tree through the capturing gateway rather than a separate Lazy parameter.
         var gateway = new CapturingGateway { DataStores = stores };
         return gateway;
     }
@@ -252,8 +236,6 @@ public class DefaultConfigurationProviderGetByIdTests
     /// <summary>
     /// TypeOption for TestChildConfig — registered via <see cref="ServicesTypeCollectionFixture"/>.
     /// </summary>
-    // Why: ConfigurationCommands TypeCollection is populated by source generators for referenced
-    // assemblies only. Test-assembly types must be registered manually in the fixture.
     [TypeOption(typeof(ConfigurationCommands), "TestChildConfig")]
     public sealed class TestChildCommand : ConfigurationCommandBase<TestChildConfig>
     {
@@ -277,8 +259,6 @@ public class DefaultConfigurationProviderGetByIdTests
         public IDataCommand? LastCommand { get; private set; }
 
         /// <inheritdoc/>
-        // Why: test double exposes the fixture's mock schema tree so ResolveParentJoin can resolve the
-        // child→parent FK join from container metadata (the eager full-tree singleton is gone).
         public IReadOnlyList<IDataStore> DataStores { get; init; } = [];
 
         /// <inheritdoc/>
@@ -289,12 +269,10 @@ public class DefaultConfigurationProviderGetByIdTests
         }
 
         /// <inheritdoc/>
-        // Why: test double — useCache not exercised in command-routing unit tests; delegates to existing implementation.
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, bool useCache, CancellationToken cancellationToken = default)
             => Execute<T>(command, target, cancellationToken);
 
         /// <inheritdoc/>
-        // Why: test double — records the command and returns success; target addressing is not exercised.
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
         {
             LastCommand = command;
@@ -302,7 +280,6 @@ public class DefaultConfigurationProviderGetByIdTests
         }
 
         /// <inheritdoc/>
-        // Why: test double — non-generic save path; records the command like the typed overload.
         public Task<IGenericResult> Execute(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
         {
             LastCommand = command;
@@ -310,8 +287,6 @@ public class DefaultConfigurationProviderGetByIdTests
         }
 
         /// <inheritdoc/>
-        // Why: test double — by-type child read records the command and returns no rows; these tests
-        // never reach child composition (the header read returns a null row), so an empty result suffices.
         public Task<IGenericResult<IEnumerable<object>>> Execute(IDataCommand command, DataStoreTarget target, Type rowType, CancellationToken cancellationToken = default)
         {
             LastCommand = command;
@@ -319,13 +294,10 @@ public class DefaultConfigurationProviderGetByIdTests
         }
 
         /// <inheritdoc/>
-        // Why: test double — DataSet routing not exercised in command-routing unit tests.
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<T>.Failure(new GenericMessage("DataSet routing not supported in CapturingGateway test double")));
 
         /// <inheritdoc/>
-        // Why: test double — transactions are not needed for command-routing unit tests.
-        // Why: streaming record-source cursor is not exercised by this test double.
         public Task<IGenericResult<Fdw.Data.RowSources.Abstractions.IRecordSource<Fdw.Data.RowSources.Abstractions.DataRecord>>> OpenRecordSource(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
             => throw new System.NotImplementedException();
 
@@ -333,11 +305,6 @@ public class DefaultConfigurationProviderGetByIdTests
             => Task.FromResult(GenericResult<IDataGatewayTransaction>.Failure(new GenericMessage("Transactions not supported in test double")));
     }
 
-    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
-    // connection it was told its rows live on, so the fake has to answer to that name to be found.
-    // Why a double rather than the real provider: these tests exercise what a configuration provider
-    // does with its gateway, not which gateway it selects, so the double answers for whatever
-    // connection is asked. Selection itself is covered where the real provider is under test.
     private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 

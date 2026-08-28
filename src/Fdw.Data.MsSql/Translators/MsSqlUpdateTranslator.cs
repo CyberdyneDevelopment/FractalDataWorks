@@ -139,7 +139,6 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
     {
         var dialect = dbPath.Dialect;
 
-        // Why: IsPrimaryKey removed from IField — use GetPrimaryKeyFieldName() and exclude by name instead.
         var pkFieldName = container.GetPrimaryKeyFieldName();
         // Get columns from schema (exclude PK, identity, computed, and system-provided
         // columns). System-provided columns (e.g. RowId via newsequentialid(), audit
@@ -202,7 +201,6 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
         else
         {
             // Fall back to primary key if available
-            // Why: IsPrimaryKey removed from IField — use GetPrimaryKeyFieldName() extension instead.
             var pkName = container.GetPrimaryKeyFieldName();
             var pkField = pkName != null ? container.Schema?.Fields?.FirstOrDefault(f => string.Equals(f.Name, pkName, StringComparison.OrdinalIgnoreCase)) : null;
             if (pkField == null)

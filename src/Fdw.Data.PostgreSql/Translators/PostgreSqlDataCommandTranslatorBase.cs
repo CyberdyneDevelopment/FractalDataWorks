@@ -41,9 +41,6 @@ public abstract class PostgreSqlDataCommandTranslatorBase : SqlDataCommandTransl
     /// Creates a new <see cref="NpgsqlCommand"/> with the supplied SQL text.
     /// </summary>
     /// <param name="sql">The SQL command text.</param>
-    // Why: defined here (not as abstract on the shared SqlDataCommandTranslatorBase<TCommand>)
-    // to avoid the TypeCollection source generator emitting 'public override' stubs (CS0507).
-    // Why static: no instance state required; static avoids CA1822 in Release.
     protected static NpgsqlCommand CreateCommand(string sql) => new NpgsqlCommand(sql);
 
     /// <summary>

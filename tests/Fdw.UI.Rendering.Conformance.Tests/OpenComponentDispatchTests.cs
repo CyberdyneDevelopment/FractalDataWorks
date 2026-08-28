@@ -75,8 +75,6 @@ public class OpenComponentDispatchTests
     [Fact]
     public void AModelNoRegisteredRendererClaimsResolvesToNull()
     {
-        // Why null rather than a catch-all: substituting a generic control would render something
-        // the author never asked for instead of surfacing that the mapping is missing.
         BlazorComponentRendererExtensions.ResolveFor(new UnmappedComponentModel()).ShouldBeNull();
     }
 

@@ -41,9 +41,6 @@ public static class ConfigurationAnalyzer
         ExtractAttributeValues(attribute, model);
 
         // Detect whether the base class also has [ManagedConfiguration].
-        // Why: If the parent class generates GetDdlDefinition(), the child must emit
-        // 'public new static' to avoid CS0108. This is a Roslyn-level check — the
-        // attribute no longer carries this info since IDataNode now owns hierarchy.
         model.ParentHasManagedConfiguration = BaseClassHasManagedConfiguration(classSymbol);
 
         // Infer service category/type from class name if not specified
@@ -125,8 +122,6 @@ public static class ConfigurationAnalyzer
         var current = classSymbol;
         while (current != null && current.SpecialType != SpecialType.System_Object)
         {
-            // Why: stop before walking into a base that is itself [ManagedConfiguration] — its
-            // columns belong to that base's own DDL/parent table, never this child's.
             if (!ReferenceEquals(current, classSymbol) && HasManagedConfigurationAttribute(current))
                 break;
 

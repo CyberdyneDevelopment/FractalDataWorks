@@ -4,7 +4,6 @@ namespace Fdw.Services.Notifications.Abstractions;
 /// Domain model for a single user notification preference entry
 /// (a notification-type / delivery-channel pair and its enabled state).
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class NotificationPreference
 {

@@ -204,8 +204,6 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"tags": [1, 2, 3]}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        // Why: explicitly set FlattenNestedObjects=false to confirm raw-JSON behavior is
-        // preserved when flattening is disabled — the default is false.
         var options = new JsonRowSourceOptions { FlattenNestedObjects = false };
         using var source = new JsonStreamRowSource(stream, options);
         await source.Read(TestContext.Current.CancellationToken);

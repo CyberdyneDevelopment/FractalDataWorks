@@ -17,9 +17,6 @@ public static class StatusBadgeMapper
     /// <param name="isHealthy">Whether the entity is healthy.</param>
     /// <param name="logger">Optional logger. Falls back to <see cref="NullLogger.Instance"/> when not supplied.</param>
     /// <returns>A status badge with label, color, and variant.</returns>
-    // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions; this static
-    // helper has no DI-constructed instance to hold a logger, so it is threaded through as an
-    // optional trailing parameter instead, mirroring the EntityPicker/ObjectPicker component pattern.
     public static StatusBadge FromHealth(bool isHealthy, ILogger? logger = null)
     {
         var effectiveLogger = logger ?? NullLogger.Instance;

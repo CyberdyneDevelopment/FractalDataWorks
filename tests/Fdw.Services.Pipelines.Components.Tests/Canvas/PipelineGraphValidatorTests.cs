@@ -251,7 +251,6 @@ public sealed class PipelineGraphValidatorTests
         var result = PipelineGraphValidator.Validate(model);
 
         // Assert
-        // Why: orphan does not fail IsValid — only Error-level issues block execution.
         result.IsValid.ShouldBeTrue();
         result.Warnings.ShouldContain(w => w.Severity == ValidationSeverities.Warning
                                            && w.NodeOrEdgeId == "t_orphan");

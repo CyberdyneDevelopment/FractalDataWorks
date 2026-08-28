@@ -5,8 +5,6 @@ using Fdw.Data.Abstractions;
 using Fdw.Data.DataStores.Abstractions;
 using Fdw.Data.MsSql;
 using Moq;
-// Why: Phase 1 introduced IDataNodePath in Data.Abstractions alongside the pre-existing one in
-// DataStores.Abstractions. This file predates Phase 1 and uses the old interface throughout.
 using IDataNodePath = Fdw.Data.DataStores.Abstractions.IDataPath;
 using Shouldly;
 using Xunit;
@@ -19,9 +17,6 @@ namespace Fdw.Data.MsSql.Tests.Paths;
 /// </summary>
 public sealed class DatabasePathGapTests
 {
-    // Why (foundational redesign): the old ContainerBase-derived TableContainer was deleted. These
-    // tests only need an IStorageContainer with a Name to exercise DatabasePath container navigation,
-    // so a lightweight mock stands in for the concrete container type.
     private static IStorageContainer MakeContainer(string name)
     {
         var container = new Mock<IStorageContainer>();

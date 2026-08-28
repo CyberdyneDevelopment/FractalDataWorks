@@ -62,22 +62,15 @@ public class DataSetDetailResponse : ResourceDetail
     public IList<DataSetFilterConditionPayload> Filters { get; set; } = [];
 
     /// <summary>Gets or sets the join definitions composing this DataSet's sources.</summary>
-    // Why: the editor must round-trip joins. Without them on the detail, loading a DataSet for edit
-    // and saving silently drops every join (the update path persists exactly what the form holds).
     public IList<DataSetJoinPayload> Joins { get; set; } = [];
 
     /// <summary>Gets or sets the caching policy for this DataSet, or <c>null</c> when not configured.</summary>
-    // Why: same round-trip reason as Joins — omitting Caching from the detail makes an edit wipe it.
     public DataSetCachingPayload? Caching { get; set; }
 
     /// <summary>Gets or sets the aggregate measure definitions composed on this DataSet.</summary>
-    // Why: same round-trip reason as Joins/Caching — omitting Aggregates from the detail makes an
-    // edit silently drop every aggregate measure (WI-5).
     public IList<DataSetAggregateDto> Aggregates { get; set; } = [];
 
     /// <summary>Gets or sets the creation timestamp.</summary>
-    // Why: DateTimeOffset serializes with timezone offset (ISO 8601 compliant) — plain DateTime
-    // produces a string without offset which fails ISO regex assertions.
     public DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>Gets or sets the last modification timestamp.</summary>

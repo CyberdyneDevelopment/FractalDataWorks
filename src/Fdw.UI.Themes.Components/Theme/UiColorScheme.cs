@@ -5,7 +5,6 @@ namespace Fdw.UI.Themes.Components.Theme;
 /// <summary>
 /// Color scheme for UI components.
 /// </summary>
-// Why: pure theme descriptor — properties + literal preset values, no logic.
 [ExcludeFromCodeCoverage]
 public class UiColorScheme
 {

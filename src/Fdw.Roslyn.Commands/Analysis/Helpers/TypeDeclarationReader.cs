@@ -47,8 +47,6 @@ public static class TypeDeclarationReader
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Why: a nested type's location is decided by its parent's file, so evaluating it separately
-            // would report a phantom mismatch for a file that is already correct.
             if (declaration.Parent is BaseTypeDeclarationSyntax) continue;
 
             results.Add(new TypeDeclarationInfo(

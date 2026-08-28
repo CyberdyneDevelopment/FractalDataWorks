@@ -31,12 +31,6 @@ public abstract class ListDataStoreTypesEndpointBase : CrudListEndpointBase<Data
     /// <summary>Loads all registered DataStore types as summary DTOs.</summary>
     protected override Task<IGenericResult<List<DataStoreTypeSummaryPayload>>> LoadItems(CancellationToken ct)
     {
-        // Why: DataStoreTypes is a MutableTypeCollection; .All() returns IReadOnlyCollection<IDataStoreType>
-        // (direct elements, not dictionary KVPs). Contrast with ServiceTypeCollections (e.g. ConnectionTypes)
-        // which return ImmutableDictionary<Guid, IConnectionType> and require kvp.Value.
-        // Why: IDataStoreType exposes Name (from ITypeOption) + SectionName; it has no DisplayName/
-        // Description/Category members, so we mirror the connection-types pattern (Name doubles as the
-        // display label) and surface SectionName as the category. No fabricated values.
         var items = DataStoreTypes.All()
             .Select(t => new DataStoreTypeSummaryPayload
             {

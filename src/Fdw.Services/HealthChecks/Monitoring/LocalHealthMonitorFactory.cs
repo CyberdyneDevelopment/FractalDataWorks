@@ -28,11 +28,6 @@ public sealed class LocalHealthMonitorFactory : ILocalHealthMonitorFactory
     private readonly ILogger<LocalHealthMonitorFactory> _logger;
     private readonly ILoggerFactory? _loggerFactory;
 
-    // Why: the monitor's health history + throughput live in IN-MEMORY circular buffers on the
-    // instance, so the instance must live for the application's lifetime. The domain provider is
-    // scoped (new per request), so app-lifetime caching belongs HERE, on this singleton factory —
-    // one monitor per configuration row name, created once, reused by every scope. Lazy prevents
-    // duplicate construction under concurrent first calls.
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Lazy<IHealthMonitorService>> _instances =
         new(StringComparer.OrdinalIgnoreCase);
 

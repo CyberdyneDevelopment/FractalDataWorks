@@ -62,9 +62,6 @@ public sealed class ConfigurationGatewayProvider : IConfigurationGatewayProvider
         }
 
         return
-            // Why the held connections are in the failure: the caller named the connection its
-            // collection declares, so a miss is a question about which gateways came up, not about
-            // whether the name was spelled right.
             GenericResult<IConfigurationGateway>.Failure(
                 DataServiceResultCodes.ByName("NoConfigurationGateway"),
                 ResultDetails.Create("ConnectionName", connectionName, "Registered", Held()));

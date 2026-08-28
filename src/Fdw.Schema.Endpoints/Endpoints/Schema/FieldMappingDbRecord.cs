@@ -6,10 +6,6 @@ namespace Fdw.Schema.Endpoints;
 /// <summary>
 /// Internal entity for DataSetFieldMapping table.
 /// </summary>
-// Why [GenerateMapper]: a query materialises through a generated POCO mapper, and the generator
-// emits one only for a type carrying this attribute. Without it the read threw "No POCO mapper
-// found" on every call — and the caller was handed 200 with an empty list, so a mapping that
-// exists in the database read as a dataset that has none.
 [GenerateMapper]
 public partial class FieldMappingDbRecord
 {

@@ -101,8 +101,6 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
             return;
         }
 
-        // Why: Resolve item type and state from string names to TypeCollection entries.
-        // ByName returns NotFound sentinel when name doesn't match — treat as no filter.
         IExecutionItemType? itemTypeFilter = null;
         if (!string.IsNullOrWhiteSpace(req.ItemType))
         {

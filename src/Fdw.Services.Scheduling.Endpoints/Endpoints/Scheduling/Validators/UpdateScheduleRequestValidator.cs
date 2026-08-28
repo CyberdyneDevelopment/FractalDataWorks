@@ -13,15 +13,8 @@ public abstract class UpdateScheduleRequestValidator : FdwEndpointValidator<Upda
     /// </summary>
     protected UpdateScheduleRequestValidator()
     {
-        // Why: PUT here is a partial update — clients may send just {isEnabled:false} to toggle
-        // a single field. Required-on-update validation rejected those legitimate PATCH-style
-        // bodies with 400. Only enforce required fields when the client supplied them.
         ValidateName(x => x.Name);
 
-        // Why: reject bodies that supply no updateable field. A PUT with only {name:...}
-        // (which always matches the path) is a no-op — Newman expects 400 here. At least
-        // one of PipelineName/SchedulerType/CronExpression/IntervalSeconds/IsEnabled must
-        // be present.
         RuleFor(x => x)
             .Must(x => x.PipelineName is not null
                 || x.SchedulerType is not null

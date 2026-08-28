@@ -53,8 +53,6 @@ public sealed class InProcMcpToolSource : IMcpToolSource
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var ct = _cts.Token;
-        // Why: call Subscribe synchronously on the caller's thread so the subscription is live
-        // before Start returns. The pump then drains the already-live channel on the thread pool.
         var stream = bus.Subscribe($"mcp/{ServerName}/*/invoke", ct);
         _pump = Task.Run(() => Pump(bus, stream, ct), ct);
         return Task.CompletedTask;

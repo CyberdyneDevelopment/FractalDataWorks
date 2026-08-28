@@ -24,15 +24,8 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissionsRequest, List<PermissionSummaryDto>>
 {
     private readonly ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand> _rolePermissionProvider;
-    // Why: RoleConfigurationProvider replaces 3x IOptionsMonitor<List<T>> with a single dual-source
-    // provider that handles roles, permissions, and role-permission assembly.
     private readonly RoleConfigurationProvider _roleProvider;
-    // Why: IConfigurationGateway is the single connection used by the authorization domain; opening
-    // a transaction on it ensures all deletes + inserts share one SqlTransaction.
     private readonly IConfigurationGateway _configurationGateway;
-    // Why: ISystemRoleConfiguration replaces the former hardcoded HashSet<string> {"Admin","Operator",...}.
-    // The system role names are now runtime-configurable; the endpoint must ask the configuration
-    // whether a given role is a system role rather than comparing against a compile-time set.
     private readonly ISystemRoleConfiguration _systemRoleConfiguration;
 
     /// <summary>
@@ -61,11 +54,6 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:write".
     /// </summary>
-    // Why: the standard CRUD tier for this resource. This endpoint previously required ":delete"
-    // as an ad-hoc "Admin-only" tier, because the seeded Operator role is granted ":write" on
-    // every resource by a blanket rule and would otherwise have inherited user administration.
-    // The grant was the wrong thing to work around: user/role admin is now carved out of
-    // Operator in the seed, so these permissions can mean exactly what they say (FDW-634).
     protected virtual string WritePolicy => "settings/role:write";
 
     /// <inheritdoc />
@@ -88,8 +76,6 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 
         AuthorizationEndpointLog.SettingRolePermissions(EndpointLogger, req.Name);
 
-        // Why: system-role guard uses ISystemRoleConfiguration.IsSystemRole — runtime-configurable
-        // role names rather than a hardcoded compile-time set.
         if (_systemRoleConfiguration.IsSystemRole(req.Name))
         {
             HttpContext.Response.StatusCode = 403;
@@ -123,7 +109,6 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
         await Send.OkAsync(resolved, ct).ConfigureAwait(false);
     }
 
-    // Why: Extracted to keep HandleAsync below the FDW007 cyclomatic-complexity threshold.
     private List<PermissionSummaryDto> ResolvePermissions(
         SetRolePermissionsRequest req,
         IReadOnlyList<PermissionConfiguration> allPermissions)
@@ -158,8 +143,6 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
         return resolved;
     }
 
-    // Why: Extracted to keep HandleAsync below the FDW007 cyclomatic-complexity threshold.
-    // Returns success when the transaction commits; on failure, the HTTP response is already sent.
     private async Task<IGenericResult> SetPermissionsAtomically(
         SetRolePermissionsRequest req,
         RoleConfiguration role,
@@ -167,7 +150,6 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
         IReadOnlyList<RolePermissionConfiguration> existingMappings,
         CancellationToken ct)
     {
-        // Why: Open one transaction so all deletes + inserts are atomic.
         var txnResult = await _configurationGateway.BeginTransaction(
             _rolePermissionProvider.DataStoreName, ct).ConfigureAwait(false);
         if (!txnResult.IsSuccess || txnResult.Value == null)
@@ -200,9 +182,6 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
                 return commitResult;
             }
 
-            // Why: the transactional save/delete defer to this transaction and cannot evict the
-            // cached RolePermission reads before commit. Invalidate now so the role-detail reload
-            // reflects the new grants instead of stale cached rows.
             _rolePermissionProvider.InvalidateCache();
 
             return GenericResult.Success();
@@ -278,9 +257,6 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
     {
     }
 
-    // Why: extracted to keep HandleAsync below cyclomatic-complexity thresholds. Returns the
-    // bare permission name on success, or null if the caller submitted a different tenant's
-    // prefix (which would be a cross-tenant write and must not be silently rewritten).
     private static string? StripTenantPrefix(string rawName, string? tenantPrefix)
     {
         if (tenantPrefix is not null

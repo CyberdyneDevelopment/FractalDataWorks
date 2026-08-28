@@ -54,8 +54,6 @@ public sealed class OrchestrationPageTests : IDisposable
     [Fact]
     public void ListRendersErrorBannerWhenErrorMessageSet()
     {
-        // Why: current markup emits the error banner as class "card b-fail" (the old reference-ui
-        // test asserted a stale "border-red-700" class the page no longer emits).
         var cut = RenderList(new OrchestrationNodeContext { LastResult = GenericResult.Failure(new GenericMessage("node load failed")) });
         cut.Markup.ShouldContain("node load failed");
         cut.FindAll("div").ShouldContain(d => d.ClassList.Contains("b-fail"));

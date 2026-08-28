@@ -19,9 +19,6 @@ namespace Fdw.Services.Audit.Services;
 /// <summary>
 /// Implementation of <see cref="IAuditService"/> using IConfigurationGateway for persistence.
 /// </summary>
-// Why: audit.ConfigurationAudit lives in ConfigurationDb, which is reached via IConfigurationGateway.
-// IConfigurationGateway has its own connection built from configurationSchema.json and does not depend
-// on runtime IDataConnectionProvider — so it works even before connection rows are loaded from ConfigurationDb.
 [ExcludeFromCodeCoverage]
 public sealed class AuditService : IAuditService
 {
@@ -196,8 +193,6 @@ public sealed class AuditService : IAuditService
 
         var command = new QueryCommand<AuditQueryRecord>
         {
-            // Why: Addressing lives in DataStoreTarget — audit.ConfigurationAudit is in
-            // ConfigurationDb (DataStore) under the "audit" path (schema).
             Filter = filter,
             Ordering = new OrderingExpression
             {
@@ -303,8 +298,6 @@ public sealed class AuditService : IAuditService
 
         var command = new QueryCommand<AuditQueryRecord>
         {
-            // Why: Addressing lives in DataStoreTarget — audit.ConfigurationAudit is in
-            // ConfigurationDb (DataStore) under the "audit" path (schema).
             Filter = filter,
             Ordering = new OrderingExpression
             {
@@ -347,8 +340,6 @@ public sealed class AuditService : IAuditService
 
     private async Task<IGenericResult> InsertAuditRecord(AuditInsertRecord record, CancellationToken cancellationToken)
     {
-        // Why: Addressing lives in DataStoreTarget — audit.ConfigurationAudit is in
-        // ConfigurationDb (DataStore) under the "audit" path (schema).
         var command = new InsertCommand<AuditInsertRecord>(record);
         var result = await _gateway.Execute<int>(
             command,

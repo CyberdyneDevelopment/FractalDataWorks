@@ -33,9 +33,6 @@ public sealed class DataSetQueryDocumentProcessor : IDocumentProcessor
         if (_serviceProvider is null)
             return;
 
-        // Why: IDataSetConfigurationProvider (not IDataSetProvider) is used here because OpenAPI
-        // document generation needs DataSetConfiguration records — specifically Fields, KeyFields,
-        // and source metadata — not the live IDataSet runtime graph.
         var dataSetProvider = _serviceProvider.GetService<IDataSetConfigurationProvider>();
         if (dataSetProvider is null)
             return;

@@ -50,9 +50,6 @@ public class WindowedCalculationEntityTypeTests
     [Fact]
     public async Task ExecuteWithRowsAppliesHardcodedRankRegardlessOfConfiguration()
     {
-        // Why (defect): windowFunction/targetField/partitionByFields/orderByFields are all local
-        // constants in ExecuteTyped, never read from the entity's WindowedCalculationConfiguration —
-        // so every execution behaves identically regardless of what was configured.
         var type = new WindowedCalculationEntityType();
         var entity = new TestCalculationEntity
         {
@@ -203,9 +200,6 @@ public class WindowedCalculationEntityTypeTests
     [Fact]
     public void TypedContainerNameIsNullByDefault()
     {
-        // Why: WindowedCalculationEntityType does not override TypedContainerName, so it inherits
-        // the base's null (no typed container by that mechanism); the typed body is instead resolved
-        // via ManagedConfiguration's ServiceCategory/ServiceType path.
         var type = new WindowedCalculationEntityType();
 
         type.TypedContainerName.ShouldBeNull();

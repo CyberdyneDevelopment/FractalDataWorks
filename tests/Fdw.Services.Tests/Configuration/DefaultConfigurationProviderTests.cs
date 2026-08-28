@@ -29,11 +29,7 @@ public class DefaultConfigurationProviderTests
         TestDualConfig[] systemConfigs,
         TestDualConfig[] userConfigs)
     {
-        // Why: The two-arity constructor requires IConfigurationGatewayProvider, dataStoreName,
-        // and pathName. The TCommand generic arg replaces IConfigurationType — the command encodes
-        // the table name. We wire up a mock gateway that returns userConfigs for any IDataCommand.
         var mockGateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         mockGateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
         mockGateway
             .Setup(g => g.Execute<IEnumerable<TestDualConfig>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
@@ -77,8 +73,6 @@ public class DefaultConfigurationProviderTests
     [Trait("Category", "Configuration")]
     public async Task GetByNameReturnsNullWhenNotInSystemAndNoUserCache()
     {
-        // Why: The mock DataGateway returns all user configs for any query (can't filter),
-        // so we test system-only miss with empty user cache to verify null is returned.
         var provider = MakeProvider(
             [new TestDualConfig { Id = Guid.NewGuid(), Name = "Other" }],
             []);
@@ -137,10 +131,6 @@ public class DefaultConfigurationProviderTests
     // ComposeAggregate hook (FDW-558 behavior-preservation regression)
     // ========================================================================
 
-    // Why: builds the minimal owner-key metadata tree (Physical=RowId, Logical=Id) so
-    // ResolveOwnerKeyColumns("TestContainer") resolves and LoadChildrenInto actually issues the child
-    // JOIN instead of silently skipping (NoSuitableKeyForContainer) — without this, a Get(name) call
-    // that happens to leave Fields empty would prove nothing about whether ComposeAggregate ran.
     private static IReadOnlyList<IDataStore> BuildOwnerKeyTree(string containerName)
     {
         var physicalField = new Mock<IDataField>();
@@ -217,17 +207,10 @@ public class DefaultConfigurationProviderTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        // Why: this is the exact behavior A1 (extracting ComposeAggregate) must preserve — Get(string)
-        // used to call ComposeTypedBody+ComposeChildren inline; it now calls them via the shared hook.
-        // A regression here would mean the extraction silently dropped the child cascade.
         result.Value!.Fields.Select(f => f.Name).OrderBy(n => n, StringComparer.Ordinal)
             .ShouldBe(["Alpha", "Beta"]);
     }
 
-    // Why (FDW-601): a root header that carries a self-referencing hierarchy FK (e.g.
-    // authz.Role.ParentRoleRowId → Role) must still resolve by name. Before the fix, FindForeignKey
-    // returned the self-FK as a "parent", ResolveParentJoin reported HasParent=true, and
-    // GetHeaderByName refused name resolution (TypedBodyNotResolvableByName) → Get(name) 404'd.
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Configuration")]
@@ -257,15 +240,11 @@ public class DefaultConfigurationProviderTests
 
         var result = await provider.Get("Admin", TestContext.Current.CancellationToken);
 
-        // Why: the self-FK must be skipped so this is a by-name root read, not the
-        // TypedBodyNotResolvableByName failure that produced the /roles/{name} 404.
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value!.Name.ShouldBe("Admin");
     }
 
-    // Why (FDW-601): mirrors BuildOwnerKeyTree but adds a self-referencing hierarchy FK
-    // (LocalField ParentRowId → this same container) — the exact shape that misclassified authz.Role.
     private static IReadOnlyList<IDataStore> BuildSelfReferencingKeyTree(string containerName)
     {
         var physicalField = new Mock<IDataField>();
@@ -373,7 +352,6 @@ public class DefaultConfigurationProviderTests
 
         var result = await provider.Delete(Guid.Empty, TestContext.Current.CancellationToken);
 
-        // Why: deleting nothing is a caller error, not a no-op — it used to report Success.
         result.IsSuccess.ShouldBeFalse();
         mockGateway.Verify(g => g.InvalidateCachedResults(It.IsAny<DataStoreTarget>()), Times.Never);
     }
@@ -383,9 +361,6 @@ public class DefaultConfigurationProviderTests
     [Trait("Category", "Configuration")]
     public void InvalidateCacheAsksTheGatewayToDropThisContainer()
     {
-        // Why this is the only invalidation a provider still initiates: a write executed through the
-        // gateway invalidates itself. A write made inside a transaction cannot — its rows are not
-        // visible until commit — so the committer calls this afterwards.
         var mockGateway = new Mock<IConfigurationGateway>();
         mockGateway.Setup(g => g.DataStores).Returns(Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
@@ -426,11 +401,6 @@ public class DefaultConfigurationProviderTests
     // Save — KVP property-collection cascade (FDW-547)
     // ========================================================================
 
-    // Why: the write cascade previously no-op'd on IsPropertyCollection descriptors (CascadeCollections),
-    // silently dropping every KVP child row on save. This pins the fix: one ConfigurationSaveCommand
-    // <KeyValueRow> per bag entry, each carrying the owner's logical FK via AdditionalColumnValues. A
-    // 2-entry bag is MANDATORY here — it locks the sibling-deactivation regression the translator fix
-    // also addresses (a single-entry bag would pass even with the old owner-only UPDATE predicate).
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Configuration")]
@@ -493,12 +463,6 @@ public class DefaultConfigurationProviderTests
     // Save — typed-list child cascade, generic fields (FDW-548)
     // ========================================================================
 
-    // Why: pins the write cascade FDW-548 relies on — a mapper-visible List<T> child collection with no
-    // [NotMapped] (mirrors DataContainerConfiguration.Fields / DataSetConfiguration.Fields) gets a
-    // typed-list CascadeChildren descriptor, and CascadeCollections stamps the owner's logical FK + mints
-    // each child's Id before issuing one ConfigurationSaveCommand<T> per row — the same mechanism proven
-    // for FDW-547's KVP children, applied here to a typed-list collection. Two fields are used so a
-    // single-row collection couldn't mask an off-by-one in the cascade loop.
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Configuration")]
@@ -567,17 +531,12 @@ public class DefaultConfigurationProviderTests
         public string? Description { get; init; }
     }
 
-    // Why: ConfigurationCommands is a TypeCollection — TestConfigurationCommand must be registered
-    // via [TypeOption] so that ImplementationConfigurationProviderBase<TestDualConfig, TestConfigurationCommand>
-    // can resolve Commands() from ConfigurationCommands.All().OfType<TestConfigurationCommand>().Single().
     [TypeOption(typeof(ConfigurationCommands), "TestDualConfig")]
     public sealed class TestConfigurationCommand : ConfigurationCommandBase<TestDualConfig>
     {
         public TestConfigurationCommand() : base("TestDualConfig") { }
     }
 
-    // Why: a real [GenerateMapper] POCO with a [ConfigurationChildTable] KVP property so the generated
-    // ReadDictionary (FDW-547) actually runs — not a hand-rolled stand-in.
     [GenerateMapper]
     public sealed class TestKvpConfiguration : IGenericConfiguration
     {
@@ -597,9 +556,6 @@ public class DefaultConfigurationProviderTests
         public TestKvpCommand() : base("TestKvp") { }
     }
 
-    // Why: a real [GenerateMapper] parent/child pair mirroring DataContainerConfiguration.Fields —
-    // a mapper-visible (no [NotMapped]) List<T> of a type implementing IGenericConfiguration, so the
-    // generator emits a typed-list CascadeChildren descriptor (FDW-548), not a KVP one.
     [GenerateMapper]
     public sealed class TestContainerConfiguration : IGenericConfiguration
     {
@@ -638,11 +594,6 @@ public class DefaultConfigurationProviderTests
         public TestContainerFieldCommand() : base("TestContainerField") { }
     }
 
-    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
-    // connection it was told its rows live on, so the fake has to answer to that name to be found.
-    // Why a double rather than the real provider: these tests exercise what a configuration provider
-    // does with its gateway, not which gateway it selects, so the double answers for whatever
-    // connection is asked. Selection itself is covered where the real provider is under test.
     private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 

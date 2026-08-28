@@ -32,7 +32,6 @@ public static partial class AuthorizationEndpointLog
         Message = "Getting permissions for role '{roleName}'")]
     public static partial IGenericMessage GettingRolePermissions(ILogger logger, string roleName);
 
-    // Why (FDW-583): pre-action announcement, not a completed business milestone — noise at Info.
     /// <summary>
     /// Logs when setting role permissions.
     /// </summary>
@@ -47,7 +46,6 @@ public static partial class AuthorizationEndpointLog
         Message = "Role '{roleName}' permissions updated with {count} permissions")]
     public static partial IGenericMessage RolePermissionsUpdated(ILogger logger, string roleName, int count);
 
-    // Why (FDW-583): pre-action announcement, not a completed business milestone — noise at Info.
     /// <summary>
     /// Logs when assigning a role to a user.
     /// </summary>
@@ -62,7 +60,6 @@ public static partial class AuthorizationEndpointLog
         Message = "Role '{roleName}' assigned to user '{userId}'")]
     public static partial IGenericMessage UserRoleAssigned(ILogger logger, string roleName, string userId);
 
-    // Why (FDW-583): pre-action announcement, not a completed business milestone — noise at Info.
     /// <summary>
     /// Logs when revoking a role from a user.
     /// </summary>
@@ -88,7 +85,6 @@ public static partial class AuthorizationEndpointLog
         string operation,
         string context);
 
-    // Why: EventId 3140 (SecurityStampBumpFailed) retired with SecurityStampService purge. Not reused.
 
     /// <summary>
     /// Logs when the transactional role change is rolled back because a step (role write or stamp bump)

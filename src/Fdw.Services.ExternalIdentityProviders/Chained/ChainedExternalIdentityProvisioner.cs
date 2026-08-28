@@ -45,11 +45,6 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// </remarks>
 internal sealed class ChainedExternalIdentityProvisioner : IExternalIdentityProvisioner
 {
-    // Why: the canonical NotFound ResultCode number reserved in the ResultCode catalog (C0000-C0999
-    // FDW-reserved band) — reused identically by every package's own NotFound code under its own
-    // prefix (e.g. UserNotFoundCode, WorkflowNotFoundCode, ConfigurationNotFoundCode all use 30000).
-    // Comparing on the numeric Id (not the prefixed Code string) recognizes a NotFound failure
-    // regardless of which package's NotFound code a leaf provisioner used.
     private const int CanonicalNotFoundId = 30000;
     private readonly ChainedExternalIdentityProvisionerConfiguration _typed;
     private readonly IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration> _provisionerProvider;
@@ -67,9 +62,6 @@ internal sealed class ChainedExternalIdentityProvisioner : IExternalIdentityProv
     }
 
     // ── IGenericService ────────────────────────────────────────────────────────────
-    // Why: IExternalIdentityProvisioner's surface is the direct Provision verb, not a command-dispatch
-    // model — mirrors how OidcExternalIdentityProvider/OpenIdTokenManager satisfy the same
-    // base-interface obligation.
 
     /// <inheritdoc cref="IGenericService.Id" />
     public string Id => _typed.Id.ToString();
@@ -104,8 +96,6 @@ internal sealed class ChainedExternalIdentityProvisioner : IExternalIdentityProv
         ArgumentException.ThrowIfNullOrEmpty(externalSubject);
         ArgumentNullException.ThrowIfNull(externalPrincipal);
 
-        // Why: the read cascade does not order children — sort ascending here, every time, so a chain
-        // whose steps were inserted out of order still walks in the configured ExecutionOrder.
         var steps = _typed.Steps
             .OrderBy(s => s.ExecutionOrder)
             .ToList();
@@ -130,8 +120,6 @@ internal sealed class ChainedExternalIdentityProvisioner : IExternalIdentityProv
                 continue;
             }
 
-            // Why: any failure that is NOT the canonical NotFound code is a hard error — propagate
-            // immediately, never mask it as a fall-through to the next step.
             return stepResult;
         }
 
@@ -140,10 +128,6 @@ internal sealed class ChainedExternalIdentityProvisioner : IExternalIdentityProv
             ExternalIdentityProvisionerLog.ChainExhausted(_logger, provider, externalSubject, steps.Count));
     }
 
-    // Why: resolves and (conditionally) invokes ONE step, isolated so Provision's fall-through loop
-    // stays simple. Returns null ONLY for the nested-Chained rejection (a fall-through with no
-    // step-level result to inspect); otherwise returns the resolution failure or the step's own
-    // Provision result for the caller to classify.
     private async Task<IGenericResult<Guid>?> TryStep(
         ChainedProvisionerStepConfiguration step,
         string provider,
@@ -160,8 +144,6 @@ internal sealed class ChainedExternalIdentityProvisioner : IExternalIdentityProv
                     _logger, step.ExecutionOrder, step.ProvisionerName,
                     resolved.CurrentMessage ?? "provisioner could not be resolved."));
 
-        // Why: nested Chained provisioners are rejected outright — log loud and fall through without
-        // ever calling Provision (no recursion).
         if (string.Equals(resolved.Value.ServiceType, "Chained", StringComparison.Ordinal))
         {
             ExternalIdentityProvisionerLog.StepNestedChainedRejected(_logger, step.ExecutionOrder, step.ProvisionerName);

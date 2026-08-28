@@ -11,7 +11,6 @@ namespace Fdw.UI.DrillDown;
 /// Carries state snapshots for the drill-down tree and callback delegates for user interaction.
 /// </summary>
 /// <typeparam name="T">The type of the root data object.</typeparam>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class DrillDownContext<T> : ProviderContextBase
 {

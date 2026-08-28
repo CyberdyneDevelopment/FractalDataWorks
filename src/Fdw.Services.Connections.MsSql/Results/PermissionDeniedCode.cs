@@ -15,8 +15,6 @@ public sealed class PermissionDeniedCode : MsSqlResultCodeBase
     /// Initializes a new instance of the <see cref="PermissionDeniedCode"/> class.
     /// </summary>
     public PermissionDeniedCode()
-        // Why: Forbidden(403) band (100000-109999) — the caller is authenticated but the DB
-        // login lacks the required permission, distinct from Auth(401) not-authenticated failures.
         : base(
             100001,
             "PermissionDenied",

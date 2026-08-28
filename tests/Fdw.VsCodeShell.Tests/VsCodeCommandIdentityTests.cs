@@ -58,8 +58,6 @@ public class VsCodeCommandIdentityTests
         public SameNameAsAlphaCommand() : base("Alpha", "test.samename", "Same name as Alpha") { }
     }
 
-    // Why: the static Id hides the instance member, so it must be read through IServiceType — which is
-    // exactly how the generated RegisterMember reads it (`_pendingRegistrations.Any(p => p.Id == type.Id)`).
     private static System.Guid IdOf(IServiceType option) => option.Id;
 
     [Fact]
@@ -70,11 +68,6 @@ public class VsCodeCommandIdentityTests
         IdOf(new AlphaCommand()).ShouldNotBe(IdOf(new BetaCommand()));
     }
 
-    // Why this asserts distinctness where it once asserted a collision: identity moved off the generic
-    // arguments and onto the option's name, so reusing a handler type is no longer the silent-drop shape.
-    // The suite's earlier note — "if this ever stops being true the phantom can be reconsidered" — is now
-    // due: IVsCodeCommandFactory<THandler> existed only to vary TFactory and make ids unique, and nothing
-    // reads it. Removing it is a production change and is deliberately left out of this test-only fix.
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
@@ -83,9 +76,6 @@ public class VsCodeCommandIdentityTests
         IdOf(new DuplicateOfAlphaCommand()).ShouldNotBe(IdOf(new AlphaCommand()));
     }
 
-    // Why this is asserted rather than assumed: an id is global while a name is unique only inside its
-    // collection, so two options sharing a name must still be two options. When identity came from the
-    // name they were one, and RegisterMember discarded the second with no throw and no log.
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]

@@ -22,8 +22,6 @@ public sealed class CreateRolePayload
     /// <summary>
     /// Gets or sets the description for the new role.
     /// </summary>
-    // Why: authz.Role.Description is nvarchar(500). Both sides previously allowed 1000, so a
-    // 501-1000 character description passed validation and then failed at the database.
     [StringLength(500)]
     public string? Description { get; set; }
 

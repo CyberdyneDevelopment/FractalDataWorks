@@ -28,10 +28,6 @@ namespace Fdw.Roslyn.Commands.Tests.Workspace;
 /// </remarks>
 public sealed class SessionReattachTests : IDisposable
 {
-    // Why a temp subdirectory and not a fixed folder under the temp path: a shared
-    // "fdw-session-reattach-tests" segment is created by whoever runs the suite first and is
-    // owned by them, so on a machine where CI and a developer both run, the second one cannot
-    // write into it at all.
     private readonly string _storePath = Directory.CreateTempSubdirectory("fdw-session-reattach-tests-").FullName;
 
     private FileBasedSessionStore NewStore() =>
@@ -91,8 +87,6 @@ public sealed class SessionReattachTests : IDisposable
     {
         using var manager = NewManager(NewStore());
 
-        // Why this case matters: an empty id must never match, or every caller that omitted a
-        // conversation id would collide onto one shared session.
         (await manager.FindSessionByConversationId(string.Empty, TestContext.Current.CancellationToken))
             .ShouldBeNull();
     }

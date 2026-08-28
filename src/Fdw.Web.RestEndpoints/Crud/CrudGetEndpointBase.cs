@@ -143,9 +143,6 @@ public abstract class CrudGetEndpointBase<TRequest, TDetail> : Endpoint<TRequest
 
             var resourceName = GetResourceIdentifier(req);
 
-            // Why this is a 400 and not the 404 the lookup would otherwise produce: an identifier
-            // that names nothing means none arrived, and answering "not found" sends the next
-            // person to the database instead of to the route that failed to bind.
             if (CrudResourceIdentifier.NamesNothing(resourceName))
             {
                 HttpContext.Response.StatusCode = 400;
@@ -172,8 +169,6 @@ public abstract class CrudGetEndpointBase<TRequest, TDetail> : Endpoint<TRequest
             if (result.Value is null)
             {
                 OnNotFound(resourceName);
-                // Why: harness/API contract requires structured 404 body
-                // {errorCode, messages[]} — Send.NotFoundAsync writes no body.
                 HttpContext.Response.StatusCode = 404;
                 HttpContext.Response.ContentType = "application/json";
                 await HttpContext.Response.WriteAsJsonAsync(NotFoundProblem($"{ResourceName} '{resourceName}' was not found."), ct).ConfigureAwait(false);
@@ -250,9 +245,6 @@ public abstract class CrudGetEndpointBase<TRequest, TDetail> : Endpoint<TRequest
     /// </remarks>
     private Microsoft.AspNetCore.Mvc.ProblemDetails NotFoundProblem(string detail)
     {
-        // Why fully qualified: FastEndpoints ships its own ProblemDetails and both are in scope
-        // here. Both are RFC 7807 on the wire; this is the one ResultHttpStatusMapper emits, so
-        // every failure from this endpoint has one shape whichever branch produced it.
         var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails
         {
             Status = 404,

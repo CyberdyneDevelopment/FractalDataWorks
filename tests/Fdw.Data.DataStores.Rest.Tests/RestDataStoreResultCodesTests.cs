@@ -59,7 +59,6 @@ public sealed class RestDataStoreResultCodesTests
         var code = RestDataStoreResultCodes.ByName("SomethingThatDoesNotExist");
 
         // Assert
-        // Why: TypeCollection lookups return the NotFound sentinel on miss, never null.
         code.ShouldBe(RestDataStoreResultCodes.NotFound);
     }
 
@@ -144,8 +143,6 @@ public sealed class RestDataStoreResultCodesTests
         var code = RestDataStoreResultCodes.ByName("ODataMetadataFetchFailed");
 
         // Assert
-        // Why: transient network/endpoint failures are retryable; validation-style guard failures
-        // (e.g. ODataServiceUrlRequired above) are not.
         code.IsRetryable.ShouldBeTrue();
     }
 }

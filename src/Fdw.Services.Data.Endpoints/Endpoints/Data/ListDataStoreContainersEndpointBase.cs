@@ -14,7 +14,6 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class ListDataStoreContainersEndpointBase : CrudListEndpointBase<DataStoreContainerWithPathDto>
 {
-    // Why: DataStoreConfigurationProvider (dual-source) merges system (ctrl) and user (cfg) DataStore configs.
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
 
     /// <inheritdoc />
@@ -59,7 +58,6 @@ public abstract class ListDataStoreContainersEndpointBase : CrudListEndpointBase
             DataStoreName = dataStore.Name,
             PathName = path.Name,
             ContainerName = container.Name,
-            // Why: TypeId replaces ContainerType after Wave A5 DDL rename.
             ContainerType = container.TypeId ?? string.Empty,
             FieldCount = (container.Fields ?? []).Count
         };

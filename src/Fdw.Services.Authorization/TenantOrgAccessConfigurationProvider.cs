@@ -19,8 +19,6 @@ namespace Fdw.Services.Authorization;
 /// </summary>
 public class TenantOrgAccessConfigurationProvider
 {
-    // Why: TenantOrgAccess records live in the tenant schema in ConfigurationDb.
-    // IConfigurationGateway routes directly to ConfigurationDb via configurationSchema.json.
     private const string DataStoreName = "ConfigurationDb";
     private const string PathName = "tenant";
     private const string ContainerName = "TenantOrgAccess";

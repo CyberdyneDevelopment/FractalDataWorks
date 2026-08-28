@@ -66,8 +66,6 @@ public sealed class SchemaLoadTests
             schema.SecretManagers.Count.ShouldBe(1);
             schema.SecretManagers[0].Configuration.ShouldBeOfType<SyntheticSecretManagerConfiguration>();
 
-            // Why assert this too: the summary claims all THREE converters are covered, and the
-            // connection body is the one that silently bound to null before the converters failed loud.
             schema.Connections.Count.ShouldBe(1);
             schema.Connections[0].Configuration.ShouldBeOfType<MockConnectionConfiguration>()
                 .Root.ShouldBe("config-data");

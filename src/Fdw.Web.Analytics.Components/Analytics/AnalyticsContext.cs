@@ -7,7 +7,6 @@ using Fdw.UI.Providers;
 
 namespace Fdw.Web.Analytics.Components.Analytics;
 
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class AnalyticsContext : ProviderContextBase
 {

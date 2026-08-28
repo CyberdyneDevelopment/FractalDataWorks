@@ -48,9 +48,6 @@ public abstract class ExecuteCalculationEndpointBase : Endpoint<ExecuteCalculati
     {
         EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
 
-        // Why: shape validation (CalculationType, inline-Values OR DataSetName+FieldName) lives in
-        // ExecuteCalculationRequestValidator. DataSet *existence* is a resource-state concern: a
-        // typo should surface as 404, not 400, so the lookup stays at the endpoint boundary.
         if (req.DataSetName.Length > 0 && !await DataSetLookup.Exists(Resolve<IConfigurationGateway>(), req.DataSetName, ct).ConfigureAwait(false))
         {
             await HttpContext.WriteNotFound("DataSet", req.DataSetName, ct).ConfigureAwait(false);
@@ -110,10 +107,6 @@ public abstract class ExecuteCalculationEndpointBase : Endpoint<ExecuteCalculati
         var gateway = TryResolve<IDataGateway>();
         if (gateway is null) return Array.Empty<decimal>();
 
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget. The DataStore name is not
-        // present in ExecuteCalculationRequest — the endpoint must be subclassed to supply it.
-        // Passing DataSetName as both DataStore and Container preserves the pre-existing behaviour
-        // of querying by logical name only; the gateway will fail if no matching store is configured.
         var cmd = new QueryCommand<Dictionary<string, object?>>();
         var dataResult = await gateway.Execute<IEnumerable<Dictionary<string, object?>>>(
             cmd, new DataStoreTarget(dataSetName, null, dataSetName), ct).ConfigureAwait(false);

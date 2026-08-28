@@ -59,12 +59,8 @@ public sealed class ConnectionsScreen : ScreenBase
     {
         while (true)
         {
-            // Why: the renderer owns the header, table, pagination and the action prompt — including its
-            // own "Back" choice, which it signals via ShouldExit. The screen therefore contributes only
-            // the page's data and its domain actions, never console output.
             var result = await _renderer.RenderListPage(BuildPage(), _renderContext).ConfigureAwait(false);
 
-            // Why: fail loud — a renderer that could not paint the page must not look like "user went back".
             if (!result.Success)
             {
                 RenderStatus(result.Error ?? "The connections page could not be rendered.", isError: true);
@@ -126,9 +122,6 @@ public sealed class ConnectionsScreen : ScreenBase
                 ColumnLastUsed,
                 connection.LastUsed?.ToString("g", CultureInfo.CurrentCulture) ?? "Never");
 
-            // Why: flag the live connection with a semantic row status rather than a colour. Each
-            // renderer decides how to express it (a highlight in the terminal, a badge on the web),
-            // so the screen never encodes presentation.
             if (status.IsConnected
                 && string.Equals(status.InstanceName, connection.Name, StringComparison.Ordinal))
             {
@@ -140,7 +133,6 @@ public sealed class ConnectionsScreen : ScreenBase
 
         page.AddListAction(new PageAction { Id = ActionNew, Label = "New Connection", Shortcut = 'n' });
 
-        // Why 'u' and not 'q': the renderer reserves [q] for its own Back choice.
         page.AddListAction(new PageAction { Id = ActionQuickConnect, Label = "Quick Connect (URL)", Shortcut = 'u' });
 
         if (status.IsConnected)

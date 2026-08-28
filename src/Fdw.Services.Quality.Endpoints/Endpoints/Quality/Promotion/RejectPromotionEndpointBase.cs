@@ -54,9 +54,6 @@ public abstract class RejectPromotionEndpointBase : Endpoint<PromotionActionRequ
             if (!result.IsSuccess)
             {
                 PromotionEndpointLog.RejectPromotionFailed(_logger, req.Id, result.CurrentMessage!);
-                // Why: "not found" from the service is a 404, not a 500. The current message carries
-                // the lower-layer reason; surface the right HTTP status so callers can distinguish
-                // missing resource from server-side failure.
                 var status = (result.CurrentMessage ?? string.Empty)
                     .Contains("not found", System.StringComparison.OrdinalIgnoreCase) ? 404 : 500;
                 AddError("Failed to reject promotion");
@@ -66,7 +63,6 @@ public abstract class RejectPromotionEndpointBase : Endpoint<PromotionActionRequ
 
             if (result.Value is null)
             {
-                // Why: a null payload after success means the promotion ID didn't match any row.
                 AddError("Promotion request was not found.");
                 await Send.ErrorsAsync(404, ct).ConfigureAwait(false);
                 return;

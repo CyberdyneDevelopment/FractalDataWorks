@@ -40,9 +40,6 @@ namespace Test
     public void GeneratorProducesDdlForSimpleConfiguration()
     {
         // Arrange
-        // Why: Schema and TableName were removed from [ManagedConfiguration] in FDW-395 Phase 6.
-        // Table name is now derived from class name. "SimpleConfiguration" → table name "Simple".
-        // Schema is no longer emitted in DdlDefinition initializer (DdlDefinition.Schema defaults to "cfg").
         var source = @"
 using Fdw.Configuration;
 
@@ -66,7 +63,6 @@ namespace Test
         ddl.ShouldNotBeNull();
         ddl.ShouldContain("IConfigurationDdlProvider");
         ddl.ShouldContain("GetDdlDefinition");
-        // Why: Schema no longer emitted in DDL (DdlDefinition.Schema defaults to "cfg").
         ddl.ShouldNotContain("Schema = ");
         // Table name derived from class name "SimpleConfiguration" → "Simple"
         ddl.ShouldContain("TableName = \"Simple\"");
@@ -78,7 +74,6 @@ namespace Test
     public void GeneratorProducesConfigurationTypeWhenConfigurationPackageReferenced()
     {
         // Arrange
-        // Why: Schema removed from [ManagedConfiguration] in FDW-395 Phase 6.
         var source = @"
 
 namespace Test
@@ -96,8 +91,6 @@ namespace Test
         // Assert
         diagnostics.ShouldNotContain(d => d.Severity == DiagnosticSeverity.Error);
 
-        // Why: ConfigurationTypeBase / *ConfigurationType.g.cs generation was removed in Wave C5.
-        // The generator now emits DDL + TypeCollection DDL only — assert the DDL artifact exists.
         var ddl = CompilationHelper.GetGeneratedOutput(compilation, "MsSqlConnectionConfiguration.Ddl.g.cs");
         ddl.ShouldNotBeNull();
     }
@@ -133,10 +126,6 @@ namespace Test
     public void GeneratorHandlesParentChildRelationship()
     {
         // Arrange
-        // Why: ParentTableName and Schema removed from [ManagedConfiguration] in FDW-395 Phase 6.
-        // IDataNode owns parent-child structure. Both types generate as independent flat root tables.
-        // Child inheriting from Parent with [ManagedConfiguration] triggers ParentHasManagedConfiguration=true
-        // via Roslyn symbol analysis → generates 'public new static GetDdlDefinition()'.
         var source = @"
 
 namespace Test
@@ -204,9 +193,6 @@ namespace Test
     public void GeneratorHandlesMultipleConfigurationsInSameFile()
     {
         // Arrange
-        // Why: Schema and TableName removed from [ManagedConfiguration] in FDW-395 Phase 6.
-        // Table names are derived from class names: "ConfigurationA" → "ConfigurationA" (no suffix stripped)
-        // and "ConfigurationB" → "ConfigurationB".
         var source = @"
 
 namespace Test
@@ -292,9 +278,6 @@ namespace Test
 
         // ServiceCategory should be inferred as "Connection" from class name
         // ServiceType should be inferred as "MsSql" from prefix
-        // Why: ConfigurationTypeBase / *ConfigurationType.g.cs generation was removed in Wave C5.
-        // Inferred service metadata is no longer surfaced via a generated ConfigurationType file —
-        // assert the DDL artifact exists instead.
         var ddl = CompilationHelper.GetGeneratedOutput(compilation, "MsSqlConnectionConfiguration.Ddl.g.cs");
         ddl.ShouldNotBeNull();
     }

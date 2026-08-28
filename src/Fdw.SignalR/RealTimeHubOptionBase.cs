@@ -36,8 +36,6 @@ public abstract class RealTimeHubOptionBase : TypeOptionBase<int, RealTimeHubOpt
     protected RealTimeHubOptionBase(int id, string name, string route, Type hubType, string? authorizationPolicy)
         : base(id, name)
     {
-        // Why: fail loud on a missing route/hub type — a hub with no route or type is a wiring bug,
-        // not a condition to paper over with a default (NO FALLBACKS).
         Route = route ?? throw new ArgumentNullException(nameof(route));
         HubType = hubType ?? throw new ArgumentNullException(nameof(hubType));
         AuthorizationPolicy = authorizationPolicy;
@@ -77,9 +75,6 @@ public abstract class RealTimeHubOptionBase : TypeOptionBase<int, RealTimeHubOpt
     {
         var conventions = endpoints.MapHub<THub>(Route);
 
-        // Why: endpoint-level RequireAuthorization is the load-bearing enforcement. A declared policy
-        // widens/narrows the requirement; a null policy still requires an authenticated user via the
-        // default policy — the hub is never left open.
         if (!string.IsNullOrEmpty(AuthorizationPolicy))
         {
             conventions.RequireAuthorization(AuthorizationPolicy);

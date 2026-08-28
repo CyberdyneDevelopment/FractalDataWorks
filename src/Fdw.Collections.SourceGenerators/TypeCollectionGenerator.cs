@@ -147,8 +147,6 @@ public class TypeCollectionGenerator : IIncrementalGenerator
         var (collections, allOptions) = source.Data;
         var compilation = source.Compilation;
 
-        // Why: Build a single replacement map from all [Replaces] attributes across the compilation.
-        // This map is shared across all collections — filtering happens per-collection below.
         var replacementMap = ReplacesDiscovery.BuildReplacementMap(compilation, context);
 
         foreach (var collection in collections)
@@ -157,8 +155,6 @@ public class TypeCollectionGenerator : IIncrementalGenerator
                 .Where(o => string.Equals(o.CollectionMatchKey, collection.MatchKey, StringComparison.Ordinal))
                 .ToImmutableArray();
 
-            // Why: Remove replaced types so the static constructor doesn't register originals
-            // that have been overridden by [Replaces] in this or a downstream assembly.
             options = ReplacesDiscovery.FilterReplacedTypeOptions(options, replacementMap, context);
 
             // Find child collections for this parent
@@ -280,10 +276,6 @@ public class TypeCollectionGenerator : IIncrementalGenerator
                 string.Equals(prop.PropertyName, "Name", StringComparison.Ordinal))
                 continue;
 
-            // Why a non-unique property is not checked: TC008 exists to catch a collision on a value
-            // that is supposed to identify one option. A lookup declared non-unique is saying several
-            // options SHOULD share a value, so reporting that as an error would make the declaration
-            // impossible to act on — the duplicate is the feature.
             if (!prop.IsUnique)
                 continue;
 
@@ -372,9 +364,6 @@ public class TypeCollectionGenerator : IIncrementalGenerator
         {
             var prop = group.First();
             var fieldName = $"_{CodeGeneration.ToCamelCase(group.Key)}";
-            // Why the value type follows IsUnique: a unique lookup maps a value to THE option, a
-            // non-unique one maps it to every option that carries it. Both are dictionaries; only the
-            // value side differs, so the lookup stays one hash probe either way.
             var valueType = prop.IsUnique
                 ? collection.InterfaceTypeName
                 : $"IReadOnlyList<{collection.InterfaceTypeName}>";
@@ -415,11 +404,6 @@ public class TypeCollectionGenerator : IIncrementalGenerator
         bodySb.AppendLine("                var items = _pendingRegistrations.ToArray();");
         bodySb.AppendLine();
 
-        // Why the collision is detected here rather than left to the dictionary build: ToImmutableDictionary
-        // and ToFrozenDictionary do throw on a duplicate key, but an ArgumentException that names neither
-        // the collection, the property, the colliding value nor the two options is unactionable — and the
-        // collision it reports is almost always cross-assembly, so the reader has no compile error to
-        // navigate from either. This runs once, at freeze, only for lookups that declared uniqueness.
         foreach (var group in lookupGroups.Where(g => g.First().IsUnique))
         {
             var prop = group.First();
@@ -438,9 +422,6 @@ public class TypeCollectionGenerator : IIncrementalGenerator
         {
             var prop = group.First();
             var fieldName = $"_{CodeGeneration.ToCamelCase(group.Key)}";
-            // Why a unique lookup keeps the plain dictionary build: ToImmutableDictionary throws on a duplicate
-            // key, which is exactly the contract IsUnique declares. The throw is caught below and
-            // re-raised with the option names, because the framework exception names neither.
             if (prop.IsUnique)
                 bodySb.AppendLine($"                {fieldName} = items.ToImmutableDictionary(x => x.{prop.PropertyName});");
             else
@@ -451,9 +432,6 @@ public class TypeCollectionGenerator : IIncrementalGenerator
         {
             var prop = group.First();
             var fieldName = $"_{CodeGeneration.ToCamelCase(group.Key)}";
-            // Why a unique lookup keeps the plain dictionary build: ToFrozenDictionary throws on a duplicate
-            // key, which is exactly the contract IsUnique declares. The throw is caught below and
-            // re-raised with the option names, because the framework exception names neither.
             if (prop.IsUnique)
                 bodySb.AppendLine($"                {fieldName} = items.ToFrozenDictionary(x => x.{prop.PropertyName});");
             else
@@ -497,10 +475,6 @@ public class TypeCollectionGenerator : IIncrementalGenerator
             var prop = group.First();
             var fieldName = $"_{CodeGeneration.ToCamelCase(group.Key)}";
 
-            // Why the shape follows IsUnique: a unique lookup answers with THE option and NotFound when
-            // there is none; a non-unique one answers with every match and an empty list when there are
-            // none. Returning NotFound from a list-valued lookup would make "no match" and "one match"
-            // the same shape to a caller that iterates.
             var returns = prop.IsUnique
                 ? collection.InterfaceTypeName
                 : $"IReadOnlyList<{collection.InterfaceTypeName}>";
@@ -834,9 +808,6 @@ public class TypeCollectionGenerator : IIncrementalGenerator
     }
 
 
-    // Why extracted: GenerateCode sits at the FDW006 executable-line budget, and the RegisterMember
-    // emission is a self-contained block with a single input — the same reason the metadata and
-    // provider-registration emitters were extracted.
     private static void AppendRegisterMember(StringBuilder bodySb, TypeCollectionModel collection)
     {
             bodySb.AppendLine("        /// <summary>");

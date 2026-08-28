@@ -63,8 +63,6 @@ public sealed class DevSessionManager : IDevSessionManager
         SessionRequest request,
         CancellationToken cancellationToken = default)
     {
-        // Why: the parent is resolved before any git work happens, so a bad parent id never leaves
-        // an orphaned branch or worktree behind.
         var parent = Get(parentSessionId);
         if (parent.IsFailure) return parent;
 
@@ -114,8 +112,6 @@ public sealed class DevSessionManager : IDevSessionManager
     {
         if (request is null) throw new ArgumentNullException(nameof(request));
 
-        // Why: dedup happens before materializing anything. Opening the same fix twice must not
-        // create a second branch — the second caller joins the session that already exists.
         var existing = FindLiveByKey(request.Key);
         if (existing is not null)
         {
@@ -142,8 +138,6 @@ public sealed class DevSessionManager : IDevSessionManager
             .ConfigureAwait(false);
         if (materialized.IsFailure)
         {
-            // Why: the engine's own failure is preserved as the inner result rather than replaced,
-            // so the caller still sees git's reason (bad base ref, existing branch, and so on).
             return materialized.ToNewResult<IDevSession>();
         }
 
@@ -183,15 +177,12 @@ public sealed class DevSessionManager : IDevSessionManager
                 DevSessionManagerLog.SessionNotFoundById(_logger, sessionId));
         }
 
-        // Why: a terminal session is finished. Re-opening or re-sleeping one would resurrect work
-        // whose branch may already have been merged and pruned, so it fails loud instead.
         if (session.State.IsTerminal)
         {
             return GenericResult<IDevSession>.Failure(
                 DevSessionManagerLog.SessionIsTerminal(_logger, sessionId, session.State.Name, attemptedOperation));
         }
 
-        // Why: waking something that was never asleep is a caller bug, not a no-op to absorb.
         if (string.Equals(targetStateName, OpenStateName, StringComparison.Ordinal)
             && !string.Equals(session.State.Name, SleepingStateName, StringComparison.Ordinal))
         {
@@ -215,9 +206,6 @@ public sealed class DevSessionManager : IDevSessionManager
         return GenericResult<IDevSession>.Success(session);
     }
 
-    // Why: the ledger IS the bus. Every lifecycle change is published under dev/session/<id>/<leaf>
-    // so a subscriber can follow a live session and a late joiner can replay the same topic to
-    // reconstruct its history — there is no second, divergent audit store.
     private async Task PublishLifecycle(DevSession session, string leaf, CancellationToken cancellationToken)
     {
         var entry = new SessionLedgerEntry(session.Id, leaf, session.LastActiveAt)
@@ -236,8 +224,6 @@ public sealed class DevSessionManager : IDevSessionManager
             cancellationToken).ConfigureAwait(false);
     }
 
-    // Why: "live" excludes terminal sessions so a key can be reused after its session is closed;
-    // otherwise a fix could never be reopened after being finished once.
     private DevSession? FindLiveByKey(string key)
         => _sessions.Values.FirstOrDefault(s =>
             string.Equals(s.Key, key, StringComparison.Ordinal) && !s.State.IsTerminal);

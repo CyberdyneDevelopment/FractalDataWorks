@@ -30,8 +30,6 @@ public sealed class NoneSqliteAuthentication : SqliteAuthenticationConfiguration
         => GenericResult.Success();
 
     /// <inheritdoc/>
-    // Why: None needs no secret — return a null password. The connection string is built without a
-    // Password= keyword.
     public override Task<IGenericResult<string?>> ResolvePassword(
         IReadOnlyDictionary<string, string?> values,
         IPlatformServiceProvider<ISecretManager> secretManagerProvider,

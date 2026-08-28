@@ -6,7 +6,6 @@ namespace Fdw.WebMcp.Hosting;
 /// <summary>
 /// Configuration options for WebMCP tool exposure and agent key authentication.
 /// </summary>
-// Why: pure DTO, only auto-properties bound from IOptions, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class WebMcpOptions
 {

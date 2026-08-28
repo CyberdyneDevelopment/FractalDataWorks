@@ -42,14 +42,8 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
             "Default Operations Services",
             "Execution tracking, escalation, and escalation-policy configuration")
     {
-        // Why: IExecutionTracker + IEscalationService persist execution/runtime data to OpsDb (ops
-        // schema), so they take the "OpsDb" data store the collection passes in. Scoped because they
-        // depend on the scoped IDataGateway.
         Registration((builder, loggerFactory) =>
         {
-            // Why here and not a Configure phase: escalation-policy config lives in
-            // ConfigurationDb.workflow and is read through IConfigurationGateway — nothing binds from
-            // IConfiguration, so this is pure DI registration with no Phase-1a concern.
             builder.Services.TryAddSingleton<EscalationConfigurationProvider>(sp =>
                 new EscalationConfigurationProvider(
                     sp.GetService<ILogger<EscalationConfigurationProvider>>()!,
@@ -64,8 +58,6 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
             {
                 var lf = sp.GetRequiredService<ILoggerFactory>();
                 var gatewayProvider = sp.GetRequiredService<IDataGateway>();
-                // Why: GetService (not GetRequired) — notification providers are optional; callers
-                // that don't wire notifications (e.g. reference-etl, reference-scheduler) still boot.
                 var notificationProvider = sp.GetService<INotificationServiceProvider>();
                 var ruleProvider = sp.GetService<IServiceConfigurationProvider<NotificationRuleConfiguration>>();
                 return new ExecutionTrackingService(gatewayProvider, lf, "OpsDb", notificationProvider, ruleProvider);
@@ -74,9 +66,6 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
             builder.Services.TryAddScoped<IEscalationService>(sp =>
             {
                 var lf = sp.GetRequiredService<ILoggerFactory>();
-                // Why: EscalationService now delegates to EscalationConfigurationProvider (registered above
-                // against ConfigurationDb.workflow — where the escalation tables live). This also corrects the
-                // prior "OpsDb" store mismatch: the provider already targets ConfigurationDb.workflow.
                 var provider = sp.GetRequiredService<EscalationConfigurationProvider>();
                 return new EscalationService(provider, lf);
             });

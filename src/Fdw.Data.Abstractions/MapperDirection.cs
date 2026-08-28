@@ -1,6 +1,3 @@
-// Why: attribute property arguments must be compile-time constants. TypeCollections are runtime
-// objects and cannot serve as [Attribute(...)] values. MapperDirection is therefore an enum —
-// it is not a candidate for TypeCollection conversion.
 #pragma warning disable FDW017 // Attribute parameter enum — TypeCollection not applicable here
 namespace Fdw.Data;
 

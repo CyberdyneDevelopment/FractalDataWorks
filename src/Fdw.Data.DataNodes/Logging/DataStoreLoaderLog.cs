@@ -60,9 +60,6 @@ public static partial class DataStoreLoaderLog
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="containerRowId">The RowId of the container that could not be located in the tree.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why Debug, not Warning: a tree navigation miss is routine caller-handled control flow — the
-    // caller treats the absent container as "FK reference will be null" and continues. Re-leveled
-    // (EventId 5189 retained) so it sits at the same altitude as the other navigation misses below.
     [MessageLogging(EventId = 11123, Level = LogLevel.Debug,
         Message = "[DataStoreLoader] Container with RowId '{containerRowId}' not found in the built tree — FK reference will be null")]
     public static partial IGenericMessage ContainerNotFound(ILogger logger, string containerRowId);
@@ -74,9 +71,6 @@ public static partial class DataStoreLoaderLog
     /// <param name="pathName">The name of the path that could not be found.</param>
     /// <param name="storeName">The name of the DataStore that was searched.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why Debug, not Warning: a path navigation miss is routine caller-handled control flow — the
-    // navigation API returns a Failure result the caller inspects (e.g. ResolveContainer iterates
-    // paths expecting misses). Re-leveled (EventId 5190 retained) to match the other navigation misses.
     [MessageLogging(EventId = 11124, Level = LogLevel.Debug,
         Message = "[DataStoreLoader] Path '{pathName}' not found in DataStore '{storeName}'")]
     public static partial IGenericMessage PathNotFound(ILogger logger, string pathName, string storeName);
@@ -88,11 +82,6 @@ public static partial class DataStoreLoaderLog
     /// <param name="pathName">The name of the path that could not be found.</param>
     /// <param name="storeName">The name of the DataStore that was searched.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why Error, not Debug: this is the terminal, explicitly-addressed altitude — reached only from
-    // ConfigurationGatewayDataStoreProvider.Get(dataStoreName, pathName, ct), which
-    // DataGatewayService.ResolveContainer calls with a caller-specified target.Path. Unlike PathNotFound
-    // above (fired inside probe loops that expect most candidates to miss), a miss here IS the final
-    // answer for the one path the caller asked for — the operation cannot complete (FDW-583).
     [MessageLogging(EventId = 71050, Level = LogLevel.Error,
         Message = "[DataStoreLoader] Addressed lookup: path '{pathName}' not found in DataStore '{storeName}'")]
     public static partial IGenericMessage PathNotFoundAddressed(ILogger logger, string pathName, string storeName);
@@ -103,9 +92,6 @@ public static partial class DataStoreLoaderLog
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="storeName">The name of the DataStore that could not be found.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why Debug, not Warning: a store navigation miss is routine caller-handled control flow — the
-    // navigation API returns a Failure result the caller inspects and handles. Re-leveled
-    // (EventId 5191 retained) to match the other navigation misses.
     [MessageLogging(EventId = 11125, Level = LogLevel.Debug,
         Message = "[DataStoreLoader] DataStore '{storeName}' not found")]
     public static partial IGenericMessage StoreNotFound(ILogger logger, string storeName);
@@ -153,8 +139,6 @@ public static partial class DataStoreLoaderLog
         Message = "[DataStoreLoader] DataStore ConnectionId {connectionId} has no matching Connection in provider — connection type unknown for '{storeName}'")]
     public static partial IGenericMessage ConnectionNotFound(ILogger logger, string connectionId, string storeName);
 
-    // Why: 5196 was RegisteringSentinels — removed with sentinel elimination.
-    // Keeping the EventId gap so existing log archives remain readable.
 
     /// <summary>
     /// Logs that a KeyType on a key in a container is not recognized, so the key will be skipped.
@@ -168,11 +152,7 @@ public static partial class DataStoreLoaderLog
         Message = "[DataStoreLoader] KeyType '{keyType}' on key '{keyName}' in container '{containerName}' is not recognized — key will be skipped")]
     public static partial IGenericMessage KeyTypeUnresolved(ILogger logger, string keyType, string keyName, string containerName);
 
-    // Why: 5198 was ContainerHasNoTypedBodyParent — removed with TypedBodyParent elimination (FDW-479).
-    // Keeping the EventId gap so existing log archives remain readable.
 
-    // Why: 5199 repurposed from SentinelBindingNotSupported — that sentinel no longer exists.
-    // Navigation misses now return IGenericResult.Failure; this entry carries the reason.
     /// <summary>
     /// Logs that a DataContainer was not found in the named path during navigation.
     /// </summary>
@@ -180,9 +160,6 @@ public static partial class DataStoreLoaderLog
     /// <param name="containerName">The name of the DataContainer that could not be found.</param>
     /// <param name="pathName">The name of the path that was searched.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why Debug, not Warning: a container navigation miss is routine caller-handled control flow — the
-    // navigation API returns a Failure result the caller inspects (ResolveContainer/DataPath.Container
-    // iterate paths expecting misses). Re-leveled (EventId 5199 retained) to match the other misses.
     [MessageLogging(EventId = 11128, Level = LogLevel.Debug,
         Message = "[DataStoreLoader] DataContainer '{containerName}' not found in path '{pathName}'")]
     public static partial IGenericMessage ContainerNotFoundInPath(ILogger logger, string containerName, string pathName);
@@ -196,20 +173,11 @@ public static partial class DataStoreLoaderLog
     /// <param name="pathName">The name of the path that was searched.</param>
     /// <param name="storeName">The name of the DataStore the path belongs to.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    // Why Error, not Debug: this is the terminal, explicitly-addressed altitude — reached only from
-    // ConfigurationGatewayDataStoreProvider.Get(dataStoreName, pathName, containerName, ct), which
-    // DataGatewayService.ResolveContainer calls with the caller's target.Container. Unlike
-    // ContainerNotFoundInPath above (fired inside probe loops such as ConfigurationGateway.ResolveContainer's
-    // scan of every path, which expects most candidates to miss), a miss here IS the final answer for the
-    // one container the caller asked for — the operation cannot complete (FDW-583).
     [MessageLogging(EventId = 71051, Level = LogLevel.Error,
         Message = "[DataStoreLoader] Addressed lookup: DataContainer '{containerName}' not found in path '{pathName}' of DataStore '{storeName}'")]
     public static partial IGenericMessage ContainerNotFoundInPathAddressed(ILogger logger, string containerName, string pathName, string storeName);
 
-    // Why: FieldNotFoundInContainer (was EventId 5237) moved to DataNodeTreeLog (EventId 5933) in
-    // Data.Abstractions alongside the DataContainer base — keeping the gap so log archives stay readable.
 
-    // Why: IDataField is a leaf IDataNode — Node(name) always fails because a field has no children.
     /// <summary>
     /// Logs that a field is a leaf node and therefore has no requested child node.
     /// </summary>

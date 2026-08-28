@@ -675,12 +675,6 @@ public static partial class ConnectionProviderLogger
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Composed-Header Factory Path Events (7165-7169)
-    // Why: After config-split, typed bodies are attached to the composed header via
-    // ConnectionConfigurationProvider.PopulateTypedBody. ConnectionProvider
-    // extracts header.Configuration and passes it directly to the factory — bypassing
-    // DefaultServiceProvider.CreateFromType which would look up _configurationProviders
-    // (now empty). These events trace that new path.
-    // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>Logs when a connection header has no Configuration after PopulateTypedBody.</summary>
     [LoggerMessage(

@@ -41,17 +41,12 @@ public sealed class DefaultSystemRoleConfiguration : ISystemRoleConfiguration
 
         if (cfg.AdminRoleName is null || cfg.AdminRoleName.Trim().Length == 0)
         {
-            // Why: fail-loud — the admin role name is required. The app cannot correctly enforce
-            // system-role guards in SetRolePermissions, SignalR hubs, or tenant endpoints without
-            // a non-empty AdminRoleName. Throwing here surfaces the misconfiguration at startup
-            // rather than silently allowing any (or no) role to be treated as admin.
             SystemRoleConfigurationLog.AdminRoleNameMissing(log);
             throw new InvalidOperationException(
                 "authz:SystemRoleMapping:AdminRoleName is required and must not be empty. " +
                 "Add it to appsettings.json under authz:SystemRoleMapping:AdminRoleName.");
         }
 
-        // Why: cfg.AdminRoleName is guaranteed non-null/non-empty by the guard above.
         _adminRoleName = cfg.AdminRoleName!;
         _operatorRoleName = string.IsNullOrWhiteSpace(cfg.OperatorRoleName) ? null : cfg.OperatorRoleName;
         _viewerRoleName = string.IsNullOrWhiteSpace(cfg.ViewerRoleName) ? null : cfg.ViewerRoleName;

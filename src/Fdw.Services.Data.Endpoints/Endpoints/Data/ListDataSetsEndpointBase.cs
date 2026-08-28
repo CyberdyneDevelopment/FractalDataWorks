@@ -40,9 +40,6 @@ public abstract class ListDataSetsEndpointBase : CrudListEndpointBase<DataSetSum
     {
         DataSetEndpointLog.QueryingDataSets(Logger, string.Empty);
 
-        // Why: Provider.Get() returns all datasets without child hierarchy (by design — see comment
-        // in DataSetConfigurationProvider). Source counts come from SourceIds list already populated
-        // on the configuration by the provider's internal query.
         var result = await _dataSetProvider.Get(ct).ConfigureAwait(false);
         if (result.IsFailure) return result.ToNewResult<List<DataSetSummaryResponse>>();
 

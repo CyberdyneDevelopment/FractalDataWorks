@@ -15,8 +15,6 @@ namespace Fdw.Services.Scheduling.Endpoints;
 public abstract class UpdateScheduleEndpointBase<TConfig> : CrudUpdateEndpointBase<UpdateScheduleRequest, ScheduleDetailDto>
     where TConfig : ScheduleConfiguration
 {
-    // Why: ScheduleConfigurationProvider replaces IOptionsMonitor<List<T>> with dual-source
-    // (ctrl + cfg) provider that merges system and user configurations.
     private readonly ScheduleConfigurationProvider _provider;
 
     /// <inheritdoc />

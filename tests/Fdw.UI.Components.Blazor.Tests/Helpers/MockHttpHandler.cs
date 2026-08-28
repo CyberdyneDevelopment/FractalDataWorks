@@ -14,13 +14,6 @@ namespace Fdw.UI.Components.Blazor.Tests.Helpers;
 /// </summary>
 public sealed class MockHttpHandler : HttpMessageHandler
 {
-    // Why: Store the raw JSON + status code rather than a single HttpResponseMessage instance.
-    // HttpResponseMessage.Content (StringContent) is a read-once stream; returning the same
-    // instance on repeated requests causes empty/failed reads on the second call.
-    // Why a list keyed on method as well as url: the API gives list and create the same path and
-    // separates them by verb, so a url-only stub for the create is shadowed by the one for the
-    // list and the caller is handed an array where it expects an object. Entries are matched in
-    // the order they were registered, and a stub naming a method only answers that method.
     private readonly List<(HttpMethod? Method, string UrlContains, string Json, HttpStatusCode Status)> _responses = [];
 
     private HttpStatusCode _defaultStatus = HttpStatusCode.NotFound;
@@ -78,9 +71,6 @@ public sealed class MockHttpHandler : HttpMessageHandler
         return this;
     }
 
-    // Why replace rather than append on a repeated pattern: a test that registers a pattern and
-    // then re-registers it with a failure is saying "this one fails", and appending would leave the
-    // first, success-shaped stub in front of it.
     private void Set(HttpMethod? method, string urlContains, string json, HttpStatusCode status)
     {
         var existing = _responses.FindIndex(r => r.Method == method

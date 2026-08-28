@@ -45,9 +45,6 @@ public abstract class MsSqlDataCommandTranslatorBase : SqlDataCommandTranslatorB
     /// Creates a new <see cref="SqlCommand"/> with the supplied SQL text.
     /// </summary>
     /// <param name="sql">The SQL command text.</param>
-    // Why: defined here (not as abstract on the shared SqlDataCommandTranslatorBase<TCommand>)
-    // to avoid the TypeCollection source generator emitting 'public override' stubs (CS0507).
-    // Why static: no instance state required; static avoids CA1822 in Release.
     protected static SqlCommand CreateCommand(string sql) => new SqlCommand(sql);
 
     /// <summary>
@@ -64,7 +61,6 @@ public abstract class MsSqlDataCommandTranslatorBase : SqlDataCommandTranslatorB
     /// serialized before handing to ADO.NET.
     /// Why (defined here): same CS0507 reason as CreateCommand — no abstract on shared base.
     /// </remarks>
-    // Why static: same CS0507/CA1822 rationale as CreateCommand.
     protected static void AddParameter(SqlCommand command, string name, object? value)
     {
         object? materialized = value;

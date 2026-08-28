@@ -88,9 +88,6 @@ public sealed class RecursiveCascadeSaveTests
         mapping.TestOpId.ShouldBe(operation.Id);
     }
 
-    // Why: the read mirror of the no-fallback guarantee — a domain record naming a ServiceOptionType
-    // for which no implementation configuration provider is registered must FAIL LOUD, never silently
-    // return the bare record. This is the pipeline case "Get a pipeline whose kind has no provider".
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Cascade")]
@@ -148,8 +145,6 @@ public sealed class RecursiveCascadeSaveTests
     }
 
     /// <summary>Root record carrying a typed body in its <c>Configuration</c> property.</summary>
-    // Why: the reflection-free cascade discovers the typed body + child collections via this type's
-    // generated PocoMapper (GetTypedBody / CascadeChildren / SetValue), exactly as real config types do.
     [GenerateMapper]
     public sealed class TestRootConfiguration : IGenericConfiguration
     {
@@ -176,8 +171,6 @@ public sealed class RecursiveCascadeSaveTests
         /// <summary>FK to the root, set by the cascade (Strip(TestRootConfiguration)+"Id").</summary>
         public Guid TestRootId { get; set; }
 
-        // Why: settable collection — the generated mapper only treats a child collection as a cascade
-        // child when it has a public setter (matches every real config type, e.g. DataSetConfiguration.Fields).
         public IList<TestOpConfiguration> Operations { get; set; } = [];
     }
 
@@ -211,11 +204,6 @@ public sealed class RecursiveCascadeSaveTests
         public Guid TestOpId { get; set; }
     }
 
-    // Why: ConfigurationCommands TypeCollection is auto-populated only for referenced assemblies.
-    // These test-assembly commands are registered manually in ServicesTypeCollectionFixture.
-    // The TypeOption key is the STRIPPED config name (the production convention, e.g.
-    // [TypeOption(..., "CalculationEntity")]) — SaveOneChild resolves the command via
-    // ConfigurationCommands.ByName(StripConfigurationSuffix(childType.Name)).
     [TypeOption(typeof(ConfigurationCommands), "TestRoot")]
     public sealed class TestRootCommand : ConfigurationCommandBase<TestRootConfiguration>
     {
@@ -263,7 +251,6 @@ public sealed class RecursiveCascadeSaveTests
             => Execute<T>(command, default(DataStoreTarget)!, cancellationToken);
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, bool useCache, CancellationToken cancellationToken = default)
-            // Why: test double — useCache not exercised in cascade-save tests; delegates to existing implementation.
             => Execute<T>(command, target, cancellationToken);
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
@@ -287,15 +274,12 @@ public sealed class RecursiveCascadeSaveTests
             return Task.FromResult<IGenericResult>(GenericResult.Success());
         }
 
-        // Why: by-type child read — the existence-check read returns empty, so child composition never
-        // fires in these save tests; an empty result satisfies the interface.
         public Task<IGenericResult<IEnumerable<object>>> Execute(IDataCommand command, DataStoreTarget target, Type rowType, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<IEnumerable<object>>.Success(Array.Empty<object>()));
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<T>.Failure(new GenericMessage("DataSet routing not supported in RecordingGateway test double")));
 
-        // Why: streaming record-source cursor is not exercised by this test double.
         public Task<IGenericResult<Fdw.Data.RowSources.Abstractions.IRecordSource<Fdw.Data.RowSources.Abstractions.DataRecord>>> OpenRecordSource(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
             => throw new System.NotImplementedException();
 
@@ -328,7 +312,6 @@ public sealed class RecursiveCascadeSaveTests
             => Execute<T>(command, default(DataStoreTarget)!, cancellationToken);
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, bool useCache, CancellationToken cancellationToken = default)
-            // Why: test double — useCache not exercised in cascade-save tests; delegates to existing implementation.
             => Execute<T>(command, target, cancellationToken);
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
@@ -352,7 +335,6 @@ public sealed class RecursiveCascadeSaveTests
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<T>.Failure(new GenericMessage("DataSet routing not supported in HeaderReturningGateway test double")));
 
-        // Why: streaming record-source cursor is not exercised by this test double.
         public Task<IGenericResult<Fdw.Data.RowSources.Abstractions.IRecordSource<Fdw.Data.RowSources.Abstractions.DataRecord>>> OpenRecordSource(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
             => throw new System.NotImplementedException();
 
@@ -360,11 +342,6 @@ public sealed class RecursiveCascadeSaveTests
             => Task.FromResult(GenericResult<IDataGatewayTransaction>.Failure(new GenericMessage("Transactions not supported in test double")));
     }
 
-    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
-    // connection it was told its rows live on, so the fake has to answer to that name to be found.
-    // Why a double rather than the real provider: these tests exercise what a configuration provider
-    // does with its gateway, not which gateway it selects, so the double answers for whatever
-    // connection is asked. Selection itself is covered where the real provider is under test.
     private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 

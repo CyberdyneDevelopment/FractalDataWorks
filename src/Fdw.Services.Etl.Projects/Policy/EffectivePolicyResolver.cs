@@ -25,7 +25,6 @@ public sealed class EffectivePolicyResolver : IEffectivePolicyResolver
     {
         if (project == null) throw new ArgumentNullException(nameof(project));
 
-        // Why: Inherit from server defaults for every NULL policy field on the project.
         return new ExecutionPolicySnapshot(
             StepFailurePolicy: project.StepFailurePolicy ?? _serverDefaults.StepFailurePolicy,
             StageFailurePolicy: project.StageFailurePolicy ?? _serverDefaults.StageFailurePolicy,
@@ -42,7 +41,6 @@ public sealed class EffectivePolicyResolver : IEffectivePolicyResolver
         if (stage == null) throw new ArgumentNullException(nameof(stage));
         if (parentProjectEffective == null) throw new ArgumentNullException(nameof(parentProjectEffective));
 
-        // Why: Inherit from parent project's effective policy for every NULL policy field on the stage.
         return new ExecutionPolicySnapshot(
             StepFailurePolicy: stage.StepFailurePolicy ?? parentProjectEffective.StepFailurePolicy,
             StageFailurePolicy: stage.StageFailurePolicy ?? parentProjectEffective.StageFailurePolicy,
@@ -59,7 +57,6 @@ public sealed class EffectivePolicyResolver : IEffectivePolicyResolver
         if (step == null) throw new ArgumentNullException(nameof(step));
         if (parentStageEffective == null) throw new ArgumentNullException(nameof(parentStageEffective));
 
-        // Why: Inherit from parent stage's effective policy for every NULL policy field on the step.
         return new ExecutionPolicySnapshot(
             StepFailurePolicy: step.StepFailurePolicy ?? parentStageEffective.StepFailurePolicy,
             StageFailurePolicy: step.StageFailurePolicy ?? parentStageEffective.StageFailurePolicy,
@@ -76,8 +73,6 @@ public sealed class EffectivePolicyResolver : IEffectivePolicyResolver
         if (node == null) throw new ArgumentNullException(nameof(node));
         if (parentEffective == null) throw new ArgumentNullException(nameof(parentEffective));
 
-        // Why: Same NULL-means-inherit semantics as v1 Project/Stage/Step resolution,
-        // now unified for any node depth in the recursive hierarchy.
         return new ExecutionPolicySnapshot(
             StepFailurePolicy: node.StepFailurePolicy ?? parentEffective.StepFailurePolicy,
             StageFailurePolicy: node.StageFailurePolicy ?? parentEffective.StageFailurePolicy,

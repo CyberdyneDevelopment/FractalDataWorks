@@ -11,7 +11,6 @@ namespace Fdw.Web.Analytics.Components.Health.Dashboard;
 /// Immutable context for the Health Dashboard headless provider.
 /// Aggregates system health and per-service throughput data.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class HealthDashboardContext : ProviderContextBase
 {

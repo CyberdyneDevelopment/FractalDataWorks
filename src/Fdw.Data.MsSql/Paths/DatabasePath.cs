@@ -92,13 +92,9 @@ public sealed class DatabasePath : PathBase, IDataPath<IStorageContainer>, IData
     public string SchemaQualifiedName => $"[{Schema}].[{ObjectName}]";
 
     // IDatabasePath explicit implementation
-    // Why: Schema is non-nullable on DatabasePath (T-SQL always requires a schema namespace),
-    // but IDatabasePath.Schema is nullable to support schemaless dialects (SQLite). Explicit
-    // implementation satisfies the interface without changing the non-nullable public surface.
     string? IDatabasePath.Database => Database;
     string? IDatabasePath.Schema => Schema;
     string IDatabasePath.ObjectName => ObjectName;
-    // Why: dialect is a compile-time fact for this class — MsSql paths always use T-SQL quoting.
     ISqlDialect IDatabasePath.Dialect => TSqlDialect.Instance;
 
     // IDataNodePath implementation — using fully qualified type to resolve ambiguity with

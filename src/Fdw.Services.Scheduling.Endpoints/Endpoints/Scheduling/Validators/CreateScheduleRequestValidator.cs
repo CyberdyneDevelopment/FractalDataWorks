@@ -23,7 +23,6 @@ public abstract class CreateScheduleRequestValidator : FdwEndpointValidator<Crea
             .NotEmpty()
             .WithMessage("SchedulerType is required");
 
-        // Why: Cron schedules require a valid cron expression; interval schedules require a positive interval.
         When(x => string.Equals(x.SchedulerType, "Cron", System.StringComparison.OrdinalIgnoreCase), () =>
         {
             RuleFor(x => x.CronExpression)

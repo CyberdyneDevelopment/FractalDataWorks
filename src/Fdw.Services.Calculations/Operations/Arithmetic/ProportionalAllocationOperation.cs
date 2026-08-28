@@ -55,9 +55,6 @@ public sealed class ProportionalAllocationOperation : CalculationOperationBase
         {
             var whole = Convert.ToDecimal(parameters["Whole"], CultureInfo.InvariantCulture);
 
-            // Why fail rather than allocate zero: a zero whole means the allocation basis is absent,
-            // and "nobody gets anything" is a different — and silently wrong — statement from "this
-            // allocation cannot be computed". Matches DivideOperation's explicit guard.
             if (whole == 0m)
             {
                 return Task.FromResult(GenericResult<object>.Failure(

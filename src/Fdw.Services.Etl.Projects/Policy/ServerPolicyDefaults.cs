@@ -34,15 +34,12 @@ public sealed class ServerPolicyDefaults : IServerPolicyDefaults
     }
 
     /// <inheritdoc/>
-    // Why: Hard-coded "HaltStage" is the strict/safe default; appsettings can loosen to "ContinueStage".
     public string StepFailurePolicy => _options.Value.StepFailurePolicy ?? "HaltStage";
 
     /// <inheritdoc/>
-    // Why: Hard-coded "HaltProject" is the strict/safe default; appsettings can loosen to "ContinueProject".
     public string StageFailurePolicy => _options.Value.StageFailurePolicy ?? "HaltProject";
 
     /// <inheritdoc/>
-    // Why: 4 is a reasonable parallelism cap; most servers handle 4 concurrent pipelines without pressure.
     public int MaxParallelPipelines => _options.Value.MaxParallelPipelines ?? 4;
 
     /// <inheritdoc/>

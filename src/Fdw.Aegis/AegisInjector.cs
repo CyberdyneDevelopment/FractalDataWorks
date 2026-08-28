@@ -78,9 +78,6 @@ public sealed class AegisInjector
             return GenericResult<AegisInjectionOutcome>.Failure(
                 AegisLog.SecretResolutionFailed(_logger, request.SecretManagerName, request.SecretKeyName));
 
-        // Why the MANAGER name and not the key: this is the one trace point between "which backend
-        // did we reach" and "we have a secret in hand", and the key name is part of the secret
-        // reference — the tool surface deliberately never emits it, so neither does the log.
         AegisLog.SecretManagerResolved(_logger, request.SecretManagerName);
 
         var secretResult = await managerResult.Value
@@ -90,10 +87,6 @@ public sealed class AegisInjector
             return GenericResult<AegisInjectionOutcome>.Failure(
                 AegisLog.SecretResolutionFailed(_logger, request.SecretManagerName, request.SecretKeyName));
 
-        // Why: the secret is held only for the span of this using block — handed to the injection
-        // target and disposed immediately after. Never logged, never returned. The target's result
-        // (success, or its own structured AegisLog failure) is propagated verbatim — no re-wrap, so
-        // no CurrentMessage fallback and no duplicate log line.
         using (secretResult.Value)
         {
             return await _target.Inject(request, secretResult.Value, cancellationToken).ConfigureAwait(false);

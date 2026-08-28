@@ -36,7 +36,6 @@ public class DataflowGraphConfigurationProviderTests
     public async Task LoadDataSets_WhenGatewayReturnsRows_ReturnsList()
     {
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<IEnumerable<DataSetRecord>>(
@@ -57,7 +56,6 @@ public class DataflowGraphConfigurationProviderTests
     public async Task LoadDataSets_WhenGatewayFails_ReturnsFailure()
     {
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<IEnumerable<DataSetRecord>>(
@@ -75,7 +73,6 @@ public class DataflowGraphConfigurationProviderTests
     public async Task LoadDataStores_WhenGatewayReturnsRows_ReturnsList()
     {
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<IEnumerable<DataStoreRecord>>(
@@ -95,7 +92,6 @@ public class DataflowGraphConfigurationProviderTests
     public async Task LoadDataStores_WhenGatewayFails_ReturnsFailure()
     {
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<IEnumerable<DataStoreRecord>>(
@@ -113,7 +109,6 @@ public class DataflowGraphConfigurationProviderTests
     public async Task LoadSources_WhenGatewayReturnsRows_ReturnsList()
     {
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<IEnumerable<DataSetSourceConfiguration>>(
@@ -134,7 +129,6 @@ public class DataflowGraphConfigurationProviderTests
     public async Task LoadSources_WhenGatewayFails_ReturnsFailure()
     {
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<IEnumerable<DataSetSourceConfiguration>>(
@@ -152,7 +146,6 @@ public class DataflowGraphConfigurationProviderTests
     public async Task PipelineExists_WhenMatchingPipelineFound_ReturnsTrue()
     {
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<IEnumerable<Dictionary<string, object?>>>(
@@ -171,7 +164,6 @@ public class DataflowGraphConfigurationProviderTests
     public async Task PipelineExists_WhenNoPipelineMatches_ReturnsFalse()
     {
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<IEnumerable<Dictionary<string, object?>>>(
@@ -190,7 +182,6 @@ public class DataflowGraphConfigurationProviderTests
     public async Task PipelineExists_WhenGatewayFails_ReturnsFailure()
     {
         var gateway = new Mock<IConfigurationGateway>();
-        // Why: IConfigurationGateway.DataStores is contractually non-null; ResolveParentJoin reads it.
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
         gateway.Setup(g => g.Execute<IEnumerable<Dictionary<string, object?>>>(

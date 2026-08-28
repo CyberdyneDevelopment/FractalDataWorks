@@ -61,8 +61,6 @@ public sealed class DevSessionManagerTests
         var (manager, _) = CreateManager();
         var first = await manager.Open(RequestFor(repository, "FDW-3", "feature/three"), Token);
 
-        // Why: a session is keyed to the FIX, not the worker. A second worker picking up the same
-        // fix must join the existing session; materializing a second branch would fork the work.
         var second = await manager.Open(RequestFor(repository, "FDW-3", "feature/three-again"), Token);
 
         second.IsSuccess.ShouldBeTrue(second.CurrentMessage);
@@ -96,8 +94,6 @@ public sealed class DevSessionManagerTests
             Token);
 
         result.IsFailure.ShouldBeTrue();
-        // Why: a failed open must leave nothing behind — no registered session, and no ledger entry
-        // claiming a session was opened.
         manager.List().ShouldBeEmpty();
         bus.Published.ShouldBeEmpty();
     }
@@ -125,7 +121,6 @@ public sealed class DevSessionManagerTests
         var result = await manager.OpenNested(Guid.NewGuid(), RequestFor(repository, "FDW-7", "feature/orphan"), Token);
 
         result.IsFailure.ShouldBeTrue();
-        // Why: the parent is checked before any git work, so a bad id cannot strand a branch.
         repository.Git("branch", "--list", "feature/orphan").ShouldBeEmpty();
     }
 
@@ -178,7 +173,6 @@ public sealed class DevSessionManagerTests
 
         var result = await manager.Wake(opened.Value!.Id, Token);
 
-        // Why: waking something that was never asleep is a caller bug, not a no-op to absorb.
         result.IsFailure.ShouldBeTrue();
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("woken");
     }
@@ -206,8 +200,6 @@ public sealed class DevSessionManagerTests
 
         var result = await manager.Sleep(opened.Value!.Id, Token);
 
-        // Why: a terminal session's branch may already be merged and pruned; resurrecting it would
-        // operate on something that no longer exists.
         result.IsFailure.ShouldBeTrue();
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("terminal");
     }
@@ -222,8 +214,6 @@ public sealed class DevSessionManagerTests
 
         var second = await manager.Open(RequestFor(repository, "FDW-13", "feature/thirteen-again"), Token);
 
-        // Why: dedup only applies to LIVE sessions, otherwise a fix could never be reopened after
-        // being finished once.
         second.IsSuccess.ShouldBeTrue(second.CurrentMessage);
         second.Value!.Id.ShouldNotBe(first.Value!.Id);
     }

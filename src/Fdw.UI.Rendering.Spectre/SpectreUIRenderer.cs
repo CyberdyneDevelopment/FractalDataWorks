@@ -121,8 +121,6 @@ public sealed class SpectreUIRenderer : IUIRenderer
 
         try
         {
-            // Why: ListPageRenderer is an implementation detail of THIS renderer, not something a caller
-            // reaches for. Callers hold an IUIRenderer resolved from UIRenderers and never name Spectre.
             return Task.FromResult(ListPageRenderer.Render(page, spectreContext));
         }
         catch (Exception ex)

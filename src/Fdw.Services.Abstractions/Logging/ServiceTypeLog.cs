@@ -771,8 +771,6 @@ public static partial class ServiceTypeLog
     // this actually run" — the question that is otherwise unanswerable from a log.
     // ═══════════════════════════════════════════════════════════════════════════
 
-    // Why a single const rather than the URL baked into each template: at GA this link moves
-    // once, and one place should change. Passing it as a parameter keeps the templates stable.
 #pragma warning disable MA0026 // TODO is intentional and tracked — see FDW-638.
     // TODO: FDW-638 — repoint at the published documentation URL when the framework reaches GA.
     // Until then this names the in-repo wiki page, which is the only durable target that exists.
@@ -985,11 +983,6 @@ public static partial class ServiceTypeLog
         string collectionName,
         string implementation);
 
-    // Why these two are separate from the *Failed pair above: a phase that RETURNS a failure did so
-    // deliberately and carries its own domain's code and message, whereas a phase that THREW did not
-    // choose to fail and has only an exception. Logging both as "FAILED ... while running" would make
-    // a deliberate, well-described refusal indistinguishable from a crash in the one place someone
-    // reads to tell them apart. No exception parameter here, because there is no exception.
 
     /// <summary>
     /// Logs that an option's phase body returned a failure result rather than throwing.

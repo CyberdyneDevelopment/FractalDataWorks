@@ -23,9 +23,6 @@ public sealed class WebMcpBridgeTests
 
     // ── Harness ───────────────────────────────────────────────────────────────────
 
-    // Why: the bridge always imports its ES module and calls register() on first render, so every
-    // test needs the module stubbed with a real outcome — in Loose mode InvokeAsync would return a
-    // null outcome and the bridge's structured logging would have nothing to report.
     private static TestContext CreateContext(int registered = 1)
     {
         var ctx = new TestContext();
@@ -124,8 +121,6 @@ public sealed class WebMcpBridgeTests
                 .Add(x => x.InputSchema, "{ not json")
                 .Add(x => x.OnExecute, Ok)));
 
-        // Why assert absence rather than a substituted default: publishing a permissive {} schema
-        // would let an agent call the tool with arguments the handler never expects.
         RegisteredPayload(ctx).ShouldNotContain("broken");
     }
 
@@ -253,8 +248,6 @@ public sealed class WebMcpBridgeTests
 
         var result = await cut.Instance.ExecuteTool("delete_all", "{}");
 
-        // Why this is the important one: the failure mode to avoid is silently downgrading a
-        // confirmation-gated tool to an unguarded one because nobody wired a handler.
         executed.ShouldBeFalse("A confirmation-gated tool must never run without a handler");
         result.ShouldContain("error");
     }
@@ -321,8 +314,6 @@ public sealed class WebMcpBridgeTests
                 .Add(x => x.OnExecute, (JsonElement args, CancellationToken ct) =>
                     throw new InvalidOperationException("kaboom"))));
 
-        // Why: an exception escaping across the interop boundary reaches the agent as an opaque
-        // interop failure with no server-side record — it must be caught, logged, and returned.
         (await cut.Instance.ExecuteTool("boom", "{}")).ShouldContain("error");
     }
 

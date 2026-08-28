@@ -11,8 +11,6 @@ namespace Fdw.UI.Canvas.Blazor.Logging;
 /// MessageLogging for the Cytoscape.js canvas renderer (<c>CytoscapeRenderer</c>).
 /// EventId range: 4760–4769 (UI canvas Cytoscape renderer layer).
 /// </summary>
-// Why: give every Fdw.UI.Canvas.Blazor Log class its own TypeCode so its generated Code never
-// collides with the sibling Fdw.UI.Charts.Blazor project, which shares the same 47xx EventId band.
 [ExcludeFromCodeCoverage]
 [MessageLoggingTypeCode("CANVAS")]
 public static partial class CytoscapeRendererLog
@@ -45,7 +43,6 @@ public static partial class CytoscapeRendererLog
         Message = "Cytoscape graph rendered: {nodeCount} nodes, {edgeCount} edges")]
     public static partial IGenericMessage GraphRendered(ILogger logger, int nodeCount, int edgeCount);
 
-    // Why: Error level — JS render failure means the canvas is blank; the operator needs to know.
     [MessageLogging(
         EventId = 4764,
         Level = LogLevel.Error,

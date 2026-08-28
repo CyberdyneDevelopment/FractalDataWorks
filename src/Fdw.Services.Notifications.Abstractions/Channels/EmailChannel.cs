@@ -6,7 +6,6 @@ namespace Fdw.Services.Notifications.Abstractions;
 /// Email notification channel.
 /// Sends notifications via SMTP email.
 /// </summary>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(NotificationChannels), "Email", RestrictToCurrentCompilation = true)]
 public sealed class EmailChannel : NotificationChannelBase

@@ -178,8 +178,6 @@ public sealed class QueryCommandBuilderAdditionalTests
     [Trait("Category", "DataIntegrity")]
     public void DataStoreNameIsStoredInTarget()
     {
-        // Why: ConnectionName was removed from IDataCommand; addressing now lives in DataStoreTarget.
-        // The DataStore name in the target is the authority for which store to use.
         var call = new QueryCommandBuilder<TestEntity>(TestDataStore, TestPath, TestContainer)
             .Build();
 

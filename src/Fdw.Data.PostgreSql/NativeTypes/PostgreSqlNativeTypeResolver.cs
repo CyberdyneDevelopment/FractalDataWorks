@@ -15,7 +15,6 @@ namespace Fdw.Data.PostgreSql;
 /// </remarks>
 public static class PostgreSqlNativeTypeResolver
 {
-    // Why: alias map normalizes common PostgreSQL type aliases to the canonical TypeCollection name.
     private static readonly Dictionary<string, string> _aliasMap =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -46,19 +45,13 @@ public static class PostgreSqlNativeTypeResolver
     /// </returns>
     public static PostgreSqlNativeTypeBase Resolve(string? dbNativeTypeName)
     {
-        // Why: ByName/NotFound return IPostgreSqlNativeType (TGeneric); cast to PostgreSqlNativeTypeBase (TBase)
-        // because callers hold fields typed as PostgreSqlNativeTypeBase. Every TypeOption in PostgreSqlNativeTypes
-        // derives from PostgreSqlNativeTypeBase, so the cast is always safe.
         if (string.IsNullOrWhiteSpace(dbNativeTypeName))
             return (PostgreSqlNativeTypeBase)PostgreSqlNativeTypes.NotFound;
 
-        // Why: Normalize alias first, then fall back to direct ByName.
         var normalized = _aliasMap.TryGetValue(dbNativeTypeName, out var mapped)
             ? mapped
             : dbNativeTypeName;
 
-        // Why: ByName returns IPostgreSqlNativeType (the interface); cast to the concrete base class
-        // because PostgreSqlDataField.NativeType is typed as PostgreSqlNativeTypeBase.
         var found = (PostgreSqlNativeTypeBase)PostgreSqlNativeTypes.ByName(normalized);
 
         // Fallback: try original name in case it wasn't in our alias map.

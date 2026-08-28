@@ -10,7 +10,6 @@ namespace Fdw.Services.SecretManagers.Logging;
 [MessageLoggingTypeCode("SECRETMGR")]
 public static partial class SetSecretManagerCommandLog
 {
-    // Why: never logs the secret value itself — only the non-sensitive container/key identifiers.
     [MessageLogging(
         EventId = 12002,
         Level = LogLevel.Trace,
@@ -20,8 +19,6 @@ public static partial class SetSecretManagerCommandLog
         string? container,
         string secretKey);
 
-    // Why: reuses the FDW canonical RequiredValueMissing number (20000) — see
-    // SecretManagerCommandBaseLog.RequiredValueMissing's remark.
     [MessageLogging(
         EventId = 20000,
         Level = LogLevel.Critical,

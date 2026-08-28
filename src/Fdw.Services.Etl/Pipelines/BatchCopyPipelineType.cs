@@ -62,9 +62,6 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
         category: "ETL",
         defaultContainerName: "BatchCopyPipeline")
     {
-        // Why Initialize and not Register: this wiring needs a LIVE container (it resolves the
-        // domain provider and its typed-body providers), and Register runs while the container
-        // is still being built. Initialize runs after Build() with a real IServiceProvider.
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
@@ -78,9 +75,6 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
             var factoryResult = provider.Register(Name, factory);
             if (!factoryResult.IsSuccess)
             {
-                // Why this exit is logged at Error: it returns SUCCESS to the host. Without a line
-                // here this engine simply is not creatable and the host starts as though it were —
-                // the gap surfaces only at the first pipeline run, far from the method that caused it.
                 ServiceTypeLog.OptionFactoryRegistrationFailed(
                     log,
                     nameof(BatchCopyPipelineType),
@@ -96,18 +90,8 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
                 Name,
                 nameof(IBatchCopyPipelineFactory));
 
-            // Why: Resolve from DI — provider was registered with Lazy<IConfigurationGateway> in the option's Register phase.
-            // Not registered with the runtime IPlatformServiceProvider (which is typed to the ETL-kind
-            // EtlPipelineConfiguration, resolved from DI by the generated resolver) — the engine config is a
-            // distinct typed body reached through the kind body's .Configuration, attached below.
             var configProvider = services.GetRequiredService<ImplementationConfigurationProviderBase<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>>();
 
-            // Why: wire the two-level configuration typed-body chain (Pipeline → Etl → engine), mirroring the
-            // Calculation precedent but across packages. (1) Attach this engine's body provider to the ETL-kind
-            // provider keyed by the engine discriminator ("BatchCopy"); (2) attach the ETL-kind provider to the
-            // general header keyed by the KIND discriminator ("Etl"). Both attachments are idempotent
-            // and run against the real singletons (RegisterFactory executes inside the collection's provider
-            // resolver against the app sp), so the keystone's ComposeTypedBody recurses Pipeline→Etl→engine.
             var etlKindProvider = services.GetRequiredService<EtlPipelineConfigurationProvider>();
             etlKindProvider.Register(Name, configProvider);
 
@@ -127,22 +111,9 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
         Registration((builder, loggerFactory) =>
         {
 
-            // Why: register the ETL-kind header provider (idempotent TryAdd) that EtlPipelineTypes' generated
-            // provider resolves as IServiceConfigurationProvider<EtlPipelineConfiguration> — the domain,
-            // not the app, registers what it depends on.
 
-            // Why: ETL is a KIND the general Pipeline header consumes. Register the general header provider
-            // (idempotent TryAdd) here too so the "Etl" typed-provider attachment in RegisterFactory never
-            // depends on cross-collection registration ordering (PipelineServiceTypes vs EtlPipelineTypes).
 
             // Factory - DI handles all constructor dependencies
-            // Why Scoped: the factory optionally consumes IDataGateway (scoped). EtlPipelineTypes'
-            // generated IEtlPipelineProvider is itself Scoped and
-            // resolves this factory via RegisterFactory inside its own per-scope resolver, so a Scoped
-            // factory here is lifetime-consistent, not a captive dependency.
-            // Why: lambda registration so the cross-collection connection provider is injected as a Lazy —
-            // the factory must stay pure (FDW045). The Lazy defers resolution to pipeline-build time; .Value
-            // yields the provider or null, preserving the optional semantics.
             builder.Services.AddScoped<IBatchCopyPipelineFactory>(sp => new BatchCopyPipelineFactory(
                 sp.GetRequiredService<ILogger<BatchCopyPipelineFactory>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
@@ -151,25 +122,13 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
                     () => sp.GetService<IConnectionProvider>()!),
                 sp.GetService<IDataStoreProvider>()));
 
-            // Why: Lazy<IConfigurationGateway> defers cfg resolution until first runtime query, avoiding
-            // circular dependency with the DataGateway that hasn't been built yet at registration time.
-            // DataStore flows from TypeCollection.Configure() so "ConfigurationDb" is never hardcoded here.
             builder.Services.AddSingleton(sp => new ImplementationConfigurationProviderBase<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>(
                 sp.GetRequiredService<ILoggerFactory>().CreateLogger<ImplementationConfigurationProviderBase<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 DataStore,
                 PathName));
 
-            // Why: a pipeline type can't run without the execution queue + its background consumer, so the
-            // option registers what it needs (idempotent — guarded by an existing-registration check, so
-            // BatchCopy and Streaming can both call it and the first wins). This is the option-owned home
-            // for the executor: any host with any pipeline type gets it automatically, with no host-level
-            // host-level registration call and no OrchestrationTypes hand-wiring.
             EtlPipelineTypes.RegisterPipelineExecutionQueue(builder.Services);
-            // Why: the inspection/test-control singletons the execution subsystem exposes
-            // (IPipelineExecutionInspector, IPipelineTestController) are needed wherever a pipeline
-            // can run, so the option that brings the pipeline registers them too. Idempotent TryAdd,
-            // so both pipeline options calling it is harmless.
             EtlPipelineTypes.RegisterAdditionalServices(builder.Services);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

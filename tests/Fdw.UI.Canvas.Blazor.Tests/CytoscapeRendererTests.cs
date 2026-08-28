@@ -17,9 +17,6 @@ public sealed class CytoscapeRendererTests
     private static TestContext CreateContext()
     {
         var ctx = new TestContext();
-        // Why: CytoscapeRenderer uses JS interop (module import + render/dispose calls). Configure
-        // bUnit in loose JS interop mode so all un-setup JS calls are silently ignored, including the
-        // dynamic import() that loads cytoscape-interop.js on first render.
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         return ctx;
     }

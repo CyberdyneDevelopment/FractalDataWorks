@@ -6,7 +6,6 @@ namespace Fdw.Collections.Attributes;
 /// <summary>
 /// Marks a property for which to generate lookup methods.
 /// </summary>
-// Why: pure attribute definition (declarative metadata only, consumed by source generators) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 [ExcludeFromCodeCoverage]
 public sealed class TypeLookupAttribute : Attribute

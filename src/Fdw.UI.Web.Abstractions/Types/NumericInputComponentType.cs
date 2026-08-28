@@ -6,7 +6,6 @@ namespace Fdw.UI.Web.Abstractions;
 /// <summary>
 /// Numeric value input component type.
 /// </summary>
-// Why: pure TypeOption leaf — literal constructor values only, no logic to test.
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(ComponentTypes), "NumericInput", RestrictToCurrentCompilation = true)]
 public sealed class NumericInputComponentType : ComponentTypeBase

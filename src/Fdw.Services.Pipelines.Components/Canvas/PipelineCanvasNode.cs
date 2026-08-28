@@ -15,9 +15,6 @@ namespace Fdw.Services.Pipelines.Components.Canvas;
 [ExcludeFromCodeCoverage]
 public sealed class PipelineCanvasNode : ICanvasNode
 {
-    // Why: mutable backing is kept separate so ICanvasEditContext.UpdateNodeMetadata can
-    // write individual keys without reconstructing the whole node, while the public
-    // Metadata property preserves the IReadOnlyDictionary<string,string> contract.
     private readonly Dictionary<string, string> _mutableMetadata;
 
     /// <summary>
@@ -48,8 +45,6 @@ public sealed class PipelineCanvasNode : ICanvasNode
         X = x;
         Y = y;
         Ports = ports;
-        // Why: copy to a mutable dictionary so the edit context can write keys via
-        // MutableMetadata without violating the public IReadOnlyDictionary contract.
         _mutableMetadata = new Dictionary<string, string>(metadata, StringComparer.Ordinal);
         Metadata = _mutableMetadata;
     }

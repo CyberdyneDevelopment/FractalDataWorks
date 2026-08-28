@@ -15,10 +15,6 @@ public sealed class DataMsSqlTypeCollectionFixture
         _ = SortDirections.All();
         _ = ContainerTypes.All();
 
-        // Why: TestKvpRow is a [GenerateMapper] POCO defined in this test assembly — the
-        // TypeOptionModuleInitializerGenerator only auto-registers TypeOptions from REFERENCED
-        // assemblies, so an in-assembly mapper needs manual registration (same requirement as
-        // Fdw.Services.Tests's ServicesTypeCollectionFixture).
         PocoMapperCollection.RegisterMember(new TestKvpRowPocoMapper());
     }
 }

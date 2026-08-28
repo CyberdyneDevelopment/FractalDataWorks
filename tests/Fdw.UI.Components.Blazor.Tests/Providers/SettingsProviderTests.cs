@@ -62,8 +62,6 @@ public sealed class SettingsProviderTests : IDisposable
             new() { SettingName = "DefaultTimeout", SettingValue = "30", DataType = "int" }
         };
 
-        // Why: SettingsProvider calls both "settings/server" and "themes" in parallel on init;
-        // provide empty themes response to avoid errors.
         var handler = new MockHttpHandler()
             .RespondWith("settings/server", settings)
             .RespondWith("themes", new List<ThemeSummaryPayload>());

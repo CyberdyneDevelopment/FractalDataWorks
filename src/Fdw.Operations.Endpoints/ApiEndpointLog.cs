@@ -130,8 +130,6 @@ public static partial class ApiEndpointLog
         string name);
 
     /// <summary>Logs an error that composing a pipeline aggregate failed; the pipeline renders node-only.</summary>
-    // Why: level raised to Error (composing genuinely failed) but the node-only rendering fallback
-    // itself is intentionally left in place pending a separate decision.
     [MessageLogging(
         EventId = 31003,
         Level = LogLevel.Error,

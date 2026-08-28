@@ -42,8 +42,6 @@ public class RoleConfigurationProvider : ImplementationConfigurationProviderBase
     }
 
     /// <inheritdoc />
-    // Why: virtual allows Moq to override GetRole in unit tests (e.g., DefaultPrincipalResolverTests)
-    // without requiring a real IOptionsMonitor<List<RoleConfiguration>> or gateway.
     public virtual async Task<RoleConfiguration?> GetRole(string name, CancellationToken cancellationToken = default)
     {
         var result = await Get(name, cancellationToken).ConfigureAwait(false);
@@ -51,7 +49,6 @@ public class RoleConfigurationProvider : ImplementationConfigurationProviderBase
     }
 
     /// <inheritdoc />
-    // Why: virtual — same test-isolation rationale as GetRole(string).
     public virtual async Task<RoleConfiguration?> GetRole(Guid id, CancellationToken cancellationToken = default)
     {
         var result = await Get(id, cancellationToken).ConfigureAwait(false);
@@ -59,8 +56,6 @@ public class RoleConfigurationProvider : ImplementationConfigurationProviderBase
     }
 
     /// <inheritdoc />
-    // Why: virtual to match GetByUser — both are the seams the auth resolver tests stub on a
-    // loose mock. Without virtual, a loose mock runs the real body against a null gatewayProvider and NREs.
     public virtual async Task<IReadOnlyList<RoleConfiguration>> GetAllRoles(CancellationToken cancellationToken = default)
     {
         var result = await Get(cancellationToken).ConfigureAwait(false);
@@ -114,8 +109,6 @@ public class RoleConfigurationProvider : ImplementationConfigurationProviderBase
         Guid roleId,
         CancellationToken cancellationToken = default)
     {
-        // Why: version-on-write tables keep all historical rows. Filter to the currently-active,
-        // non-deleted slice so duplicate or soft-deleted assignments don't inflate the result.
         var command = new QueryCommandBuilder<RolePermissionConfiguration>(
                 DataStoreName, PathName, "RolePermission")
             .Where("RoleId", roleId)
@@ -141,10 +134,6 @@ public class RoleConfigurationProvider : ImplementationConfigurationProviderBase
         CancellationToken cancellationToken = default)
     {
         var result = await Get(name, cancellationToken).ConfigureAwait(false);
-        // Why: split query-failed from found-but-absent (FDW-583) — the prior single check fired one
-        // Trace log for both "no such role" and "ConfigurationDb query failed", silently vanishing
-        // role permissions on an infrastructure fault. IsSuccess=false is the query failure (Error);
-        // IsSuccess=true with a null Value is a genuine miss (Debug).
         if (!result.IsSuccess)
         {
             RoleConfigurationProviderLog.RoleQueryFailed(_logger, name, result.CurrentMessage ?? "Unknown error");

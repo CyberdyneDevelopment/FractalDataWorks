@@ -144,8 +144,6 @@ public class CalculationStepExecutorTests
                 Operand("Right", "Literal", literalValue: "1")),
         };
 
-        // Why this must fail rather than treat the absent input as zero: a missing determinant is
-        // the exact condition a billing calculation must stop on.
         var result = await CreateExecutor().Execute(steps, [], new CalculationTraceRecorder(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();

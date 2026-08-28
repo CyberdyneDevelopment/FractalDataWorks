@@ -264,9 +264,6 @@ public abstract class ComponentTypeCollectionBase<TBase> : TypeCollectionBase<TB
     /// <inheritdoc />
     public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        // Why the flag is set here rather than after the work: a phase that failed halfway
-        // has already registered whatever came before the failure, and re-entering would do
-        // that part twice.
         if (!force && (Configured || SkipConfiguration))
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
@@ -302,9 +299,6 @@ public abstract class ComponentTypeCollectionBase<TBase> : TypeCollectionBase<TB
         bool force = false,
         bool defer = false)
     {
-        // Why the flag is set here rather than after the work: a phase that failed halfway
-        // has already registered whatever came before the failure, and re-entering would do
-        // that part twice.
         if (!force && (Registered || SkipRegistration))
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
@@ -336,9 +330,6 @@ public abstract class ComponentTypeCollectionBase<TBase> : TypeCollectionBase<TB
     /// <inheritdoc />
     public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        // Why the flag is set here rather than after the work: a phase that failed halfway
-        // has already registered whatever came before the failure, and re-entering would do
-        // that part twice.
         if (!force && (Initialized || SkipInitialization))
         {
             return GenericResult<IHost>.Success(host);
@@ -367,9 +358,6 @@ public abstract class ComponentTypeCollectionBase<TBase> : TypeCollectionBase<TB
         return GenericResult<IHost>.Success(host);
     }
 
-    // Why no argument check: nothing to register is a real state, not a mistake. A domain whose
-    // components are all skipped, or which has none yet, registers nothing and says so by doing
-    // nothing.
     private static IEnumerable<IComponentTypeOption> Selected(IEnumerable<IComponentTypeOption>? members)
         => (members ?? Enumerable.Empty<IComponentTypeOption>()).Where(m => !m.SkipRegistration);
 }

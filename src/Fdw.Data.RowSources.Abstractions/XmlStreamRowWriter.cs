@@ -97,9 +97,6 @@ public sealed class XmlStreamRowWriter : IRecordWriter<DataRecord>
     }
 
     /// <inheritdoc />
-    // Why: the typed IRecordWriter<DataRecord> surface projects the record's field-array onto the
-    // existing dictionary write path via DataRecord.ToDictionary() — the flyweight schema names the
-    // emitted XML elements.
     public void Write(DataRecord record) => Write(record.ToDictionary());
 
     /// <inheritdoc />
@@ -150,8 +147,6 @@ public sealed class XmlStreamRowWriter : IRecordWriter<DataRecord>
     /// <inheritdoc />
     public ValueTask DisposeAsync()
     {
-        // Why: XmlWriter.DisposeAsync is not available on netstandard2.0 (the target of this
-        // abstractions project); the sync Dispose flushes and releases the writer fully.
         Dispose();
         return default;
     }

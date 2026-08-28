@@ -48,9 +48,6 @@ public sealed class JsonStreamRowWriter : IRowWriter
     {
         _target = target ?? throw new ArgumentNullException(nameof(target));
         var opts = options ?? new JsonRowWriterOptions();
-        // Why: Utf8JsonWriter targets a Stream/IBufferWriter, but IRowWriter writes to a TextWriter
-        // (so all formats share one target abstraction). Buffer to a MemoryStream, then decode UTF-8
-        // to the TextWriter on Flush — JSON output is always UTF-8, so the decode is lossless.
         _bridge = new MemoryStream();
         _writer = new Utf8JsonWriter(_bridge, new JsonWriterOptions
         {
@@ -108,9 +105,6 @@ public sealed class JsonStreamRowWriter : IRowWriter
     }
 
     /// <inheritdoc />
-    // Why: the typed IRecordWriter<DataRecord> surface projects the record's field-array onto the
-    // existing dictionary write path via DataRecord.ToDictionary() — the flyweight schema names the
-    // emitted JSON properties. No second serializer path.
     public void Write(DataRecord record) => Write(record.ToDictionary());
 
     /// <inheritdoc />
@@ -151,9 +145,6 @@ public sealed class JsonStreamRowWriter : IRowWriter
         _target.Flush();
     }
 
-    // Why: writes a CLR value as its natural JSON token, inverse of JsonStreamRowSource's
-    // JsonValueKind switch — strings, the numeric family, bool, and null. Anything else is
-    // emitted as its string form (the read path stores raw text for non-scalar tokens too).
     private static void WriteValue(Utf8JsonWriter writer, object? value)
     {
         switch (value)
@@ -205,8 +196,6 @@ public sealed class JsonStreamRowWriter : IRowWriter
 
         _disposed = true;
         await _writer.DisposeAsync().ConfigureAwait(false);
-        // Why: Stream.DisposeAsync is not available on netstandard2.0 (the target of this abstractions
-        // project); MemoryStream's sync Dispose is fully sufficient (no unflushed OS handles).
         _bridge.Dispose();
     }
 }

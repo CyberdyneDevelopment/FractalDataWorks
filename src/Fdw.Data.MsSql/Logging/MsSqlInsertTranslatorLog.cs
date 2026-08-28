@@ -33,15 +33,12 @@ public static partial class MsSqlInsertTranslatorLog
         string container,
         int columnCount);
 
-    // Why: reuses MsSqlDataResultCodes.ContainerNull's number (20000) as the EventId so the log
-    // event and the returned ResultCode stay numerically aligned.
     [MessageLogging(
         EventId = 20000,
         Level = LogLevel.Error,
         Message = "MsSqlInsertTranslator received a null container")]
     public static partial IGenericMessage ContainerNull(ILogger logger);
 
-    // Why: reuses MsSqlDataResultCodes.InvalidContainerPath's number (20001).
     [MessageLogging(
         EventId = 20001,
         Level = LogLevel.Error,
@@ -50,7 +47,6 @@ public static partial class MsSqlInsertTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses MsSqlDataResultCodes.MissingInputData's number (21001).
     [MessageLogging(
         EventId = 21001,
         Level = LogLevel.Error,
@@ -84,7 +80,6 @@ public static partial class MsSqlInsertTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses MsSqlDataResultCodes.InsertTranslationFailed's number (91005).
     [MessageLogging(
         EventId = 91005,
         Level = LogLevel.Error,

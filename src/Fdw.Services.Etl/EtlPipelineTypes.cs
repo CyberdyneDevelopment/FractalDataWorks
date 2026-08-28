@@ -43,11 +43,6 @@ namespace Fdw.Services.Etl;
     typeof(IEtlPipelineType),
     typeof(EtlPipelineTypes),
     ServiceInterface = typeof(IEtlPipeline),
-    // Why: the runtime service provider name-resolves via the ROOT header (pipe.Pipeline /
-    // PipelineConfiguration, which owns Name + ServiceOptionType), then composes the kind/engine
-    // typed bodies and downcasts in the factory. ConfigurationType therefore is the header config —
-    // it drives the generated parent-provider lookup + IOptions binding. The ENGINE type-options
-    // (BatchCopy/Streaming) keep EtlPipelineConfiguration as their base config (positional arg above).
     ProviderType = typeof(EtlPipelineProvider),
     ProviderInterface = typeof(IEtlPipelineProvider),
     ServiceCategory = "Pipeline")]
@@ -124,18 +119,12 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
     {
         var collectOptions = RegisterFunc;
 
-        // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
-        // three points below — the deferred declaration, the milestone, and the zero-option warning.
-        // Written out three times it is three chances for them to disagree.
         var providerService = typeof(IEtlPipelineProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<EtlPipelineTypes>() ?? NullLogger<EtlPipelineTypes>.Instance;
 
-            // Why the result is read: this replacement calls the func it captured, and discarding
-            // what that returned meant an option that failed to register was followed by this body
-            // registering the provider anyway and reporting success.
             var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
                 return registered;
@@ -165,10 +154,6 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILoggerFactory>()?.CreateLogger<EtlPipelineProvider>()
                     ?? NullLogger<EtlPipelineProvider>.Instance);
 
-                // Why ILogger<EtlPipelineTypes> and not CreateLogger("EtlPipelineTypes"): SourceContext then
-                // carries the namespace-qualified collection, and the category cannot drift from the
-                // type it claims to name. The provider logs its own lines under its own type, so the
-                // two layers read base-then-derived rather than collapsing onto one category.
                 var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<EtlPipelineTypes>()
                     ?? NullLogger<EtlPipelineTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(EtlPipelineTypes), provider.GetType().Name);
@@ -176,8 +161,6 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
                 {
                     if (sp.GetService<IPipelineConfigurationProvider>() is { } cfgProvider)
                     {
-                        // Why the result is read: a provider that did not take its parent still constructs, and
-                        // every later read silently misses. The failure has to be said out loud here or nowhere.
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(EtlPipelineTypes), provider.GetType().Name, cfgProvider.GetType().Name);
@@ -186,11 +169,6 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
                     }
                     else
                     {
-                        // Why Critical, and why the collection says it rather than the provider: from
-                        // inside the provider a null parent is indistinguishable from a domain that needs
-                        // none. This is the one place that knows one was meant to arrive, and without it
-                        // the domain fails every lookup by name for the life of the scope with nothing
-                        // pointing back here.
                         ServiceTypeLog.DomainHasNoConfigurationSource(
                             stLogger,
                             nameof(EtlPipelineTypes),
@@ -200,16 +178,12 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
                 }
                 catch (Exception ex)
                 {
-                    // Why rethrow: a throw here was previously silent, and a provider that failed to take
-                    // its parent is unusable in a way that only surfaces much later.
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(EtlPipelineTypes));
                     throw;
                 }
                 return provider;
             });
 
-            // Why the milestone comes after the registration and not before: it states that the domain
-            // finished phase 2, which is only true once the provider is actually in the container.
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(EtlPipelineTypes), providerService);
             else

@@ -20,10 +20,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-// Why: DataSet configuration is read on demand — no local dictionary:
-// 1. IServiceConfigurationProvider<DataSetConfiguration> (live, via ConfigurationDb) — the dataset INSTANCES
-// 2. DataSetTypes.All() filtered to non-strategy members — genuinely code-defined dataset instances only
-//    (the Simple/Compound/Federated strategy KINDS in DataSetTypes are dispatch strategies, not datasets)
 
 namespace Fdw.Services.Data;
 
@@ -69,13 +65,8 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
         var services = builder.Services;
-        // Why: the DataSet domain registers the gateway-backed DataSetConfigurationProvider it
-        // depends on (it supplies the IServiceConfigurationProvider<DataSetConfiguration> resolved
-        // below), instead of the entry-point app.
         DataSetConfigurationProvider.RegisterDomainConfiguration(services);
 
-        // Why: IDataSetConfigurationProvider (merged: TypeCollection + ctrl/cfg DB)
-        // replaces the old IDataSetProvider. Resolves three sources in priority order.
         services.TryAddSingleton<IDataSetConfigurationProvider>(sp =>
         {
             var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<DataSetProvider>();
@@ -83,20 +74,15 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
             return new DataSetProvider(logger, configProvider);
         });
 
-        // Why: IDataSetBuilder builds live IDataSet runtimes from DataSetConfiguration records.
-        // Field mappings are composed by DataSetConfigurationProvider.Get — no resolver needed.
         services.TryAddSingleton<IDataSetBuilder>(sp =>
             new DataSetBuilder(sp.GetService<ILogger<DataSetBuilder>>()));
 
-        // Why: IDataSetProvider (NEW — returns IDataSet) wraps IDataSetConfigurationProvider + IDataSetBuilder.
         services.TryAddSingleton<IDataSetProvider>(sp =>
             new DataSetRuntimeProvider(
                 sp.GetRequiredService<IDataSetConfigurationProvider>(),
                 sp.GetRequiredService<IDataSetBuilder>(),
                 sp.GetService<ILogger<DataSetRuntimeProvider>>()));
 
-        // Why: IStatSetService was previously registered ad-hoc in application Program.cs files.
-        // Scoped because it depends on scoped IDataGateway for per-request data access.
         services.TryAddScoped<IStatSetService, StatSetService>();
 
         if (loggerFactory != null)
@@ -120,11 +106,6 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         var logger = loggerFactory?.CreateLogger<DataSetProvider>()
             ?? host.Services.GetRequiredService<ILoggerFactory>().CreateLogger<DataSetProvider>();
 
-        // Why: DataSetTypes holds the static strategy KINDS (Simple/Compound/Federated) — it is NOT a
-        // registry of dataset instances. Dataset instances are resolved live from the configuration
-        // provider; DataGatewayService dispatches on the authored ServiceOptionType. No per-instance
-        // registration happens here (the old boot loop that stuffed a ConfiguredDataSetType per config
-        // into DataSetTypes is deleted — it froze runtime-created datasets out of execution).
         DataSetTypesLog.DataSetTypesInitializedNoConfig(logger, DataSetTypes.All().Count);
     
         return GenericResult<IHost>.Success(host);
@@ -161,9 +142,6 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
                 DataServiceResultCodes.ByName("DataSetNameRequired"), _logger);
         }
 
-        // Why: dataset INSTANCES come only from the configuration provider (live, gateway-backed).
-        // DataSetTypes holds dispatch strategy KINDS (Simple/Compound/Federated), never instances, so
-        // there is no TypeCollection fallback here.
         if (_configurationProvider != null)
         {
             var configResult = await _configurationProvider.Get(name, cancellationToken).ConfigureAwait(false);
@@ -185,7 +163,6 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     {
         DataSetProviderLog.TraceGetDataSetByIdEntry(_logger, id);
 
-        // Why: ID-based lookup goes to DB only — TypeCollection entries have no stable Guid Id.
         if (_configurationProvider != null)
         {
             var configResult = await _configurationProvider.Get(id, cancellationToken).ConfigureAwait(false);
@@ -210,7 +187,6 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         var dataSets = new List<DataSetConfiguration>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // Why: IOptionsMonitor + DB via _configurationProvider (covers ctrl + cfg datasets).
         if (_configurationProvider != null)
         {
             var dbResult = await _configurationProvider.Get(cancellationToken).ConfigureAwait(false);
@@ -228,8 +204,6 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
             }
         }
 
-        // Why: instances come only from the configuration provider. DataSetTypes holds dispatch
-        // strategy KINDS, not datasets, so they are never added to the instance list.
         DataSetProviderLog.AllDataSetsRetrieved(_logger, dataSets.Count);
         return GenericResult<IReadOnlyList<DataSetConfiguration>>.Success(dataSets.AsReadOnly());
     }
@@ -285,14 +259,11 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         return GenericResult.Success();
     }
 
-    // Why: Deep field-reference validation requires resolving DataSetFieldRowId through the
-    // DataSetField table, which happens at provider load time. Here we only sanity-check the records.
     private static IGenericResult ValidateKeyFieldsExist(DataSetConfiguration configuration)
         => GenericResult.Success();
 
     private static IGenericResult ValidateDataSetSources(DataSetConfiguration configuration)
     {
-        // Why: Sources are composed by DataSetConfigurationProvider.Get — iterate directly.
         foreach (var source in configuration.Sources)
         {
             if (source.FieldMappingIds == null || source.FieldMappingIds.Count == 0)

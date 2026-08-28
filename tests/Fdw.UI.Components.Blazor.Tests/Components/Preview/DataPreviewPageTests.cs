@@ -23,9 +23,6 @@ public sealed class DataPreviewPageTests : IDisposable
     private void SwapProvider(DataPreviewPageContext? seed = null) =>
         _ctx.ComponentFactories.Add(new ProviderFactory<DataPreviewPageProvider, DataPreviewPageContext>(seed));
 
-    // Why: subclass VisualizationTypeBase directly instead of calling VisualizationTypes.ByName.
-    // ByName freezes the TypeCollection on first access, corrupting global static registration for
-    // the whole process. Constructing an instance touches no collection, so it is side-effect free.
     private sealed class TestVizType(int id, string name, string display)
         : VisualizationTypeBase(id, name, display, "icon", [])
     {

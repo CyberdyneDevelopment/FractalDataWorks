@@ -53,10 +53,6 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
             if (registered.IsFailure)
                 return registered;
 
-            // Why the collection and not an option: every consumer of this domain resolves
-            // IPipelineConfigurationProvider, and an option owning the registration means the whole
-            // domain loses name resolution whenever that option is not referenced.
-            // ConfigurationConnection is the one place that names which store these rows live in.
             builder.Services.TryAddSingleton<IPipelineConfigurationProvider>(sp =>
                 new PipelineServiceConfigurationProvider(
                     sp.GetService<ILogger<PipelineServiceConfigurationProvider>>(),

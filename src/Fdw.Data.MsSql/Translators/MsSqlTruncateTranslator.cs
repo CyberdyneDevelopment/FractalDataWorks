@@ -68,8 +68,6 @@ public sealed class MsSqlTruncateTranslator : MsSqlDataCommandTranslatorBase
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("InvalidContainerPath")));
             }
 
-            // Why: empty the whole container — an unconditional DELETE (no WHERE). DELETE rather than
-            // TRUNCATE TABLE so the operation needs only a DELETE grant and tolerates FK references.
             var sqlCommand = CreateCommand($"DELETE FROM {BuildQualifiedTableName(dbPath)}");
 
             MsSqlTruncateTranslatorLog.Translated(NullLogger<MsSqlTruncateTranslator>.Instance, container.Name);

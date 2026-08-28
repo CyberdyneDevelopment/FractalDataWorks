@@ -77,15 +77,11 @@ public sealed class SwallowedExceptionAnalyzer : DiagnosticAnalyzer
 
     private static void AnalyzeCatchClause(SyntaxNodeAnalysisContext context)
     {
-        // Why: analyzer surfaces production violations; test projects deliberately throw/swallow.
         if (IsTestProject(context))
             return;
 
         var catchClause = (CatchClauseSyntax)context.Node;
 
-        // Why: a swallowed catch is the primary signal — FDW022 takes precedence and FDW023 (the
-        // broad-catch survey) is suppressed for the same clause so a bare 'catch {}' reports once.
-        // Re-throwing (throw; / throw new X(..., ex) / throw expression) preserves the failure.
         if (!HasThrowStatement(catchClause) && !IsExceptionObserved(catchClause))
         {
             context.ReportDiagnostic(Diagnostic.Create(
@@ -102,9 +98,6 @@ public sealed class SwallowedExceptionAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    // Why: the exception is "observed" when its variable is referenced anywhere in the catch
-    // block or the 'when' filter — passed to a log/result, inspected, or stored. A catch with no
-    // declared variable (bare 'catch' or 'catch (Exception)') can never observe the object.
     private static bool IsExceptionObserved(CatchClauseSyntax catchClause)
     {
         var declaration = catchClause.Declaration;
@@ -143,9 +136,6 @@ public sealed class SwallowedExceptionAnalyzer : DiagnosticAnalyzer
         return false;
     }
 
-    // Why: flags a broad 'catch (Exception)' / bare 'catch' only when nothing on the same try
-    // distinguishes exception types — no more-specific catch clause and no 'when' filter. A broad
-    // catch-all that FOLLOWS specific clauses, or a filtered catch, is the discriminating pattern.
     private static bool IsUnchainedBroadCatch(CatchClauseSyntax catchClause, SyntaxNodeAnalysisContext context)
     {
         // A 'when' filter is an explicit discrimination mechanism — not an unchained blanket catch.
@@ -180,7 +170,6 @@ public sealed class SwallowedExceptionAnalyzer : DiagnosticAnalyzer
 
         var type = context.SemanticModel.GetTypeInfo(declaration.Type).Type;
 
-        // Why: unresolved type — stay conservative and treat as NOT broad to avoid false positives.
         if (type == null)
             return false;
 

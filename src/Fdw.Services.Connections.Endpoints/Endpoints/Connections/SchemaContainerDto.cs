@@ -28,7 +28,6 @@ public sealed class SchemaContainerDto
         return new SchemaContainerDto
         {
             Name = config.Name,
-            // Why: TypeId replaces ContainerType after Wave A5 DDL rename.
             ContainerType = config.TypeId ?? string.Empty,
             FieldCount = fields.Count,
             Fields = fields

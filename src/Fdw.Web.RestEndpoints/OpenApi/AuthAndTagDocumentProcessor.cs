@@ -44,8 +44,6 @@ public sealed class AuthAndTagDocumentProcessor : IDocumentProcessor
 
     private const string AuthenticationTag = "Authentication";
 
-    // Why: OAuth2 password-grant fields. The three fixed values are prefilled as schema defaults
-    // so Scalar populates them; username/password are left empty for the caller to type.
     private (string Name, string? Default)[] TokenFormFields =>
     [
         ("grant_type", "password"),
@@ -72,8 +70,6 @@ public sealed class AuthAndTagDocumentProcessor : IDocumentProcessor
         }
     }
 
-    // Why: collapse the "Auth"/"Authentication" split, drop empty/null tags, dedupe, and give any
-    // untagged operation a tag derived from its route so nothing renders ungrouped in Scalar.
     private static void NormalizeTags(OpenApiOperation operation, string path)
     {
         var normalized = operation.Tags
@@ -96,8 +92,6 @@ public sealed class AuthAndTagDocumentProcessor : IDocumentProcessor
         }
     }
 
-    // Why: /connect/* (OpenIddict) → Authentication; everything else derives a Title-cased tag
-    // from the first non-version route segment (e.g. /api/v1/connections → "Connections").
     private static string DeriveTag(string path)
     {
         if (path.Contains("/connect/", StringComparison.OrdinalIgnoreCase))
@@ -119,9 +113,6 @@ public sealed class AuthAndTagDocumentProcessor : IDocumentProcessor
         return char.ToUpperInvariant(segment[0]) + segment[1..];
     }
 
-    // Why: the token endpoint is OpenIddict middleware with no request schema, so Scalar shows no
-    // fields to fill. Add a urlencoded form body with the password-grant parameter names (no
-    // default values) so the login form is usable directly from the doc.
     private void AugmentTokenEndpoint(OpenApiOperation operation)
     {
         if (operation.RequestBody is not null && operation.RequestBody.Content.Count > 0)
@@ -133,8 +124,6 @@ public sealed class AuthAndTagDocumentProcessor : IDocumentProcessor
         foreach (var (name, defaultValue) in TokenFormFields)
         {
             var property = new JsonSchemaProperty { Type = JsonObjectType.String };
-            // Why: prefill the fixed OAuth2 values (grant_type/client_id/scope) via schema default
-            // + example so Scalar populates them; username/password stay empty.
             if (defaultValue is not null)
             {
                 property.Default = defaultValue;

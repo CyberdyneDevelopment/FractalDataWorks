@@ -55,8 +55,6 @@ public static class McpToolSourceServiceCollectionExtensions
 
     private static void EnsureToolSourceHost(IServiceCollection services)
     {
-        // Why: TryAddEnumerable avoids registering the host twice if the caller chains multiple
-        // AddInProc / AddStdioBridge calls. One host serves all registered sources.
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, McpToolSourceHost>());
     }
 }

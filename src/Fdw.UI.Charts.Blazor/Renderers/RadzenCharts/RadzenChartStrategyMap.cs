@@ -34,8 +34,6 @@ namespace Fdw.UI.Charts.Blazor.Renderers.RadzenCharts;
 [ExcludeFromCodeCoverage]
 public static class RadzenChartStrategyMap
 {
-    // Why: static initializer for the strategy dictionary. Each entry is a named builder
-    // function keyed on the ChartTypes registry name (Ordinal comparison at lookup time).
     private static readonly Dictionary<string, Func<IChartModel, IReadOnlyList<IReadOnlyDictionary<string, object?>>, RadzenChartConfiguration>> _strategies =
         new Dictionary<string, Func<IChartModel, IReadOnlyList<IReadOnlyDictionary<string, object?>>, RadzenChartConfiguration>>(StringComparer.Ordinal)
         {
@@ -61,13 +59,10 @@ public static class RadzenChartStrategyMap
 
     // ── Helpers ─────────────────────────────────────────────────────────────────────
 
-    // Why: resolve a field name from the Encodings list by role name (Ordinal comparison).
     private static string? FieldForRole(IChartModel model, string roleName)
         => model.Encodings.FirstOrDefault(
             e => string.Equals(e.Role.Name, roleName, StringComparison.Ordinal))?.FieldName;
 
-    // Why: extract a decimal value from a row field; non-numeric values resolve to null so the
-    // chart renders a gap rather than throwing. A gap is preferable to a crash.
     private static decimal? NumericValue(IReadOnlyDictionary<string, object?> row, string? field)
     {
         if (field is null || !row.TryGetValue(field, out var raw) || raw is null)
@@ -85,7 +80,6 @@ public static class RadzenChartStrategyMap
         };
     }
 
-    // Why: extract a string display value from a row field for category labels.
     private static string StringValue(IReadOnlyDictionary<string, object?> row, string? field)
     {
         if (field is null || !row.TryGetValue(field, out var raw))
@@ -93,20 +87,13 @@ public static class RadzenChartStrategyMap
         return raw?.ToString() ?? string.Empty;
     }
 
-    // Why: Radzen uses double internally for numeric values; convert once during projection so
-    // Radzen's reflection-based ValueProperty binding never touches decimal.
     private static double? ToDouble(decimal? value)
         => value is { } d ? (double)d : (double?)null;
 
-    // Why: project a single row to RadzenChartDataRow using the resolved field names so the
-    // series fragment can bind CategoryProperty/ValueProperty to fixed property names.
     private static RadzenChartDataRow ProjectRow(
         IReadOnlyDictionary<string, object?> row, string? xField, string? yField)
         => new RadzenChartDataRow(StringValue(row, xField), ToDouble(NumericValue(row, yField)));
 
-    // Why: build shared series groups — if a Series encoding is bound, partition rows by
-    // distinct series values and emit one Radzen series per partition; otherwise emit one
-    // series for the whole row set.  Returns (seriesName, projectedItems) pairs.
     private static List<(string Name, List<RadzenChartDataRow> Items)> BuildSeriesGroups(
         IChartModel model,
         IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
@@ -129,14 +116,7 @@ public static class RadzenChartStrategyMap
 
     // ── RenderFragment builders ──────────────────────────────────────────────────────
 
-    // Why: each helper captures pre-projected groups in a closure and returns a RenderFragment
-    // that uses RenderTreeBuilder to emit the correct Radzen series component(s).  The
-    // per-type helper keeps the capture explicit, and the caller (strategy function) keeps
-    // the builder call site clean.
 
-    // Why: RenderTreeBuilder sequence numbers MUST be compile-time constants (MA0123). The
-    // Blazor-endorsed pattern for loops is to reuse the SAME literal constants on every
-    // iteration — the diffing engine keys loop items positionally, not by sequence number.
     private static RenderFragment BuildColumnSeriesFragment(
         List<(string Name, List<RadzenChartDataRow> Items)> groups)
         => builder =>
@@ -281,7 +261,6 @@ public static class RadzenChartStrategyMap
         IChartModel model, IReadOnlyList<IReadOnlyDictionary<string, object?>> rows)
     {
         var xField = FieldForRole(model, "X");
-        // Why: donut uses Measure role first if bound (KPI pattern), falls back to Y.
         var yField = FieldForRole(model, "Measure") ?? FieldForRole(model, "Y");
         var items  = rows.Select(r => ProjectRow(r, xField, yField)).ToList();
         return new RadzenChartConfiguration

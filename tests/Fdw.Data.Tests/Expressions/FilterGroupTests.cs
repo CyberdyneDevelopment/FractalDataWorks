@@ -110,14 +110,6 @@ public sealed class FilterGroupTests
     [Trait("Category", "Regression")]
     public void RecordEqualityAndHashCodeAreValueBasedAcrossDistinctNodeCollectionInstances()
     {
-        // Why: the two Nodes lists below are SEPARATE List<IFilterNode> instances with equal content —
-        // this is what every query builder call actually produces (a fresh list per call), unlike
-        // RecordEqualityWorksForSameContent above which reuses one array instance and would pass even
-        // with the old, reference-identity-based Equals/GetHashCode. Before FilterGroup got value-based
-        // equality, CacheKeyBuilder.ComputeCacheKey hashed this tree via the record-synthesized
-        // GetHashCode(), which fell back to List<T>'s reference identity for Nodes — so the SAME logical
-        // filter (e.g. IsCurrent=1 AND IsDeleted=0) produced a different cache key on every call and the
-        // DataGateway result cache never hit.
         var group1 = new FilterGroup
         {
             Operator = LogicalOperator.And,

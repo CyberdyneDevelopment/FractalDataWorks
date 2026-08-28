@@ -41,9 +41,6 @@ public sealed class RadzenChartsRendererType : ChartRendererTypeBase
             supportsInteraction: true,
             supportsLargeSeries: false,
             supportsEditing: false,
-            // Why: explicit list so the ChartHost can filter the chart-type dropdown to only the
-            // types this renderer handles — no reflection, no switch. Heatmap, Kpi, Geo, Sankey,
-            // and Table are excluded; they require libraries beyond what Radzen provides.
             supportedChartTypes: new List<string>
             {
                 "Bar", "Line", "Area", "Pie", "Donut", "Scatter",

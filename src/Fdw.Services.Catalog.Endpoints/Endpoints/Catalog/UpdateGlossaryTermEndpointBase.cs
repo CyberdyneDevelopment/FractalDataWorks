@@ -36,7 +36,6 @@ public abstract class UpdateGlossaryTermEndpointBase : Endpoint<GlossaryTermResp
     /// <summary>Updates the glossary term identified by the request ID and returns the updated DTO.</summary>
     public override async Task HandleAsync(GlossaryTermResponse req, CancellationToken ct)
     {
-        // Why: MapFromDto preserves dto.Id — when non-empty the provider issues UPDATE.
         var config = GlossaryTermMapper.MapFromDto(req);
 
         var result = await _provider.SaveGlossaryTerm(config, ct).ConfigureAwait(false);

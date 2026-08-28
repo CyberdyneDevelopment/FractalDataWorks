@@ -18,8 +18,6 @@ public sealed class CalculationEntityConfigurationValidator : FdwConfigurationVa
             .NotEmpty()
             .WithMessage("Name is required");
 
-        // Why: FormulaCalculation entities require a formula expression to compute results;
-        // without it the entity cannot execute.
         When(x => string.Equals(x.CalculationEntityType, "Formula", System.StringComparison.OrdinalIgnoreCase), () =>
         {
             RuleFor(x => x.CalculationEntityType)

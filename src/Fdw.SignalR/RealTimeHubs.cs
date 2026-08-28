@@ -75,7 +75,6 @@ public abstract partial class RealTimeHubs : TypeCollectionBase<RealTimeHubOptio
         ArgumentNullException.ThrowIfNull(builder);
         var services = builder.Services;
 
-        // Why: NullLogger keeps registration loggable-or-silent without a conditional at each call.
         ILogger logger = loggerFactory?.CreateLogger("Fdw.SignalR") ?? NullLogger.Instance;
 
         services.AddSignalR();

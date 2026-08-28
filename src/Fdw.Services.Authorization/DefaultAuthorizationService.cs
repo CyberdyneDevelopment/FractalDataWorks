@@ -22,10 +22,6 @@ namespace Fdw.Services.Authorization;
 /// token-issue time by <see cref="EffectivePermissionResolver"/> and stamped into the token;
 /// per-request enforcement trusts those claims as authoritative and does not re-query the store.
 /// </summary>
-// Why: The constructor still accepts the authorization-store providers and tenant/org contexts so
-// the DI registration shape is unchanged, but they are no longer needed for enforcement — the
-// authoritative permission set lives on the token. The resolver remains independently registered
-// for the token-issue (baking) path. Parameters are validated for null and otherwise unused.
 public sealed class DefaultAuthorizationService : IFrameworkAuthorizationService
 {
     private readonly ILogger<DefaultAuthorizationService> _logger;
@@ -72,13 +68,9 @@ public sealed class DefaultAuthorizationService : IFrameworkAuthorizationService
 
         var userPermissions = await GetEffectivePermissions(context, cancellationToken).ConfigureAwait(false);
 
-        // Why: null means a provider query failed — fail-closed, deny access.
         if (userPermissions is null)
             return GenericResult<bool>.Success(false);
 
-        // Why: Policy names use "{resource}:{action}" where resource maps to the Domain column.
-        // The Name column on PermissionConfiguration holds the canonical permission identifier.
-        // We check: exact match, domain wildcard (domain:*), and global wildcard (*:*).
         var permissionName = $"{resource}:{action}";
 
         var hasPermission = userPermissions.Contains(permissionName, StringComparer.OrdinalIgnoreCase) ||
@@ -132,7 +124,6 @@ public sealed class DefaultAuthorizationService : IFrameworkAuthorizationService
 
         var userPermissions = await GetEffectivePermissions(context, cancellationToken).ConfigureAwait(false);
 
-        // Why: null means a provider query failed — fail-closed, deny access.
         if (userPermissions is null)
             return GenericResult<bool>.Success(false);
 
@@ -167,14 +158,6 @@ public sealed class DefaultAuthorizationService : IFrameworkAuthorizationService
         return roles;
     }
 
-    // Why: Per-request enforcement reads the baked "perm" claims carried by the access token.
-    // The 3-tier union (global/tenant/org) is resolved ONCE at token-issue time by
-    // EffectivePermissionResolver and stamped into the token as perm claims; stateless enforcement
-    // trusts those claims as authoritative for the token's lifetime. Re-resolving from role claims
-    // here would (a) defeat the purpose of baking and (b) silently deny every FDW-issued token,
-    // because FDW tokens carry perm claims and NO role claims — the regression this method fixes.
-    // The nullable return type is retained for the IGenericResult fail-closed contract at the call
-    // sites; a missing baked set surfaces as an empty permission set (deny), never an exception.
     private Task<HashSet<string>?> GetEffectivePermissions(
         IAuthenticationContext context, CancellationToken cancellationToken)
     {

@@ -19,8 +19,6 @@ public abstract class CreateConnectionRequestValidator : FdwEndpointValidator<Cr
             .NotEmpty()
             .WithMessage("ServiceType is required");
 
-        // Why: Server and Database are required for SQL connections; we validate them as safe strings
-        // to block injection attempts that bypass the connection layer.
         RuleFor(x => x.Server)
             .NotEmpty()
             .WithMessage("Server is required")

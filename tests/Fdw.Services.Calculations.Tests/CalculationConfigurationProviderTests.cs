@@ -64,9 +64,6 @@ public class CalculationConfigurationProviderTests
         ((FormulaCalculationConfiguration)result.Value.Configuration!).FormulaBody.ShouldBe("[A]+[B]");
     }
 
-    // Why: hand-written so the real RowId-keyed read runs — header by [Id], typed body by child->parent
-    // JOIN, child collections filtered by the parent RowId and matched via each child's
-    // ConfigurationCommand.ContainerName, recursing one level into the step.
     private sealed class AggregateGateway : IConfigurationGateway
     {
         /// <summary>The connection this fake stands in for.</summary>
@@ -106,7 +103,6 @@ public class CalculationConfigurationProviderTests
 
         public IReadOnlyList<IDataStore> DataStores => _stores;
 
-        // Why: test double — useCache not exercised in calculation provider tests; delegates to existing implementation.
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, bool useCache, CancellationToken cancellationToken = default)
             => Execute<T>(command, target, cancellationToken);
 
@@ -138,7 +134,6 @@ public class CalculationConfigurationProviderTests
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<T>.Failure(new GenericMessage("DataSet routing not used in this test")));
 
-        // Why: streaming record-source cursor is not exercised by this test double.
         public Task<IGenericResult<Fdw.Data.RowSources.Abstractions.IRecordSource<Fdw.Data.RowSources.Abstractions.DataRecord>>> OpenRecordSource(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
             => throw new System.NotImplementedException();
 
@@ -225,8 +220,6 @@ public class CalculationConfigurationProviderTests
             field.Setup(f => f.Name).Returns(localField);
             var keyField = new Mock<IContainerKeyField>();
             keyField.Setup(k => k.LocalField).Returns(field.Object);
-            // Why: KeyType is the abstract KeyTypeBase TypeOption — use the real concrete instances so
-            // FindForeignKey/FindKeyFieldName read the genuine Name ("Foreign"/"Physical"/"Logical").
             global::Fdw.Data.Abstractions.KeyTypeBase kt = keyType switch
             {
                 "Foreign" => new global::Fdw.Data.Abstractions.ForeignKeyType(),
@@ -243,11 +236,6 @@ public class CalculationConfigurationProviderTests
         }
     }
 
-    // Why the gateway is registered rather than handed over: a provider asks for the gateway on the
-    // connection it was told its rows live on, so the fake has to answer to that name to be found.
-    // Why a double rather than the real provider: these tests exercise what a configuration provider
-    // does with its gateway, not which gateway it selects, so the double answers for whatever
-    // connection is asked. Selection itself is covered where the real provider is under test.
     private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 

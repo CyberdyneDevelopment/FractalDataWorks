@@ -23,8 +23,6 @@ public abstract class CalculationServiceTypeBase : ServiceTypeBase<IGenericServi
         string displayName,
         string description,
         string? category = null)
-        // Why: pass the category through as-is — ServiceTypeBase already accepts a nullable category.
-        // No "Calculation" default: a fabricated category value is a silent fallback (NO-FALLBACKS rule).
         : base(name, sectionName, displayName, description, category)
     {
     }

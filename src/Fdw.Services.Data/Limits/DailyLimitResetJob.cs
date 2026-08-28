@@ -19,8 +19,6 @@ namespace Fdw.Services.Data.Limits;
 /// The DB flush of counter values is handled separately by the configuration
 /// persistence path; this job only clears the in-memory state for the new day.
 /// </summary>
-// Why: Separating counter reset from counter persistence keeps the reset job
-// simple and eliminates a DB dependency at the midnight boundary.
 internal sealed class DailyLimitResetJob : BackgroundService
 {
     private readonly ConnectionLimitCounterStore _counters;
@@ -50,7 +48,6 @@ internal sealed class DailyLimitResetJob : BackgroundService
             }
             catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
-                // Why: clean exit on shutdown — observe the cancellation at Debug, then return.
                 ConnectionLimitLog.ResetJobCancelledDuringShutdown(_logger, ex);
                 return;
             }
@@ -76,11 +73,9 @@ internal sealed class DailyLimitResetJob : BackgroundService
     private static TimeSpan ComputeDelayUntilMidnightUtc()
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
-        // Why: Explicit DateTimeOffset constructor avoids MA0132 (implicit DateTime→DateTimeOffset conversion).
         DateTimeOffset nextMidnight = new DateTimeOffset(now.UtcDateTime.Date.AddDays(1), TimeSpan.Zero);
         TimeSpan delay = nextMidnight - now;
 
-        // Why: Guard against negative delays from clock skew at the boundary.
         return delay > TimeSpan.Zero ? delay : TimeSpan.FromMinutes(1);
     }
 }

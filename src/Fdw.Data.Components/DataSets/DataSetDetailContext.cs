@@ -11,7 +11,6 @@ namespace Fdw.Data.Components.DataSets;
 /// Immutable context object passed to the consumer RenderFragment by <see cref="DataSetDetailProvider"/>.
 /// Carries working-set state and callback delegates for the in-place composition workbench.
 /// </summary>
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class DataSetDetailContext : ProviderContextBase
 {

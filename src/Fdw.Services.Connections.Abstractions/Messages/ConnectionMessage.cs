@@ -7,7 +7,6 @@ namespace Fdw.Services.Connections.Abstractions.Messages;
 /// <summary>
 /// Base class for connection service messages.
 /// </summary>
-// Why: pure message DTO; ctor only forwards literal id/severity/text to the base template, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [MessageCollection("ConnectionMessages")]
 public abstract class ConnectionMessage : MessageTemplate<MessageSeverity>, IServiceMessage

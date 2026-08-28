@@ -25,15 +25,8 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageRequest, DataSetLineageResponse>
 {
-    // Why: IConfigurationGateway routes directly to ConfigurationDb via configurationSchema.json.
-    // Using plain IDataGateway would look for "ConfigurationDb" in the runtime DataStore table
-    // (data.DataStore), where it does not exist — it is only a bootstrap connection in the JSON.
     private readonly IConfigurationGateway _configurationGateway;
     private readonly ILogger<GetDataSetLineageEndpointBase> _logger;
-    // Why: same composing-provider mechanism as GetLineageGraphEndpointBase. Also fixes the
-    // "downstream consumers always empty" bug — the OLD code filtered pipe.Pipeline on
-    // SourceDataSet/DestinationDataSet columns that do not exist on that table (SQL "Invalid column
-    // name", swallowed into an empty list by the existing best-effort QueryAll pattern).
     private readonly PipelineServiceConfigurationProvider _pipelineProvider;
 
     /// <inheritdoc />
@@ -92,7 +85,6 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
     /// <summary>Finds a DataSet by name from the configuration database.</summary>
     protected virtual async Task<DataSetRecord?> FindDataSet(string name, CancellationToken ct)
     {
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget.
         var command = new QueryCommand<DataSetRecord>
         {
             Filter = new FilterExpression
@@ -114,7 +106,6 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
     /// <summary>Retrieves all sources for a DataSet, ordered by priority.</summary>
     protected virtual async Task<IReadOnlyList<DataSetSourceConfiguration>> GetSources(Guid dataSetId, CancellationToken ct)
     {
-        // Why: Addressing moved off IDataCommand onto DataStoreTarget.
         var command = new QueryCommand<DataSetSourceConfiguration>
         {
             Filter = new FilterExpression
@@ -182,7 +173,6 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
 
         foreach (var source in sources)
         {
-            // Why: Addressing moved off IDataCommand onto DataStoreTarget.
             var mappingsCommand = new QueryCommand<DataSetFieldMappingRecord>
             {
                 Filter = new FilterExpression
@@ -227,9 +217,6 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
     }
 
     /// <summary>Identifies downstream consumers by finding pipelines that reference this DataSet.</summary>
-    // Why: the OLD code filtered pipe.Pipeline directly on SourceDataSet/DestinationDataSet — columns
-    // that live only on the engine typed body two levels down, not on the flat header row. Loading
-    // through the composing provider and filtering in-memory is the fix (mirrors the graph-builder path).
     protected virtual async Task<IReadOnlyList<LineageConsumerResponse>> BuildDownstreamConsumers(string dataSetName, CancellationToken ct)
     {
         var downstreamConsumers = new List<LineageConsumerResponse>();

@@ -14,8 +14,6 @@ namespace Fdw.Services.Connections.Endpoints;
 /// </summary>
 /// <typeparam name="TConfiguration">The connection configuration type.</typeparam>
 public abstract class TestConnectionConfigEndpointBase<TConfiguration> : Endpoint<CreateConnectionRequest, TestConnectionResponse>
-    // Why: typed body configs are standalone POCOs implementing IGenericConfiguration directly;
-    // they no longer inherit from ConnectionConfiguration after the config-split refactor.
     where TConfiguration : class, IGenericConfiguration
 {
     /// <summary>

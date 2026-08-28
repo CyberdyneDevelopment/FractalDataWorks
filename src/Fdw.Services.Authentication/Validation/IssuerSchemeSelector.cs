@@ -76,10 +76,6 @@ public static class IssuerSchemeSelector
         return match.SchemeName;
     }
 
-    // Why hand-decoded rather than run through a JWT reader: this is a routing lookup, and a reader
-    // would validate structure this code has no standing to reject — an unreadable token is routed to
-    // the failing scheme either way, so the only thing a stricter parse changes is where the 401
-    // comes from.
     private static string? ReadIssuer(string authorizationHeader, string path, ILogger logger)
     {
         if (string.IsNullOrEmpty(authorizationHeader)

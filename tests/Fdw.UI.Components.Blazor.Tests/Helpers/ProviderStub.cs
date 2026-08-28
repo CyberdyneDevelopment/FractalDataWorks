@@ -51,8 +51,6 @@ public sealed class ProviderStub<TContext> : ComponentBase
     private TContext _context = new();
 
     protected override void OnInitialized() =>
-        // Why: Take<T> removes the seed from the shared store, so it must be captured ONCE here.
-        // Re-reading on every BuildRenderTree (e.g. after a filter @onclick) would drop the seed.
         _context = ProviderStubState.Take<TContext>() ?? new TContext();
 
     protected override void BuildRenderTree(RenderTreeBuilder builder)

@@ -64,9 +64,6 @@ public sealed class ResolvePrincipalStep : IAuthenticationStep
 
         if (bound.Value is null)
         {
-            // Why a failure and not a silent skip: an authenticated stranger with no binding is
-            // exactly the case provisioning policy exists to decide. Contributing nothing here would
-            // let the flow continue and fail later somewhere less clear about why.
             return GenericResult<StepOutcome>.Failure(StepLog.NoBinding(_logger, subject.Issuer));
         }
 

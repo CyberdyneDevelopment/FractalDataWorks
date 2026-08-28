@@ -3,7 +3,6 @@ namespace Fdw.Services.Connections.Clients.Models;
 /// <summary>
 /// Response DTO from DDL execution on a connection.
 /// </summary>
-// Why: pure response DTO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ExecuteDdlConnectionResponse
 {

@@ -106,16 +106,6 @@ public partial class DataContainerFieldConfiguration : IGenericConfiguration
 
     // ── Type facets: what THIS field is, as opposed to what its type permits ────────────────────
     //
-    // Why these are separate from the data type's own MaxLength/MaxPrecision/MaxScale: the type states
-    // a LIMIT ("varchar accepts up to 8000"), the field states an INSTANCE ("this column is
-    // varchar(50)"). Both are needed and neither can be derived from the other.
-    //
-    // Why they are being added now rather than having always existed: data.DataContainerField has
-    // carried MaxLength, Precision, Scale and DefaultValue since the DDL was written, and this POCO
-    // mapped NONE of them. The save translator builds its column list from the intersection of mapper
-    // properties and container fields, so all four were omitted from every INSERT and took the DB
-    // default. Schema discovery wrote nvarchar with no length, and any field that did carry one lost it
-    // on the next version-on-write — 77 rows in devConfigurationDb were in exactly that state.
 
     /// <summary>
     /// Gets or sets this field's declared length, or null when the type takes none.

@@ -31,11 +31,6 @@ public partial class EtlPipelineConfiguration : IPipelineImplementationConfigura
     public Guid Id { get; set; }
 
     /// <summary>Gets or sets the parent pipeline's logical Id (FK to pipe.Pipeline.Id).</summary>
-    // Why: the keystone cascade stamps this from the header's Id; the physical PipelineRowId FK column is
-    // NOT a POCO property (per the connection convention — MsSqlConnectionConfiguration carries ConnectionId
-    // only) so the save translator resolves it by subquery on insert and the read JOIN uses the container's
-    // FK metadata. A POCO PipelineRowId would defeat the subquery and insert an empty RowId
-    // (FK_EtlPipeline_Pipeline violation).
     public Guid PipelineId { get; set; }
 
     /// <inheritdoc/>
@@ -64,7 +59,5 @@ public partial class EtlPipelineConfiguration : IPipelineImplementationConfigura
     /// (e.g. <c>BatchCopyPipelineConfiguration</c>, <c>StreamingPipelineConfiguration</c>). Composed on
     /// read and cascade-saved on write by the keystone.
     /// </summary>
-    // Why: declared as the IEtlPipelineTypedConfiguration marker (NOT bare IGenericConfiguration) so the
-    // generated mapper emits GetTypedBody/SetTypedBody for the second typed-body level.
     public IEtlPipelineTypedConfiguration? Configuration { get; set; }
 }

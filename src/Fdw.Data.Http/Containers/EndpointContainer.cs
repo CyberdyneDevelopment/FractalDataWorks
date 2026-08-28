@@ -79,8 +79,6 @@ public sealed class EndpointContainer : IStorageContainer
         ContainerType = EndpointContainerType.Instance;
         SupportedOperations = MapHttpMethodsToOperations(httpMethods);
 
-        // Why: Row-extraction options flow from config into container.Metadata so that
-        // ProcessResponse can read them without casting to EndpointContainer.
         var meta = new Dictionary<string, object>(StringComparer.Ordinal);
         if (recordSelector is not null)
             meta[RecordSelectorKey] = recordSelector;

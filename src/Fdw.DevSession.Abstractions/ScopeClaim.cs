@@ -8,7 +8,6 @@ namespace Fdw.DevSession.Abstractions;
 /// per strand and guarantees the claimed paths do not overlap any other live claim in the same session,
 /// so strands can proceed in parallel without stepping on each other.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ScopeClaim
 {

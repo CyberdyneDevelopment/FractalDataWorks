@@ -23,9 +23,6 @@ public abstract class ListRolesEndpointBase : EndpointWithoutRequest<PaginatedRe
     protected ILogger EndpointLogger { get; private set; } = null!;
 
     /// <inheritdoc />
-    // Why: IAuthorizationProvider.GetAllRoles() returns every role, including the seeded platform roles
-    // (Admin, Operator, Viewer). Reading roles through IServiceConfigurationProvider<RoleConfiguration>
-    // instead left those invisible.
     protected ListRolesEndpointBase(IAuthorizationProvider authorizationProvider)
     {
         _authorizationProvider = authorizationProvider;
@@ -61,8 +58,6 @@ public abstract class ListRolesEndpointBase : EndpointWithoutRequest<PaginatedRe
             .ThenBy(r => r.Name, StringComparer.Ordinal)
             .ToList();
 
-        // Why: Newman/clients expect a paginated envelope {items, skip, take, totalCount, hasMore}
-        // instead of a bare array; matches the response shape from /pipelines and other Crud-list endpoints.
         var response = PaginatedResponse<RoleSummaryResponse>.Create(roles, 0, roles.Count, roles.Count);
         await Send.OkAsync(response, ct).ConfigureAwait(false);
     }

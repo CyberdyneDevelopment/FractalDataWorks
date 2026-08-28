@@ -14,8 +14,6 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class GetConnectionsByTypeEndpointBase : CrudGetEndpointBase<GetConnectionsByTypeRequest, List<ConnectionByTypeDto>>
 {
-    // Why: ConnectionConfigurationProvider replaces IOptionsMonitor<List<ConnectionConfiguration>>
-    // with dual-source (ctrl + cfg) provider that merges system and user configurations.
     private readonly ConnectionConfigurationProvider _provider;
 
     /// <inheritdoc />

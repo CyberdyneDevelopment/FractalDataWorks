@@ -7,7 +7,6 @@ namespace Fdw.Messages.Attributes;
 /// Marks a class as a message option that belongs to a specific message collection.
 /// The source generator will include this type in the specified collection's generated code.
 /// </summary>
-// Why: pure attribute definition (declarative metadata only, consumed by source generators) — no logic to unit test.
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 [ExcludeFromCodeCoverage]
 public sealed class MessageOptionAttribute : Attribute

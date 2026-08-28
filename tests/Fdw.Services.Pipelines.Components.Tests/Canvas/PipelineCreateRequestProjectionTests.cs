@@ -214,9 +214,6 @@ public sealed class PipelineCreateRequestProjectionTests
     [Trait("Category", "CoreFramework")]
     public void ToCreateRequestWithEmptyFilterPayloadReturnsFailure()
     {
-        // Why: FromConfigPayload has always rejected an empty-predicate Filter; ApplyConfigPayload
-        // (the reader actually consumed by the persisted create-pipeline request) previously accepted
-        // it with no validation at all — an empty-predicate Filter must never be persisted.
         var model = BuildModel(BuildTransformNode("Filter", "\"\""));
 
         var result = PipelineCreateRequestProjection.ToCreateRequest(model, "TestPipeline", null);

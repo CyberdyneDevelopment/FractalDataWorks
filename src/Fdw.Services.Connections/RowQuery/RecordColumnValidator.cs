@@ -75,9 +75,6 @@ public static class RecordColumnValidator
                 }
                 return GenericResult.Success();
 
-            // Why: RecordQueryValidator.ValidateShape already rejects any node type unreachable here —
-            // reaching this point with an unrecognised node means that upstream grammar check has a gap,
-            // not that this is a data condition. Never silently pass an unvalidated column.
             default:
                 return GenericResult.Failure(RecordQueryLog.UnsupportedFilterNodeType(logger, node.GetType().Name));
         }

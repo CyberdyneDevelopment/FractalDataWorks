@@ -5,7 +5,6 @@ namespace Fdw.Commands.Development.Abstractions.Categories;
 /// <summary>
 /// Category for code analysis commands (complexity, dependencies, diagnostics, etc.).
 /// </summary>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(DevelopmentCommandCategories), "Analysis", RestrictToCurrentCompilation = true)]
 public sealed class AnalysisCommandCategory : DevelopmentCommandCategoryBase

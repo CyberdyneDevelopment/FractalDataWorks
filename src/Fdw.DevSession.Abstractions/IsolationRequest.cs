@@ -5,7 +5,6 @@ namespace Fdw.DevSession.Abstractions;
 /// base ref, on which branch, and (optionally) at which working-tree path. No value is defaulted —
 /// the caller supplies repo, base ref, and branch name explicitly.
 /// </summary>
-// Why: pure request DTO, auto-properties only, no logic
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class IsolationRequest
 {

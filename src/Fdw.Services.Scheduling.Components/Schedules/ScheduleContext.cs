@@ -9,7 +9,6 @@ using Fdw.UI.Providers;
 
 namespace Fdw.Services.Scheduling.Components.Schedules;
 
-// Why: pure view-model — state + callback delegates only, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class ScheduleContext : ProviderContextBase
 {

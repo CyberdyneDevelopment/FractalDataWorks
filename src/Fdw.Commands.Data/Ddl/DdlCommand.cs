@@ -31,8 +31,6 @@ public abstract class DdlCommand : DataCommandBase<bool>
         : base($"Ddl.{commandType.Name}")
     {
         DdlCommandType = commandType;
-        // Why: TableName was previously passed as containerName to DataCommandBase.
-        // Addressing is now in DataStoreTarget; the table name is kept as command metadata.
         TableName = tableName;
     }
 

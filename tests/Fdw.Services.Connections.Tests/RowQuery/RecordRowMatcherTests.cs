@@ -15,8 +15,6 @@ namespace Fdw.Services.Connections.Tests.RowQuery;
 /// </summary>
 public sealed class RecordRowMatcherTests
 {
-    // Why: a marker IFilterNode implementation this evaluator does not recognise — proves Matches fails
-    // loud (fix #3) rather than silently matching everything/nothing for an unhandled node type.
     private sealed class UnrecognisedFilterNode : IFilterNode
     {
     }
@@ -86,10 +84,6 @@ public sealed class RecordRowMatcherTests
     [Trait("Category", "InnerJoinSemantics")]
     public void MatchesJoinedRowKeepsTheChildWhenAnyOfSeveralParentRowsSharingTheJoinKeySatisfiesTheFilter()
     {
-        // Why (fix #4): files carry no PK enforcement, so two parent rows can share a join-key value.
-        // SQL's INNER JOIN produces a row for EVERY matching pairing and keeps the child if ANY pairing
-        // satisfies the WHERE clause — first-match-only resolution would silently drop this child row
-        // because the FIRST parent with RowId=1 does not satisfy the filter, only the second one does.
         var parent1 = Row(("RowId", 1L), ("Name", "Other"));
         var parent2 = Row(("RowId", 1L), ("Name", "EnvSecrets"));
         var child = Row(("SecretManagerRowId", 1L));
@@ -219,9 +213,6 @@ public sealed class RecordRowMatcherTests
     [Trait("Category", "NullEquality")]
     public void MatchesReturnsFalseWhenBothTheRowValueAndTheFilterValueAreNull()
     {
-        // Why (fix #2): "WHERE x = NULL" never matches in SQL — a filter condition comparing a
-        // genuinely-absent row value against a null filter Value must NOT match, unlike the previous
-        // left==null && right==null => true behavior.
         var row = Row(("Description", null));
         var condition = new FilterCondition { PropertyName = "Description", Operator = new EqualOperator(), Value = null };
 
@@ -247,8 +238,6 @@ public sealed class RecordRowMatcherTests
     [Trait("Category", "UnsupportedValueType")]
     public void MatchesThrowsForAnUnsupportedComparisonValueType()
     {
-        // Why (fix #8): a catch-all Convert.ToString comparison would have compared two distinct
-        // byte[] instances as EQUAL (both stringify to "System.Byte[]") — fail loud instead.
         var row = Row(("Payload", new byte[] { 1, 2, 3 }));
         var condition = new FilterCondition { PropertyName = "Payload", Operator = new EqualOperator(), Value = new byte[] { 1, 2, 3 } };
 
@@ -262,8 +251,6 @@ public sealed class RecordRowMatcherTests
     [Trait("Category", "CaseInsensitivity")]
     public void MatchesTreatsStringValuesAsCaseInsensitive()
     {
-        // Why: SQL runs CI collation, so a config lookup like Get("envsecrets") must match a stored
-        // "EnvSecrets" — the FileSystem/Json in-memory path must behave the same as MsSql.
         var row = Row(("Name", "EnvSecrets"));
         var condition = new FilterCondition { PropertyName = "Name", Operator = new EqualOperator(), Value = "envsecrets" };
 
@@ -288,8 +275,6 @@ public sealed class RecordRowMatcherTests
     [Trait("Category", "BoolCoercion")]
     public void MatchesCoercesTheStringZeroAgainstANativeFalseWithoutThrowing()
     {
-        // Why: Convert.ToBoolean("0") throws FormatException — a decoded bit column may arrive as the
-        // literal string "0" while the config filter always carries IsDeleted as a native bool.
         var row = Row(("IsDeleted", "0"));
         var condition = new FilterCondition { PropertyName = "IsDeleted", Operator = new EqualOperator(), Value = false };
 

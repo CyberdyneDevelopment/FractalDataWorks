@@ -23,7 +23,6 @@ public sealed class NumericTransformTests
     [Fact]
     public async Task ParseDecimalHonoursTheConfiguredCulture()
     {
-        // Why this matters: "1.234,56" is one-thousand-two-hundred in de-DE and malformed in en-US.
         var result = await new ParseDecimalFieldTransformer().Transform(
             "1.234,56", TransformTestContext.With(("culture", "de-DE")), TestContext.Current.CancellationToken);
 
@@ -71,9 +70,6 @@ public sealed class NumericTransformTests
     [InlineData(0.5, 1)]
     public async Task RoundGoesAwayFromZeroAtTheMidpointNotToEven(decimal input, decimal expected)
     {
-        // Why pin this: .NET's Math.Round defaults to banker's rounding, which would make 2.5 -> 2
-        // and 0.5 -> 0. This transformer deliberately rounds away from zero, and the difference only
-        // shows on exact midpoints - the values a money column is full of.
         var result = await new RoundFieldTransformer().Transform(
             input, TransformTestContext.With(("precision", "0")), TestContext.Current.CancellationToken);
 
@@ -120,8 +116,6 @@ public sealed class NumericTransformTests
     [Fact]
     public async Task ConditionalDivideTakesTheDefaultWhenTheDivisorIsZero()
     {
-        // Why a default rather than an error: per-game averages over zero games are the normal case
-        // in a partial season, not a fault in the data.
         var result = await new ConditionalDivideFieldTransformer().Transform(
             100m,
             TransformTestContext.With(
@@ -173,8 +167,6 @@ public sealed class NumericTransformTests
     [Fact]
     public void RoundRejectsAModeThatIsNotRegistered()
     {
-        // Why Should.Throw and not ThrowAsync: the guard runs before the Task is created, so the
-        // exception escapes synchronously.
         Should.Throw<System.InvalidOperationException>(() =>
         {
             _ = new RoundFieldTransformer().Transform(

@@ -11,12 +11,6 @@ namespace Fdw.Services.Data.Abstractions.Discovery;
 /// <see cref="IGenericConnection"/>, list the tables/views (and optionally their
 /// columns) the underlying store exposes.
 /// </summary>
-// Why: typed discoverers (IMsSqlSchemaDiscoverer, IPostgreSqlSchemaDiscoverer) have
-// fundamentally similar shape but take their own connection types. ISchemaDiscoverer
-// is the cross-cutting abstraction the CLI / web UI talks to; it dispatches via
-// ISchemaDiscoveryFactory to the right typed implementation per registered connection
-// type. Returns a flat list of containers — full ManagedConfiguration shape can be
-// mapped from this by the caller (e.g., ConfigurationGatewayDataStoreProvider Save).
 public interface ISchemaDiscoverer
 {
     /// <summary>

@@ -187,7 +187,6 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
                     nameof(joins));
             }
 
-            // Why: SQLite is schemaless — JOIN target is bare quoted table name only.
             var targetQuoted = dialect.QuoteIdentifier(join.TargetContainerName);
             sql.Append(CultureInfo.InvariantCulture, $" {join.JoinType} JOIN {targetQuoted} ON ");
 

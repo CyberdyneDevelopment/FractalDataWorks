@@ -20,7 +20,6 @@ public sealed class DataContainerFieldConfigurationValidator : FdwConfigurationV
             .NotEqual(System.Guid.Empty)
             .WithMessage("DataContainerId is required");
 
-        // Why: Ordinal moved to data.MsSqlDataContainerField typed body (Wave A5); no longer on base record.
 
         When(x => x.Description is not null, () =>
         {

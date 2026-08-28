@@ -141,7 +141,6 @@ public partial class EntityPicker<TItem> : IDisposable
     /// <summary>
     /// Gets or sets the optional logger. Falls back to <see cref="NullLogger.Instance"/> when not supplied.
     /// </summary>
-    // Why: NullLogger fallback is the only acceptable ?? fallback per FDW conventions.
     [Parameter] public ILogger? Logger { get; set; }
 
     // ── State ──────────────────────────────────────────────────────────────────────
@@ -150,12 +149,7 @@ public partial class EntityPicker<TItem> : IDisposable
     private bool _isLoading;
     private bool _isPanelOpen;
     private string? _errorMessage;
-    // Why: _inputText mirrors the search field value and is distinct from Value (the key) so
-    // the user can type freely without clearing Value prematurely. Value is only updated on
-    // an explicit item selection.
     private string _inputText = string.Empty;
-    // Why: a per-search CancellationTokenSource lets each keystroke cancel the previous in-flight
-    // query without cancelling the component-level CancellationToken.
     private CancellationTokenSource _searchCts = new();
 
     private ILogger ResolvedLogger => Logger ?? NullLogger.Instance;
@@ -167,8 +161,6 @@ public partial class EntityPicker<TItem> : IDisposable
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
-        // Why: when the parent resets Value to null/empty (e.g. on form reset), mirror that
-        // into the input text so the field visually clears too.
         if (string.IsNullOrEmpty(Value) && !string.IsNullOrEmpty(_inputText) && _isPanelOpen)
             return; // Don't clear while the user is actively typing
 
@@ -182,8 +174,6 @@ public partial class EntityPicker<TItem> : IDisposable
     {
         _inputText = e.Value?.ToString() ?? string.Empty;
 
-        // Why: if the user types after having a selection, clear Value so the parent knows
-        // the old selection is no longer current.
         if (!string.IsNullOrEmpty(Value))
         {
             Value = null;
@@ -198,18 +188,12 @@ public partial class EntityPicker<TItem> : IDisposable
     private async Task HandleFocus()
     {
         _isPanelOpen = true;
-        // Why: show the initial (empty-search) result set when the user first focuses the
-        // field so they can browse without having to type anything.
         if (_items.Count == 0)
             await RunSearch(_inputText);
     }
 
     private async Task HandleBlur()
     {
-        // Why: 200ms delay before closing lets the @onclick on result buttons fire first.
-        // Without this, the panel closes before the click is processed and the item is
-        // never selected. Awaiting Task.Delay resumes on the Blazor dispatcher, so
-        // StateHasChanged can be called directly afterwards (no InvokeAsync needed).
         await Task.Delay(200).ConfigureAwait(true);
         _isPanelOpen = false;
         StateHasChanged();
@@ -219,8 +203,6 @@ public partial class EntityPicker<TItem> : IDisposable
 
     private async Task RunSearch(string term)
     {
-        // Why: cancel the previous in-flight search before starting a new one so we never
-        // apply a stale result over a fresher one.
         await _searchCts.CancelAsync();
         _searchCts.Dispose();
         _searchCts = new CancellationTokenSource();
@@ -247,7 +229,6 @@ public partial class EntityPicker<TItem> : IDisposable
         }
         catch (OperationCanceledException ex)
         {
-            // Why: cancellation on search change is expected; ex is observed to satisfy FDW022.
             _ = ex;
             return;
         }
@@ -265,21 +246,14 @@ public partial class EntityPicker<TItem> : IDisposable
 
     // ── Virtualize items provider ──────────────────────────────────────────────────
 
-    // Why: Virtualize's ItemsProvider is called for each visible window as the user scrolls.
-    // We delegate directly to SearchSource with the same search term but an incremented skip.
     private async ValueTask<ItemsProviderResult<TItem>> ProvideItems(ItemsProviderRequest request)
     {
         if (SearchSource is null)
             return new ItemsProviderResult<TItem>([], 0);
 
-        // Why: use a CancellationToken from the request so Blazor can cancel the provider
-        // call when the component is unmounted or the window changes.
         try
         {
             var results = await SearchSource(_inputText, request.StartIndex, request.Count, request.CancellationToken);
-            // Why: if we get a full page back the total may be larger; expand _totalCount
-            // conservatively so Virtualize renders a scrollbar. The next page-fetch will
-            // correct it.
             var total = results.Count < request.Count
                 ? request.StartIndex + results.Count
                 : request.StartIndex + results.Count + request.Count;
@@ -288,7 +262,6 @@ public partial class EntityPicker<TItem> : IDisposable
         }
         catch (OperationCanceledException ex)
         {
-            // Why: cancellation is expected when the scroll window changes / component unmounts; observe ex.
             _ = ex;
             return new ItemsProviderResult<TItem>([], 0);
         }

@@ -28,11 +28,6 @@ public sealed class CredentialServiceProvider
 {
     private readonly ILogger<CredentialServiceProvider> _logger;
 
-    // Why: credential service instances cache their resolved vault, so we cache the services
-    // by name. ConcurrentDictionary<string, Lazy<...>> mirrors the pattern used by
-    // DataVaultProvider — the Lazy ensures a single initialization per name even under
-    // concurrent first-access. No stale-eviction: services are long-lived system objects;
-    // configuration changes restart the host.
     private readonly ConcurrentDictionary<string, Lazy<Task<IGenericResult<ICredentialService>>>> _cache
         = new(StringComparer.OrdinalIgnoreCase);
 
@@ -63,10 +58,6 @@ public sealed class CredentialServiceProvider
     /// <inheritdoc />
     public override Task<IGenericResult<ICredentialService>> Get(string name, CancellationToken cancellationToken = default)
     {
-        // Why: VSTHRD011 + VSTHRD002 fire on Lazy<Task<T>> value factories that block on async.
-        // The Lazy here stores the Task itself (not the result), so .Value just returns the Task
-        // without blocking — the caller awaits the Task. Suppression is safe.
-        // LazyThreadSafetyMode.ExecutionAndPublication ensures only one Task is created per name.
 #pragma warning disable VSTHRD011, VSTHRD002
         var lazy = _cache.GetOrAdd(name, static (key, provider) =>
             new Lazy<Task<IGenericResult<ICredentialService>>>(
@@ -78,9 +69,6 @@ public sealed class CredentialServiceProvider
         return lazy.Value;
     }
 
-    // Why: delegates to the base class Get(string) which resolves the configuration and
-    // creates the credential service via the registered factory. Wrapped in a Lazy so the base
-    // call only happens once per name regardless of concurrent callers.
     private Task<IGenericResult<ICredentialService>> GetFromBase(string name, CancellationToken ct)
         => base.Get(name, ct);
 }

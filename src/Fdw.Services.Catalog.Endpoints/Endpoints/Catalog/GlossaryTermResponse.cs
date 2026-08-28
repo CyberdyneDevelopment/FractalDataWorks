@@ -12,10 +12,6 @@ public class GlossaryTermResponse
     /// <summary>Gets or sets the glossary term name.</summary>
     public string Name { get; set; } = string.Empty;
 
-    // Why: The UI client model uses "Term" as the JSON property name (CreateGlossaryTermRequest.Term
-    // / client GlossaryTermResponse.Term). This alias property bridges the wire format so POST bodies
-    // with {"term":"..."} populate Name, and GET responses include "term" so the client DTO
-    // deserializes the Term field correctly. Name takes precedence when both are present.
     /// <summary>Gets or sets the term name as an alias for <see cref="Name"/> for client compatibility.</summary>
     public string Term
     {

@@ -51,12 +51,9 @@ public sealed class PostgreSqlTableContainer : DataContainer
             fields,
             keys,
             referencingKeys,
-            // Why: ContainerTypes is a TypeCollection populated by module initializers in entry-point
-            // apps; ByName resolves the PostgreSql table option registered by PostgreSqlTableContainerType.
             ContainerTypes.ByName("PostgreSqlTable"),
             format,
             physicalPath,
-            // Why: real table operations — drives gateway operation validation.
             ["Query", "Insert", "Update", "Delete"],
             metadata,
             logger)

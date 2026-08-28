@@ -69,7 +69,6 @@ public static partial class ApiKeyProviderLog
         Message = "Failed to load agent keys")]
     public static partial IGenericMessage LoadAgentKeysFailed(ILogger logger);
 
-    // Why (FDW-583): pre-action announcement, not a completed business milestone — noise at Info.
     /// <summary>
     /// Logs that a personal access token with the given label is being created.
     /// </summary>
@@ -119,7 +118,6 @@ public static partial class ApiKeyProviderLog
         Message = "Exception creating personal access token '{label}'")]
     public static partial IGenericMessage CreateTokenException(ILogger logger, Exception exception, string label);
 
-    // Why (FDW-583): pre-action announcement, not a completed business milestone — noise at Info.
     /// <summary>
     /// Logs that the personal access token with the given id is being revoked.
     /// </summary>
@@ -156,7 +154,6 @@ public static partial class ApiKeyProviderLog
         Message = "Failed to revoke personal access token '{tokenId}'")]
     public static partial IGenericMessage RevokeTokenFailed(ILogger logger, Guid tokenId);
 
-    // Why (FDW-583): pre-action announcement, not a completed business milestone — noise at Info.
     /// <summary>
     /// Logs that an agent key with the given label is being created.
     /// </summary>
@@ -206,7 +203,6 @@ public static partial class ApiKeyProviderLog
         Message = "Exception creating agent key '{label}'")]
     public static partial IGenericMessage CreateAgentKeyException(ILogger logger, Exception exception, string label);
 
-    // Why (FDW-583): pre-action announcement, not a completed business milestone — noise at Info.
     /// <summary>
     /// Logs that the agent key with the given id is being deleted.
     /// </summary>

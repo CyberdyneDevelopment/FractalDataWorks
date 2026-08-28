@@ -5,7 +5,6 @@ namespace Fdw.Commands.Development.Abstractions.Categories;
 /// <summary>
 /// Category for compilation commands (build, emit, diagnostics, syntax validation, etc.).
 /// </summary>
-// Why: data-bearing TypeOption; ctor only forwards literal/config data to the base class, no behavior
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(DevelopmentCommandCategories), "Compilation", RestrictToCurrentCompilation = true)]
 public sealed class CompilationCommandCategory : DevelopmentCommandCategoryBase

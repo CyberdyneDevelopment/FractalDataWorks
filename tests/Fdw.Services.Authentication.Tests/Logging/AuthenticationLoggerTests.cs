@@ -157,8 +157,6 @@ public sealed class AuthenticationLoggerTests
     [Trait("Category", "Security")]
     public void ConfigurationBindingFailedAllowsNullConfigurationType()
     {
-        // Why: the parameter is declared string? — a null configurationType must not throw when
-        // interpolated into the generated message.
         var result = AuthenticationLogger.ConfigurationBindingFailed(_logger.Object, null);
 
         result.Code.ShouldBe("AUTHENTICATION-91003");

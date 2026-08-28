@@ -6,8 +6,6 @@ namespace Fdw.Services.Data.Abstractions;
 /// Invalidates cached DataGateway command results by tag.
 /// Writers call this after persisting changes to ensure stale data is evicted.
 /// </summary>
-// Why: Decouples writers from providers. Writers invalidate by "{schema}.{table}" tag
-// instead of resolving provider singletons and calling EvictAllFromUserCache().
 public interface ICacheInvalidator
 {
     /// <summary>

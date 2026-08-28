@@ -441,11 +441,6 @@ public abstract class CrudListEndpointBase<TListRequest, TSummary> : Endpoint<TL
 
             var items = result.Value!;
 
-            // Why: consistent with the EndpointWithoutRequest variant (line 160-166) — wrap items
-            // in a PaginatedResponse envelope so clients always see {items, skip, take, totalCount, hasMore},
-            // never a bare array. LoadItems implementations apply filtering/sorting but return the full
-            // matching set; the envelope reports totalCount as items.Count because server-side paging
-            // is the override's responsibility when needed.
             var totalCount = items.Count;
             var response = PaginatedResponse<TSummary>.Create(items, 0, totalCount, totalCount);
             await HttpContext.Response.WriteAsJsonAsync(response, ct).ConfigureAwait(false);

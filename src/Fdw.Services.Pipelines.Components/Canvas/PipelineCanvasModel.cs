@@ -64,8 +64,6 @@ public sealed class PipelineCanvasModel : ICanvasModel
         SelectedId = selectedId;
         PipelineType = pipelineType;
 
-        // Why: wire the edit context to this model immediately so consumers don't have to null-check
-        // when RenderMode allows editing. The context holds a back-reference to mutate _nodes/_edges.
         if (renderMode.AllowsEditing)
             _editContext = new PipelineCanvasEditContext(this);
     }

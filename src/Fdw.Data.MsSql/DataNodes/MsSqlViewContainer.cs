@@ -49,13 +49,9 @@ public sealed class MsSqlViewContainer : DataContainer
             fields,
             keys,
             referencingKeys,
-            // Why: instantiate the View container type directly. ViewContainerType is registered
-            // RestrictToCurrentCompilation=true (Data.MsSql-local), so a shared-registry ByName lookup
-            // is not reliable across assemblies; the concrete type is the source of truth here.
             new ViewContainerType(),
             format,
             physicalPath,
-            // Why: views are read-only — only Query is a valid operation.
             ["Query"],
             metadata,
             logger)

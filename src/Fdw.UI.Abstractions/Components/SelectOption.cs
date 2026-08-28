@@ -6,7 +6,6 @@ namespace Fdw.UI.Abstractions.Components;
 /// Represents a selectable option.
 /// </summary>
 /// <typeparam name="T">The type of the value.</typeparam>
-// Why: pure DTO, no logic.
 [ExcludeFromCodeCoverage]
 public sealed class SelectOption<T>
 {

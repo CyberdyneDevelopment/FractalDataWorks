@@ -19,8 +19,6 @@ public static partial class RevokeCredentialCommandLog
         System.Guid credentialId,
         string credentialType);
 
-    // Why: reuses the FDW canonical RequiredValueMissing number (20000) — see
-    // SecretManagerCommandBaseLog.RequiredValueMissing's remark.
     [MessageLogging(
         EventId = 20000,
         Level = LogLevel.Critical,

@@ -26,14 +26,12 @@ public static partial class MsSqlTruncateTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses MsSqlDataResultCodes.ContainerNull's number (20000).
     [MessageLogging(
         EventId = 20000,
         Level = LogLevel.Error,
         Message = "MsSqlTruncateTranslator received a null container")]
     public static partial IGenericMessage ContainerNull(ILogger logger);
 
-    // Why: reuses MsSqlDataResultCodes.InvalidContainerPath's number (20001).
     [MessageLogging(
         EventId = 20001,
         Level = LogLevel.Error,
@@ -42,8 +40,6 @@ public static partial class MsSqlTruncateTranslatorLog
         ILogger logger,
         string container);
 
-    // Why: reuses MsSqlDataResultCodes.DeleteTranslationFailed's number (91003) — Truncate's catch
-    // block returns the same "DeleteTranslationFailed" ResultCode as ConfigurationDelete.
     [MessageLogging(
         EventId = 91003,
         Level = LogLevel.Error,

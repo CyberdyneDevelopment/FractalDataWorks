@@ -15,8 +15,6 @@ public class UpdateUserRequest
     /// <summary>
     /// Gets or sets the email address, if updating.
     /// </summary>
-    // Why: the client contract validates the format; without the matching server-side check an
-    // invalid address is accepted here and only fails further downstream.
     [EmailAddress]
     public string? Email { get; set; }
 

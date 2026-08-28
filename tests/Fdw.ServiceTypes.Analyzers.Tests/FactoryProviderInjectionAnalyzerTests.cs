@@ -9,12 +9,6 @@ namespace Fdw.ServiceTypes.Analyzers.Tests;
 
 public class FactoryProviderInjectionAnalyzerTests
 {
-    // Why: minimal stand-ins for Fdw.Abstractions.IServiceFactory,
-    // Fdw.ServiceTypes.IPlatformServiceProvider<...>, System.Lazy<T>, and IServiceScopeFactory — the test
-    // project references only the analyzer assembly, so each source declares the shapes the analyzer's
-    // metadata-name lookups need. System.Lazy<T> is redeclared in a test namespace so its metadata name
-    // resolves to System.Lazy`1 as the analyzer expects (the real corelib type is also present, but the
-    // analyzer keys on the metadata name which both satisfy).
     private const string CommonScaffolding = """
         namespace Fdw.Abstractions
         {
@@ -164,7 +158,6 @@ public class FactoryProviderInjectionAnalyzerTests
     [Trait("Category", "SourceGen")]
     public async Task NonFactory_InjectsProvider_NoDiagnostic()
     {
-        // Why: the rule targets IServiceFactory implementors only; an ordinary class may hold a provider.
         var test = CommonScaffolding + """
             namespace TestNamespace
             {

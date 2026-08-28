@@ -22,9 +22,6 @@ public interface IConnectionFactory
     /// requires a secret, this overload FAILS LOUD (it never resolves secrets) — the caller must use one
     /// of the async overloads that supply a secret source.
     /// </returns>
-    // Why: this is the pure-construction contract (IServiceFactory.Create). Secret resolution is async,
-    // so it cannot happen here at all — a connection whose authentication type requires a secret must be
-    // built through one of the async overloads below.
     IGenericResult<IGenericConnection> Create(IGenericConfiguration configuration);
 
     /// <summary>

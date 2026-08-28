@@ -21,13 +21,6 @@ namespace Fdw.Services.Authorization;
 /// Invoked at token-issue time by <c>DefaultPrincipalResolver</c> and
 /// <c>ConnectTokenEndpoint</c> to bake the permission set into the JWT.
 /// </summary>
-// Why: Extracted from DefaultAuthorizationService so token-issuance code (DefaultPrincipalResolver
-// and ConnectTokenEndpoint) can call the same resolution logic without depending on
-// DefaultAuthorizationService directly.
-// DefaultAuthorizationService delegates to this class so the logic lives in one place.
-// FDW-532: ApplyRoleTiers previously iterated allRoles without filtering by userId, baking the
-// entire permission catalog into every token. Fixed by loading user role assignments first and
-// filtering the role set to only those the user is assigned.
 public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
 {
     private readonly IServiceConfigurationProvider<RoleConfiguration> _roleProvider;
@@ -53,8 +46,6 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
         _rolePermissionProvider = rolePermissionProvider ?? throw new ArgumentNullException(nameof(rolePermissionProvider));
         _userRoleProvider = userRoleProvider ?? throw new ArgumentNullException(nameof(userRoleProvider));
         _logger = logger ?? NullLogger<EffectivePermissionResolver>.Instance;
-        // Why: NullOrgAccessProvider fallback here is safe — it means "org tier disabled".
-        // When org grants are not wired, the resolver still returns the global+tenant tiers.
         _orgAccessProvider = orgAccessProvider ?? new Lazy<IOrgAccessProvider>(() => NullOrgAccessProvider.Instance);
     }
 
@@ -72,9 +63,6 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
 
         var (allRoles, allPermissions, allRolePermissions) = catalogResult.Value;
 
-        // Why: FDW-532 — load the user's actual role assignments first.
-        // If this fails, we MUST deny (fail-closed). Returning the full catalog would be a
-        // privilege escalation: every user would get admin permissions.
         var userRoleAssignmentsResult = await _userRoleProvider.GetByUser(userId, cancellationToken).ConfigureAwait(false);
         if (!userRoleAssignmentsResult.IsSuccess || userRoleAssignmentsResult.Value is null)
             return GenericResult<IReadOnlyCollection<string>>.Failure(
@@ -91,9 +79,6 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
 
         if (userRoleAssignments.Count == 0)
         {
-            // Why: Zero role assignments → zero permissions from the role tiers.
-            // This is correct and intentional — an unassigned user gets nothing from global/tenant tiers.
-            // The org tier is still applied below because org-level grants are independent of role assignments.
             AuthorizationLog.UserHasNoRoleAssignments(_logger, userId);
         }
         else
@@ -119,7 +104,6 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
         return GenericResult<IReadOnlyCollection<string>>.Success(permissions);
     }
 
-    // Why: Loads and validates all three catalog tables. Returns null on any failure (fail-closed).
     private async Task<(IReadOnlyList<RoleConfiguration>, IReadOnlyList<PermissionConfiguration>, IReadOnlyList<RolePermissionConfiguration>)?> LoadCatalog(
         CancellationToken cancellationToken)
     {
@@ -147,9 +131,6 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
         return (allRolesResult.Value, allPermissionsResult.Value, allRolePermissionsResult.Value);
     }
 
-    // Why: FDW-532 — assignedRoleIds is the user's actual role set, not the full catalog.
-    // allRoles is still the full catalog (for name/id lookups), but permission SELECTION
-    // only processes roles the user is assigned to.
     private (int GlobalCount, int TenantCount) ApplyRoleTiers(
         string userId,
         IReadOnlyList<RoleConfiguration> allRoles,
@@ -168,9 +149,6 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
 
         foreach (var role in allRoles)
         {
-            // Why: FDW-532 — skip roles the user is not assigned to.
-            // The catalog is still loaded for name→id lookups and org-tier resolution,
-            // but only assigned roles contribute permissions to the user's effective set.
             if (!assignedRoleIds.Contains(role.Id))
                 continue;
 

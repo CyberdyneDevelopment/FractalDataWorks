@@ -56,11 +56,6 @@ public sealed class BearerTokenHandler : DelegatingHandler
         catch (Exception ex)
         {
             BearerTokenLog.TokenAttachmentError(_logger, ex, path);
-            // Why: Re-throw rather than continuing without auth. Sending the request
-            // unauthenticated would produce a confusing 401 at the destination with no
-            // indication that token acquisition itself failed. The caller must see the
-            // original exception so it can distinguish a token-fetch failure from a
-            // genuine authorization rejection.
             throw;
         }
 

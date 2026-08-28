@@ -39,13 +39,10 @@ public sealed class XmlRowSourceType : RecordSourceTypeBase
     public override string Format => "Xml";
 
     /// <inheritdoc />
-    // Why: the format-driven read seam. Downcast to XmlRowSourceOptions when supplied; a base
-    // RowSourceOptions (or null) yields XmlStreamRowSource's own secure defaults.
     public override IRowSourceReader CreateReader(Stream content, RowSourceOptions? options)
         => new XmlStreamRowSource(content, options as XmlRowSourceOptions);
 
     /// <inheritdoc />
-    // Why: XML yields ITEMS (elements), not rows — item source over the container's field schema.
     public override IRecordSource<DataRecord> Create(RecordSourceContext context)
         => CreateItemSource(context);
 }

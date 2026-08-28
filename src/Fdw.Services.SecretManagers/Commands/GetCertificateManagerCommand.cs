@@ -54,8 +54,6 @@ public sealed class GetCertificateManagerCommand : SecretManagerCommandBase, ISe
     {
         if (string.IsNullOrWhiteSpace(certificateName))
         {
-            // Why: reported as a defect (FDW rule) — a command should return IGenericResult, not
-            // throw. Left in place per instructions (constructors cannot return IGenericResult).
             GetCertificateManagerCommandLog.RequiredValueMissing(NullLogger<GetCertificateManagerCommand>.Instance, nameof(certificateName));
             throw new ArgumentException("Certificate name cannot be null or empty for GetCertificate operation.", nameof(certificateName));
         }
@@ -120,8 +118,6 @@ public sealed class GetCertificateManagerCommand : SecretManagerCommandBase, ISe
     {
         if (string.IsNullOrWhiteSpace(version))
         {
-            // Why: same throw-instead-of-result defect as the constructor guard above — logged,
-            // not converted.
             GetCertificateManagerCommandLog.RequiredValueMissing(NullLogger<GetCertificateManagerCommand>.Instance, nameof(version));
             throw new ArgumentException("Version cannot be null or empty.", nameof(version));
         }

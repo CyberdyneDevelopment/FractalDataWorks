@@ -34,9 +34,6 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
     /// </summary>
     public static void RegisterDomainConfiguration(IServiceCollection services)
     {
-        // Why named here rather than defaulted on the constructor: a defaulted connection is one a
-        // caller inherits without saying so, and this provider is registered directly rather than by
-        // a collection that would otherwise name it.
 
         services.TryAddSingleton<DataSetConfigurationProvider>(sp =>
             new DataSetConfigurationProvider(
@@ -110,12 +107,6 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
         return result;
     }
 
-    // Why there is no Save override: it existed only to force base.Save down its INSERT branch, because the
-    // base cascaded children on INSERT alone — so a DataSet had to be tombstoned and re-created to get its
-    // Sources/Fields/KeyFields rewritten. The base now has ONE write path (version-on-write, cascade always),
-    // so the delete-then-save is not just redundant but wrong: it retired the aggregate before every save,
-    // and against the now fail-loud Delete it would abort any save that supplied an Id for a record that did
-    // not exist yet.
 
     // ============================================================================
     // Field mapping composition
@@ -151,9 +142,6 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
             var result = await gateway.Value!.Execute<IEnumerable<DataSetFieldMappingConfiguration>>(command, ct).ConfigureAwait(false);
             if (!result.IsSuccess)
             {
-                // Why: fail loud — returning a composed config with silently empty FieldMappings would
-                // mask a gatewayProvider error. The caller's Get override propagates this failure so the
-                // caller receives a non-success result rather than a partially-composed DataSet.
                 return GenericResult<bool>.Failure(
                     DataSetConfigurationProviderLog.FieldMappingQueryFailed(
                         _logger, source.SourceName, config.Name,
@@ -162,9 +150,6 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
 
             var mappings = result.Value?.ToList() ?? [];
             source.FieldMappingIds = mappings.Select(m => m.Id).ToList();
-            // Why: FieldMappings is logical→physical; only include entries where PhysicalFieldName
-            // is non-null (SourceKind='DataStore'). SourceKind='DataSet' or 'Calculation' bindings
-            // have null PhysicalFieldName and are resolved by the execution layer, not field rename.
             source.FieldMappings = mappings
                 .Where(m => !string.IsNullOrEmpty(m.PhysicalFieldName))
                 .ToDictionary(m => m.LogicalFieldName, m => m.PhysicalFieldName!, StringComparer.Ordinal);
@@ -214,9 +199,6 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
                     new InvalidOperationException(result.CurrentMessage)));
         }
 
-        // Why: DataFieldConfiguration uses Name/TypeName matching the DDL columns [Name] and TypeName.
-        // DataSetFieldDefinition uses FieldName/ScalarTypeName as the public contract. Project here so
-        // callers never see the database column mismatch.
         var fields = result.Value!.Select(c => new DataSetFieldDefinition
         {
             DataSetId = c.DataSetId,
@@ -274,13 +256,6 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
             return GenericResult.Success();
         }
 
-        // Why: DataFieldConfiguration columns are Name/TypeName; DataSetFieldDefinition uses FieldName/ScalarTypeName.
-        // Project the inverse mapping here so the DDL columns receive correct values.
-        // Id is app-minted (Guid.CreateVersion7()) per DDL convention — no DEFAULT on the Id column.
-        //
-        // Why: persist via ConfigurationSaveCommand<T> (not a raw insert). data.DataSetField.DataSetRowId
-        // is the NOT NULL physical FK to data.DataSet(RowId); only MsSqlConfigurationSaveTranslator
-        // resolves it from the logical DataSetId via subquery on insert. A raw insert omits it (SQL 515).
         foreach (var f in fields)
         {
             var record = new DataFieldConfiguration

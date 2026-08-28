@@ -8,9 +8,6 @@ namespace Fdw.Services.Credentials.Abstractions;
 /// <summary>
 /// Provider for configured credential service instances.
 /// </summary>
-// Why: credential service providers provide SERVICES, not configurations — configuration comes
-// from the credential domain's configuration provider. Consumers resolve a credential service by
-// name (the connections→secret-managers pattern), then execute vault commands through it.
 public interface ICredentialServiceProvider : IPlatformServiceProvider<ICredentialService, ICredentialServiceImplementationConfiguration>
 {
     /// <summary>

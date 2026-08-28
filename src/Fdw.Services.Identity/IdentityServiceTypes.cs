@@ -62,25 +62,16 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
     {
         var collectOptions = RegisterFunc;
 
-        // Why a local: this closed generic is the DI key a consumer injects, and it is reported at
-        // three points below. Written out three times it is three chances for them to disagree.
         var providerService = typeof(IIdentityServiceProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<IdentityServiceTypes>() ?? NullLogger<IdentityServiceTypes>.Instance;
 
-            // Why the result is read: discarding it meant an option that failed to register was
-            // followed by this body registering the provider anyway and reporting success.
             var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
                 return registered;
 
-            // Why the domain interface and not only the concrete class: this collection resolves
-            // IIdentityServiceConfigurationProvider to attach it to the domain provider, and a registration of the
-            // concrete type alone leaves that lookup empty — the domain then fails every lookup by name
-            // for the life of the scope. ConfigurationConnection is the one place that names which store
-            // these rows live in.
             builder.Services.TryAddSingleton<IIdentityServiceConfigurationProvider>(sp =>
                 new IdentityServiceConfigurationProvider(
                     sp.GetService<ILogger<IdentityServiceConfigurationProvider>>()!,
@@ -93,9 +84,6 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<IdentityServiceConfiguration>>(
                 sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
 
-            // Why singleton: the cache's whole purpose is that one live token is reused across every
-            // outbound call in the process. A scoped cache would acquire a new token per scope, which
-            // is the behaviour it exists to prevent.
             builder.Services.AddSingleton<IIdentityTokenCache>(sp =>
                 new IdentityTokenCache(
                     sp.GetService<ILoggerFactory>()?.CreateLogger<IdentityTokenCache>()
@@ -122,8 +110,6 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
                 {
                     if (sp.GetService<IIdentityServiceConfigurationProvider>() is { } cfgProvider)
                     {
-                        // Why the result is read: a provider that did not take its parent still
-                        // constructs, and every later read silently misses.
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
                             ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(IdentityServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name);
@@ -132,10 +118,6 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
                     }
                     else
                     {
-                        // Why Critical, and why the collection says it rather than the provider: from
-                        // inside the provider a null parent is indistinguishable from a domain that
-                        // needs none. Without it the domain fails every lookup by name for the life
-                        // of the scope with nothing pointing back here.
                         ServiceTypeLog.DomainHasNoConfigurationSource(
                             stLogger,
                             nameof(IdentityServiceTypes),
@@ -145,16 +127,12 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
                 }
                 catch (Exception ex)
                 {
-                    // Why rethrow: a provider that failed to take its parent is unusable in a way
-                    // that only surfaces much later.
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(IdentityServiceTypes));
                     throw;
                 }
                 return provider;
             });
 
-            // Why the milestone comes after the registration: it states that the domain finished
-            // phase 2, which is only true once the provider is actually in the container.
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(IdentityServiceTypes), providerService);
             else

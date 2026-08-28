@@ -67,10 +67,6 @@ public abstract class SqlDataCommandTranslatorBase<TCommand> : DataCommandTransl
     /// Receives the parameter name WITHOUT the SQL prefix (e.g., <c>FieldName</c>, not <c>@FieldName</c>).
     /// Typically <c>(n, v) => AddParameter(command, n, v)</c>.
     /// </param>
-    // Why: addParam delegate instead of abstract AddParameter — eliminates the need for
-    // protected abstract hooks on this class that the TypeCollection source generator would
-    // try to stub as 'public override' (CS0507 access-modifier conflict). Backend base classes
-    // provide their own concrete AddParameter without an abstract contract here.
     protected static void AddParametersFromObject(object data, IEnumerable<string> fieldNames, Action<string, object?> addParam)
     {
         var type = data.GetType();
@@ -230,22 +226,13 @@ public abstract class SqlDataCommandTranslatorBase<TCommand> : DataCommandTransl
 
         public required Action<string, object?> AddParam { get; init; }
 
-        // Why: the FULL SQL parameter prefix (includes the @ or other driver marker),
-        // e.g., "@" for unqualified params or "@where_" to namespace the WHERE-clause params
-        // away from SET-clause params in UPDATE statements.
         public required string ParameterPrefix { get; init; }
 
         public int ParameterCounter { get; set; }
 
-        // Why: non-null only when a JOIN is in play. Drives column qualification so a bare column
-        // resolves to the primary (FROM) table and dotted columns resolve to their stated table.
         public string? PrimaryQualifier { get; init; }
     }
 
-    // Why: qualify a filter column for SQL. With no JOIN (PrimaryQualifier null) emit bare quoted
-    // column. With a JOIN: a dotted "Table.Col" emits [Table].[Col] (dialect-quoted); a bare "Col"
-    // emits [Primary].[Col]. Each identifier part is validated independently so the dotted form
-    // stays injection-safe.
     private static string QualifyColumn(string propertyName, ISqlDialect dialect, string? primaryQualifier)
     {
         var dot = propertyName.IndexOf('.');
@@ -285,13 +272,6 @@ public abstract class SqlDataCommandTranslatorBase<TCommand> : DataCommandTransl
         };
     }
 
-    // Why: all column names are validated via IsValidColumnName before inclusion in SQL text.
-    // All VALUES go into parameters — zero SQL injection risk.
-    // Why (parameterPrefix convention): context.ParameterPrefix is the FULL SQL prefix including
-    // the driver's marker (e.g., "@" or "@where_"). The AddParam delegate receives the name
-    // WITHOUT the leading marker character so the backend's AddParameter can prepend it.
-    // We derive the key by stripping the leading character (always "@" for T-SQL/Postgres/SQLite):
-    //   SQL name: "@where_p0"  →  AddParam key: "where_p0"  →  SqlParameter("@where_p0", ...)
     private static string BuildWhereCondition(FilterCondition condition, SqlBuildContext context)
     {
         var columnName = QualifyColumn(condition.PropertyName, context.Dialect, context.PrimaryQualifier);

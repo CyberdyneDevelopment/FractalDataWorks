@@ -4,7 +4,6 @@ namespace Fdw.Types;
 /// <summary>
 /// Metadata describing a property on a TypeOption for database persistence.
 /// </summary>
-// Why: pure data holder, no logic beyond trivial construction/assignment
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class TypePropertyMetadata
 {
