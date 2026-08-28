@@ -538,28 +538,30 @@ public abstract class ApiClientBase
     /// <returns>The description.</returns>
     private static string DescribeBody(string body, int statusCode)
     {
-        try
+        // Why: a non-JSON body is the ordinary case here, not a failure, so this probes with a
+        // non-throwing parse rather than catching JsonException. Catching it made a routine outcome
+        // look like a swallowed error and cost an exception on every plain-text response.
+        var reader = new Utf8JsonReader(System.Text.Encoding.UTF8.GetBytes(body));
+        if (JsonDocument.TryParseValue(ref reader, out var doc))
         {
-            using var doc = JsonDocument.Parse(body);
-            if (doc.RootElement.ValueKind == JsonValueKind.Object)
+            using (doc)
             {
-                var text = doc.RootElement.TryGetProperty("detail", out var d) ? d.GetString() : null;
-                if (string.IsNullOrWhiteSpace(text) && doc.RootElement.TryGetProperty("title", out var t))
+                if (doc.RootElement.ValueKind == JsonValueKind.Object)
                 {
-                    text = t.GetString();
-                }
+                    var text = doc.RootElement.TryGetProperty("detail", out var d) ? d.GetString() : null;
+                    if (string.IsNullOrWhiteSpace(text) && doc.RootElement.TryGetProperty("title", out var t))
+                    {
+                        text = t.GetString();
+                    }
 
-                if (!string.IsNullOrWhiteSpace(text))
-                {
-                    return doc.RootElement.TryGetProperty("code", out var c) && c.GetString() is string codeText
-                        ? $"{text} ({codeText})"
-                        : text;
+                    if (!string.IsNullOrWhiteSpace(text))
+                    {
+                        return doc.RootElement.TryGetProperty("code", out var c) && c.GetString() is string codeText
+                            ? $"{text} ({codeText})"
+                            : text;
+                    }
                 }
             }
-        }
-        catch (JsonException)
-        {
-            // Not ProblemDetails, and not worth failing over - fall through to the raw text.
         }
 
         return (body.Length > 500 ? body[..500] : body).Trim();

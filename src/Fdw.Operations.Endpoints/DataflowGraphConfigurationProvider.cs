@@ -66,7 +66,11 @@ public class DataflowGraphConfigurationProvider
     {
         var command = new QueryCommand<DataSetRecord>();
 
-        var result = await (await Gateway()).Value!.Execute<IEnumerable<DataSetRecord>>(
+        var gateway = await Gateway().ConfigureAwait(false);
+        if (!gateway.IsSuccess)
+            return gateway.ToNewResult<IReadOnlyList<DataSetRecord>>();
+
+        var result = await gateway.Value!.Execute<IEnumerable<DataSetRecord>>(
                 command, new DataStoreTarget(DataStoreName, DataPath, "DataSet"), cancellationToken)
             .ConfigureAwait(false);
 
@@ -84,7 +88,11 @@ public class DataflowGraphConfigurationProvider
     {
         var command = new QueryCommand<DataStoreRecord>();
 
-        var result = await (await Gateway()).Value!.Execute<IEnumerable<DataStoreRecord>>(
+        var gateway = await Gateway().ConfigureAwait(false);
+        if (!gateway.IsSuccess)
+            return gateway.ToNewResult<IReadOnlyList<DataStoreRecord>>();
+
+        var result = await gateway.Value!.Execute<IEnumerable<DataStoreRecord>>(
                 command, new DataStoreTarget(DataStoreName, DataPath, "DataStoreConfiguration"), cancellationToken)
             .ConfigureAwait(false);
 
@@ -102,7 +110,11 @@ public class DataflowGraphConfigurationProvider
     {
         var command = new QueryCommand<DataSetSourceConfiguration>();
 
-        var result = await (await Gateway()).Value!.Execute<IEnumerable<DataSetSourceConfiguration>>(
+        var gateway = await Gateway().ConfigureAwait(false);
+        if (!gateway.IsSuccess)
+            return gateway.ToNewResult<IReadOnlyList<DataSetSourceConfiguration>>();
+
+        var result = await gateway.Value!.Execute<IEnumerable<DataSetSourceConfiguration>>(
                 command, new DataStoreTarget(DataStoreName, DataPath, "DataSetSource"), cancellationToken)
             .ConfigureAwait(false);
 
@@ -123,7 +135,11 @@ public class DataflowGraphConfigurationProvider
         {
             var command = new QueryCommand<System.Collections.Generic.Dictionary<string, object?>>();
 
-            var result = await (await Gateway()).Value!
+            var gateway = await Gateway().ConfigureAwait(false);
+            if (!gateway.IsSuccess)
+                return gateway.ToNewResult<bool>();
+
+            var result = await gateway.Value!
                 .Execute<IEnumerable<System.Collections.Generic.Dictionary<string, object?>>>(
                     command, new DataStoreTarget(DataStoreName, PipePath, "Pipeline"), cancellationToken)
                 .ConfigureAwait(false);

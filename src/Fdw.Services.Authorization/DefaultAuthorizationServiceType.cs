@@ -97,10 +97,19 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                 sp.GetRequiredService<ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand>>());
 
             builder.Services.TryAddSingleton<TenantOrgAccessConfigurationProvider>(sp =>
-                new TenantOrgAccessConfigurationProvider(
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()
-                        .Get(AuthorizationServiceTypes.ConfigurationConnection).Value!,
-                    sp.GetService<ILogger<TenantOrgAccessConfigurationProvider>>()));
+            {
+                // Why: a failed lookup returns a result whose Value is null, so passing it straight
+                // in surfaced as ArgumentNullException("gateway") and lost the reason. Fail with the
+                // message that says which connection could not be resolved and why.
+                var gateway = sp.GetRequiredService<IConfigurationGatewayProvider>()
+                    .Get(AuthorizationServiceTypes.ConfigurationConnection);
+                if (!gateway.IsSuccess)
+                    throw new InvalidOperationException(gateway.CurrentMessage);
+
+                return new TenantOrgAccessConfigurationProvider(
+                    gateway.Value!,
+                    sp.GetService<ILogger<TenantOrgAccessConfigurationProvider>>());
+            });
 
             builder.Services.TryAddScoped<IOrgAccessProvider>(sp =>
                 new DefaultOrgAccessProvider(
