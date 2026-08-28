@@ -27,13 +27,9 @@ public class SendMessageRequest
     /// Gets or sets which side of the conversation sent this message.
     /// </summary>
     /// <remarks>
-    /// Caller-asserted, and validated against the two conversation types rather than accepted as
-    /// free text — the endpoint would otherwise be a way to forge any message type, including the
-    /// notification types other parts of the system act on.
-    ///
-    /// It is asserted rather than derived because nothing in the request identifies the caller as
-    /// an agent: an agent acts on behalf of its owner, so its <c>sub</c> claim is that person's.
-    /// Deriving this needs an agent claim the PAT middleware does not yet emit.
+    /// OPTIONAL, and never trusted. The endpoint derives the side from how the caller authenticated
+    /// and uses that; a value supplied here is only checked against the derived one and refused if
+    /// it contradicts. Leave it unset unless you want that assertion checked.
     /// </remarks>
     public string? MessageType { get; set; }
 

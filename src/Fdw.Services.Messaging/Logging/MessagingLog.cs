@@ -124,6 +124,12 @@ public static partial class MessagingLog
     public static partial IGenericMessage TraceGetForUserEntry(ILogger logger);
 
     /// <summary>Logs message not found.</summary>
+    [MessageLogging(EventId = 31002, Level = LogLevel.Warning, Message = "Paging cursor message {messageId} is not in the queried set")]
+    public static partial IGenericMessage PagingCursorNotFound(ILogger logger, string messageId);
+
+    [MessageLogging(EventId = 31003, Level = LogLevel.Warning, Message = "After and Before cannot both be supplied")]
+    public static partial IGenericMessage PagingCursorsConflict(ILogger logger);
+
     [MessageLogging(EventId = 31000, Level = LogLevel.Warning, Message = "Message {messageId} not found")]
     public static partial IGenericMessage MessageNotFound(ILogger logger, string messageId);
 

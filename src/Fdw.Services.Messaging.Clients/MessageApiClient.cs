@@ -42,6 +42,8 @@ public class MessageApiClient
         string? severity = null,
         string? status = null,
         string? referenceId = null,
+        Guid? after = null,
+        Guid? before = null,
         int skip = 0,
         int take = 50,
         CancellationToken cancellationToken = default)
@@ -63,6 +65,14 @@ public class MessageApiClient
         {
             query += $"&referenceId={Uri.EscapeDataString(referenceId)}";
         }
+        if (after.HasValue)
+        {
+            query += $"&after={after.Value:D}";
+        }
+        if (before.HasValue)
+        {
+            query += $"&before={before.Value:D}";
+        }
 
         var result = await _httpClient.GetFromJsonAsync<IReadOnlyList<ClientModels.MessagePayload>>(query, cancellationToken).ConfigureAwait(false);
         return result ?? [];
@@ -71,7 +81,6 @@ public class MessageApiClient
     /// <summary>Sends a message into a conversation thread.</summary>
     /// <param name="referenceId">The thread this message belongs to.</param>
     /// <param name="recipientUserId">The user the message is addressed to.</param>
-    /// <param name="messageType">Which side of the conversation is speaking.</param>
     /// <param name="subject">The message subject.</param>
     /// <param name="body">The message body.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -80,11 +89,13 @@ public class MessageApiClient
     /// The thread id is a required argument rather than an optional one the client would fill in.
     /// A client that minted one when it was not given would open a new conversation every time a
     /// caller forgot it, and the other participant would never see the turn.
+    ///
+    /// Which side is speaking is not sent. The server derives it from how this client authenticated,
+    /// so a caller cannot post as the other party.
     /// </remarks>
     public virtual async Task<ClientModels.MessagePayload?> SendMessage(
         string referenceId,
         Guid recipientUserId,
-        string messageType,
         string subject,
         string? body,
         CancellationToken cancellationToken = default)
@@ -95,7 +106,6 @@ public class MessageApiClient
             {
                 ReferenceId = referenceId,
                 RecipientUserId = recipientUserId,
-                MessageType = messageType,
                 Subject = subject,
                 Body = body,
             },

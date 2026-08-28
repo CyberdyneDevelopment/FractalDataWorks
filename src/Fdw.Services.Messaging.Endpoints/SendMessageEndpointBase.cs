@@ -78,24 +78,28 @@ public abstract class SendMessageEndpointBase : Endpoint<SendMessageRequest, Mes
     /// Checks the parts of the request the endpoint refuses to invent.
     /// </summary>
     /// <param name="req">The incoming request.</param>
+    /// <param name="derivedType">The conversation side derived from how the caller authenticated.</param>
     /// <returns>Success, or the failure describing the first missing or unacceptable field.</returns>
     /// <remarks>
     /// Separate from <c>HandleAsync</c> because the three checks are what pushed that method past
     /// the FDW007 complexity threshold, and because a condition that needs a result should return
     /// one rather than write an error into endpoint state from three places.
     /// </remarks>
-    private IGenericResult Validate(SendMessageRequest req)
+    private IGenericResult Validate(SendMessageRequest req, string derivedType)
     {
         if (string.IsNullOrWhiteSpace(req.ReferenceId))
         {
             return GenericResult.Failure(MessagingEndpointLog.ReferenceIdMissing(_logger));
         }
 
-        if (!string.Equals(req.MessageType, AgentMessageType, StringComparison.Ordinal)
-            && !string.Equals(req.MessageType, UserReplyType, StringComparison.Ordinal))
+        // A caller may state its side, but only to be checked against the derived one. Contradiction
+        // is refused rather than corrected, because a client that believes it is the other party has
+        // a bug worth surfacing, not a value worth silently overwriting.
+        if (req.MessageType is not null
+            && !string.Equals(req.MessageType, derivedType, StringComparison.Ordinal))
         {
             return GenericResult.Failure(
-                MessagingEndpointLog.MessageTypeRefused(_logger, req.MessageType ?? "(none)"));
+                MessagingEndpointLog.MessageTypeRefused(_logger, req.MessageType));
         }
 
         if (string.IsNullOrWhiteSpace(req.Subject))
@@ -127,7 +131,17 @@ public abstract class SendMessageEndpointBase : Endpoint<SendMessageRequest, Mes
             return;
         }
 
-        var validation = Validate(req);
+        // Direction is DERIVED, never taken from the body. A caller that could name its own side
+        // could post as the other one, and a transcript that lets the sender choose how it is
+        // attributed is a transcript that can lie about who said something.
+        var derivedType = string.Equals(
+            HttpContext.User.Identity?.AuthenticationType,
+            AuthenticationSchemes.PatBearer,
+            StringComparison.Ordinal)
+                ? AgentMessageType
+                : UserReplyType;
+
+        var validation = Validate(req, derivedType);
         if (validation.IsFailure)
         {
             AddError(validation.CurrentMessage!);
@@ -149,7 +163,7 @@ public abstract class SendMessageEndpointBase : Endpoint<SendMessageRequest, Mes
                     TenantId = tenantId,
                     RecipientUserId = req.RecipientUserId,
                     SenderUserId = userId,
-                    MessageType = req.MessageType!,
+                    MessageType = derivedType,
                     Subject = req.Subject!,
                     Body = req.Body,
                     ReferenceId = referenceId

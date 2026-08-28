@@ -1,6 +1,7 @@
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Methods;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -84,7 +85,7 @@ public sealed class WebMcpApiKeyMiddleware
 
         var identity = new ClaimsIdentity(
             new[] { new Claim("sub", validation.UserId.ToString()) },
-            "PATBearer");
+            AuthenticationSchemes.PatBearer);
         context.User = new ClaimsPrincipal(identity);
 
         await _next(context).ConfigureAwait(false);
