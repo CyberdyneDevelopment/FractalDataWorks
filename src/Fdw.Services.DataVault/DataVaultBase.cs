@@ -65,13 +65,13 @@ public abstract class DataVaultBase : IDataVault, IDisposable
     // ── IGenericService ────────────────────────────────────────────────────────
 
     /// <inheritdoc />
-    string IGenericService.Id => _vaultName;
+    string IPlatformService.Id => _vaultName;
 
     /// <inheritdoc />
-    string IGenericService.ServiceType => "DataVault";
+    string IPlatformService.ServiceType => "DataVault";
 
     /// <inheritdoc />
-    bool IGenericService.IsAvailable => true;
+    bool IPlatformService.IsAvailable => true;
 
     /// <inheritdoc />
     Task<IGenericResult<T>> IGenericService.Execute<T>(IGenericCommand command, CancellationToken cancellationToken)
