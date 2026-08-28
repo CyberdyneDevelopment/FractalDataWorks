@@ -20,26 +20,6 @@ namespace Fdw.Services.Universes.Abstractions;
 /// database constraint would have to be widened by a schema change every time a domain was added,
 /// and would encode a set the database has no way to know.
 /// </para>
-/// <para>
-/// Id allocation. Options are declared by the packages owning their resources, so this table is
-/// the one place a new domain looks to pick a free number. A duplicate fails loud when the
-/// collection freezes rather than one option silently winning the lookup.
-/// </para>
-/// <list type="table">
-/// <item><description>1  DataSet — <c>Fdw.Data.DataSets</c></description></item>
-/// <item><description>2  DataStore</description></item>
-/// <item><description>3  Connection</description></item>
-/// <item><description>4  Pipeline</description></item>
-/// <item><description>5  OrchestrationNode</description></item>
-/// <item><description>6  Schedule</description></item>
-/// <item><description>7  Calculation</description></item>
-/// <item><description>8  Transform</description></item>
-/// <item><description>9  Expectation</description></item>
-/// <item><description>10 EscalationPolicy</description></item>
-/// <item><description>11 GlossaryTerm</description></item>
-/// <item><description>12 Snapshot</description></item>
-/// <item><description>13 SavedView — <c>Fdw.Services.Universes.Abstractions</c></description></item>
-/// </list>
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [TypeCollection(typeof(UniverseResourceKindBase), typeof(IUniverseResourceKind), typeof(UniverseResourceKinds))]

@@ -18,12 +18,7 @@ public sealed class DataSetResourceKind : UniverseResourceKindBase
 {
     /// <summary>Initializes a new instance of the <see cref="DataSetResourceKind"/> class.</summary>
     public DataSetResourceKind()
-        : base(
-            id: 1,
-            name: "DataSet",
-            displayName: "Data set",
-            description: "A data set, which a universe may own and which need not be bound to a source.",
-            canBeOwned: true)
+        : base("DataSet", canBeOwned: true)
     {
     }
 }

@@ -15,12 +15,7 @@ public sealed class SavedViewResourceKind : UniverseResourceKindBase
 {
     /// <summary>Initializes a new instance of the <see cref="SavedViewResourceKind"/> class.</summary>
     public SavedViewResourceKind()
-        : base(
-            id: 13,
-            name: "SavedView",
-            displayName: "Saved view",
-            description: "A stored visualisation of a data set, which lineage can point at.",
-            canBeOwned: true)
+        : base("SavedView", canBeOwned: true)
     {
     }
 }
