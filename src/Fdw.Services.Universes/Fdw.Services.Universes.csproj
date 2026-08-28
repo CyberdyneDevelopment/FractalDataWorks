@@ -21,6 +21,7 @@
     <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\Fdw.Configuration.SourceGenerators\Fdw.Configuration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Services.Universes.Abstractions\Fdw.Services.Universes.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>
