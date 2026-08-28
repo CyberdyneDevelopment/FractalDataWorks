@@ -30,7 +30,7 @@ namespace Fdw.Services.TokenManagers.Abstractions;
 /// revokes. What was wrong before was making every <em>consumer</em> see all of it.
 /// </para>
 /// </remarks>
-public interface ITokenManager : IServiceOption, ITokenIssuer, ITokenValidator, ISessionManager
+public interface ITokenManager : IServiceOption, ITokenIssuer, ITokenValidator, ITokenRevoker
 {
     /// <summary>Authenticates and mints in one call, dispatching on the request's grant type.</summary>
     /// <param name="request">The grant request.</param>
