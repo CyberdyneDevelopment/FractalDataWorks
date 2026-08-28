@@ -97,7 +97,7 @@ public sealed class MessageServiceTests
 
         await fixture.Service.GetMessages(new MessageQuery(), TestContext.Current.CancellationToken);
 
-        var query = captured.ShouldBeAssignableTo<IQueryCommand>();
+        var query = captured.ShouldBeAssignableTo<IQueryCommand>()!;
         query.Ordering.ShouldNotBeNull();
         query.Ordering!.OrderedFields.Select(f => f.PropertyName)
             .ShouldBe([nameof(MessagePayload.CreatedAt), nameof(MessagePayload.Id)]);
@@ -207,10 +207,19 @@ public sealed class MessageServiceTests
     [Trait("Category", "Api")]
     public async Task GetMessagesWithAllFiltersAppliesPagingAndReturnsResults()
     {
+        // Why the command is asserted rather than the returned count: paging is the STORE's job now,
+        // and the gateway is a mock that returns its fixed list whatever window it is handed. This
+        // test previously stubbed three rows and asserted one came back, which only held while the
+        // host sliced the results — it would pass again the moment paging regressed to in-memory.
         var fixture = CreateService();
         var userId = Guid.NewGuid();
-        var messages = new[] { MakeDto(Guid.NewGuid(), userId), MakeDto(Guid.NewGuid(), userId), MakeDto(Guid.NewGuid(), userId) };
-        SetupExecuteMessages(fixture.Gateway, GenericResult<IEnumerable<MessagePayload>>.Success(messages));
+        IDataCommand? captured = null;
+        fixture.Gateway
+            .Setup(g => g.Execute<IEnumerable<MessagePayload>>(
+                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+            .Callback((IDataCommand c, DataStoreTarget _, CancellationToken __) => captured = c)
+            .ReturnsAsync(GenericResult<IEnumerable<MessagePayload>>.Success(
+                [MakeDto(Guid.NewGuid(), userId), MakeDto(Guid.NewGuid(), userId), MakeDto(Guid.NewGuid(), userId)]));
 
         var query = new MessageQuery
         {
@@ -226,7 +235,60 @@ public sealed class MessageServiceTests
         var result = await fixture.Service.GetMessages(query, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.Count.ShouldBe(1);
+        var command = captured.ShouldBeAssignableTo<IQueryCommand>()!;
+        var paging = command.Paging.ShouldNotBeNull();
+        paging.Skip.ShouldBe(1);
+        paging.Take.ShouldBe(1);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task GetMessagesWithAfterCursorPutsTheKeysetPredicateOnTheCommand()
+    {
+        // The window is a predicate over the SORT KEY, not the id: "later timestamp, OR same
+        // timestamp and later id". Asserting the command is the only way to see it — the mock
+        // gateway applies no window of its own.
+        var fixture = CreateService();
+        var userId = Guid.NewGuid();
+        var cursor = MakeDto(Guid.NewGuid(), userId);
+        var commands = new List<IDataCommand>();
+        fixture.Gateway
+            .Setup(g => g.Execute<IEnumerable<MessagePayload>>(
+                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+            .Callback((IDataCommand c, DataStoreTarget _, CancellationToken __) => commands.Add(c))
+            .ReturnsAsync(GenericResult<IEnumerable<MessagePayload>>.Success([cursor]));
+
+        var result = await fixture.Service.GetMessages(
+            new MessageQuery { UserId = userId, After = cursor.Id, Take = 20 },
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+
+        // Two reads: the cursor row is resolved first, because its CreatedAt is what the predicate
+        // is written against and the caller only named an id.
+        commands.Count.ShouldBe(2);
+        var windowed = commands[1].ShouldBeAssignableTo<IQueryCommand>()!;
+        windowed.Filter.ShouldNotBeNull();
+        windowed.Paging.ShouldNotBeNull().Take.ShouldBe(20);
+        windowed.Ordering.ShouldNotBeNull().OrderedFields
+            .ShouldAllBe(f => f.Direction.Name == "Ascending");
+    }
+
+    [Fact]
+    [Trait("Priority", "P2")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task GetMessagesWithBothCursorsFails()
+    {
+        // Refused rather than resolved by precedence: a caller asking to page forward and backward
+        // at once has a bug, and silently honouring one of them hides it.
+        var fixture = CreateService();
+
+        var result = await fixture.Service.GetMessages(
+            new MessageQuery { UserId = Guid.NewGuid(), After = Guid.NewGuid(), Before = Guid.NewGuid() },
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
     }
 
     [Fact]

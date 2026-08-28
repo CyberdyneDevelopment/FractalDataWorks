@@ -97,50 +97,39 @@ public sealed class MessageService : IMessageService
     {
         MessagingLog.TraceGetMessagesEntry(_logger);
 
+        if (query.After.HasValue && query.Before.HasValue)
+        {
+            return GenericResult<IReadOnlyList<MessagePayload>>.Failure(
+                MessagingLog.PagingCursorsConflict(_logger));
+        }
+
         try
         {
-            var builder = Query.From<MessagePayload>(DataStoreName, PathName, MessageContainer)
-                .Where(m => m.RecipientUserId).Equal(query.UserId);
+            var builder = ApplyFilters(
+                Query.From<MessagePayload>(DataStoreName, PathName, MessageContainer),
+                query);
 
-            if (query.TenantId.HasValue)
+            // Why the cursor row is read first: a keyset window is a predicate over the SORT KEY,
+            // not over the id — "everything after (CreatedAt, Id)". The caller names a message, so
+            // its own CreatedAt has to be in hand before the predicate can be written at all.
+            // An absent cursor fails here rather than degrading to an unwindowed read.
+            var cursorId = query.After ?? query.Before;
+            MessagePayload? cursor = null;
+
+            if (cursorId.HasValue)
             {
-                builder = builder.Where(m => m.TenantId).Equal(query.TenantId.Value);
+                var cursorResult = await GetMessage(cursorId.Value, cancellationToken).ConfigureAwait(false);
+                if (cursorResult.IsFailure)
+                {
+                    return GenericResult<IReadOnlyList<MessagePayload>>.Failure(
+                        MessagingLog.PagingCursorNotFound(_logger, cursorId.Value.ToString("D")));
+                }
+
+                cursor = cursorResult.Value;
             }
 
-            if (!string.IsNullOrEmpty(query.MessageType))
-            {
-                builder = builder.Where(m => m.MessageType).Equal(query.MessageType);
-            }
-
-            if (!string.IsNullOrEmpty(query.Severity))
-            {
-                builder = builder.Where(m => m.Severity).Equal(query.Severity);
-            }
-
-            if (!string.IsNullOrEmpty(query.Status))
-            {
-                builder = builder.Where(m => m.Status).Equal(query.Status);
-            }
-
-            if (!string.IsNullOrEmpty(query.ReferenceId))
-            {
-                builder = builder.Where(m => m.ReferenceId).Equal(query.ReferenceId);
-            }
-
-            // Why ordered on the command rather than on the results: SqlDataCommandTranslatorBase
-            // declares CanExpressOrdering, so this becomes ORDER BY in the generated SQL and uses
-            // the (CreatedAt, Id) index instead of sorting the whole set in the host.
-            //
-            // (CreatedAt, Id) rather than CreatedAt alone because a burst written in one transaction
-            // shares a timestamp, and a tie with no second key has no defined order. Note Id is
-            // Guid.NewGuid() — random, so the tiebreak is stable but NOT insertion order. Minting
-            // with Guid.CreateVersion7() would make it both.
-            var command = builder
-                .OrderBy(m => m.CreatedAt)
-                .OrderBy(m => m.Id)
-                .Build();
-
-            var result = await _dataGateway.Execute<IEnumerable<MessagePayload>>(command, cancellationToken)
+            var result = await _dataGateway
+                .Execute<IEnumerable<MessagePayload>>(BuildWindow(builder, query, cursor), cancellationToken)
                 .ConfigureAwait(false);
 
             if (!result.IsSuccess)
@@ -157,19 +146,12 @@ public sealed class MessageService : IMessageService
                     MessagingLog.MessageQueryFailed(_logger, "Query returned null value"));
             }
 
-            // Why paging is still applied here: After/Before are keyset cursors that locate a row by
-            // Id within the ordered set and fail loud when it is absent. Pushing that down needs a
-            // tuple predicate on (CreatedAt, Id) built from the cursor row's own values, which means
-            // reading that row first — a different shape, not a fluent call. Tracked separately.
-            // The rows arrive ordered from the store, so no host-side sort remains.
-            var paged = ApplyPaging([.. result.Value], query);
-
-            if (paged.IsFailure)
-            {
-                return paged;
-            }
-
-            var items = paged.Value!;
+            // Scrollback is read backwards from the cursor so the store returns the LAST page rather
+            // than the first, then flipped so callers always receive one chronological order. The
+            // reversal spans at most Take rows, not the set.
+            var items = query.Before.HasValue
+                ? (IReadOnlyList<MessagePayload>)[.. result.Value.Reverse()]
+                : [.. result.Value];
 
             var userId = query.UserId.ToString("D");
             MessagingLog.MessagesQueried(_logger, userId, items.Count);
@@ -548,60 +530,104 @@ public sealed class MessageService : IMessageService
     }
 
     /// <summary>
-    /// Applies the cursor or offset window to an already-ordered set.
+    /// Narrows a message query to the rows the caller asked for.
     /// </summary>
-    /// <param name="ordered">The matching messages, in (CreatedAt, Id) ascending order.</param>
-    /// <param name="query">The query carrying the window.</param>
-    /// <returns>The requested window, or a failure describing why the cursor could not be honoured.</returns>
+    /// <param name="builder">A query over the message container.</param>
+    /// <param name="query">The query carrying the filters.</param>
+    /// <returns>The builder with every supplied filter applied.</returns>
     /// <remarks>
-    /// Separate from the query method so neither crosses the FDW007 complexity threshold, and so the
-    /// window rule has one home rather than being restated wherever messages are read.
+    /// The recipient is always constrained; every other filter is optional and omitted when unset,
+    /// so an absent filter widens the result rather than matching empty. Separate from the query
+    /// method because the two together cross the FDW007 complexity threshold, and because "which
+    /// rows" and "which window over them" are different jobs.
     /// </remarks>
-    private IGenericResult<IReadOnlyList<MessagePayload>> ApplyPaging(
-        IReadOnlyList<MessagePayload> ordered,
+    private static QueryCommandBuilder<MessagePayload> ApplyFilters(
+        QueryCommandBuilder<MessagePayload> builder,
         MessageQuery query)
     {
-        if (query.After.HasValue && query.Before.HasValue)
+        builder = builder.Where(m => m.RecipientUserId).Equal(query.UserId);
+
+        if (query.TenantId.HasValue)
         {
-            return GenericResult<IReadOnlyList<MessagePayload>>.Failure(
-                MessagingLog.PagingCursorsConflict(_logger));
+            builder = builder.Where(m => m.TenantId).Equal(query.TenantId.Value);
         }
 
-        if (query.After is { } after)
+        if (!string.IsNullOrEmpty(query.MessageType))
         {
-            var index = IndexOf(ordered, after);
-            return index < 0
-                ? GenericResult<IReadOnlyList<MessagePayload>>.Failure(
-                    MessagingLog.PagingCursorNotFound(_logger, after.ToString("D")))
-                : GenericResult<IReadOnlyList<MessagePayload>>.Success(
-                    [.. ordered.Skip(index + 1).Take(query.Take)]);
+            builder = builder.Where(m => m.MessageType).Equal(query.MessageType);
         }
 
-        if (query.Before is { } before)
+        if (!string.IsNullOrEmpty(query.Severity))
         {
-            var index = IndexOf(ordered, before);
-            return index < 0
-                ? GenericResult<IReadOnlyList<MessagePayload>>.Failure(
-                    MessagingLog.PagingCursorNotFound(_logger, before.ToString("D")))
-                : GenericResult<IReadOnlyList<MessagePayload>>.Success(
-                    [.. ordered.Take(index).TakeLast(query.Take)]);
+            builder = builder.Where(m => m.Severity).Equal(query.Severity);
         }
 
-        return GenericResult<IReadOnlyList<MessagePayload>>.Success(
-            [.. ordered.Skip(query.Skip).Take(query.Take)]);
+        if (!string.IsNullOrEmpty(query.Status))
+        {
+            builder = builder.Where(m => m.Status).Equal(query.Status);
+        }
+
+        if (!string.IsNullOrEmpty(query.ReferenceId))
+        {
+            builder = builder.Where(m => m.ReferenceId).Equal(query.ReferenceId);
+        }
+
+        return builder;
     }
 
-    private static int IndexOf(IReadOnlyList<MessagePayload> ordered, Guid id)
+    /// <summary>
+    /// Puts the ordering and the requested window onto the command.
+    /// </summary>
+    /// <param name="builder">The query with its filters already applied.</param>
+    /// <param name="query">The query carrying the window.</param>
+    /// <param name="cursor">The resolved cursor row, or <see langword="null"/> for offset paging.</param>
+    /// <returns>The built command.</returns>
+    /// <remarks>
+    /// Ordering is (CreatedAt, Id): a burst written in one transaction shares a timestamp, and a tie
+    /// with no second key has no defined order. Id is Guid.NewGuid() — random — so the tiebreak is
+    /// stable but not insertion order; minting with Guid.CreateVersion7() would make it both.
+    ///
+    /// The predicate and the ORDER BY are evaluated by the SAME store, which is what makes the guid
+    /// leg sound: SQL Server compares uniqueidentifier in its own byte order, not .NET's, so a
+    /// window computed here and an order computed there would disagree about ties. Both sides being
+    /// server-side, they cannot.
+    ///
+    /// Separate from the query method so neither crosses the FDW007 complexity threshold.
+    /// </remarks>
+    private static DataGatewayCall BuildWindow(
+        QueryCommandBuilder<MessagePayload> builder,
+        MessageQuery query,
+        MessagePayload? cursor)
     {
-        for (var i = 0; i < ordered.Count; i++)
+        if (cursor is null)
         {
-            if (ordered[i].Id == id)
-            {
-                return i;
-            }
+            return builder
+                .OrderBy(m => m.CreatedAt)
+                .OrderBy(m => m.Id)
+                .Paging(query.Skip, query.Take)
+                .Build();
         }
 
-        return -1;
+        // "Strictly past the cursor" in sort-key terms: a later timestamp, or the same timestamp and
+        // a later id. Written as a group so it ANDs with the filters rather than replacing them.
+        var forward = query.After.HasValue;
+
+        builder = builder.BeginOrGroup();
+        builder = forward
+            ? builder.Where(m => m.CreatedAt).GreaterThan(cursor.CreatedAt)
+            : builder.Where(m => m.CreatedAt).LessThan(cursor.CreatedAt);
+
+        builder = builder.BeginAndGroup().Where(m => m.CreatedAt).Equal(cursor.CreatedAt);
+        builder = forward
+            ? builder.Where(m => m.Id).GreaterThan(cursor.Id)
+            : builder.Where(m => m.Id).LessThan(cursor.Id);
+        builder = builder.EndGroup().EndGroup();
+
+        builder = forward
+            ? builder.OrderBy(m => m.CreatedAt).OrderBy(m => m.Id)
+            : builder.OrderByDescending(m => m.CreatedAt).OrderByDescending(m => m.Id);
+
+        return builder.Paging(0, query.Take).Build();
     }
 
     private async Task NotifyRecipientViaSignalR(MessagePayload payload)
