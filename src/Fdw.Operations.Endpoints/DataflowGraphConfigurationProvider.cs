@@ -31,28 +31,30 @@ public class DataflowGraphConfigurationProvider
     {
         services.TryAddSingleton<DataflowGraphConfigurationProvider>(sp =>
             new DataflowGraphConfigurationProvider(
-                sp.GetRequiredService<IConfigurationGatewayProvider>()
-                    .Get(EtlPipelineTypes.ConfigurationConnection).Value!,
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 sp.GetService<ILogger<DataflowGraphConfigurationProvider>>()));
         return services;
     }
 
 
-    private const string DataStoreName = "ConfigurationDb";
+    private static string DataStoreName => EtlPipelineTypes.ConfigurationConnection;
     private const string DataPath = "data";
     private const string PipePath = "pipe";
 
-    private readonly IConfigurationGateway _gateway;
+    private readonly IConfigurationGatewayProvider _gatewayProvider;
     private readonly ILogger<DataflowGraphConfigurationProvider> _logger;
+
+    private Task<IGenericResult<IConfigurationGateway>> Gateway()
+        => Task.FromResult(_gatewayProvider.Get(DataStoreName));
 
     /// <summary>
     /// Initializes a new instance of <see cref="DataflowGraphConfigurationProvider"/>.
     /// </summary>
     public DataflowGraphConfigurationProvider(
-        IConfigurationGateway gateway,
+        IConfigurationGatewayProvider gatewayProvider,
         ILogger<DataflowGraphConfigurationProvider>? logger = null)
     {
-        _gateway = gateway;
+        _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
         _logger = logger ?? NullLogger<DataflowGraphConfigurationProvider>.Instance;
     }
 
@@ -64,7 +66,7 @@ public class DataflowGraphConfigurationProvider
     {
         var command = new QueryCommand<DataSetRecord>();
 
-        var result = await _gateway.Execute<IEnumerable<DataSetRecord>>(
+        var result = await (await Gateway()).Value!.Execute<IEnumerable<DataSetRecord>>(
                 command, new DataStoreTarget(DataStoreName, DataPath, "DataSet"), cancellationToken)
             .ConfigureAwait(false);
 
@@ -82,7 +84,7 @@ public class DataflowGraphConfigurationProvider
     {
         var command = new QueryCommand<DataStoreRecord>();
 
-        var result = await _gateway.Execute<IEnumerable<DataStoreRecord>>(
+        var result = await (await Gateway()).Value!.Execute<IEnumerable<DataStoreRecord>>(
                 command, new DataStoreTarget(DataStoreName, DataPath, "DataStoreConfiguration"), cancellationToken)
             .ConfigureAwait(false);
 
@@ -100,7 +102,7 @@ public class DataflowGraphConfigurationProvider
     {
         var command = new QueryCommand<DataSetSourceConfiguration>();
 
-        var result = await _gateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
+        var result = await (await Gateway()).Value!.Execute<IEnumerable<DataSetSourceConfiguration>>(
                 command, new DataStoreTarget(DataStoreName, DataPath, "DataSetSource"), cancellationToken)
             .ConfigureAwait(false);
 
@@ -121,7 +123,7 @@ public class DataflowGraphConfigurationProvider
         {
             var command = new QueryCommand<System.Collections.Generic.Dictionary<string, object?>>();
 
-            var result = await _gateway
+            var result = await (await Gateway()).Value!
                 .Execute<IEnumerable<System.Collections.Generic.Dictionary<string, object?>>>(
                     command, new DataStoreTarget(DataStoreName, PipePath, "Pipeline"), cancellationToken)
                 .ConfigureAwait(false);

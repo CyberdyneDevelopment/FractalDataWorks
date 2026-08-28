@@ -53,11 +53,11 @@ public sealed class OrchestrationNodeConfigurationValidator : AbstractValidator<
         // Non-root types must have a parent. Why: validate the LOGICAL ParentId — RowId is DB-managed and
         // invisible; the parent link the caller supplies is the durable ParentId.
         RuleFor(x => x.ParentId)
-            .Must((config, domainConfigurationId) =>
+            .Must((config, parentId) =>
             {
                 var nodeType = OrchestrationNodeTypes.ById(config.NodeTypeId);
                 if (nodeType == OrchestrationNodeTypes.NotFound) return true; // covered above
-                return nodeType.CanBeRoot || domainConfigurationId.HasValue;
+                return nodeType.CanBeRoot || parentId.HasValue;
             })
             .WithMessage(x =>
             {

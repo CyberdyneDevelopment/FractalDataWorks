@@ -26,7 +26,7 @@ namespace Fdw.Services.Etl.Projects.Providers;
 /// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> ComposeChildren cannot express its
 /// semantics — a depth-limited Get(id,depth) and a single load-all-then-walk-in-memory pass (instead of
 /// the base's per-relationship child queries, which for a self-tree would be query-per-node and lose the
-/// depth bound). So the tree overloads (Get(name,domainConfigurationId), Get(id,depth), GetRoots, GetChildren) plus
+/// depth bound). So the tree overloads (Get(name,parentId), Get(id,depth), GetRoots, GetChildren) plus
 /// the BuildSubtree walker stay as a sanctioned custom layer ON TOP of the base: the base loads the flat
 /// rows, and these methods walk by ParentId in memory. The plain header/CRUD reads (Get(id), Get(), Save,
 /// Delete) are inherited from the base unchanged — no per-domain override.
@@ -74,7 +74,7 @@ public class OrchestrationNodeConfigurationProvider
     /// <inheritdoc/>
     public async Task<IGenericResult<OrchestrationNodeConfiguration>> Get(
         string name,
-        Guid? domainConfigurationId,
+        Guid? parentId,
         CancellationToken cancellationToken = default)
     {
         var allResult = await Get(cancellationToken).ConfigureAwait(false);
@@ -83,7 +83,7 @@ public class OrchestrationNodeConfigurationProvider
 
         var match = allResult.Value?.FirstOrDefault(n =>
             string.Equals(n.Name, name, StringComparison.OrdinalIgnoreCase) &&
-            n.ParentId == domainConfigurationId);
+            n.ParentId == parentId);
         if (match is null)
             return GenericResult<OrchestrationNodeConfiguration>.Failure(
                 OrchestrationNodeConfigurationLog.NodeNotFound(_logger, name));
@@ -129,7 +129,7 @@ public class OrchestrationNodeConfigurationProvider
 
     /// <inheritdoc/>
     public async Task<IGenericResult<IReadOnlyList<OrchestrationNodeConfiguration>>> GetChildren(
-        Guid domainConfigurationId,
+        Guid parentId,
         CancellationToken cancellationToken = default)
     {
         var allResult = await Get(cancellationToken).ConfigureAwait(false);
@@ -137,7 +137,7 @@ public class OrchestrationNodeConfigurationProvider
             return allResult;
 
         var children = (allResult.Value ?? [])
-            .Where(n => n.ParentId == domainConfigurationId)
+            .Where(n => n.ParentId == parentId)
             .OrderBy(n => n.Ordinal)
             .ToList();
 

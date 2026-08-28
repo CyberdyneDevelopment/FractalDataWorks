@@ -142,10 +142,10 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// Logical FK columns reference the parent's durable Id (e.g. ConnectionId → Connection.Id).
     /// IsCurrent filter is mandatory because the same logical Id can appear in multiple version rows.
     /// </summary>
-    protected internal virtual IDataCommand GetByParent(string dataStoreName, string pathName, string parentIdColumn, Guid domainConfigurationId, DateTimeOffset? asOf = null)
+    protected internal virtual IDataCommand GetByParent(string dataStoreName, string pathName, string parentIdColumn, Guid parentId, DateTimeOffset? asOf = null)
     {
         return ApplyVersionFilter(
-                new QueryCommandBuilder<TConfig>(dataStoreName, pathName, TableName).Where(parentIdColumn, domainConfigurationId),
+                new QueryCommandBuilder<TConfig>(dataStoreName, pathName, TableName).Where(parentIdColumn, parentId),
                 asOf)
             .Build().Command;
     }

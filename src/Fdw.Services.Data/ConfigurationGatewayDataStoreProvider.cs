@@ -82,7 +82,6 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
         var services = builder.Services;
-        DataStoreConfigurationProvider.RegisterDomainConfiguration(services);
 
         services.TryAddSingleton<IDataStoreBuilderSelector, DataStoreTypesBuilderSelector>();
         services.TryAddSingleton<ConfiguredDataStoreProvider>(sp => new ConfiguredDataStoreProvider(

@@ -27,8 +27,25 @@ public class DataflowGraphConfigurationProviderTests
 
     private static DataflowGraphConfigurationProvider MakeProvider(Mock<IConfigurationGateway> gateway)
         => new DataflowGraphConfigurationProvider(
-            gateway.Object,
+            GatewayProviderFor(gateway.Object),
             NullLogger<DataflowGraphConfigurationProvider>.Instance);
+
+    // Why the double answers for any connection: these tests exercise what the provider does with its
+    // gateway, not which one it selects.
+    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+        => new AnyConnectionGateways(gateway);
+
+    private sealed class AnyConnectionGateways : IConfigurationGatewayProvider
+    {
+        private readonly IConfigurationGateway _gateway;
+
+        public AnyConnectionGateways(IConfigurationGateway gateway) => _gateway = gateway;
+
+        public IGenericResult<IConfigurationGateway> Get(string connectionName)
+            => GenericResult<IConfigurationGateway>.Success(_gateway);
+
+        public IGenericResult Register(IConfigurationGateway gateway) => GenericResult.Success();
+    }
 
     // ── LoadDataSets ──────────────────────────────────────────────────────────
 

@@ -28,23 +28,6 @@ namespace Fdw.Services.Data;
 /// </summary>
 public class DataSetConfigurationProvider : ImplementationConfigurationProviderBase<DataSetConfiguration, DataSetConfigurationCommand>
 {
-    /// <summary>
-    /// Registers the DataSetConfigurationProvider with DI, targeting this domain's own default
-    /// location. To override, call <c>SetConfiguration</c> on the resolved singleton.
-    /// </summary>
-    public static void RegisterDomainConfiguration(IServiceCollection services)
-    {
-
-        services.TryAddSingleton<DataSetConfigurationProvider>(sp =>
-            new DataSetConfigurationProvider(
-                sp.GetService<ILogger<DataSetConfigurationProvider>>(),
-                sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                DataStoreTypes.ConfigurationConnection, "data"));
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<DataSetConfiguration, DataSetConfigurationCommand>>(
-            sp => sp.GetRequiredService<DataSetConfigurationProvider>());
-        services.TryAddSingleton<IServiceConfigurationProvider<DataSetConfiguration>>(
-            sp => sp.GetRequiredService<DataSetConfigurationProvider>());
-    }
 
     private readonly ILogger _logger;
 

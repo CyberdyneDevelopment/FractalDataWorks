@@ -65,7 +65,6 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
         var services = builder.Services;
-        DataSetConfigurationProvider.RegisterDomainConfiguration(services);
 
         services.TryAddSingleton<IDataSetConfigurationProvider>(sp =>
         {
