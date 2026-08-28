@@ -65,4 +65,18 @@ public sealed class MessagePayload
 
     /// <summary>Gets or sets when the message was created.</summary>
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether an agent sent this message rather than a person.
+    /// </summary>
+    /// <remarks>
+    /// Derived from the stored message type, which the send endpoint sets from the caller's
+    /// authentication scheme and refuses to take from the request body. It is exposed as its own
+    /// field so a consumer has exactly one thing to trust for "who is speaking" instead of
+    /// re-deriving identity from a type string, and so it keeps working unchanged when the
+    /// underlying signal improves from the auth scheme to a real agent claim.
+    ///
+    /// Get-only on purpose: it is not a column, and the mappers only bind settable properties.
+    /// </remarks>
+    public bool IsAgent => string.Equals(MessageType, "AgentMessage", System.StringComparison.Ordinal);
 }

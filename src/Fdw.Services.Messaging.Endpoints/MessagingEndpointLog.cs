@@ -222,6 +222,47 @@ public static partial class MessagingEndpointLog
     [MessageLogging(EventId = 71010, Level = LogLevel.Error, Message = "Failed to deny access request '{requestId}': {reason}")]
     public static partial IGenericMessage AccessRequestDenyFailed(ILogger logger, string requestId, string reason);
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Conversation send operations
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Logged at Trace level when sending a message into a conversation thread.
+    /// </summary>
+    [MessageLogging(EventId = 11022, Level = LogLevel.Trace, Message = "Sending message into thread '{referenceId}'")]
+    public static partial IGenericMessage SendingMessage(ILogger logger, string referenceId);
+
+    /// <summary>
+    /// Logged at Information level when a message was sent into a conversation thread.
+    /// </summary>
+    [MessageLogging(EventId = 11023, Level = LogLevel.Information, Message = "Message '{messageId}' sent into thread '{referenceId}'")]
+    public static partial IGenericMessage MessageSent(ILogger logger, string messageId, string referenceId);
+
+    /// <summary>
+    /// Logged at Error level when sending a message into a conversation thread fails.
+    /// </summary>
+    [MessageLogging(EventId = 71011, Level = LogLevel.Error, Message = "Failed to send message into thread '{referenceId}': {reason}")]
+    public static partial IGenericMessage MessageSendFailed(ILogger logger, string referenceId, string reason);
+
+    /// <summary>
+    /// Logged at Warning level when a send is refused for carrying no thread reference.
+    /// </summary>
+    [MessageLogging(EventId = 51002, Level = LogLevel.Warning, Message = "Refused send with no ReferenceId — the thread is not identified")]
+    public static partial IGenericMessage ReferenceIdMissing(ILogger logger);
+
+    /// <summary>
+    /// Logged at Warning level when a send is refused for carrying no subject.
+    /// </summary>
+    [MessageLogging(EventId = 51003, Level = LogLevel.Warning, Message = "Refused send into thread '{referenceId}' with no subject")]
+    public static partial IGenericMessage SubjectMissing(ILogger logger, string referenceId);
+
+    /// <summary>
+    /// Logged at Warning level when a send is refused because the declared message type is not a
+    /// conversation type.
+    /// </summary>
+    [MessageLogging(EventId = 51001, Level = LogLevel.Warning, Message = "Refused message type '{messageType}' — not a conversation type")]
+    public static partial IGenericMessage MessageTypeRefused(ILogger logger, string messageType);
+
     /// <summary>
     /// Logged at Warning level when user identity claim is not found.
     /// </summary>

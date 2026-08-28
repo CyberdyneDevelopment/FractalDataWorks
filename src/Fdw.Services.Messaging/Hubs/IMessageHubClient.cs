@@ -13,8 +13,12 @@ namespace Fdw.Services.Messaging.Hubs;
 public interface IMessageHubClient
 {
     /// <summary>Notifies the recipient that a new message has arrived.</summary>
-    /// <param name="messageId">The identifier of the new message.</param>
-    Task NewMessage(Guid messageId);
+    /// <param name="message">The message that arrived.</param>
+    /// <remarks>
+    /// The whole message travels rather than its id. A burst of turns arriving together would
+    /// otherwise become one fetch per turn, and a transcript that paints in a stagger.
+    /// </remarks>
+    Task NewMessage(MessagePayload message);
 
     /// <summary>Notifies the recipient that their unread message count has changed.</summary>
     Task UnreadCountChanged();

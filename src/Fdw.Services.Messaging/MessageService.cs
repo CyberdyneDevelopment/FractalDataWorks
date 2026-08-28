@@ -73,13 +73,15 @@ public sealed class MessageService : IMessageService
                         MessagingLog.MessageCreationFailed(_logger, "Insert command failed"));
             }
 
+            var payload = BuildMessageDto(request, messageId, now);
+
             await InsertRecipientIfDirect(request, messageId, now, cancellationToken).ConfigureAwait(false);
-            await NotifyRecipientViaSignalR(request, messageId).ConfigureAwait(false);
+            await NotifyRecipientViaSignalR(payload).ConfigureAwait(false);
 
             var recipientId = request.RecipientUserId?.ToString("D") ?? "broadcast";
             MessagingLog.MessageCreated(_logger, request.Subject, recipientId);
 
-            return GenericResult<MessagePayload>.Success(BuildMessageDto(request, messageId, now));
+            return GenericResult<MessagePayload>.Success(payload);
         }
         catch (Exception ex)
         {
@@ -120,6 +122,11 @@ public sealed class MessageService : IMessageService
                 builder = builder.Where(m => m.Status).Equal(query.Status);
             }
 
+            if (!string.IsNullOrEmpty(query.ReferenceId))
+            {
+                builder = builder.Where(m => m.ReferenceId).Equal(query.ReferenceId);
+            }
+
             var command = builder.Build();
 
             var result = await _dataGateway.Execute<IEnumerable<MessagePayload>>(command, cancellationToken)
@@ -133,16 +140,31 @@ public sealed class MessageService : IMessageService
                         MessagingLog.MessageQueryFailed(_logger, "Query command failed"));
             }
 
-            var items = result.Value?
-                .Skip(query.Skip)
-                .Take(query.Take)
-                .ToList();
-
-            if (items is null)
+            if (result.Value is null)
             {
                 return GenericResult<IReadOnlyList<MessagePayload>>.Failure(
                     MessagingLog.MessageQueryFailed(_logger, "Query returned null value"));
             }
+
+            // Why ordered here rather than in the command: the query builder exposes no ordering
+            // surface yet — IOrderingExpression exists, the fluent method does not — and an
+            // unordered read is a correctness bug for a conversation, not just untidy: turns come
+            // back in whatever order the store happened to return them.
+            //
+            // (CreatedAt, Id) rather than CreatedAt alone because a burst written in one
+            // transaction shares a timestamp, and a tie with no second key has no defined order.
+            // Note Id is Guid.NewGuid() — random, so the tiebreak is stable but NOT insertion
+            // order. Switching minting to Guid.CreateVersion7() would make it both.
+            var paged = ApplyPaging(
+                [.. result.Value.OrderBy(m => m.CreatedAt).ThenBy(m => m.Id)],
+                query);
+
+            if (paged.IsFailure)
+            {
+                return paged;
+            }
+
+            var items = paged.Value!;
 
             var userId = query.UserId.ToString("D");
             MessagingLog.MessagesQueried(_logger, userId, items.Count);
@@ -520,17 +542,72 @@ public sealed class MessageService : IMessageService
         }
     }
 
-    private async Task NotifyRecipientViaSignalR(
-        CreateMessageRequest request,
-        Guid messageId)
+    /// <summary>
+    /// Applies the cursor or offset window to an already-ordered set.
+    /// </summary>
+    /// <param name="ordered">The matching messages, in (CreatedAt, Id) ascending order.</param>
+    /// <param name="query">The query carrying the window.</param>
+    /// <returns>The requested window, or a failure describing why the cursor could not be honoured.</returns>
+    /// <remarks>
+    /// Separate from the query method so neither crosses the FDW007 complexity threshold, and so the
+    /// window rule has one home rather than being restated wherever messages are read.
+    /// </remarks>
+    private IGenericResult<IReadOnlyList<MessagePayload>> ApplyPaging(
+        IReadOnlyList<MessagePayload> ordered,
+        MessageQuery query)
     {
-        if (!request.RecipientUserId.HasValue)
+        if (query.After.HasValue && query.Before.HasValue)
+        {
+            return GenericResult<IReadOnlyList<MessagePayload>>.Failure(
+                MessagingLog.PagingCursorsConflict(_logger));
+        }
+
+        if (query.After is { } after)
+        {
+            var index = IndexOf(ordered, after);
+            return index < 0
+                ? GenericResult<IReadOnlyList<MessagePayload>>.Failure(
+                    MessagingLog.PagingCursorNotFound(_logger, after.ToString("D")))
+                : GenericResult<IReadOnlyList<MessagePayload>>.Success(
+                    [.. ordered.Skip(index + 1).Take(query.Take)]);
+        }
+
+        if (query.Before is { } before)
+        {
+            var index = IndexOf(ordered, before);
+            return index < 0
+                ? GenericResult<IReadOnlyList<MessagePayload>>.Failure(
+                    MessagingLog.PagingCursorNotFound(_logger, before.ToString("D")))
+                : GenericResult<IReadOnlyList<MessagePayload>>.Success(
+                    [.. ordered.Take(index).TakeLast(query.Take)]);
+        }
+
+        return GenericResult<IReadOnlyList<MessagePayload>>.Success(
+            [.. ordered.Skip(query.Skip).Take(query.Take)]);
+    }
+
+    private static int IndexOf(IReadOnlyList<MessagePayload> ordered, Guid id)
+    {
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            if (ordered[i].Id == id)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private async Task NotifyRecipientViaSignalR(MessagePayload payload)
+    {
+        if (!payload.RecipientUserId.HasValue)
         {
             return;
         }
 
-        var recipientId = request.RecipientUserId.Value.ToString("D");
-        await _hubContext.Clients.Group(recipientId).NewMessage(messageId).ConfigureAwait(false);
+        var recipientId = payload.RecipientUserId.Value.ToString("D");
+        await _hubContext.Clients.Group(recipientId).NewMessage(payload).ConfigureAwait(false);
         await _hubContext.Clients.Group(recipientId).UnreadCountChanged().ConfigureAwait(false);
     }
 

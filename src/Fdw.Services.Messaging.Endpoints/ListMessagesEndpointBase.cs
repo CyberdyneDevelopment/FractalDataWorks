@@ -79,6 +79,9 @@ public abstract class ListMessagesEndpointBase : Endpoint<ListMessagesRequest, I
                 MessageType = req.MessageType,
                 Severity = req.Severity,
                 Status = req.Status,
+                ReferenceId = req.ReferenceId,
+                After = req.After,
+                Before = req.Before,
                 Skip = req.Skip,
                 Take = req.Take > 0 ? req.Take : 50
             };

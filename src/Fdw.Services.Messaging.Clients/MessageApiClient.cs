@@ -41,6 +41,9 @@ public class MessageApiClient
         string? messageType = null,
         string? severity = null,
         string? status = null,
+        string? referenceId = null,
+        Guid? after = null,
+        Guid? before = null,
         int skip = 0,
         int take = 50,
         CancellationToken cancellationToken = default)
@@ -58,9 +61,61 @@ public class MessageApiClient
         {
             query += $"&status={Uri.EscapeDataString(status)}";
         }
+        if (!string.IsNullOrEmpty(referenceId))
+        {
+            query += $"&referenceId={Uri.EscapeDataString(referenceId)}";
+        }
+        if (after.HasValue)
+        {
+            query += $"&after={after.Value:D}";
+        }
+        if (before.HasValue)
+        {
+            query += $"&before={before.Value:D}";
+        }
 
         var result = await _httpClient.GetFromJsonAsync<IReadOnlyList<ClientModels.MessagePayload>>(query, cancellationToken).ConfigureAwait(false);
         return result ?? [];
+    }
+
+    /// <summary>Sends a message into a conversation thread.</summary>
+    /// <param name="referenceId">The thread this message belongs to.</param>
+    /// <param name="recipientUserId">The user the message is addressed to.</param>
+    /// <param name="subject">The message subject.</param>
+    /// <param name="body">The message body.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The stored message.</returns>
+    /// <remarks>
+    /// The thread id is a required argument rather than an optional one the client would fill in.
+    /// A client that minted one when it was not given would open a new conversation every time a
+    /// caller forgot it, and the other participant would never see the turn.
+    ///
+    /// Which side is speaking is not sent. The server derives it from how this client authenticated,
+    /// so a caller cannot post as the other party.
+    /// </remarks>
+    public virtual async Task<ClientModels.MessagePayload?> SendMessage(
+        string referenceId,
+        Guid recipientUserId,
+        string subject,
+        string? body,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.PostAsJsonAsync(
+            "messages",
+            new
+            {
+                ReferenceId = referenceId,
+                RecipientUserId = recipientUserId,
+                Subject = subject,
+                Body = body,
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content
+            .ReadFromJsonAsync<ClientModels.MessagePayload>(cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <summary>Gets a single message by identifier.</summary>
