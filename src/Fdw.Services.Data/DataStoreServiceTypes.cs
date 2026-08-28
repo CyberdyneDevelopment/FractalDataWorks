@@ -153,10 +153,6 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                 sp => sp.GetRequiredService<DataSetConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<DataSetConfiguration>>(
                 sp => sp.GetRequiredService<DataSetConfigurationProvider>());
-            // NOT YET REGISTERED: DataStoreService and DataSetService need a concrete
-            // IDataStoreBuilder / IDataSetBuilder. IDataStoreBuilder's implementations derive
-            // DataStoreBuilderBase and are per datastore kind, so which one this registers is a
-            // design decision, not a wiring detail. The configuration providers above are complete.
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
