@@ -115,12 +115,15 @@ public sealed class AuthenticationRunner
             if (outcome.IsFailure)
                 return outcome.ToNewResult<FlowResult>();
 
+            ContextContribution? contributed = null;
+
             switch (outcome.Value)
             {
-                case StepOutcome.Contributed contributed:
-                    context = Merge(context, contributed.Contribution, step, flow.Steps[i]);
+                case StepOutcome.Contributed c:
+                    contributed = c.Contribution;
+                    context = Merge(context, contributed, step, flow.Steps[i]);
                     RunnerLog.StepContributed(_logger, flow.Steps[i],
-                        string.Join(", ", contributed.Contribution.Present()));
+                        string.Join(", ", contributed.Present()));
                     break;
 
                 case StepOutcome.Challenge challenge:
@@ -150,9 +153,9 @@ public sealed class AuthenticationRunner
                         RunnerLog.UnknownOutcome(_logger, flow.Steps[i]));
             }
 
-            // I2 — recorded from the step's declared method, and only once it has actually
-            // succeeded. A step never names its own method at execution time.
-            if (step.AuthenticationMethod is { Length: > 0 } method)
+            // I2 — the intersection, and only once the step has actually succeeded. A step that
+            // reports a method it never declared records nothing: the declaration is the ceiling.
+            foreach (var method in Recordable(step, contributed))
             {
                 context = context with { AchievedMethods = [.. context.AchievedMethods, method] };
                 RunnerLog.MethodRecorded(_logger, flow.Steps[i], method);
@@ -165,6 +168,16 @@ public sealed class AuthenticationRunner
 
         return await Terminal(flow, context, cancellationToken).ConfigureAwait(false);
     }
+
+    // I2 — what the step observed, kept only where it also declared it may assert it. A step
+    // declaring nothing proves nothing; a step declaring methods and observing none is taken to
+    // have proved what it declared, which is the ordinary case for a step doing its own checking.
+    private static IEnumerable<string> Recordable(IAuthenticationStep step, ContextContribution? contribution)
+        => step.AuthenticationMethods.Count == 0
+            ? []
+            : contribution is null or { ObservedMethods.Count: 0 }
+                ? step.AuthenticationMethods
+                : contribution.ObservedMethods.Where(step.AuthenticationMethods.Contains);
 
     // I1 — a step's output is filtered to what it declared. Anything else is discarded and
     // reported: a declaration nothing checks is a comment, and silence would make this a latent

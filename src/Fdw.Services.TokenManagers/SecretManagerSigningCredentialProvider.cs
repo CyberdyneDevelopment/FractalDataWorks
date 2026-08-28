@@ -23,7 +23,7 @@ namespace Fdw.Services.TokenManagers;
 /// as it is expected to live, and dropped when that expires so a rotation takes effect without a
 /// restart.
 /// </remarks>
-public sealed class SecretManagerSigningCredentialProvider : ISigningCredentialProvider
+public sealed class SecretManagerSigningCredentialProvider : ISigningCredentialProvider, IDisposable
 {
     private readonly ISecretManagerProvider _secrets;
     private readonly string _secretManagerName;
@@ -80,28 +80,28 @@ public sealed class SecretManagerSigningCredentialProvider : ISigningCredentialP
             if (secret.IsFailure)
                 return secret.ToNewResult<SigningCredentials>();
 
-            // Why AccessStringValue rather than reading the value out: it scopes the material to
-            // this callback and clears it after, so the key is never a string this method holds.
-            var rsa = secret.Value!.AccessStringValue(pem =>
+            RSA rsa;
+            try
             {
-                var created = RSA.Create();
-                try
+                // Why AccessStringValue: it scopes the material to the callback and clears it after,
+                // so the private key is never a string this method holds. The parse throws from
+                // inside, which is why the catch is here rather than in the callback — an exception
+                // swallowed in a lambda is one the caller never learns about.
+                rsa = secret.Value!.AccessStringValue(pem =>
                 {
+                    var created = RSA.Create();
                     created.ImportFromPem(pem);
                     return created;
-                }
-                catch (ArgumentException)
-                {
-                    // Why the exception is not carried into the failure: its text can quote the
-                    // material it could not parse, and that material is the private key.
-                    created.Dispose();
-                    return null;
-                }
-            });
-
-            if (rsa is null)
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                // Carried rather than swallowed. ImportFromPem reports that no supported format was
+                // found and does not echo the material, so recording it is safe here — which is not
+                // true of every parser, and worth checking before doing the same elsewhere.
                 return GenericResult<SigningCredentials>.Failure(
-                    IssuerLog.SigningKeyUnreadable(_logger, _keyName));
+                    IssuerLog.SigningKeyUnreadable(_logger, ex, _keyName));
+            }
 
             _cached = new SigningCredentials(
                 new RsaSecurityKey(rsa) { KeyId = _keyName },
@@ -116,4 +116,7 @@ public sealed class SecretManagerSigningCredentialProvider : ISigningCredentialP
             _gate.Release();
         }
     }
+
+    /// <inheritdoc />
+    public void Dispose() => _gate.Dispose();
 }

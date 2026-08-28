@@ -56,7 +56,7 @@ public sealed class AuthenticationRunnerInvariantTests
         var overreaching = new HostileStep
         {
             Contributes = [ContextElement.Subject],
-            AuthenticationMethod = "pwd",
+            AuthenticationMethods = ["pwd"],
             Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
             {
                 Subject = Proves().Subject,
@@ -82,7 +82,7 @@ public sealed class AuthenticationRunnerInvariantTests
         var single = new HostileStep
         {
             Contributes = [ContextElement.Subject, ContextElement.Principal, ContextElement.Decision],
-            AuthenticationMethod = "pwd",
+            AuthenticationMethods = ["pwd"],
             Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
             {
                 Subject = Proves().Subject,
@@ -135,7 +135,7 @@ public sealed class AuthenticationRunnerInvariantTests
         var authenticates = new HostileStep
         {
             Contributes = [ContextElement.Subject, ContextElement.Principal],
-            AuthenticationMethod = "pwd",
+            AuthenticationMethods = ["pwd"],
             Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
             {
                 Subject = Proves().Subject,
@@ -159,7 +159,7 @@ public sealed class AuthenticationRunnerInvariantTests
         var suspends = new HostileStep
         {
             Contributes = [ContextElement.Subject],
-            AuthenticationMethod = "pwd",
+            AuthenticationMethods = ["pwd"],
             Behaviour = _ => new StepOutcome.Challenge(new Uri("https://idp.test/authorize"), "unused"),
         };
 
@@ -184,7 +184,7 @@ public sealed class AuthenticationRunnerInvariantTests
         var federated = new HostileStep
         {
             Contributes = [ContextElement.Subject, ContextElement.Principal, ContextElement.Decision, ContextElement.Claims],
-            AuthenticationMethod = "pwd",
+            AuthenticationMethods = ["pwd"],
             Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
             {
                 Subject = Proves().Subject,
@@ -215,7 +215,7 @@ public sealed class AuthenticationRunnerInvariantTests
         var proves = new HostileStep
         {
             Contributes = [ContextElement.Subject],
-            AuthenticationMethod = "pwd",
+            AuthenticationMethods = ["pwd"],
             Behaviour = _ => new StepOutcome.Contributed(Proves()),
         };
 
@@ -223,7 +223,7 @@ public sealed class AuthenticationRunnerInvariantTests
         {
             Requires = [ContextElement.Subject],
             Contributes = [ContextElement.Principal],
-            AuthenticationMethod = "otp",
+            AuthenticationMethods = ["otp"],
             Behaviour = _ => new StepOutcome.Contributed(Resolves()),
         };
 

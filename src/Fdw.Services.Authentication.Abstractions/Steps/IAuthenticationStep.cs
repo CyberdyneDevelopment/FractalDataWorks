@@ -32,15 +32,22 @@ public interface IAuthenticationStep
     IReadOnlyList<ContextElement> Contributes { get; }
 
     /// <summary>
-    /// Gets the authentication method this step proves, as an RFC 8176 value, or null if it proves none.
+    /// Gets the RFC 8176 methods this step may assert, or empty if it proves nothing.
     /// </summary>
     /// <remarks>
-    /// Static metadata the runner records once this step has actually succeeded. A step cannot name
-    /// its own method at execution time: one that could would be able to claim a factor it never
-    /// checked, and every downstream test of assurance — step-up, high-value operations, audit —
-    /// would be unfalsifiable.
+    /// <para>
+    /// A ceiling, not a claim. The runner records the intersection of this set with whatever the
+    /// step reports having observed, so a step can report fewer methods than it declares but never
+    /// more. What it declares is configuration, which is reviewable; what it reports is discovered
+    /// at execution time, which is not.
+    /// </para>
+    /// <para>
+    /// This is why a federating step can pass through the provider's own <c>amr</c> without being
+    /// able to inflate it. A provider is the only authority on how someone proved themselves to that
+    /// provider — but it is not an authority on what this platform is willing to count.
+    /// </para>
     /// </remarks>
-    string? AuthenticationMethod { get; }
+    IReadOnlyList<string> AuthenticationMethods { get; }
 
     /// <summary>Runs the step.</summary>
     /// <param name="context">What the flow has established so far.</param>

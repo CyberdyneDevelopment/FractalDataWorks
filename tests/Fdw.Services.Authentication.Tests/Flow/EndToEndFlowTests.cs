@@ -42,7 +42,7 @@ public sealed class EndToEndFlowTests
     private static HostileStep Proves(string method) => new()
     {
         Contributes = [ContextElement.Subject, ContextElement.Claims],
-        AuthenticationMethod = method,
+        AuthenticationMethods = [method],
         Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
         {
             Subject = new Subject
@@ -69,7 +69,7 @@ public sealed class EndToEndFlowTests
             {
                 Requires = [ContextElement.Subject],
                 Contributes = [],
-                AuthenticationMethod = "otp",
+                AuthenticationMethods = ["otp"],
                 Behaviour = _ => new StepOutcome.Contributed(new ContextContribution()),
             })
             .Add("ResolvePrincipal", new HostileStep

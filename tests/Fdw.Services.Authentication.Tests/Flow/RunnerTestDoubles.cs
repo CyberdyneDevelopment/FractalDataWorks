@@ -19,7 +19,7 @@ internal sealed class HostileStep : IAuthenticationStep
 
     public IReadOnlyList<ContextElement> Contributes { get; init; } = [];
 
-    public string? AuthenticationMethod { get; init; }
+    public IReadOnlyList<string> AuthenticationMethods { get; init; } = [];
 
     public Func<AuthenticationContext, StepOutcome> Behaviour { get; init; } = _ => new StepOutcome.NotApplicable("nothing configured");
 

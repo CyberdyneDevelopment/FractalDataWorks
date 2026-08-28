@@ -46,11 +46,18 @@ public sealed record ForeignTokenStepConfiguration
     /// </remarks>
     public TimeSpan ClockSkew { get; init; } = TimeSpan.FromSeconds(30);
 
-    /// <summary>Gets the RFC 8176 method recorded when this step succeeds.</summary>
+    /// <summary>Gets the RFC 8176 methods this provider is trusted to assert.</summary>
     /// <remarks>
-    /// Declares what the external authority proved, not what this step did. A provider enforcing
-    /// multi-factor should say so here; claiming more than it enforces makes every downstream
-    /// assurance check a lie.
+    /// <para>
+    /// A ceiling on what the provider's own <c>amr</c> may contribute, not a claim about what it
+    /// did. The step reads <c>amr</c> from the token — the provider is the only authority on how
+    /// someone proved themselves to it — and the runner keeps only the values that also appear here.
+    /// </para>
+    /// <para>
+    /// So a provider you trust for a password cannot raise your assurance by asserting a hardware
+    /// key, whether through misconfiguration or compromise. Widen this only for a provider whose
+    /// enforcement of those methods you have actually checked.
+    /// </para>
     /// </remarks>
-    public string AuthenticationMethod { get; init; } = "pwd";
+    public IReadOnlyList<string> AssertableMethods { get; init; } = ["pwd"];
 }

@@ -31,6 +31,18 @@ public sealed record ContextContribution
     /// <summary>Gets the decision this step reached, if it reached one.</summary>
     public Decision? Decision { get; init; }
 
+    /// <summary>Gets the RFC 8176 methods this step observed being proved.</summary>
+    /// <remarks>
+    /// Reported, not recorded. The runner keeps only those the step also declared it may assert, so
+    /// this cannot raise assurance beyond what configuration already permits — a step that reports
+    /// <c>hwk</c> while declaring only <c>pwd</c> records nothing extra.
+    /// <para>
+    /// Empty means "whatever the step declares it proves", which is the ordinary case for a step
+    /// that performs the check itself rather than relaying someone else's.
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<string> ObservedMethods { get; init; } = [];
+
     /// <summary>Enumerates the elements actually present, for checking against the declaration.</summary>
     public IEnumerable<ContextElement> Present()
     {

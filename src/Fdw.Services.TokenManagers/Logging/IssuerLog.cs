@@ -38,12 +38,13 @@ internal static partial class IssuerLog
     /// <summary>The signing key could not be parsed.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="keyName">Its name in the secret manager.</param>
-    // Why Error and why the parse failure is not quoted: nothing can be minted until this is fixed,
-    // and the exception text can contain the key material it failed to read.
+    /// <param name="exception">What the parser reported.</param>
+    // Why Error: nothing can be minted until this is fixed, so every login through this issuer
+    // fails until someone does.
     [MessageLogging(EventId = 91184, Level = LogLevel.Error,
         Message = "Signing key '{keyName}' is not a readable PEM private key")]
     internal static partial IGenericMessage SigningKeyUnreadable(
-        ILogger<SecretManagerSigningCredentialProvider> logger, string keyName);
+        ILogger<SecretManagerSigningCredentialProvider> logger, Exception exception, string keyName);
 
     /// <summary>No request was supplied.</summary>
     /// <param name="logger">The logger.</param>

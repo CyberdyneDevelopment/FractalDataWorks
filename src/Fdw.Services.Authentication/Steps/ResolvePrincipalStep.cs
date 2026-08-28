@@ -47,7 +47,7 @@ public sealed class ResolvePrincipalStep : IAuthenticationStep
 
     /// <inheritdoc />
     /// <remarks>Resolution proves nothing — the subject was already proved by whatever ran before.</remarks>
-    public string? AuthenticationMethod => null;
+    public IReadOnlyList<string> AuthenticationMethods => [];
 
     /// <inheritdoc />
     public async Task<IGenericResult<StepOutcome>> Execute(

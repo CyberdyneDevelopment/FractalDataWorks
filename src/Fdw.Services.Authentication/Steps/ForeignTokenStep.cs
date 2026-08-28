@@ -61,7 +61,7 @@ public sealed class ForeignTokenStep : IAuthenticationStep
     public IReadOnlyList<ContextElement> Contributes => [ContextElement.Subject, ContextElement.Claims];
 
     /// <inheritdoc />
-    public string? AuthenticationMethod => _configuration.AuthenticationMethod;
+    public IReadOnlyList<string> AuthenticationMethods => _configuration.AssertableMethods;
 
     /// <inheritdoc />
     public async Task<IGenericResult<StepOutcome>> Execute(
@@ -109,6 +109,13 @@ public sealed class ForeignTokenStep : IAuthenticationStep
 
         return GenericResult<StepOutcome>.Success(new StepOutcome.Contributed(new ContextContribution
         {
+            // Why read rather than assume: the provider is the only authority on how someone proved
+            // themselves to it. A configured value is a guess that survives a user switching to a
+            // passkey, or the provider starting to enforce a second factor, and quietly understates
+            // or overstates every assurance decision downstream. The runner intersects this with
+            // AssertableMethods, so reading it cannot inflate anything.
+            ObservedMethods = [.. validated.ClaimsIdentity.FindAll("amr").Select(c => c.Value)],
+
             Subject = new Subject
             {
                 // Why the configured issuer and not the token's: validation already proved they

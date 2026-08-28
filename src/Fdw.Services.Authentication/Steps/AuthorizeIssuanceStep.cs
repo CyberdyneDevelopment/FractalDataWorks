@@ -41,7 +41,8 @@ public sealed class AuthorizeIssuanceStep : IAuthenticationStep
     public IReadOnlyList<ContextElement> Contributes => [ContextElement.Decision];
 
     /// <inheritdoc />
-    public string? AuthenticationMethod => null;
+    /// <remarks>Deciding is not proving. Nothing about the caller is established here.</remarks>
+    public IReadOnlyList<string> AuthenticationMethods => [];
 
     /// <inheritdoc />
     public async Task<IGenericResult<StepOutcome>> Execute(

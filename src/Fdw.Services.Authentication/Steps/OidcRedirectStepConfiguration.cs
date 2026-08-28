@@ -57,6 +57,11 @@ public sealed record OidcRedirectStepConfiguration
     /// <summary>Gets the tolerance for clock difference with the provider.</summary>
     public TimeSpan ClockSkew { get; init; } = TimeSpan.FromSeconds(30);
 
-    /// <summary>Gets the RFC 8176 method recorded when this step succeeds.</summary>
-    public string AuthenticationMethod { get; init; } = "pwd";
+    /// <summary>Gets the RFC 8176 methods this provider is trusted to assert.</summary>
+    /// <remarks>
+    /// A ceiling on what the provider's own <c>amr</c> may contribute. The step reads <c>amr</c>
+    /// from the returned token and the runner keeps only what also appears here, so a provider
+    /// trusted for a password cannot raise assurance by asserting a hardware key.
+    /// </remarks>
+    public IReadOnlyList<string> AssertableMethods { get; init; } = ["pwd"];
 }
