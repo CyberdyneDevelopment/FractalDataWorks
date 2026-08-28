@@ -29,6 +29,22 @@ public static partial class WebMcpApiKeyMiddlewareLog
     [MessageLogging(EventId = 11017, Level = LogLevel.Trace, Message = "PAT Authorization header detected, validating token")]
     public static partial IGenericMessage PatHeaderDetected(ILogger logger);
 
+    /// <summary>Logs when an agent key is validated successfully.</summary>
+    [MessageLogging(EventId = 11018, Level = LogLevel.Information, Message = "Agent key accepted: '{label}' acting as user {userId}")]
+    public static partial IGenericMessage AgentKeyAccepted(ILogger logger, string label, string userId);
+
+    /// <summary>Logs when an agent key fails validation (unrecognised, revoked or expired).</summary>
+    [MessageLogging(EventId = 51002, Level = LogLevel.Warning, Message = "Agent key rejected for route '{route}'")]
+    public static partial IGenericMessage AgentKeyRejected(ILogger logger, string route);
+
+    /// <summary>Logs when agent key validation returns a service-level error.</summary>
+    [MessageLogging(EventId = 51003, Level = LogLevel.Error, Message = "Agent key validation service error: {error}")]
+    public static partial IGenericMessage AgentKeyValidationError(ILogger logger, string error);
+
+    /// <summary>Logs when the IAgentKeyService is not registered in DI.</summary>
+    [MessageLogging(EventId = 61004, Level = LogLevel.Error, Message = "IAgentKeyService is not registered, so an agent key cannot be validated")]
+    public static partial IGenericMessage AgentKeyServiceNotRegistered(ILogger logger);
+
     /// <summary>Logs when the IPersonalAccessTokenService is not registered in DI.</summary>
     [MessageLogging(EventId = 61003, Level = LogLevel.Error, Message = "IPersonalAccessTokenService is not registered. Call AddMsSqlPersonalAccessTokenService() during startup.")]
     public static partial IGenericMessage PatServiceNotRegistered(ILogger logger);
