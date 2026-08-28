@@ -68,4 +68,42 @@ public static partial class ConfigurationGatewayProviderLog
         Message = "connection '{connectionName}' names factory '{factoryType}', which is not registered — connections must register before configuration gateways")]
     public static partial IGenericMessage ConnectionFactoryUnavailable(ILogger logger, string connectionName, string factoryType);
 
+    /// <summary>The bootstrap schema declares several secret managers and the connection's choice is unreadable here.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="connectionName">The connection being built.</param>
+    /// <param name="declaredCount">How many secret managers the schema declares.</param>
+    [MessageLogging(EventId = 61028, Level = LogLevel.Error,
+        Message = "configurationSchema.json declares {declaredCount} secret managers, so which one opens connection '{connectionName}' cannot be determined before the configuration store is reachable — the schema should declare only the secret manager needed to REACH the store; runtime secret managers belong in the store itself")]
+    public static partial IGenericMessage BootstrapSecretManagerAmbiguous(ILogger logger, string connectionName, int declaredCount);
+
+    /// <summary>A declared bootstrap secret manager does not say what kind it is.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="secretManagerName">The secret manager as declared.</param>
+    [MessageLogging(EventId = 61029, Level = LogLevel.Error,
+        Message = "configurationSchema.json declares secret manager '{secretManagerName}' with no ServiceOptionType, so no option can be selected for it")]
+    public static partial IGenericMessage BootstrapSecretManagerDeclaresNoKind(ILogger logger, string secretManagerName);
+
+    /// <summary>The kind a declared bootstrap secret manager names is not a registered option.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="secretManagerName">The secret manager as declared.</param>
+    /// <param name="serviceOptionType">The kind it names.</param>
+    [MessageLogging(EventId = 61030, Level = LogLevel.Error,
+        Message = "configurationSchema.json declares secret manager '{secretManagerName}' as kind '{serviceOptionType}', which no secret manager option registered")]
+    public static partial IGenericMessage BootstrapSecretManagerKindNotRegistered(ILogger logger, string secretManagerName, string serviceOptionType);
+
+    /// <summary>The factory a declared bootstrap secret manager kind names is not in the container.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="secretManagerName">The secret manager as declared.</param>
+    /// <param name="factoryType">The factory type its kind names.</param>
+    [MessageLogging(EventId = 61031, Level = LogLevel.Error,
+        Message = "secret manager '{secretManagerName}' names factory '{factoryType}', which is not registered — secret managers must register before configuration gateways")]
+    public static partial IGenericMessage BootstrapSecretManagerFactoryUnavailable(ILogger logger, string secretManagerName, string factoryType);
+
+    /// <summary>The bootstrap secret manager factory ran and did not return a secret manager.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="secretManagerName">The secret manager as declared.</param>
+    /// <param name="reason">What the factory reported.</param>
+    [MessageLogging(EventId = 61032, Level = LogLevel.Error,
+        Message = "secret manager '{secretManagerName}' could not be created: {reason}")]
+    public static partial IGenericMessage BootstrapSecretManagerCreateFailed(ILogger logger, string secretManagerName, string reason);
 }
