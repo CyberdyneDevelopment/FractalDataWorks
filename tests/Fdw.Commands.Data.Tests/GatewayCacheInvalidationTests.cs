@@ -20,7 +20,7 @@ namespace Fdw.Commands.Data.Tests;
 /// </summary>
 public sealed class GatewayCacheInvalidationTests
 {
-    private static DataStoreTarget Target => new("ConfigurationDb", "conn", "Connection");
+    private static DataStoreTarget Target => new("PlatformConfiguration", "conn", "Connection");
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -74,7 +74,7 @@ public sealed class GatewayCacheInvalidationTests
     {
         using var memory = new MemoryCache(new MemoryCacheOptions());
         var cache = new DataGatewayResultCache(memory, loggerFactory: null);
-        var other = new DataStoreTarget("ConfigurationDb", "sec", "SecretManager");
+        var other = new DataStoreTarget("PlatformConfiguration", "sec", "SecretManager");
 
         cache.Set("conn-key", GenericResult<int>.Success(1),
             new[] { CacheKeyBuilder.TagFor(Target) }, TimeSpan.FromMinutes(5));

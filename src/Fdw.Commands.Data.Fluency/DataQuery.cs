@@ -10,7 +10,7 @@ public static class DataQuery
     /// All three parameters are required.
     /// </summary>
     /// <typeparam name="T">The result type for queries on this container.</typeparam>
-    /// <param name="dataStoreName">The DataStore name (e.g., "AuthDb", "ConfigurationDb").</param>
+    /// <param name="dataStoreName">The DataStore name (e.g., "AuthDb", "PlatformConfiguration").</param>
     /// <param name="pathName">The path within the DataStore (e.g., "auth", "cfg", "dbo").</param>
     /// <param name="containerName">The container name (table/endpoint).</param>
     /// <returns>A new QueryCommandBuilder with full path specification.</returns>

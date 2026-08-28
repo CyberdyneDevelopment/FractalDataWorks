@@ -164,7 +164,7 @@ public class DefaultConfigurationProviderTests
             .Returns(GenericResult<IDataContainer>.Failure(new GenericMessage("container not found")));
 
         var store = new Mock<IDataStore>();
-        store.Setup(s => s.Name).Returns("ConfigurationDb");
+        store.Setup(s => s.Name).Returns("PlatformConfiguration");
         store.Setup(s => s.Paths).Returns(new List<IDataNodePath> { path.Object });
         store.Setup(s => s.Path(It.Is<string>(n => string.Equals(n, "data", StringComparison.Ordinal))))
             .Returns(GenericResult<IDataNodePath>.Success(path.Object));
@@ -200,7 +200,7 @@ public class DefaultConfigurationProviderTests
         var provider = new ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>>.Instance,
             GatewayProviderFor(mockGateway.Object),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "data");
 
         var result = await provider.Get("Owner", TestContext.Current.CancellationToken);
@@ -235,7 +235,7 @@ public class DefaultConfigurationProviderTests
         var provider = new ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>>.Instance,
             GatewayProviderFor(mockGateway.Object),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "data");
 
         var result = await provider.Get("Admin", TestContext.Current.CancellationToken);
@@ -289,7 +289,7 @@ public class DefaultConfigurationProviderTests
             .Returns(GenericResult<IDataContainer>.Failure(new GenericMessage("container not found")));
 
         var store = new Mock<IDataStore>();
-        store.Setup(s => s.Name).Returns("ConfigurationDb");
+        store.Setup(s => s.Name).Returns("PlatformConfiguration");
         store.Setup(s => s.Paths).Returns(new List<IDataNodePath> { path.Object });
         store.Setup(s => s.Path(It.Is<string>(n => string.Equals(n, "data", StringComparison.Ordinal))))
             .Returns(GenericResult<IDataNodePath>.Success(path.Object));
@@ -439,14 +439,14 @@ public class DefaultConfigurationProviderTests
         var provider = new ImplementationConfigurationProviderBase<TestKvpConfiguration, TestKvpCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestKvpConfiguration, TestKvpCommand>>.Instance,
             GatewayProviderFor(mockGateway.Object),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "conn");
 
         var result = await provider.Save(owner, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         kvpSaves.Count.ShouldBe(2);
-        kvpSaves.ShouldAllBe(s => s.Target == new DataStoreTarget("ConfigurationDb", "conn", "TestKvpChild"));
+        kvpSaves.ShouldAllBe(s => s.Target == new DataStoreTarget("PlatformConfiguration", "conn", "TestKvpChild"));
         kvpSaves.Select(s => s.Command.Data.Name).OrderBy(n => n, StringComparer.Ordinal)
             .ShouldBe(["Alpha", "Beta"]);
         foreach (var (command, _) in kvpSaves)
@@ -501,14 +501,14 @@ public class DefaultConfigurationProviderTests
         var provider = new ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestContainerConfiguration, TestContainerCommand>>.Instance,
             GatewayProviderFor(mockGateway.Object),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "data");
 
         var result = await provider.Save(owner, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         childSaves.Count.ShouldBe(2);
-        childSaves.ShouldAllBe(s => s.Target == new DataStoreTarget("ConfigurationDb", "data", "TestContainerField"));
+        childSaves.ShouldAllBe(s => s.Target == new DataStoreTarget("PlatformConfiguration", "data", "TestContainerField"));
         childSaves.ShouldAllBe(s => s.Command.Data.Id != Guid.Empty);
         // Strip(TestContainerConfiguration)+"Id" = "TestContainerId" — the same FK-name convention
         // CascadeCollections already applies to KVP children (FDW-547) and DataSet.Fields.

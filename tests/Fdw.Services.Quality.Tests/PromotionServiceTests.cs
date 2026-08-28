@@ -36,7 +36,7 @@ public sealed class PromotionServiceTests
         var qualityProvider = new QualityConfigurationProvider(
             NullLogger<QualityConfigurationProvider>.Instance,
             lazyGateway,
-            "ConfigurationDb");
+            "PlatformConfiguration");
 
         var loggerFactory = LoggerFactory.Create(_ => { });
         return (new PromotionService(loggerFactory, qualityProvider), gatewayMock);

@@ -28,7 +28,7 @@ public abstract class ResiliencyServiceTypeBase :
         string? category = null,
         string defaultContainerName = "")
         : base(name, sectionName, displayName, description, category ?? "Resiliency",
-               defaultDataStoreName: "ConfigurationDb",
+               defaultDataStoreName: "PlatformConfiguration",
                defaultPathName: "conn",
                defaultContainerName: defaultContainerName)
     {

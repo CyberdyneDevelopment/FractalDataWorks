@@ -47,7 +47,7 @@ public sealed class EscalationAggregateCompositionTests
         var provider = new EscalationConfigurationProvider(
             NullLogger<EscalationConfigurationProvider>.Instance,
             GatewayProviderFor(gateway),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "workflow");
 
         var result = await provider.Get(PolicyId, TestContext.Current.CancellationToken);
@@ -72,7 +72,7 @@ public sealed class EscalationAggregateCompositionTests
     private sealed class AggregateGateway : IConfigurationGateway
     {
         /// <summary>The connection this fake stands in for.</summary>
-        public string ConnectionName => "ConfigurationDb";
+        public string ConnectionName => "PlatformConfiguration";
 
         /// <summary>Targets this fake was asked to invalidate, in call order.</summary>
         public List<DataStoreTarget> Invalidated { get; } = [];
@@ -210,7 +210,7 @@ public sealed class EscalationAggregateCompositionTests
                 Mock.Get(c).Setup(x => x.Parent).Returns(path.Object);
 
             var store = new Mock<IDataStore>();
-            store.Setup(s => s.Name).Returns("ConfigurationDb");
+            store.Setup(s => s.Name).Returns("PlatformConfiguration");
             store.Setup(s => s.Paths).Returns(new List<IDataNodePath> { path.Object });
             store.Setup(s => s.Path(It.IsAny<string>())).Returns((string n) =>
                 string.Equals(n, "workflow", StringComparison.Ordinal)

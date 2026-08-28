@@ -31,7 +31,7 @@ public sealed class DefaultSchedulingServiceTests
     {
         Id = Guid.CreateVersion7(),
         Name = "TestScheduler",
-        DataStoreName = "ConfigurationDb",
+        DataStoreName = "PlatformConfiguration",
         PathName = "sched",
         ScheduleContainerName = "Schedule"
     };

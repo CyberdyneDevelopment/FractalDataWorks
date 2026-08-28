@@ -35,7 +35,7 @@ public abstract class ProjectLineageGraphEndpointBase : GetLineageGraphEndpointB
     private const string NodePipelineContainer = "OrchestrationNodePipeline";
     private const string NodePipelinePrerequisiteContainer = "OrchestrationNodePipelinePrerequisite";
     private const string PipeSchemaPath = "pipe";
-    private const string ConfigurationDbConnection = "ConfigurationDb";
+    private const string ConfigurationDbConnection = "PlatformConfiguration";
 
     private static readonly TimeSpan LineageCacheDuration = TimeSpan.FromMinutes(5);
 

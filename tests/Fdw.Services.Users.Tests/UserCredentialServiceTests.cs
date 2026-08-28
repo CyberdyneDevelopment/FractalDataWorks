@@ -42,8 +42,8 @@ public class UserCredentialServiceTests
     private static Mock<UserConfigurationProvider> MakeUserProviderMock()
         => new(
             NullLogger<UserConfigurationProvider>.Instance,
-            GatewayProviderOn("ConfigurationDb"),
-            "ConfigurationDb",
+            GatewayProviderOn("PlatformConfiguration"),
+            "PlatformConfiguration",
             "usr");
 
     private static IConfigurationGatewayProvider GatewayProviderOn(string connectionName)

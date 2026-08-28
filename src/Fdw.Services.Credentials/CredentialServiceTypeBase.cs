@@ -37,7 +37,7 @@ public abstract class CredentialServiceTypeBase<TService, TFactory, TConfigurati
         string description,
         string category = "CredentialService")
         : base(name, sectionName, displayName, description, category,
-               defaultDataStoreName: "ConfigurationDb",
+               defaultDataStoreName: "PlatformConfiguration",
                defaultPathName: "sec",
                defaultContainerName: "CredentialService")
     {

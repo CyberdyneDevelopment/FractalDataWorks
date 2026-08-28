@@ -70,7 +70,7 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
                 sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>()
                     ?? NullLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>.Instance,
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                "ConfigurationDb",
+                "PlatformConfiguration",
                 "settings"));
         services.TryAddSingleton<IServiceConfigurationProvider<TConfig>>(sp =>
             sp.GetRequiredService<ImplementationConfigurationProviderBase<TConfig, TCommand>>());

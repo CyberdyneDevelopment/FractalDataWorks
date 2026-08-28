@@ -30,7 +30,7 @@ public sealed class DataSetSchemaServiceTests
         return new Mock<DataSetConfigurationProvider>(
             (ILogger<DataSetConfigurationProvider>?)null!,
             new ConfigurationGatewayProvider(),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "data");
     }
 

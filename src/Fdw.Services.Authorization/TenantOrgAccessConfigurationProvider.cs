@@ -19,7 +19,7 @@ namespace Fdw.Services.Authorization;
 /// </summary>
 public class TenantOrgAccessConfigurationProvider
 {
-    private const string DataStoreName = "ConfigurationDb";
+    private const string DataStoreName = "PlatformConfiguration";
     private const string PathName = "tenant";
     private const string ContainerName = "TenantOrgAccess";
 

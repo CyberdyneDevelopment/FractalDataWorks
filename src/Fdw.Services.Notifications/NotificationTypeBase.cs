@@ -47,7 +47,7 @@ public abstract class NotificationTypeBase<TService, TFactory, TConfiguration>
             displayName,
             description,
             "Notifications",
-            defaultDataStoreName: "ConfigurationDb",
+            defaultDataStoreName: "PlatformConfiguration",
             defaultPathName: "notify",
             defaultContainerName: defaultContainerName)
     {

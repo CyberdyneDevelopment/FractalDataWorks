@@ -46,7 +46,7 @@ public sealed class AggregateWriteCascadeTests
         => new(
             NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>>.Instance,
             GatewayProviderFor(gateway),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "pipe");
 
     // ========================================================================
@@ -120,7 +120,7 @@ public sealed class AggregateWriteCascadeTests
             new ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>(
                 NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>>.Instance,
                 GatewayProviderFor(gateway),
-                "ConfigurationDb",
+                "PlatformConfiguration",
                 "pipe"));
 
         // ServiceOptionType is fixed to "Default" on TestRootConfiguration — a provider IS registered for
@@ -253,7 +253,7 @@ public sealed class AggregateWriteCascadeTests
         var bodyProvider = new ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>>.Instance,
             GatewayProviderFor(gateway),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "pipe");
 
         var result = await bodyProvider.Delete(domainConfigurationId, TestContext.Current.CancellationToken);
@@ -279,7 +279,7 @@ public sealed class AggregateWriteCascadeTests
     private sealed class RecordingGateway : IConfigurationGateway
     {
         /// <summary>The connection this fake stands in for.</summary>
-        public string ConnectionName => "ConfigurationDb";
+        public string ConnectionName => "PlatformConfiguration";
 
         /// <summary>Targets this fake was asked to invalidate, in call order.</summary>
         public List<DataStoreTarget> Invalidated { get; } = [];

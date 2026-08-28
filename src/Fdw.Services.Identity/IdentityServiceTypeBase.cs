@@ -38,7 +38,7 @@ public abstract class IdentityServiceTypeBase<TService, TConfiguration, TFactory
         string? category = null,
         string defaultContainerName = "")
         : base(name, $"Identities:{name}", $"{name} Identity", $"Managed identity using {name}", category ?? "Identity",
-               defaultDataStoreName: "ConfigurationDb",
+               defaultDataStoreName: "PlatformConfiguration",
                defaultPathName: "sec",
                defaultContainerName: defaultContainerName)
     {

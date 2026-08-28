@@ -88,7 +88,7 @@ public abstract class ListConfigurationInstancesEndpointBase : Endpoint<ListConf
 
             try
             {
-                var command = DataQuery.From<ConfigurationRecord>("ConfigurationDb", container.Parent.Name, container.Name)
+                var command = DataQuery.From<ConfigurationRecord>("PlatformConfiguration", container.Parent.Name, container.Name)
                     .Build();
 
                 var result = await _dataGateway.Execute<IEnumerable<ConfigurationRecord>>(command, ct)

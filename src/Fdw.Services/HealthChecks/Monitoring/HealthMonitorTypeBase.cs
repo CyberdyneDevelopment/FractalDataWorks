@@ -36,7 +36,7 @@ public abstract class HealthMonitorTypeBase<TService, TFactory, TConfiguration> 
         string displayName,
         string description)
         : base(name, sectionName, displayName, description, category: "HealthMonitor",
-               defaultDataStoreName: "ConfigurationDb",
+               defaultDataStoreName: "PlatformConfiguration",
                defaultPathName: "settings",
                defaultContainerName: "HealthMonitor")
     {

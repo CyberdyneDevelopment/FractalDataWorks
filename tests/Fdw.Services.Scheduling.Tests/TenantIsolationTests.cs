@@ -36,7 +36,7 @@ public sealed class TenantIsolationTests
     {
         Id = Guid.CreateVersion7(),
         Name = "TestScheduler",
-        DataStoreName = "ConfigurationDb",
+        DataStoreName = "PlatformConfiguration",
         PathName = "sched",
         ScheduleContainerName = "Schedule"
     };

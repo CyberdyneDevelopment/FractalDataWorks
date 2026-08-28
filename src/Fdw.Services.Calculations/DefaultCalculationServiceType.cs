@@ -106,7 +106,7 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
             new ImplementationConfigurationProviderBase<TConfig, TCommand>(
                 sp.GetService<ILogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                "ConfigurationDb",
+                "PlatformConfiguration",
                 "calc"));
     }
 }

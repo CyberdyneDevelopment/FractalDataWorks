@@ -39,7 +39,7 @@ public abstract class MultitenancyTypeBase<TFactory> :
         string displayName,
         string description)
         : base(name, sectionName, displayName, description, category: "Multitenancy",
-               defaultDataStoreName: "ConfigurationDb",
+               defaultDataStoreName: "PlatformConfiguration",
                defaultPathName: "settings",
                defaultContainerName: "Multitenancy")
     {

@@ -99,7 +99,7 @@ public sealed class RecursiveCascadeSaveTests
         var provider = new ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>>.Instance,
             GatewayProviderFor(gateway),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "pipe");
 
         // Register a typed provider for a DIFFERENT kind: the registry is NON-EMPTY (so this is a header
@@ -109,7 +109,7 @@ public sealed class RecursiveCascadeSaveTests
             new ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>(
                 NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>>.Instance,
                 GatewayProviderFor(gateway),
-                "ConfigurationDb",
+                "PlatformConfiguration",
                 "pipe"));
 
         // Act — Get by name reads the header then composes the typed body; "Default" has no provider.
@@ -125,7 +125,7 @@ public sealed class RecursiveCascadeSaveTests
         return new ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>(
             NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>>.Instance,
             GatewayProviderFor(gateway),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "pipe");
     }
 

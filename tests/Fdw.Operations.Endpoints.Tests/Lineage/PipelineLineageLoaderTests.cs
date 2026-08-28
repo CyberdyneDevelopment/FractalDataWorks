@@ -48,7 +48,7 @@ public class PipelineLineageLoaderTests
         return new Mock<PipelineServiceConfigurationProvider>(
             (ILogger<PipelineServiceConfigurationProvider>?)null!,
             new ConfigurationGatewayProvider(),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "pipe");
     }
 

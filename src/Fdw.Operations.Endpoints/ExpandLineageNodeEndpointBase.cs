@@ -135,7 +135,7 @@ public abstract class ExpandLineageNodeEndpointBase : Endpoint<ExpandLineageNode
             }
         };
         var result = await _configurationGateway
-            .Execute<IEnumerable<T>>(command, new DataStoreTarget("ConfigurationDb", pathName, containerName), ct)
+            .Execute<IEnumerable<T>>(command, new DataStoreTarget("PlatformConfiguration", pathName, containerName), ct)
             .ConfigureAwait(false);
         return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
     }

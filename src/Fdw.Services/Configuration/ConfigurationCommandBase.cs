@@ -169,7 +169,7 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// configuration provider reads them from the container's FK metadata) — this verb never reads
     /// metadata itself.
     /// </summary>
-    /// <param name="dataStoreName">DataStore name (e.g. "ConfigurationDb").</param>
+    /// <param name="dataStoreName">DataStore name (e.g. "PlatformConfiguration").</param>
     /// <param name="pathName">Schema/path name (e.g. "sec", "conn").</param>
     /// <param name="childForeignKeyColumn">The child's FK column (e.g. "CredentialServiceRowId").</param>
     /// <param name="parentTable">The parent table to join to (e.g. "CredentialService").</param>

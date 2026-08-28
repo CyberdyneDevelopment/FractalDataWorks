@@ -66,7 +66,7 @@ public abstract class BulkPipelineStatusEndpointBase : EndpointWithoutRequest<Bu
             var command = new QueryCommand<PipelineStatusRecord>();
 
             var result = await _dataGateway.Execute<IEnumerable<PipelineStatusRecord>>(
-                command, new DataStoreTarget("ConfigurationDb", "etl", "Pipeline"), ct).ConfigureAwait(false);
+                command, new DataStoreTarget("PlatformConfiguration", "etl", "Pipeline"), ct).ConfigureAwait(false);
             if (result.IsSuccess && result.Value != null)
             {
                 pipelines = result.Value

@@ -24,7 +24,7 @@ public abstract class UserServiceTypeBase : ServiceTypeBase<IGenericService, IUs
         string description,
         string? category = null)
         : base(name, sectionName, displayName, description, category ?? "User",
-               defaultDataStoreName: "ConfigurationDb",
+               defaultDataStoreName: "PlatformConfiguration",
                defaultPathName: "usr")
     {
     }

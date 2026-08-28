@@ -44,7 +44,7 @@ public abstract class ExternalIdentityProvisionerTypeBase<TService, TConfigurati
         string defaultContainerName = "")
         : base(name, $"ExternalIdentityProvisioners:{name}", $"{name} External Identity Provisioner",
                $"External identity provisioner using {name}", category ?? "ExternalIdentityProvisioner",
-               defaultDataStoreName: "ConfigurationDb",
+               defaultDataStoreName: "PlatformConfiguration",
                defaultPathName: "sec",
                defaultContainerName: defaultContainerName)
     {

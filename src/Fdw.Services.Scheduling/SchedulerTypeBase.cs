@@ -155,7 +155,7 @@ public abstract class SchedulerTypeBase<TService, TConfiguration, TFactory> :
         string? category = null,
         string defaultContainerName = "")
         : base(name, $"Schedulings:{name}", $"{name} Scheduling Service", $"Scheduling service using {schedulingEngine} engine", category ?? "Scheduling",
-               defaultDataStoreName: "ConfigurationDb",
+               defaultDataStoreName: "PlatformConfiguration",
                defaultPathName: "sched",
                defaultContainerName: defaultContainerName)
     {

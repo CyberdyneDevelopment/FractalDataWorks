@@ -109,7 +109,7 @@ public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRe
         };
 
         var result = await _dataGateway.Execute<IEnumerable<DataSetRecord>>(
-            command, new DataStoreTarget("ConfigurationDb", "data", "DataSet"), ct).ConfigureAwait(false);
+            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSet"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             return null;
@@ -135,7 +135,7 @@ public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRe
         };
 
         var result = await _dataGateway.Execute<IEnumerable<DataSetFieldPayload>>(
-            command, new DataStoreTarget("ConfigurationDb", "data", "DataSetField"), ct).ConfigureAwait(false);
+            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetField"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             return [];

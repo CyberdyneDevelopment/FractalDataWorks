@@ -105,7 +105,7 @@ public sealed class MsSqlQueryTranslatorTests
         var fields = new[] { CreateField("Id").Object, CreateField("ServerName").Object };
         var container = CreateContainer(name: "MsSqlConnection", schema: "conn", fields: fields);
 
-        var call = new QueryCommandBuilder<object>("ConfigurationDb", "conn", "MsSqlConnection")
+        var call = new QueryCommandBuilder<object>("PlatformConfiguration", "conn", "MsSqlConnection")
             .Join("Connection", "ConnectionRowId", "RowId")
             .Where("IsCurrent", true)
             .Where("IsDeleted", false)

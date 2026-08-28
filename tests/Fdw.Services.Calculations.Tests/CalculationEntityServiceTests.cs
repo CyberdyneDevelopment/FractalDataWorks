@@ -32,7 +32,7 @@ public class CalculationEntityServiceTests
         => new(
             NullLogger<CalculationConfigurationProvider>.Instance,
             new ConfigurationGatewayProvider(),
-            "ConfigurationDb",
+            "PlatformConfiguration",
             "calc");
 
     private static CalculationEntityConfiguration SampleConfig(Guid id, string name = "Calc1", string type = "Formula") => new()

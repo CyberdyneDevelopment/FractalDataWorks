@@ -23,7 +23,7 @@ public static class Find
     /// All three parameters are required.
     /// </summary>
     /// <typeparam name="T">The result type for records in this container.</typeparam>
-    /// <param name="dataStoreName">The DataStore name (e.g., "AuthDb", "ConfigurationDb").</param>
+    /// <param name="dataStoreName">The DataStore name (e.g., "AuthDb", "PlatformConfiguration").</param>
     /// <param name="pathName">The path within the DataStore (e.g., "auth", "cfg", "dbo").</param>
     /// <param name="containerName">The container name (table/endpoint).</param>
     /// <returns>A new <see cref="FindCommandBuilder{T}"/> with full path specification.</returns>
