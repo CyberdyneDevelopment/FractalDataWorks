@@ -92,6 +92,13 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(SecretManagerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(SecretManagerTypes), providerService);
 
+            // Published under the closed generic as well as the domain interface. SecretManagerProvider
+            // is both, but a consumer resolving IPlatformServiceProvider<ISecretManager, …> — which is
+            // what the generic call sites ask for — got nothing back, because only the domain name was
+            // registered. Two names for one instance, and only one of them findable.
+            builder.Services.AddScoped<IPlatformServiceProvider<ISecretManager, ISecretManagerImplementationConfiguration>>(
+                sp => sp.GetRequiredService<ISecretManagerProvider>());
+
             builder.Services.AddScoped<ISecretManagerProvider>(sp =>
             {
                 var provider = new SecretManagerProvider(
