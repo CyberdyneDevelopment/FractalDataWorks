@@ -15,6 +15,7 @@ using Fdw.Data.Abstractions;
 // ApiEndpointLog now in this namespace
 using Microsoft.Extensions.Logging;
 using Fdw.Web.RestEndpoints.Logging;
+using Fdw.Services.Data;
 
 namespace Fdw.Operations.Endpoints;
 
@@ -23,13 +24,13 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisRequest, ImpactAnalysisResponse>
 {
-    private readonly IConfigurationGateway _configurationGateway;
+    private readonly DataSetConfigurationProvider _dataSets;
     private readonly ILogger<GetImpactAnalysisEndpointBase> _logger;
 
     /// <inheritdoc />
-    protected GetImpactAnalysisEndpointBase(IConfigurationGateway configurationGateway, ILogger<GetImpactAnalysisEndpointBase> logger)
+    protected GetImpactAnalysisEndpointBase(DataSetConfigurationProvider dataSets, ILogger<GetImpactAnalysisEndpointBase> logger)
     {
-        _configurationGateway = configurationGateway;
+        _dataSets = dataSets;
         _logger = logger;
     }
 
@@ -90,51 +91,50 @@ public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisReq
         return await BuildImpactedDataSets(sources, ct).ConfigureAwait(false);
     }
 
-    /// <summary>Finds DataSet source records matching a specific property value.</summary>
-    protected virtual async Task<IReadOnlyList<DataSetSourceConfiguration>> FindSourcesByProperty(string propertyName, string value, CancellationToken ct)
+    /// <summary>Finds the sources whose <paramref name="propertyName"/> equals <paramref name="value"/>.</summary>
+    /// <param name="propertyName">The source property to match on.</param>
+    /// <param name="value">The value to match.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <remarks>
+    /// Read through the DataSet provider rather than queried per container: the provider's read
+    /// cascade already composes Sources onto each DataSet, so one call returns the whole graph this
+    /// walks. Matching in memory also replaces a query-per-DataSet with a single read.
+    /// </remarks>
+    protected virtual async Task<IReadOnlyList<DataSetSourceConfiguration>> FindSourcesByProperty(
+        string propertyName, string value, CancellationToken cancellationToken)
     {
-        var command = new QueryCommand<DataSetSourceConfiguration>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterCondition
-                {
-                    PropertyName = propertyName,
-                    Operator = FilterOperators.ByName("Equal"),
-                    Value = value
-                }
-            }
-        };
+        var dataSets = await _dataSets.Get(cancellationToken).ConfigureAwait(false);
+        if (dataSets.IsFailure)
+            return [];
 
-        var result = await _configurationGateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
-            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetSource"), ct).ConfigureAwait(false);
-        return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
+        return (dataSets.Value ?? [])
+            .SelectMany(d => d.Sources ?? [])
+            .Where(source => string.Equals(SourceProperty(source, propertyName), value, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
+    /// <summary>Reads the named property off a source.</summary>
+    /// <param name="source">The source to read.</param>
+    /// <param name="propertyName">The property to read.</param>
+    /// <returns>The value, or null when the source does not carry that property.</returns>
+    private static string? SourceProperty(DataSetSourceConfiguration source, string propertyName)
+        => propertyName switch
+        {
+            "ConnectionName" => source.ConnectionName,
+            "DataStoreName" => source.DataStoreName,
+            _ => null,
+        };
+
     /// <summary>Groups sources by DataSet and builds impact assessment DTOs with impact level classification.</summary>
-    protected virtual async Task<IReadOnlyList<ImpactedDataSetResponse>> BuildImpactedDataSets(IReadOnlyList<DataSetSourceConfiguration> sources, CancellationToken ct)
+    protected virtual async Task<IReadOnlyList<ImpactedDataSetResponse>> BuildImpactedDataSets(IReadOnlyList<DataSetSourceConfiguration> sources, CancellationToken cancellationToken)
     {
         var impacted = new List<ImpactedDataSetResponse>();
         var dataSetIds = sources.Select(s => s.DataSetId).Distinct();
 
         foreach (var dsId in dataSetIds)
         {
-            var dsCommand = new QueryCommand<DataSetRecord>
-            {
-                Filter = new FilterExpression
-                {
-                    Root = new FilterCondition
-                    {
-                        PropertyName = "Id",
-                        Operator = FilterOperators.ByName("Equal"),
-                        Value = dsId
-                    }
-                }
-            };
-
-            var dsResult = await _configurationGateway.Execute<IEnumerable<DataSetRecord>>(
-                dsCommand, new DataStoreTarget("PlatformConfiguration", "data", "DataSet"), ct).ConfigureAwait(false);
-            var ds = dsResult.IsSuccess ? dsResult.Value?.FirstOrDefault() : null;
+            var dsResult = await _dataSets.Get(dsId, cancellationToken).ConfigureAwait(false);
+            var ds = dsResult.IsSuccess ? dsResult.Value : null;
 
             if (ds != null)
             {

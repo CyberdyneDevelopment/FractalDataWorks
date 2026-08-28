@@ -1167,4 +1167,22 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
             : await gateway.Value!.Execute<T>(call, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Opens a transaction on this provider's configuration connection.</summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The open transaction, or the failure naming the connection no gateway serves.</returns>
+    /// <remarks>
+    /// Pair with <see cref="SaveInTransaction"/> and <see cref="DeleteInTransaction"/>, and dispose the
+    /// scope when done. A caller that needs several saves to land together opens one here rather than
+    /// holding a gateway of its own: the provider already knows which connection its rows live on, so
+    /// asking it to open the transaction keeps that the only place the answer is written down.
+    /// </remarks>
+    public async Task<IGenericResult<IDataGatewayTransaction>> BeginTransaction(
+        CancellationToken cancellationToken = default)
+    {
+        var gateway = Gateway();
+        return gateway.IsFailure
+            ? gateway.ToNewResult<IDataGatewayTransaction>()
+            : await gateway.Value!.BeginTransaction(DataStoreName, cancellationToken).ConfigureAwait(false);
+    }
+
 }

@@ -20,7 +20,6 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
 {
     private readonly RoleConfigurationProvider _roleProvider;
     private readonly UserRoleConfigurationProvider _userRoleProvider;
-    private readonly IConfigurationGateway _configurationGateway;
     private readonly UserConfigurationProvider _userProvider;
 
     /// <summary>
@@ -32,12 +31,10 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
     protected AssignUserRoleEndpointBase(
         RoleConfigurationProvider roleProvider,
         UserRoleConfigurationProvider userRoleProvider,
-        IConfigurationGateway configurationGateway,
         UserConfigurationProvider userProvider)
     {
         _roleProvider = roleProvider;
         _userRoleProvider = userRoleProvider;
-        _configurationGateway = configurationGateway;
         _userProvider = userProvider;
     }
 
@@ -144,8 +141,7 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
     private async Task<Fdw.Results.IGenericResult> AssignRoleAtomically(
         Guid userId, UserRoleConfiguration config, string userIdString, CancellationToken ct)
     {
-        var txnResult = await _configurationGateway.BeginTransaction(
-            _userRoleProvider.DataStoreName, ct).ConfigureAwait(false);
+        var txnResult = await _userRoleProvider.BeginTransaction(ct).ConfigureAwait(false);
         if (!txnResult.IsSuccess || txnResult.Value == null)
         {
             var reason = txnResult.CurrentMessage ?? "Transaction could not be opened";
