@@ -120,4 +120,14 @@ public static partial class AuthenticationValidationLog
     [MessageLogging(EventId = 11104, Level = LogLevel.Debug,
         Message = "No token-validation mechanism is registered; this host validates no tokens of its own")]
     public static partial IGenericMessage NoMechanismsRegistered(ILogger logger);
+
+    /// <summary>The signing key this host validates its own tokens with could not be read.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="serviceName">The entry whose scheme needed it.</param>
+    // Why Error and why registration fails on it: a scheme that cannot check a signature refuses
+    // every token it exists to accept. Failing here stops the host with the cause named, rather
+    // than starting one that 401s everything and says nothing about why.
+    [MessageLogging(EventId = 71113, Level = LogLevel.Error,
+        Message = "No local signing key is available for '{serviceName}', so its tokens cannot be validated")]
+    public static partial IGenericMessage LocalSigningKeyUnavailable(ILogger logger, string serviceName);
 }

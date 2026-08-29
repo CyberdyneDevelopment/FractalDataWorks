@@ -106,40 +106,35 @@ internal static class ServiceTypeOptionDiscovery
     }
 
     /// <summary>
-    /// Computes a deterministic Guid for a ServiceTypeOption by matching the runtime
-    /// ServiceTypeBase&lt;TService, TFactory&gt;.Id computation (MD5 of TService+TFactory full names).
-    /// Falls back to UUID v5 of concrete type name for types not inheriting from ServiceTypeBase.
+    /// Computes what <c>ServiceTypeBase.Id</c> will be at runtime — <c>MD5</c> of the option's full
+    /// type name, matching <c>OptionId.Derive(GetType().FullName)</c>.
     /// </summary>
-    [SuppressMessage("Security", "CA5351:Do not use weak cryptographic algorithms", Justification = "MD5 used for deterministic ID generation matching runtime ServiceTypeBase, not for security.")]
-    [SuppressMessage("Security", "SCS0006:Weak hashing function", Justification = "MD5 used for deterministic ID generation matching runtime ServiceTypeBase, not for security.")]
+    /// <param name="fullTypeName">The option's fully-qualified type name.</param>
+    /// <remarks>
+    /// Used only to detect two options that would resolve to one identity. Generated code reads
+    /// each option's own <c>Id</c> rather than a value computed here, so this cannot put a wrong
+    /// Guid into a lookup — the worst it can do is miss a collision or report one that is not real.
+    /// <para>
+    /// It hashed <c>TService:TFactory</c> before, which every option of a domain closes identically,
+    /// so every option of a domain computed one shared Id. Nothing caught it because the convention
+    /// of one option per Registration project meant two never met in one compilation — a layout
+    /// choice was load-bearing and nothing said so.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("Security", "CA5351:Do not use weak cryptographic algorithms", Justification = "MD5 used for deterministic ID generation matching runtime OptionId.Derive, not for security.")]
+    [SuppressMessage("Security", "SCS0006:Weak hashing function", Justification = "MD5 used for deterministic ID generation matching runtime OptionId.Derive, not for security.")]
     [SuppressMessage("Security", "CA1850:Prefer static HashData method", Justification = "netstandard2.0 target does not have static HashData.")]
-    public static Guid ComputeServiceTypeId(INamedTypeSymbol typeSymbol)
+    public static Guid ComputeServiceTypeId(string fullTypeName)
     {
-        // Walk up the inheritance chain to find ServiceTypeBase<TService, TFactory, ...>
-        var current = typeSymbol.BaseType;
-        while (current != null)
+        if (string.IsNullOrEmpty(fullTypeName))
         {
-            var original = current.OriginalDefinition;
-            if (string.Equals(original.Name, "ServiceTypeBase", StringComparison.Ordinal) &&
-                string.Equals(original.ContainingNamespace.ToDisplayString(), "Fdw.ServiceTypes", StringComparison.Ordinal) &&
-                current.TypeArguments.Length >= 2)
-            {
-                var tService = current.TypeArguments[0];
-                var tFactory = current.TypeArguments[1];
-                var input = $"{tService.ToDisplayString()}:{tFactory.ToDisplayString()}";
-
-                using (var md5 = MD5.Create())
-                {
-                    var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(input));
-                    return new Guid(hash);
-                }
-            }
-
-            current = current.BaseType;
+            throw new ArgumentException("A type name is required to derive an option's Id.", nameof(fullTypeName));
         }
 
-        // Fallback for types not inheriting from ServiceTypeBase
-        return GenerateGuidFromTypeName(typeSymbol.ToDisplayString());
+        using (var md5 = MD5.Create())
+        {
+            return new Guid(md5.ComputeHash(Encoding.UTF8.GetBytes(fullTypeName)));
+        }
     }
 
     private sealed class ServiceTypeOptionVisitor : SymbolVisitor
@@ -195,7 +190,7 @@ internal static class ServiceTypeOptionDiscovery
                 return null;
 
             var collectionMatchKey = GetMatchKey(collectionType);
-            var generatedId = ComputeServiceTypeId(typeSymbol);
+            var generatedId = ComputeServiceTypeId(typeSymbol.ToDisplayString());
             var constructors = ExtractConstructors(typeSymbol);
             var lookupProperties = DiscoverLookupProperties(typeSymbol, _lookupAttrType);
 

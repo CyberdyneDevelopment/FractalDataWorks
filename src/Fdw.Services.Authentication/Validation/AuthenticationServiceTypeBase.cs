@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Fdw.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
@@ -83,6 +86,11 @@ public abstract class AuthenticationServiceTypeBase
     /// <param name="authenticationBuilder">The host's authentication builder.</param>
     /// <param name="configuration">The entry's header, already validated.</param>
     /// <param name="section">The configuration section the entry was read from, for this option's typed body.</param>
+    /// <param name="services">
+    /// The collection the scheme's own dependencies are registered in. Registration runs before the
+    /// container is built, so an option needing a service at validation time registers what it needs
+    /// here and resolves it from the request rather than holding process-wide state.
+    /// </param>
     /// <param name="loggerFactory">The host's logger factory, if it has one.</param>
     /// <returns>
     /// The issuer/scheme binding this entry contributes. Failure when the entry's typed body is
@@ -92,5 +100,6 @@ public abstract class AuthenticationServiceTypeBase
         AuthenticationBuilder authenticationBuilder,
         AuthenticationServiceConfiguration configuration,
         Microsoft.Extensions.Configuration.IConfigurationSection section,
+        IServiceCollection services,
         ILoggerFactory? loggerFactory);
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -65,6 +66,7 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
         AuthenticationBuilder authenticationBuilder,
         AuthenticationServiceConfiguration configuration,
         IConfigurationSection section,
+        IServiceCollection services,
         ILoggerFactory? loggerFactory)
     {
         if (authenticationBuilder is null) throw new ArgumentNullException(nameof(authenticationBuilder));
@@ -77,17 +79,17 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
         // compiler rather than asserted with a null-forgiving operator.
         if (configuration.Name is not { Length: > 0 } serviceName)
             return GenericResult<AuthenticationSchemeBinding>.Failure(
-                AuthenticationValidationLog.EntryMissingName(log, section.Path));
+                    AuthenticationValidationLog.EntryMissingName(log, section.Path));
         if (configuration.Authority is not { Length: > 0 } authority)
             return GenericResult<AuthenticationSchemeBinding>.Failure(
-                AuthenticationValidationLog.EntryMissingAuthority(log, serviceName));
+                    AuthenticationValidationLog.EntryMissingAuthority(log, serviceName));
 
         var typed = JwtBearerAuthenticationConfiguration.Read(section, serviceName, log);
         if (typed.IsFailure)
             return typed.ToNewResult<AuthenticationSchemeBinding>();
         if (typed.Value is not { } body)
             return GenericResult<AuthenticationSchemeBinding>.Failure(
-                AuthenticationValidationLog.JwtBearerMissingAudience(log, serviceName));
+                    AuthenticationValidationLog.JwtBearerMissingAudience(log, serviceName));
 
         var schemeName = SchemeNameFor(serviceName);
 
@@ -117,7 +119,7 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
         });
 
         return GenericResult<AuthenticationSchemeBinding>.Success(
-            new AuthenticationSchemeBinding(serviceName, authority, schemeName));
+                new AuthenticationSchemeBinding(serviceName, authority, schemeName));
     }
 
     /// <summary>

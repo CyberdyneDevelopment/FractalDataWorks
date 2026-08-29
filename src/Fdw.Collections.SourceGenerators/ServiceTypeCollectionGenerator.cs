@@ -450,7 +450,7 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
             bodySb.AppendLine("            get");
             bodySb.AppendLine("            {");
             bodySb.AppendLine("                EnsureLookups();");
-            bodySb.AppendLine($"                return {fieldName} ??= ({option.FullTypeName}){byIdFieldName}![new Guid(\"{option.GeneratedId}\")];");
+            bodySb.AppendLine($"                return {fieldName} ??= ({option.FullTypeName}){byIdFieldName}![new {option.FullTypeName}().Id];");
             bodySb.AppendLine("            }");
             bodySb.AppendLine("        }");
             bodySb.AppendLine();

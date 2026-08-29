@@ -78,7 +78,8 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
 
                 foreach (var (header, section) in entries)
                 {
-                    var binding = mechanism.RegisterScheme(authenticationBuilder, header, section, loggerFactory);
+                    var binding = mechanism.RegisterScheme(
+                        authenticationBuilder, header, section, builder.Services, loggerFactory);
                     if (binding.IsFailure)
                         return binding.ToNewResult<IHostApplicationBuilder>();
                     if (binding.Value is not { } scheme)

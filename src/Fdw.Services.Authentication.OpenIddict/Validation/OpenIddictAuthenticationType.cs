@@ -109,6 +109,7 @@ public sealed class OpenIddictAuthenticationType : AuthenticationServiceTypeBase
         AuthenticationBuilder authenticationBuilder,
         AuthenticationServiceConfiguration configuration,
         IConfigurationSection section,
+        IServiceCollection services,
         ILoggerFactory? loggerFactory)
     {
         if (configuration is null) throw new ArgumentNullException(nameof(configuration));

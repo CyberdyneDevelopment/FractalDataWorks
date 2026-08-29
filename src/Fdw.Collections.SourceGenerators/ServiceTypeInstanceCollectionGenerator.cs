@@ -267,7 +267,7 @@ public class ServiceTypeInstanceCollectionGenerator : IIncrementalGenerator
         sb.AppendLine("        {");
         foreach (var option in options)
         {
-            sb.AppendLine($"            RegisterFactory(new Guid(\"{option.GeneratedId}\"), \"{option.OptionName}\", () => new {option.FullTypeName}());");
+            sb.AppendLine($"            RegisterFactory(new {option.FullTypeName}().Id, \"{option.OptionName}\", () => new {option.FullTypeName}());");
         }
         sb.AppendLine("        }");
         sb.AppendLine();
