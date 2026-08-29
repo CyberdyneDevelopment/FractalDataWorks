@@ -62,10 +62,13 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
         {
             collectOptions?.Invoke(builder, loggerFactory);
 
-            builder.Services.TryAddSingleton<AuthenticationStepResolver>(sp =>
-                new AuthenticationStepResolver(sp.GetService<ILogger<AuthenticationStepResolver>>()));
+            // Scoped, not singleton: it resolves steps from the scope it was built in, and steps
+            // read through providers that are themselves scoped. The name-to-type map it consults
+            // is static, so scoping the resolver costs a lookup rather than a re-registration.
+            builder.Services.TryAddScoped<AuthenticationStepResolver>(sp =>
+                new AuthenticationStepResolver(sp, sp.GetService<ILogger<AuthenticationStepResolver>>()));
 
-            builder.Services.TryAddSingleton<IAuthenticationStepResolver>(sp =>
+            builder.Services.TryAddScoped<IAuthenticationStepResolver>(sp =>
                 sp.GetRequiredService<AuthenticationStepResolver>());
 
             builder.Services.TryAddSingleton<IAcrPolicy, StandardAcrPolicy>();
@@ -86,6 +89,16 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<AuthenticationStepResolver>(),
                     sp.GetService<ILogger<AuthenticationFlowProvider>>()));
 
+            // The steps this domain ships. Scoped because each reads through providers that are,
+            // and registered by name here so a flow row naming one resolves to it.
+            builder.Services.TryAddScoped<PasswordCredentialStep>();
+            builder.Services.TryAddScoped<BakePermissionsStep>();
+            builder.Services.TryAddScoped<AuthorizeIssuanceStep>();
+            builder.Services.TryAddScoped<ResolvePrincipalStep>();
+
+            builder.Services.TryAddSingleton<IPasswordCredentialAccessor, HttpPasswordCredentialAccessor>();
+            builder.Services.AddHttpContextAccessor();
+
             builder.Services.TryAddScoped(sp => new AuthenticationRunner(
                 sp.GetRequiredService<IAuthenticationStepResolver>(),
                 sp.GetRequiredService<IAcrPolicy>(),
@@ -95,6 +108,41 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
                 sp.GetService<ILogger<AuthenticationRunner>>()));
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+
+        // Why Initialize and not Register: a step is resolved per request but named once, and the
+        // resolver holding the names is a singleton. Registering the names here - after the
+        // container exists - is what lets a scoped step be reached from it without the resolver
+        // capturing a scope it would outlive.
+        Initialization((host, loggerFactory) =>
+        {
+            // A scope, because the resolver is scoped. Registration only writes the static
+            // name-to-type map, so this scope exists to construct the resolver and nothing else.
+            using var scope = host.Services.CreateScope();
+            var resolver = scope.ServiceProvider.GetRequiredService<AuthenticationStepResolver>();
+
+            // Named for what the step does, not for its class. A flow row names the behaviour it
+            // wants; which type provides it is this registration's business.
+            var registered = resolver.Register("PasswordCredential", typeof(PasswordCredentialStep));
+
+            if (registered.IsFailure)
+                return registered.ToNewResult<IHost>();
+
+            registered = resolver.Register("BakePermissions", typeof(BakePermissionsStep));
+
+            if (registered.IsFailure)
+                return registered.ToNewResult<IHost>();
+
+            registered = resolver.Register("AuthorizeIssuance", typeof(AuthorizeIssuanceStep));
+
+            if (registered.IsFailure)
+                return registered.ToNewResult<IHost>();
+
+            registered = resolver.Register("ResolvePrincipal", typeof(ResolvePrincipalStep));
+
+            return registered.IsFailure
+                ? registered.ToNewResult<IHost>()
+                : GenericResult<IHost>.Success(host);
         });
     }
 
