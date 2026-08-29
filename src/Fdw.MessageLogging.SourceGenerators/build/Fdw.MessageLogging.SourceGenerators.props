@@ -1,9 +1,4 @@
 <Project>
-  <PropertyGroup>
-    <!-- Mark this as a development dependency so it doesn't flow transitively -->
-    <DevelopmentDependency>true</DevelopmentDependency>
-  </PropertyGroup>
-
   <ItemGroup>
     <!-- Add the source generator analyzer -->
     <Analyzer Include="$(MSBuildThisFileDirectory)..\analyzers\dotnet\cs\Fdw.MessageLogging.SourceGenerators.dll" />
