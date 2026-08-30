@@ -82,8 +82,13 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// <summary>Gets the configuration section name for appsettings.json.</summary>
     public string SectionName => ConfigurationKey;
 
-    /// <inheritdoc />
-    public string DataStore { get; }
+    /// <summary>The connection this type's configuration is read from.</summary>
+    /// <remarks>
+    /// Defaults to the type's <c>defaultDataStoreName</c>, which every base sets to
+    /// <c>PlatformConfiguration</c>. Settable so a host that names that connection differently can
+    /// say so once, rather than each option carrying the name as a literal.
+    /// </remarks>
+    public string DataStore { get; set; }
 
     /// <inheritdoc />
     /// <remarks>
