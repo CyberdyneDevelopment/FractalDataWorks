@@ -1,3 +1,4 @@
+using Fdw.Data.DataSets;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Data.Clients.Models;
 using System;
@@ -10,6 +11,7 @@ using Fdw.Commands.Data;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.Lineage;
+using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Pipelines;
 using Microsoft.Extensions.Logging;
@@ -25,17 +27,20 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest, LineageGraphResponse>
 {
-    private readonly IConfigurationGateway _configurationGateway;
+    private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly LineageConfigurationProvider _lineageProvider;
     private readonly ILogger<GetFieldLineageEndpointBase> _logger;
     private readonly PipelineServiceConfigurationProvider _pipelineProvider;
 
     /// <inheritdoc />
     protected GetFieldLineageEndpointBase(
-        IConfigurationGateway configurationGateway,
+        DataSetConfigurationProvider dataSetProvider,
+        LineageConfigurationProvider lineageProvider,
         PipelineServiceConfigurationProvider pipelineProvider,
         ILogger<GetFieldLineageEndpointBase> logger)
     {
-        _configurationGateway = configurationGateway;
+        _dataSetProvider = dataSetProvider;
+        _lineageProvider = lineageProvider;
         _pipelineProvider = pipelineProvider;
         _logger = logger ?? NullLogger<GetFieldLineageEndpointBase>.Instance;
     }
@@ -93,12 +98,18 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
         var fieldGraph = new LineageGraph();
         fieldGraph.Nodes.Add(entryNode);
 
-        var fieldMappings = await QueryFieldMappings(req.EntityName, ct).ConfigureAwait(false);
-        var matchingMappings = fieldMappings.Where(m =>
-            string.Equals(m.LogicalFieldName, req.FieldName, StringComparison.OrdinalIgnoreCase)).ToList();
-
-        var sourceIds = matchingMappings.Select(m => m.DataSetSourceId).Distinct().ToList();
-        var sources = await QuerySourcesByIds(sourceIds, ct).ConfigureAwait(false);
+        // One read for the whole thing. The provider composes the DataSet with its sources and each
+        // source with its mappings, so the sources carrying a matching field are found by walking
+        // what came back - where this used to query the DataSet, then its sources, then issue one
+        // more query per source for mappings, then one more per source id to read those sources
+        // back again.
+        var dataSet = await _dataSetProvider.Get(req.EntityName, ct).ConfigureAwait(false);
+        var sources = dataSet.IsSuccess && dataSet.Value is { } composed
+            ? (composed.Sources ?? []).Where(source =>
+                (source.Mappings ?? []).Exists(m =>
+                    string.Equals(m.LogicalFieldName, req.FieldName, StringComparison.OrdinalIgnoreCase)))
+                .ToList()
+            : [];
 
         var addedNodeIds = new HashSet<string>(StringComparer.Ordinal) { entryNodeId };
 
@@ -153,9 +164,9 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
         int edgeId,
         CancellationToken ct)
     {
-        var chains = await QueryAll<ChainDefinitionLineageRecord>("ChainDefinition", ct).ConfigureAwait(false);
-        var steps = await QueryAll<ChainStepLineageRecord>("ChainStep", ct).ConfigureAwait(false);
-        var stepFields = await QueryAll<ChainStepSourceFieldRecord>("ChainStepSourceField", ct).ConfigureAwait(false);
+        var chains = await _lineageProvider.ReadTransform<ChainDefinitionLineageRecord>("ChainDefinition", ct).ConfigureAwait(false);
+        var steps = await _lineageProvider.ReadTransform<ChainStepLineageRecord>("ChainStep", ct).ConfigureAwait(false);
+        var stepFields = await _lineageProvider.ReadTransform<ChainStepSourceFieldRecord>("ChainStepSourceField", ct).ConfigureAwait(false);
 
         var stepsByChainId = steps.GroupBy(s => s.ChainDefinitionId).ToDictionary(g => g.Key, g => g.ToList());
         var stepFieldsByStepId = stepFields.GroupBy(sf => sf.ChainStepId).ToDictionary(g => g.Key, g => g.ToList());
@@ -219,10 +230,10 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
     /// <summary>Builds a node-only graph for resolving entry nodes.</summary>
     protected virtual async Task<LineageGraph> BuildFullGraph(CancellationToken ct)
     {
-        var dataSets = await QueryAll<DataSetRecord>("DataSet", ct).ConfigureAwait(false);
+        var dataSets = await _lineageProvider.ReadData<DataSetRecord>("DataSet", ct).ConfigureAwait(false);
         var pipelines = await PipelineLineageLoader.Load(_pipelineProvider, _logger, ct).ConfigureAwait(false);
-        var sources = await QueryAll<DataSetSourceConfiguration>("DataSetSource", ct).ConfigureAwait(false);
-        var chains = await QueryAll<ChainDefinitionLineageRecord>("ChainDefinition", ct).ConfigureAwait(false);
+        var sources = await _lineageProvider.ReadData<DataSetSourceConfiguration>("DataSetSource", ct).ConfigureAwait(false);
+        var chains = await _lineageProvider.ReadTransform<ChainDefinitionLineageRecord>("ChainDefinition", ct).ConfigureAwait(false);
 
         var graph = new LineageGraph();
 
@@ -282,98 +293,5 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
         return graph;
     }
 
-    /// <summary>Queries all field mappings for a DataSet by name, resolving through DataSetSource records.</summary>
-    private async Task<IReadOnlyList<DataSetFieldMappingRecord>> QueryFieldMappings(string dataSetName, CancellationToken ct)
-    {
-        var dsCommand = new QueryCommand<DataSetRecord>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterCondition
-                {
-                    PropertyName = "Name",
-                    Operator = FilterOperators.ByName("Equal"),
-                    Value = dataSetName
-                }
-            }
-        };
-        var dsResult = await _configurationGateway.Execute<IEnumerable<DataSetRecord>>(
-            dsCommand, new DataStoreTarget("PlatformConfiguration", "data", "DataSet"), ct).ConfigureAwait(false);
-        var dataSet = dsResult.IsSuccess ? dsResult.Value?.FirstOrDefault() : null;
-        if (dataSet == null) return [];
 
-        var srcCommand = new QueryCommand<DataSetSourceConfiguration>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterCondition
-                {
-                    PropertyName = "DataSetId",
-                    Operator = FilterOperators.ByName("Equal"),
-                    Value = dataSet.Id
-                }
-            }
-        };
-        var srcResult = await _configurationGateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
-            srcCommand, new DataStoreTarget("PlatformConfiguration", "data", "DataSetSource"), ct).ConfigureAwait(false);
-        var dsSources = srcResult.IsSuccess ? srcResult.Value?.ToList() ?? [] : [];
-
-        var allMappings = new List<DataSetFieldMappingRecord>();
-        foreach (var source in dsSources)
-        {
-            var fmCommand = new QueryCommand<DataSetFieldMappingRecord>
-            {
-                Filter = new FilterExpression
-                {
-                    Root = new FilterCondition
-                    {
-                        PropertyName = "DataSetSourceId",
-                        Operator = FilterOperators.ByName("Equal"),
-                        Value = source.Id
-                    }
-                }
-            };
-            var fmResult = await _configurationGateway.Execute<IEnumerable<DataSetFieldMappingRecord>>(
-                fmCommand, new DataStoreTarget("PlatformConfiguration", "data", "DataSetFieldMapping"), ct).ConfigureAwait(false);
-            if (fmResult.IsSuccess && fmResult.Value != null)
-                allMappings.AddRange(fmResult.Value);
-        }
-
-        return allMappings;
-    }
-
-    /// <summary>Queries DataSetSource records by their identifiers.</summary>
-    private async Task<IReadOnlyList<DataSetSourceConfiguration>> QuerySourcesByIds(IReadOnlyList<Guid> sourceIds, CancellationToken ct)
-    {
-        var results = new List<DataSetSourceConfiguration>();
-        foreach (var id in sourceIds)
-        {
-            var command = new QueryCommand<DataSetSourceConfiguration>
-            {
-                Filter = new FilterExpression
-                {
-                    Root = new FilterCondition
-                    {
-                        PropertyName = "Id",
-                        Operator = FilterOperators.ByName("Equal"),
-                        Value = id
-                    }
-                }
-            };
-            var result = await _configurationGateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
-                command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetSource"), ct).ConfigureAwait(false);
-            if (result.IsSuccess && result.Value != null)
-                results.AddRange(result.Value);
-        }
-        return results;
-    }
-
-    /// <summary>Queries all records from a configuration table in the ConfigurationDb data schema.</summary>
-    private async Task<IReadOnlyList<T>> QueryAll<T>(string containerName, CancellationToken ct) where T : class
-    {
-        var command = new QueryCommand<T>();
-        var result = await _configurationGateway.Execute<IEnumerable<T>>(
-            command, new DataStoreTarget("PlatformConfiguration", "data", containerName), ct).ConfigureAwait(false);
-        return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
-    }
 }

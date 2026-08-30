@@ -10,6 +10,7 @@ using Fdw.Commands.Data.Abstractions.Caching;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.Lineage;
+using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Pipelines;
 using Microsoft.Extensions.Logging;
@@ -25,17 +26,17 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public abstract class ExpandLineageNodeEndpointBase : Endpoint<ExpandLineageNodeRequest, LineageGraphResponse>
 {
-    private readonly IConfigurationGateway _configurationGateway;
+    private readonly LineageConfigurationProvider _lineageProvider;
     private readonly ILogger<ExpandLineageNodeEndpointBase> _logger;
     private readonly PipelineServiceConfigurationProvider _pipelineProvider;
 
     /// <inheritdoc />
     protected ExpandLineageNodeEndpointBase(
-        IConfigurationGateway configurationGateway,
+        LineageConfigurationProvider lineageProvider,
         PipelineServiceConfigurationProvider pipelineProvider,
         ILogger<ExpandLineageNodeEndpointBase> logger)
     {
-        _configurationGateway = configurationGateway;
+        _lineageProvider = lineageProvider;
         _pipelineProvider = pipelineProvider;
         _logger = logger ?? NullLogger<ExpandLineageNodeEndpointBase>.Instance;
     }
@@ -134,9 +135,6 @@ public abstract class ExpandLineageNodeEndpointBase : Endpoint<ExpandLineageNode
                 [CachePolicy.CacheInvalidationTagsKey] = invalidationTags
             }
         };
-        var result = await _configurationGateway
-            .Execute<IEnumerable<T>>(command, new DataStoreTarget("PlatformConfiguration", pathName, containerName), ct)
-            .ConfigureAwait(false);
-        return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
+        return await _lineageProvider.Read<T>(pathName, containerName, command.Metadata, ct).ConfigureAwait(false);
     }
 }

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Commands.Data;
 using Fdw.Data.Lineage;
+using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Pipelines;
 using Microsoft.Extensions.Logging;
@@ -21,17 +22,17 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public abstract class GetLineageImpactEndpointBase : Endpoint<LineageImpactRequest, ImpactAnalysisResponse>
 {
-    private readonly IConfigurationGateway _configurationGateway;
+    private readonly LineageConfigurationProvider _lineageProvider;
     private readonly ILogger<GetLineageImpactEndpointBase> _logger;
     private readonly PipelineServiceConfigurationProvider _pipelineProvider;
 
     /// <inheritdoc />
     protected GetLineageImpactEndpointBase(
-        IConfigurationGateway configurationGateway,
+        LineageConfigurationProvider lineageProvider,
         PipelineServiceConfigurationProvider pipelineProvider,
         ILogger<GetLineageImpactEndpointBase> logger)
     {
-        _configurationGateway = configurationGateway;
+        _lineageProvider = lineageProvider;
         _pipelineProvider = pipelineProvider;
         _logger = logger ?? NullLogger<GetLineageImpactEndpointBase>.Instance;
     }
@@ -281,11 +282,6 @@ public abstract class GetLineageImpactEndpointBase : Endpoint<LineageImpactReque
     }
 
     /// <summary>Queries all records from a configuration table in the ConfigurationDb data schema.</summary>
-    private async Task<IReadOnlyList<T>> QueryAll<T>(string containerName, CancellationToken ct) where T : class
-    {
-        var command = new QueryCommand<T>();
-        var result = await _configurationGateway.Execute<IEnumerable<T>>(
-            command, new DataStoreTarget("PlatformConfiguration", "data", containerName), ct).ConfigureAwait(false);
-        return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
-    }
+    private Task<IReadOnlyList<T>> QueryAll<T>(string containerName, CancellationToken ct) where T : class
+        => _lineageProvider.ReadData<T>(containerName, ct);
 }

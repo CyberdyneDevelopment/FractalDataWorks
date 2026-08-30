@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Data.Lineage;
 using Fdw.Operations.Endpoints;
+using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Projects.Abstractions.TypeCollections;
 using Fdw.Services.Pipelines;
@@ -29,7 +30,6 @@ namespace Fdw.Services.Etl.Projects.Lineage;
 /// </remarks>
 public abstract class ProjectLineageGraphEndpointBase : GetLineageGraphEndpointBase
 {
-    private readonly IConfigurationGateway _configurationGateway;
 
     private const string OrchestrationNodeContainer = "OrchestrationNode";
     private const string NodePipelineContainer = "OrchestrationNodePipeline";
@@ -49,12 +49,11 @@ public abstract class ProjectLineageGraphEndpointBase : GetLineageGraphEndpointB
 
     /// <inheritdoc/>
     protected ProjectLineageGraphEndpointBase(
-        IConfigurationGateway configurationGateway,
+        LineageConfigurationProvider lineageProvider,
         PipelineServiceConfigurationProvider pipelineProvider,
         ILogger<GetLineageGraphEndpointBase> logger)
-        : base(configurationGateway, pipelineProvider, logger)
+        : base(lineageProvider, pipelineProvider, logger)
     {
-        _configurationGateway = configurationGateway;
     }
 
     /// <inheritdoc/>
@@ -222,11 +221,7 @@ public abstract class ProjectLineageGraphEndpointBase : GetLineageGraphEndpointB
         string[] invalidationTags,
         CancellationToken ct) where T : class
     {
-        var command = DataQuery.From<T>(ConfigurationDbConnection, PipeSchemaPath, containerName)
-            .WithCaching(LineageCacheDuration, invalidationTags)
-            .Build();
-
-        var result = await _configurationGateway.Execute<IEnumerable<T>>(command, ct).ConfigureAwait(false);
-        return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
+        return await Lineage.ReadCached<T>(
+            PipeSchemaPath, containerName, LineageCacheDuration, invalidationTags, ct).ConfigureAwait(false);
     }
 }
