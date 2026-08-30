@@ -10,6 +10,7 @@ using Fdw.Services.Authentication.Abstractions.Execution;
 using Fdw.Services.Authentication.Execution;
 using Fdw.Services.Authentication.Steps;
 using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.TokenManagers.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -79,6 +80,28 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<IAuthorizationRequestStore>(sp =>
                 new InMemoryAuthorizationRequestStore(
                     sp.GetService<ILogger<InMemoryAuthorizationRequestStore>>()));
+
+            // The two providers AuthenticationFlowProvider reads through. Consumed via
+            // GetRequiredService and registered nowhere, so the flow provider could not be built -
+            // it surfaced as "No service for type ImplementationConfigurationProviderBase`2[...]"
+            // only once everything ahead of it in startup had been fixed.
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<
+                AuthenticationFlowConfiguration, AuthenticationFlowConfigurationCommand>>(sp =>
+                new ImplementationConfigurationProviderBase<
+                    AuthenticationFlowConfiguration, AuthenticationFlowConfigurationCommand>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<
+                        AuthenticationFlowConfiguration, AuthenticationFlowConfigurationCommand>>()!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConfigurationConnection, "auth"));
+
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<
+                AuthenticationFlowStepConfiguration, AuthenticationFlowStepConfigurationCommand>>(sp =>
+                new ImplementationConfigurationProviderBase<
+                    AuthenticationFlowStepConfiguration, AuthenticationFlowStepConfigurationCommand>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<
+                        AuthenticationFlowStepConfiguration, AuthenticationFlowStepConfigurationCommand>>()!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConfigurationConnection, "auth"));
 
             builder.Services.TryAddSingleton<IAuthenticationFlowProvider>(sp =>
                 new AuthenticationFlowProvider(
@@ -150,10 +173,16 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
     /// <remarks>
-    /// ServerConfiguration rather than PlatformConfiguration: which providers a host accepts, and on
-    /// what terms, is that host's business. Two hosts in one tenant legitimately differ. The binding
-    /// between a provider subject and a user is the opposite — a fact about the tenant — and reads
-    /// from PlatformConfiguration.
+    /// PlatformConfiguration, because that is where a flow's DDL actually lives:
+    /// <c>auth.AuthenticationFlow</c> and <c>auth.AuthenticationFlowStep</c> are declared in
+    /// ConfigurationDb and seeded there. This previously said ServerConfiguration, on the argument
+    /// that which providers a host accepts is the host's own business — a fair argument, and it
+    /// contradicted the data model, so the flow provider read a store that held no flows.
+    /// <para>
+    /// Moving flows to ServerConfiguration would be a coherent design, but it is a schema change
+    /// with a data migration behind it, not a connection-name edit. The trusted-issuer list is the
+    /// part that genuinely is per-host, and that one does read from ServerConfiguration.
+    /// </para>
     /// </remarks>
-    public static string ConfigurationConnection { get; set; } = "ServerConfiguration";
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
 }
