@@ -75,10 +75,11 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
 
             builder.Services.TryAddSingleton<IAcrPolicy, StandardAcrPolicy>();
 
-            // PasswordCredentialStep takes this, so an unregistered resolver is not a missing
-            // feature - it is a step that cannot be activated, and the flow fails at the login
-            // rather than at startup.
+            // What the shipped steps take beyond their own registration. A step is activated on
+            // demand, so a dependency missing here fails at the first login that names the step,
+            // never at startup - which is why these were found one deploy at a time.
             builder.Services.TryAddScoped<ITenantResolver, UserTenantResolver>();
+            builder.Services.TryAddScoped<IIssuanceEligibility, UserAccountEligibility>();
 
             builder.Services.TryAddSingleton<IAuthenticationExecutionStore>(sp =>
                 new InMemoryExecutionStore(sp.GetService<ILogger<InMemoryExecutionStore>>()));
