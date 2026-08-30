@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Data.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -42,15 +44,18 @@ public sealed class ConfigurationGatewayServiceType : ConfigurationGatewayTypeBa
 
             builder.Services.TryAddSingleton<IConfigurationContainerLookup>(sp =>
             {
-                // Selects its gateway through the provider rather than resolving IConfigurationGateway,
-                // which nothing registers - only the provider is.
+                // Every connection declared in configurationSchema.json, not one chosen store:
+                // Get(configTypeName) scans all DataStores for a container, so a container declared
+                // on ServerConfiguration is invisible if only PlatformConfiguration is loaded.
+                // The provider builds each gateway on demand from its declaration and caches it.
                 var gatewayProvider = sp.GetRequiredService<IConfigurationGatewayProvider>();
+                var schema = sp.GetRequiredService<ConfigurationSchema>();
                 var dataStoresLazy = new Lazy<IReadOnlyList<IDataStore>>(
-                    () => gatewayProvider.Get(DataStore) is { IsSuccess: true, Value: { } gateway }
-                        ? gateway.DataStores
-                        : throw new InvalidOperationException(
-                            $"No configuration gateway is available for connection '{DataStore}', "
-                            + "so no container can be looked up."),
+                    () => schema.Connections
+                        .Select(c => gatewayProvider.Get(c.Name))
+                        .Where(g => g.IsSuccess && g.Value is not null)
+                        .SelectMany(g => g.Value!.DataStores)
+                        .ToList(),
                     LazyThreadSafetyMode.ExecutionAndPublication);
                 return new ConfigurationContainerLookup(
                     dataStoresLazy,
