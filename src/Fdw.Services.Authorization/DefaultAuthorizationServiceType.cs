@@ -130,10 +130,12 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<RolePermissionConfiguration>>(sp =>
                 sp.GetRequiredService<ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand>>());
 
+            // Hands over the gateway provider, not a gateway. Resolving one here meant .Value! on a
+            // result that can fail — a null-forgive that turns "no gateway for this connection" into
+            // a NullReferenceException at the first query instead of a named failure at the read.
             builder.Services.TryAddSingleton<TenantOrgAccessConfigurationProvider>(sp =>
                 new TenantOrgAccessConfigurationProvider(
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()
-                        .Get(AuthorizationServiceTypes.ConfigurationConnection).Value!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     sp.GetService<ILogger<TenantOrgAccessConfigurationProvider>>()));
 
             builder.Services.TryAddScoped<IOrgAccessProvider>(sp =>

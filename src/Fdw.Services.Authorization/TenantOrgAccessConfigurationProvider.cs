@@ -23,21 +23,29 @@ public class TenantOrgAccessConfigurationProvider
     private const string PathName = "tenant";
     private const string ContainerName = "TenantOrgAccess";
 
-    private readonly IConfigurationGateway _gateway;
+    private readonly IConfigurationGatewayProvider _gatewayProvider;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TenantOrgAccessConfigurationProvider"/> class.
     /// </summary>
-    /// <param name="gateway">The configuration gateway.</param>
+    /// <param name="gatewayProvider">Resolves the gateway for this provider's store.</param>
     /// <param name="logger">Optional logger instance.</param>
+    /// <remarks>
+    /// The provider selects its own gateway rather than being handed one. Which connection this
+    /// domain reads is its own business and is named once here, in <see cref="DataStoreName"/> —
+    /// a caller cannot supply a gateway over some other store.
+    /// </remarks>
     public TenantOrgAccessConfigurationProvider(
-        IConfigurationGateway gateway,
+        IConfigurationGatewayProvider gatewayProvider,
         ILogger<TenantOrgAccessConfigurationProvider>? logger = null)
     {
-        _gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
+        _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
         _logger = logger ?? NullLogger<TenantOrgAccessConfigurationProvider>.Instance;
     }
+
+    /// <summary>The gateway over this provider's store.</summary>
+    private IGenericResult<IConfigurationGateway> Gateway() => _gatewayProvider.Get(DataStoreName);
 
     /// <summary>
     /// Queries org-tier access grants for a specific user within a tenant and org.
@@ -61,7 +69,13 @@ public class TenantOrgAccessConfigurationProvider
             .Where("OrgId", orgId)
             .Build();
 
-        var result = await _gateway.Execute<IEnumerable<TenantOrgAccessConfiguration>>(command, cancellationToken)
+        var gateway = Gateway();
+        if (gateway.IsFailure || gateway.Value is not { } resolved)
+            return GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Failure(
+                TenantOrgAccessConfigurationProviderLog.GetFailed(_logger, userId, orgId,
+                    new InvalidOperationException(gateway.CurrentMessage)));
+
+        var result = await resolved.Execute<IEnumerable<TenantOrgAccessConfiguration>>(command, cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)

@@ -1,3 +1,4 @@
+using Fdw.Data.DataSets;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Data.Clients.Models;
 using System;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Commands.Data;
 using Fdw.Data;
+using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Pipelines;
@@ -25,17 +27,17 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageRequest, DataSetLineageResponse>
 {
-    private readonly IConfigurationGateway _configurationGateway;
+    private readonly DataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<GetDataSetLineageEndpointBase> _logger;
     private readonly PipelineServiceConfigurationProvider _pipelineProvider;
 
     /// <inheritdoc />
     protected GetDataSetLineageEndpointBase(
-        IConfigurationGateway configurationGateway,
+        DataSetConfigurationProvider dataSetProvider,
         PipelineServiceConfigurationProvider pipelineProvider,
         ILogger<GetDataSetLineageEndpointBase> logger)
     {
-        _configurationGateway = configurationGateway;
+        _dataSetProvider = dataSetProvider;
         _pipelineProvider = pipelineProvider;
         _logger = logger ?? NullLogger<GetDataSetLineageEndpointBase>.Instance;
     }
@@ -68,7 +70,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
             return;
         }
 
-        var sources = await GetSources(dataSet.Id, ct).ConfigureAwait(false);
+        var sources = GetSources(dataSet);
         var upstreamSources = BuildUpstreamSources(sources);
         var fieldLineage = await BuildFieldLineage(sources, ct).ConfigureAwait(false);
         var downstreamConsumers = await BuildDownstreamConsumers(req.Name, ct).ConfigureAwait(false);
@@ -82,51 +84,22 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
         }, ct).ConfigureAwait(false);
     }
 
-    /// <summary>Finds a DataSet by name from the configuration database.</summary>
-    protected virtual async Task<DataSetRecord?> FindDataSet(string name, CancellationToken ct)
+    /// <summary>Finds a DataSet by name.</summary>
+    /// <remarks>
+    /// The provider knows which store, path and container a DataSet lives in, so none of that is
+    /// named here. It also composes the aggregate — sources, and each source's field mappings —
+    /// which is why the three separate reads this endpoint used to issue are one call.
+    /// </remarks>
+    protected virtual async Task<DataSetConfiguration?> FindDataSet(string name, CancellationToken ct)
     {
-        var command = new QueryCommand<DataSetRecord>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterCondition
-                {
-                    PropertyName = "Name",
-                    Operator = FilterOperators.ByName("Equal"),
-                    Value = name
-                }
-            }
-        };
-
-        var result = await _configurationGateway.Execute<IEnumerable<DataSetRecord>>(
-            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSet"), ct).ConfigureAwait(false);
-        return result.IsSuccess ? result.Value?.FirstOrDefault() : null;
+        var result = await _dataSetProvider.Get(name, ct).ConfigureAwait(false);
+        return result.IsSuccess ? result.Value : null;
     }
 
-    /// <summary>Retrieves all sources for a DataSet, ordered by priority.</summary>
-    protected virtual async Task<IReadOnlyList<DataSetSourceConfiguration>> GetSources(Guid dataSetId, CancellationToken ct)
-    {
-        var command = new QueryCommand<DataSetSourceConfiguration>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterCondition
-                {
-                    PropertyName = "DataSetId",
-                    Operator = FilterOperators.ByName("Equal"),
-                    Value = dataSetId
-                }
-            },
-            Ordering = new OrderingExpression
-            {
-                OrderedFields = [new OrderedField { PropertyName = "Priority", Direction = SortDirections.ByName("Ascending") }]
-            }
-        };
-
-        var result = await _configurationGateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
-            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetSource"), ct).ConfigureAwait(false);
-        return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
-    }
+    /// <summary>The DataSet's sources, in priority order.</summary>
+    /// <remarks>Ordered here rather than in a query: they arrive on the aggregate already.</remarks>
+    protected static IReadOnlyList<DataSetSourceConfiguration> GetSources(DataSetConfiguration dataSet) =>
+        [.. (dataSet.Sources ?? []).OrderBy(s => s.Priority)];
 
     /// <summary>Builds upstream source DTOs from source records, classifying source types by their physical location.</summary>
     protected virtual IReadOnlyList<LineageSourceResponse> BuildUpstreamSources(IReadOnlyList<DataSetSourceConfiguration> sources)
@@ -173,22 +146,9 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
 
         foreach (var source in sources)
         {
-            var mappingsCommand = new QueryCommand<DataSetFieldMappingRecord>
-            {
-                Filter = new FilterExpression
-                {
-                    Root = new FilterCondition
-                    {
-                        PropertyName = "DataSetSourceId",
-                        Operator = FilterOperators.ByName("Equal"),
-                        Value = source.Id
-                    }
-                }
-            };
-
-            var mappingsResult = await _configurationGateway.Execute<IEnumerable<DataSetFieldMappingRecord>>(
-                mappingsCommand, new DataStoreTarget("PlatformConfiguration", "data", "DataSetFieldMapping"), ct).ConfigureAwait(false);
-            var mappings = mappingsResult.IsSuccess ? mappingsResult.Value?.ToList() ?? [] : [];
+            // The provider composed these onto the source; a query here would re-read what the
+            // aggregate already carries, against a container this endpoint would have to name.
+            var mappings = source.Mappings ?? [];
 
             foreach (var mapping in mappings)
             {
@@ -208,7 +168,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
                 existingField.Sources.Add(new FieldSourceMappingResponse
                 {
                     SourceName = source.SourceName,
-                    PhysicalField = mapping.PhysicalFieldName
+                    PhysicalField = mapping.PhysicalFieldName ?? string.Empty
                 });
             }
         }

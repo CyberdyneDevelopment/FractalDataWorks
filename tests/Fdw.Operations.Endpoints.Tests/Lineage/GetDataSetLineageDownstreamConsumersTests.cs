@@ -29,8 +29,8 @@ namespace Fdw.Operations.Endpoints.Tests.Lineage;
 public class GetDataSetLineageDownstreamConsumersTests
 {
     private sealed class TestableEndpoint(
-        IConfigurationGateway gateway, PipelineServiceConfigurationProvider provider, ILogger<GetDataSetLineageEndpointBase> logger)
-        : GetDataSetLineageEndpointBase(gateway, provider, logger)
+        DataSetConfigurationProvider dataSets, PipelineServiceConfigurationProvider provider, ILogger<GetDataSetLineageEndpointBase> logger)
+        : GetDataSetLineageEndpointBase(dataSets, provider, logger)
     {
         public Task<IReadOnlyList<LineageConsumerResponse>> InvokeBuildDownstreamConsumers(string dataSetName, CancellationToken ct) =>
             BuildDownstreamConsumers(dataSetName, ct);
@@ -62,8 +62,16 @@ public class GetDataSetLineageDownstreamConsumersTests
         }
     };
 
+    // These tests only exercise BuildDownstreamConsumers, which reads through the pipeline provider;
+    // the DataSet provider is a constructor dependency it never touches here.
     private static TestableEndpoint CreateEndpoint(Mock<PipelineServiceConfigurationProvider> providerMock) =>
-        new(Mock.Of<IConfigurationGateway>(), providerMock.Object, Mock.Of<ILogger<GetDataSetLineageEndpointBase>>());
+        new(new Mock<DataSetConfigurationProvider>(
+                    (ILogger<DataSetConfigurationProvider>?)null!,
+                    new ConfigurationGatewayProvider(),
+                    "PlatformConfiguration",
+                    "data").Object,
+            providerMock.Object,
+            Mock.Of<ILogger<GetDataSetLineageEndpointBase>>());
 
     [Fact]
     public async Task DownstreamConsumersPopulatedWhenPipelineConsumesDataSet()

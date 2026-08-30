@@ -24,7 +24,6 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
     private readonly UserRoleConfigurationProvider _userRoleProvider;
 
     private readonly UserConfigurationProvider _userProvider;
-    private readonly IConfigurationGateway _configurationGateway;
 
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
@@ -35,13 +34,11 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
     protected RevokeUserRoleEndpointBase(
         RoleConfigurationProvider roleProvider,
         UserRoleConfigurationProvider userRoleProvider,
-        UserConfigurationProvider userProvider,
-        IConfigurationGateway configurationGateway)
+        UserConfigurationProvider userProvider)
     {
         _roleProvider = roleProvider;
         _userRoleProvider = userRoleProvider;
         _userProvider = userProvider;
-        _configurationGateway = configurationGateway;
     }
 
     /// <summary>
@@ -129,8 +126,7 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
     private async Task<IGenericResult> RevokeRoleAtomically(
         UserRoleConfiguration existing, Guid userId, string userIdString, CancellationToken ct)
     {
-        var txnResult = await _configurationGateway.BeginTransaction(
-            _userRoleProvider.DataStoreName, ct).ConfigureAwait(false);
+        var txnResult = await _userRoleProvider.BeginTransaction(ct).ConfigureAwait(false);
         if (!txnResult.IsSuccess || txnResult.Value == null)
         {
             var reason = txnResult.CurrentMessage ?? "Transaction could not be opened";

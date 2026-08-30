@@ -46,6 +46,7 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
     /// </summary>
     public static string SchemaFileName { get; set; } = "configurationSchema.json";
 
+
     /// <summary>
     /// Sets this collection's phases: the schema in Configure, the gateways over it in Register.
     /// </summary>
@@ -69,6 +70,7 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
                 new ConfigurationGatewayProvider(
                     connectionName => Build(sp, connectionName, loggerFactory),
                     sp.GetService<ILogger<ConfigurationGatewayProvider>>()));
+
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
