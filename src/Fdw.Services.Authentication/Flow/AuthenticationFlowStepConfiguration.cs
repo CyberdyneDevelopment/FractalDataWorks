@@ -30,7 +30,12 @@ public partial class AuthenticationFlowStepConfiguration : IGenericConfiguration
     public string? ServiceOptionType => null;
 
     /// <summary>Gets or sets the flow this step belongs to.</summary>
-    public Guid AuthenticationFlowId { get; set; }
+    /// <remarks>
+    /// Keyed on the parent's RowId, which is the column auth.AuthenticationFlowStep actually
+    /// carries. A Guid AuthenticationFlowId here bound to no column, so it stayed empty and every
+    /// flow loaded with zero steps.
+    /// </remarks>
+    public int AuthenticationFlowRowId { get; set; }
 
     /// <summary>Gets or sets where in the flow this step runs.</summary>
     public int StepOrder { get; set; }

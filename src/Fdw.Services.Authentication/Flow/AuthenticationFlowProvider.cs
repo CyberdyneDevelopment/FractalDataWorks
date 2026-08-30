@@ -84,7 +84,7 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
         foreach (var row in rows.Value ?? [])
         {
             var ordered = (stepRows.Value ?? [])
-                .Where(s => s.AuthenticationFlowId == row.Id)
+                .Where(s => s.AuthenticationFlowRowId == row.RowId)
                 .OrderBy(s => s.StepOrder)
                 .ToList();
 

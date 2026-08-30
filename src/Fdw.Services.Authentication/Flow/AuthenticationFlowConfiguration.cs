@@ -16,6 +16,9 @@ public partial class AuthenticationFlowConfiguration : IGenericConfiguration
     /// <inheritdoc />
     public Guid Id { get; set; }
 
+    /// <summary>Gets or sets the identity this flow's steps are keyed on.</summary>
+    public int RowId { get; set; }
+
     /// <inheritdoc />
     /// <remarks>What a caller selects. The button pressed picks the flow.</remarks>
     public string Name { get; set; } = string.Empty;
