@@ -94,6 +94,19 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<RoleConfiguration>>(
                 sp => sp.GetRequiredService<RoleConfigurationProvider>());
 
+            // UserRole provider. Consumed by EffectivePermissionResolver here, by
+            // DefaultPrincipalResolver in the Authentication package, and by GetMeEndpoint - which
+            // is where its absence actually surfaced, as FastEndpoints activating an endpoint at
+            // MapFastEndpoints rather than as a phase failure, because the resolver takes it
+            // through a factory that is not called until something asks.
+            builder.Services.TryAddSingleton<UserRoleConfigurationProvider>(sp =>
+                new UserRoleConfigurationProvider(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<UserRoleConfigurationProvider>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    DataStore, pathNameAuthz));
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<UserRoleConfiguration, UserRoleConfigurationCommand>>(
+                sp => sp.GetRequiredService<UserRoleConfigurationProvider>());
+
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>>(sp =>
                 new ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>(
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>>()!,

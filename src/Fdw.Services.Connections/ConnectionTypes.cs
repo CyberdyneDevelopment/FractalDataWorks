@@ -99,11 +99,19 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                 ?? NullLogger<ConnectionConfigurationProvider>.Instance,
                 nameof(ConnectionConfigurationProvider));
 
-            builder.Services.TryAddSingleton<IConnectionConfigurationProvider>(sp =>
+            // The concrete type is registered as well as the interface, and the interface resolves
+            // to it, so both are one instance. Endpoints take the concrete provider - 25 of them do
+            // - and registering only the interface leaves every one of them unactivatable. That
+            // surfaces as FastEndpoints failing at MapFastEndpoints rather than as a missing
+            // registration, which points at the endpoint instead of at this line.
+            builder.Services.TryAddSingleton<ConnectionConfigurationProvider>(sp =>
                 new ConnectionConfigurationProvider(
                     sp.GetService<ILogger<ConnectionConfigurationProvider>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     ConfigurationConnection));
+
+            builder.Services.TryAddSingleton<IConnectionConfigurationProvider>(
+                sp => sp.GetRequiredService<ConnectionConfigurationProvider>());
 
             builder.Services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IHealthCheckable, ConnectionsHealthCheckable>());
