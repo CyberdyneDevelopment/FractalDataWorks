@@ -4,6 +4,7 @@ using Fdw.Collections;
 using Fdw.Services;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Steps;
+using Fdw.Services.Authentication.Binding;
 using Fdw.ServiceTypes;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Execution;
@@ -73,6 +74,11 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
                 sp.GetRequiredService<AuthenticationStepResolver>());
 
             builder.Services.TryAddSingleton<IAcrPolicy, StandardAcrPolicy>();
+
+            // PasswordCredentialStep takes this, so an unregistered resolver is not a missing
+            // feature - it is a step that cannot be activated, and the flow fails at the login
+            // rather than at startup.
+            builder.Services.TryAddScoped<ITenantResolver, UserTenantResolver>();
 
             builder.Services.TryAddSingleton<IAuthenticationExecutionStore>(sp =>
                 new InMemoryExecutionStore(sp.GetService<ILogger<InMemoryExecutionStore>>()));
