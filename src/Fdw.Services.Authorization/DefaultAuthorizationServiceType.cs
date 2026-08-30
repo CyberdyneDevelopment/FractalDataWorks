@@ -79,6 +79,21 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
 
             const string pathNameAuthz = "authz";
 
+            // Role provider. Registered here beside the other two because the three are read
+            // together - a role means nothing without the permissions it grants - and leaving this
+            // one out is what made every consumer of it unresolvable while the other two looked
+            // fine. RoleConfigurationProvider rather than the bare base, because DefaultPrincipalResolver
+            // takes the concrete type and both should be the same instance.
+            builder.Services.TryAddSingleton<RoleConfigurationProvider>(sp =>
+                new RoleConfigurationProvider(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<RoleConfigurationProvider>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    DataStore, pathNameAuthz));
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<RoleConfiguration, RoleConfigurationCommand>>(
+                sp => sp.GetRequiredService<RoleConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServiceConfigurationProvider<RoleConfiguration>>(
+                sp => sp.GetRequiredService<RoleConfigurationProvider>());
+
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>>(sp =>
                 new ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>(
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>>()!,
