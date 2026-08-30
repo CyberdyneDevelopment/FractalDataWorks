@@ -94,6 +94,12 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<RoleConfiguration>>(
                 sp => sp.GetRequiredService<RoleConfigurationProvider>());
 
+            // RoleConfigurationProvider is also the domain's IAuthorizationProvider, and endpoints
+            // ask for it under that name. Same instance rather than a second provider over the same
+            // rows.
+            builder.Services.TryAddSingleton<IAuthorizationProvider>(
+                sp => sp.GetRequiredService<RoleConfigurationProvider>());
+
             // UserRole provider. Consumed by EffectivePermissionResolver here, by
             // DefaultPrincipalResolver in the Authentication package, and by GetMeEndpoint - which
             // is where its absence actually surfaced, as FastEndpoints activating an endpoint at
