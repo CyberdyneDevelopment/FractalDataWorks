@@ -39,10 +39,32 @@ public abstract class UpdateUniverseEndpointBase : CrudUpdateEndpointBase<Update
                 result.Value is null ? null : UniverseResponseMapper.ToDetail(result.Value));
     }
 
+    /// <summary>
+    /// Rejects a supplied Status, Visibility or JoinPolicy that is not a registered option.
+    /// </summary>
+    /// <remarks>
+    /// Only what was supplied is checked. A null field means "leave it alone", so validating it
+    /// would reject every PATCH that does not restate all three.
+    /// </remarks>
+    /// <param name="request">The update request.</param>
+    protected virtual IGenericResult ValidateLifecycle(UpdateUniverseRequest request)
+    {
+        var status = UniverseLifecycleValidator.ValidateStatus(request.Name, request.Status, Logger);
+        if (status.IsFailure) return status;
+
+        var visibility = UniverseLifecycleValidator.ValidateVisibility(request.Name, request.Visibility, Logger);
+        return visibility.IsFailure
+            ? visibility
+            : UniverseLifecycleValidator.ValidateJoinPolicy(request.Name, request.JoinPolicy, Logger);
+    }
+
     /// <inheritdoc />
     protected override async Task<IGenericResult<UniverseDetailResponse>> Update(
         UpdateUniverseRequest request, UniverseDetailResponse existing, CancellationToken ct)
     {
+        var lifecycle = ValidateLifecycle(request);
+        if (lifecycle.IsFailure) return lifecycle.ToNewResult<UniverseDetailResponse>();
+
         var current = await _provider.Get(request.Name, ct).ConfigureAwait(false);
         if (current.IsFailure) return current.ToNewResult<UniverseDetailResponse>();
 
