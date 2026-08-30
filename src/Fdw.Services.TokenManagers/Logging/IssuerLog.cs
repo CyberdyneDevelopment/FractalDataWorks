@@ -72,4 +72,73 @@ internal static partial class IssuerLog
     [MessageLogging(EventId = 91182, Level = LogLevel.Error,
         Message = "A token cannot be issued without an audience")]
     internal static partial IGenericMessage AudienceMissing(ILogger<JwtTokenIssuer> logger);
+
+    /// <summary>The issuance configuration was resolved.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="name">The token manager row's name.</param>
+    /// <param name="issuer">What it mints into <c>iss</c>.</param>
+    [MessageLogging(EventId = 91187, Level = LogLevel.Information,
+        Message = "Resolved token manager '{name}' issuing as '{issuer}'")]
+    internal static partial IGenericMessage IssuanceResolved(
+        ILogger<JwtIssuanceResolver> logger, string name, string issuer);
+
+    /// <summary>No token manager row declares the Jwt option.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="declared">The option types that were found.</param>
+    // Critical: the host is running and cannot mint, and no request will fix it.
+    [MessageLogging(EventId = 91188, Level = LogLevel.Critical,
+        Message = "No enabled auth.TokenManager row declares ServiceOptionType 'Jwt' (found: {declared})")]
+    internal static partial IGenericMessage NoJwtTokenManager(
+        ILogger<JwtIssuanceResolver> logger, string declared);
+
+    /// <summary>The header named no secret manager or key.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="name">The token manager row's name.</param>
+    [MessageLogging(EventId = 91189, Level = LogLevel.Critical,
+        Message = "Token manager '{name}' names no SecretManagerName/SecretKeyName, so its signing key cannot be located")]
+    internal static partial IGenericMessage SigningKeyNotLocatable(
+        ILogger<JwtIssuanceResolver> logger, string name);
+
+    /// <summary>The typed body row was missing.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="name">The token manager row's name.</param>
+    /// <param name="reason">What the read reported.</param>
+    [MessageLogging(EventId = 91190, Level = LogLevel.Critical,
+        Message = "Token manager '{name}' has no readable auth.JwtTokenManager body: {reason}")]
+    internal static partial IGenericMessage TypedBodyUnreadable(
+        ILogger<JwtIssuanceResolver> logger, string name, string? reason);
+
+    /// <summary>The typed body named no issuer.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="name">The token manager row's name.</param>
+    [MessageLogging(EventId = 91191, Level = LogLevel.Critical,
+        Message = "Token manager '{name}' names no Issuer, and a token minted without one matches no validator")]
+    internal static partial IGenericMessage IssuerMissing(
+        ILogger<JwtIssuanceResolver> logger, string name);
+
+    /// <summary>The configured lifetime was not an ISO 8601 duration.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="name">The token manager row's name.</param>
+    /// <param name="exception">What the parser reported.</param>
+    /// <param name="value">What was configured.</param>
+    [MessageLogging(EventId = 91192, Level = LogLevel.Critical,
+        Message = "Token manager '{name}' has AccessTokenLifetime '{value}', which is not an ISO 8601 duration")]
+    internal static partial IGenericMessage LifetimeUnreadable(
+        ILogger<JwtIssuanceResolver> logger, Exception exception, string name, string value);
+
+    /// <summary>No lifetime was configured.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="name">The token manager row's name.</param>
+    [MessageLogging(EventId = 91194, Level = LogLevel.Critical,
+        Message = "Token manager '{name}' names no AccessTokenLifetime, and a token with no expiry never stops being usable")]
+    internal static partial IGenericMessage LifetimeMissing(
+        ILogger<JwtIssuanceResolver> logger, string name);
+
+    /// <summary>The token manager headers could not be read.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="reason">What the read reported.</param>
+    [MessageLogging(EventId = 91193, Level = LogLevel.Critical,
+        Message = "Could not read auth.TokenManager rows: {reason}")]
+    internal static partial IGenericMessage HeadersUnreadable(
+        ILogger<JwtIssuanceResolver> logger, string? reason);
 }

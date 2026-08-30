@@ -87,6 +87,24 @@ public partial class TokenManagerTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<TokenManagerConfiguration>>(
                 sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
 
+            builder.Services.TryAddSingleton<JwtTokenManagerConfigurationProvider>(sp =>
+                new JwtTokenManagerConfigurationProvider(
+                    sp.GetService<ILogger<JwtTokenManagerConfigurationProvider>>()!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConfigurationConnection));
+
+            // The issuer and the key it signs with are one registration for the whole collection,
+            // not per-option: a deployment mints as exactly one issuer, and a host that had to call
+            // an AddXxx of its own is a host the next one has to remember to copy.
+            builder.Services.TryAddSingleton<JwtIssuanceResolver>(sp =>
+                new JwtIssuanceResolver(sp, sp.GetService<ILogger<JwtIssuanceResolver>>()));
+
+            builder.Services.TryAddSingleton<ITokenIssuer>(sp =>
+                new ConfiguredTokenIssuer(sp.GetRequiredService<JwtIssuanceResolver>()));
+
+            builder.Services.TryAddSingleton<ISigningCredentialProvider>(sp =>
+                new ConfiguredSigningCredentialProvider(sp.GetRequiredService<JwtIssuanceResolver>()));
+
             builder.Services.AddScoped<ITokenManagerProvider>(sp =>
             {
                 var provider = new TokenManagerProvider(
