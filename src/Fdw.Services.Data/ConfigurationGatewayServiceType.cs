@@ -42,9 +42,15 @@ public sealed class ConfigurationGatewayServiceType : ConfigurationGatewayTypeBa
 
             builder.Services.TryAddSingleton<IConfigurationContainerLookup>(sp =>
             {
-                var gateway = sp.GetRequiredService<IConfigurationGateway>();
+                // Selects its gateway through the provider rather than resolving IConfigurationGateway,
+                // which nothing registers - only the provider is.
+                var gatewayProvider = sp.GetRequiredService<IConfigurationGatewayProvider>();
                 var dataStoresLazy = new Lazy<IReadOnlyList<IDataStore>>(
-                    () => gateway.DataStores,
+                    () => gatewayProvider.Get(DataStore) is { IsSuccess: true, Value: { } gateway }
+                        ? gateway.DataStores
+                        : throw new InvalidOperationException(
+                            $"No configuration gateway is available for connection '{DataStore}', "
+                            + "so no container can be looked up."),
                     LazyThreadSafetyMode.ExecutionAndPublication);
                 return new ConfigurationContainerLookup(
                     dataStoresLazy,

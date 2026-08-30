@@ -29,7 +29,8 @@ public abstract class ConfigurationGatewayTypeBase<TService, TFactory> :
         string displayName,
         string description,
         string? category = null)
-        : base(name, sectionName, displayName, description, category ?? "ConfigurationGateway")
+        : base(name, sectionName, displayName, description, category ?? "ConfigurationGateway",
+               defaultDataStoreName: "PlatformConfiguration")
     {
     }
 }
