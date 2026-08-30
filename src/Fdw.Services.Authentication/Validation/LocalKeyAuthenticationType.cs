@@ -98,13 +98,13 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
             return GenericResult<AuthenticationSchemeBinding>.Failure(
                 AuthenticationValidationLog.EntryMissingAuthority(log, serviceName));
 
-        var typed = JwtBearerAuthenticationConfiguration.Read(section, serviceName, log);
+        var typed = LocalKeyAuthenticationConfiguration.Read(section, serviceName, log);
         if (typed.IsFailure)
             return typed.ToNewResult<AuthenticationSchemeBinding>();
 
         if (typed.Value is not { } body)
             return GenericResult<AuthenticationSchemeBinding>.Failure(
-                AuthenticationValidationLog.JwtBearerMissingAudience(log, serviceName));
+                AuthenticationValidationLog.LocalKeyMissingAudience(log, serviceName));
 
         var schemeName = SchemeNameFor(serviceName);
 

@@ -130,4 +130,12 @@ public static partial class AuthenticationValidationLog
     [MessageLogging(EventId = 71113, Level = LogLevel.Error,
         Message = "No local signing key is available for '{serviceName}', so its tokens cannot be validated")]
     public static partial IGenericMessage LocalSigningKeyUnavailable(ILogger logger, string serviceName);
+
+    /// <summary>Logs a LocalKey entry that declared no audience.</summary>
+    // Separate from JwtBearerMissingAudience so the message can say what a LocalKey audience is
+    // for. Here it is what this host mints into its own tokens, not a value agreed with a remote
+    // issuer, so the thing to go change is the flow rather than the provider registration.
+    [MessageLogging(EventId = 71114, Level = LogLevel.Error,
+        Message = "LocalKey authentication service '{serviceName}' declares no Audience. Set it to the audience this host's flows mint - a token is only accepted for the audience it names, so a mismatch rejects every token this host issued")]
+    public static partial IGenericMessage LocalKeyMissingAudience(ILogger logger, string serviceName);
 }
