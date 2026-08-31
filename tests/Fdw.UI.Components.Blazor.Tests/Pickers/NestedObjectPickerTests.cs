@@ -64,7 +64,7 @@ public sealed class NestedObjectPickerTests : IDisposable
                 EventCallback.Factory.Create<IReadOnlyList<Node>>(this, onChainChanged)));
 
     // Invoke the Nth (0-based) level picker's ValueChanged — the binding wired to the real handler.
-    private async Task SelectAtLevel(IRenderedComponent<NestedObjectPicker<Node>> cut, int level, string? key)
+    private static async Task SelectAtLevel(IRenderedComponent<NestedObjectPicker<Node>> cut, int level, string? key)
     {
         var picker = cut.FindComponents<ObjectPicker<Node>>()[level];
         await cut.InvokeAsync(() => picker.Instance.ValueChanged.InvokeAsync(key));
