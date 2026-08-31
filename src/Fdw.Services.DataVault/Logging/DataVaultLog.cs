@@ -141,27 +141,6 @@ public static partial class DataVaultLog
     public static partial IGenericMessage TypedCacheRegistered(ILogger logger, string serviceOptionType);
 
     /// <summary>
-    /// Logs that a vault has no ServiceOptionType, so its typed configuration cannot be resolved.
-    /// </summary>
-    /// <param name="logger">The logger that records the event.</param>
-    /// <param name="vaultName">The name of the vault that has no ServiceOptionType.</param>
-    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61006, Level = LogLevel.Warning,
-        Message = "Vault '{vaultName}' has no ServiceOptionType — cannot resolve typed configuration")]
-    public static partial IGenericMessage NoServiceOptionType(ILogger logger, string vaultName);
-
-    /// <summary>
-    /// Logs that no typed vault provider is registered for the given service option type.
-    /// </summary>
-    /// <param name="logger">The logger that records the event.</param>
-    /// <param name="serviceOptionType">The service option type that has no registered typed provider.</param>
-    /// <param name="vaultName">The name of the vault that required the typed provider.</param>
-    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61007, Level = LogLevel.Error,
-        Message = "No typed vault provider registered for service option type '{serviceOptionType}' (vault '{vaultName}')")]
-    public static partial IGenericMessage NoTypedProviderForServiceOptionType(ILogger logger, string serviceOptionType, string vaultName);
-
-    /// <summary>
     /// Logs that loading the typed vault body failed for the given vault and service option type.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
@@ -203,14 +182,4 @@ public static partial class DataVaultLog
     [MessageLogging(EventId = 61008, Level = LogLevel.Error,
         Message = "Vault factory configuration is invalid for '{vaultName}' — typed body is missing or wrong type")]
     public static partial IGenericMessage FactoryConfigurationInvalid(ILogger logger, string vaultName);
-
-    /// <summary>
-    /// Logs that a vault cannot be resolved because the provider's resolution dependencies (connection and secret-manager providers) were not configured via RegisterFactory.
-    /// </summary>
-    /// <param name="logger">The logger that records the event.</param>
-    /// <param name="vaultName">The name of the vault that cannot be resolved.</param>
-    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61009, Level = LogLevel.Error,
-        Message = "Vault '{vaultName}' cannot be resolved — the provider's resolution dependencies (connection + secret-manager providers) were not configured via RegisterFactory")]
-    public static partial IGenericMessage ResolutionProvidersNotConfigured(ILogger logger, string vaultName);
 }

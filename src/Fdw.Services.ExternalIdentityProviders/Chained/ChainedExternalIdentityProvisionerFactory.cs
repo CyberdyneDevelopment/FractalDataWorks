@@ -27,7 +27,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// whose cache entry is not published yet — producing unbounded recursion. MEDI's StackGuard migrates it
 /// onto fresh stacks instead of throwing, so the host HANGS SILENTLY (no exception, no log) until it is
 /// killed (FDW-615). Keeping the factory pure and letting the provider pass <c>this</c> removes the
-/// container from the path entirely. Mirrors <c>IDataVaultFactory.Create(config, connection, pepper)</c>.
+/// container from the path entirely.
 /// </para>
 /// </remarks>
 internal sealed class ChainedExternalIdentityProvisionerFactory
