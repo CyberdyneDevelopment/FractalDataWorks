@@ -13,8 +13,14 @@ namespace Fdw.Services.Abstractions;
 /// <remarks>
 /// It queries its <c>IConfigurationGateway</c> for the domain's configurations, finds the member
 /// by name or id, reads the <c>ServiceOptionType</c> that member names, and passes the member's
-/// <c>RowId</c> to the implementation provider registered under that type. What comes back is the
-/// implementation configuration, ready for a factory.
+/// durable <c>Id</c> to the implementation provider registered under that type. What comes back is
+/// the implementation configuration, ready for a factory.
+/// <para>
+/// The <c>Id</c> and not the <c>RowId</c>: <see cref="IImplementationConfigurationProvider{T}.Get(Guid, CancellationToken)"/>
+/// takes a <c>Guid</c>, and resolves the implementation row through the foreign key discovered from
+/// the data-store tree. The <c>RowId</c> match happens inside that join, so no <c>RowId</c> is ever
+/// materialised in C#.
+/// </para>
 /// <para>
 /// It is the only thing holding a gateway, and the only thing knowing which connection the domain lives
 /// in. Implementation providers receive the gateway as an argument, so they cannot read from a different
