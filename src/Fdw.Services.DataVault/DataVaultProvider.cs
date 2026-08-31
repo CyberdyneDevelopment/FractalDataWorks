@@ -78,16 +78,21 @@ public sealed class DataVaultProvider
     }
 
     /// <inheritdoc />
-    public Task<IGenericResult<IDataVault>> Get(DataVaultRequest request, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<IDataVault>> Get(DataVaultRequest request, CancellationToken cancellationToken = default)
     {
         if (request is null || (request.Id is null && string.IsNullOrWhiteSpace(request.Name)))
-            return Task.FromResult<IGenericResult<IDataVault>>(
-                GenericResult<IDataVault>.Failure(DataVaultLog.EmptyVaultRequest(_logger)));
+            return GenericResult<IDataVault>.Failure(DataVaultLog.EmptyVaultRequest(_logger));
 
-        if (request.Id.HasValue)
-            return Get(request.Id.Value, cancellationToken);
+        // Not the base Get: that creates from configuration alone, and a vault cannot be built without
+        // its resolved connection and pepper — the factory refuses a config-only call by design.
+        var configuration = request.Id.HasValue
+            ? await DomainConfigurationProvider!.Get(request.Id.Value, cancellationToken).ConfigureAwait(false)
+            : await DomainConfigurationProvider!.Get(request.Name!, cancellationToken).ConfigureAwait(false);
 
-        return Get(request.Name!, cancellationToken);
+        if (!configuration.IsSuccess || configuration.Value is null)
+            return configuration.ToNewResult<IDataVault>();
+
+        return await ResolveVault(configuration.Value, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<IGenericResult<IDataVault>> ResolveVault(
