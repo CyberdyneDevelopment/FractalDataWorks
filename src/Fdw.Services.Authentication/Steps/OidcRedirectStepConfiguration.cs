@@ -38,7 +38,7 @@ public sealed record OidcRedirectStepConfiguration
     public required Uri RedirectUri { get; init; }
 
     /// <summary>Gets the scopes requested.</summary>
-    public IReadOnlyList<string> Scopes { get; init; } = ["openid", "profile", "email"];
+    public required IReadOnlyList<string> Scopes { get; init; }
 
     /// <summary>Gets the claim carrying the subject identifier to bind on.</summary>
     /// <remarks>
@@ -52,7 +52,7 @@ public sealed record OidcRedirectStepConfiguration
     public required IReadOnlyList<string> ValidAudiences { get; init; }
 
     /// <summary>Gets the signing algorithms accepted.</summary>
-    public IReadOnlyList<string> ValidAlgorithms { get; init; } = ["RS256"];
+    public required IReadOnlyList<string> ValidAlgorithms { get; init; }
 
     /// <summary>Gets the tolerance for clock difference with the provider.</summary>
     public TimeSpan ClockSkew { get; init; } = TimeSpan.FromSeconds(30);
@@ -63,5 +63,5 @@ public sealed record OidcRedirectStepConfiguration
     /// from the returned token and the runner keeps only what also appears here, so a provider
     /// trusted for a password cannot raise assurance by asserting a hardware key.
     /// </remarks>
-    public IReadOnlyList<string> AssertableMethods { get; init; } = ["pwd"];
+    public required IReadOnlyList<string> AssertableMethods { get; init; }
 }
