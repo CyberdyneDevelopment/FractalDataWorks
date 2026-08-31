@@ -112,9 +112,25 @@ public abstract class MsSqlAuthenticationConfiguration
     public abstract IGenericResult<string> BuildAuthFragment(IReadOnlyDictionary<string, string?> values, string? resolvedPassword);
 
     /// <inheritdoc />
+    /// <summary>Builds the authentication fragment, resolving any secret this type needs.</summary>
+    /// <param name="values">The connection's authentication properties.</param>
+    /// <param name="supplied">
+    /// A manager handed in directly, by a caller that cannot resolve one by name — the connection
+    /// that reaches the configuration store is in that position, since the provider that would
+    /// resolve it reads its own configuration out of the store being opened.
+    /// </param>
+    /// <param name="provider">Resolves a manager by the name this type's own properties declare.</param>
+    /// <param name="cancellationToken">A token to cancel the resolution.</param>
+    /// <remarks>
+    /// Whether a secret is needed, which manager holds it, and how to fetch it are all decided here,
+    /// because this type owns the property set those answers come from — SecretManagerName and
+    /// SecretKeyName are its keys, not the factory's. The default needs none: a type that declares no
+    /// secret-bearing properties ignores both arguments.
+    /// </remarks>
     public virtual Task<IGenericResult<string>> BuildAuthFragment(
         IReadOnlyDictionary<string, string?> values,
-        ISecretManager? secretManager,
+        ISecretManager? supplied,
+        ISecretManagerProvider? provider,
         CancellationToken cancellationToken = default)
         => Task.FromResult(BuildAuthFragment(values, resolvedPassword: null));
 
