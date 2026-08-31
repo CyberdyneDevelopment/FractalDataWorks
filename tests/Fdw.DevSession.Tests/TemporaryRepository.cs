@@ -45,7 +45,7 @@ internal sealed class TemporaryRepository : IDisposable
 
     public string Git(params string[] arguments) => RunGit(Path, arguments);
 
-    public string GitIn(string workingDirectory, params string[] arguments) => RunGit(workingDirectory, arguments);
+    public static string GitIn(string workingDirectory, params string[] arguments) => RunGit(workingDirectory, arguments);
 
     private static string RunGit(string workingDirectory, IReadOnlyList<string> arguments)
     {

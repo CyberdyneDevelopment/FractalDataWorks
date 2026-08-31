@@ -1,6 +1,6 @@
 using Fdw.Services.Abstractions;
 
-namespace Fdw.Services.Hosting.Abstractions;
+namespace Fdw.Services.Hosts.Abstractions;
 
 /// <summary>
 /// Supplies hosting configuration. Registered and resolved as this type — never as the base.
@@ -10,7 +10,7 @@ namespace Fdw.Services.Hosting.Abstractions;
 /// <c>PlatformConfiguration</c>: hosting has to come up before the platform store is reachable, so
 /// its configuration lives in the file-backed server tier declared in <c>configurationSchema.json</c>.
 /// </remarks>
-public interface IHostingConfigurationProvider
-    : IDomainConfigurationProvider<IHostingImplementationConfiguration>
+public interface IHostConfigurationProvider
+    : IDomainConfigurationProvider<IHostImplementationConfiguration>
 {
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -106,7 +107,7 @@ public sealed class ScheduleHttpClientTests
     [Trait("Category", "Scheduling")]
     public async Task CreateScheduleSendsPostRequestToCorrectPath()
     {
-        var response = new CreateScheduleClientResponse { ScheduleId = "123", Name = "daily-etl" };
+        var response = new CreateScheduleClientResponse { Id = Guid.CreateVersion7(), Name = "daily-etl" };
         var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = JsonContent.Create(response)

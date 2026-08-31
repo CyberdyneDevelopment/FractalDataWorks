@@ -51,11 +51,20 @@ public sealed class ConfigurationGatewayServiceType : ConfigurationGatewayTypeBa
                 var gatewayProvider = sp.GetRequiredService<IConfigurationGatewayProvider>();
                 var schema = sp.GetRequiredService<ConfigurationSchema>();
                 var dataStoresLazy = new Lazy<IReadOnlyList<IDataStore>>(
-                    () => schema.Connections
-                        .Select(c => gatewayProvider.Get(c.Name))
-                        .Where(g => g.IsSuccess && g.Value is not null)
-                        .SelectMany(g => g.Value!.DataStores)
-                        .ToList(),
+                    () =>
+                    {
+                        var stores = new List<IDataStore>();
+                        foreach (var connection in schema.Connections)
+                        {
+                            var gateway = gatewayProvider.Get(connection.Name);
+                            if (!gateway.IsSuccess || gateway.Value is null)
+                                continue;
+
+                            stores.AddRange(gateway.Value.DataStores);
+                        }
+
+                        return stores;
+                    },
                     LazyThreadSafetyMode.ExecutionAndPublication);
                 return new ConfigurationContainerLookup(
                     dataStoresLazy,

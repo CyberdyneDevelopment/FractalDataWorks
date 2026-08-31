@@ -147,15 +147,16 @@ public class ResultHttpStatusMapperTests
         var (_, response) = ResultHttpStatusMapper.Map(result, context);
 
         // Assert -- no server addresses, SQL text, or usernames
-        response.Detail.ShouldNotContain("SELECT");
-        response.Detail.ShouldNotContain("INSERT");
-        response.Detail.ShouldNotContain("DELETE");
-        response.Detail.ShouldNotContain("UPDATE");
-        response.Detail.ShouldNotContain("10.10.10");
-        response.Detail.ShouldNotContain("localhost");
-        response.Detail.ShouldNotContain("sa ");
-        response.Detail.ShouldNotContain("password", Case.Insensitive);
-        response.Detail.ShouldNotContain("connection string", Case.Insensitive);
+        var detail = response.Detail.ShouldNotBeNull();
+        detail.ShouldNotContain("SELECT");
+        detail.ShouldNotContain("INSERT");
+        detail.ShouldNotContain("DELETE");
+        detail.ShouldNotContain("UPDATE");
+        detail.ShouldNotContain("10.10.10");
+        detail.ShouldNotContain("localhost");
+        detail.ShouldNotContain("sa ");
+        detail.ShouldNotContain("password", Case.Insensitive);
+        detail.ShouldNotContain("connection string", Case.Insensitive);
     }
 
     #endregion

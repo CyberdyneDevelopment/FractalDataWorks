@@ -46,7 +46,7 @@ public sealed class SchemaDefinitionBaseTests
         return PropertyRoles.ByName(name);
     }
 
-    private TestProperty CreateProperty(string name, string roleName = "Attribute")
+    private static TestProperty CreateProperty(string name, string roleName = "Attribute")
     {
         return new TestProperty { Name = name, Role = CreateRole(roleName) };
     }

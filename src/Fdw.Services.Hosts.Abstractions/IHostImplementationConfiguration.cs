@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Fdw.Configuration;
 
-namespace Fdw.Services.Hosting.Abstractions;
+namespace Fdw.Services.Hosts.Abstractions;
 
 /// <summary>
 /// The contract every host implementation's configuration satisfies.
@@ -11,7 +11,7 @@ namespace Fdw.Services.Hosting.Abstractions;
 /// store is reachable. In reference-api today they are split between literals in <c>Program.cs</c>
 /// and loose <c>GetSection(...).Get&lt;T&gt;()</c> calls outside any ServiceType phase.
 /// </remarks>
-public interface IHostingImplementationConfiguration : IImplementationConfiguration
+public interface IHostImplementationConfiguration : IImplementationConfiguration
 {
     /// <summary>Gets or sets the route prefix every endpoint is mounted under.</summary>
     string RoutePrefix { get; set; }

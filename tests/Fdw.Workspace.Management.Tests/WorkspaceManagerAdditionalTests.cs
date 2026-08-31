@@ -35,7 +35,7 @@ public class WorkspaceManagerAdditionalTests : IDisposable
         }
     }
 
-    private Mock<IRoslynWorkspace> CreateMockWorkspace(int projectCount = 3, bool hasChanges = false, int snapshotCount = 0)
+    private static Mock<IRoslynWorkspace> CreateMockWorkspace(int projectCount = 3, bool hasChanges = false, int snapshotCount = 0)
     {
         var workspaceMock = new Mock<IRoslynWorkspace>();
 

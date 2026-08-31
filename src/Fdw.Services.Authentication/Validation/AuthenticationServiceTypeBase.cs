@@ -22,14 +22,10 @@ namespace Fdw.Services.Authentication.Validation;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The Register body is written once, here, because it is the same for every mechanism: read the
-/// host's <c>AuthenticationServices</c> entries that name this option, add a scheme for each, and
-/// register the binding that lets <see cref="IssuerSchemeSelector"/> route to it. A mechanism supplies
-/// only <see cref="RegisterScheme"/> — what a scheme for one entry actually is.
-/// </para>
-/// <para>
-/// A derived option that needs more of the Register phase appends to this one rather than setting it:
-/// <c>Registration</c> assigns, discarding this body along with the entries it would have read.
+/// The collection reads the declared entries once, through the domain configuration provider, and
+/// hands each to the option its <c>ServiceOptionType</c> names. A mechanism supplies only
+/// <see cref="TakeScheme"/> — what a scheme for one entry actually is — and the binding it returns is
+/// what lets <see cref="IssuerSchemeSelector"/> route to it.
 /// </para>
 /// <para>
 /// Every option closes the base on the domain's one factory interface. An option's identity comes from
@@ -49,13 +45,13 @@ public abstract class AuthenticationServiceTypeBase
     /// <param name="description">What this option validates.</param>
     protected AuthenticationServiceTypeBase(string name, string displayName, string description)
         : base(name,
-               AuthenticationServiceConfiguration.SectionName,
+               "AuthenticationServices",
                displayName,
                description,
                category: "Authentication",
-               defaultDataStoreName: "PlatformConfiguration",
+               defaultDataStoreName: "ServerConfiguration",
                defaultPathName: "auth",
-               defaultContainerName: "Authentication")
+               defaultContainerName: "AuthenticationService")
     {
     }
 
@@ -80,26 +76,19 @@ public abstract class AuthenticationServiceTypeBase
     /// <inheritdoc />
     public abstract bool SupportsTokenCaching { get; }
 
-    /// <summary>
-    /// Adds the authentication scheme for one declared entry and reports what it added.
-    /// </summary>
-    /// <param name="authenticationBuilder">The host's authentication builder.</param>
-    /// <param name="configuration">The entry's header, already validated.</param>
-    /// <param name="section">The configuration section the entry was read from, for this option's typed body.</param>
-    /// <param name="services">
-    /// The collection the scheme's own dependencies are registered in. Registration runs before the
-    /// container is built, so an option needing a service at validation time registers what it needs
-    /// here and resolves it from the request rather than holding process-wide state.
-    /// </param>
-    /// <param name="loggerFactory">The host's logger factory, if it has one.</param>
-    /// <returns>
-    /// The issuer/scheme binding this entry contributes. Failure when the entry's typed body is
-    /// incomplete — reported with the reason, never with a scheme built on assumed values.
-    /// </returns>
-    public abstract IGenericResult<AuthenticationSchemeBinding> RegisterScheme(
-        AuthenticationBuilder authenticationBuilder,
-        AuthenticationServiceConfiguration configuration,
-        Microsoft.Extensions.Configuration.IConfigurationSection section,
-        IServiceCollection services,
+    /// <summary>Takes an authentication scheme for one declared entry.</summary>
+    /// <param name="configuration">The domain row, carrying the name, the kind and the authority.</param>
+    /// <param name="schemes">The scheme provider the option adds its scheme to.</param>
+    /// <param name="services">The built container, for anything the option needs to resolve.</param>
+    /// <param name="loggerFactory">The logger factory, or null.</param>
+    /// <remarks>
+    /// Runs during Initialize, against the built container, because the entry it is given was read
+    /// through a gateway. The option adds its scheme through <see cref="IAuthenticationSchemeProvider"/>
+    /// rather than the builder, which is closed by this point.
+    /// </remarks>
+    public abstract IGenericResult<AuthenticationSchemeBinding> TakeScheme(
+        IAuthenticationServiceConfiguration configuration,
+        IAuthenticationSchemeProvider schemes,
+        IServiceProvider services,
         ILoggerFactory? loggerFactory);
 }

@@ -598,7 +598,7 @@ public partial class Tests : TypeCollectionBase<TestBase, TestBase>
         Assert.DoesNotContain("ConcurrentDictionary", immutable); // Not ConcurrentDictionary
     }
 
-    private string CompileAndGetGenerated(string attributeName, string className)
+    private static string CompileAndGetGenerated(string attributeName, string className)
     {
         var source = $@"
 using Fdw.Collections;

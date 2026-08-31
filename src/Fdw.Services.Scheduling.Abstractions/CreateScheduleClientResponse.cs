@@ -1,3 +1,5 @@
+using System;
+
 namespace Fdw.Services.Scheduling.Clients.Abstractions;
 
 /// <summary>
@@ -8,7 +10,7 @@ public class CreateScheduleClientResponse
     /// <summary>
     /// Gets or sets the created schedule identifier.
     /// </summary>
-    public string ScheduleId { get; set; } = string.Empty;
+    public Guid Id { get; set; }
 
     /// <summary>
     /// Gets or sets the schedule name.
