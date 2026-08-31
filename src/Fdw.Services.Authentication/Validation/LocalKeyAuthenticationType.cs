@@ -7,6 +7,9 @@ using Fdw.Services.Authentication.Logging;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Fdw.Services.Data.Abstractions;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -39,6 +42,29 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
                "Local Signing Key",
                "Validates bearer tokens this host issued, against the key it signed them with")
     {
+        Registration((builder, loggerFactory) =>
+        {
+            builder.Services.TryAddSingleton<LocalKeyAuthenticationConfigurationProvider>(sp =>
+                new LocalKeyAuthenticationConfigurationProvider(
+                    sp.GetRequiredService<ILogger<LocalKeyAuthenticationConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    AuthenticationServiceTypes.ConfigurationConnection,
+                    AuthenticationServiceTypes.ServerConfigurationPath));
+            builder.Services.TryAddSingleton<ILocalKeyAuthenticationConfigurationProvider>(sp =>
+                sp.GetRequiredService<LocalKeyAuthenticationConfigurationProvider>());
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+
+        // Initialize, because both providers have to be resolvable: the option is the only thing that
+        // knows which implementation it is, and the domain provider dispatches by the name registered
+        // here. Without this the domain row names a kind the registry has never heard of, and the
+        // read fails at the point a token arrives rather than at startup.
+        Initialization((host, loggerFactory) =>
+        {
+            host.Services.GetRequiredService<IAuthenticationServiceConfigurationProvider>()
+                .Register(Name, host.Services.GetRequiredService<LocalKeyAuthenticationConfigurationProvider>());
+            return GenericResult<IHost>.Success(host);
+        });
     }
 
     /// <inheritdoc />
