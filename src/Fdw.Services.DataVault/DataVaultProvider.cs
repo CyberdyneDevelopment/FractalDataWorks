@@ -30,8 +30,7 @@ namespace Fdw.Services.DataVault;
 /// alone, and the factory refuses a config-only call because a vault cannot be built without them.
 /// </para>
 /// <para>
-/// Nothing is cached, so each call re-resolves. This paragraph previously described a resolve-once-then-cache
-/// path backed by a field that was declared and never read; the field is gone and this says what the code does.
+/// Nothing is cached: each call re-resolves the connection and the pepper.
 /// </para>
 /// </remarks>
 public sealed class DataVaultProvider
