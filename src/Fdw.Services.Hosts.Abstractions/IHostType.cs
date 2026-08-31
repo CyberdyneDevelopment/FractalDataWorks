@@ -2,10 +2,10 @@ using System;
 using Fdw.Configuration;
 using Fdw.ServiceTypes;
 
-namespace Fdw.Services.Hosting.Abstractions;
+namespace Fdw.Services.Hosts.Abstractions;
 
 /// <summary>Marker for the hosting option set — the return type of ById, ByName and All.</summary>
-public interface IHostingType : IServiceType
+public interface IHostType : IServiceType
 {
 }
 
@@ -13,10 +13,10 @@ public interface IHostingType : IServiceType
 /// <typeparam name="TService">The hosting service the option's factory creates.</typeparam>
 /// <typeparam name="TConfiguration">The implementation configuration it binds to.</typeparam>
 /// <typeparam name="TFactory">The factory the option registers.</typeparam>
-public interface IHostingType<TService, TConfiguration, TFactory>
-    : IServiceType<Guid, TService, TFactory, TConfiguration>, IHostingType
-    where TService : IHostingService
+public interface IHostType<TService, TConfiguration, TFactory>
+    : IServiceType<Guid, TService, TFactory, TConfiguration>, IHostType
+    where TService : IHostService
     where TConfiguration : IGenericConfiguration
-    where TFactory : IHostingFactory<TService, TConfiguration>
+    where TFactory : IHostFactory<TService, TConfiguration>
 {
 }

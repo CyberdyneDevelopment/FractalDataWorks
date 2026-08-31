@@ -2,17 +2,17 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
-using Fdw.Services.Hosting.Abstractions;
+using Fdw.Services.Hosts.Abstractions;
 
-namespace Fdw.Services.Hosting;
+namespace Fdw.Services.Hosts;
 
 /// <summary>
 /// The hosting domain configuration: which hosting implementation is configured, and its settings.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
-[ManagedConfiguration(ServiceCategory = "Hosting")]
-public partial class HostingConfiguration : IHostingConfiguration
+[ManagedConfiguration(ServiceCategory = "Host")]
+public partial class HostConfiguration : IHostConfiguration
 {
     // Why no generated default: the store assigns identity. A value minted here reaches Get(id) as a
     // real-looking id matching no row, and the miss reads as a data problem rather than an unsaved record.
@@ -23,10 +23,10 @@ public partial class HostingConfiguration : IHostingConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets the configuration section this domain reads.</summary>
-    public string SectionName => "Hosting";
+    public string SectionName => "Host";
 
     /// <summary>Gets the service category this configuration belongs to.</summary>
-    public string ServiceType => "Hosting";
+    public string ServiceType => "Host";
 
     /// <summary>Gets or sets the option name selecting which hosting implementation is configured.</summary>
     public string? ServiceOptionType { get; set; }
@@ -35,5 +35,5 @@ public partial class HostingConfiguration : IHostingConfiguration
     public string? Description { get; set; }
 
     /// <summary>Gets or sets the configuration of the implementation named by <see cref="ServiceOptionType"/>.</summary>
-    public IHostingImplementationConfiguration? Configuration { get; set; }
+    public IHostImplementationConfiguration? Configuration { get; set; }
 }
