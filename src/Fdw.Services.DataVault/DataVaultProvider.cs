@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,9 +42,6 @@ public sealed class DataVaultProvider
       IDataVaultProvider
 {
     private readonly ILogger<DataVaultProvider> _logger;
-
-    private readonly ConcurrentDictionary<string, Lazy<Task<IGenericResult<IDataVault>>>> _cache
-        = new(StringComparer.OrdinalIgnoreCase);
 
     private IDataConnectionProvider? _connectionProvider;
     private ISecretManagerProvider? _secretManagerProvider;
@@ -92,12 +88,7 @@ public sealed class DataVaultProvider
         if (!configuration.IsSuccess || configuration.Value is null)
             return configuration.ToNewResult<IDataVault>();
 
-        return await ResolveVault(configuration.Value, cancellationToken).ConfigureAwait(false);
-    }
-
-    private async Task<IGenericResult<IDataVault>> ResolveVault(
-        IDataVaultImplementationConfiguration body, CancellationToken cancellationToken)
-    {
+        var body = configuration.Value;
         var vaultName = body.Name;
 
         if (_connectionProvider is null || _secretManagerProvider is null)
