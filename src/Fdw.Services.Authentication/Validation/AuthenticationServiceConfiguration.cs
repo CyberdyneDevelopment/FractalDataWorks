@@ -18,8 +18,7 @@ namespace Fdw.Services.Authentication.Validation;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "AuthenticationService")]
-public partial class AuthenticationServiceConfiguration
-    : IPlatformServiceConfiguration<IAuthenticationServiceImplementationConfiguration>
+public partial class AuthenticationServiceConfiguration : IAuthenticationServiceConfiguration
 {
     /// <summary>Initializes a new instance of the <see cref="AuthenticationServiceConfiguration"/> class.</summary>
     public AuthenticationServiceConfiguration()

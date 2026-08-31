@@ -19,7 +19,7 @@ namespace Fdw.Services.Authentication.Validation;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "AuthenticationService")]
-public partial class LocalKeyAuthenticationConfiguration : IAuthenticationServiceImplementationConfiguration
+public partial class LocalKeyAuthenticationConfiguration : ILocalKeyAuthenticationConfiguration
 {
     /// <summary>Initializes a new instance of the <see cref="LocalKeyAuthenticationConfiguration"/> class.</summary>
     public LocalKeyAuthenticationConfiguration()

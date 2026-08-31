@@ -49,13 +49,13 @@ public abstract class AuthenticationServiceTypeBase
     /// <param name="description">What this option validates.</param>
     protected AuthenticationServiceTypeBase(string name, string displayName, string description)
         : base(name,
-               AuthenticationServiceConfiguration.SectionName,
+               "AuthenticationServices",
                displayName,
                description,
                category: "Authentication",
-               defaultDataStoreName: "PlatformConfiguration",
+               defaultDataStoreName: "ServerConfiguration",
                defaultPathName: "auth",
-               defaultContainerName: "Authentication")
+               defaultContainerName: "AuthenticationService")
     {
     }
 
