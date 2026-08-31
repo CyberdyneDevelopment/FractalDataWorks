@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Linq;
@@ -168,6 +169,21 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
                 if (entry.ServiceOptionType is not { Length: > 0 } kind)
                     return GenericResult<IHost>.Failure(
                         AuthenticationValidationLog.SectionUnreadable(log, serviceName));
+
+                // The issuer a token carries is what routes it, and the selector matches it
+                // ordinally, so a declared "https://host" must become "https://host/" here or it
+                // never matches a token minted against it. Normalising once, where the entry is
+                // read, is what keeps every option and the selector comparing the same string.
+                if (!Uri.TryCreate(entry.Authority, UriKind.Absolute, out var authority)
+                    || (!string.Equals(authority.Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal)
+                        && !string.Equals(authority.Scheme, Uri.UriSchemeHttp, StringComparison.Ordinal)))
+                {
+                    return GenericResult<IHost>.Failure(
+                        AuthenticationValidationLog.AuthorityNotAbsolute(
+                            log, serviceName, entry.Authority ?? string.Empty));
+                }
+
+                entry.Authority = authority.AbsoluteUri;
 
                 if (ByName(kind) is not AuthenticationServiceTypeBase option)
                     return GenericResult<IHost>.Failure(
