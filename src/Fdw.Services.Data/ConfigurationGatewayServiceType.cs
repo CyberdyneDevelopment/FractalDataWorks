@@ -50,24 +50,28 @@ public sealed class ConfigurationGatewayServiceType : ConfigurationGatewayTypeBa
                 // The provider builds each gateway on demand from its declaration and caches it.
                 var gatewayProvider = sp.GetRequiredService<IConfigurationGatewayProvider>();
                 var schema = sp.GetRequiredService<ConfigurationSchema>();
-                var dataStoresLazy = new Lazy<IReadOnlyList<IDataStore>>(
-                    () =>
+                // Resolved on every lookup rather than cached. A cache here is wrong twice over:
+                // the first caller may run before every gateway has registered, and would pin an
+                // incomplete list for the life of the host; and a Lazy whose factory asks the
+                // provider for a gateway that is itself mid-construction re-enters its own value
+                // factory and throws. The provider hands back registered gateways, so asking it
+                // again is cheap.
+                IReadOnlyList<IDataStore> DataStores()
+                {
+                    var stores = new List<IDataStore>();
+                    foreach (var connection in schema.Connections)
                     {
-                        var stores = new List<IDataStore>();
-                        foreach (var connection in schema.Connections)
-                        {
-                            var gateway = gatewayProvider.Get(connection.Name);
-                            if (!gateway.IsSuccess || gateway.Value is null)
-                                continue;
+                        var gateway = gatewayProvider.Get(connection.Name);
+                        if (!gateway.IsSuccess || gateway.Value is null)
+                            continue;
 
-                            stores.AddRange(gateway.Value.DataStores);
-                        }
+                        stores.AddRange(gateway.Value.DataStores);
+                    }
 
-                        return stores;
-                    },
-                    LazyThreadSafetyMode.ExecutionAndPublication);
+                    return stores;
+                }
                 return new ConfigurationContainerLookup(
-                    dataStoresLazy,
+                    DataStores,
                     sp.GetService<ILogger<ConfigurationContainerLookup>>());
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
