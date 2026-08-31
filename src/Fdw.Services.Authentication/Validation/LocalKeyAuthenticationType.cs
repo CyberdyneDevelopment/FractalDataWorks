@@ -131,8 +131,9 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
             return GenericResult<AuthenticationSchemeBinding>.Failure(
                 AuthenticationValidationLog.EntryMissingAuthority(log, serviceName));
 
-        // The scheme is added here; its TokenValidationParameters are read from this entry's
-        // implementation row on first use, by the options bridge. Adding a scheme twice throws, and a
+        // The scheme is added here and names the handler that validates for it. The handler reads
+        // this entry's rows through the configuration provider on every request - nothing is cached
+        // between them.
         // host that declares one issuer twice is a configuration defect worth reporting.
         schemes.AddScheme(new AuthenticationScheme(
             SchemeNameFor(serviceName), displayName: null, handlerType: typeof(LocalKeyAuthenticationHandler)));

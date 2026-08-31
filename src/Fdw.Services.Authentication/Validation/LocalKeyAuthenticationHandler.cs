@@ -127,6 +127,17 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
                 AuthenticationValidationLog.LocalKeyEntryUnreadable(_log, ServiceName));
         }
 
+        // Checked like every other input this method needs. A blank audience is not a null: the
+        // column is nullable and the generated mapper converts DBNull to string.Empty, so an unset
+        // audience arrives as "" and a null test would pass it through. Left unchecked it becomes
+        // ValidateAudience = true with ValidAudience = "", which rejects every token for a reason
+        // the log does not name.
+        if (string.IsNullOrWhiteSpace(body.Audience))
+        {
+            return GenericResult<TokenValidationParameters>.Failure(
+                AuthenticationValidationLog.LocalKeyMissingAudience(_log, ServiceName));
+        }
+
         var credentials = await _credentials.Current(cancellationToken).ConfigureAwait(false);
         if (!credentials.IsSuccess || credentials.Value is not { Key: { } key })
         {
@@ -160,15 +171,15 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
             ? _scheme.Name[LocalKeyAuthenticationType.SchemePrefix.Length..]
             : _scheme?.Name ?? string.Empty;
 
-    // AuthenticateResult.Fail wants a string and a message renders to one; the coalesce is the
-    // permitted string.Empty, not a substituted value.
-    private static string Text(IGenericMessage message) => message.ToString() ?? string.Empty;
+    // The contract carries its text on Message, which is non-nullable; object.ToString() would give
+    // whatever the implementing type happens to render and is not the contract.
+    private static string Text(IGenericMessage message) => message.Message;
 
     /// <inheritdoc />
     /// <remarks>
-    /// A bare 401 with the scheme named. No <c>WWW-Authenticate</c> parameters beyond the scheme: the
-    /// realm and error codes a JwtBearer challenge adds describe the token that was rejected, and this
-    /// host does not tell an unauthenticated caller why.
+    /// A bare 401 and no <c>WWW-Authenticate</c> header at all. The realm and error codes a JwtBearer
+    /// challenge writes describe the token that was rejected, and this host does not tell an
+    /// unauthenticated caller why it failed.
     /// </remarks>
     public Task ChallengeAsync(AuthenticationProperties? properties)
     {

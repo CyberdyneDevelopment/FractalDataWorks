@@ -81,8 +81,12 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
             return GenericResult<AuthenticationSchemeBinding>.Failure(
                 AuthenticationValidationLog.EntryMissingAuthority(log, serviceName));
 
-        // The scheme is added here; its options are read from this entry's implementation row on
-        // first use, by ConfigureJwtBearerScheme.
+        // UNFINISHED. This still names JwtBearerHandler, which reads JwtBearerOptions from
+        // IOptionsMonitor - and nothing populates them, so a declared JwtBearer entry takes a scheme
+        // that validates with no authority, no audience and no key, and refuses every token from that
+        // issuer. Latent only because no host declares one today. LocalKey has been moved off the
+        // options system onto its own IAuthenticationHandler; this option needs the same treatment,
+        // plus the implementation configuration, provider and container declaration it also lacks.
         schemes.AddScheme(new AuthenticationScheme(
             SchemeNameFor(serviceName), displayName: null, handlerType: typeof(JwtBearerHandler)));
 
