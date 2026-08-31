@@ -60,7 +60,10 @@ public static class IssuerSchemeSelector
             return UnmatchedIssuerHandler.SchemeName;
         }
 
-        var bindings = context.RequestServices.GetServices<AuthenticationSchemeBinding>().ToList();
+        // From the registry rather than from DI: the entries that decide these bindings are read
+        // through a gateway during Initialize, which is after the container is built, so they cannot
+        // be service registrations made while it was still being described.
+        var bindings = context.RequestServices.GetRequiredService<AuthenticationSchemeBindings>().All;
 
         var match = bindings.FirstOrDefault(
             b => string.Equals(b.Issuer, issuer, StringComparison.Ordinal));
