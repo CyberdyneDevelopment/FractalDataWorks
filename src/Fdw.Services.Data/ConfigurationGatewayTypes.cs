@@ -175,7 +175,11 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
             return GenericResult<ISecretManager?>.Failure(
                 ConfigurationGatewayProviderLog.SecretManagerDeclaresNoBody(log, declared.Name));
 
-        var created = secretManagerFactory.Create(declared.Configuration);
+        // The composed entry, not its body: the name is on the domain row, and the connection
+        // checks the manager it is handed against the name it declares. A factory given the body
+        // alone has no name to give the manager it builds and falls back to rendering an id, which
+        // then fails that check against the name the schema declared one line above.
+        var created = secretManagerFactory.Create(declared);
         return created.IsSuccess
             ? GenericResult<ISecretManager?>.Success(created.Value)
             : created.ToNewResult<ISecretManager?>();
