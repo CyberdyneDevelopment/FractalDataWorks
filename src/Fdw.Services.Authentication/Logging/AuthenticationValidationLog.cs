@@ -150,6 +150,21 @@ public static partial class AuthenticationValidationLog
         Message = "LocalKey authentication service '{serviceName}' could not be read, so its scheme validates with no key and no issuer and every token it is handed will be refused")]
     public static partial IGenericMessage LocalKeyEntryUnreadable(ILogger logger, string serviceName);
 
+    /// <summary>Logs a JwtBearer entry whose row could not be read.</summary>
+    [MessageLogging(EventId = 71119, Level = LogLevel.Error,
+        Message = "JwtBearer authentication service '{serviceName}' could not be read, so its scheme validates with no issuer and no audience and every token it is handed will be refused")]
+    public static partial IGenericMessage JwtBearerEntryUnreadable(ILogger logger, string serviceName);
+
+    /// <summary>Logs an issuer that published an OpenID document carrying no signing keys.</summary>
+    [MessageLogging(EventId = 71120, Level = LogLevel.Error,
+        Message = "JwtBearer authentication service '{serviceName}' read the OpenID configuration at '{issuer}' and it published no signing keys, so no token from that issuer can have its signature checked")]
+    public static partial IGenericMessage JwtBearerNoSigningKeys(ILogger logger, string serviceName, string issuer);
+
+    /// <summary>Logs an issuer whose OpenID document could not be fetched.</summary>
+    [MessageLogging(EventId = 71121, Level = LogLevel.Error,
+        Message = "JwtBearer authentication service '{serviceName}' could not reach the OpenID configuration at '{issuer}': {reason}. The keys are the issuer's to publish, so this is a failure to read them rather than a token that was refused")]
+    public static partial IGenericMessage JwtBearerKeysUnreachable(ILogger logger, string serviceName, string issuer, string reason);
+
     // Why the reason is carried rather than summarised: IDX codes name exactly which check failed -
     // issuer, audience, lifetime, signature - and a reader who cannot see which one is left guessing
     // at the same four possibilities every time.
