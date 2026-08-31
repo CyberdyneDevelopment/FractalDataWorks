@@ -1,4 +1,5 @@
 using System;
+using Fdw.Configuration;
 using Fdw.Data;
 
 namespace Fdw.Services.Universes;
@@ -14,13 +15,22 @@ namespace Fdw.Services.Universes;
 /// relationship that is known to exist before anyone has said which columns carry it.
 /// </remarks>
 [GenerateMapper]
-public sealed partial class UniverseRelationshipConfiguration
+public sealed partial class UniverseRelationshipConfiguration : IGenericConfiguration
 {
     /// <summary>Gets or sets the durable logical identity.</summary>
     public Guid Id { get; set; }
 
     /// <summary>Gets or sets the row name.</summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>Gets the configuration section name.</summary>
+    public string SectionName => "UniverseRelationships";
+
+    /// <summary>Gets the structural discriminator.</summary>
+    public string ServiceType => "UniverseRelationship";
+
+    /// <summary>Gets the service option type. Always null — this row selects no factory.</summary>
+    public string? ServiceOptionType => null;
 
     /// <summary>Gets or sets the owning universe.</summary>
     public Guid UniverseId { get; set; }

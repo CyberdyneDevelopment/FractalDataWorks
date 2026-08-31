@@ -712,12 +712,26 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         return GenericResult<IReadOnlyList<TConfig>>.Success(result.Value?.ToList() ?? []);
     }
 
-    /// <summary>Persists a configuration record (INSERT for new, UPDATE for existing by Id).</summary>
+    /// <summary>Persists a configuration record and its whole child tree.</summary>
     /// <remarks>
+    /// <para>
     /// Why: when the caller hasn't supplied an Id, mint the DURABLE Id with UUID v7 so the record can
     /// be inserted without round-tripping to the DB to assign it. The physical RowId is a DB-managed
     /// INT IDENTITY (invisible — never set here); the time-ordered durable Id keeps logical creation
     /// order stable across versions.
+    /// </para>
+    /// <para>
+    /// THIS CASCADES UNCONDITIONALLY. Every child row in the aggregate is rewritten on every call —
+    /// there is no diff and no dirty check — so using it to change one field on one child stamps
+    /// ModifyDate and ModifyBy across rows nobody touched, and under version-on-write mints a new
+    /// version of each. An audit trail then reports that someone edited the whole collection when
+    /// they edited one row of it, which is deterministic rather than a race. Reading, mutating one
+    /// child and calling this also overwrites anything another caller wrote in between.
+    /// </para>
+    /// <para>
+    /// To change part of an aggregate, use <see cref="SaveChild{TChild}"/> or
+    /// <see cref="DeleteChild{TChild}"/> and expose a named domain method over it.
+    /// </para>
     /// </remarks>
     public virtual async Task<IGenericResult<TConfig>> Save(TConfig record, CancellationToken ct = default)
     {
@@ -742,6 +756,75 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         if (!cascade.IsSuccess) return cascade.ToNewResult<TConfig>();
 
         return GenericResult<TConfig>.Success(record);
+    }
+
+    /// <summary>Writes ONE child row, without touching the rest of the aggregate.</summary>
+    /// <typeparam name="TChild">The child configuration type.</typeparam>
+    /// <param name="child">The child row to write.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <remarks>
+    /// The counterpart to <see cref="Save"/>'s unconditional cascade: this writes the row it is
+    /// given and nothing else, so changing one member's role leaves every other row's audit columns
+    /// alone. Protected rather than public so a domain provider publishes a named operation —
+    /// SetMemberRole, AttachResource — and an endpoint never handles a child-level primitive.
+    ///
+    /// Pass several of these inside a <see cref="BeginTransaction"/> scope when a set of rows has to
+    /// land together, then call <see cref="InvalidateCache"/> after the commit.
+    /// </remarks>
+    protected async Task<IGenericResult> SaveChild<TChild>(
+        TChild child,
+        CancellationToken cancellationToken = default)
+        where TChild : IGenericConfiguration
+    {
+        ArgumentNullException.ThrowIfNull(child);
+
+        var result = await SaveOneChild(child, cancellationToken).ConfigureAwait(false);
+        if (!result.IsSuccess) return result;
+
+        // The cached aggregate still holds the row as it was; without this a re-read serves it.
+        InvalidateCache();
+        return GenericResult.Success();
+    }
+
+    /// <summary>Deletes ONE child row, without touching the rest of the aggregate.</summary>
+    /// <typeparam name="TChild">The child configuration type.</typeparam>
+    /// <param name="id">The child's logical identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <remarks>
+    /// The delete counterpart to <see cref="SaveChild{TChild}"/>. Resolves the child's own command
+    /// and container, so the delete lands on the child's table rather than the owner's.
+    /// </remarks>
+    protected async Task<IGenericResult> DeleteChild<TChild>(
+        Guid id,
+        CancellationToken cancellationToken = default)
+        where TChild : IGenericConfiguration
+    {
+        if (id == Guid.Empty)
+        {
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.ConfigurationNotFound(
+                    _logger, typeof(TChild).Name, id.ToString()));
+        }
+
+        var command = ConfigurationCommands.All().FirstOrDefault(c => c.ConfigType == typeof(TChild));
+        if (command is null)
+        {
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.NoChildCommandForType(
+                    _logger, typeof(TConfig).Name, typeof(TChild).Name));
+        }
+
+        var gateway = Gateway();
+        if (gateway.IsFailure) return gateway;
+
+        var result = await gateway.Value!.Execute(
+            command.Delete(DataStoreName, PathName, id),
+            new DataStoreTarget(DataStoreName, PathName, command.ContainerName),
+            cancellationToken).ConfigureAwait(false);
+        if (!result.IsSuccess) return result;
+
+        InvalidateCache();
+        return GenericResult.Success();
     }
 
     private IGenericResult RequireCompleteAggregate(TConfig record)

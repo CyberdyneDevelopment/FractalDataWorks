@@ -1,4 +1,5 @@
 using System;
+using Fdw.Configuration;
 using Fdw.Data;
 
 namespace Fdw.Services.Universes;
@@ -25,13 +26,22 @@ namespace Fdw.Services.Universes;
 /// </para>
 /// </remarks>
 [GenerateMapper]
-public sealed partial class NoteConfiguration
+public sealed partial class NoteConfiguration : IGenericConfiguration
 {
     /// <summary>Gets or sets the durable logical identity.</summary>
     public Guid Id { get; set; }
 
     /// <summary>Gets or sets the row name.</summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>Gets the configuration section name.</summary>
+    public string SectionName => "Notes";
+
+    /// <summary>Gets the structural discriminator.</summary>
+    public string ServiceType => "Note";
+
+    /// <summary>Gets the service option type. Always null — this row selects no factory.</summary>
+    public string? ServiceOptionType => null;
 
     /// <summary>Gets or sets the kind of thing this note is about.</summary>
     public string SubjectType { get; set; } = string.Empty;
