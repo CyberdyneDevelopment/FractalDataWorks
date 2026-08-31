@@ -148,7 +148,10 @@
     <PackageVersion Include="Verify.Xunit" Version="26.6.0" />
     <!-- ci-components' shared dotnet-package.yml test job runs dotnet test with the junit
          logger, which isn't built in; it comes from this package. -->
-    <PackageVersion Include="JunitXml.TestLogger" Version="8.0.0" />
+    <!-- Pinned below latest (8.0.0): that version's binary was compiled against
+         Microsoft.Testing.Platform 2.0.2.0, which conflicts (CS1705) with the 1.9.1.0 this
+         repo's test SDK stack resolves to. Confirmed live on pipeline 5258. -->
+    <PackageVersion Include="JunitXml.TestLogger" Version="7.1.0" />
     <!-- Build and Versioning -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.300" />
     <!-- Analyzers -->
