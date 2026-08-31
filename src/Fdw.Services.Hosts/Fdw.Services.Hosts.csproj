@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Fdw.Services.Hosting.Abstractions\Fdw.Services.Hosting.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Hosts.Abstractions\Fdw.Services.Hosts.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Configuration\Fdw.Configuration.csproj" />
     <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
