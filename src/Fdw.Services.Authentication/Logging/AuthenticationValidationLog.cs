@@ -149,4 +149,15 @@ public static partial class AuthenticationValidationLog
     [MessageLogging(EventId = 71116, Level = LogLevel.Error,
         Message = "LocalKey authentication service '{serviceName}' could not be read, so its scheme validates with no key and no issuer and every token it is handed will be refused")]
     public static partial IGenericMessage LocalKeyEntryUnreadable(ILogger logger, string serviceName);
+
+    // Why the reason is carried rather than summarised: IDX codes name exactly which check failed -
+    // issuer, audience, lifetime, signature - and a reader who cannot see which one is left guessing
+    // at the same four possibilities every time.
+    [MessageLogging(EventId = 71117, Level = LogLevel.Information,
+        Message = "Token for authentication service '{serviceName}' was rejected: {reason}")]
+    public static partial IGenericMessage TokenRejected(ILogger logger, string serviceName, string reason);
+
+    [MessageLogging(EventId = 71118, Level = LogLevel.Debug,
+        Message = "Token for authentication service '{serviceName}' accepted for principal '{subject}'")]
+    public static partial IGenericMessage TokenAccepted(ILogger logger, string serviceName, string subject);
 }

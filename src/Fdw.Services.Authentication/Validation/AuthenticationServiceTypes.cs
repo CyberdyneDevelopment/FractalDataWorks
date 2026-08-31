@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
-using System.Linq;
 using Fdw.Collections;
 using Fdw.Configuration;
 using Fdw.Results;
@@ -9,7 +8,6 @@ using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Logging;
 using Fdw.ServiceTypes;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Fdw.Services.Data.Abstractions;
@@ -45,11 +43,6 @@ namespace Fdw.Services.Authentication.Validation;
     ServiceCategory = "Authentication")]
 public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<AuthenticationServiceTypeBase, IAuthenticationServiceType>
 {
-    /// <summary>The bootstrap schema declaring where ServerConfiguration lives.</summary>
-    /// <remarks>
-    /// Settable for the same reason <c>ConfigurationGatewayTypes.SchemaFileName</c> is: a host that
-    /// ships its schema under another name says so once, here, rather than everywhere it is read.
-    /// </remarks>
     /// <summary>The connection these rows are read through.</summary>
     /// <remarks>
     /// ServerConfiguration, not PlatformConfiguration: which issuers a host trusts is server
@@ -58,24 +51,16 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
     /// </remarks>
     public static string ConfigurationConnection { get; set; } = "ServerConfiguration";
 
-    /// <summary>The schema file the host declares its connections in.</summary>
-    public static string SchemaFileName { get; set; } = "configurationSchema.json";
-
     /// <summary>The ServerConfiguration folder this domain's rows live in.</summary>
     public static string ServerConfigurationPath { get; set; } = "auth";
 
-    /// <summary>The file, without extension, holding the declared authentication services.</summary>
-    // Singular, matching the table it mirrors. The section it is exposed under is plural because
-    // that is the name its reader has always used, and renaming a configuration key to match a file
-    // name would break every host that already declares one.
-    public static string ServerConfigurationTable { get; set; } = "AuthenticationService";
-
-    // Configure(), Register(), Initialize() are source-generated. This replaces Register's body with
-    // the option collect followed by the routing this domain owns — written beside the declaration
-    // because it is one registration for the whole collection, not per option.
+    // Configure(), Register() and Initialize() are source-generated. Each body below runs the loop
+    // over this collection's options first - which is what Registration and Initialization replace -
+    // then the part this domain owns for the whole collection rather than per option.
     static AuthenticationServiceTypes()
     {
         var collectOptions = RegisterFunc;
+        var initializeOptions = InitializationFunc;
 
         Registration((builder, loggerFactory) =>
         {
@@ -110,12 +95,6 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
             // built — the configuration that decides its contents is not readable yet.
             builder.Services.TryAddSingleton<AuthenticationSchemeBindings>();
 
-            // The adapter between JwtBearerHandler's options contract and the configuration system.
-            // IConfigureOptions is the service type OptionsFactory resolves; registered under the
-            // named interface it would sit in a collection nothing reads.
-            builder.Services.AddSingleton<IConfigureOptions<JwtBearerOptions>>(sp =>
-                new ConfigureLocalKeyScheme(sp));
-
             // The routing this domain owns, which does not depend on what is configured: an
             // unmatched issuer is refused, and everything else is forwarded by the selector.
             builder.Services.AddAuthentication()
@@ -131,13 +110,17 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
-        // Initialize, not Register: the entries are read through a gateway, and a gateway exists only
-        // once the container is built. Nothing needs them earlier — the first token to arrive is what
-        // needs a scheme to route to, and that is a request, long after this.
+        // Initialize and not Register: the entries are read through a gateway, which exists only once
+        // the container is built. Nothing needs them earlier - the first token to arrive is what needs
+        // a scheme to route to, and that is a request, long after this.
         Initialization((host, hostLoggerFactory) =>
         {
             var log = hostLoggerFactory?.CreateLogger<AuthenticationServiceTypes>()
                 ?? NullLogger<AuthenticationServiceTypes>.Instance;
+
+            var initialized = initializeOptions(host, hostLoggerFactory);
+            if (initialized.IsFailure)
+                return initialized;
 
             if (Options.Length == 0)
                 return GenericResult<IHost>.Success(host);

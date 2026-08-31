@@ -52,6 +52,12 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
                     AuthenticationServiceTypes.ServerConfigurationPath));
             builder.Services.TryAddSingleton<ILocalKeyAuthenticationConfigurationProvider>(sp =>
                 sp.GetRequiredService<LocalKeyAuthenticationConfigurationProvider>());
+
+            // Scoped, and registered rather than left to ActivatorUtilities: the handler provider
+            // resolves the handler type from the request container first and only constructs it
+            // itself if nothing is registered. Registering it says what its dependencies are in the
+            // one place a reader looks for them.
+            builder.Services.TryAddScoped<LocalKeyAuthenticationHandler>();
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
@@ -129,7 +135,7 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
         // implementation row on first use, by the options bridge. Adding a scheme twice throws, and a
         // host that declares one issuer twice is a configuration defect worth reporting.
         schemes.AddScheme(new AuthenticationScheme(
-            SchemeNameFor(serviceName), displayName: null, handlerType: typeof(JwtBearerHandler)));
+            SchemeNameFor(serviceName), displayName: null, handlerType: typeof(LocalKeyAuthenticationHandler)));
 
         return GenericResult<AuthenticationSchemeBinding>.Success(
             new AuthenticationSchemeBinding(serviceName, issuer, SchemeNameFor(serviceName)));
