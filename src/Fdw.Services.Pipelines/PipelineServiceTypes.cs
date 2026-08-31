@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Configuration;
 using Fdw.Results;
@@ -9,10 +10,12 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Pipelines.Commands;
 using Fdw.ServiceTypes;
+using Fdw.ServiceTypes.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Pipelines;
 
@@ -64,6 +67,46 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
                 sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<PipelineConfiguration>>(
                 sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
+
+            // Published under the closed generic as well as the domain interface: a consumer asking
+            // for IPlatformServiceProvider<IGenericService, IPipelineImplementationConfiguration>
+            // and one asking for IPipelineServiceProvider must get the SAME instance, or the second
+            // gets a provider whose factory registrations the first one made.
+            builder.Services.AddScoped<IPlatformServiceProvider<IGenericService, IPipelineImplementationConfiguration>>(
+                sp => sp.GetRequiredService<IPipelineServiceProvider>());
+
+            builder.Services.AddScoped<IPipelineServiceProvider>(sp =>
+            {
+                var provider = new PipelineServiceProvider(
+                    sp,
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<PipelineServiceProvider>()
+                    ?? NullLogger<PipelineServiceProvider>.Instance);
+
+                var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<PipelineServiceTypes>()
+                    ?? NullLogger<PipelineServiceTypes>.Instance;
+                ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(PipelineServiceTypes), provider.GetType().Name);
+
+                if (sp.GetService<IPipelineConfigurationProvider>() is { } cfgProvider)
+                {
+                    var domainResult = provider.Register(cfgProvider);
+                    if (domainResult.IsSuccess)
+                        ServiceTypeLog.DomainConfigurationSourceAttached(
+                            stLogger, nameof(PipelineServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name);
+                    else
+                        ServiceTypeLog.DomainConfigurationSourceRejected(
+                            stLogger, nameof(PipelineServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
+                }
+                else
+                {
+                    ServiceTypeLog.DomainHasNoConfigurationSource(
+                        stLogger,
+                        nameof(PipelineServiceTypes),
+                        provider.GetType().Name,
+                        typeof(IPipelineConfigurationProvider).ToString());
+                }
+
+                return provider;
+            });
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
