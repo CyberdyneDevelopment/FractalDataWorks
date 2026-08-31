@@ -7,7 +7,7 @@ namespace Fdw.Data.Builders.Tests;
 
 public sealed class DataFieldConfigurationBuilderTests
 {
-    private DataFieldConfigurationBuilder CreateValidBuilder() =>
+    private static DataFieldConfigurationBuilder CreateValidBuilder() =>
         new DataFieldConfigurationBuilder()
             .WithName("CustomerId")
             .WithType<int>();

@@ -140,7 +140,7 @@ public class CalculationConfigurationProviderTests
         public Task<IGenericResult<IDataGatewayTransaction>> BeginTransaction(string connectionName, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<IDataGatewayTransaction>.Failure(new GenericMessage("Transactions not used in this test")));
 
-        private IDataStore BuildTree()
+        private static IDataStore BuildTree()
         {
             var inputContainer = Container("CalculationEntityInput", [], null);
             var fieldContainer = Container("CalculationStepField", [], null);

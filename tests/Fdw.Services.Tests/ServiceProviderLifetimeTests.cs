@@ -181,7 +181,6 @@ public class ServiceProviderLifetimeTests
         public Task<IGenericResult> Delete(string name, CancellationToken ct = default)
             => throw new NotSupportedException("Test provider does not support Delete.");
 
-        public bool IsSystemProtected(string name) => false;
     
         // Type-erased surface — delegates to the typed members.
         async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
@@ -280,7 +279,6 @@ public class ServiceProviderLifetimeTests
         public Task<IGenericResult> Delete(string name, CancellationToken ct = default)
             => throw new NotSupportedException("Aggregate test provider does not support Delete.");
 
-        public bool IsSystemProtected(string name) => false;
     
         // Type-erased surface — delegates to the typed members.
         async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)

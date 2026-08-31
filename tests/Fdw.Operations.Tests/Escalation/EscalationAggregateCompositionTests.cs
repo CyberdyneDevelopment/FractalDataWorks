@@ -181,7 +181,7 @@ public sealed class EscalationAggregateCompositionTests
             }
         }
 
-        private IDataStore BuildTree()
+        private static IDataStore BuildTree()
         {
             // Leaf container (no children) needs no keys. Owner containers at every level need BOTH a
             // Physical key (field "RowId" — the JOIN target the child FK points at) and a Logical key

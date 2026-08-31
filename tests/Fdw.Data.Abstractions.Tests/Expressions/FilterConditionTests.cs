@@ -249,9 +249,6 @@ public sealed class FilterConditionTests
         public int Id => 999;
         object ITypeOption.Id => Id;
         public string Name => "TestOperator";
-        public string Code => "TEST";
-        public string DisplayName => "Test Operator";
-        public string Description => "Test operator for unit tests";
         public string Category => "Test";
         public string SqlOperator => "=";
         public string ODataOperator => "eq";
