@@ -170,20 +170,16 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
                     return GenericResult<IHost>.Failure(
                         AuthenticationValidationLog.SectionUnreadable(log, serviceName));
 
-                // The issuer a token carries is what routes it, and the selector matches it
-                // ordinally, so a declared "https://host" must become "https://host/" here or it
-                // never matches a token minted against it. Normalising once, where the entry is
-                // read, is what keeps every option and the selector comparing the same string.
-                if (!Uri.TryCreate(entry.Authority, UriKind.Absolute, out var authority)
-                    || (!string.Equals(authority.Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal)
-                        && !string.Equals(authority.Scheme, Uri.UriSchemeHttp, StringComparison.Ordinal)))
-                {
-                    return GenericResult<IHost>.Failure(
-                        AuthenticationValidationLog.AuthorityNotAbsolute(
-                            log, serviceName, entry.Authority ?? string.Empty));
-                }
+                // Through IssuerName, which the options bridge also reads its ValidIssuer through:
+                // the selector matches the binding ordinally and the scheme checks ValidIssuer
+                // ordinally, so both have to derive from the same rule or a declared "https://host"
+                // routes a token minted against "https://host/" and is then refused by the scheme
+                // it was correctly routed to.
+                var issuer = IssuerName.Read(entry.Authority, serviceName, log);
+                if (!issuer.IsSuccess || issuer.Value is null)
+                    return issuer.ToNewResult<IHost>();
 
-                entry.Authority = authority.AbsoluteUri;
+                entry.Authority = issuer.Value;
 
                 if (ByName(kind) is not AuthenticationServiceTypeBase option)
                     return GenericResult<IHost>.Failure(

@@ -98,7 +98,15 @@ internal sealed class ConfigureLocalKeyScheme : IConfigureNamedOptions<JwtBearer
         // whole reason this option exists apart from JwtBearer.
         options.MapInboundClaims = false;
         options.TokenValidationParameters.ValidateIssuer = true;
-        options.TokenValidationParameters.ValidIssuer = header.Authority;
+        // Through the same rule the binding was built with — see IssuerName.
+        var issuer = IssuerName.Read(header.Authority, serviceName, log);
+        if (!issuer.IsSuccess || issuer.Value is null)
+        {
+            AuthenticationValidationLog.LocalKeyEntryUnreadable(log, serviceName);
+            return;
+        }
+
+        options.TokenValidationParameters.ValidIssuer = issuer.Value;
         options.TokenValidationParameters.ValidateAudience = true;
         options.TokenValidationParameters.ValidAudience = body.Audience;
         options.TokenValidationParameters.ValidateLifetime = true;
