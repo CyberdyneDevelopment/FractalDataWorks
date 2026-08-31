@@ -138,4 +138,15 @@ public static partial class AuthenticationValidationLog
     [MessageLogging(EventId = 71114, Level = LogLevel.Error,
         Message = "LocalKey authentication service '{serviceName}' declares no Audience. Set it to the audience this host's flows mint - a token is only accepted for the audience it names, so a mismatch rejects every token this host issued")]
     public static partial IGenericMessage LocalKeyMissingAudience(ILogger logger, string serviceName);
+
+    // Why an error and not a skip: the domain provider dispatches by the kind the domain row names,
+    // so a provider only ever sees rows of its own kind. Another kind arriving means the registry
+    // sent the row to the wrong provider, and silently dropping it would hide that.
+    [MessageLogging(EventId = 71115, Level = LogLevel.Error,
+        Message = "Expected a {expected} configuration but the row read as '{actual}'. The domain provider dispatched this row to the wrong implementation provider")]
+    public static partial IGenericMessage ImplementationKindMismatch(ILogger logger, string expected, string actual);
+
+    [MessageLogging(EventId = 71116, Level = LogLevel.Error,
+        Message = "LocalKey authentication service '{serviceName}' could not be read, so its scheme validates with no key and no issuer and every token it is handed will be refused")]
+    public static partial IGenericMessage LocalKeyEntryUnreadable(ILogger logger, string serviceName);
 }

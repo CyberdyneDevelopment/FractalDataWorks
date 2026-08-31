@@ -6,7 +6,7 @@ namespace Fdw.CodeBuilder.Analysis.CSharp.Tests.Expectations;
 
 public class FieldExpectationsTests
 {
-    private FieldDeclarationSyntax ParseField(string code)
+    private static FieldDeclarationSyntax ParseField(string code)
     {
         var tree = CSharpSyntaxTree.ParseText(code);
         var root = tree.GetCompilationUnitRoot();

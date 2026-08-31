@@ -13,7 +13,7 @@ namespace Fdw.Data.Builders.Tests;
 
 public sealed class DataSetConfigurationBuilderTests
 {
-    private DataSetConfigurationBuilder CreateValidBuilder()
+    private static DataSetConfigurationBuilder CreateValidBuilder()
     {
         return new DataSetConfigurationBuilder()
             .WithName("Customers")

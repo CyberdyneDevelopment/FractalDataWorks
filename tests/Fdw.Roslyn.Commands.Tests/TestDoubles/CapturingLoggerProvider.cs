@@ -45,7 +45,7 @@ public sealed class CapturingLoggerProvider : ILoggerProvider
             Exception? exception,
             Func<TState, Exception?, string> formatter)
         {
-            if (formatter is null) throw new ArgumentNullException(nameof(formatter));
+            ArgumentNullException.ThrowIfNull(formatter);
 
             _sink.Enqueue($"{logLevel}|{eventId.Id}|{formatter(state, exception)}");
         }

@@ -78,11 +78,13 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
         {
             var log = loggerFactory?.CreateLogger<HealthMonitorTypes>() ?? NullLogger<HealthMonitorTypes>.Instance;
 
-            builder.Services.TryAddSingleton<IHealthMonitorConfigurationProvider>(sp =>
+            builder.Services.TryAddSingleton<HealthMonitorConfigurationProvider>(sp =>
                 new HealthMonitorConfigurationProvider(
                     sp.GetService<ILogger<HealthMonitorConfigurationProvider>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     ConfigurationConnection));
+            builder.Services.TryAddSingleton<IHealthMonitorConfigurationProvider>(
+                sp => sp.GetRequiredService<HealthMonitorConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<HealthMonitorConfiguration>>(
                 sp => sp.GetRequiredService<HealthMonitorConfigurationProvider>());
 

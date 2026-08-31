@@ -272,7 +272,7 @@ public class TestServiceProvider : IDisposable
         });
     }
 
-    private Dictionary<string, SimpleService> BuildServiceDictionary(List<ServiceConfig> configs)
+    private static Dictionary<string, SimpleService> BuildServiceDictionary(List<ServiceConfig> configs)
     {
         var dict = new Dictionary<string, SimpleService>();
         if (configs != null)
@@ -309,7 +309,7 @@ public class TestServiceProviderSingleton
         // No subscription - IOptions doesn't support change notifications
     }
 
-    private Dictionary<string, SimpleService> BuildServiceDictionary(List<ServiceConfig> configs)
+    private static Dictionary<string, SimpleService> BuildServiceDictionary(List<ServiceConfig> configs)
     {
         var dict = new Dictionary<string, SimpleService>();
         if (configs != null)

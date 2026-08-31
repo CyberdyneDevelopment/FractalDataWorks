@@ -6,14 +6,14 @@ namespace Fdw.CodeBuilder.Analysis.CSharp.Tests.Expectations;
 
 public class PropertyExpectationsTests
 {
-    private PropertyDeclarationSyntax ParseProperty(string code)
+    private static PropertyDeclarationSyntax ParseProperty(string code)
     {
         var tree = CSharpSyntaxTree.ParseText(code);
         var root = tree.GetCompilationUnitRoot();
         return root.DescendantNodes().OfType<PropertyDeclarationSyntax>().First();
     }
 
-    private PropertyDeclarationSyntax ParseProperty(string code, int index)
+    private static PropertyDeclarationSyntax ParseProperty(string code, int index)
     {
         var tree = CSharpSyntaxTree.ParseText(code);
         var root = tree.GetCompilationUnitRoot();

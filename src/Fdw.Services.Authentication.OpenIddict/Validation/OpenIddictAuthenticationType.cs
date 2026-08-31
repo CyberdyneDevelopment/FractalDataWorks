@@ -1,8 +1,10 @@
 using System;
+using System.Threading;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Logging;
 using Fdw.Services.Authentication.Validation;
 using Microsoft.AspNetCore.Authentication;
@@ -53,20 +55,26 @@ public sealed class OpenIddictAuthenticationType : AuthenticationServiceTypeBase
             var log = loggerFactory?.CreateLogger<OpenIddictAuthenticationType>()
                 ?? NullLogger<OpenIddictAuthenticationType>.Instance;
 
-            var declared = AuthenticationServiceConfiguration.Read(
-                host.Services.GetRequiredService<IConfiguration>(), Name, log);
-            if (declared.IsFailure)
+            // VSTHRD002: Initialization is a synchronous phase by contract, and this runs once at
+            // startup before any request exists to deadlock against.
+#pragma warning disable VSTHRD002
+            var declared = host.Services.GetRequiredService<IAuthenticationServiceConfigurationProvider>()
+                .GetHeaders(CancellationToken.None)
+                .GetAwaiter().GetResult();
+#pragma warning restore VSTHRD002
+            if (!declared.IsSuccess || declared.Value is not { } entries)
                 return declared.ToNewResult<IHost>();
-            if (declared.Value is not { } entries)
-                return GenericResult<IHost>.Failure(AuthenticationValidationLog.SectionUnreadable(log, Name));
 
             var stamped = host.Services.GetRequiredService<IOptions<OpenIddictServerOptions>>().Value.Issuer;
             if (stamped is null)
                 return GenericResult<IHost>.Failure(
                     AuthenticationValidationLog.OpenIddictIssuerNotStamped(log));
 
-            foreach (var (header, _) in entries)
+            foreach (var header in entries)
             {
+                if (!string.Equals(header.ServiceOptionType, Name, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 if (!string.Equals(header.Authority, stamped.AbsoluteUri, StringComparison.Ordinal))
                     return GenericResult<IHost>.Failure(
                         AuthenticationValidationLog.OpenIddictIssuerMismatch(
@@ -105,26 +113,26 @@ public sealed class OpenIddictAuthenticationType : AuthenticationServiceTypeBase
     /// the pipeline it owns, and a second registration of the same scheme name is an error rather than a
     /// duplicate. This reports which scheme that was, and the issuer it accepts.
     /// </remarks>
-    public override IGenericResult<AuthenticationSchemeBinding> RegisterScheme(
-        AuthenticationBuilder authenticationBuilder,
-        AuthenticationServiceConfiguration configuration,
-        IConfigurationSection section,
-        IServiceCollection services,
+    public override IGenericResult<AuthenticationSchemeBinding> TakeScheme(
+        IAuthenticationServiceConfiguration configuration,
+        IAuthenticationSchemeProvider schemes,
+        IServiceProvider services,
         ILoggerFactory? loggerFactory)
     {
         if (configuration is null) throw new ArgumentNullException(nameof(configuration));
-        if (section is null) throw new ArgumentNullException(nameof(section));
 
         var log = loggerFactory?.CreateLogger<OpenIddictAuthenticationType>()
             ?? NullLogger<OpenIddictAuthenticationType>.Instance;
 
         if (configuration.Name is not { Length: > 0 } serviceName)
             return GenericResult<AuthenticationSchemeBinding>.Failure(
-                AuthenticationValidationLog.EntryMissingName(log, section.Path));
+                AuthenticationValidationLog.EntryMissingName(log, "(unnamed)"));
         if (configuration.Authority is not { Length: > 0 } authority)
             return GenericResult<AuthenticationSchemeBinding>.Failure(
                 AuthenticationValidationLog.EntryMissingAuthority(log, serviceName));
 
+        // No scheme is added: OpenIddict's own validation handler already registered this scheme
+        // name. This entry only binds the issuer to it so the selector can route there.
         return GenericResult<AuthenticationSchemeBinding>.Success(
             new AuthenticationSchemeBinding(
                 serviceName, authority, OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme));
