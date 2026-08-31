@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -11,7 +12,6 @@ using Fdw.Services.Authentication.Logging;
 using Fdw.Services.Authorization.Abstractions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -61,69 +61,42 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
     public override bool SupportsTokenCaching => false;
 
     /// <inheritdoc />
-    public override IGenericResult<AuthenticationSchemeBinding> RegisterScheme(
-        AuthenticationBuilder authenticationBuilder,
-        AuthenticationServiceConfiguration configuration,
-        IConfigurationSection section,
+    public override IGenericResult<AuthenticationSchemeBinding> TakeScheme(
+        IAuthenticationServiceConfiguration configuration,
+        IAuthenticationSchemeProvider schemes,
+        IServiceProvider services,
         ILoggerFactory? loggerFactory)
     {
-        if (authenticationBuilder is null) throw new ArgumentNullException(nameof(authenticationBuilder));
         if (configuration is null) throw new ArgumentNullException(nameof(configuration));
+        if (schemes is null) throw new ArgumentNullException(nameof(schemes));
 
         var log = loggerFactory?.CreateLogger<JwtBearerAuthenticationType>()
             ?? NullLogger<JwtBearerAuthenticationType>.Instance;
 
-        // The base validated these before calling; reading them again is what makes that visible to the
-        // compiler rather than asserted with a null-forgiving operator.
         if (configuration.Name is not { Length: > 0 } serviceName)
             return GenericResult<AuthenticationSchemeBinding>.Failure(
-                AuthenticationValidationLog.EntryMissingName(log, section.Path));
+                AuthenticationValidationLog.EntryMissingName(log, "(unnamed)"));
+
         if (configuration.Authority is not { Length: > 0 } authority)
             return GenericResult<AuthenticationSchemeBinding>.Failure(
                 AuthenticationValidationLog.EntryMissingAuthority(log, serviceName));
 
-        var typed = JwtBearerAuthenticationConfiguration.Read(section, serviceName, log);
-        if (typed.IsFailure)
-            return typed.ToNewResult<AuthenticationSchemeBinding>();
-        if (typed.Value is not { } body)
-            return GenericResult<AuthenticationSchemeBinding>.Failure(
-                AuthenticationValidationLog.JwtBearerMissingAudience(log, serviceName));
-
-        var schemeName = SchemeNameFor(serviceName);
-
-        authenticationBuilder.AddJwtBearer(schemeName, options =>
-        {
-            options.Authority = authority;
-            options.Audience = body.Audience;
-            options.RequireHttpsMetadata = string.Equals(
-                new Uri(authority).Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal);
-
-            options.MapInboundClaims = false;
-
-            options.TokenValidationParameters.ValidateIssuer = true;
-            options.TokenValidationParameters.ValidIssuer = authority;
-            options.TokenValidationParameters.ValidateAudience = true;
-            options.TokenValidationParameters.ValidAudience = body.Audience;
-            options.TokenValidationParameters.ValidateLifetime = true;
-            options.TokenValidationParameters.ValidateIssuerSigningKey = true;
-
-            options.TokenValidationParameters.RoleClaimType = ClaimDefinitions.roles.Name;
-            options.TokenValidationParameters.NameClaimType = ClaimDefinitions.sub.Name;
-
-            options.Events = new JwtBearerEvents
-            {
-                OnTokenValidated = context => ConferDeclaredRoles(context, serviceName, body.Roles),
-            };
-        });
+        // UNFINISHED. This still names JwtBearerHandler, which reads JwtBearerOptions from
+        // IOptionsMonitor - and nothing populates them, so a declared JwtBearer entry takes a scheme
+        // that validates with no authority, no audience and no key, and refuses every token from that
+        // issuer. Latent only because no host declares one today. LocalKey has been moved off the
+        // options system onto its own IAuthenticationHandler; this option needs the same treatment,
+        // plus the implementation configuration, provider and container declaration it also lacks.
+        schemes.AddScheme(new AuthenticationScheme(
+            SchemeNameFor(serviceName), displayName: null, handlerType: typeof(JwtBearerHandler)));
 
         return GenericResult<AuthenticationSchemeBinding>.Success(
-            new AuthenticationSchemeBinding(serviceName, authority, schemeName));
+            new AuthenticationSchemeBinding(serviceName, authority, SchemeNameFor(serviceName)));
     }
 
     /// <summary>
     /// Builds the ASP.NET scheme name for an authentication service.
     /// </summary>
-    /// <param name="serviceName">The service's declared name.</param>
     /// <returns>The scheme name.</returns>
     /// <remarks>
     /// Qualified by mechanism so two services of different mechanisms can share a name without one

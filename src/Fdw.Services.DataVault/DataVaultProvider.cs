@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,19 +18,19 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.DataVault;
 
 /// <summary>
-/// Default implementation of <see cref="IDataVaultProvider"/>.
-/// Wraps <see cref="PlatformServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}"/>
-/// and adds vault-specific cache-by-name lookup plus the typed
-/// <see cref="Get(DataVaultRequest, CancellationToken)"/> entry point.
+/// Default implementation of <see cref="IDataVaultProvider"/>, adding the typed
+/// <see cref="Get(DataVaultRequest, CancellationToken)"/> entry point over
+/// <see cref="PlatformServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}"/>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// A vault is fully resolved AT CONSTRUCTION. The async resolution — connection + pepper — lives
-/// ONLY here, in the cache factory, and runs exactly ONCE per vault name. Every <c>Get</c> overload
-/// routes through that single resolve-once-then-cache path; the registered factory is a pure
-/// constructor that receives the already-resolved connection and pepper. Any resolution failure is
-/// fail-loud (MessageLogging) and EVICTS the cache entry so a misconfiguration is never served from
-/// cache forever.
+/// A vault is fully resolved before it is handed back: <see cref="Get(DataVaultRequest, CancellationToken)"/>
+/// loads the implementation configuration, resolves the connection and the pepper from it, and calls the
+/// factory with both. That is why the base <c>Get</c> is not used — it creates a service from configuration
+/// alone, and the factory refuses a config-only call because a vault cannot be built without them.
+/// </para>
+/// <para>
+/// Nothing is cached: each call re-resolves the connection and the pepper.
 /// </para>
 /// </remarks>
 public sealed class DataVaultProvider
@@ -43,9 +42,6 @@ public sealed class DataVaultProvider
       IDataVaultProvider
 {
     private readonly ILogger<DataVaultProvider> _logger;
-
-    private readonly ConcurrentDictionary<string, Lazy<Task<IGenericResult<IDataVault>>>> _cache
-        = new(StringComparer.OrdinalIgnoreCase);
 
     private IDataConnectionProvider? _connectionProvider;
     private ISecretManagerProvider? _secretManagerProvider;
@@ -78,21 +74,21 @@ public sealed class DataVaultProvider
     }
 
     /// <inheritdoc />
-    public Task<IGenericResult<IDataVault>> Get(DataVaultRequest request, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<IDataVault>> Get(DataVaultRequest request, CancellationToken cancellationToken = default)
     {
         if (request is null || (request.Id is null && string.IsNullOrWhiteSpace(request.Name)))
-            return Task.FromResult<IGenericResult<IDataVault>>(
-                GenericResult<IDataVault>.Failure(DataVaultLog.EmptyVaultRequest(_logger)));
+            return GenericResult<IDataVault>.Failure(DataVaultLog.EmptyVaultRequest(_logger));
 
-        if (request.Id.HasValue)
-            return Get(request.Id.Value, cancellationToken);
+        // Not the base Get: that creates from configuration alone, and a vault cannot be built without
+        // its resolved connection and pepper — the factory refuses a config-only call by design.
+        var configuration = request.Id.HasValue
+            ? await DomainConfigurationProvider!.Get(request.Id.Value, cancellationToken).ConfigureAwait(false)
+            : await DomainConfigurationProvider!.Get(request.Name!, cancellationToken).ConfigureAwait(false);
 
-        return Get(request.Name!, cancellationToken);
-    }
+        if (!configuration.IsSuccess || configuration.Value is null)
+            return configuration.ToNewResult<IDataVault>();
 
-    private async Task<IGenericResult<IDataVault>> ResolveVault(
-        IDataVaultImplementationConfiguration body, CancellationToken cancellationToken)
-    {
+        var body = configuration.Value;
         var vaultName = body.Name;
 
         if (_connectionProvider is null || _secretManagerProvider is null)

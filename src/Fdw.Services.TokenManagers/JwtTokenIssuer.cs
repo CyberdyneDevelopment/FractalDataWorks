@@ -80,8 +80,16 @@ public sealed class JwtTokenIssuer : ITokenIssuer
         if (!string.IsNullOrWhiteSpace(request.Acr))
             claims["acr"] = request.Acr;
 
-        foreach (var (type, value) in request.Claims)
-            claims.TryAdd(type, value);
+        // Why the list is unwrapped when it holds one value: a resource server reading "sub" expects
+        // a string, and a single-element array is not one. Only genuinely repeated claims - perm,
+        // roles - stay arrays, which is what a reader of those expects.
+        foreach (var (type, values) in request.Claims)
+        {
+            if (values.Count == 0)
+                continue;
+
+            claims.TryAdd(type, values.Count == 1 ? values[0] : values);
+        }
 
         IssuerLog.Minting(_logger, request.Audience, claims.Count);
 

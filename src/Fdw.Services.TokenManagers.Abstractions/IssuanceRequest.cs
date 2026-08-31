@@ -45,11 +45,19 @@ public sealed record IssuanceRequest
     /// <summary>Gets the assurance level those methods amount to.</summary>
     public string? Acr { get; init; }
 
-    /// <summary>Gets the claims to embed.</summary>
+    /// <summary>Gets the claims to embed, keyed by type, each with every value of that type.</summary>
     /// <remarks>
+    /// <para>
     /// The runner selects these, and does not forward a claim merely because an external authority
     /// asserted it. A federated provider naming a role does not thereby grant one.
+    /// </para>
+    /// <para>
+    /// Multi-valued because the claims that matter most are: a real user token carries dozens of
+    /// <c>perm</c> entries and several <c>roles</c>. A single-valued map cannot hold them, and
+    /// collapsing to one value silently issues a token that verifies and then fails authorization
+    /// on everything the caller can actually do.
+    /// </para>
     /// </remarks>
-    public IReadOnlyDictionary<string, string> Claims { get; init; }
-        = new Dictionary<string, string>(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> Claims { get; init; }
+        = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
 }

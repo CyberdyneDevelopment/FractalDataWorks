@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Data.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -42,12 +44,34 @@ public sealed class ConfigurationGatewayServiceType : ConfigurationGatewayTypeBa
 
             builder.Services.TryAddSingleton<IConfigurationContainerLookup>(sp =>
             {
-                var gateway = sp.GetRequiredService<IConfigurationGateway>();
-                var dataStoresLazy = new Lazy<IReadOnlyList<IDataStore>>(
-                    () => gateway.DataStores,
-                    LazyThreadSafetyMode.ExecutionAndPublication);
+                // Every connection declared in configurationSchema.json, not one chosen store:
+                // Get(configTypeName) scans all DataStores for a container, so a container declared
+                // on ServerConfiguration is invisible if only PlatformConfiguration is loaded.
+                // The provider builds each gateway on demand from its declaration and caches it.
+                var gatewayProvider = sp.GetRequiredService<IConfigurationGatewayProvider>();
+                var schema = sp.GetRequiredService<ConfigurationSchema>();
+                // Resolved on every lookup rather than cached. A cache here is wrong twice over:
+                // the first caller may run before every gateway has registered, and would pin an
+                // incomplete list for the life of the host; and a Lazy whose factory asks the
+                // provider for a gateway that is itself mid-construction re-enters its own value
+                // factory and throws. The provider hands back registered gateways, so asking it
+                // again is cheap.
+                IReadOnlyList<IDataStore> DataStores()
+                {
+                    var stores = new List<IDataStore>();
+                    foreach (var connection in schema.Connections)
+                    {
+                        var gateway = gatewayProvider.Get(connection.Name);
+                        if (!gateway.IsSuccess || gateway.Value is null)
+                            continue;
+
+                        stores.AddRange(gateway.Value.DataStores);
+                    }
+
+                    return stores;
+                }
                 return new ConfigurationContainerLookup(
-                    dataStoresLazy,
+                    DataStores,
                     sp.GetService<ILogger<ConfigurationContainerLookup>>());
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);

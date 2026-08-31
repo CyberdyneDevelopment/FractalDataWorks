@@ -41,7 +41,7 @@ public abstract class MockApiClientFixture : IDisposable
     /// <summary>
     /// Create a mock ILogger<T> for assertions and injection.
     /// </summary>
-    protected Mock<ILogger<T>> CreateMockLogger<T>()
+    protected static Mock<ILogger<T>> CreateMockLogger<T>()
     {
         return new Mock<ILogger<T>>();
     }

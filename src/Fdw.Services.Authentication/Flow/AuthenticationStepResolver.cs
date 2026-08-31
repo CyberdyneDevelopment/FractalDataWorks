@@ -21,20 +21,36 @@ namespace Fdw.Services.Authentication.Flow;
 /// </remarks>
 public sealed class AuthenticationStepResolver : IAuthenticationStepResolver
 {
-    private readonly ConcurrentDictionary<string, IAuthenticationStep> _steps = new(StringComparer.Ordinal);
+    // Types rather than instances, because a step reads through scoped providers while this map
+    // is the same for every request. The instance comes from the scope that asks for one.
+    private static readonly ConcurrentDictionary<string, Type> Registered = new(StringComparer.Ordinal);
+
+    // Instances registered directly, for a step that is already built - a test double, or a step
+    // with no scoped dependency to resolve. Checked before the type map so a caller that supplied
+    // an instance gets that instance rather than a second one from the container.
+    private readonly ConcurrentDictionary<string, IAuthenticationStep> _instances = new(StringComparer.Ordinal);
+
+    private readonly IServiceProvider? _services;
     private readonly ILogger<AuthenticationStepResolver> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="AuthenticationStepResolver"/> class.</summary>
+    /// <param name="services">The scope steps are resolved from.</param>
     /// <param name="logger">The logger.</param>
-    public AuthenticationStepResolver(ILogger<AuthenticationStepResolver>? logger = null)
-        => _logger = logger ?? NullLogger<AuthenticationStepResolver>.Instance;
+    public AuthenticationStepResolver(
+        IServiceProvider? services = null,
+        ILogger<AuthenticationStepResolver>? logger = null)
+    {
+        _services = services;
+        _logger = logger ?? NullLogger<AuthenticationStepResolver>.Instance;
+    }
 
-    /// <summary>Registers <paramref name="step"/> under <paramref name="stepName"/>.</summary>
+    /// <summary>Registers an already-built <paramref name="step"/> under <paramref name="stepName"/>.</summary>
     /// <param name="stepName">The name a flow will use.</param>
     /// <param name="step">The step.</param>
     /// <remarks>
-    /// Two packages claiming one name is refused rather than resolved by order. Whichever won would
-    /// depend on assembly load order, and a flow would then mean different things on different hosts.
+    /// For a step that needs no scope to build — one configured in place, or a double in a test.
+    /// A step reading through scoped providers registers its type instead, so the instance comes
+    /// from the scope that asks for it rather than outliving one.
     /// </remarks>
     public IGenericResult Register(string stepName, IAuthenticationStep step)
     {
@@ -44,22 +60,57 @@ public sealed class AuthenticationStepResolver : IAuthenticationStepResolver
         if (step is null)
             return GenericResult.Failure(StepResolverLog.StepMissing(_logger, stepName));
 
-        if (!_steps.TryAdd(stepName, step))
+        if (!_instances.TryAdd(stepName, step))
             return GenericResult.Failure(StepResolverLog.AlreadyRegistered(
-                _logger, stepName, _steps[stepName].GetType().Name, step.GetType().Name));
+                _logger, stepName, _instances[stepName].GetType().Name, step.GetType().Name));
 
         StepResolverLog.Registered(_logger, stepName, step.GetType().Name);
         return GenericResult.Success();
     }
 
+    /// <summary>Registers the type serving <paramref name="stepName"/>.</summary>
+    /// <param name="stepName">The name a flow will use.</param>
+    /// <param name="stepType">The type implementing it.</param>
+    /// <remarks>
+    /// Two packages claiming one name is refused rather than resolved by order. Whichever won would
+    /// depend on assembly load order, and a flow would then mean different things on different hosts.
+    /// Registering the same type under the same name twice is not a conflict — a host that
+    /// initializes more than once is repeating itself, not disagreeing with itself.
+    /// </remarks>
+    public IGenericResult Register(string stepName, Type stepType)
+    {
+        if (string.IsNullOrWhiteSpace(stepName))
+            return GenericResult.Failure(StepResolverLog.NameMissing(_logger));
+
+        if (stepType is null)
+            return GenericResult.Failure(StepResolverLog.StepMissing(_logger, stepName));
+
+        if (!Registered.TryAdd(stepName, stepType) && Registered[stepName] != stepType)
+            return GenericResult.Failure(StepResolverLog.AlreadyRegistered(
+                _logger, stepName, Registered[stepName].Name, stepType.Name));
+
+        StepResolverLog.Registered(_logger, stepName, stepType.Name);
+        return GenericResult.Success();
+    }
+
     /// <inheritdoc />
     public IGenericResult<IAuthenticationStep> Resolve(string stepName)
-        => string.IsNullOrWhiteSpace(stepName)
-            ? GenericResult<IAuthenticationStep>.Failure(StepResolverLog.NameMissing(_logger))
-            : _steps.TryGetValue(stepName, out var step)
-                ? GenericResult<IAuthenticationStep>.Success(step)
-                : GenericResult<IAuthenticationStep>.Failure(
-                    StepResolverLog.NotRegistered(_logger, stepName, Known()));
+    {
+        if (string.IsNullOrWhiteSpace(stepName))
+            return GenericResult<IAuthenticationStep>.Failure(StepResolverLog.NameMissing(_logger));
+
+        if (_instances.TryGetValue(stepName, out var instance))
+            return GenericResult<IAuthenticationStep>.Success(instance);
+
+        if (!Registered.TryGetValue(stepName, out var stepType))
+            return GenericResult<IAuthenticationStep>.Failure(
+                StepResolverLog.NotRegistered(_logger, stepName, Known()));
+
+        return _services?.GetService(stepType) is IAuthenticationStep step
+            ? GenericResult<IAuthenticationStep>.Success(step)
+            : GenericResult<IAuthenticationStep>.Failure(
+                StepResolverLog.StepMissing(_logger, stepName));
+    }
 
     /// <summary>Validates that every step a flow names exists and has what it needs.</summary>
     /// <param name="flow">The flow to check.</param>
@@ -94,5 +145,12 @@ public sealed class AuthenticationStepResolver : IAuthenticationStepResolver
     }
 
     private string Known()
-        => _steps.IsEmpty ? "(none registered)" : string.Join(", ", _steps.Keys.OrderBy(k => k, StringComparer.Ordinal));
+    {
+        var names = Registered.Keys.Concat(_instances.Keys)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(k => k, StringComparer.Ordinal)
+            .ToList();
+
+        return names.Count == 0 ? "(none registered)" : string.Join(", ", names);
+    }
 }

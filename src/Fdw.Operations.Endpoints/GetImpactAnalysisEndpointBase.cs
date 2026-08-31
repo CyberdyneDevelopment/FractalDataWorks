@@ -1,3 +1,4 @@
+using Fdw.Data.DataSets;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Data.Clients.Models;
 using System;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Commands.Data;
 using Fdw.Data;
+using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Data.Abstractions;
 // DataSetRecord and DataSetSourceConfiguration now in this namespace
@@ -23,13 +25,13 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisRequest, ImpactAnalysisResponse>
 {
-    private readonly IConfigurationGateway _configurationGateway;
+    private readonly DataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<GetImpactAnalysisEndpointBase> _logger;
 
     /// <inheritdoc />
-    protected GetImpactAnalysisEndpointBase(IConfigurationGateway configurationGateway, ILogger<GetImpactAnalysisEndpointBase> logger)
+    protected GetImpactAnalysisEndpointBase(DataSetConfigurationProvider dataSetProvider, ILogger<GetImpactAnalysisEndpointBase> logger)
     {
-        _configurationGateway = configurationGateway;
+        _dataSetProvider = dataSetProvider;
         _logger = logger;
     }
 
@@ -77,77 +79,51 @@ public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisReq
     }
 
     /// <summary>Analyzes the impact of a connection change by finding all sources using that connection.</summary>
-    protected virtual async Task<IReadOnlyList<ImpactedDataSetResponse>> AnalyzeConnectionImpact(string connectionName, CancellationToken ct)
-    {
-        var sources = await FindSourcesByProperty("ConnectionName", connectionName, ct).ConfigureAwait(false);
-        return await BuildImpactedDataSets(sources, ct).ConfigureAwait(false);
-    }
+    protected virtual Task<IReadOnlyList<ImpactedDataSetResponse>> AnalyzeConnectionImpact(
+        string connectionName, CancellationToken ct) =>
+        Impact(source => string.Equals(source.ConnectionName, connectionName, StringComparison.OrdinalIgnoreCase), ct);
 
     /// <summary>Analyzes the impact of a data store change by finding all sources using that data store.</summary>
-    protected virtual async Task<IReadOnlyList<ImpactedDataSetResponse>> AnalyzeDataStoreImpact(string dataStoreName, CancellationToken ct)
-    {
-        var sources = await FindSourcesByProperty("DataStoreName", dataStoreName, ct).ConfigureAwait(false);
-        return await BuildImpactedDataSets(sources, ct).ConfigureAwait(false);
-    }
+    protected virtual Task<IReadOnlyList<ImpactedDataSetResponse>> AnalyzeDataStoreImpact(
+        string dataStoreName, CancellationToken ct) =>
+        Impact(source => string.Equals(source.DataStoreName, dataStoreName, StringComparison.OrdinalIgnoreCase), ct);
 
-    /// <summary>Finds DataSet source records matching a specific property value.</summary>
-    protected virtual async Task<IReadOnlyList<DataSetSourceConfiguration>> FindSourcesByProperty(string propertyName, string value, CancellationToken ct)
+    /// <summary>Builds impact assessments for every DataSet with a source matching <paramref name="matches"/>.</summary>
+    /// <remarks>
+    /// One read. The provider composes each DataSet with its sources, so the DataSets are already in
+    /// hand once the sources are - where this previously filtered sources in one query and then
+    /// issued another query per distinct DataSet id.
+    /// <para>
+    /// The match is a predicate rather than a property name and value. The old form passed
+    /// "ConnectionName" as a string into a filter, so a typo produced an empty result rather than a
+    /// compile error, and only two properties were ever passed.
+    /// </para>
+    /// </remarks>
+    protected virtual async Task<IReadOnlyList<ImpactedDataSetResponse>> Impact(
+        Func<DataSetSourceConfiguration, bool> matches, CancellationToken ct)
     {
-        var command = new QueryCommand<DataSetSourceConfiguration>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterCondition
-                {
-                    PropertyName = propertyName,
-                    Operator = FilterOperators.ByName("Equal"),
-                    Value = value
-                }
-            }
-        };
+        ArgumentNullException.ThrowIfNull(matches);
 
-        var result = await _configurationGateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
-            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetSource"), ct).ConfigureAwait(false);
-        return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
-    }
+        var dataSets = await _dataSetProvider.Get(ct).ConfigureAwait(false);
+        if (dataSets.IsFailure || dataSets.Value is not { } all)
+            return [];
 
-    /// <summary>Groups sources by DataSet and builds impact assessment DTOs with impact level classification.</summary>
-    protected virtual async Task<IReadOnlyList<ImpactedDataSetResponse>> BuildImpactedDataSets(IReadOnlyList<DataSetSourceConfiguration> sources, CancellationToken ct)
-    {
         var impacted = new List<ImpactedDataSetResponse>();
-        var dataSetIds = sources.Select(s => s.DataSetId).Distinct();
 
-        foreach (var dsId in dataSetIds)
+        foreach (var dataSet in all)
         {
-            var dsCommand = new QueryCommand<DataSetRecord>
-            {
-                Filter = new FilterExpression
-                {
-                    Root = new FilterCondition
-                    {
-                        PropertyName = "Id",
-                        Operator = FilterOperators.ByName("Equal"),
-                        Value = dsId
-                    }
-                }
-            };
+            var affectedSources = (dataSet.Sources ?? []).Where(matches).ToList();
+            if (affectedSources.Count == 0)
+                continue;
 
-            var dsResult = await _configurationGateway.Execute<IEnumerable<DataSetRecord>>(
-                dsCommand, new DataStoreTarget("PlatformConfiguration", "data", "DataSet"), ct).ConfigureAwait(false);
-            var ds = dsResult.IsSuccess ? dsResult.Value?.FirstOrDefault() : null;
-
-            if (ds != null)
+            impacted.Add(new ImpactedDataSetResponse
             {
-                var affectedSources = sources.Where(s => s.DataSetId == dsId).ToList();
-                impacted.Add(new ImpactedDataSetResponse
-                {
-                    DataSetName = ds.Name,
-                    Category = ds.Category,
-                    ImpactLevel = affectedSources.Any(s => s.Priority == 1) ? "High" : "Medium",
-                    AffectedSourceCount = affectedSources.Count,
-                    AffectedSources = affectedSources.Select(s => s.SourceName).ToList()
-                });
-            }
+                DataSetName = dataSet.Name,
+                Category = dataSet.Category,
+                ImpactLevel = affectedSources.Exists(s => s.Priority == 1) ? "High" : "Medium",
+                AffectedSourceCount = affectedSources.Count,
+                AffectedSources = affectedSources.ConvertAll(s => s.SourceName)
+            });
         }
 
         return impacted;

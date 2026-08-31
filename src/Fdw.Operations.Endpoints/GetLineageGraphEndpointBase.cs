@@ -10,6 +10,7 @@ using Fdw.Commands.Data.Abstractions.Caching;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.Lineage;
+using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Pipelines;
 using Microsoft.Extensions.Logging;
@@ -25,17 +26,19 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest, LineageGraphResponse>
 {
-    private readonly IConfigurationGateway _configurationGateway;
+    /// <summary>Reads the configuration rows lineage is assembled from.</summary>
+    /// <remarks>Protected so a derived graph endpoint reads through the same provider.</remarks>
+    protected LineageConfigurationProvider Lineage { get; }
     private readonly ILogger<GetLineageGraphEndpointBase> _logger;
     private readonly PipelineServiceConfigurationProvider _pipelineProvider;
 
     /// <inheritdoc />
     protected GetLineageGraphEndpointBase(
-        IConfigurationGateway configurationGateway,
+        LineageConfigurationProvider lineageProvider,
         PipelineServiceConfigurationProvider pipelineProvider,
         ILogger<GetLineageGraphEndpointBase> logger)
     {
-        _configurationGateway = configurationGateway;
+        Lineage = lineageProvider;
         _pipelineProvider = pipelineProvider;
         _logger = logger ?? NullLogger<GetLineageGraphEndpointBase>.Instance;
     }
@@ -479,9 +482,6 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
                 [CachePolicy.CacheInvalidationTagsKey] = invalidationTags
             }
         };
-        var result = await _configurationGateway
-            .Execute<IEnumerable<T>>(command, new DataStoreTarget("PlatformConfiguration", pathName, containerName), ct)
-            .ConfigureAwait(false);
-        return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
+        return await Lineage.Read<T>(pathName, containerName, command.Metadata, ct).ConfigureAwait(false);
     }
 }

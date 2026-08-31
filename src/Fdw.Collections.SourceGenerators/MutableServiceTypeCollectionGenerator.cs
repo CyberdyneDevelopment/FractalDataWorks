@@ -390,7 +390,7 @@ public class MutableServiceTypeCollectionGenerator : IIncrementalGenerator
             sb.AppendLine($"        private static {option.FullTypeName}? {fieldName};");
             sb.AppendLine($"        /// <summary>Gets the {option.OptionName} singleton instance.</summary>");
             sb.AppendLine($"        public static {option.FullTypeName} {option.OptionName} =>");
-            sb.AppendLine($"            {fieldName} ??= ({option.FullTypeName})({byIdFieldName}.TryGetValue(new Guid(\"{option.GeneratedId}\"), out var result) ? result : NotFound)!;");
+            sb.AppendLine($"            {fieldName} ??= ({option.FullTypeName})({byIdFieldName}.TryGetValue(new {option.FullTypeName}().Id, out var result) ? result : NotFound)!;");
             sb.AppendLine();
 
             foreach (var ctor in option.Constructors.Where(c => c.HasParameters))

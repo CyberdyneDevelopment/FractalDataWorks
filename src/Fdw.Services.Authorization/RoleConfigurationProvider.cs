@@ -23,7 +23,7 @@ namespace Fdw.Services.Authorization;
 /// Domain configuration provider for roles. Thin wrapper over
 /// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with permission-aggregation helpers.
 /// </summary>
-public class RoleConfigurationProvider : ImplementationConfigurationProviderBase<RoleConfiguration, RoleConfigurationCommand>, IAuthorizationProvider
+public class RoleConfigurationProvider : ImplementationConfigurationProviderBase<RoleConfiguration, RoleConfigurationCommand>, IAuthorizationProvider, IRoleConfigurationProvider
 {
     private readonly ILogger _logger;
 

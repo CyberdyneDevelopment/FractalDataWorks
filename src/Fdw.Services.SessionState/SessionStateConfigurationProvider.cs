@@ -28,21 +28,38 @@ public class SessionStateConfigurationProvider
     private const string PathName = "settings";
     private const string ContainerName = "SessionState";
 
-    private readonly IConfigurationGateway _gateway;
+    private readonly IConfigurationGatewayProvider _gatewayProvider;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SessionStateConfigurationProvider"/> class.
     /// </summary>
-    /// <param name="gateway">The configuration gateway.</param>
+    /// <param name="gatewayProvider">Resolves the gateway for this provider's store.</param>
     /// <param name="logger">Optional logger instance.</param>
+    /// <remarks>
+    /// The provider selects its own gateway. <see cref="DataStoreName"/> names the connection once,
+    /// here, so no caller can hand this domain a gateway over a different store.
+    /// </remarks>
     public SessionStateConfigurationProvider(
-        IConfigurationGateway gateway,
+        IConfigurationGatewayProvider gatewayProvider,
         ILogger<SessionStateConfigurationProvider>? logger = null)
     {
-        _gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
+        _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
         _logger = logger ?? NullLogger<SessionStateConfigurationProvider>.Instance;
     }
+
+    /// <summary>The gateway over this provider's store.</summary>
+    /// <remarks>
+    /// Throws rather than returning a result, for the same reason the constructor throws on a null
+    /// dependency: a connection this domain declares and the host does not is a configuration error,
+    /// not a condition a caller can handle. The connection is named so the message says what to fix.
+    /// </remarks>
+    private IConfigurationGateway Gateway() =>
+        _gatewayProvider.Get(DataStoreName) is { IsSuccess: true, Value: { } gateway }
+            ? gateway
+            : throw new InvalidOperationException(
+                $"No configuration gateway is available for connection '{DataStoreName}'. "
+                + "It must be declared in the host's configurationSchema.json.");
 
     /// <summary>
     /// Queries for an existing session state record by user and key.
@@ -62,7 +79,7 @@ public class SessionStateConfigurationProvider
             .Where(r => r.StateKey).Equal(key)
             .Build();
 
-        var result = await _gateway.Execute<IEnumerable<SessionStateRecord>>(command, cancellationToken)
+        var result = await Gateway().Execute<IEnumerable<SessionStateRecord>>(command, cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)
@@ -90,7 +107,7 @@ public class SessionStateConfigurationProvider
             .Where(r => r.UserId).Equal(userId)
             .Build();
 
-        var result = await _gateway.Execute<IEnumerable<SessionStateRecord>>(command, cancellationToken)
+        var result = await Gateway().Execute<IEnumerable<SessionStateRecord>>(command, cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)
@@ -119,7 +136,7 @@ public class SessionStateConfigurationProvider
             .DataStore(DataStoreName).Path(PathName)
             .Value(record);
 
-        var result = await _gateway.Execute<int>(command, cancellationToken)
+        var result = await Gateway().Execute<int>(command, cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)
@@ -153,7 +170,7 @@ public class SessionStateConfigurationProvider
             .Where(nameof(SessionStateRecord.StateKey), key)
             .Value(update);
 
-        var result = await _gateway.Execute<int>(command, cancellationToken)
+        var result = await Gateway().Execute<int>(command, cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)
@@ -185,7 +202,7 @@ public class SessionStateConfigurationProvider
             .Where(nameof(SessionStateRecord.StateKey), key)
             .Build();
 
-        var result = await _gateway.Execute<int>(command, cancellationToken)
+        var result = await Gateway().Execute<int>(command, cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)
@@ -215,7 +232,7 @@ public class SessionStateConfigurationProvider
             .Where(nameof(SessionStateRecord.UserId), userId)
             .Build();
 
-        var result = await _gateway.Execute<int>(command, cancellationToken)
+        var result = await Gateway().Execute<int>(command, cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)

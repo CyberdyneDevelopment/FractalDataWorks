@@ -23,8 +23,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Fdw.UI.Rendering.Spectre\Fdw.UI.Rendering.Spectre.csproj" />
-    <ProjectReference Include="..\Fdw.Services.Audit.Abstractions\Fdw.Services.Audit.Abstractions.csproj" />
-    <ProjectReference Include="..\Fdw.Services.Audit\Fdw.Services.Audit.csproj" />
     <ProjectReference Include="..\Fdw.Services.Data\Fdw.Services.Data.csproj" />
     <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
   </ItemGroup>

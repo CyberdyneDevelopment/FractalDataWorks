@@ -118,10 +118,6 @@
     <Project Path="src/Fdw.Services.SessionState/Fdw.Services.SessionState.csproj" />
     <Project Path="src/Fdw.Services/Fdw.Services.csproj" />
   </Folder>
-  <Folder Name="/src/Services/Audit/">
-    <Project Path="src/Fdw.Services.Audit.Abstractions/Fdw.Services.Audit.Abstractions.csproj" />
-    <Project Path="src/Fdw.Services.Audit/Fdw.Services.Audit.csproj" />
-  </Folder>
 
   <Folder Name="/src/Services/Authentication/">
     <Project Path="src/Fdw.Services.Authentication.Abstractions/Fdw.Services.Authentication.Abstractions.csproj" />
@@ -294,8 +290,8 @@
     <Project Path="src/Fdw.Services.ExternalIdentityProviders.Endpoints/Fdw.Services.ExternalIdentityProviders.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.ExternalIdentityProviders.Oidc/Fdw.Services.ExternalIdentityProviders.Oidc.csproj" />
     <Project Path="src/Fdw.Services.ExternalIdentityProviders/Fdw.Services.ExternalIdentityProviders.csproj" />
-    <Project Path="src/Fdw.Services.Hosting.Abstractions/Fdw.Services.Hosting.Abstractions.csproj" />
-    <Project Path="src/Fdw.Services.Hosting/Fdw.Services.Hosting.csproj" />
+    <Project Path="src/Fdw.Services.Hosts.Abstractions/Fdw.Services.Hosts.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Hosts/Fdw.Services.Hosts.csproj" />
     <Project Path="src/Fdw.Services.Identity.Abstractions/Fdw.Services.Identity.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Identity.ClientCredentials/Fdw.Services.Identity.ClientCredentials.csproj" />
     <Project Path="src/Fdw.Services.Identity.Endpoints/Fdw.Services.Identity.Endpoints.csproj" />
@@ -344,6 +340,9 @@
     <Project Path="src/Fdw.Services.Terminal.UI.Pages/Fdw.Services.Terminal.UI.Pages.csproj" />
     <Project Path="src/Fdw.Services.TokenManagers.Abstractions/Fdw.Services.TokenManagers.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.TokenManagers/Fdw.Services.TokenManagers.csproj" />
+    <Project Path="src/Fdw.Services.Universes.Abstractions/Fdw.Services.Universes.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Universes.Endpoints/Fdw.Services.Universes.Endpoints.csproj" />
+    <Project Path="src/Fdw.Services.Universes/Fdw.Services.Universes.csproj" />
     <Project Path="src/Fdw.Services.Users.Abstractions/Fdw.Services.Users.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Users.Endpoints/Fdw.Services.Users.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Users/Fdw.Services.Users.csproj" />

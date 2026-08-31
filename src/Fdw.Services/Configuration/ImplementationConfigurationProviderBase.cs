@@ -1091,6 +1091,24 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         return await Delete(getResult.Value.Id, ct).ConfigureAwait(false);
     }
 
+    /// <summary>Opens a transaction over the store this provider reads and writes.</summary>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <remarks>
+    /// Here rather than on the caller so an endpoint does not need <c>IConfigurationGateway</c> to
+    /// begin one. The provider already knows which store it is bound to, so the caller cannot open
+    /// a transaction against a different store than the one it then saves into — which is what
+    /// passing the store name in from outside allowed.
+    /// </remarks>
+    public virtual async Task<IGenericResult<IDataGatewayTransaction>> BeginTransaction(
+        CancellationToken ct = default)
+    {
+        var gateway = Gateway();
+
+        return gateway.IsSuccess && gateway.Value is { } resolved
+            ? await resolved.BeginTransaction(DataStoreName, ct).ConfigureAwait(false)
+            : gateway.ToNewResult<IDataGatewayTransaction>();
+    }
+
     /// <summary>
     /// Saves a configuration record inside the provided transaction scope.
     /// Use when the save must be atomic with other operations (e.g., security stamp bump).

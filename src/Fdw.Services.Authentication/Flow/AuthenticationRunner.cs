@@ -250,10 +250,17 @@ public sealed class AuthenticationRunner
 
                 // I6 — an external claim is advisory. A provider naming a role does not grant one,
                 // so only what this platform states or derived itself reaches the token.
+                //
+                // Every value of a repeated type is carried, not the first: permissions and roles
+                // arrive as many claims of one type, and keeping one would mint a token that
+                // verifies and then refuses everything its holder is actually entitled to.
                 Claims = context.Claims.Claims
                     .Where(c => c.Source is ClaimSource.Local or ClaimSource.Derived)
                     .GroupBy(c => c.Type, StringComparer.Ordinal)
-                    .ToDictionary(g => g.Key, g => g.First().Value, StringComparer.Ordinal),
+                    .ToDictionary(
+                        g => g.Key,
+                        g => (IReadOnlyList<string>)[.. g.Select(c => c.Value)],
+                        StringComparer.Ordinal),
             },
             cancellationToken).ConfigureAwait(false);
 

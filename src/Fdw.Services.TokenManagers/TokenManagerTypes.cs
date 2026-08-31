@@ -87,6 +87,32 @@ public partial class TokenManagerTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<TokenManagerConfiguration>>(
                 sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
 
+            builder.Services.TryAddSingleton<JwtTokenManagerConfigurationProvider>(sp =>
+                new JwtTokenManagerConfigurationProvider(
+                    sp.GetService<ILogger<JwtTokenManagerConfigurationProvider>>()!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConfigurationConnection));
+
+            // The issuer and the key it signs with are one registration for the whole collection,
+            // not per-option: a deployment mints as exactly one issuer, and a host that had to call
+            // an AddXxx of its own is a host the next one has to remember to copy.
+            builder.Services.TryAddSingleton<JwtIssuanceResolver>(sp =>
+                new JwtIssuanceResolver(sp, sp.GetService<ILogger<JwtIssuanceResolver>>()));
+
+            builder.Services.TryAddSingleton<ITokenIssuer>(sp =>
+                new ConfiguredTokenIssuer(sp.GetRequiredService<JwtIssuanceResolver>()));
+
+            builder.Services.TryAddSingleton<ISigningCredentialProvider>(sp =>
+                new ConfiguredSigningCredentialProvider(sp.GetRequiredService<JwtIssuanceResolver>()));
+
+            // AuthenticationService's own registration helper. Its summary says it is safe to call
+            // from every TokenManagers option's registration cascade - but there are no options in
+            // this collection, so nothing ever called it and IAuthenticationService resolved to
+            // nothing. That surfaced as FastEndpoints failing to activate LogoutEndpoint, naming
+            // the endpoint rather than the registration. Called here for the same reason the issuer
+            // is registered here: one registration for the whole collection.
+            AuthenticationService.RegisterDomainServices(builder.Services);
+
             builder.Services.AddScoped<ITokenManagerProvider>(sp =>
             {
                 var provider = new TokenManagerProvider(

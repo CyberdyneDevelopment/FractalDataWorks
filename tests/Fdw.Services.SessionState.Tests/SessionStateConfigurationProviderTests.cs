@@ -22,10 +22,20 @@ namespace Fdw.Services.SessionState.Tests;
 [Trait("Priority", "P1")]
 public class SessionStateConfigurationProviderTests
 {
+    // The provider selects its own gateway now, so the fake is handed to it through a gateway
+    // provider rather than directly. Everything below still exercises the real provider against a
+    // faked gateway; only how it gets one changed.
     private static SessionStateConfigurationProvider MakeProvider(Mock<IConfigurationGateway> gateway)
-        => new SessionStateConfigurationProvider(
-            gateway.Object,
+    {
+        var gatewayProvider = new Mock<IConfigurationGatewayProvider>();
+        gatewayProvider
+            .Setup(p => p.Get(It.IsAny<string>()))
+            .Returns(GenericResult<IConfigurationGateway>.Success(gateway.Object));
+
+        return new SessionStateConfigurationProvider(
+            gatewayProvider.Object,
             NullLogger<SessionStateConfigurationProvider>.Instance);
+    }
 
     // ── GetRecord ─────────────────────────────────────────────────────────────
 

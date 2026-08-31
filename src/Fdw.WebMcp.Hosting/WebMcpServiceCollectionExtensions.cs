@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Fdw.WebMcp.Abstractions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -61,9 +62,12 @@ public static class WebMcpServiceCollectionExtensions
         var registry = app.Services.GetRequiredService<WebMcpToolRegistry>();
         var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Fdw.Hosting.WebMcp");
 
+        // Why the app's own data sources rather than a resolved EndpointDataSource: the composite is
+        // not reliably resolvable from the container, and the route table this reads has to be the one
+        // this application built -- a tool resolved against any other is a route that will not match.
         registry.Resolve(
             DeclaredWebMcpTools.Declarations,
-            app.Services.GetRequiredService<EndpointDataSource>(),
+            ((IEndpointRouteBuilder)app).DataSources.SelectMany(static source => source.Endpoints).ToList(),
             logger);
 
         var generator = app.Services.GetRequiredService<WebMcpJsGenerator>();

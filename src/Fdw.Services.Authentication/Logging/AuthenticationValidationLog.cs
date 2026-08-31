@@ -120,4 +120,44 @@ public static partial class AuthenticationValidationLog
     [MessageLogging(EventId = 11104, Level = LogLevel.Debug,
         Message = "No token-validation mechanism is registered; this host validates no tokens of its own")]
     public static partial IGenericMessage NoMechanismsRegistered(ILogger logger);
+
+    /// <summary>The signing key this host validates its own tokens with could not be read.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="serviceName">The entry whose scheme needed it.</param>
+    // Why Error and why registration fails on it: a scheme that cannot check a signature refuses
+    // every token it exists to accept. Failing here stops the host with the cause named, rather
+    // than starting one that 401s everything and says nothing about why.
+    [MessageLogging(EventId = 71113, Level = LogLevel.Error,
+        Message = "No local signing key is available for '{serviceName}', so its tokens cannot be validated")]
+    public static partial IGenericMessage LocalSigningKeyUnavailable(ILogger logger, string serviceName);
+
+    /// <summary>Logs a LocalKey entry that declared no audience.</summary>
+    // Separate from JwtBearerMissingAudience so the message can say what a LocalKey audience is
+    // for. Here it is what this host mints into its own tokens, not a value agreed with a remote
+    // issuer, so the thing to go change is the flow rather than the provider registration.
+    [MessageLogging(EventId = 71114, Level = LogLevel.Error,
+        Message = "LocalKey authentication service '{serviceName}' declares no Audience. Set it to the audience this host's flows mint - a token is only accepted for the audience it names, so a mismatch rejects every token this host issued")]
+    public static partial IGenericMessage LocalKeyMissingAudience(ILogger logger, string serviceName);
+
+    // Why an error and not a skip: the domain provider dispatches by the kind the domain row names,
+    // so a provider only ever sees rows of its own kind. Another kind arriving means the registry
+    // sent the row to the wrong provider, and silently dropping it would hide that.
+    [MessageLogging(EventId = 71115, Level = LogLevel.Error,
+        Message = "Expected a {expected} configuration but the row read as '{actual}'. The domain provider dispatched this row to the wrong implementation provider")]
+    public static partial IGenericMessage ImplementationKindMismatch(ILogger logger, string expected, string actual);
+
+    [MessageLogging(EventId = 71116, Level = LogLevel.Error,
+        Message = "LocalKey authentication service '{serviceName}' could not be read, so its scheme validates with no key and no issuer and every token it is handed will be refused")]
+    public static partial IGenericMessage LocalKeyEntryUnreadable(ILogger logger, string serviceName);
+
+    // Why the reason is carried rather than summarised: IDX codes name exactly which check failed -
+    // issuer, audience, lifetime, signature - and a reader who cannot see which one is left guessing
+    // at the same four possibilities every time.
+    [MessageLogging(EventId = 71117, Level = LogLevel.Information,
+        Message = "Token for authentication service '{serviceName}' was rejected: {reason}")]
+    public static partial IGenericMessage TokenRejected(ILogger logger, string serviceName, string reason);
+
+    [MessageLogging(EventId = 71118, Level = LogLevel.Debug,
+        Message = "Token for authentication service '{serviceName}' accepted for principal '{subject}'")]
+    public static partial IGenericMessage TokenAccepted(ILogger logger, string serviceName, string subject);
 }

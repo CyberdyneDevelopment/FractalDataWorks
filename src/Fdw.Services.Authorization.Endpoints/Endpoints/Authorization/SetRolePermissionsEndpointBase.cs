@@ -25,7 +25,6 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 {
     private readonly ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand> _rolePermissionProvider;
     private readonly RoleConfigurationProvider _roleProvider;
-    private readonly IConfigurationGateway _configurationGateway;
     private readonly ISystemRoleConfiguration _systemRoleConfiguration;
 
     /// <summary>
@@ -37,12 +36,10 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
     protected SetRolePermissionsEndpointBase(
         ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand> rolePermissionProvider,
         RoleConfigurationProvider roleProvider,
-        IConfigurationGateway configurationGateway,
         ISystemRoleConfiguration systemRoleConfiguration)
     {
         _rolePermissionProvider = rolePermissionProvider;
         _roleProvider = roleProvider;
-        _configurationGateway = configurationGateway;
         _systemRoleConfiguration = systemRoleConfiguration;
     }
 
@@ -150,8 +147,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
         IReadOnlyList<RolePermissionConfiguration> existingMappings,
         CancellationToken ct)
     {
-        var txnResult = await _configurationGateway.BeginTransaction(
-            _rolePermissionProvider.DataStoreName, ct).ConfigureAwait(false);
+        var txnResult = await _rolePermissionProvider.BeginTransaction(ct).ConfigureAwait(false);
         if (!txnResult.IsSuccess || txnResult.Value == null)
         {
             var reason = txnResult.CurrentMessage ?? "Transaction could not be opened";

@@ -19,7 +19,7 @@ namespace Fdw.Services.Data;
 /// </remarks>
 public class ConfigurationContainerLookup : IConfigurationContainerLookup
 {
-    private readonly Lazy<IReadOnlyList<IDataStore>> _dataStores;
+    private readonly Func<IReadOnlyList<IDataStore>> _dataStores;
     private readonly ILogger<ConfigurationContainerLookup> _logger;
 
     /// <summary>
@@ -28,7 +28,7 @@ public class ConfigurationContainerLookup : IConfigurationContainerLookup
     /// <param name="dataStores">The lazy ctrl-tier data store tree built at startup.</param>
     /// <param name="logger">Logger for diagnostics.</param>
     public ConfigurationContainerLookup(
-        Lazy<IReadOnlyList<IDataStore>> dataStores,
+        Func<IReadOnlyList<IDataStore>> dataStores,
         ILogger<ConfigurationContainerLookup>? logger = null)
     {
         _dataStores = dataStores;
@@ -40,7 +40,7 @@ public class ConfigurationContainerLookup : IConfigurationContainerLookup
     {
         ConfigurationContainerLookupLog.LookupStarted(_logger, configTypeName);
 
-        foreach (var store in _dataStores.Value)
+        foreach (var store in _dataStores())
         {
             foreach (var path in store.Paths)
             {
@@ -64,7 +64,7 @@ public class ConfigurationContainerLookup : IConfigurationContainerLookup
     public IReadOnlyList<IDataContainer> All()
     {
         var result = new List<IDataContainer>();
-        foreach (var store in _dataStores.Value)
+        foreach (var store in _dataStores())
         {
             foreach (var path in store.Paths)
             {
@@ -79,7 +79,7 @@ public class ConfigurationContainerLookup : IConfigurationContainerLookup
     public IReadOnlyList<IDataContainer> ByCategory(string sectionPath)
     {
         var result = new List<IDataContainer>();
-        foreach (var store in _dataStores.Value)
+        foreach (var store in _dataStores())
         {
             foreach (var path in store.Paths)
             {

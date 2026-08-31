@@ -1,12 +1,16 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
+using System.Threading;
 using Fdw.Collections;
+using Fdw.Configuration;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Logging;
 using Fdw.ServiceTypes;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -39,12 +43,24 @@ namespace Fdw.Services.Authentication.Validation;
     ServiceCategory = "Authentication")]
 public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<AuthenticationServiceTypeBase, IAuthenticationServiceType>
 {
-    // Configure(), Register(), Initialize() are source-generated. This replaces Register's body with
-    // the option collect followed by the routing this domain owns — written beside the declaration
-    // because it is one registration for the whole collection, not per option.
+    /// <summary>The connection these rows are read through.</summary>
+    /// <remarks>
+    /// ServerConfiguration, not PlatformConfiguration: which issuers a host trusts is server
+    /// configuration. Two hosts sharing a tenant legitimately trust different issuers, the same
+    /// reason the flows themselves live there.
+    /// </remarks>
+    public static string ConfigurationConnection { get; set; } = "ServerConfiguration";
+
+    /// <summary>The ServerConfiguration folder this domain's rows live in.</summary>
+    public static string ServerConfigurationPath { get; set; } = "auth";
+
+    // Configure(), Register() and Initialize() are source-generated. Each body below runs the loop
+    // over this collection's options first - which is what Registration and Initialization replace -
+    // then the part this domain owns for the whole collection rather than per option.
     static AuthenticationServiceTypes()
     {
         var collectOptions = RegisterFunc;
+        var initializeOptions = InitializationFunc;
 
         Registration((builder, loggerFactory) =>
         {
@@ -61,43 +77,26 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
                 return GenericResult<IHostApplicationBuilder>.Success(builder);
             }
 
-            var authenticationBuilder = builder.Services.AddAuthentication();
+            // The domain provider. Which issuers this host trusts is server configuration, read
+            // through the gateway onto the store the host declared it on — not application settings,
+            // because two hosts sharing a tenant legitimately trust different issuers, the same
+            // reason the flows themselves live there.
+            builder.Services.TryAddSingleton<AuthenticationServiceConfigurationProvider>(sp =>
+                new AuthenticationServiceConfigurationProvider(
+                    sp.GetRequiredService<ILogger<AuthenticationServiceConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConfigurationConnection,
+                    ServerConfigurationPath));
+            builder.Services.TryAddSingleton<IAuthenticationServiceConfigurationProvider>(sp =>
+                sp.GetRequiredService<AuthenticationServiceConfigurationProvider>());
 
-            foreach (var option in Options)
-            {
-                if (option is not AuthenticationServiceTypeBase mechanism)
-                    return GenericResult<IHostApplicationBuilder>.Failure(
-                        AuthenticationValidationLog.SectionUnreadable(log, option.Name));
+            // Filled during Initialize, once the gateway can be reached. The selector reads it per
+            // request, so it cannot be a set of service registrations made before the container is
+            // built — the configuration that decides its contents is not readable yet.
+            builder.Services.TryAddSingleton<AuthenticationSchemeBindings>();
 
-                var declared = AuthenticationServiceConfiguration.Read(builder.Configuration, mechanism.Name, log);
-                if (declared.IsFailure)
-                    return declared.ToNewResult<IHostApplicationBuilder>();
-                if (declared.Value is not { } entries)
-                    return GenericResult<IHostApplicationBuilder>.Failure(
-                        AuthenticationValidationLog.SectionUnreadable(log, mechanism.Name));
-
-                foreach (var (header, section) in entries)
-                {
-                    var binding = mechanism.RegisterScheme(authenticationBuilder, header, section, loggerFactory);
-                    if (binding.IsFailure)
-                        return binding.ToNewResult<IHostApplicationBuilder>();
-                    if (binding.Value is not { } scheme)
-                        return GenericResult<IHostApplicationBuilder>.Failure(
-                            AuthenticationValidationLog.SchemeNotProduced(log, header.Name ?? section.Path, mechanism.Name));
-
-                    builder.Services.AddSingleton(scheme);
-                    AuthenticationValidationLog.SchemeRegistered(
-                        log, scheme.ServiceName, mechanism.Name, scheme.SchemeName, scheme.Issuer);
-                }
-            }
-
-            var bindings = builder.Services.Count(d => d.ServiceType == typeof(AuthenticationSchemeBinding));
-
-            if (bindings == 0)
-                return GenericResult<IHostApplicationBuilder>.Failure(
-                    AuthenticationValidationLog.NoAuthenticationServicesDeclared(
-                        log, AuthenticationServiceConfiguration.SectionName));
-
+            // The routing this domain owns, which does not depend on what is configured: an
+            // unmatched issuer is refused, and everything else is forwarded by the selector.
             builder.Services.AddAuthentication()
                 .AddScheme<AuthenticationSchemeOptions, UnmatchedIssuerHandler>(
                     UnmatchedIssuerHandler.SchemeName, displayName: null, configureOptions: _ => { })
@@ -108,9 +107,82 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
 
             builder.Services.AddSingleton<IPostConfigureOptions<AuthenticationOptions>, SelectorIsDefaultScheme>();
 
-            AuthenticationValidationLog.RoutingRegistered(log, bindings, IssuerSchemeSelector.SchemeName);
-
             return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+
+        // Initialize and not Register: the entries are read through a gateway, which exists only once
+        // the container is built. Nothing needs them earlier - the first token to arrive is what needs
+        // a scheme to route to, and that is a request, long after this.
+        Initialization((host, hostLoggerFactory) =>
+        {
+            var log = hostLoggerFactory?.CreateLogger<AuthenticationServiceTypes>()
+                ?? NullLogger<AuthenticationServiceTypes>.Instance;
+
+            var initialized = initializeOptions(host, hostLoggerFactory);
+            if (initialized.IsFailure)
+                return initialized;
+
+            if (Options.Length == 0)
+                return GenericResult<IHost>.Success(host);
+
+            var services = host.Services;
+            // VSTHRD002: Initialization is a synchronous phase by contract, and this runs once at
+            // startup on the host's own thread before any request exists to deadlock against.
+#pragma warning disable VSTHRD002
+            var declared = services.GetRequiredService<IAuthenticationServiceConfigurationProvider>()
+                .GetHeaders(CancellationToken.None)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+#pragma warning restore VSTHRD002
+
+            if (!declared.IsSuccess || declared.Value is null)
+                return declared.ToNewResult<IHost>();
+
+            var schemes = services.GetRequiredService<IAuthenticationSchemeProvider>();
+            var bindings = services.GetRequiredService<AuthenticationSchemeBindings>();
+
+            foreach (var entry in declared.Value)
+            {
+                if (!entry.Enabled)
+                    continue;
+
+                if (entry.Name is not { Length: > 0 } serviceName)
+                    return GenericResult<IHost>.Failure(
+                        AuthenticationValidationLog.EntryMissingName(log, "(unnamed)"));
+
+                if (entry.ServiceOptionType is not { Length: > 0 } kind)
+                    return GenericResult<IHost>.Failure(
+                        AuthenticationValidationLog.SectionUnreadable(log, serviceName));
+
+                // Through IssuerName, which the options bridge also reads its ValidIssuer through:
+                // the selector matches the binding ordinally and the scheme checks ValidIssuer
+                // ordinally, so both have to derive from the same rule or a declared "https://host"
+                // routes a token minted against "https://host/" and is then refused by the scheme
+                // it was correctly routed to.
+                var issuer = IssuerName.Read(entry.Authority, serviceName, log);
+                if (!issuer.IsSuccess || issuer.Value is null)
+                    return issuer.ToNewResult<IHost>();
+
+                entry.Authority = issuer.Value;
+
+                if (ByName(kind) is not AuthenticationServiceTypeBase option)
+                    return GenericResult<IHost>.Failure(
+                        AuthenticationValidationLog.SectionUnreadable(log, kind));
+
+                var binding = option.TakeScheme(entry, schemes, services, hostLoggerFactory);
+                if (!binding.IsSuccess || binding.Value is null)
+                    return binding.ToNewResult<IHost>();
+
+                bindings.Add(binding.Value);
+                AuthenticationValidationLog.SchemeRegistered(
+                    log, binding.Value.ServiceName, kind, binding.Value.SchemeName, binding.Value.Issuer);
+            }
+
+            if (bindings.Count == 0)
+                return GenericResult<IHost>.Failure(
+                    AuthenticationValidationLog.NoAuthenticationServicesDeclared(log, "AuthenticationServices"));
+
+            AuthenticationValidationLog.RoutingRegistered(log, bindings.Count, IssuerSchemeSelector.SchemeName);
+            return GenericResult<IHost>.Success(host);
         });
     }
 

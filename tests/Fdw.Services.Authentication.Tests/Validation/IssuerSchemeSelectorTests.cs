@@ -65,10 +65,14 @@ public sealed class IssuerSchemeSelectorTests
     private static HttpContext Request(string? authorization)
     {
         var services = new ServiceCollection();
-        services.AddSingleton(new AuthenticationSchemeBinding(
+        // Through the registry, as Initialize fills it: the entries these bindings come from are
+        // read through a gateway once the container is built, so they are never DI registrations.
+        var bindings = new AuthenticationSchemeBindings();
+        bindings.Add(new AuthenticationSchemeBinding(
             "FdwAuthority", FdwIssuer, "OpenIddict.Validation.AspNetCore"));
-        services.AddSingleton(new AuthenticationSchemeBinding(
+        bindings.Add(new AuthenticationSchemeBinding(
             "Partner", PartnerIssuer, "Fdw.JwtBearer.Partner"));
+        services.AddSingleton(bindings);
 
         var context = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
         context.Request.Path = "/api/v1/etl/trigger/pipeline";

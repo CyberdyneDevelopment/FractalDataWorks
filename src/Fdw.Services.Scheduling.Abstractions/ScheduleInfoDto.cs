@@ -20,7 +20,7 @@ public class ScheduleInfoDto
     /// <summary>
     /// Gets or sets the scheduler type (e.g., Cron, Interval).
     /// </summary>
-    public string ServiceOptionType { get; set; } = string.Empty;
+    public string SchedulerType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the cron expression for cron-based schedules.

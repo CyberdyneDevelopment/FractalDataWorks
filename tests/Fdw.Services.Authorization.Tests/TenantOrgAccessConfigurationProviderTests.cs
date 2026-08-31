@@ -23,10 +23,18 @@ namespace Fdw.Services.Authorization.Tests;
 [Trait("Priority", "P1")]
 public class TenantOrgAccessConfigurationProviderTests
 {
+    // The provider selects its own gateway now, so the fake reaches it through a gateway provider.
     private static TenantOrgAccessConfigurationProvider MakeProvider(Mock<IConfigurationGateway> gateway)
-        => new TenantOrgAccessConfigurationProvider(
-            gateway.Object,
+    {
+        var gatewayProvider = new Mock<IConfigurationGatewayProvider>();
+        gatewayProvider
+            .Setup(p => p.Get(It.IsAny<string>()))
+            .Returns(GenericResult<IConfigurationGateway>.Success(gateway.Object));
+
+        return new TenantOrgAccessConfigurationProvider(
+            gatewayProvider.Object,
             NullLogger<TenantOrgAccessConfigurationProvider>.Instance);
+    }
 
     // ── Get ───────────────────────────────────────────────────────────────────
 

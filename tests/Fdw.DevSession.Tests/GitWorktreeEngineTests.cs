@@ -109,7 +109,7 @@ public sealed class GitWorktreeEngineTests
 
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         result.Value!.Length.ShouldBe(40);
-        repository.GitIn(worktreePath, "log", "-1", "--pretty=%s").ShouldBe("add work");
+        TemporaryRepository.GitIn(worktreePath, "log", "-1", "--pretty=%s").ShouldBe("add work");
     }
 
     [Fact]
