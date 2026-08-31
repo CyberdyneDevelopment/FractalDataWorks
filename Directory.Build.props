@@ -186,6 +186,14 @@
     <PackageReference Include="System.Collections.Immutable" />
   </ItemGroup>
 
+  <!-- ci-components' shared dotnet-package.yml test job runs dotnet test with the junit logger;
+       the VSTest junit logger comes from this package, not the runtime, so every test project
+       needs it referenced. That job was previously only used by other repos, since FDW's own
+       internal-tier test job now uses it too (see the test/test-coverage split in .gitlab-ci.yml). -->
+  <ItemGroup Condition="'$(IsTestProject)' == 'true'">
+    <PackageReference Include="JunitXml.TestLogger" PrivateAssets="all" />
+  </ItemGroup>
+
   <!-- Local NuGet Development Configuration -->
   <PropertyGroup>
     <!-- Default config filename - can be overridden in project files -->
