@@ -48,17 +48,6 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
     {
         Registration((builder, loggerFactory) =>
         {
-            // Proven once here so the factory lambdas below can use it: a factory lambda has to return
-            // its service or throw, so it has no way to report an unset connection as a failure.
-            var operationalConnection = OperationsServiceTypes.OperationalConnection;
-            if (string.IsNullOrWhiteSpace(operationalConnection))
-                return GenericResult<IHostApplicationBuilder>.Failure(
-                    ServicesResultCodes.ByName("OperationalConnectionNotSet"),
-                    loggerFactory?.CreateLogger<DefaultOperationsServiceType>() ?? NullLogger<DefaultOperationsServiceType>.Instance,
-                    ResultDetails.Create(
-                        "Domain", nameof(OperationsServiceTypes),
-                        "Property", nameof(OperationsServiceTypes.OperationalConnection)));
-
             builder.Services.TryAddSingleton<EscalationConfigurationProvider>(sp =>
                 new EscalationConfigurationProvider(
                     sp.GetService<ILogger<EscalationConfigurationProvider>>()!,
@@ -75,7 +64,7 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
                 var gatewayProvider = sp.GetRequiredService<IDataGateway>();
                 var notificationProvider = sp.GetService<INotificationServiceProvider>();
                 var ruleProvider = sp.GetService<IServiceConfigurationProvider<NotificationRuleConfiguration>>();
-                return new ExecutionTrackingService(gatewayProvider, lf, operationalConnection, notificationProvider, ruleProvider);
+                return new ExecutionTrackingService(gatewayProvider, lf, OperationsServiceTypes.OperationalConnection, notificationProvider, ruleProvider);
             });
 
             builder.Services.TryAddScoped<IEscalationService>(sp =>

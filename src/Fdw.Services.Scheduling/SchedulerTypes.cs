@@ -55,7 +55,9 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
     /// is therefore known before any row is read. An operational store is a row INSIDE that store, so a
     /// default here would name a store the application merely hopes exists — the absence the
     /// no-fallbacks rule exists to catch, rather than the ConfigurationConnection case it resembles.
-    /// The Registration phase fails loud when this is unset.
+    /// Not proven at registration: every host registers this domain as part of the platform sweep,
+    /// including hosts that never touch its operational store, so refusing to start them would demand
+    /// a value a correct host cannot supply. The sites that read it report it instead.
     /// </remarks>
     public static string? OperationalConnection { get; set; }
 
@@ -78,15 +80,6 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
 
         Registration((builder, loggerFactory) =>
         {
-            // The host names its own operational store; the framework has no name to supply. Failing
-            // the phase is what makes the DI factory sites below legal: a factory lambda cannot return
-            // a failure result, so the value has to be proven before any of them can run.
-            if (string.IsNullOrWhiteSpace(OperationalConnection))
-                return GenericResult<IHostApplicationBuilder>.Failure(
-                    ServicesResultCodes.ByName("OperationalConnectionNotSet"),
-                    loggerFactory?.CreateLogger<SchedulerTypes>() ?? NullLogger<SchedulerTypes>.Instance,
-                    ResultDetails.Create("Domain", nameof(SchedulerTypes), "Property", nameof(OperationalConnection)));
-
             var log = loggerFactory?.CreateLogger<SchedulerTypes>() ?? NullLogger<SchedulerTypes>.Instance;
 
             var registered = collectOptions(builder, loggerFactory);

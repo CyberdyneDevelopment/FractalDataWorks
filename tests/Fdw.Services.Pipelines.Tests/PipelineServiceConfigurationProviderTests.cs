@@ -58,9 +58,11 @@ public sealed class PipelineServiceConfigurationProviderTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Configuration")]
-    public void RegisterFailsLoudWhenTheOperationalConnectionIsNotNamed()
+    public void RegisterSucceedsWhenNoOperationalConnectionIsNamed()
     {
-        // Arrange
+        // Every host registers this domain as part of the platform sweep, including hosts that never
+        // read its operational data. Refusing to register them took every reference host down at boot
+        // once already; this is the regression guard for that, not a preference.
         var previous = PipelineServiceTypes.OperationalConnection;
         try
         {
@@ -72,9 +74,8 @@ public sealed class PipelineServiceConfigurationProviderTests
             // Act
             var result = PipelineServiceTypes.Register(builder, NullLoggerFactory.Instance, force: true);
 
-            // Assert -- the phase fails rather than registering a provider that cannot reach its store.
-            result.IsSuccess.ShouldBeFalse();
-            result.CurrentMessage?.ToString().ShouldContain("OperationalConnection");
+            // Assert -- registration completes; an unnamed store is reported by the sites that read it.
+            result.IsSuccess.ShouldBeTrue(result.CurrentMessage?.ToString());
         }
         finally
         {
