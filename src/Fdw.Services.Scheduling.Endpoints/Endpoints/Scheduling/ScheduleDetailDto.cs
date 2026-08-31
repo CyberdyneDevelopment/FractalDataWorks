@@ -20,6 +20,9 @@ public class ScheduleDetailDto : ResourceDetail
     /// <summary>Gets or sets the interval in seconds for interval-based schedules.</summary>
     public int? IntervalSeconds { get; set; }
 
+    /// <summary>Gets or sets the time zone the schedule's times are expressed in.</summary>
+    public string? TimeZoneId { get; set; }
+
     /// <summary>Gets or sets whether the schedule is enabled.</summary>
     public bool IsEnabled { get; set; }
 
