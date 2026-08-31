@@ -53,11 +53,13 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
             builder.Services.TryAddSingleton<ILocalKeyAuthenticationConfigurationProvider>(sp =>
                 sp.GetRequiredService<LocalKeyAuthenticationConfigurationProvider>());
 
-            // Scoped, and registered rather than left to ActivatorUtilities: the handler provider
-            // resolves the handler type from the request container first and only constructs it
-            // itself if nothing is registered. Registering it says what its dependencies are in the
-            // one place a reader looks for them.
-            builder.Services.TryAddScoped<LocalKeyAuthenticationHandler>();
+            // Transient, because the handler holds the scheme and the request it was initialised
+            // for in fields. One instance per resolution is what AuthenticationBuilder.AddScheme
+            // registers for the same reason; scoped would hand the same object to every scheme
+            // resolved in one request, and the second InitializeAsync would overwrite the first.
+            // Registered rather than left to ActivatorUtilities so its dependencies are stated in
+            // the one place a reader looks for them.
+            builder.Services.TryAddTransient<LocalKeyAuthenticationHandler>();
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
