@@ -18,19 +18,20 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.DataVault;
 
 /// <summary>
-/// Default implementation of <see cref="IDataVaultProvider"/>.
-/// Wraps <see cref="PlatformServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}"/>
-/// and adds vault-specific cache-by-name lookup plus the typed
-/// <see cref="Get(DataVaultRequest, CancellationToken)"/> entry point.
+/// Default implementation of <see cref="IDataVaultProvider"/>, adding the typed
+/// <see cref="Get(DataVaultRequest, CancellationToken)"/> entry point over
+/// <see cref="PlatformServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}"/>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// A vault is fully resolved AT CONSTRUCTION. The async resolution — connection + pepper — lives
-/// ONLY here, in the cache factory, and runs exactly ONCE per vault name. Every <c>Get</c> overload
-/// routes through that single resolve-once-then-cache path; the registered factory is a pure
-/// constructor that receives the already-resolved connection and pepper. Any resolution failure is
-/// fail-loud (MessageLogging) and EVICTS the cache entry so a misconfiguration is never served from
-/// cache forever.
+/// A vault is fully resolved before it is handed back: <see cref="Get(DataVaultRequest, CancellationToken)"/>
+/// loads the implementation configuration, resolves the connection and the pepper from it, and calls the
+/// factory with both. That is why the base <c>Get</c> is not used — it creates a service from configuration
+/// alone, and the factory refuses a config-only call because a vault cannot be built without them.
+/// </para>
+/// <para>
+/// Nothing is cached, so each call re-resolves. This paragraph previously described a resolve-once-then-cache
+/// path backed by a field that was declared and never read; the field is gone and this says what the code does.
 /// </para>
 /// </remarks>
 public sealed class DataVaultProvider
