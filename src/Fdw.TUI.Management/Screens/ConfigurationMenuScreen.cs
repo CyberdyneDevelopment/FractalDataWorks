@@ -509,7 +509,7 @@ public sealed class ConfigurationMenuScreen : ScreenBase
             var row = new ListRowModel { Id = schedule.Name };
             row.SetValue(ColumnName, schedule.Name);
             row.SetValue(ColumnPipeline, schedule.PipelineName);
-            row.SetValue(ColumnTrigger, schedule.ServiceOptionType);
+            row.SetValue(ColumnTrigger, schedule.SchedulerType);
             row.SetValue(
                 ColumnNextRun,
                 schedule.NextRunTime?.ToString("g", CultureInfo.CurrentCulture) ?? "—");

@@ -25,6 +25,18 @@ public class ScheduleSummaryDto
     /// <summary>Gets or sets the next scheduled run time.</summary>
     public DateTimeOffset? NextRunTime { get; set; }
 
+    /// <summary>Gets or sets the last time this schedule ran.</summary>
+    public DateTimeOffset? LastRunTime { get; set; }
+
+    /// <summary>Gets or sets the cron expression for cron-based schedules.</summary>
+    public string? CronExpression { get; set; }
+
+    /// <summary>Gets or sets the interval in seconds for interval-based schedules.</summary>
+    public int? IntervalSeconds { get; set; }
+
+    /// <summary>Gets or sets the time zone the schedule's times are expressed in.</summary>
+    public string? TimeZoneId { get; set; }
+
     /// <summary>Gets or sets the creation timestamp.</summary>
     public DateTimeOffset CreatedAt { get; set; }
 
