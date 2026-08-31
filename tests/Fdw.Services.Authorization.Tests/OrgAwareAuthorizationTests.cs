@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Authorization.Commands;
 using Fdw.Services.Authorization.Configuration;
 using Fdw.Services.Configuration;
@@ -199,11 +200,11 @@ public sealed class OrgAwareAuthorizationTests
             new() { UserId = User1Id.ToString(), RoleId = TenantRoleId, TenantId = TenantId },
         };
 
-        var roleProviderMock = MockProvider<RoleConfiguration, RoleConfigurationCommand>(
+        var roleProviderMock = MockCatalog<IRoleConfigurationProvider, RoleConfiguration>(
             new List<RoleConfiguration> { globalRole, tenantRole });
-        var permProviderMock = MockProvider<PermissionConfiguration, PermissionConfigurationCommand>(
+        var permProviderMock = MockCatalog<IPermissionConfigurationProvider, PermissionConfiguration>(
             new List<PermissionConfiguration> { globalPerm, tenantPerm });
-        var rolePermProviderMock = MockProvider<RolePermissionConfiguration, RolePermissionConfigurationCommand>(
+        var rolePermProviderMock = MockCatalog<IRolePermissionConfigurationProvider, RolePermissionConfiguration>(
             rolePermissions);
 
         var userRoleProviderMock = new Mock<UserRoleConfigurationProvider>(
@@ -243,4 +244,14 @@ public sealed class OrgAwareAuthorizationTests
             .ReturnsAsync(GenericResult<IReadOnlyList<TConfig>>.Success(items));
         return mock;
     }
+    private static Mock<TProvider> MockCatalog<TProvider, TConfig>(IEnumerable<TConfig> items)
+        where TProvider : class, IServiceConfigurationProvider<TConfig>
+        where TConfig : class, Fdw.Configuration.IGenericConfiguration
+    {
+        var mock = new Mock<TProvider>();
+        mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyList<TConfig>>.Success(new List<TConfig>(items)));
+        return mock;
+    }
+
 }

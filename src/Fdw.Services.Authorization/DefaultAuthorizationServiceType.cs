@@ -56,18 +56,18 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
 
             builder.Services.TryAddSingleton<IEffectivePermissionResolver>(sp =>
                 new EffectivePermissionResolver(
-                    sp.GetRequiredService<IServiceConfigurationProvider<RoleConfiguration>>(),
-                    sp.GetRequiredService<IServiceConfigurationProvider<PermissionConfiguration>>(),
-                    sp.GetRequiredService<IServiceConfigurationProvider<RolePermissionConfiguration>>(),
+                    sp.GetRequiredService<IRoleConfigurationProvider>(),
+                    sp.GetRequiredService<IPermissionConfigurationProvider>(),
+                    sp.GetRequiredService<IRolePermissionConfigurationProvider>(),
                     sp.GetRequiredService<UserRoleConfigurationProvider>(),
                     sp.GetService<ILoggerFactory>()?.CreateLogger<EffectivePermissionResolver>(),
                     new Lazy<IOrgAccessProvider>(() => sp.GetRequiredService<IOrgAccessProvider>())));
 
             builder.Services.TryAddSingleton<IRolePermissionResolver>(sp =>
                 new RolePermissionResolver(
-                    sp.GetRequiredService<IServiceConfigurationProvider<RoleConfiguration>>(),
-                    sp.GetRequiredService<IServiceConfigurationProvider<PermissionConfiguration>>(),
-                    sp.GetRequiredService<IServiceConfigurationProvider<RolePermissionConfiguration>>(),
+                    sp.GetRequiredService<IRoleConfigurationProvider>(),
+                    sp.GetRequiredService<IPermissionConfigurationProvider>(),
+                    sp.GetRequiredService<IRolePermissionConfigurationProvider>(),
                     sp.GetService<ILoggerFactory>()?.CreateLogger<RolePermissionResolver>()));
 
             builder.Services.TryAddSingleton<IFrameworkAuthorizationService, DefaultAuthorizationService>();
@@ -90,6 +90,8 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, pathNameAuthz));
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<RoleConfiguration, RoleConfigurationCommand>>(
+                sp => sp.GetRequiredService<RoleConfigurationProvider>());
+            builder.Services.TryAddSingleton<IRoleConfigurationProvider>(
                 sp => sp.GetRequiredService<RoleConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<RoleConfiguration>>(
                 sp => sp.GetRequiredService<RoleConfigurationProvider>());
@@ -118,8 +120,15 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, pathNameAuthz));
+            builder.Services.TryAddSingleton<PermissionConfigurationProvider>(sp =>
+                new PermissionConfigurationProvider(
+                    sp.GetService<ILogger<PermissionConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    DataStore, pathNameAuthz));
+            builder.Services.TryAddSingleton<IPermissionConfigurationProvider>(
+                sp => sp.GetRequiredService<PermissionConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<PermissionConfiguration>>(sp =>
-                sp.GetRequiredService<ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>>());
+                sp.GetRequiredService<PermissionConfigurationProvider>());
 
             // RolePermission junction provider.
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand>>(sp =>
@@ -127,8 +136,15 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, pathNameAuthz));
+            builder.Services.TryAddSingleton<RolePermissionConfigurationProvider>(sp =>
+                new RolePermissionConfigurationProvider(
+                    sp.GetService<ILogger<RolePermissionConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    DataStore, pathNameAuthz));
+            builder.Services.TryAddSingleton<IRolePermissionConfigurationProvider>(
+                sp => sp.GetRequiredService<RolePermissionConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<RolePermissionConfiguration>>(sp =>
-                sp.GetRequiredService<ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand>>());
+                sp.GetRequiredService<RolePermissionConfigurationProvider>());
 
             // Hands over the gateway provider, not a gateway. Resolving one here meant .Value! on a
             // result that can fail — a null-forgive that turns "no gateway for this connection" into
