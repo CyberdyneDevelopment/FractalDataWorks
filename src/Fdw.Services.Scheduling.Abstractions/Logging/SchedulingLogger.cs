@@ -311,4 +311,10 @@ public static partial class SchedulingLogger
     /// </summary>
     [MessageLogging(EventId = 91004, Level = LogLevel.Warning, Message = "Timezone/datetime conversion failed during secondary validation check; skipping start-time check")]
     public static partial IGenericMessage TimezoneConversionSkippedInValidation(ILogger logger, Exception ex);
+
+    /// <summary>
+    /// Traces a scheduling command instance being constructed.
+    /// </summary>
+    [MessageLogging(EventId = 11004, Level = LogLevel.Trace, Message = "Scheduling command '{commandId}' of type '{commandType}' created in category '{category}'")]
+    public static partial IGenericMessage CommandCreated(ILogger logger, Guid commandId, string commandType, string category);
 }
