@@ -36,7 +36,6 @@ namespace Fdw.Services.Etl.Execution;
 public sealed class PipelineExecutionBackgroundService : BackgroundService
 {
     private const string EtlContainerName = "PipelineExecution";
-    private const string EtlDataStore = "OpsDb";
     private const string EtlSchemaPath = "etl";
 
     private readonly PipelineExecutionQueue _queue;
@@ -289,8 +288,20 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             ErrorMessage = resultMessage
         };
 
+        // This method returns Task and reports through EtlLog, so an unset connection is reported the
+        // same way a failed update is rather than being passed on as a null store name.
+        var etlDataStore = EtlPipelineTypes.OperationalConnection;
+        if (string.IsNullOrWhiteSpace(etlDataStore))
+        {
+            EtlLog.MetricsUpdateFailed(
+                logger,
+                executionId,
+                $"{nameof(EtlPipelineTypes)}.{nameof(EtlPipelineTypes.OperationalConnection)} is not set; the host must name the operational store.");
+            return;
+        }
+
         var updateCommand = Update.In<ExecutionUpdateRecord>(EtlContainerName)
-            .DataStore(EtlDataStore)
+            .DataStore(etlDataStore)
             .Path(EtlSchemaPath)
             .Where("Id", executionId)
             .Value(updateRecord);

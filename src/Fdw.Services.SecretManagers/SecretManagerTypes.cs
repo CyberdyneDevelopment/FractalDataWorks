@@ -24,6 +24,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading;
 
+using Fdw.Services.Results;
+
 namespace Fdw.Services.SecretManagers;
 
 /// <summary>
@@ -47,6 +49,24 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
     public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
+    /// <summary>
+    /// The connection this domain's identity rows live in. The host must set it; there is no default.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately without an initializer, unlike <see cref="ConfigurationConnection"/>. That one may
+    /// default because <c>PlatformConfiguration</c> is declared in <c>configurationSchema.json</c> and
+    /// is therefore known before any row is read. An identity store is a row INSIDE that store, so a
+    /// default here would name a store the application merely hopes exists — the absence the
+    /// no-fallbacks rule exists to catch, rather than the ConfigurationConnection case it resembles.
+    /// Unlike the other domains carrying this property, it is NOT proven in this collection's
+    /// Registration phase. Nothing this collection registers reads it: the only readers are the
+    /// credential handlers in the optional <c>ReferenceSecretManagers.MsSql</c> package, and a host
+    /// registering secret managers without that package has no operational store to name. Demanding
+    /// one here would fail hosts that are entirely correct. Those handlers return results, so each
+    /// guards at its own read.
+    /// </remarks>
+    public static string? OperationalConnection { get; set; }
 
     // Configure(), Register() and Initialize() are source-generated
 
