@@ -6,7 +6,6 @@ using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Logging;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -67,56 +66,46 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
     /// <inheritdoc />
     public override bool SupportsTokenCaching => false;
 
-    /// <summary>The scheme name this option registers for a given entry.</summary>
-    /// <param name="serviceName">The declared entry's name.</param>
+    /// <summary>The prefix every LocalKey scheme name carries.</summary>
     /// <remarks>
     /// Distinct from the JwtBearer prefix so two entries of different kinds cannot land on one
-    /// scheme name — ASP.NET would take the second registration as a duplicate of the first.
+    /// scheme name — ASP.NET would take the second as a duplicate of the first. It is also what the
+    /// options bridge reads the entry name back out of.
     /// </remarks>
-    public static string SchemeNameFor(string serviceName) => "Fdw.LocalKey." + serviceName;
+    public const string SchemePrefix = "Fdw.LocalKey.";
+
+    /// <summary>The scheme name this option registers for a given entry.</summary>
+    /// <param name="serviceName">The declared entry's name.</param>
+    public static string SchemeNameFor(string serviceName) => SchemePrefix + serviceName;
 
     /// <inheritdoc />
-    public override IGenericResult<AuthenticationSchemeBinding> RegisterScheme(
-        AuthenticationBuilder authenticationBuilder,
-        AuthenticationServiceConfiguration configuration,
-        IConfigurationSection section,
-        IServiceCollection services,
+    public override IGenericResult<AuthenticationSchemeBinding> TakeScheme(
+        IAuthenticationServiceConfiguration configuration,
+        IAuthenticationSchemeProvider schemes,
+        IServiceProvider services,
         ILoggerFactory? loggerFactory)
     {
-        if (authenticationBuilder is null) throw new ArgumentNullException(nameof(authenticationBuilder));
         if (configuration is null) throw new ArgumentNullException(nameof(configuration));
-        if (services is null) throw new ArgumentNullException(nameof(services));
+        if (schemes is null) throw new ArgumentNullException(nameof(schemes));
 
         var log = loggerFactory?.CreateLogger<LocalKeyAuthenticationType>()
             ?? NullLogger<LocalKeyAuthenticationType>.Instance;
 
         if (configuration.Name is not { Length: > 0 } serviceName)
             return GenericResult<AuthenticationSchemeBinding>.Failure(
-                AuthenticationValidationLog.EntryMissingName(log, section.Path));
+                AuthenticationValidationLog.EntryMissingName(log, "(unnamed)"));
 
         if (configuration.Authority is not { Length: > 0 } issuer)
             return GenericResult<AuthenticationSchemeBinding>.Failure(
                 AuthenticationValidationLog.EntryMissingAuthority(log, serviceName));
 
-        var typed = LocalKeyAuthenticationConfiguration.Read(section, serviceName, log);
-        if (typed.IsFailure)
-            return typed.ToNewResult<AuthenticationSchemeBinding>();
-
-        if (typed.Value is not { } body)
-            return GenericResult<AuthenticationSchemeBinding>.Failure(
-                AuthenticationValidationLog.LocalKeyMissingAudience(log, serviceName));
-
-        var schemeName = SchemeNameFor(serviceName);
-
-        // The scheme is declared here and its key supplied by ConfigureLocalKeyScheme, which runs
-        // inside the built container: reading a secret needs the secret manager, and at this point
-        // nothing has been registered that could resolve one.
-        services.AddSingleton<IConfigureNamedOptions<JwtBearerOptions>>(serviceProvider =>
-            new ConfigureLocalKeyScheme(schemeName, issuer, body.Audience, serviceProvider));
-
-        authenticationBuilder.AddJwtBearer(schemeName, _ => { });
+        // The scheme is added here; its TokenValidationParameters are read from this entry's
+        // implementation row on first use, by the options bridge. Adding a scheme twice throws, and a
+        // host that declares one issuer twice is a configuration defect worth reporting.
+        schemes.AddScheme(new AuthenticationScheme(
+            SchemeNameFor(serviceName), displayName: null, handlerType: typeof(JwtBearerHandler)));
 
         return GenericResult<AuthenticationSchemeBinding>.Success(
-            new AuthenticationSchemeBinding(serviceName, issuer, schemeName));
+            new AuthenticationSchemeBinding(serviceName, issuer, SchemeNameFor(serviceName)));
     }
 }

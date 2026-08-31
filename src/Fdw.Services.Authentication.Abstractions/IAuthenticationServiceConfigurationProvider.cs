@@ -1,3 +1,7 @@
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Fdw.Results;
 using Fdw.Services.Abstractions;
 
 namespace Fdw.Services.Authentication.Abstractions;
@@ -13,4 +17,13 @@ namespace Fdw.Services.Authentication.Abstractions;
 public interface IAuthenticationServiceConfigurationProvider
     : IDomainConfigurationProvider<IAuthenticationServiceImplementationConfiguration>
 {
+    /// <summary>Reads the declared services, without dispatching to their implementations.</summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <remarks>
+    /// Scheme routing needs the name, the kind, the authority and whether the entry is enabled — all
+    /// on the domain row. What each kind uses to check a signature is read later, by the provider for
+    /// that kind, when a token actually arrives.
+    /// </remarks>
+    Task<IGenericResult<IReadOnlyList<IAuthenticationServiceConfiguration>>> GetHeaders(
+        CancellationToken cancellationToken = default);
 }

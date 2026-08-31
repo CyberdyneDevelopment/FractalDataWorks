@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -58,6 +59,16 @@ public class AuthenticationServiceConfigurationProvider
         string name,
         CancellationToken cancellationToken = default)
         => GetHeaderByName(name, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<IReadOnlyList<IAuthenticationServiceConfiguration>>> GetHeaders(
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await Get(cancellationToken).ConfigureAwait(false);
+        return rows.IsSuccess && rows.Value is not null
+            ? GenericResult<IReadOnlyList<IAuthenticationServiceConfiguration>>.Success(rows.Value)
+            : rows.ToNewResult<IReadOnlyList<IAuthenticationServiceConfiguration>>();
+    }
 
     /// <inheritdoc />
     protected override AuthenticationServiceConfiguration Compose<T>(

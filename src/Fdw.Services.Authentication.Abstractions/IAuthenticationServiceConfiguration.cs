@@ -13,4 +13,17 @@ namespace Fdw.Services.Authentication.Abstractions;
 public interface IAuthenticationServiceConfiguration
     : IPlatformServiceConfiguration<IAuthenticationServiceImplementationConfiguration>
 {
+    /// <summary>Gets or sets whether this service is trusted.</summary>
+    /// <remarks>
+    /// A declared service that is not enabled takes no scheme, so a token naming its issuer routes
+    /// nowhere and is refused. It is how a host stops trusting an issuer without forgetting it.
+    /// </remarks>
+    bool Enabled { get; set; }
+
+    /// <summary>Gets or sets the issuer a token must name to be routed to this service.</summary>
+    /// <remarks>
+    /// On the domain row because every kind has one, and because it is what selects the scheme —
+    /// that selection happens before any kind-specific check runs.
+    /// </remarks>
+    string? Authority { get; set; }
 }

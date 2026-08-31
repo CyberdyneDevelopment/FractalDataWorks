@@ -145,4 +145,8 @@ public static partial class AuthenticationValidationLog
     [MessageLogging(EventId = 71115, Level = LogLevel.Error,
         Message = "Expected a {expected} configuration but the row read as '{actual}'. The domain provider dispatched this row to the wrong implementation provider")]
     public static partial IGenericMessage ImplementationKindMismatch(ILogger logger, string expected, string actual);
+
+    [MessageLogging(EventId = 71116, Level = LogLevel.Error,
+        Message = "LocalKey authentication service '{serviceName}' could not be read, so its scheme validates with no key and no issuer and every token it is handed will be refused")]
+    public static partial IGenericMessage LocalKeyEntryUnreadable(ILogger logger, string serviceName);
 }
