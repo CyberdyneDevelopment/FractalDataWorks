@@ -3,16 +3,15 @@ using System.Threading;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
 using Fdw.Collections;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Logging;
-using Fdw.Services.Authorization.Abstractions;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Fdw.Services.Data.Abstractions;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -37,6 +36,33 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
                "JWT Bearer",
                "Validates bearer tokens issued by a remote OpenID Connect provider against its published JWKS")
     {
+        Registration((builder, loggerFactory) =>
+        {
+            builder.Services.TryAddSingleton<JwtBearerAuthenticationConfigurationProvider>(sp =>
+                new JwtBearerAuthenticationConfigurationProvider(
+                    sp.GetRequiredService<ILogger<JwtBearerAuthenticationConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    AuthenticationServiceTypes.ConfigurationConnection,
+                    AuthenticationServiceTypes.ServerConfigurationPath));
+            builder.Services.TryAddSingleton<IJwtBearerAuthenticationConfigurationProvider>(sp =>
+                sp.GetRequiredService<JwtBearerAuthenticationConfigurationProvider>());
+
+            // Transient for the same reason LocalKey's is: the handler holds the scheme and the
+            // request it was initialised for in fields, so one instance per resolution is required.
+            builder.Services.TryAddTransient<JwtBearerAuthenticationHandler>();
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+
+        // Initialize, because both providers have to be resolvable: the option is the only thing that
+        // knows which implementation it is, and the domain provider dispatches by the name registered
+        // here. Without this the domain row names a kind the registry has never heard of, and the
+        // read fails at the point a token arrives rather than at startup.
+        Initialization((host, loggerFactory) =>
+        {
+            host.Services.GetRequiredService<IAuthenticationServiceConfigurationProvider>()
+                .Register(Name, host.Services.GetRequiredService<JwtBearerAuthenticationConfigurationProvider>());
+            return GenericResult<IHost>.Success(host);
+        });
     }
 
     /// <inheritdoc />
@@ -81,14 +107,8 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
             return GenericResult<AuthenticationSchemeBinding>.Failure(
                 AuthenticationValidationLog.EntryMissingAuthority(log, serviceName));
 
-        // UNFINISHED. This still names JwtBearerHandler, which reads JwtBearerOptions from
-        // IOptionsMonitor - and nothing populates them, so a declared JwtBearer entry takes a scheme
-        // that validates with no authority, no audience and no key, and refuses every token from that
-        // issuer. Latent only because no host declares one today. LocalKey has been moved off the
-        // options system onto its own IAuthenticationHandler; this option needs the same treatment,
-        // plus the implementation configuration, provider and container declaration it also lacks.
         schemes.AddScheme(new AuthenticationScheme(
-            SchemeNameFor(serviceName), displayName: null, handlerType: typeof(JwtBearerHandler)));
+            SchemeNameFor(serviceName), displayName: null, handlerType: typeof(JwtBearerAuthenticationHandler)));
 
         return GenericResult<AuthenticationSchemeBinding>.Success(
             new AuthenticationSchemeBinding(serviceName, authority, SchemeNameFor(serviceName)));
@@ -102,51 +122,9 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
     /// Qualified by mechanism so two services of different mechanisms can share a name without one
     /// silently replacing the other's scheme options.
     /// </remarks>
-    public static string SchemeNameFor(string serviceName) => "Fdw.JwtBearer." + serviceName;
+    public const string SchemePrefix = "Fdw.JwtBearer.";
 
-    private static async Task ConferDeclaredRoles(
-        TokenValidatedContext context,
-        string serviceName,
-        IReadOnlyList<string> roles)
-    {
-        var services = context.HttpContext.RequestServices;
-        var log = services.GetService<ILoggerFactory>()?.CreateLogger<JwtBearerAuthenticationType>()
-            ?? NullLogger<JwtBearerAuthenticationType>.Instance;
-
-        if (context.Principal?.Identity is not ClaimsIdentity identity)
-        {
-            AuthenticationValidationLog.ValidatedTokenHasNoIdentity(log, serviceName);
-            context.Fail("The validated token produced no claims identity.");
-            return;
-        }
-
-        var permissions = await services.GetRequiredService<IRolePermissionResolver>()
-            .Resolve(roles, context.HttpContext.RequestAborted).ConfigureAwait(false);
-
-        if (permissions.IsFailure)
-        {
-            AuthenticationValidationLog.DeclaredRolesNotResolved(
-                log, serviceName, string.Join(", ", roles), permissions.CurrentMessage ?? string.Empty);
-            context.Fail(permissions.CurrentMessage ?? "The declared roles could not be resolved to permissions.");
-            return;
-        }
-
-        if (permissions.Value is not { } granted)
-        {
-            AuthenticationValidationLog.DeclaredRolesNotResolved(
-                log, serviceName, string.Join(", ", roles), "the resolver reported success with no permission set");
-            context.Fail("The declared roles resolved to no permission set.");
-            return;
-        }
-
-        foreach (var role in roles)
-            identity.AddClaim(new Claim(ClaimDefinitions.roles.Name, role));
-
-        foreach (var permission in granted)
-            identity.AddClaim(new Claim(ClaimDefinitions.perm.Name, permission));
-
-        AuthenticationValidationLog.DeclaredRolesConferred(
-            log, serviceName, roles.Count, granted.Count,
-            identity.FindFirst(ClaimDefinitions.sub.Name)?.Value ?? "(no sub)");
-    }
+    /// <summary>The scheme name this option registers for a given entry.</summary>
+    /// <param name="serviceName">The declared entry's name.</param>
+    public static string SchemeNameFor(string serviceName) => SchemePrefix + serviceName;
 }

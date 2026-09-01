@@ -513,4 +513,26 @@ public static partial class SchedulingLog
     public static partial IGenericMessage FactoryServiceCreated(
         ILogger logger,
         string schedulerName);
+
+    /// <summary>
+    /// Traces a scheduling command translator type being constructed (compile-time discovery via [TypeOption]).
+    /// </summary>
+    [MessageLogging(
+        EventId = 11029,
+        Level = LogLevel.Trace,
+        Message = "[SchedulingCommandTranslatorBase] Initializing translator '{translatorName}' for domain '{domainName}'")]
+    public static partial IGenericMessage TranslatorInitializing(
+        ILogger logger,
+        string translatorName,
+        string domainName);
+
+    /// <summary>
+    /// Logs the defect condition immediately before <see cref="SchedulingCommandTranslatorBase{TNative}"/>
+    /// throws <see cref="ArgumentNullException"/> for a null or empty translator name.
+    /// </summary>
+    [MessageLogging(
+        EventId = 91006,
+        Level = LogLevel.Error,
+        Message = "[SchedulingCommandTranslatorBase] Translator name is required and was null or empty")]
+    public static partial IGenericMessage TranslatorNameMissing(ILogger logger);
 }

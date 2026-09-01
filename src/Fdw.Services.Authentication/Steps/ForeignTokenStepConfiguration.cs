@@ -37,7 +37,7 @@ public sealed record ForeignTokenStepConfiguration
     /// Pinned rather than read from the token header. A verifier that accepts whatever the token
     /// names is how <c>none</c> and RS256-to-HS256 confusion work.
     /// </remarks>
-    public IReadOnlyList<string> ValidAlgorithms { get; init; } = ["RS256"];
+    public required IReadOnlyList<string> ValidAlgorithms { get; init; }
 
     /// <summary>Gets the tolerance for clock difference between here and the issuer.</summary>
     /// <remarks>
@@ -59,5 +59,5 @@ public sealed record ForeignTokenStepConfiguration
     /// enforcement of those methods you have actually checked.
     /// </para>
     /// </remarks>
-    public IReadOnlyList<string> AssertableMethods { get; init; } = ["pwd"];
+    public required IReadOnlyList<string> AssertableMethods { get; init; }
 }

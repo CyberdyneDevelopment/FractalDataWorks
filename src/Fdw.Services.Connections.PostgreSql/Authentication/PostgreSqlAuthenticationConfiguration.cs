@@ -86,9 +86,15 @@ public abstract class PostgreSqlAuthenticationConfiguration
     public abstract IGenericResult<string> BuildAuthFragment(IReadOnlyDictionary<string, string?> values, string? resolvedPassword);
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Takes both a manager that may have been supplied directly and the provider that resolves one
+    /// by name, because which of the two applies is this type's own decision: SecretManagerName is
+    /// one of its properties. A type with no secret-bearing properties ignores both arguments.
+    /// </remarks>
     public virtual Task<IGenericResult<string>> BuildAuthFragment(
         IReadOnlyDictionary<string, string?> values,
-        ISecretManager? secretManager,
+        ISecretManager? supplied,
+        ISecretManagerProvider? provider,
         CancellationToken cancellationToken = default)
         => Task.FromResult(BuildAuthFragment(values, resolvedPassword: null));
 

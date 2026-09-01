@@ -53,6 +53,18 @@ public static partial class OperationsLog
     public static partial IGenericMessage ExecutionItemNameRequired(ILogger logger);
 
     /// <summary>
+    /// Logs that the store the execution tracker reads and writes was never named by the host.
+    /// </summary>
+    /// <remarks>
+    /// Category 6 rather than 9: nothing has gone wrong internally, the host simply never named an
+    /// operational store. Reported per call rather than at registration, because every host registers
+    /// the Operations option as part of the platform sweep whether or not it ever tracks an execution
+    /// - refusing to start those hosts is what this event exists to avoid.
+    /// </remarks>
+    [MessageLogging(EventId = 61000, Level = LogLevel.Error, Message = "OperationsServiceTypes.OperationalConnection is not set; the host must name the store the execution tracker reads and writes before executions can be tracked")]
+    public static partial IGenericMessage OperationalConnectionNotSet(ILogger logger);
+
+    /// <summary>
     /// Logs when persisting an execution item fails.
     /// </summary>
     [MessageLogging(EventId = 71000, Level = LogLevel.Error, Message = "Failed to persist execution item '{executionItemId}': {errorMessage}")]

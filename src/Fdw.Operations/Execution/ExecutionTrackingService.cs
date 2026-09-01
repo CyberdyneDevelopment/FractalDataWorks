@@ -36,7 +36,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
 
     private readonly IDataGateway _dataGateway;
     private readonly ILogger _logger;
-    private readonly string _dataStoreName;
+    private readonly string? _dataStoreName;
     private readonly INotificationServiceProvider? _notificationProvider;
     private readonly IServiceConfigurationProvider<NotificationRuleConfiguration>? _notificationRuleProvider;
 
@@ -45,25 +45,42 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     /// </summary>
     /// <param name="dataGateway">The data gateway for persistence.</param>
     /// <param name="loggerFactory">Logger factory.</param>
-    /// <param name="dataStoreName">The DataStore name to use for the ops database (required).</param>
+    /// <param name="dataStoreName">
+    /// The store the tracker reads and writes, or null when the host has not named one. Null is
+    /// accepted rather than rejected here because every host registers the Operations option as part
+    /// of the platform sweep, including hosts that never track an execution; refusing construction
+    /// would stop those hosts booting. Each operation reports it instead.
+    /// </param>
     /// <param name="notificationProvider">Optional notification service provider. When null, notification emission is skipped.</param>
     /// <param name="notificationRuleProvider">Optional notification rule configuration provider. When null, notification emission is skipped.</param>
     public ExecutionTrackingService(
         IDataGateway dataGateway,
         ILoggerFactory loggerFactory,
-        string dataStoreName,
+        string? dataStoreName,
         INotificationServiceProvider? notificationProvider = null,
         IServiceConfigurationProvider<NotificationRuleConfiguration>? notificationRuleProvider = null)
     {
         _dataGateway = dataGateway ?? throw new ArgumentNullException(nameof(dataGateway));
         _logger = loggerFactory?.CreateLogger<ExecutionTrackingService>()
             ?? throw new ArgumentNullException(nameof(loggerFactory));
-        _dataStoreName = string.IsNullOrWhiteSpace(dataStoreName)
-            ? throw new ArgumentException("DataStore name is required.", nameof(dataStoreName))
-            : dataStoreName;
+        _dataStoreName = dataStoreName;
         _notificationProvider = notificationProvider;
         _notificationRuleProvider = notificationRuleProvider;
     }
+
+    /// <summary>
+    /// Whether the host named the store this tracker reads and writes.
+    /// </summary>
+    private bool StoreIsNamed => !string.IsNullOrWhiteSpace(_dataStoreName);
+
+    /// <summary>
+    /// Builds a target in the host's operational store.
+    /// </summary>
+    /// <remarks>
+    /// Every public entry point checks <see cref="StoreIsNamed"/> and returns a failure before
+    /// reaching here, which is what makes the suppression sound rather than hopeful.
+    /// </remarks>
+    private DataStoreTarget TargetFor(string container) => new(_dataStoreName!, PathName, container);
 
     /// <inheritdoc />
     public async Task<IGenericResult<IExecutionItem>> CreateItem(
@@ -75,6 +92,11 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         IReadOnlyDictionary<string, object?>? parameters = null,
         CancellationToken cancellationToken = default)
     {
+        // Reported here rather than refused at registration: a host that never tracks an
+        // execution is not misconfigured for having no operational store.
+        if (!StoreIsNamed)
+            return GenericResult<IExecutionItem>.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
+
         if (string.IsNullOrWhiteSpace(name))
         {
             return GenericResult<IExecutionItem>.Failure(
@@ -120,6 +142,11 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         string? actor = null,
         CancellationToken cancellationToken = default)
     {
+        // Reported here rather than refused at registration: a host that never tracks an
+        // execution is not misconfigured for having no operational store.
+        if (!StoreIsNamed)
+            return GenericResult.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
+
         var itemResult = await GetItemInternal(executionItemId, cancellationToken).ConfigureAwait(false);
         if (!itemResult.IsSuccess)
         {
@@ -166,6 +193,11 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         string? actor = null,
         CancellationToken cancellationToken = default)
     {
+        // Reported here rather than refused at registration: a host that never tracks an
+        // execution is not misconfigured for having no operational store.
+        if (!StoreIsNamed)
+            return GenericResult<IExecutionEvent>.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
+
         // Verify item exists
         var itemResult = await GetItemInternal(executionItemId, cancellationToken).ConfigureAwait(false);
         if (!itemResult.IsSuccess)
@@ -206,6 +238,11 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         string? resultMessage = null,
         CancellationToken cancellationToken = default)
     {
+        // Reported here rather than refused at registration: a host that never tracks an
+        // execution is not misconfigured for having no operational store.
+        if (!StoreIsNamed)
+            return GenericResult.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
+
         IExecutionStateType targetState = success ? ExecutionStateTypes.Completed : ExecutionStateTypes.Failed;
 
         var itemResult = await GetItemInternal(executionItemId, cancellationToken).ConfigureAwait(false);
@@ -253,6 +290,11 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         Guid executionItemId,
         CancellationToken cancellationToken = default)
     {
+        // Reported here rather than refused at registration: a host that never tracks an
+        // execution is not misconfigured for having no operational store.
+        if (!StoreIsNamed)
+            return GenericResult<IExecutionItem>.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
+
         var result = await GetItemInternal(executionItemId, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
@@ -268,6 +310,11 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         Guid executionItemId,
         CancellationToken cancellationToken = default)
     {
+        // Reported here rather than refused at registration: a host that never tracks an
+        // execution is not misconfigured for having no operational store.
+        if (!StoreIsNamed)
+            return GenericResult<IReadOnlyList<IExecutionEvent>>.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
+
         var queryCommand = new QueryCommand<ExecutionEvent>
         {
             Filter = new FilterExpression
@@ -293,7 +340,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         };
 
         var result = await _dataGateway.Execute<IEnumerable<ExecutionEvent>>(
-            queryCommand, new DataStoreTarget(_dataStoreName, PathName, ContainerNameExecutionEvent), cancellationToken).ConfigureAwait(false);
+            queryCommand, TargetFor(ContainerNameExecutionEvent), cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             return result.ToNewResult<IReadOnlyList<IExecutionEvent>>();
@@ -310,6 +357,11 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         Guid parentId,
         CancellationToken cancellationToken = default)
     {
+        // Reported here rather than refused at registration: a host that never tracks an
+        // execution is not misconfigured for having no operational store.
+        if (!StoreIsNamed)
+            return GenericResult<IReadOnlyList<IExecutionItem>>.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
+
         var queryCommand = new QueryCommand<ExecutionItem>
         {
             Filter = new FilterExpression
@@ -335,7 +387,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         };
 
         var result = await _dataGateway.Execute<IEnumerable<ExecutionItem>>(
-            queryCommand, new DataStoreTarget(_dataStoreName, PathName, ContainerNameExecutionItem), cancellationToken).ConfigureAwait(false);
+            queryCommand, TargetFor(ContainerNameExecutionItem), cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             return result.ToNewResult<IReadOnlyList<IExecutionItem>>();
@@ -352,6 +404,11 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         string correlationId,
         CancellationToken cancellationToken = default)
     {
+        // Reported here rather than refused at registration: a host that never tracks an
+        // execution is not misconfigured for having no operational store.
+        if (!StoreIsNamed)
+            return GenericResult<IReadOnlyList<IExecutionItem>>.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
+
         var queryCommand = new QueryCommand<ExecutionItem>
         {
             Filter = new FilterExpression
@@ -377,7 +434,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         };
 
         var result = await _dataGateway.Execute<IEnumerable<ExecutionItem>>(
-            queryCommand, new DataStoreTarget(_dataStoreName, PathName, ContainerNameExecutionItem), cancellationToken).ConfigureAwait(false);
+            queryCommand, TargetFor(ContainerNameExecutionItem), cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             return result.ToNewResult<IReadOnlyList<IExecutionItem>>();
@@ -407,6 +464,11 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         string? correlationId = null,
         CancellationToken cancellationToken = default)
     {
+        // Reported here rather than refused at registration: a host that never tracks an
+        // execution is not misconfigured for having no operational store.
+        if (!StoreIsNamed)
+            return GenericResult<IPagedResponse<IExecutionItem>>.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
+
         var filter = BuildListFilter(itemType, state, correlationId);
 
         var queryCommand = new QueryCommand<ExecutionItem>
@@ -431,7 +493,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         };
 
         var result = await _dataGateway.Execute<IEnumerable<ExecutionItem>>(
-            queryCommand, new DataStoreTarget(_dataStoreName, PathName, ContainerNameExecutionItem), cancellationToken).ConfigureAwait(false);
+            queryCommand, TargetFor(ContainerNameExecutionItem), cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
             return result.ToNewResult<IPagedResponse<IExecutionItem>>();
 
@@ -535,7 +597,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     {
         var insertResult = await _dataGateway.Execute<int>(
             new InsertCommand<ExecutionItem>(poco),
-            new DataStoreTarget(_dataStoreName, PathName, ContainerNameExecutionItem),
+            TargetFor(ContainerNameExecutionItem),
             cancellationToken).ConfigureAwait(false);
         if (!insertResult.IsSuccess)
         {
@@ -601,7 +663,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
                     }
                 }
             },
-            new DataStoreTarget(_dataStoreName, PathName, ContainerNameExecutionItem),
+            TargetFor(ContainerNameExecutionItem),
             cancellationToken).ConfigureAwait(false);
         if (!updateResult.IsSuccess)
         {
@@ -630,7 +692,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         };
 
         var result = await _dataGateway.Execute<IEnumerable<ExecutionItem>>(
-            queryCommand, new DataStoreTarget(_dataStoreName, PathName, ContainerNameExecutionItem), cancellationToken).ConfigureAwait(false);
+            queryCommand, TargetFor(ContainerNameExecutionItem), cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             return result.ToNewResult<ExecutionItem>();
@@ -674,7 +736,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         };
 
         var result = await _dataGateway.Execute<IEnumerable<ExecutionEvent>>(
-            queryCommand, new DataStoreTarget(_dataStoreName, PathName, ContainerNameExecutionEvent), cancellationToken).ConfigureAwait(false);
+            queryCommand, TargetFor(ContainerNameExecutionEvent), cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             return 1;
@@ -911,7 +973,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
 
         var insertResult = await _dataGateway.Execute<int>(
             new InsertCommand<ExecutionEvent>(eventPoco),
-            new DataStoreTarget(_dataStoreName, PathName, ContainerNameExecutionEvent),
+            TargetFor(ContainerNameExecutionEvent),
             cancellationToken).ConfigureAwait(false);
 
         return insertResult.IsSuccess ? eventPoco : null;

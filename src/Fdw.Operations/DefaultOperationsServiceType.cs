@@ -22,6 +22,10 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Fdw.Results;
 
+using Fdw.Services.Results;
+
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace Fdw.Operations;
 
 /// <summary>
@@ -60,7 +64,7 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
                 var gatewayProvider = sp.GetRequiredService<IDataGateway>();
                 var notificationProvider = sp.GetService<INotificationServiceProvider>();
                 var ruleProvider = sp.GetService<IServiceConfigurationProvider<NotificationRuleConfiguration>>();
-                return new ExecutionTrackingService(gatewayProvider, lf, "OpsDb", notificationProvider, ruleProvider);
+                return new ExecutionTrackingService(gatewayProvider, lf, OperationsServiceTypes.OperationalConnection, notificationProvider, ruleProvider);
             });
 
             builder.Services.TryAddScoped<IEscalationService>(sp =>

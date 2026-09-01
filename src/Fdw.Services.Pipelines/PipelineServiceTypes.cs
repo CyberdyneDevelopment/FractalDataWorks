@@ -17,6 +17,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Services.Results;
+
 namespace Fdw.Services.Pipelines;
 
 /// <summary>
@@ -42,6 +44,21 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
     public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
+    /// <summary>
+    /// The connection this domain's operational rows live in. The host must set it; there is no default.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately without an initializer, unlike <see cref="ConfigurationConnection"/>. That one may
+    /// default because <c>PlatformConfiguration</c> is declared in <c>configurationSchema.json</c> and
+    /// is therefore known before any row is read. An operational store is a row INSIDE that store, so a
+    /// default here would name a store the application merely hopes exists — the absence the
+    /// no-fallbacks rule exists to catch, rather than the ConfigurationConnection case it resembles.
+    /// Not proven at registration: every host registers this domain as part of the platform sweep,
+    /// including hosts that never touch its operational store, so refusing to start them would demand
+    /// a value a correct host cannot supply. The sites that read it report it instead.
+    /// </remarks>
+    public static string? OperationalConnection { get; set; }
 
     /// <summary>
     /// Sets this collection's Register body: the option collect, then this domain's configuration provider.

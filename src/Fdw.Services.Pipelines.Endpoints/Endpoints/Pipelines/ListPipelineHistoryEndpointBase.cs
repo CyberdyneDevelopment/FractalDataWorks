@@ -12,6 +12,8 @@ using Fdw.Web.Endpoints.Contracts;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
+using Fdw.Services.Pipelines;
+
 namespace Fdw.Services.Pipelines.Endpoints;
 
 /// <summary>
@@ -56,6 +58,20 @@ public abstract class ListPipelineHistoryEndpointBase : Endpoint<ListPipelineHis
     public override async Task HandleAsync(ListPipelineHistoryRequest req, CancellationToken ct)
     {
         EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
+
+        // Fails here as well as in the Registration phase: registration proves it for a real host,
+        // and this proves it for anything that reaches the endpoint without having run registration.
+        if (string.IsNullOrWhiteSpace(PipelineServiceTypes.OperationalConnection))
+        {
+            HttpContext.Response.StatusCode = 500;
+            await HttpContext.Response.WriteAsJsonAsync(
+                new
+                {
+                    Error = "The Pipelines operational connection is not configured",
+                    Details = "The host must set PipelineServiceTypes.OperationalConnection before this endpoint can read execution history."
+                }, ct).ConfigureAwait(false);
+            return;
+        }
 
         OnFetchingExecutionHistory(req.PipelineName ?? "all pipelines");
 
@@ -107,7 +123,7 @@ public abstract class ListPipelineHistoryEndpointBase : Endpoint<ListPipelineHis
         };
 
         var result = await _dataGateway.Execute<IEnumerable<PipelineExecutionDbRecord>>(
-            command, new DataStoreTarget("OpsDb", "etl", "PipelineExecution"), ct).ConfigureAwait(false);
+            command, new DataStoreTarget(PipelineServiceTypes.OperationalConnection, "etl", "PipelineExecution"), ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {
