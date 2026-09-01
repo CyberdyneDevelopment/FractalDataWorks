@@ -110,6 +110,30 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     ConfigurationConnection, "auth"));
 
+            // What the foreign-token exchange needs. A caller arriving on another authority's token
+            // is bound to a local user through ExternalIdentity rows, so the binding reads its own
+            // container the way every other implementation provider does.
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<
+                ExternalIdentityConfiguration, ExternalIdentityConfigurationCommand>>(sp =>
+                new ImplementationConfigurationProviderBase<
+                    ExternalIdentityConfiguration, ExternalIdentityConfigurationCommand>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<
+                        ExternalIdentityConfiguration, ExternalIdentityConfigurationCommand>>()!,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConfigurationConnection, "auth"));
+
+            builder.Services.TryAddScoped<IPrincipalBinding, ExternalIdentityBinding>();
+
+            // The presented token comes off the request, so this follows the request scope.
+            builder.Services.TryAddScoped<IForeignTokenAccessor, HttpForeignTokenAccessor>();
+
+            // Singleton because it caches the authority's keys across requests and refreshes them
+            // on its own schedule; a scoped one would re-fetch per request and lose the point.
+            builder.Services.TryAddSingleton<ISigningKeyProvider>(sp =>
+                new CachingSigningKeyProvider(
+                    sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(CachingSigningKeyProvider)),
+                    logger: sp.GetService<ILogger<CachingSigningKeyProvider>>()));
+
             builder.Services.TryAddSingleton<IAuthenticationFlowProvider>(sp =>
                 new AuthenticationFlowProvider(
                     sp.GetRequiredService<ImplementationConfigurationProviderBase<
@@ -170,6 +194,10 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
 
             registered = resolver.Register("ResolvePrincipal", typeof(ResolvePrincipalStep));
 
+            // ForeignToken is deliberately NOT registered here. The step is generic, but the thing
+            // that makes it usable is a named authority and the terms it is trusted on, which is a
+            // vendor implementation - the same reason a secret manager kind lives in a reference
+            // package rather than in the framework. It registers itself from there.
             return registered.IsFailure
                 ? registered.ToNewResult<IHost>()
                 : GenericResult<IHost>.Success(host);
