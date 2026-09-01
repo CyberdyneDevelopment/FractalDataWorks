@@ -8,8 +8,11 @@ public sealed class ResumeScheduleCommand : SchedulingCommandBase
 {
     /// <summary>Initializes a new instance of the <see cref="ResumeScheduleCommand"/> class.</summary>
     /// <param name="scheduleId">The identifier of the schedule to resume.</param>
-    public ResumeScheduleCommand(string scheduleId)
-        : base("Resume")
+    /// <param name="dataStoreName">The connection the owning scheduler reads and writes.</param>
+    /// <param name="pathName">The schema the owning scheduler reads and writes.</param>
+    /// <param name="scheduleContainerName">The container the owning scheduler's schedules live in.</param>
+    public ResumeScheduleCommand(string scheduleId, string dataStoreName, string pathName, string scheduleContainerName)
+        : base("Resume", dataStoreName, pathName, scheduleContainerName)
     {
         ScheduleId = scheduleId;
     }

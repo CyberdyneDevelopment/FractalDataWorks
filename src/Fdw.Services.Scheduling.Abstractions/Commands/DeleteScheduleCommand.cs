@@ -8,8 +8,11 @@ public sealed class DeleteScheduleCommand : SchedulingCommandBase
 {
     /// <summary>Initializes a new instance of the <see cref="DeleteScheduleCommand"/> class.</summary>
     /// <param name="scheduleId">The identifier of the schedule to delete.</param>
-    public DeleteScheduleCommand(string scheduleId)
-        : base("Delete")
+    /// <param name="dataStoreName">The connection the owning scheduler reads and writes.</param>
+    /// <param name="pathName">The schema the owning scheduler reads and writes.</param>
+    /// <param name="scheduleContainerName">The container the owning scheduler's schedules live in.</param>
+    public DeleteScheduleCommand(string scheduleId, string dataStoreName, string pathName, string scheduleContainerName)
+        : base("Delete", dataStoreName, pathName, scheduleContainerName)
     {
         ScheduleId = scheduleId;
     }
