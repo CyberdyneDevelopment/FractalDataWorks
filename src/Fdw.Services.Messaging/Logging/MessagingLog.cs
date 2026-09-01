@@ -67,6 +67,15 @@ public static partial class MessagingLog
     [MessageLogging(EventId = 91000, Level = LogLevel.Error, Message = "Failed to process access request {requestId}: {error}")]
     public static partial IGenericMessage AccessRequestFailed(ILogger logger, string requestId, string error);
 
+    /// <summary>Logs that the messaging domain's configured store/path could not be resolved.</summary>
+    /// <remarks>
+    /// The domain row exists once no <c>ManagedConfiguration</c> row named "Messaging" is declared, or
+    /// its DataStoreName/PathName is unset — either is an absence the no-fallbacks rule catches rather
+    /// than defaulting to a store the deployment merely hopes exists.
+    /// </remarks>
+    [MessageLogging(EventId = 71003, Level = LogLevel.Error, Message = "The Messaging domain's DataStoreName/PathName could not be resolved: {error}")]
+    public static partial IGenericMessage LocationNotConfigured(ILogger logger, string error);
+
     /// <summary>Trace entry for CreateMessage.</summary>
     [MessageLogging(EventId = 11010, Level = LogLevel.Trace, Message = "Entering CreateMessage")]
     public static partial IGenericMessage TraceCreateMessageEntry(ILogger logger);

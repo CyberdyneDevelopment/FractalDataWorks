@@ -7,6 +7,7 @@ using Fdw.Commands.Data;
 using Fdw.Data;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Messaging.Abstractions;
 using Fdw.Services.Messaging.Hubs;
 using Fdw.Services.Messaging.Logging;
 using Microsoft.AspNetCore.SignalR;
@@ -22,13 +23,16 @@ namespace Fdw.Services.Messaging;
 /// </summary>
 public sealed class MessageService : IMessageService
 {
-    private const string DataStoreName = "OpsDb";
-    private const string PathName = "msg";
+    // The row's own name, not a store choice: this deployment has exactly one configured
+    // messaging service, and every method resolves its store/path from that row rather than
+    // from a value baked into this class.
+    private const string MessagingServiceName = "Messaging";
     private const string MessageContainer = "Message";
     private const string RecipientContainer = "MessageRecipient";
 
     private readonly ILogger<MessageService> _logger;
     private readonly IDataGateway _dataGateway;
+    private readonly IMessagingConfigurationProvider _messaging;
     private readonly IHubContext<MessageHub, IMessageHubClient> _hubContext;
 
     /// <summary>
@@ -36,15 +40,41 @@ public sealed class MessageService : IMessageService
     /// </summary>
     /// <param name="logger">The logger instance.</param>
     /// <param name="dataGateway">The data gateway for message data access.</param>
+    /// <param name="messaging">Resolves where this deployment keeps its messages.</param>
     /// <param name="hubContext">The strongly-typed SignalR hub context for real-time message push.</param>
     public MessageService(
         ILogger<MessageService> logger,
         IDataGateway dataGateway,
+        IMessagingConfigurationProvider messaging,
         IHubContext<MessageHub, IMessageHubClient> hubContext)
     {
         _logger = logger ?? NullLogger<MessageService>.Instance;
         _dataGateway = dataGateway ?? throw new ArgumentNullException(nameof(dataGateway));
+        _messaging = messaging ?? throw new ArgumentNullException(nameof(messaging));
         _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
+    }
+
+    /// <summary>Resolves the store and path this deployment keeps its messages in.</summary>
+    /// <remarks>
+    /// Read fresh on every call rather than cached at construction: the row is ordinary
+    /// configuration, and a change to it should take effect on the next request rather than
+    /// require a restart. <see cref="MessagingConfigurationProvider"/> caches the underlying read
+    /// at the gateway layer, so this is not a query per call.
+    /// </remarks>
+    private async Task<IGenericResult<(string DataStoreName, string PathName)>> ResolveLocation(
+        CancellationToken cancellationToken)
+    {
+        var header = await _messaging.GetHeader(MessagingServiceName, cancellationToken).ConfigureAwait(false);
+        if (!header.IsSuccess || header.Value is null)
+            return header.ToNewResult<(string, string)>();
+
+        if (string.IsNullOrWhiteSpace(header.Value.DataStoreName) || string.IsNullOrWhiteSpace(header.Value.PathName))
+        {
+            return GenericResult<(string, string)>.Failure(
+                MessagingLog.LocationNotConfigured(_logger, "DataStoreName or PathName is unset on the Messaging row"));
+        }
+
+        return GenericResult<(string, string)>.Success((header.Value.DataStoreName, header.Value.PathName));
     }
 
     /// <inheritdoc />
@@ -56,11 +86,15 @@ public sealed class MessageService : IMessageService
 
         try
         {
+            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+            if (!location.IsSuccess)
+                return location.ToNewResult<MessagePayload>();
+
             var messageId = Guid.NewGuid();
             var now = DateTime.UtcNow;
 
             var command = CmdBuilders.Insert.Into<MessageInsertRecord>(MessageContainer)
-                .DataStore(DataStoreName).Path(PathName)
+                .DataStore(location.Value.DataStoreName).Path(location.Value.PathName)
                 .Value(BuildInsertRecord(request, messageId, now));
 
             var insertResult = await _dataGateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
@@ -75,7 +109,7 @@ public sealed class MessageService : IMessageService
 
             var payload = BuildMessageDto(request, messageId, now);
 
-            await InsertRecipientIfDirect(request, messageId, now, cancellationToken).ConfigureAwait(false);
+            await InsertRecipientIfDirect(request, messageId, now, location.Value, cancellationToken).ConfigureAwait(false);
             await NotifyRecipientViaSignalR(payload).ConfigureAwait(false);
 
             var recipientId = request.RecipientUserId?.ToString("D") ?? "broadcast";
@@ -105,8 +139,12 @@ public sealed class MessageService : IMessageService
 
         try
         {
+            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+            if (!location.IsSuccess)
+                return location.ToNewResult<IReadOnlyList<MessagePayload>>();
+
             var builder = ApplyFilters(
-                Query.From<MessagePayload>(DataStoreName, PathName, MessageContainer),
+                Query.From<MessagePayload>(location.Value.DataStoreName, location.Value.PathName, MessageContainer),
                 query);
 
             // Why the cursor row is read first: a keyset window is a predicate over the SORT KEY,
@@ -174,7 +212,11 @@ public sealed class MessageService : IMessageService
 
         try
         {
-            var command = Query.From<MessagePayload>(DataStoreName, PathName, MessageContainer)
+            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+            if (!location.IsSuccess)
+                return location.ToNewResult<MessagePayload>();
+
+            var command = Query.From<MessagePayload>(location.Value.DataStoreName, location.Value.PathName, MessageContainer)
                 .Where(m => m.Id).Equal(messageId)
                 .Build();
 
@@ -214,7 +256,11 @@ public sealed class MessageService : IMessageService
 
         try
         {
-            var command = Query.From<MessagePayload>(DataStoreName, PathName, MessageContainer)
+            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+            if (!location.IsSuccess)
+                return location.ToNewResult<int>();
+
+            var command = Query.From<MessagePayload>(location.Value.DataStoreName, location.Value.PathName, MessageContainer)
                 .Where(m => m.RecipientUserId).Equal(userId)
                 .Where(m => m.ReadAt).IsNull()
                 .Build();
@@ -251,8 +297,12 @@ public sealed class MessageService : IMessageService
         {
             var messageIdStr = messageId.ToString("D");
 
+            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+            if (!location.IsSuccess)
+                return (IGenericResult)location;
+
             var command = CmdBuilders.Update.In<MessageDeliveredUpdate>(MessageContainer)
-                .DataStore(DataStoreName).Path(PathName)
+                .DataStore(location.Value.DataStoreName).Path(location.Value.PathName)
                 .Where(nameof(MessagePayload.Id), messageId)
                 .Value(new MessageDeliveredUpdate
                 {
@@ -292,8 +342,12 @@ public sealed class MessageService : IMessageService
         {
             var messageIdStr = messageId.ToString("D");
 
+            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+            if (!location.IsSuccess)
+                return (IGenericResult)location;
+
             var command = CmdBuilders.Update.In<MessageReadUpdate>(MessageContainer)
-                .DataStore(DataStoreName).Path(PathName)
+                .DataStore(location.Value.DataStoreName).Path(location.Value.PathName)
                 .Where(nameof(MessagePayload.Id), messageId)
                 .Value(new MessageReadUpdate
                 {
@@ -336,8 +390,12 @@ public sealed class MessageService : IMessageService
         {
             var messageIdStr = messageId.ToString("D");
 
+            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+            if (!location.IsSuccess)
+                return (IGenericResult)location;
+
             var command = CmdBuilders.Update.In<MessageDismissedUpdate>(MessageContainer)
-                .DataStore(DataStoreName).Path(PathName)
+                .DataStore(location.Value.DataStoreName).Path(location.Value.PathName)
                 .Where(nameof(MessagePayload.Id), messageId)
                 .Value(new MessageDismissedUpdate
                 {
@@ -377,8 +435,12 @@ public sealed class MessageService : IMessageService
         {
             var messageIdStr = messageId.ToString("D");
 
+            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+            if (!location.IsSuccess)
+                return (IGenericResult)location;
+
             var command = CmdBuilders.Update.In<MessageArchivedUpdate>(MessageContainer)
-                .DataStore(DataStoreName).Path(PathName)
+                .DataStore(location.Value.DataStoreName).Path(location.Value.PathName)
                 .Where(nameof(MessagePayload.Id), messageId)
                 .Value(new MessageArchivedUpdate
                 {
@@ -419,8 +481,12 @@ public sealed class MessageService : IMessageService
             var userIdStr = userId.ToString("D");
             var now = DateTime.UtcNow;
 
+            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+            if (!location.IsSuccess)
+                return (IGenericResult)location;
+
             var command = CmdBuilders.Update.In<MessageReadUpdate>(MessageContainer)
-                .DataStore(DataStoreName).Path(PathName)
+                .DataStore(location.Value.DataStoreName).Path(location.Value.PathName)
                 .Where(nameof(MessagePayload.RecipientUserId), userId)
                 .Where(nameof(MessagePayload.ReadAt), new IsNullOperator(), null)
                 .Value(new MessageReadUpdate
@@ -498,6 +564,7 @@ public sealed class MessageService : IMessageService
         CreateMessageRequest request,
         Guid messageId,
         DateTime now,
+        (string DataStoreName, string PathName) location,
         CancellationToken cancellationToken)
     {
         if (!request.RecipientUserId.HasValue)
@@ -516,7 +583,7 @@ public sealed class MessageService : IMessageService
         };
 
         var recipientCommand = CmdBuilders.Insert.Into<MessageRecipientInsertRecord>(RecipientContainer)
-            .DataStore(DataStoreName).Path(PathName)
+            .DataStore(location.DataStoreName).Path(location.PathName)
             .Value(recipientRecord);
 
         var recipientResult = await _dataGateway.Execute<int>(recipientCommand, cancellationToken).ConfigureAwait(false);
