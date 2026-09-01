@@ -131,4 +131,41 @@ public static partial class ExternalIdentityProvisionerLog
         Level = LogLevel.Error,
         Message = "Provisioner binding read failed: tenantId={tenantId} providerName='{providerName}'. {message}")]
     public static partial IGenericMessage BindingReadFailed(ILogger logger, string tenantId, string providerName, string message);
+
+    // ── ClaimMapped ────────────────────────────────────────────────────────────────
+
+    /// <summary>Logs that no configured rule matched the presented subject.</summary>
+    [MessageLogging(
+        EventId = 91002,
+        Level = LogLevel.Trace,
+        Message = "ClaimMapped provisioner: no configured rule matched a claim on the subject asserted by '{provider}'.")]
+    public static partial IGenericMessage NoRuleMatched(ILogger logger, string provider);
+
+    /// <summary>Logs that a matched rule's UsernameClaimType is absent from the presented claims.</summary>
+    [MessageLogging(
+        EventId = 91003,
+        Level = LogLevel.Error,
+        Message = "ClaimMapped rule '{ruleName}' matched but its UsernameClaimType '{usernameClaimType}' is not present on the presented claims — cannot name the new account.")]
+    public static partial IGenericMessage RuleMissingUsernameClaim(ILogger logger, string ruleName, string usernameClaimType);
+
+    /// <summary>Logs that a matched rule names a role this host has no Role row for.</summary>
+    [MessageLogging(
+        EventId = 91004,
+        Level = LogLevel.Error,
+        Message = "ClaimMapped rule '{ruleName}' names role '{roleName}', which has no Role row on this host.")]
+    public static partial IGenericMessage RuleReferencesUnknownRole(ILogger logger, string ruleName, string roleName);
+
+    /// <summary>Logs that a new account was just-in-time provisioned.</summary>
+    [MessageLogging(
+        EventId = 91005,
+        Level = LogLevel.Information,
+        Message = "Subject asserted by '{provider}' provisioned by rule '{ruleName}': new user {userId}.")]
+    public static partial IGenericMessage AccountProvisioned(ILogger logger, string provider, string ruleName, Guid userId);
+
+    /// <summary>Logs that provisioning resumed an interrupted prior attempt instead of creating a new user.</summary>
+    [MessageLogging(
+        EventId = 91006,
+        Level = LogLevel.Warning,
+        Message = "ClaimMapped rule '{ruleName}': username already exists with no identity link — resuming provisioning for existing user {userId} instead of creating a new one.")]
+    public static partial IGenericMessage ResumingOrphanedUser(ILogger logger, string ruleName, Guid userId);
 }

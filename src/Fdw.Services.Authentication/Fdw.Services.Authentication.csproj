@@ -58,6 +58,12 @@
 
 
     <ProjectReference Include="..\Fdw.Services.Users\Fdw.Services.Users.csproj" />
+
+
+    <ProjectReference Include="..\Fdw.Services.ExternalIdentityProviders.Abstractions\Fdw.Services.ExternalIdentityProviders.Abstractions.csproj" />
+
+
+    <ProjectReference Include="..\Fdw.Services.ExternalIdentityProviders\Fdw.Services.ExternalIdentityProviders.csproj" />
   </ItemGroup>
 
   <!-- Why a FrameworkReference: the inbound-token validation domain registers ASP.NET authentication

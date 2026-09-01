@@ -42,6 +42,25 @@ internal static partial class StepLog
     internal static partial IGenericMessage EligibilityDecided(
         ILogger logger, Guid principalId, bool permitted, string reason);
 
+    /// <summary>A subject with no binding was provisioned a new local principal.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="issuer">The authority that asserted them.</param>
+    /// <param name="provisionerName">The configured provisioner that created the principal.</param>
+    /// <param name="principalId">The newly created local principal.</param>
+    [MessageLogging(EventId = 91144, Level = LogLevel.Information,
+        Message = "Subject asserted by '{issuer}' had no binding; provisioner '{provisionerName}' created principal {principalId}")]
+    internal static partial IGenericMessage PrincipalProvisioned(
+        ILogger logger, string issuer, string provisionerName, Guid principalId);
+
+    /// <summary>A provisioner name resolved from a binding row does not resolve to a live provisioner.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="issuer">The authority that asserted the subject.</param>
+    /// <param name="provisionerName">The provisioner name the binding named.</param>
+    [MessageLogging(EventId = 91145, Level = LogLevel.Error,
+        Message = "Subject asserted by '{issuer}' is bound to provisioner '{provisionerName}', which did not resolve to a registered provisioner")]
+    internal static partial IGenericMessage ProvisionerNotResolved(
+        ILogger logger, string issuer, string provisionerName);
+
     /// <summary>Logs a step asked to run before its Initialize captured what it needs.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="stepName">The step the flow named.</param>

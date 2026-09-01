@@ -1,7 +1,7 @@
 using Fdw.Collections.Attributes;
 using Fdw.Services.Configuration;
 
-namespace Fdw.Services.Authentication.Binding;
+namespace Fdw.Services.ExternalIdentityProviders.Binding;
 
 /// <summary>
 /// Reads and writes <c>auth.ExternalIdentity</c>.

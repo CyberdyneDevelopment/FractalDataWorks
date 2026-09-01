@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Abstractions;
@@ -10,6 +11,8 @@ using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Logging;
+using Fdw.Services.ExternalIdentityProviders.Abstractions;
+using Fdw.Services.ExternalIdentityProviders.Binding;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -18,7 +21,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.Authentication.Flow.StepTypes;
 
 /// <summary>
-/// Binds a subject an authority proved to a principal this platform knows.
+/// Binds a subject an authority proved to a principal this platform knows — provisioning one
+/// just-in-time when a deployment has configured that for the subject's issuer.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -31,6 +35,15 @@ namespace Fdw.Services.Authentication.Flow.StepTypes;
 /// is the same wherever the subject came from — and because <c>Requires</c> Subject and
 /// <c>Contributes</c> Principal is what stops a flow minting a token for nobody.
 /// </para>
+/// <para>
+/// An unbound subject is not automatically a refusal: <see cref="ExternalIdentityProvisionerBindingConfigurationProvider"/>
+/// is consulted for a provisioner bound to the subject's issuer. No binding row is the default-OFF
+/// outcome and refuses exactly as before — provisioning an account for a caller this platform has
+/// never decided to trust is not something an absence of configuration should do. A bound issuer
+/// hands the subject and every claim contributed so far to that provisioner, which decides what (if
+/// anything) to create; this step never inspects claim content itself; that policy lives entirely in
+/// the provisioner a deployment configures.
+/// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [ServiceTypeOption(typeof(AuthenticationStepTypes), "ResolvePrincipal")]
@@ -41,6 +54,9 @@ public sealed class ResolvePrincipalStepType
     // Captured when the host is built: an option is created by its module initializer, which needs
     // a parameterless constructor, so what it needs arrives where a live container exists.
     private IPrincipalBinding? _bindings;
+    private ExternalIdentityProvisionerBindingConfigurationProvider? _provisionerBindings;
+    private IExternalIdentityProvisionerServiceProvider? _provisioners;
+    private ITenantResolver? _tenants;
     private ILogger _logger = NullLogger<ResolvePrincipalStepType>.Instance;
 
     /// <summary>Initializes a new instance of the <see cref="ResolvePrincipalStepType"/> class.</summary>
@@ -53,6 +69,9 @@ public sealed class ResolvePrincipalStepType
         Initialization((host, loggerFactory) =>
         {
             _bindings = host.Services.GetRequiredService<IPrincipalBinding>();
+            _provisionerBindings = host.Services.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>();
+            _provisioners = host.Services.GetRequiredService<IExternalIdentityProvisionerServiceProvider>();
+            _tenants = host.Services.GetRequiredService<ITenantResolver>();
             _logger = loggerFactory?.CreateLogger<ResolvePrincipalStepType>()
                 ?? NullLogger<ResolvePrincipalStepType>.Instance;
 
@@ -74,7 +93,7 @@ public sealed class ResolvePrincipalStepType
     public async Task<IGenericResult<StepOutcome>> Execute(
         AuthenticationContext context, CancellationToken cancellationToken = default)
     {
-        if (_bindings is null)
+        if (_bindings is null || _provisionerBindings is null || _provisioners is null || _tenants is null)
             return GenericResult<StepOutcome>.Failure(StepLog.NotInitialized(_logger, Name));
 
         var subject = context.Subject!;
@@ -86,14 +105,76 @@ public sealed class ResolvePrincipalStepType
         if (bound.IsFailure)
             return bound.ToNewResult<StepOutcome>();
 
-        // A subject with no binding is a caller this platform has never seen. Refusing is the whole
-        // point of the step: the alternative is inventing a principal for them.
-        if (bound.Value is null)
+        if (bound.Value is { } existing)
+        {
+            StepLog.PrincipalResolved(_logger, subject.Issuer, existing.Id);
+            return GenericResult<StepOutcome>.Success(
+                new StepOutcome.Contributed(new ContextContribution { Principal = existing }));
+        }
+
+        // Unbound: consult provisioning before refusing. No matching binding row is the default-OFF
+        // outcome, and refuses exactly as this step always has — an absence of configuration must
+        // never be read as permission to create an account.
+        return await TryProvision(subject, context, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<IGenericResult<StepOutcome>> TryProvision(
+        Subject subject, AuthenticationContext context, CancellationToken cancellationToken)
+    {
+        var provisionerName = await _provisionerBindings!
+            .ResolveProvisionerName(tenantId: null, subject.Issuer, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (provisionerName.IsFailure)
+            return provisionerName.ToNewResult<StepOutcome>();
+
+        // A subject with no binding AND no configured provisioner is a caller this platform has
+        // never seen. Refusing is the whole point of the step: the alternative is inventing a
+        // principal for them.
+        if (provisionerName.Value is not { Length: > 0 } name)
             return GenericResult<StepOutcome>.Failure(StepLog.NoBinding(_logger, subject.Issuer));
 
-        StepLog.PrincipalResolved(_logger, subject.Issuer, bound.Value.Id);
+        var provisioner = await _provisioners!.Get(name, cancellationToken).ConfigureAwait(false);
+        if (provisioner.IsFailure)
+            return provisioner.ToNewResult<StepOutcome>();
 
-        return GenericResult<StepOutcome>.Success(
-            new StepOutcome.Contributed(new ContextContribution { Principal = bound.Value }));
+        if (provisioner.Value is not { } resolvedProvisioner)
+            return GenericResult<StepOutcome>.Failure(
+                StepLog.ProvisionerNotResolved(_logger, subject.Issuer, name));
+
+        var provisioned = await resolvedProvisioner
+            .Provision(subject.Issuer, subject.SubjectId, ToClaimsPrincipal(subject, context), cancellationToken)
+            .ConfigureAwait(false);
+
+        if (provisioned.IsFailure)
+            return provisioned.ToNewResult<StepOutcome>();
+
+        var tenant = await _tenants!.TenantFor(provisioned.Value, cancellationToken).ConfigureAwait(false);
+        if (tenant.IsFailure)
+            return tenant.ToNewResult<StepOutcome>();
+
+        StepLog.PrincipalProvisioned(_logger, subject.Issuer, name, provisioned.Value);
+
+        return GenericResult<StepOutcome>.Success(new StepOutcome.Contributed(new ContextContribution
+        {
+            Principal = new Principal { Id = provisioned.Value, TenantId = tenant.Value },
+        }));
+    }
+
+    /// <summary>Builds the claims a provisioner reads to decide what to create.</summary>
+    /// <remarks>
+    /// The subject itself is included as <c>sub</c>/<c>iss</c> alongside whatever the proving step
+    /// contributed, since a provisioner may key off the subject identifier and not only the claims
+    /// riding beside it.
+    /// </remarks>
+    private static ClaimsPrincipal ToClaimsPrincipal(Subject subject, AuthenticationContext context)
+    {
+        var identity = new ClaimsIdentity(authenticationType: subject.Issuer);
+        identity.AddClaim(new System.Security.Claims.Claim(ClaimTypes.NameIdentifier, subject.SubjectId, valueType: null, issuer: subject.Issuer));
+
+        foreach (var claim in context.Claims.Claims)
+            identity.AddClaim(new System.Security.Claims.Claim(claim.Type, claim.Value, valueType: null, issuer: claim.Issuer ?? subject.Issuer));
+
+        return new ClaimsPrincipal(identity);
     }
 }

@@ -139,6 +139,16 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                 return provider;
             });
 
+            // Published under the domain-named interface as well as the closed generic: a caller
+            // asking for IExternalIdentityProvisionerServiceProvider states which domain it needs,
+            // rather than a shape another IPlatformServiceProvider<TService, TConfig> could also
+            // satisfy — and it has to be the SAME instance the closed generic resolves, or a caller
+            // reached through this name would register against a provider whose factories the one
+            // reached through the closed generic never sees.
+            builder.Services.TryAddScoped<IExternalIdentityProvisionerServiceProvider>(sp =>
+                (IExternalIdentityProvisionerServiceProvider)sp.GetRequiredService<
+                    IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>());
+
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(ExternalIdentityProvisionerTypes), providerService);
             else

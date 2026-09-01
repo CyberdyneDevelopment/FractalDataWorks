@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
 
-namespace Fdw.Services.Authentication.Binding;
+namespace Fdw.Services.ExternalIdentityProviders.Binding;
 
 /// <summary>
 /// One row of <c>auth.ExternalIdentity</c> — a subject at an outside authority, bound to a user here.
@@ -13,6 +13,14 @@ namespace Fdw.Services.Authentication.Binding;
 /// identifier means nothing without the authority that minted it. There is deliberately no email
 /// column: an address is often unverified, changes, and can be asserted for different people by
 /// different providers, so matching on one is the standard account-takeover path in federated login.
+/// </remarks>
+/// <remarks>
+/// Lives in the ExternalIdentityProviders domain, not Authentication: both
+/// <c>Authentication.Binding.ExternalIdentityBinding</c> (reads it to resolve a principal) and
+/// <c>ExternalIdentityProviders.ClaimMapped.ClaimMappedProvisioner</c> (writes it after JIT
+/// provisioning) need this record, and Authentication already references ExternalIdentityProviders
+/// (to reach the provisioner chain on an unbound subject) — the record has to live on the side that
+/// doesn't create a cycle.
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
