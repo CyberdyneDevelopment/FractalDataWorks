@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions.Caching;
 using Fdw.Data;
+using Fdw.Data.Abstractions;
 using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Data;
@@ -118,6 +119,56 @@ public class LineageConfigurationProvider
 
         var result = await resolved
             .Execute<IEnumerable<T>>(command, new DataStoreTarget(DataStoreName, pathName, containerName), cancellationToken)
+            .ConfigureAwait(false);
+
+        return result.IsSuccess && result.Value is { } rows ? rows.ToList() : [];
+    }
+
+    /// <summary>
+    /// Reads the transitive closure of one DataSet's lineage from <c>data.DataSetLineageClosure</c>,
+    /// filtered to one direction.
+    /// </summary>
+    /// <param name="dataSetId">The DataSet whose lineage is read.</param>
+    /// <param name="direction">
+    /// <see cref="LineageClosureDirection.Downstream"/> filters on AncestorId, returning everything
+    /// downstream of <paramref name="dataSetId"/>; <see cref="LineageClosureDirection.Upstream"/>
+    /// filters on DescendantId, returning everything upstream of it.
+    /// </param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <remarks>
+    /// Filtered rather than reading the whole closure: the view is already the transitive closure
+    /// over every DataSet, and reading it unfiltered would just move the whole-container problem this
+    /// provider exists to avoid from <c>DataSetSource</c> onto this view instead.
+    /// </remarks>
+    public virtual async Task<IReadOnlyList<DataSetLineageClosureRow>> ReadLineageClosure(
+        Guid dataSetId,
+        LineageClosureDirection direction,
+        CancellationToken cancellationToken = default)
+    {
+        var gateway = _gatewayProvider.Get(DataStoreName);
+        if (gateway.IsFailure || gateway.Value is not { } resolved)
+            return [];
+
+        var propertyName = direction == LineageClosureDirection.Downstream
+            ? nameof(DataSetLineageClosureRow.AncestorId)
+            : nameof(DataSetLineageClosureRow.DescendantId);
+
+        var command = new QueryCommand<DataSetLineageClosureRow>
+        {
+            Filter = new FilterExpression
+            {
+                Root = new FilterCondition
+                {
+                    PropertyName = propertyName,
+                    Operator = FilterOperators.ByName("Equal"),
+                    Value = dataSetId,
+                },
+            },
+        };
+
+        var result = await resolved
+            .Execute<IEnumerable<DataSetLineageClosureRow>>(
+                command, new DataStoreTarget(DataStoreName, "data", "DataSetLineageClosure"), cancellationToken)
             .ConfigureAwait(false);
 
         return result.IsSuccess && result.Value is { } rows ? rows.ToList() : [];

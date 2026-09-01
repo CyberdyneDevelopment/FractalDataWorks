@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Logging;
 using Fdw.Services.Configuration;
@@ -26,24 +28,20 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
         AuthenticationFlowConfiguration, AuthenticationFlowConfigurationCommand> _flows;
     private readonly ImplementationConfigurationProviderBase<
         AuthenticationFlowStepConfiguration, AuthenticationFlowStepConfigurationCommand> _steps;
-    private readonly AuthenticationStepResolver _resolver;
     private readonly ConcurrentDictionary<string, AuthenticationFlow> _cache = new(StringComparer.Ordinal);
     private readonly ILogger<AuthenticationFlowProvider> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="AuthenticationFlowProvider"/> class.</summary>
     /// <param name="flows">Reads the flow rows.</param>
     /// <param name="steps">Reads their step rows.</param>
-    /// <param name="resolver">Validates that each flow's steps exist and are ordered correctly.</param>
     /// <param name="logger">The logger.</param>
     public AuthenticationFlowProvider(
         ImplementationConfigurationProviderBase<AuthenticationFlowConfiguration, AuthenticationFlowConfigurationCommand> flows,
         ImplementationConfigurationProviderBase<AuthenticationFlowStepConfiguration, AuthenticationFlowStepConfigurationCommand> steps,
-        AuthenticationStepResolver resolver,
         ILogger<AuthenticationFlowProvider>? logger = null)
     {
         _flows = flows ?? throw new ArgumentNullException(nameof(flows));
         _steps = steps ?? throw new ArgumentNullException(nameof(steps));
-        _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
         _logger = logger ?? NullLogger<AuthenticationFlowProvider>.Instance;
     }
 
@@ -99,7 +97,7 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
                 MinimumAcr = row.MinimumAcr,
             };
 
-            var valid = _resolver.Validate(flow);
+            var valid = Validate(flow);
             if (valid.IsFailure)
                 return valid;
 
@@ -108,6 +106,37 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
         }
 
         FlowProviderLog.FlowsLoaded(_logger, _cache.Count);
+        return GenericResult.Success();
+    }
+
+    /// <summary>Checks that every step a flow names exists and that the order satisfies each one.</summary>
+    /// <param name="flow">The flow to check.</param>
+    /// <remarks>
+    /// Run when configuration loads, so a flow naming a step whose package is absent — or ordering
+    /// two steps wrongly — fails at startup with the missing thing named, rather than at 3am on
+    /// someone's login. The collection answers by name and what it returns IS the step, so its
+    /// declarations are read straight off it.
+    /// </remarks>
+    private IGenericResult Validate(AuthenticationFlow flow)
+    {
+        var established = new HashSet<ContextElement>();
+
+        foreach (var stepName in flow.Steps)
+        {
+            if (AuthenticationStepTypes.ByName(stepName) is not IAuthenticationStep step)
+                return GenericResult.Failure(FlowProviderLog.StepNotAvailable(
+                    _logger, flow.Name, stepName,
+                    string.Join(", ", AuthenticationStepTypes.Options.Select(o => o.Name))));
+
+            var missing = step.Requires.Where(r => !established.Contains(r)).ToList();
+            if (missing.Count > 0)
+                return GenericResult.Failure(FlowProviderLog.OrderInvalid(
+                    _logger, flow.Name, stepName, string.Join(", ", missing)));
+
+            foreach (var contributed in step.Contributes)
+                established.Add(contributed);
+        }
+
         return GenericResult.Success();
     }
 }

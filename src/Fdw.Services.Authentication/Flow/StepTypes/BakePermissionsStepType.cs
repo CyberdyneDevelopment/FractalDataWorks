@@ -1,49 +1,58 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Abstractions;
+using Fdw.Collections;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Logging;
 using Fdw.Services.Authorization.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Fdw.Services.Authentication.Steps;
+namespace Fdw.Services.Authentication.Flow.StepTypes;
 
 /// <summary>
 /// Resolves what the principal may do and states it on the context, for the token to carry.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Separate from <see cref="AuthorizeIssuanceStep"/> deliberately: that step answers whether a token
-/// may be issued at all, this one gathers what the token asserts. Folding them together would make
-/// one step contribute both a decision and a claim set, and the reason to refuse issuance has
-/// nothing to do with the permissions a permitted caller turns out to hold.
-/// </para>
-/// <para>
-/// Baking at issuance rather than resolving per request is what lets a resource server authorize
-/// from the token alone. The cost is that a permission change does not reach a token already
-/// minted — it takes effect when the next one is, which is what the token's lifetime bounds.
-/// </para>
+/// The option IS the step: a flow names it, the collection answers by that name, and what answers
+/// is the thing that runs.
 /// </remarks>
-public sealed class BakePermissionsStep : IAuthenticationStep
+[ExcludeFromCodeCoverage]
+[ServiceTypeOption(typeof(AuthenticationStepTypes), "BakePermissions")]
+public sealed class BakePermissionsStepType
+    : AuthenticationStepTypeBase<IGenericService, IServiceFactory<IGenericService, IServiceConfiguration>>,
+      IAuthenticationStep
 {
-    private readonly IEffectivePermissionResolver _permissions;
-    private readonly ILogger<BakePermissionsStep> _logger;
+    // Captured when the host is built: an option is created by its module initializer, which needs
+    // a parameterless constructor, so what it needs arrives where a live container exists.
+    private IEffectivePermissionResolver? _permissions;
+    private ILogger _logger = NullLogger<BakePermissionsStepType>.Instance;
 
-    /// <summary>Initializes a new instance of the <see cref="BakePermissionsStep"/> class.</summary>
-    /// <param name="permissions">Resolves a principal's effective permissions.</param>
-    /// <param name="logger">The logger.</param>
-    public BakePermissionsStep(
-        IEffectivePermissionResolver permissions,
-        ILogger<BakePermissionsStep>? logger = null)
+    /// <summary>Initializes a new instance of the <see cref="BakePermissionsStepType"/> class.</summary>
+    public BakePermissionsStepType()
+        : base("BakePermissions",
+               "AuthenticationSteps",
+               "Bake Permissions",
+               "Resolves the principal's effective permissions and states them for the token to carry")
     {
-        _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-        _logger = logger ?? NullLogger<BakePermissionsStep>.Instance;
+        Initialization((host, loggerFactory) =>
+        {
+            _permissions = host.Services.GetRequiredService<IEffectivePermissionResolver>();
+            _logger = loggerFactory?.CreateLogger<BakePermissionsStepType>()
+                ?? NullLogger<BakePermissionsStepType>.Instance;
+
+            return GenericResult<IHost>.Success(host);
+        });
     }
 
     /// <inheritdoc />
@@ -60,6 +69,11 @@ public sealed class BakePermissionsStep : IAuthenticationStep
     public async Task<IGenericResult<StepOutcome>> Execute(
         AuthenticationContext context, CancellationToken cancellationToken = default)
     {
+        // Baking nothing would hand out a token carrying no permissions, which reads downstream as
+        // a caller who may do nothing rather than as a step that never ran.
+        if (_permissions is null)
+            return GenericResult<StepOutcome>.Failure(PermissionBakingLog.NotInitialized(_logger, Name));
+
         var principal = context.Principal!;
 
         var resolved = await _permissions

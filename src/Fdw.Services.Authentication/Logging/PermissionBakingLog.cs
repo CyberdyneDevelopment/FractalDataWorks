@@ -23,5 +23,13 @@ internal static partial class PermissionBakingLog
     [MessageLogging(EventId = 91245, Level = LogLevel.Trace,
         Message = "Baked {count} permission(s) for principal {principalId}")]
     internal static partial IGenericMessage Baked(
-        ILogger<BakePermissionsStep> logger, Guid principalId, int count);
+        ILogger logger, Guid principalId, int count);
+
+    /// <summary>Logs a step asked to run before its Initialize captured what it needs.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="stepName">The step the flow named.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 91246, Level = LogLevel.Error,
+        Message = "Step '{stepName}' ran before its dependencies were captured, so it cannot do its work. The option's Initialize phase did not run, which means the host was not fully initialized before a flow reached this step")]
+    internal static partial IGenericMessage NotInitialized(ILogger logger, string stepName);
 }

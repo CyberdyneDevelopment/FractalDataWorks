@@ -64,15 +64,6 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
         {
             collectOptions?.Invoke(builder, loggerFactory);
 
-            // Scoped, not singleton: it resolves steps from the scope it was built in, and steps
-            // read through providers that are themselves scoped. The name-to-type map it consults
-            // is static, so scoping the resolver costs a lookup rather than a re-registration.
-            builder.Services.TryAddScoped<AuthenticationStepResolver>(sp =>
-                new AuthenticationStepResolver(sp, sp.GetService<ILogger<AuthenticationStepResolver>>()));
-
-            builder.Services.TryAddScoped<IAuthenticationStepResolver>(sp =>
-                sp.GetRequiredService<AuthenticationStepResolver>());
-
             builder.Services.TryAddSingleton<IAcrPolicy, StandardAcrPolicy>();
 
             // What the shipped steps take beyond their own registration. A step is activated on
@@ -127,6 +118,11 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             // The presented token comes off the request, so this follows the request scope.
             builder.Services.TryAddScoped<IForeignTokenAccessor, HttpForeignTokenAccessor>();
 
+            // The code and state the provider's redirect carries back are also request-scoped, and
+            // reading them off the query string is the same for every OIDC provider - only the
+            // authority a flow sends the caller to is vendor-specific.
+            builder.Services.TryAddScoped<IOidcCallbackAccessor, HttpOidcCallbackAccessor>();
+
             // Singleton because it caches the authority's keys across requests and refreshes them
             // on its own schedule; a scoped one would re-fetch per request and lose the point.
             builder.Services.TryAddSingleton<ISigningKeyProvider>(sp =>
@@ -140,21 +136,14 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
                         AuthenticationFlowConfiguration, AuthenticationFlowConfigurationCommand>>(),
                     sp.GetRequiredService<ImplementationConfigurationProviderBase<
                         AuthenticationFlowStepConfiguration, AuthenticationFlowStepConfigurationCommand>>(),
-                    sp.GetRequiredService<AuthenticationStepResolver>(),
                     sp.GetService<ILogger<AuthenticationFlowProvider>>()));
-
-            // The steps this domain ships. Scoped because each reads through providers that are,
-            // and registered by name here so a flow row naming one resolves to it.
-            builder.Services.TryAddScoped<PasswordCredentialStep>();
-            builder.Services.TryAddScoped<BakePermissionsStep>();
-            builder.Services.TryAddScoped<AuthorizeIssuanceStep>();
-            builder.Services.TryAddScoped<ResolvePrincipalStep>();
 
             builder.Services.TryAddSingleton<IPasswordCredentialAccessor, HttpPasswordCredentialAccessor>();
             builder.Services.AddHttpContextAccessor();
 
             builder.Services.TryAddScoped(sp => new AuthenticationRunner(
-                sp.GetRequiredService<IAuthenticationStepResolver>(),
+                // The collection IS the registry: a name resolves to the option that declared it.
+                name => AuthenticationStepTypes.ByName(name) as IAuthenticationStep,
                 sp.GetRequiredService<IAcrPolicy>(),
                 sp.GetRequiredService<ITokenIssuer>(),
                 sp.GetRequiredService<IAuthenticationExecutionStore>(),
@@ -164,44 +153,6 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
-        // Why Initialize and not Register: a step is resolved per request but named once, and the
-        // resolver holding the names is a singleton. Registering the names here - after the
-        // container exists - is what lets a scoped step be reached from it without the resolver
-        // capturing a scope it would outlive.
-        Initialization((host, loggerFactory) =>
-        {
-            // A scope, because the resolver is scoped. Registration only writes the static
-            // name-to-type map, so this scope exists to construct the resolver and nothing else.
-            using var scope = host.Services.CreateScope();
-            var resolver = scope.ServiceProvider.GetRequiredService<AuthenticationStepResolver>();
-
-            // Named for what the step does, not for its class. A flow row names the behaviour it
-            // wants; which type provides it is this registration's business.
-            var registered = resolver.Register("PasswordCredential", typeof(PasswordCredentialStep));
-
-            if (registered.IsFailure)
-                return registered.ToNewResult<IHost>();
-
-            registered = resolver.Register("BakePermissions", typeof(BakePermissionsStep));
-
-            if (registered.IsFailure)
-                return registered.ToNewResult<IHost>();
-
-            registered = resolver.Register("AuthorizeIssuance", typeof(AuthorizeIssuanceStep));
-
-            if (registered.IsFailure)
-                return registered.ToNewResult<IHost>();
-
-            registered = resolver.Register("ResolvePrincipal", typeof(ResolvePrincipalStep));
-
-            // ForeignToken is deliberately NOT registered here. The step is generic, but the thing
-            // that makes it usable is a named authority and the terms it is trusted on, which is a
-            // vendor implementation - the same reason a secret manager kind lives in a reference
-            // package rather than in the framework. It registers itself from there.
-            return registered.IsFailure
-                ? registered.ToNewResult<IHost>()
-                : GenericResult<IHost>.Success(host);
-        });
     }
 
     /// <summary>

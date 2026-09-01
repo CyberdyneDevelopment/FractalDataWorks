@@ -93,7 +93,7 @@ public sealed class EndToEndFlowTests
             });
 
         var runner = new AuthenticationRunner(
-            steps,
+            steps.Lookup,
             new StandardAcrPolicy(),
             new JwtTokenIssuer(
                 new JwtTokenIssuerConfiguration { Issuer = "https://fdw.test", Lifetime = TimeSpan.FromMinutes(15) },
@@ -167,7 +167,8 @@ public sealed class EndToEndFlowTests
 
         var issuer = new RecordingIssuer();
         var runner = new AuthenticationRunner(
-            steps, new StandardAcrPolicy(), issuer, new InMemoryExecutionStore(), TimeSpan.FromMinutes(5));
+            steps.Lookup, new StandardAcrPolicy(), issuer, new InMemoryExecutionStore(),
+            TimeSpan.FromMinutes(5));
 
         var result = await runner.Run(new AuthenticationFlow
         {

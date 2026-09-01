@@ -15,6 +15,8 @@ namespace Fdw.Services.Authentication.Tests.Flow;
 /// <summary>A step that does whatever the test tells it to, including things it should not.</summary>
 internal sealed class HostileStep : IAuthenticationStep
 {
+    public string Name { get; init; } = "Hostile";
+
     public IReadOnlyList<ContextElement> Requires { get; init; } = [];
 
     public IReadOnlyList<ContextElement> Contributes { get; init; } = [];
@@ -27,7 +29,12 @@ internal sealed class HostileStep : IAuthenticationStep
         => Task.FromResult(GenericResult<StepOutcome>.Success(Behaviour(context)));
 }
 
-internal sealed class NamedSteps : IAuthenticationStepResolver
+/// <summary>
+/// The steps a test's flow can name. In production the collection answers this — an option joined
+/// it by being referenced — but the runner's invariants are about what it does with a step's own
+/// declarations, so proving them needs steps that differ per case.
+/// </summary>
+internal sealed class NamedSteps
 {
     private readonly Dictionary<string, IAuthenticationStep> _steps = new(StringComparer.Ordinal);
 
@@ -37,10 +44,9 @@ internal sealed class NamedSteps : IAuthenticationStepResolver
         return this;
     }
 
-    public IGenericResult<IAuthenticationStep> Resolve(string stepName)
-        => _steps.TryGetValue(stepName, out var s)
-            ? GenericResult<IAuthenticationStep>.Success(s)
-            : GenericResult<IAuthenticationStep>.Failure(ServicesResultCodes.ByName("ConfigurationNotFound"));
+    /// <summary>Reads as the runner reads the collection: a name in, a step or nothing out.</summary>
+    public IAuthenticationStep? Lookup(string stepName)
+        => _steps.TryGetValue(stepName, out var s) ? s : null;
 }
 
 /// <summary>Counts methods. Two or more is "strong", one is "weak", none is null.</summary>

@@ -21,7 +21,7 @@ internal static partial class StepLog
     /// <param name="issuer">The authority that asserted them.</param>
     [MessageLogging(EventId = 91140, Level = LogLevel.Warning,
         Message = "A subject asserted by '{issuer}' is bound to no local principal")]
-    internal static partial IGenericMessage NoBinding(ILogger<ResolvePrincipalStep> logger, string issuer);
+    internal static partial IGenericMessage NoBinding(ILogger logger, string issuer);
 
     /// <summary>A subject was resolved to a local principal.</summary>
     /// <param name="logger">The logger.</param>
@@ -30,7 +30,7 @@ internal static partial class StepLog
     [MessageLogging(EventId = 91141, Level = LogLevel.Trace,
         Message = "Subject asserted by '{issuer}' resolved to principal {principalId}")]
     internal static partial IGenericMessage PrincipalResolved(
-        ILogger<ResolvePrincipalStep> logger, string issuer, Guid principalId);
+        ILogger logger, string issuer, Guid principalId);
 
     /// <summary>Eligibility for issuance was decided.</summary>
     /// <param name="logger">The logger.</param>
@@ -40,5 +40,13 @@ internal static partial class StepLog
     [MessageLogging(EventId = 91142, Level = LogLevel.Trace,
         Message = "Principal {principalId} issuance permitted={permitted}: {reason}")]
     internal static partial IGenericMessage EligibilityDecided(
-        ILogger<AuthorizeIssuanceStep> logger, Guid principalId, bool permitted, string reason);
+        ILogger logger, Guid principalId, bool permitted, string reason);
+
+    /// <summary>Logs a step asked to run before its Initialize captured what it needs.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="stepName">The step the flow named.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 91143, Level = LogLevel.Error,
+        Message = "Step '{stepName}' ran before its dependencies were captured, so it cannot do its work. The option's Initialize phase did not run, which means the host was not fully initialized before a flow reached this step")]
+    internal static partial IGenericMessage NotInitialized(ILogger logger, string stepName);
 }

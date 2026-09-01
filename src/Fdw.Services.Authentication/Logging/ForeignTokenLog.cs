@@ -21,7 +21,7 @@ internal static partial class ForeignTokenLog
     /// <param name="issuer">The authority that issued it.</param>
     [MessageLogging(EventId = 91160, Level = LogLevel.Trace,
         Message = "A token issued by '{issuer}' was accepted")]
-    internal static partial IGenericMessage Accepted(ILogger<ForeignTokenStep> logger, string issuer);
+    internal static partial IGenericMessage Accepted(ILogger logger, string issuer);
 
     /// <summary>No token was presented for a step that requires one.</summary>
     /// <param name="logger">The logger.</param>
@@ -29,7 +29,7 @@ internal static partial class ForeignTokenLog
     [MessageLogging(EventId = 91161, Level = LogLevel.Warning,
         Message = "No token was presented for the flow expecting one issued by '{issuer}'")]
     internal static partial IGenericMessage NoTokenPresented(
-        ILogger<ForeignTokenStep> logger, string issuer);
+        ILogger logger, string issuer);
 
     /// <summary>A presented token failed validation.</summary>
     /// <param name="logger">The logger.</param>
@@ -38,7 +38,7 @@ internal static partial class ForeignTokenLog
     [MessageLogging(EventId = 91162, Level = LogLevel.Warning,
         Message = "A token claiming issuer '{issuer}' was rejected: {failure}")]
     internal static partial IGenericMessage Rejected(
-        ILogger<ForeignTokenStep> logger, string issuer, string failure);
+        ILogger logger, string issuer, string failure);
 
     /// <summary>A valid token carried no subject.</summary>
     /// <param name="logger">The logger.</param>
@@ -46,5 +46,5 @@ internal static partial class ForeignTokenLog
     [MessageLogging(EventId = 91163, Level = LogLevel.Error,
         Message = "A token from '{issuer}' verified but carried no subject claim")]
     internal static partial IGenericMessage NoSubjectClaim(
-        ILogger<ForeignTokenStep> logger, string issuer);
+        ILogger logger, string issuer);
 }

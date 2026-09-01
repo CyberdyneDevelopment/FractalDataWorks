@@ -69,4 +69,26 @@ internal static partial class FlowProviderLog
     [MessageLogging(EventId = 91233, Level = LogLevel.Error,
         Message = "A flow name must be supplied")]
     internal static partial IGenericMessage NameMissing(ILogger<AuthenticationFlowProvider> logger);
+
+    /// <summary>Logs a flow naming a step no option answers to.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="flowName">The flow.</param>
+    /// <param name="stepName">The step it named.</param>
+    /// <param name="known">The steps that are available.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 91237, Level = LogLevel.Error,
+        Message = "Flow '{flowName}' names step '{stepName}' and no option answers to it. Available: {known}. An option joins the collection by being referenced, so this is usually a missing package rather than a wrong name")]
+    internal static partial IGenericMessage StepNotAvailable(
+        ILogger logger, string flowName, string stepName, string known);
+
+    /// <summary>Logs a flow whose steps are ordered so one runs before what it needs exists.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="flowName">The flow.</param>
+    /// <param name="stepName">The step that would run too early.</param>
+    /// <param name="missing">What it needs that nothing before it establishes.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 91238, Level = LogLevel.Error,
+        Message = "Flow '{flowName}' runs step '{stepName}' before {missing} exists. Each step declares what it requires and what it contributes, and the order has to satisfy that — caught here, when configuration loads, rather than at someone's login")]
+    internal static partial IGenericMessage OrderInvalid(
+        ILogger logger, string flowName, string stepName, string missing);
 }

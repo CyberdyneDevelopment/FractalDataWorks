@@ -1,17 +1,23 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Abstractions;
+using Fdw.Collections;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Logging;
 using Fdw.Services.Users;
 using Fdw.Services.Users.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Fdw.Services.Authentication.Steps;
+namespace Fdw.Services.Authentication.Flow.StepTypes;
 
 /// <summary>
 /// Proves a caller by the password they hold, against this platform's own credential store.
@@ -19,17 +25,26 @@ namespace Fdw.Services.Authentication.Steps;
 /// <remarks>
 /// <para>
 /// The one step that both proves and identifies. Every federated step splits those in two — an
-/// authority proves a subject, and <see cref="ResolvePrincipalStep"/> binds that subject to a
-/// principal — because the authority does not know our principals. Here the credential is checked
-/// against a row that already IS the principal, so a binding step would have nothing to look up.
+/// authority proves a subject, and the ResolvePrincipal step binds that subject to a principal —
+/// because the authority does not know our principals. Here the credential is checked against a row
+/// that already IS the principal, so a binding step would have nothing to look up.
 /// </para>
 /// <para>
 /// The password reaches this step and stops here. It is read from the accessor at the moment of
 /// verification and never contributed: a credential on the context is a credential every later step
 /// can read and anything logging the context can print.
 /// </para>
+/// <para>
+/// The option IS the step. A flow names it, the collection answers by that name, and what answers
+/// is the thing that runs — so there is no second mapping from a name to a type to keep in step
+/// with this one.
+/// </para>
 /// </remarks>
-public sealed class PasswordCredentialStep : IAuthenticationStep
+[ExcludeFromCodeCoverage]
+[ServiceTypeOption(typeof(AuthenticationStepTypes), "PasswordCredential")]
+public sealed class PasswordCredentialStepType
+    : AuthenticationStepTypeBase<IGenericService, IServiceFactory<IGenericService, IServiceConfiguration>>,
+      IAuthenticationStep
 {
     /// <summary>The issuer recorded for a subject this platform proved itself.</summary>
     /// <remarks>
@@ -38,30 +53,35 @@ public sealed class PasswordCredentialStep : IAuthenticationStep
     /// </remarks>
     public const string LocalIssuer = "local";
 
-    private readonly UserConfigurationProvider _users;
-    private readonly IUserCredentialService _credentials;
-    private readonly IPasswordCredentialAccessor _presented;
-    private readonly ITenantResolver _tenants;
-    private readonly ILogger<PasswordCredentialStep> _logger;
+    // Captured when the host is built rather than taken through the constructor: an option is
+    // created by its module initializer, which needs a parameterless constructor, so what it needs
+    // arrives in Initialize where a live container exists.
+    private UserConfigurationProvider? _users;
+    private IUserCredentialService? _credentials;
+    private IPasswordCredentialAccessor? _presented;
+    private ITenantResolver? _tenants;
+    private ILogger _logger = NullLogger<PasswordCredentialStepType>.Instance;
 
-    /// <summary>Initializes a new instance of the <see cref="PasswordCredentialStep"/> class.</summary>
-    /// <param name="users">Resolves a username to a user record.</param>
-    /// <param name="credentials">Verifies the presented password.</param>
-    /// <param name="presented">Supplies what the caller presented.</param>
-    /// <param name="tenants">Supplies the tenant the resolved user belongs to.</param>
-    /// <param name="logger">The logger.</param>
-    public PasswordCredentialStep(
-        UserConfigurationProvider users,
-        IUserCredentialService credentials,
-        IPasswordCredentialAccessor presented,
-        ITenantResolver tenants,
-        ILogger<PasswordCredentialStep>? logger = null)
+    /// <summary>Initializes a new instance of the <see cref="PasswordCredentialStepType"/> class.</summary>
+    public PasswordCredentialStepType()
+        : base("PasswordCredential",
+               "AuthenticationSteps",
+               "Password Credential",
+               "Verifies a username and password against this host's own credential store")
     {
-        _users = users ?? throw new ArgumentNullException(nameof(users));
-        _credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
-        _presented = presented ?? throw new ArgumentNullException(nameof(presented));
-        _tenants = tenants ?? throw new ArgumentNullException(nameof(tenants));
-        _logger = logger ?? NullLogger<PasswordCredentialStep>.Instance;
+        Initialization((host, loggerFactory) =>
+        {
+            var services = host.Services;
+
+            _users = services.GetRequiredService<UserConfigurationProvider>();
+            _credentials = services.GetRequiredService<IUserCredentialService>();
+            _presented = services.GetRequiredService<IPasswordCredentialAccessor>();
+            _tenants = services.GetRequiredService<ITenantResolver>();
+            _logger = loggerFactory?.CreateLogger<PasswordCredentialStepType>()
+                ?? NullLogger<PasswordCredentialStepType>.Instance;
+
+            return GenericResult<IHost>.Success(host);
+        });
     }
 
     /// <inheritdoc />
@@ -78,6 +98,11 @@ public sealed class PasswordCredentialStep : IAuthenticationStep
     public async Task<IGenericResult<StepOutcome>> Execute(
         AuthenticationContext context, CancellationToken cancellationToken = default)
     {
+        // An option whose Initialize never ran has nothing to verify against, and admitting a caller
+        // on that basis would be the worst possible reading of a missing dependency.
+        if (_users is null || _credentials is null || _presented is null || _tenants is null)
+            return GenericResult<StepOutcome>.Failure(PasswordCredentialLog.NotInitialized(_logger, Name));
+
         var username = _presented.Username;
         var password = _presented.Password;
 

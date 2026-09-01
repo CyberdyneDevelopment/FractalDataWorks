@@ -23,7 +23,7 @@ internal static partial class PasswordCredentialLog
     [MessageLogging(EventId = 91240, Level = LogLevel.Trace,
         Message = "Password accepted for principal {principalId}")]
     internal static partial IGenericMessage Proved(
-        ILogger<PasswordCredentialStep> logger, Guid principalId);
+        ILogger logger, Guid principalId);
 
     /// <summary>The credential was refused.</summary>
     /// <param name="logger">The logger.</param>
@@ -35,11 +35,19 @@ internal static partial class PasswordCredentialLog
     [MessageLogging(EventId = 91241, Level = LogLevel.Information,
         Message = "Refused the credential presented for '{username}'")]
     internal static partial IGenericMessage Refused(
-        ILogger<PasswordCredentialStep> logger, string username);
+        ILogger logger, string username);
 
     /// <summary>The caller presented no credential to check.</summary>
     /// <param name="logger">The logger.</param>
     [MessageLogging(EventId = 91242, Level = LogLevel.Information,
         Message = "A username and password are required to prove a caller by password")]
-    internal static partial IGenericMessage NothingPresented(ILogger<PasswordCredentialStep> logger);
+    internal static partial IGenericMessage NothingPresented(ILogger logger);
+
+    /// <summary>Logs a step asked to run before its Initialize captured what it needs.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="stepName">The step the flow named.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 91243, Level = LogLevel.Error,
+        Message = "Step '{stepName}' ran before its dependencies were captured, so it cannot do its work. The option's Initialize phase did not run, which means the host was not fully initialized before a flow reached this step")]
+    internal static partial IGenericMessage NotInitialized(ILogger logger, string stepName);
 }

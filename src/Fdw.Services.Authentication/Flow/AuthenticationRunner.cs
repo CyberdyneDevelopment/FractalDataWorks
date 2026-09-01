@@ -26,12 +26,17 @@ namespace Fdw.Services.Authentication.Flow;
 /// </remarks>
 public sealed class AuthenticationRunner
 {
-    private readonly IAuthenticationStepResolver _steps;
     private readonly IAcrPolicy _acrPolicy;
     private readonly ITokenIssuer _issuer;
     private readonly IAuthenticationExecutionStore _executions;
     private readonly TimeSpan _executionLifetime;
     private readonly ILogger<AuthenticationRunner> _logger;
+
+    // How a name becomes a step. Defaults to the collection, which is the registry — a delegate
+    // rather than an injected service because there is nothing to register: the only reason it is
+    // a parameter at all is that the runner's invariants are about what it does with a step's
+    // declarations, and proving those needs steps that vary per test.
+    private readonly Func<string, IAuthenticationStep?> _step;
 
     /// <summary>Initializes a new instance of the <see cref="AuthenticationRunner"/> class.</summary>
     /// <param name="steps">Resolves a step by the name a flow gives.</param>
@@ -39,20 +44,25 @@ public sealed class AuthenticationRunner
     /// <param name="issuer">Mints the token once the terminal check passes.</param>
     /// <param name="executions">Holds a suspended flow between the redirect and the return.</param>
     /// <param name="executionLifetime">How long a suspended flow stays resumable.</param>
+    /// <param name="step">
+    /// How a name becomes a step. Supplied rather than defaulted: the registration hands over the
+    /// collection, which is the registry, and a test hands over steps that vary per case — which is
+    /// what proving this runner's invariants requires.
+    /// </param>
     /// <param name="logger">The logger.</param>
     public AuthenticationRunner(
-        IAuthenticationStepResolver steps,
         IAcrPolicy acrPolicy,
         ITokenIssuer issuer,
         IAuthenticationExecutionStore executions,
         TimeSpan executionLifetime,
+        Func<string, IAuthenticationStep?> step,
         ILogger<AuthenticationRunner>? logger = null)
     {
-        _steps = steps ?? throw new ArgumentNullException(nameof(steps));
         _acrPolicy = acrPolicy ?? throw new ArgumentNullException(nameof(acrPolicy));
         _issuer = issuer ?? throw new ArgumentNullException(nameof(issuer));
         _executions = executions ?? throw new ArgumentNullException(nameof(executions));
         _executionLifetime = executionLifetime;
+        _step = step ?? throw new ArgumentNullException(nameof(step));
         _logger = logger ?? NullLogger<AuthenticationRunner>.Instance;
     }
 
@@ -95,11 +105,15 @@ public sealed class AuthenticationRunner
 
         for (var i = startAt; i < flow.Steps.Count; i++)
         {
-            var resolved = _steps.Resolve(flow.Steps[i]);
-            if (resolved.IsFailure)
-                return resolved.ToNewResult<FlowResult>();
-
-            var step = resolved.Value!;
+            // The collection is the registry: an option joined it by declaring itself, and ByName
+            // is how every other domain selects one. A name nothing answers to is a flow naming a
+            // step whose package is not referenced.
+            // The collection answers by name and what it returns IS the step. A flow that reached
+            // here was validated when configuration loaded, so a miss now means the collection
+            // changed under a cached flow rather than a mis-typed row.
+            if (_step(flow.Steps[i]) is not { } step)
+                return GenericResult<FlowResult>.Failure(
+                    RunnerLog.StepNotAvailable(_logger, flow.Steps[i]));
             RunnerLog.StepExecuting(_logger, flow.Name, flow.Steps[i], i);
 
             // I3 — enforced here and not only when the configuration loaded, because a step that

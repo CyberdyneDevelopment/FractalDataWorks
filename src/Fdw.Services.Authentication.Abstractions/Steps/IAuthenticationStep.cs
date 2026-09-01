@@ -16,6 +16,14 @@ namespace Fdw.Services.Authentication.Abstractions.Steps;
 /// </remarks>
 public interface IAuthenticationStep
 {
+    /// <summary>Gets the name a flow selects this step by.</summary>
+    /// <remarks>
+    /// The step names itself, so a flow row and the step it selects agree without a registry
+    /// between them holding the mapping. Two steps claiming one name is a conflict a host must
+    /// resolve rather than something order decides.
+    /// </remarks>
+    string Name { get; }
+
     /// <summary>Gets what must already be established for this step to run.</summary>
     /// <remarks>
     /// Checked when a flow's configuration loads, so a misordered flow fails at startup with the

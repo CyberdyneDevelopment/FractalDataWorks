@@ -7,7 +7,7 @@ using Fdw.Services.Abstractions;
 namespace Fdw.Services.Authentication.Abstractions;
 
 /// <summary>
-/// Reads the authentication services a host trusts, from <c>auth.AuthenticationService</c>.
+/// Reads the authentication services a host trusts, from <c>auth.Authentication</c>.
 /// </summary>
 /// <remarks>
 /// Named rather than a bare closed generic: a constructor asking for this states which rows it reads.

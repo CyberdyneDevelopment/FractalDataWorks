@@ -1,18 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using Fdw.Services.Authentication.Abstractions;
 
 namespace Fdw.Services.Authentication.Steps;
 
 /// <summary>
-/// Which external authority a <see cref="ForeignTokenStep"/> will trust, and on what terms.
+/// Which external authority the ForeignToken step will trust, and on what terms.
 /// </summary>
 /// <remarks>
 /// One instance per provider. Entra, Auth0 and Authentik are all OIDC, so they are this same step
 /// configured three times rather than three steps.
 /// </remarks>
 [ExcludeFromCodeCoverage]
-public sealed record ForeignTokenStepConfiguration
+public sealed record ForeignTokenStepConfiguration : IForeignAuthorityConfiguration
 {
     /// <summary>Gets the issuer, exactly as it appears in the token's <c>iss</c> claim.</summary>
     /// <remarks>
@@ -44,7 +45,7 @@ public sealed record ForeignTokenStepConfiguration
     /// Thirty seconds, not the five minutes Microsoft's handler defaults to — five means a revoked
     /// or expired token keeps working for five more.
     /// </remarks>
-    public TimeSpan ClockSkew { get; init; } = TimeSpan.FromSeconds(30);
+    public required TimeSpan ClockSkew { get; init; }
 
     /// <summary>Gets the RFC 8176 methods this provider is trusted to assert.</summary>
     /// <remarks>
