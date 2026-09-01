@@ -8,8 +8,11 @@ public sealed class CreateScheduleCommand : SchedulingCommandBase
 {
     /// <summary>Initializes a new instance of the <see cref="CreateScheduleCommand"/> class.</summary>
     /// <param name="schedule">The schedule to create.</param>
-    public CreateScheduleCommand(IGenericSchedule schedule)
-        : base("Create")
+    /// <param name="dataStoreName">The connection the owning scheduler reads and writes.</param>
+    /// <param name="pathName">The schema the owning scheduler reads and writes.</param>
+    /// <param name="scheduleContainerName">The container the owning scheduler's schedules live in.</param>
+    public CreateScheduleCommand(IGenericSchedule schedule, string dataStoreName, string pathName, string scheduleContainerName)
+        : base("Create", dataStoreName, pathName, scheduleContainerName)
     {
         Schedule = schedule;
     }
