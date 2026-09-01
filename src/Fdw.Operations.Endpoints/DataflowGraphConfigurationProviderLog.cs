@@ -23,4 +23,7 @@ internal static partial class DataflowGraphConfigurationProviderLog
 
     [MessageLogging(EventId = 91001, Level = LogLevel.Error, Message = "Failed to load pipeline list for filter check")]
     public static partial IGenericMessage PipelineFilterCheckFailed(ILogger logger, Exception ex);
+
+    [MessageLogging(EventId = 91002, Level = LogLevel.Error, Message = "Configuration gateway '{dataStoreName}' is unavailable")]
+    public static partial IGenericMessage GatewayUnavailable(ILogger logger, string dataStoreName);
 }

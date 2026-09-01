@@ -66,7 +66,12 @@ public class DataflowGraphConfigurationProvider
     {
         var command = new QueryCommand<DataSetRecord>();
 
-        var result = await (await Gateway()).Value!.Execute<IEnumerable<DataSetRecord>>(
+        var gatewayResult = await Gateway().ConfigureAwait(false);
+        if (gatewayResult.IsFailure || gatewayResult.Value is not { } gateway)
+            return GenericResult<IReadOnlyList<DataSetRecord>>.Failure(
+                DataflowGraphConfigurationProviderLog.GatewayUnavailable(_logger, DataStoreName));
+
+        var result = await gateway.Execute<IEnumerable<DataSetRecord>>(
                 command, new DataStoreTarget(DataStoreName, DataPath, "DataSet"), cancellationToken)
             .ConfigureAwait(false);
 
@@ -84,7 +89,12 @@ public class DataflowGraphConfigurationProvider
     {
         var command = new QueryCommand<DataStoreRecord>();
 
-        var result = await (await Gateway()).Value!.Execute<IEnumerable<DataStoreRecord>>(
+        var gatewayResult = await Gateway().ConfigureAwait(false);
+        if (gatewayResult.IsFailure || gatewayResult.Value is not { } gateway)
+            return GenericResult<IReadOnlyList<DataStoreRecord>>.Failure(
+                DataflowGraphConfigurationProviderLog.GatewayUnavailable(_logger, DataStoreName));
+
+        var result = await gateway.Execute<IEnumerable<DataStoreRecord>>(
                 command, new DataStoreTarget(DataStoreName, DataPath, "DataStoreConfiguration"), cancellationToken)
             .ConfigureAwait(false);
 
@@ -102,7 +112,12 @@ public class DataflowGraphConfigurationProvider
     {
         var command = new QueryCommand<DataSetSourceConfiguration>();
 
-        var result = await (await Gateway()).Value!.Execute<IEnumerable<DataSetSourceConfiguration>>(
+        var gatewayResult = await Gateway().ConfigureAwait(false);
+        if (gatewayResult.IsFailure || gatewayResult.Value is not { } gateway)
+            return GenericResult<IReadOnlyList<DataSetSourceConfiguration>>.Failure(
+                DataflowGraphConfigurationProviderLog.GatewayUnavailable(_logger, DataStoreName));
+
+        var result = await gateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
                 command, new DataStoreTarget(DataStoreName, DataPath, "DataSetSource"), cancellationToken)
             .ConfigureAwait(false);
 
@@ -123,7 +138,12 @@ public class DataflowGraphConfigurationProvider
         {
             var command = new QueryCommand<System.Collections.Generic.Dictionary<string, object?>>();
 
-            var result = await (await Gateway()).Value!
+            var gatewayResult = await Gateway().ConfigureAwait(false);
+            if (gatewayResult.IsFailure || gatewayResult.Value is not { } gateway)
+                return GenericResult<bool>.Failure(
+                    DataflowGraphConfigurationProviderLog.GatewayUnavailable(_logger, DataStoreName));
+
+            var result = await gateway
                 .Execute<IEnumerable<System.Collections.Generic.Dictionary<string, object?>>>(
                     command, new DataStoreTarget(DataStoreName, PipePath, "Pipeline"), cancellationToken)
                 .ConfigureAwait(false);
