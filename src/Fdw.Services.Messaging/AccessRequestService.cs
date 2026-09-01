@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Messaging.Abstractions;
 using Fdw.Services.Messaging.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -19,13 +20,14 @@ namespace Fdw.Services.Messaging;
 /// </summary>
 public sealed class AccessRequestService : IAccessRequestService
 {
-    private const string DataStoreName = "OpsDb";
-    private const string PathName = "msg";
+    // The row's own name, not a store choice — see MessageService's identical constant.
+    private const string MessagingServiceName = "Messaging";
     private const string MessageContainer = "Message";
     private const string AccessRequestContainer = "AccessRequest";
 
     private readonly ILogger<AccessRequestService> _logger;
     private readonly IDataGateway _dataGateway;
+    private readonly IMessagingConfigurationProvider _messaging;
     private readonly IMessageService _messageService;
 
     /// <summary>
@@ -33,15 +35,36 @@ public sealed class AccessRequestService : IAccessRequestService
     /// </summary>
     /// <param name="logger">The logger instance.</param>
     /// <param name="dataGateway">The data gateway for access request data access.</param>
+    /// <param name="messaging">Resolves where this deployment keeps its messaging data.</param>
     /// <param name="messageService">The message service for creating associated messages.</param>
     public AccessRequestService(
         ILogger<AccessRequestService> logger,
         IDataGateway dataGateway,
+        IMessagingConfigurationProvider messaging,
         IMessageService messageService)
     {
         _logger = logger ?? NullLogger<AccessRequestService>.Instance;
         _dataGateway = dataGateway ?? throw new ArgumentNullException(nameof(dataGateway));
+        _messaging = messaging ?? throw new ArgumentNullException(nameof(messaging));
         _messageService = messageService ?? throw new ArgumentNullException(nameof(messageService));
+    }
+
+    /// <summary>Resolves the store and path this deployment keeps its messaging data in.</summary>
+    /// <remarks>Same reasoning as <c>MessageService.ResolveLocation</c> — see there.</remarks>
+    private async Task<IGenericResult<(string DataStoreName, string PathName)>> ResolveLocation(
+        CancellationToken cancellationToken)
+    {
+        var header = await _messaging.GetHeader(MessagingServiceName, cancellationToken).ConfigureAwait(false);
+        if (!header.IsSuccess || header.Value is null)
+            return header.ToNewResult<(string, string)>();
+
+        if (string.IsNullOrWhiteSpace(header.Value.DataStoreName) || string.IsNullOrWhiteSpace(header.Value.PathName))
+        {
+            return GenericResult<(string, string)>.Failure(
+                MessagingLog.LocationNotConfigured(_logger, "DataStoreName or PathName is unset on the Messaging row"));
+        }
+
+        return GenericResult<(string, string)>.Success((header.Value.DataStoreName, header.Value.PathName));
     }
 
     /// <inheritdoc />
@@ -77,6 +100,10 @@ public sealed class AccessRequestService : IAccessRequestService
                         MessagingLog.AccessRequestFailed(_logger, "new", "Failed to create associated message"));
             }
 
+            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+            if (!location.IsSuccess)
+                return location.ToNewResult<AccessRequestPayload>();
+
             var accessRequestId = Guid.NewGuid();
             var now = DateTime.UtcNow;
 
@@ -92,7 +119,7 @@ public sealed class AccessRequestService : IAccessRequestService
             };
 
             var command = CmdBuilders.Insert.Into<AccessRequestInsertRecord>(AccessRequestContainer)
-                .DataStore(DataStoreName).Path(PathName)
+                .DataStore(location.Value.DataStoreName).Path(location.Value.PathName)
                 .Value(insertRecord);
 
             var insertResult = await _dataGateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
@@ -145,8 +172,12 @@ public sealed class AccessRequestService : IAccessRequestService
             var reviewerIdStr = reviewerUserId.ToString("D");
             var now = DateTime.UtcNow;
 
+            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+            if (!location.IsSuccess)
+                return (IGenericResult)location;
+
             var command = CmdBuilders.Update.In<AccessRequestReviewUpdate>(AccessRequestContainer)
-                .DataStore(DataStoreName).Path(PathName)
+                .DataStore(location.Value.DataStoreName).Path(location.Value.PathName)
                 .Where(nameof(AccessRequestPayload.Id), requestId)
                 .Value(new AccessRequestReviewUpdate
                 {
@@ -198,8 +229,12 @@ public sealed class AccessRequestService : IAccessRequestService
             var reviewerIdStr = reviewerUserId.ToString("D");
             var now = DateTime.UtcNow;
 
+            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+            if (!location.IsSuccess)
+                return (IGenericResult)location;
+
             var command = CmdBuilders.Update.In<AccessRequestReviewUpdate>(AccessRequestContainer)
-                .DataStore(DataStoreName).Path(PathName)
+                .DataStore(location.Value.DataStoreName).Path(location.Value.PathName)
                 .Where(nameof(AccessRequestPayload.Id), requestId)
                 .Value(new AccessRequestReviewUpdate
                 {
@@ -245,7 +280,11 @@ public sealed class AccessRequestService : IAccessRequestService
 
         try
         {
-            var builder = Query.From<AccessRequestPayload>(DataStoreName, PathName, AccessRequestContainer)
+            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+            if (!location.IsSuccess)
+                return location.ToNewResult<IReadOnlyList<AccessRequestPayload>>();
+
+            var builder = Query.From<AccessRequestPayload>(location.Value.DataStoreName, location.Value.PathName, AccessRequestContainer)
                 .Where(r => r.Status).Equal("Pending");
 
             var command = builder.Build();
@@ -286,7 +325,11 @@ public sealed class AccessRequestService : IAccessRequestService
 
         try
         {
-            var messageCommand = Query.From<MessagePayload>(DataStoreName, PathName, MessageContainer)
+            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+            if (!location.IsSuccess)
+                return location.ToNewResult<IReadOnlyList<AccessRequestPayload>>();
+
+            var messageCommand = Query.From<MessagePayload>(location.Value.DataStoreName, location.Value.PathName, MessageContainer)
                 .Where(m => m.SenderUserId).Equal(userId)
                 .Where(m => m.MessageType).Equal("AccessRequest")
                 .Build();
@@ -309,7 +352,7 @@ public sealed class AccessRequestService : IAccessRequestService
             var requests = new List<AccessRequestPayload>();
             foreach (var messageId in messageIds)
             {
-                var arCommand = Query.From<AccessRequestPayload>(DataStoreName, PathName, AccessRequestContainer)
+                var arCommand = Query.From<AccessRequestPayload>(location.Value.DataStoreName, location.Value.PathName, AccessRequestContainer)
                     .Where(r => r.MessageId).Equal(messageId)
                     .Build();
 

@@ -7,6 +7,7 @@ using Fdw.Commands.Data.Abstractions;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Messaging.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Messaging.Tests;
@@ -24,7 +25,15 @@ public sealed class AccessRequestServiceTests
     {
         var gateway = new Mock<IDataGateway>(MockBehavior.Loose);
         var messageService = new Mock<IMessageService>(MockBehavior.Loose);
-        var service = new AccessRequestService(NullLogger<AccessRequestService>.Instance, gateway.Object, messageService.Object);
+
+        var messaging = new Mock<IMessagingConfigurationProvider>(MockBehavior.Loose);
+        messaging
+            .Setup(m => m.GetHeader(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IMessagingConfiguration>.Success(
+                new MessagingConfiguration { Name = "Messaging", DataStoreName = "OpsDb", PathName = "msg" }));
+
+        var service = new AccessRequestService(
+            NullLogger<AccessRequestService>.Instance, gateway.Object, messaging.Object, messageService.Object);
         return new Fixture(service, gateway, messageService);
     }
 

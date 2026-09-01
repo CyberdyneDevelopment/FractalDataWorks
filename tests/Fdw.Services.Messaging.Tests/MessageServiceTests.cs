@@ -7,6 +7,7 @@ using Fdw.Commands.Data.Abstractions;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Messaging.Abstractions;
 using Fdw.Services.Messaging.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -38,7 +39,14 @@ public sealed class MessageServiceTests
         var hubContext = new Mock<IHubContext<MessageHub, IMessageHubClient>>();
         hubContext.SetupGet(h => h.Clients).Returns(clients.Object);
 
-        var service = new MessageService(NullLogger<MessageService>.Instance, gateway.Object, hubContext.Object);
+        var messaging = new Mock<IMessagingConfigurationProvider>(MockBehavior.Loose);
+        messaging
+            .Setup(m => m.GetHeader(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IMessagingConfiguration>.Success(
+                new MessagingConfiguration { Name = "Messaging", DataStoreName = "OpsDb", PathName = "msg" }));
+
+        var service = new MessageService(
+            NullLogger<MessageService>.Instance, gateway.Object, messaging.Object, hubContext.Object);
         return new Fixture(service, gateway, client, groups);
     }
 
