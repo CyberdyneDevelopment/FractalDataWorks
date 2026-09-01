@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
@@ -25,4 +26,7 @@ public sealed record AuthenticationFlow
 
     /// <summary>Gets the assurance level this flow demands before a token may be issued.</summary>
     public string? MinimumAcr { get; init; }
+
+    /// <summary>Gets how long a flow suspended mid-way (e.g. awaiting an OIDC redirect) stays resumable.</summary>
+    public required TimeSpan ExecutionLifetime { get; init; }
 }

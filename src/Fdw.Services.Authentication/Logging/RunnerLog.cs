@@ -39,6 +39,13 @@ internal static partial class RunnerLog
     internal static partial IGenericMessage ExecutionFlowMismatch(
         ILogger<AuthenticationRunner> logger, Guid executionId, string recorded, string presented);
 
+    /// <summary>A flow names a step no registered option answers to.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="stepName">The step name the flow declared.</param>
+    [MessageLogging(EventId = 91119, Level = LogLevel.Error,
+        Message = "Step '{stepName}' is not registered — its package is not referenced, or the collection changed under a cached flow")]
+    internal static partial IGenericMessage StepNotAvailable(ILogger<AuthenticationRunner> logger, string stepName);
+
     /// <summary>A step required something no earlier step contributed.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="flowName">The flow.</param>

@@ -5,6 +5,7 @@ using Fdw.Services;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Binding;
+using Fdw.Services.ExternalIdentityProviders.Binding;
 using Fdw.ServiceTypes;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Execution;
@@ -142,12 +143,11 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             builder.Services.AddHttpContextAccessor();
 
             builder.Services.TryAddScoped(sp => new AuthenticationRunner(
-                // The collection IS the registry: a name resolves to the option that declared it.
-                name => AuthenticationStepTypes.ByName(name) as IAuthenticationStep,
                 sp.GetRequiredService<IAcrPolicy>(),
                 sp.GetRequiredService<ITokenIssuer>(),
                 sp.GetRequiredService<IAuthenticationExecutionStore>(),
-                TimeSpan.FromMinutes(10),
+                // The collection IS the registry: a name resolves to the option that declared it.
+                name => AuthenticationStepTypes.ByName(name) as IAuthenticationStep,
                 sp.GetService<ILogger<AuthenticationRunner>>()));
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);

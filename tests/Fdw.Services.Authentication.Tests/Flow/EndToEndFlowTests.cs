@@ -93,13 +93,12 @@ public sealed class EndToEndFlowTests
             });
 
         var runner = new AuthenticationRunner(
-            steps.Lookup,
             new StandardAcrPolicy(),
             new JwtTokenIssuer(
                 new JwtTokenIssuerConfiguration { Issuer = "https://fdw.test", Lifetime = TimeSpan.FromMinutes(15) },
                 key),
             new InMemoryExecutionStore(),
-            TimeSpan.FromMinutes(5));
+            steps.Lookup);
 
         var flow = new AuthenticationFlow
         {
@@ -107,6 +106,7 @@ public sealed class EndToEndFlowTests
             Steps = ["ForeignToken", "SecondFactor", "ResolvePrincipal", "Authorize"],
             Audience = "reference-api",
             MinimumAcr = StandardAcrPolicy.MultiFactor,
+            ExecutionLifetime = TimeSpan.FromMinutes(5),
         };
 
         var result = await runner.Run(flow, TestContext.Current.CancellationToken);
@@ -167,8 +167,8 @@ public sealed class EndToEndFlowTests
 
         var issuer = new RecordingIssuer();
         var runner = new AuthenticationRunner(
-            steps.Lookup, new StandardAcrPolicy(), issuer, new InMemoryExecutionStore(),
-            TimeSpan.FromMinutes(5));
+            new StandardAcrPolicy(), issuer, new InMemoryExecutionStore(),
+            steps.Lookup);
 
         var result = await runner.Run(new AuthenticationFlow
         {
@@ -176,6 +176,7 @@ public sealed class EndToEndFlowTests
             Steps = ["ForeignToken", "ResolvePrincipal", "Authorize"],
             Audience = "reference-api",
             MinimumAcr = StandardAcrPolicy.MultiFactor,
+            ExecutionLifetime = TimeSpan.FromMinutes(5),
         }, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();

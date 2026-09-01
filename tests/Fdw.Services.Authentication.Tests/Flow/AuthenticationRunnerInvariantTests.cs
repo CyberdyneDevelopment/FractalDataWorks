@@ -37,7 +37,7 @@ public sealed class AuthenticationRunnerInvariantTests
     {
         var issuer = new RecordingIssuer();
         var store = new InMemoryExecutions();
-        return (new AuthenticationRunner(steps.Lookup, new CountingAcrPolicy(), issuer, store, TimeSpan.FromMinutes(5)),
+        return (new AuthenticationRunner(new CountingAcrPolicy(), issuer, store, steps.Lookup),
                 issuer, store);
     }
 
@@ -46,6 +46,7 @@ public sealed class AuthenticationRunnerInvariantTests
         Name = "test-flow",
         Steps = steps,
         Audience = "test-audience",
+        ExecutionLifetime = TimeSpan.FromMinutes(5),
     };
 
     /// <summary>I1 — a step cannot affect what it did not declare.</summary>

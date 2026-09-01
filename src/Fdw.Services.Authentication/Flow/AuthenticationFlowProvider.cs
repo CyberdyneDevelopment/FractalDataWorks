@@ -95,6 +95,7 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
                 Steps = [.. ordered.Select(s => s.StepName)],
                 Audience = row.Audience,
                 MinimumAcr = row.MinimumAcr,
+                ExecutionLifetime = row.ExecutionLifetime,
             };
 
             var valid = Validate(flow);
@@ -126,7 +127,7 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
             if (AuthenticationStepTypes.ByName(stepName) is not IAuthenticationStep step)
                 return GenericResult.Failure(FlowProviderLog.StepNotAvailable(
                     _logger, flow.Name, stepName,
-                    string.Join(", ", AuthenticationStepTypes.Options.Select(o => o.Name))));
+                    string.Join(", ", AuthenticationStepTypes.All().Values.Select(o => o.Name))));
 
             var missing = step.Requires.Where(r => !established.Contains(r)).ToList();
             if (missing.Count > 0)

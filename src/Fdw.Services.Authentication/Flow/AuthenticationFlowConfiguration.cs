@@ -36,6 +36,9 @@ public partial class AuthenticationFlowConfiguration : IGenericConfiguration
     /// <remarks>Null demands none — the terminal check separately refuses a flow that proved no one.</remarks>
     public string? MinimumAcr { get; set; }
 
+    /// <summary>Gets or sets how long a flow suspended mid-way stays resumable.</summary>
+    public TimeSpan ExecutionLifetime { get; set; }
+
     /// <summary>Gets or sets the description.</summary>
     public string? Description { get; set; }
 }
