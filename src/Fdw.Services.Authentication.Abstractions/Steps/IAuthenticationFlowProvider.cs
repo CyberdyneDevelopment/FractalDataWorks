@@ -28,7 +28,9 @@ public interface IAuthenticationFlowProvider
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <remarks>
     /// Run at startup. A flow ordering a step before its requirement, or naming a step whose package
-    /// was removed, fails here — naming the flow and what is missing — rather than at a login.
+    /// was removed, is caught here — naming the flow and what is missing — rather than at a login.
+    /// Each flow is judged on its own: one flow failing this check never stops another, valid flow
+    /// from loading. This only fails outright when the configuration itself can't be read at all.
     /// </remarks>
     Task<IGenericResult> LoadAndValidate(CancellationToken cancellationToken = default);
 }

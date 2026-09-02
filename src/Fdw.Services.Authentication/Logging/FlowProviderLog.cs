@@ -8,17 +8,18 @@ namespace Fdw.Services.Authentication.Logging;
 /// <summary>
 /// MessageLogging for loading flows from configuration.
 /// </summary>
-/// <remarks>EventId range: 91230–91234.</remarks>
+/// <remarks>EventId range: 91230–91239.</remarks>
 [MessageLoggingTypeCode("AUTHENTICATION")]
 internal static partial class FlowProviderLog
 {
-    /// <summary>Every configured flow loaded and validated.</summary>
+    /// <summary>Every configured flow row was read and judged; some may have failed on their own.</summary>
     /// <param name="logger">The logger.</param>
-    /// <param name="flowCount">How many.</param>
+    /// <param name="validCount">How many are usable.</param>
+    /// <param name="totalCount">How many rows exist, usable or not.</param>
     [MessageLogging(EventId = 91230, Level = LogLevel.Information,
-        Message = "Loaded and validated {flowCount} authentication flow(s)")]
+        Message = "Loaded {validCount}/{totalCount} authentication flow(s) as valid")]
     internal static partial IGenericMessage FlowsLoaded(
-        ILogger<AuthenticationFlowProvider> logger, int flowCount);
+        ILogger<AuthenticationFlowProvider> logger, int validCount, int totalCount);
 
     /// <summary>A configured flow was assembled from its rows.</summary>
     /// <param name="logger">The logger.</param>
@@ -37,10 +38,10 @@ internal static partial class FlowProviderLog
     internal static partial IGenericMessage FlowServed(
         ILogger<AuthenticationFlowProvider> logger, string flowName);
 
-    /// <summary>A caller selected a flow that is not configured.</summary>
+    /// <summary>A caller selected a flow that is not configured at all.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="flowName">What they asked for.</param>
-    /// <param name="known">What is configured.</param>
+    /// <param name="known">The flows that are configured and valid.</param>
     [MessageLogging(EventId = 91231, Level = LogLevel.Warning,
         Message = "No flow named '{flowName}' is configured here. Configured: {known}")]
     internal static partial IGenericMessage NoSuchFlow(
@@ -91,4 +92,13 @@ internal static partial class FlowProviderLog
         Message = "Flow '{flowName}' runs step '{stepName}' before {missing} exists. Each step declares what it requires and what it contributes, and the order has to satisfy that — caught here, when configuration loads, rather than at someone's login")]
     internal static partial IGenericMessage OrderInvalid(
         ILogger logger, string flowName, string stepName, string missing);
+
+    /// <summary>A caller selected a flow that is configured but failed its own validation.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="flowName">What they asked for.</param>
+    /// <param name="reason">Why this flow specifically failed — the message its own validation logged.</param>
+    [MessageLogging(EventId = 91239, Level = LogLevel.Warning,
+        Message = "Flow '{flowName}' is configured but invalid: {reason}")]
+    internal static partial IGenericMessage FlowKnownInvalid(
+        ILogger<AuthenticationFlowProvider> logger, string flowName, string reason);
 }

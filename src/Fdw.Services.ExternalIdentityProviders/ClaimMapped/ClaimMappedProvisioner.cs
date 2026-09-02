@@ -64,16 +64,16 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
 
     // ── IGenericService ────────────────────────────────────────────────────────────
 
-    /// <inheritdoc cref="IGenericService.Id" />
+    /// <inheritdoc cref="IPlatformService.Id" />
     public string Id => _configuration.Id.ToString();
 
     /// <inheritdoc />
     public string Name => _configuration.Name;
 
-    /// <inheritdoc cref="IGenericService.ServiceType" />
+    /// <inheritdoc cref="IPlatformService.ServiceType" />
     public string ServiceType => "ClaimMapped";
 
-    /// <inheritdoc cref="IGenericService.IsAvailable" />
+    /// <inheritdoc cref="IPlatformService.IsAvailable" />
     public bool IsAvailable => true;
 
     Task<IGenericResult<T>> IGenericService.Execute<T>(IGenericCommand command, CancellationToken cancellationToken)
