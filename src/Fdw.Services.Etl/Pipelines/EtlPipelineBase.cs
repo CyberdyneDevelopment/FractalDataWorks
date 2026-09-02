@@ -51,13 +51,13 @@ public abstract class EtlPipelineBase : IEtlPipeline
     #region IGenericService Explicit Implementation
 
     /// <inheritdoc />
-    string IGenericService.Id => Id.ToString();
+    string IPlatformService.Id => Id.ToString();
 
     /// <inheritdoc />
-    string IGenericService.ServiceType => PipelineType;
+    string IPlatformService.ServiceType => PipelineType;
 
     /// <inheritdoc />
-    bool IGenericService.IsAvailable => !IsExecuting;
+    bool IPlatformService.IsAvailable => !IsExecuting;
 
     /// <inheritdoc />
     Task<IGenericResult<T>> IGenericService.Execute<T>(IGenericCommand command, CancellationToken cancellationToken)

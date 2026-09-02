@@ -12,22 +12,8 @@ namespace Fdw.Abstractions;
 /// with source generators, following the same pattern as IGenericCommand.
 /// Extended versions with command support are in Fdw.Services.Abstractions.
 /// </remarks>
-public interface IGenericService
+public interface IGenericService : IPlatformService
 {
-    /// <summary>
-    /// Gets the unique identifier for this service instance.
-    /// </summary>
-    string Id { get; }
-
-    /// <summary>
-    /// Gets the display name of the service.
-    /// </summary>
-    string ServiceType { get; }
-
-    /// <summary>
-    /// Gets a value indicating whether the service is currently available for use.
-    /// </summary>
-    bool IsAvailable { get; }
 
     /// <summary>
     /// Executes a data command against the connection.

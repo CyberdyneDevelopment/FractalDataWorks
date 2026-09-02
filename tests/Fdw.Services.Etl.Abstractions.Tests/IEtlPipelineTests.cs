@@ -172,9 +172,9 @@ public class IEtlPipelineTests
         }
 
         // IGenericService members
-        string IGenericService.Id => Id.ToString();
-        string IGenericService.ServiceType => PipelineType;
-        bool IGenericService.IsAvailable => !IsExecuting;
+        string IPlatformService.Id => Id.ToString();
+        string IPlatformService.ServiceType => PipelineType;
+        bool IPlatformService.IsAvailable => !IsExecuting;
 
         Task<IGenericResult<T>> IGenericService.Execute<T>(IGenericCommand command, CancellationToken cancellationToken)
         {
