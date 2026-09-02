@@ -15,7 +15,8 @@ namespace Fdw.Services.Hosts;
 [ExcludeFromCodeCoverage(Justification = "Abstract base: constructor-only logic")]
 public abstract class HostTypeBase<TService, TConfiguration, TFactory>
     : ServiceTypeBase<TService, TFactory, TConfiguration>,
-      IHostType<TService, TConfiguration, TFactory>
+      IHostType<TService, TConfiguration, TFactory>,
+      IHostPipelinePosition
     where TService : IHostService
     where TConfiguration : class, IGenericConfiguration
     where TFactory : IHostFactory<TService, TConfiguration>
@@ -43,4 +44,17 @@ public abstract class HostTypeBase<TService, TConfiguration, TFactory>
                defaultContainerName: name)
     {
     }
+
+    /// <summary>Gets where this option's middleware sits in the request pipeline.</summary>
+    /// <remarks>
+    /// Order in a pipeline is a property of the middleware, not of the host that installs it:
+    /// forwarded headers have to be read before anything asks for the scheme, and a bodyless-request
+    /// check has to run after the caller is identified. Declaring it here lets the collection order
+    /// its own options, so a host neither names them nor sequences them -- it references the
+    /// packages it wants and the pipeline assembles itself.
+    ///
+    /// Lower runs earlier. Options that do not care leave it alone and run after those that do,
+    /// in registration order.
+    /// </remarks>
+    public virtual int PipelinePosition => int.MaxValue;
 }
