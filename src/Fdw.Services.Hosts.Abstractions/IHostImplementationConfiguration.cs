@@ -22,6 +22,24 @@ public interface IHostImplementationConfiguration : IImplementationConfiguration
     /// <summary>Gets the origins CORS permits.</summary>
     IList<string> AllowedOrigins { get; }
 
+    /// <summary>Gets or sets a value indicating whether the CORS policy is applied at all.</summary>
+    bool CorsEnabled { get; set; }
+
+    /// <summary>Gets the methods CORS permits.</summary>
+    IList<string> AllowedMethods { get; }
+
+    /// <summary>Gets the request headers CORS permits.</summary>
+    IList<string> AllowedHeaders { get; }
+
+    /// <summary>Gets the response headers CORS exposes to the caller.</summary>
+    IList<string> ExposedHeaders { get; }
+
+    /// <summary>Gets or sets a value indicating whether CORS permits credentials.</summary>
+    bool AllowCredentials { get; set; }
+
+    /// <summary>Gets or sets how long a preflight response may be cached, in seconds.</summary>
+    int PreflightMaxAgeSeconds { get; set; }
+
     /// <summary>Gets the proxy networks whose forwarded headers are trusted, in CIDR form.</summary>
     IList<string> TrustedProxyNetworks { get; }
 
