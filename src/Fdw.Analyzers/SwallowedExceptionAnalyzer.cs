@@ -82,7 +82,9 @@ public sealed class SwallowedExceptionAnalyzer : DiagnosticAnalyzer
 
         var catchClause = (CatchClauseSyntax)context.Node;
 
-        if (!HasThrowStatement(catchClause) && !IsExceptionObserved(catchClause))
+        if (!HasThrowStatement(catchClause)
+            && !IsExceptionObserved(catchClause)
+            && !IsExpectedCancellation(catchClause, context))
         {
             context.ReportDiagnostic(Diagnostic.Create(
                 SwallowedRule,
@@ -96,6 +98,41 @@ public sealed class SwallowedExceptionAnalyzer : DiagnosticAnalyzer
                 BroadCatchRule,
                 catchClause.CatchKeyword.GetLocation()));
         }
+    }
+
+    // Why: a cancellation caught under a filter that proves the token was cancelled is expected
+    // control flow, not a swallowed failure. Such a catch declares no exception variable because the
+    // exception carries nothing to observe, so the variable-reference test below can never pass it.
+    // This extends the reasoning IsUnchainedBroadCatch already applies, where a 'when' filter counts
+    // as deliberate discrimination. Without it, authors satisfy FDW022 with noise logging or a
+    // discard assignment, which makes a genuinely swallowed exception harder to spot.
+    private static bool IsExpectedCancellation(CatchClauseSyntax catchClause, SyntaxNodeAnalysisContext context)
+    {
+        if (catchClause.Filter == null)
+            return false;
+
+        if (!ReferencesIdentifier(catchClause.Filter, "IsCancellationRequested"))
+            return false;
+
+        var declaration = catchClause.Declaration;
+        if (declaration == null)
+            return false;
+
+        return IsCancellationExceptionType(context.SemanticModel.GetTypeInfo(declaration.Type).Type);
+    }
+
+    // Why: walks the base chain so TaskCanceledException, which derives from
+    // OperationCanceledException, is recognised too.
+    private static bool IsCancellationExceptionType(ITypeSymbol? type)
+    {
+        for (var current = type; current != null; current = current.BaseType)
+        {
+            if (string.Equals(current.Name, "OperationCanceledException", System.StringComparison.Ordinal) &&
+                string.Equals(current.ContainingNamespace?.ToDisplayString(), "System", System.StringComparison.Ordinal))
+                return true;
+        }
+
+        return false;
     }
 
     private static bool IsExceptionObserved(CatchClauseSyntax catchClause)
