@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Fdw.WebMcp.Hosting;
@@ -21,10 +20,4 @@ public sealed class WebMcpOptions
     /// Must match on both client (generated JS) and server (middleware).
     /// </summary>
     public string ApiKeyHeader { get; set; } = "X-Webmcp-Key";
-
-    /// <summary>
-    /// Agent API keys accepted by the server. Each key is associated with a user identity
-    /// so that RBAC applies and audit logs show who authorized the agent.
-    /// </summary>
-    public IList<WebMcpAgentKey> AgentKeys { get; set; } = [];
 }
