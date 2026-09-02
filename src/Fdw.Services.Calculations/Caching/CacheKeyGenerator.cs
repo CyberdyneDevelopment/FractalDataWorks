@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using Fdw.Services.Calculations.Configuration;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -12,15 +13,15 @@ namespace Fdw.Services.Calculations.Caching;
 /// </summary>
 public sealed class CacheKeyGenerator
 {
-    private readonly CalculationCacheOptions _options;
+    private readonly CalculationCacheConfiguration _options;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CacheKeyGenerator"/> class.
     /// </summary>
     /// <param name="options">The calculation cache options.</param>
-    public CacheKeyGenerator(IOptions<CalculationCacheOptions> options)
+    public CacheKeyGenerator(CalculationCacheConfiguration options)
     {
-        _options = options.Value;
+        _options = options ?? throw new ArgumentNullException(nameof(options));
     }
 
     /// <summary>

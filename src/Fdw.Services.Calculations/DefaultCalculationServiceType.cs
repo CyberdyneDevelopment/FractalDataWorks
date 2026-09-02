@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
@@ -58,16 +58,29 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
             return GenericResult<IHost>.Success(host);
         });
 
-        Configuration(builder =>
-        {
-
-            builder.Services.Configure<CalculationCacheOptions>(builder.Configuration.GetSection("CalculationCache"));
-    
-                    return GenericResult<IHostApplicationBuilder>.Success(builder);
-});
-
         Registration((builder, loggerFactory) =>
         {
+            RegisterTypedBodyProvider<CalculationCacheConfiguration, CalculationCacheConfigurationCommand>(builder.Services);
+
+            // Why the row is resolved rather than injected: the cache services take their settings
+            // as a value, and a DI factory cannot await the read.
+            builder.Services.TryAddSingleton(sp =>
+            {
+                var provider = sp.GetRequiredService<
+                    ImplementationConfigurationProviderBase<CalculationCacheConfiguration, CalculationCacheConfigurationCommand>>();
+#pragma warning disable VSTHRD002
+                var result = provider.Get("CalculationCache").GetAwaiter().GetResult();
+#pragma warning restore VSTHRD002
+                if (result.IsFailure || result.Value is null)
+                {
+                    throw new InvalidOperationException(
+                        "CalculationCache is not configured in the calculation store. " +
+                        "Caching behaviour is configuration, not a default.");
+                }
+
+                return result.Value;
+            });
+
             builder.Services.TryAddSingleton<ICalculationInputResolver, DefaultCalculationInputResolver>();
             builder.Services.TryAddSingleton<ICalculationStepExecutor, CalculationStepExecutor>();
             builder.Services.TryAddSingleton<ICalculationEntityService, CalculationEntityService>();

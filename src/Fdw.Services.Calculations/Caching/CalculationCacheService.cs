@@ -1,4 +1,6 @@
-using System;
+﻿using System;
+using System.Globalization;
+using Fdw.Services.Calculations.Configuration;
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
@@ -21,7 +23,7 @@ public sealed class CalculationCacheService : ICalculationCacheService
 {
     private readonly IDistributedCache _cache;
     private readonly CacheKeyGenerator _keyGenerator;
-    private readonly CalculationCacheOptions _options;
+    private readonly CalculationCacheConfiguration _options;
     private readonly ILogger<CalculationCacheService> _logger;
 
     private long _hits;
@@ -38,12 +40,12 @@ public sealed class CalculationCacheService : ICalculationCacheService
     public CalculationCacheService(
         IDistributedCache cache,
         CacheKeyGenerator keyGenerator,
-        IOptions<CalculationCacheOptions> options,
+        CalculationCacheConfiguration options,
         ILogger<CalculationCacheService>? logger)
     {
         _cache = cache;
         _keyGenerator = keyGenerator;
-        _options = options.Value;
+        _options = options ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? NullLogger<CalculationCacheService>.Instance;
     }
 
@@ -262,7 +264,8 @@ public sealed class CalculationCacheService : ICalculationCacheService
             return Math.Min(options.TtlMinutes.Value, _options.MaxTtlMinutes);
         }
 
-        if (_options.TtlByCalculationType.TryGetValue(calculationType, out var typeTtl))
+        if (_options.TtlByCalculationType.TryGetValue(calculationType, out var typeTtlText)
+            && int.TryParse(typeTtlText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var typeTtl))
         {
             return Math.Min(typeTtl, _options.MaxTtlMinutes);
         }
