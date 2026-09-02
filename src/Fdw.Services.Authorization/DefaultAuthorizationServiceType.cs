@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Abstractions;
@@ -159,9 +159,18 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     sp.GetRequiredService<TenantOrgAccessConfigurationProvider>(),
                     sp.GetService<ILogger<DefaultOrgAccessProvider>>()));
 
+            builder.Services.TryAddSingleton<SystemRoleMappingConfigurationProvider>(sp =>
+                new SystemRoleMappingConfigurationProvider(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<SystemRoleMappingConfigurationProvider>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    DataStore, pathNameAuthz));
+
+            // Why the row is read here rather than injected: DefaultSystemRoleConfiguration throws
+            // when no administrator role is named, and it does that at construction so the process
+            // fails at startup instead of at the first authorization check.
             builder.Services.TryAddSingleton<ISystemRoleConfiguration>(sp =>
                 new DefaultSystemRoleConfiguration(
-                    sp.GetRequiredService<IOptions<SystemRoleMappingOptions>>(),
+                    ReadSystemRoleMapping(sp),
                     sp.GetService<ILogger<DefaultSystemRoleConfiguration>>()));
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
@@ -177,12 +186,27 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                 .BindConfiguration("Permissions");
             builder.Services.AddOptions<List<UserRoleConfiguration>>()
                 .BindConfiguration("UserRoles");
-            builder.Services.AddOptions<SystemRoleMappingOptions>()
-                .BindConfiguration("authz:SystemRoleMapping");
     
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
     }
 
+    // Why blocking: this runs inside a DI factory, which cannot await, and the value is needed to
+    // decide whether the process may start at all.
+    private static SystemRoleMappingConfiguration ReadSystemRoleMapping(IServiceProvider services)
+    {
+        var provider = services.GetRequiredService<SystemRoleMappingConfigurationProvider>();
+#pragma warning disable VSTHRD002
+        var result = provider.Get("SystemRoleMapping").GetAwaiter().GetResult();
+#pragma warning restore VSTHRD002
+        if (result.IsFailure || result.Value is null)
+        {
+            throw new InvalidOperationException(
+                "SystemRoleMapping is not configured in the authorization store. " +
+                "Authorization cannot start without knowing which role names carry system authority.");
+        }
+
+        return result.Value;
+    }
 }

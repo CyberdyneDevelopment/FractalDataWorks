@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
@@ -40,11 +40,6 @@ public sealed class HttpHealthMonitorClientType
     {
         Configuration(builder =>
         {
-
-            builder.Services.AddOptions<List<HealthMonitorConfiguration>>()
-                .BindConfiguration("HealthMonitors");
-            builder.Services.AddOptions<HealthMonitorSelectionOptions>()
-                .BindConfiguration(HealthMonitorSelectionOptions.SectionName);
 
             builder.Services.AddApiHttpClient(builder.Configuration, "HealthMonitorClient");
     

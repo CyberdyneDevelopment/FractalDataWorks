@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Fdw.Abstractions;
@@ -14,6 +14,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Fdw.Results;
 
+using Fdw.Services.Data.Configuration;
+using Fdw.Services.Data.Commands;
 namespace Fdw.Services.Data;
 
 /// <summary>
@@ -37,6 +39,29 @@ public sealed class DefaultDataGatewayServiceType : DataGatewayTypeBase<IGeneric
     {
         Registration((builder, loggerFactory) =>
         {
+            builder.Services.TryAddSingleton<DataGatewayConfigurationProvider>(sp =>
+                new DataGatewayConfigurationProvider(
+                    sp.GetService<ILogger<DataGatewayConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    "ServerConfiguration"));
+
+            // Why resolved rather than injected: the gateway takes its settings as a value and a DI
+            // factory cannot await the read.
+            builder.Services.TryAddSingleton(sp =>
+            {
+#pragma warning disable VSTHRD002
+                var result = sp.GetRequiredService<DataGatewayConfigurationProvider>()
+                    .Get("DataGateway").GetAwaiter().GetResult();
+#pragma warning restore VSTHRD002
+                if (result.IsFailure || result.Value is null)
+                {
+                    throw new InvalidOperationException(
+                        "DataGateway is not configured on the server tier. Whether the gateway caches is configuration, not a default.");
+                }
+
+                return result.Value;
+            });
+
 
             builder.Services.TryAddSingleton(sp => new Lazy<IDataSetConfigurationProvider>(() => sp.GetRequiredService<IDataSetConfigurationProvider>()));
             builder.Services.TryAddSingleton<IDataGateway, DataGatewayService>();
@@ -73,14 +98,6 @@ public sealed class DefaultDataGatewayServiceType : DataGatewayTypeBase<IGeneric
             return GenericResult<IHostApplicationBuilder>.Success(builder);
     
         });
-
-        Configuration(builder =>
-        {
-
-            builder.Services.Configure<DataGatewayOptions>(builder.Configuration.GetSection("DataGateway"));
-    
-                    return GenericResult<IHostApplicationBuilder>.Success(builder);
-});
 
     }
 
