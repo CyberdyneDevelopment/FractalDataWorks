@@ -23,8 +23,14 @@ public sealed partial class UniverseMembershipRequestConfiguration
     /// <summary>Gets or sets the universe being joined.</summary>
     public Guid UniverseId { get; set; }
 
-    /// <summary>Gets or sets who asked.</summary>
+    /// <summary>Gets or sets who asked. Always a person, even when asking for a role to be added.</summary>
     public Guid RequestedByUserId { get; set; }
+
+    /// <summary>Gets or sets what the membership would be for: User or Role.</summary>
+    public string SubjectType { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the user or role the membership would be for.</summary>
+    public Guid SubjectId { get; set; }
 
     /// <summary>Gets or sets the role asked for.</summary>
     public string RequestedRole { get; set; } = string.Empty;

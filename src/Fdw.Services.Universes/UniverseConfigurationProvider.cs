@@ -95,6 +95,25 @@ public class UniverseConfigurationProvider
         Guid universeId, UniverseMemberConfiguration member, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(member);
+
+        if (string.IsNullOrWhiteSpace(member.SubjectType)
+            || ReferenceEquals(UniverseSubjectTypes.ByName(member.SubjectType), UniverseSubjectTypes.NotFound))
+        {
+            return GenericResult<UniverseMemberConfiguration>.Failure(
+                UniversesResultCodes.ByName("UniverseLifecycleValueInvalid"), _logger,
+                ResultDetails.Create("name", universeId.ToString(), "field", "SubjectType",
+                                     "value", member.SubjectType ?? string.Empty));
+        }
+
+        if (string.IsNullOrWhiteSpace(member.MemberRole)
+            || ReferenceEquals(UniverseMemberRoles.ByName(member.MemberRole), UniverseMemberRoles.NotFound))
+        {
+            return GenericResult<UniverseMemberConfiguration>.Failure(
+                UniversesResultCodes.ByName("UniverseLifecycleValueInvalid"), _logger,
+                ResultDetails.Create("name", universeId.ToString(), "field", "MemberRole",
+                                     "value", member.MemberRole ?? string.Empty));
+        }
+
         member.UniverseId = universeId;
         if (member.Id == Guid.Empty) member.Id = Guid.CreateVersion7();
 

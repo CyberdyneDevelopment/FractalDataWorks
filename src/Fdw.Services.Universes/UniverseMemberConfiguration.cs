@@ -11,6 +11,9 @@ namespace Fdw.Services.Universes;
 /// Why <see cref="State"/> is separate from <see cref="MemberRole"/>: an invitation that has not
 /// been accepted is not membership, and the two answer different questions — what they may do,
 /// versus whether they are actually here.
+///
+/// Why a subject rather than a user: people share a project with a role far more often than with a
+/// list of individuals. Expanding a role into rows would freeze the membership at grant time.
 /// </remarks>
 [GenerateMapper]
 public sealed partial class UniverseMemberConfiguration : IGenericConfiguration
@@ -33,8 +36,15 @@ public sealed partial class UniverseMemberConfiguration : IGenericConfiguration
     /// <summary>Gets or sets the owning universe.</summary>
     public Guid UniverseId { get; set; }
 
-    /// <summary>Gets or sets the member.</summary>
-    public Guid UserId { get; set; }
+    /// <summary>Gets or sets what kind of thing holds this membership: User or Role.</summary>
+    /// <remarks>
+    /// A role membership is stored as the role, not expanded into a row per current member, so the
+    /// project's access follows the role's own membership instead of a snapshot taken at grant time.
+    /// </remarks>
+    public string SubjectType { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the user or role that holds this membership.</summary>
+    public Guid SubjectId { get; set; }
 
     /// <summary>Gets or sets the role held: Owner, Steward, Contributor or Consumer.</summary>
     public string MemberRole { get; set; } = string.Empty;

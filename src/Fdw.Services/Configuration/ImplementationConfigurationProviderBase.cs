@@ -924,7 +924,17 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
             if (descriptors[c].GetCollection(owner) is not System.Collections.IEnumerable items) continue;
             foreach (var item in items)
             {
-                if (item is not IGenericConfiguration childCfg) continue;
+                // Why this is logged rather than skipped quietly: a type-test `continue` treats
+                // "did not match" as "nothing to do", so the row is dropped and NOTHING reports
+                // it — not the build, not the save result, not an audit trail. That silence is
+                // why the Universe children were discarded unnoticed. A rewrite at least leaves
+                // evidence; a silent skip leaves none, so it has to announce itself.
+                if (item is not IGenericConfiguration childCfg)
+                {
+                    DefaultConfigurationProviderLog.ChildSkippedNotConfiguration(
+                        _logger, owner.GetType().Name, item?.GetType().Name ?? "null");
+                    continue;
+                }
 
                 // Link the child row to its parent via the logical FK, set by column name through the
                 // child's generated mapper — reflection-free; translator resolves the physical RowId FK
@@ -1067,7 +1077,17 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
             if (descriptors[c].GetCollection(owner) is not System.Collections.IEnumerable items) continue;
             foreach (var item in items)
             {
-                if (item is not IGenericConfiguration childCfg) continue;
+                // Why this is logged rather than skipped quietly: a type-test `continue` treats
+                // "did not match" as "nothing to do", so the row is dropped and NOTHING reports
+                // it — not the build, not the save result, not an audit trail. That silence is
+                // why the Universe children were discarded unnoticed. A rewrite at least leaves
+                // evidence; a silent skip leaves none, so it has to announce itself.
+                if (item is not IGenericConfiguration childCfg)
+                {
+                    DefaultConfigurationProviderLog.ChildSkippedNotConfiguration(
+                        _logger, owner.GetType().Name, item?.GetType().Name ?? "null");
+                    continue;
+                }
 
                 var nested = await RetireCollections(
                     childCfg,
