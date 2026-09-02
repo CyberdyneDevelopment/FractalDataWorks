@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -441,23 +441,21 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         if (childMapper == PocoMapperCollection.NotFound)
             return;
 
-        var command = ConfigurationCommands.All().FirstOrDefault(c => c.ConfigType == descriptor.ChildType);
-        if (command is null)
+        // Why the child's own name: the container a child's rows live in is declared in
+        // configurationSchema.json under that name. Resolving it through a registered command
+        // instead meant a child bound only when someone had also written a command for it, and
+        // silently bound nothing when they had not -- a declaration in the schema was not enough.
+        var childContainerName = descriptor.ChildTypeName;
+
+        if (ChildContainerLacksColumn(childContainerName, fkColumn))
         {
             DefaultConfigurationProviderLog.ChildBindingSkippedNoDescriptor(
                 _logger, descriptor.BoundPropertyName, descriptor.ChildTypeName, ownerRow.GetType().Name);
             return;
         }
 
-        if (ChildContainerLacksColumn(command.ContainerName, fkColumn))
-        {
-            DefaultConfigurationProviderLog.ChildBindingSkippedNoDescriptor(
-                _logger, descriptor.BoundPropertyName, descriptor.ChildTypeName, ownerRow.GetType().Name);
-            return;
-        }
-
-        var cmd = BuildChildJoinQuery(command.ContainerName, fkColumn, ownerContainer, ownerPhysicalCol, ownerLogicalCol, ownerId, asOf);
-        var target = new DataStoreTarget(DataStoreName, PathName, command.ContainerName);
+        var cmd = BuildChildJoinQuery(childContainerName, fkColumn, ownerContainer, ownerPhysicalCol, ownerLogicalCol, ownerId, asOf);
+        var target = new DataStoreTarget(DataStoreName, PathName, childContainerName);
         var gateway = Gateway();
         if (gateway.IsFailure)
             return;
@@ -475,7 +473,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         foreach (var item in typedList)
         {
             if (item is not null)
-                await LoadChildrenInto(item, childMapper, command.ContainerName, asOf, ct).ConfigureAwait(false);
+                await LoadChildrenInto(item, childMapper, childContainerName, asOf, ct).ConfigureAwait(false);
         }
     }
 
