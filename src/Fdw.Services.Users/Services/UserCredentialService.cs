@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -36,9 +36,11 @@ public sealed class UserCredentialService : IUserCredentialService
 
     private const string DecoySaltBase64 = "ZmR3LWRlY295LXNhbHQwMQ==";
 
+    // The users domain's own configuration row, on the domain's own store.
+    private const string ConfigurationName = "UsersService";
+
     private readonly ICredentialServiceProvider _credentialServiceProvider;
-    private readonly IOptions<UsersServiceOptions> _usersOptions;
-    private readonly IOptions<PasswordPolicyOptions> _passwordPolicy;
+    private readonly UsersServiceConfigurationProvider _configuration;
     private readonly UserConfigurationProvider _userProvider;
     private readonly ILogger<UserCredentialService> _logger;
 
@@ -49,14 +51,12 @@ public sealed class UserCredentialService : IUserCredentialService
     /// </summary>
     public UserCredentialService(
         ICredentialServiceProvider credentialServiceProvider,
-        IOptions<UsersServiceOptions> usersOptions,
-        IOptions<PasswordPolicyOptions> passwordPolicy,
+        UsersServiceConfigurationProvider configuration,
         UserConfigurationProvider userProvider,
         ILogger<UserCredentialService>? logger = null)
     {
         _credentialServiceProvider = credentialServiceProvider ?? throw new ArgumentNullException(nameof(credentialServiceProvider));
-        _usersOptions = usersOptions ?? throw new ArgumentNullException(nameof(usersOptions));
-        _passwordPolicy = passwordPolicy ?? throw new ArgumentNullException(nameof(passwordPolicy));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _userProvider = userProvider ?? throw new ArgumentNullException(nameof(userProvider));
         _logger = logger ?? NullLogger<UserCredentialService>.Instance;
     }
@@ -69,7 +69,11 @@ public sealed class UserCredentialService : IUserCredentialService
         if (!string.Equals(secretType, PasswordSecretType, StringComparison.OrdinalIgnoreCase))
             return GenericResult<ICredentialOutcome>.Failure(UserLog.SecretTypeNotSupported(_logger, userId, secretType));
 
-        var policy = _passwordPolicy.Value;
+        var configurationResult = await LoadConfiguration(cancellationToken).ConfigureAwait(false);
+        if (configurationResult.IsFailure)
+            return configurationResult.ToNewResult<ICredentialOutcome>();
+
+        var policy = configurationResult.Value!;
         if (policy.MaxFailedLoginAttempts > 0 && policy.LockoutDurationMinutes <= 0)
             return GenericResult<ICredentialOutcome>.Failure(
                 UserLog.PasswordPolicyInvalid(_logger, "MaxFailedLoginAttempts is set but LockoutDurationMinutes is not positive"));
@@ -108,7 +112,7 @@ public sealed class UserCredentialService : IUserCredentialService
     }
 #pragma warning restore MA0051
 
-    private IGenericResult<ICredentialOutcome> RunDecoyAndDeny(Guid userId, string plaintext, PasswordPolicyOptions policy)
+    private IGenericResult<ICredentialOutcome> RunDecoyAndDeny(Guid userId, string plaintext, UsersServiceConfiguration policy)
     {
         var decoyAlgorithm = PasswordHashAlgorithms.ByName(policy.PasswordHashAlgorithm);
         if (decoyAlgorithm != PasswordHashAlgorithms.NotFound)
@@ -120,7 +124,7 @@ public sealed class UserCredentialService : IUserCredentialService
     }
 
     private async Task<IGenericResult<ICredentialOutcome>> ComposeSuccessOutcome(
-        Guid userId, UserConfiguration userCfg, PasswordPolicyOptions policy, DateTimeOffset now, CancellationToken cancellationToken)
+        Guid userId, UserConfiguration userCfg, UsersServiceConfiguration policy, DateTimeOffset now, CancellationToken cancellationToken)
     {
         if (userCfg.LockoutEnd is { } lockoutEnd && lockoutEnd > now)
         {
@@ -150,7 +154,7 @@ public sealed class UserCredentialService : IUserCredentialService
     }
 
     private async Task<IGenericResult<ICredentialOutcome>> OnNoMatch(
-        Guid userId, UserConfiguration userCfg, PasswordPolicyOptions policy, DateTimeOffset now, CancellationToken cancellationToken)
+        Guid userId, UserConfiguration userCfg, UsersServiceConfiguration policy, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var newCount = userCfg.FailedLoginCount + 1;
         DateTimeOffset? lockoutEnd = userCfg.LockoutEnd;
@@ -180,10 +184,14 @@ public sealed class UserCredentialService : IUserCredentialService
         if (!serviceResult.IsSuccess || serviceResult.Value is null)
             return serviceResult;
 
-        var algorithm = PasswordHashAlgorithms.ByName(_passwordPolicy.Value.PasswordHashAlgorithm);
+        var configurationResult = await LoadConfiguration(cancellationToken).ConfigureAwait(false);
+        if (configurationResult.IsFailure)
+            return configurationResult;
+
+        var algorithm = PasswordHashAlgorithms.ByName(configurationResult.Value!.PasswordHashAlgorithm);
         if (algorithm == PasswordHashAlgorithms.NotFound)
             return GenericResult.Failure(
-                UserLog.VaultAlgorithmNotFound(_logger, userId, secretType, _passwordPolicy.Value.PasswordHashAlgorithm));
+                UserLog.VaultAlgorithmNotFound(_logger, userId, secretType, configurationResult.Value!.PasswordHashAlgorithm));
 
         var hashResult = algorithm.HashPassword(plaintext);
 
@@ -248,13 +256,31 @@ public sealed class UserCredentialService : IUserCredentialService
         return GenericResult.Success();
     }
 
+    // Why a helper: every caller needs the row and a non-null value, and folding the two checks
+    // into one keeps each call site to a single branch.
+    private async Task<IGenericResult<UsersServiceConfiguration>> LoadConfiguration(CancellationToken cancellationToken)
+    {
+        var result = await _configuration.Get(ConfigurationName, cancellationToken).ConfigureAwait(false);
+        if (result.IsFailure)
+            return result;
+
+        return result.Value is null
+            ? GenericResult<UsersServiceConfiguration>.Failure(
+                UserLog.CredentialServiceNameMissing(_logger))
+            : result;
+    }
+
     private async Task<IGenericResult<ICredentialService>> ResolveCredentialService(
         Guid userId, string secretType, CancellationToken cancellationToken)
     {
         if (_credentialService is not null)
             return GenericResult<ICredentialService>.Success(_credentialService);
 
-        var serviceName = _usersOptions.Value.CredentialServiceName;
+        var configurationResult = await LoadConfiguration(cancellationToken).ConfigureAwait(false);
+        if (configurationResult.IsFailure)
+            return configurationResult.ToNewResult<ICredentialService>();
+
+        var serviceName = configurationResult.Value!.CredentialServiceName;
         if (string.IsNullOrWhiteSpace(serviceName))
             return GenericResult<ICredentialService>.Failure(UserLog.CredentialServiceNameMissing(_logger));
 

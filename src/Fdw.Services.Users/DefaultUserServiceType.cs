@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -39,18 +39,14 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
             "Default User Services",
             "Default user management services with credential validation and role-based access control")
     {
-        Configuration(builder =>
-        {
-            builder.Services.Configure<UsersServiceOptions>(builder.Configuration.GetSection("Users"));
-
-            builder.Services.Configure<PasswordPolicyOptions>(builder.Configuration.GetSection("Users:PasswordPolicy"));
-
-    
-                    return GenericResult<IHostApplicationBuilder>.Success(builder);
-});
-
         Registration((builder, loggerFactory) =>
         {
+            builder.Services.TryAddSingleton<UsersServiceConfigurationProvider>(sp =>
+                new UsersServiceConfigurationProvider(
+                    sp.GetService<ILogger<UsersServiceConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    DataStore, "usr"));
+
             builder.Services.TryAddSingleton<UserConfigurationProvider>(sp =>
                 new UserConfigurationProvider(
                     sp.GetService<ILogger<UserConfigurationProvider>>(),
