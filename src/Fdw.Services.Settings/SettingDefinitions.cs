@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Fdw.Services.Settings;
@@ -73,6 +73,72 @@ public static class SettingDefinitions
     /// <summary>Whether system-update notifications are enabled.</summary>
     public const string NotifySystemUpdates = "NotifySystemUpdates";
 
+    /// <summary>The credential service the users domain resolves credentials through.</summary>
+    public const string UsersCredentialServiceName = "UsersCredentialServiceName";
+
+    /// <summary>The algorithm passwords are hashed with.</summary>
+    public const string PasswordHashAlgorithm = "PasswordHashAlgorithm";
+
+    /// <summary>How long a password stays valid, in days. Zero means it does not expire.</summary>
+    public const string PasswordMaxAgeDays = "PasswordMaxAgeDays";
+
+    /// <summary>Failed sign-ins before an account is locked out.</summary>
+    public const string MaxFailedLoginAttempts = "MaxFailedLoginAttempts";
+
+    /// <summary>How long an account stays locked out, in minutes.</summary>
+    public const string LockoutDurationMinutes = "LockoutDurationMinutes";
+
+    /// <summary>The role name that grants administrator authority.</summary>
+    public const string AdminRoleName = "AdminRoleName";
+
+    /// <summary>The role name that grants operator authority.</summary>
+    public const string OperatorRoleName = "OperatorRoleName";
+
+    /// <summary>The role name that grants read-only authority.</summary>
+    public const string ViewerRoleName = "ViewerRoleName";
+
+    /// <summary>The health monitor this host reports to.</summary>
+    public const string HealthMonitorName = "HealthMonitorName";
+
+    /// <summary>Whether calculation results are cached.</summary>
+    public const string CalculationCacheEnabled = "CalculationCacheEnabled";
+
+    /// <summary>How long a cached calculation result stays valid, in minutes.</summary>
+    public const string CalculationCacheDefaultTtlMinutes = "CalculationCacheDefaultTtlMinutes";
+
+    /// <summary>The longest TTL any calculation type may ask for, in minutes.</summary>
+    public const string CalculationCacheMaxTtlMinutes = "CalculationCacheMaxTtlMinutes";
+
+    /// <summary>Whether a data change evicts dependent calculation results.</summary>
+    public const string CalculationCacheInvalidateOnDataChange = "CalculationCacheInvalidateOnDataChange";
+
+    /// <summary>Whether the calculation cache is warmed at startup.</summary>
+    public const string CalculationCacheWarmupOnStartup = "CalculationCacheWarmupOnStartup";
+
+    /// <summary>The largest calculation result that may be cached, in bytes.</summary>
+    public const string CalculationCacheMaxCachedResultSizeBytes = "CalculationCacheMaxCachedResultSizeBytes";
+
+    /// <summary>Which cache implementation backs calculation results.</summary>
+    public const string CalculationCacheProvider = "CalculationCacheProvider";
+
+    /// <summary>The prefix every calculation cache key carries.</summary>
+    public const string CalculationCacheKeyPrefix = "CalculationCacheKeyPrefix";
+
+    /// <summary>The support address shown to a caller when a request fails.</summary>
+    public const string SupportEmail = "SupportEmail";
+
+    /// <summary>The support phone number shown to a caller when a request fails.</summary>
+    public const string SupportPhone = "SupportPhone";
+
+    /// <summary>The support portal shown to a caller when a request fails.</summary>
+    public const string SupportPortalUrl = "SupportPortalUrl";
+
+    /// <summary>The response time support commits to, in hours.</summary>
+    public const string SupportExpectedResponseTimeHours = "SupportExpectedResponseTimeHours";
+
+    /// <summary>What a caller is told to do when a request keeps failing.</summary>
+    public const string SupportInstructions = "SupportInstructions";
+
     private static readonly Dictionary<string, SettingDefinition> KnownSettings =
         new Dictionary<string, SettingDefinition>(StringComparer.OrdinalIgnoreCase)
         {
@@ -91,6 +157,28 @@ public static class SettingDefinitions
             [NotifyScheduleTriggers] = new("Boolean", "Whether schedule-trigger notifications are enabled."),
             [NotifyConnectionIssues] = new("Boolean", "Whether connection-issue notifications are enabled."),
             [NotifySystemUpdates] = new("Boolean", "Whether system-update notifications are enabled."),
+            [UsersCredentialServiceName] = new("String", "The credential service the users domain resolves credentials through."),
+            [PasswordHashAlgorithm] = new("String", "The algorithm passwords are hashed with."),
+            [PasswordMaxAgeDays] = new("Int32", "How long a password stays valid, in days. Zero means it does not expire."),
+            [MaxFailedLoginAttempts] = new("Int32", "Failed sign-ins before an account is locked out."),
+            [LockoutDurationMinutes] = new("Int32", "How long an account stays locked out, in minutes."),
+            [AdminRoleName] = new("String", "The role name that grants administrator authority."),
+            [OperatorRoleName] = new("String", "The role name that grants operator authority."),
+            [ViewerRoleName] = new("String", "The role name that grants read-only authority."),
+            [HealthMonitorName] = new("String", "The health monitor this host reports to."),
+            [CalculationCacheEnabled] = new("Boolean", "Whether calculation results are cached."),
+            [CalculationCacheDefaultTtlMinutes] = new("Int32", "How long a cached calculation result stays valid, in minutes."),
+            [CalculationCacheMaxTtlMinutes] = new("Int32", "The longest TTL any calculation type may ask for, in minutes."),
+            [CalculationCacheInvalidateOnDataChange] = new("Boolean", "Whether a data change evicts dependent calculation results."),
+            [CalculationCacheWarmupOnStartup] = new("Boolean", "Whether the calculation cache is warmed at startup."),
+            [CalculationCacheMaxCachedResultSizeBytes] = new("Int32", "The largest calculation result that may be cached, in bytes."),
+            [CalculationCacheProvider] = new("String", "Which cache implementation backs calculation results."),
+            [CalculationCacheKeyPrefix] = new("String", "The prefix every calculation cache key carries."),
+            [SupportEmail] = new("String", "The support address shown to a caller when a request fails."),
+            [SupportPhone] = new("String", "The support phone number shown to a caller when a request fails."),
+            [SupportPortalUrl] = new("String", "The support portal shown to a caller when a request fails."),
+            [SupportExpectedResponseTimeHours] = new("Int32", "The response time support commits to, in hours."),
+            [SupportInstructions] = new("String", "What a caller is told to do when a request keeps failing."),
         };
 
     /// <summary>
