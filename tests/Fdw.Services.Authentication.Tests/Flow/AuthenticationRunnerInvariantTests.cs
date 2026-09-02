@@ -58,7 +58,7 @@ public sealed class AuthenticationRunnerInvariantTests
         // declares only Subject, but tries to hand back a Principal and a Permit as well
         var overreaching = new HostileStep
         {
-            Contributes = [ContextElement.Subject],
+            Contributes = [ContextElements.Subject],
             AuthenticationMethods = ["pwd"],
             Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
             {
@@ -84,7 +84,7 @@ public sealed class AuthenticationRunnerInvariantTests
         // one step, one declared method — it has no way to say it achieved more
         var single = new HostileStep
         {
-            Contributes = [ContextElement.Subject, ContextElement.Principal, ContextElement.Decision],
+            Contributes = [ContextElements.Subject, ContextElements.Principal, ContextElements.Decision],
             AuthenticationMethods = ["pwd"],
             Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
             {
@@ -110,14 +110,14 @@ public sealed class AuthenticationRunnerInvariantTests
     {
         var optedOut = new HostileStep
         {
-            Contributes = [ContextElement.Principal],
+            Contributes = [ContextElements.Principal],
             Behaviour = _ => new StepOutcome.NotApplicable("declining"),
         };
 
         var needsPrincipal = new HostileStep
         {
-            Requires = [ContextElement.Principal],
-            Contributes = [ContextElement.Decision],
+            Requires = [ContextElements.Principal],
+            Contributes = [ContextElements.Decision],
             Behaviour = _ => new StepOutcome.Contributed(Permits()),
         };
 
@@ -137,7 +137,7 @@ public sealed class AuthenticationRunnerInvariantTests
     {
         var authenticates = new HostileStep
         {
-            Contributes = [ContextElement.Subject, ContextElement.Principal],
+            Contributes = [ContextElements.Subject, ContextElements.Principal],
             AuthenticationMethods = ["pwd"],
             Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
             {
@@ -161,7 +161,7 @@ public sealed class AuthenticationRunnerInvariantTests
     {
         var suspends = new HostileStep
         {
-            Contributes = [ContextElement.Subject],
+            Contributes = [ContextElements.Subject],
             AuthenticationMethods = ["pwd"],
             Behaviour = _ => new StepOutcome.Challenge(new Uri("https://idp.test/authorize"), "unused"),
         };
@@ -187,7 +187,7 @@ public sealed class AuthenticationRunnerInvariantTests
     {
         var federated = new HostileStep
         {
-            Contributes = [ContextElement.Subject, ContextElement.Principal, ContextElement.Decision, ContextElement.Claims],
+            Contributes = [ContextElements.Subject, ContextElements.Principal, ContextElements.Decision, ContextElements.Claims],
             AuthenticationMethods = ["pwd"],
             Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
             {
@@ -196,8 +196,8 @@ public sealed class AuthenticationRunnerInvariantTests
                 Decision = Permits().Decision,
                 Claims =
                 [
-                    new Claim { Type = "role", Value = "admin", Source = ClaimSource.External, Issuer = "https://idp.test" },
-                    new Claim { Type = "department", Value = "finance", Source = ClaimSource.Local },
+                    new Claim { Type = "role", Value = "admin", Source = ClaimSources.External, Issuer = "https://idp.test" },
+                    new Claim { Type = "department", Value = "finance", Source = ClaimSources.Local },
                 ],
             }),
         };
@@ -218,23 +218,23 @@ public sealed class AuthenticationRunnerInvariantTests
     {
         var proves = new HostileStep
         {
-            Contributes = [ContextElement.Subject],
+            Contributes = [ContextElements.Subject],
             AuthenticationMethods = ["pwd"],
             Behaviour = _ => new StepOutcome.Contributed(Proves()),
         };
 
         var second = new HostileStep
         {
-            Requires = [ContextElement.Subject],
-            Contributes = [ContextElement.Principal],
+            Requires = [ContextElements.Subject],
+            Contributes = [ContextElements.Principal],
             AuthenticationMethods = ["otp"],
             Behaviour = _ => new StepOutcome.Contributed(Resolves()),
         };
 
         var authorizes = new HostileStep
         {
-            Requires = [ContextElement.Principal],
-            Contributes = [ContextElement.Decision],
+            Requires = [ContextElements.Principal],
+            Contributes = [ContextElements.Decision],
             Behaviour = _ => new StepOutcome.Contributed(Permits()),
         };
 

@@ -52,10 +52,10 @@ public sealed class AuthorizeIssuanceStepType
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<ContextElement> Requires => [ContextElement.Principal];
+    public IReadOnlyList<IContextElement> Requires => [ContextElements.Principal];
 
     /// <inheritdoc />
-    public IReadOnlyList<ContextElement> Contributes => [ContextElement.Decision];
+    public IReadOnlyList<IContextElement> Contributes => [ContextElements.Decision];
 
     /// <inheritdoc />
     /// <remarks>Deciding is not proving. Nothing about the caller is established here.</remarks>

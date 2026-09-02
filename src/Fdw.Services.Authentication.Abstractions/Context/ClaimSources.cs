@@ -1,3 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
+using Fdw.Collections;
+using Fdw.Collections.Attributes;
+
 namespace Fdw.Services.Authentication.Abstractions.Context;
 
 /// <summary>
@@ -8,14 +12,8 @@ namespace Fdw.Services.Authentication.Abstractions.Context;
 /// facts; one you merely trust to authenticate people states suggestions. Losing that distinction is
 /// how a provider asserting <c>role: admin</c> becomes an administrator in your system.
 /// </remarks>
-public enum ClaimSource
+[ExcludeFromCodeCoverage]
+[TypeCollection(typeof(ClaimSourceBase), typeof(IClaimSource), typeof(ClaimSources))]
+public abstract partial class ClaimSources : TypeCollectionBase<ClaimSourceBase, IClaimSource>
 {
-    /// <summary>Read from a store this platform owns. Usable as authorization input.</summary>
-    Local = 1,
-
-    /// <summary>Asserted by an external authority. Advisory until an explicit mapping promotes it.</summary>
-    External = 2,
-
-    /// <summary>Derived by a step from other context. Usable, and only as good as that step.</summary>
-    Derived = 3,
 }

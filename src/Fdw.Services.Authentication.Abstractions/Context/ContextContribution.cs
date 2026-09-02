@@ -44,11 +44,11 @@ public sealed record ContextContribution
     public IReadOnlyList<string> ObservedMethods { get; init; } = [];
 
     /// <summary>Enumerates the elements actually present, for checking against the declaration.</summary>
-    public IEnumerable<ContextElement> Present()
+    public IEnumerable<IContextElement> Present()
     {
-        if (Subject is not null) yield return ContextElement.Subject;
-        if (Principal is not null) yield return ContextElement.Principal;
-        if (Claims.Count > 0) yield return ContextElement.Claims;
-        if (Decision is not null) yield return ContextElement.Decision;
+        if (Subject is not null) yield return ContextElements.Subject;
+        if (Principal is not null) yield return ContextElements.Principal;
+        if (Claims.Count > 0) yield return ContextElements.Claims;
+        if (Decision is not null) yield return ContextElements.Decision;
     }
 }

@@ -30,14 +30,14 @@ public interface IAuthenticationStep
     /// missing element named — and again before each execution, because a step that returned
     /// NotApplicable contributed nothing however valid the order was.
     /// </remarks>
-    IReadOnlyList<ContextElement> Requires { get; }
+    IReadOnlyList<IContextElement> Requires { get; }
 
     /// <summary>Gets what this step may produce.</summary>
     /// <remarks>
     /// Enforced, not documented. The runner discards anything outside this declaration and reports
     /// it — a declaration nothing checks is a comment.
     /// </remarks>
-    IReadOnlyList<ContextElement> Contributes { get; }
+    IReadOnlyList<IContextElement> Contributes { get; }
 
     /// <summary>
     /// Gets the RFC 8176 methods this step may assert, or empty if it proves nothing.

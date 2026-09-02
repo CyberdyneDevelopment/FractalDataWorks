@@ -211,19 +211,19 @@ public sealed class AuthenticationRunner
         AuthenticationContext context, ContextContribution contribution, IAuthenticationStep step, string stepName)
     {
         foreach (var element in contribution.Present().Where(e => !step.Contributes.Contains(e)))
-            RunnerLog.UndeclaredContribution(_logger, stepName, element.ToString());
+            RunnerLog.UndeclaredContribution(_logger, stepName, element.Name);
 
         var declared = step.Contributes;
 
         return context with
         {
-            Subject = declared.Contains(ContextElement.Subject) && contribution.Subject is not null
+            Subject = declared.Contains(ContextElements.Subject) && contribution.Subject is not null
                 ? contribution.Subject : context.Subject,
-            Principal = declared.Contains(ContextElement.Principal) && contribution.Principal is not null
+            Principal = declared.Contains(ContextElements.Principal) && contribution.Principal is not null
                 ? contribution.Principal : context.Principal,
-            Claims = declared.Contains(ContextElement.Claims) && contribution.Claims.Count > 0
+            Claims = declared.Contains(ContextElements.Claims) && contribution.Claims.Count > 0
                 ? context.Claims.Add(contribution.Claims) : context.Claims,
-            Decision = declared.Contains(ContextElement.Decision) && contribution.Decision is not null
+            Decision = declared.Contains(ContextElements.Decision) && contribution.Decision is not null
                 ? contribution.Decision : context.Decision,
         };
     }
@@ -282,7 +282,7 @@ public sealed class AuthenticationRunner
                 // arrive as many claims of one type, and keeping one would mint a token that
                 // verifies and then refuses everything its holder is actually entitled to.
                 Claims = context.Claims.Claims
-                    .Where(c => c.Source is ClaimSource.Local or ClaimSource.Derived)
+                    .Where(c => c.Source == ClaimSources.Local || c.Source == ClaimSources.Derived)
                     .GroupBy(c => c.Type, StringComparer.Ordinal)
                     .ToDictionary(
                         g => g.Key,

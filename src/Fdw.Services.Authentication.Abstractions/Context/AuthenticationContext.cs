@@ -38,17 +38,10 @@ public sealed record AuthenticationContext
 
     /// <summary>Returns whether every element in <paramref name="required"/> is present.</summary>
     /// <param name="required">The elements a step declared it requires.</param>
-    public bool Satisfies(IEnumerable<ContextElement> required)
+    public bool Satisfies(IEnumerable<IContextElement> required)
         => required.All(Has);
 
     /// <summary>Returns whether <paramref name="element"/> is present.</summary>
     /// <param name="element">The element to test for.</param>
-    public bool Has(ContextElement element) => element switch
-    {
-        ContextElement.Subject   => Subject is not null,
-        ContextElement.Principal => Principal is not null,
-        ContextElement.Claims    => Claims.Claims.Length > 0,
-        ContextElement.Decision  => Decision is not null,
-        _ => false,
-    };
+    public bool Has(IContextElement element) => element.IsPresentOn(this);
 }

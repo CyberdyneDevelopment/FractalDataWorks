@@ -120,7 +120,7 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
     /// </remarks>
     private IGenericResult Validate(AuthenticationFlow flow)
     {
-        var established = new HashSet<ContextElement>();
+        var established = new HashSet<IContextElement>();
 
         foreach (var stepName in flow.Steps)
         {

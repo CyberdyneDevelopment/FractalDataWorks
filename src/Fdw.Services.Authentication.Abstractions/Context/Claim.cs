@@ -15,7 +15,7 @@ public sealed record Claim
     public required string Value { get; init; }
 
     /// <summary>Gets where this claim came from.</summary>
-    public required ClaimSource Source { get; init; }
+    public required IClaimSource Source { get; init; }
 
     /// <summary>Gets the authority that asserted it, for an external claim.</summary>
     public string? Issuer { get; init; }

@@ -85,10 +85,10 @@ public sealed class PasswordCredentialStepType
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<ContextElement> Requires => [];
+    public IReadOnlyList<IContextElement> Requires => [];
 
     /// <inheritdoc />
-    public IReadOnlyList<ContextElement> Contributes => [ContextElement.Subject, ContextElement.Principal];
+    public IReadOnlyList<IContextElement> Contributes => [ContextElements.Subject, ContextElements.Principal];
 
     /// <inheritdoc />
     /// <remarks>RFC 8176: a password is a knowledge factor.</remarks>
