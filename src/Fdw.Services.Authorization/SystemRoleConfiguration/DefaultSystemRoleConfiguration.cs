@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Security.Claims;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization.Logging;
+using Fdw.Services.Authorization.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -9,7 +10,7 @@ using Microsoft.Extensions.Options;
 namespace Fdw.Services.Authorization.SystemRoleConfiguration;
 
 /// <summary>
-/// Reads system role name configuration from <see cref="SystemRoleMappingOptions"/> (bound from
+/// Reads system role name configuration from <see cref="SystemRoleMappingConfiguration"/> (read from
 /// the <c>authz:SystemRoleMapping</c> section in appsettings.json) and exposes the names as the
 /// <see cref="ISystemRoleConfiguration"/> contract.
 /// </summary>
@@ -29,22 +30,22 @@ public sealed class DefaultSystemRoleConfiguration : ISystemRoleConfiguration
     /// Initializes a new instance of <see cref="DefaultSystemRoleConfiguration"/>.
     /// </summary>
     /// <exception cref="InvalidOperationException">
-    /// Thrown if <paramref name="options"/> contains an empty or missing <c>AdminRoleName</c>.
+    /// Thrown if <paramref name="configuration"/> contains an empty or missing <c>AdminRoleName</c>.
     /// The app must not start without a valid admin role name — there is no fallback.
     /// </exception>
     public DefaultSystemRoleConfiguration(
-        IOptions<SystemRoleMappingOptions> options,
+        SystemRoleMappingConfiguration configuration,
         ILogger<DefaultSystemRoleConfiguration>? logger)
     {
         var log = logger ?? NullLogger<DefaultSystemRoleConfiguration>.Instance;
-        var cfg = options.Value;
+        var cfg = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
         if (cfg.AdminRoleName is null || cfg.AdminRoleName.Trim().Length == 0)
         {
             SystemRoleConfigurationLog.AdminRoleNameMissing(log);
             throw new InvalidOperationException(
-                "authz:SystemRoleMapping:AdminRoleName is required and must not be empty. " +
-                "Add it to appsettings.json under authz:SystemRoleMapping:AdminRoleName.");
+                "SystemRoleMapping.AdminRoleName is required and must not be empty. " +
+                "Add the row to the authorization store; there is no default administrator role.");
         }
 
         _adminRoleName = cfg.AdminRoleName!;
