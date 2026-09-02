@@ -42,7 +42,7 @@ public sealed class EndToEndFlowTests
 
     private static HostileStep Proves(string method) => new()
     {
-        Contributes = [ContextElement.Subject, ContextElement.Claims],
+        Contributes = [ContextElements.Subject, ContextElements.Claims],
         AuthenticationMethods = [method],
         Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
         {
@@ -54,8 +54,8 @@ public sealed class EndToEndFlowTests
             },
             Claims =
             [
-                new Claim { Type = "role", Value = "admin", Source = ClaimSource.External, Issuer = "https://login.microsoftonline.com/tenant/v2.0" },
-                new Claim { Type = "department", Value = "platform", Source = ClaimSource.Local },
+                new Claim { Type = "role", Value = "admin", Source = ClaimSources.External, Issuer = "https://login.microsoftonline.com/tenant/v2.0" },
+                new Claim { Type = "department", Value = "platform", Source = ClaimSources.Local },
             ],
         }),
     };
@@ -68,15 +68,15 @@ public sealed class EndToEndFlowTests
             .Add("ForeignToken", Proves("pwd"))
             .Add("SecondFactor", new HostileStep
             {
-                Requires = [ContextElement.Subject],
+                Requires = [ContextElements.Subject],
                 Contributes = [],
                 AuthenticationMethods = ["otp"],
                 Behaviour = _ => new StepOutcome.Contributed(new ContextContribution()),
             })
             .Add("ResolvePrincipal", new HostileStep
             {
-                Requires = [ContextElement.Subject],
-                Contributes = [ContextElement.Principal],
+                Requires = [ContextElements.Subject],
+                Contributes = [ContextElements.Principal],
                 Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
                 {
                     Principal = new Principal { Id = PrincipalId, TenantId = TenantId },
@@ -84,8 +84,8 @@ public sealed class EndToEndFlowTests
             })
             .Add("Authorize", new HostileStep
             {
-                Requires = [ContextElement.Principal],
-                Contributes = [ContextElement.Decision],
+                Requires = [ContextElements.Principal],
+                Contributes = [ContextElements.Decision],
                 Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
                 {
                     Decision = new Decision { Permitted = true, Reason = "account active" },
@@ -149,8 +149,8 @@ public sealed class EndToEndFlowTests
             .Add("ForeignToken", Proves("pwd"))
             .Add("ResolvePrincipal", new HostileStep
             {
-                Requires = [ContextElement.Subject],
-                Contributes = [ContextElement.Principal],
+                Requires = [ContextElements.Subject],
+                Contributes = [ContextElements.Principal],
                 Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
                 {
                     Principal = new Principal { Id = PrincipalId, TenantId = TenantId },
@@ -158,8 +158,8 @@ public sealed class EndToEndFlowTests
             })
             .Add("Authorize", new HostileStep
             {
-                Requires = [ContextElement.Principal],
-                Contributes = [ContextElement.Decision],
+                Requires = [ContextElements.Principal],
+                Contributes = [ContextElements.Decision],
                 Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
                 {
                     Decision = new Decision { Permitted = true, Reason = "account active" },

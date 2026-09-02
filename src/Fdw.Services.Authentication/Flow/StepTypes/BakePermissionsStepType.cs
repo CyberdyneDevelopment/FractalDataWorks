@@ -56,10 +56,10 @@ public sealed class BakePermissionsStepType
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<ContextElement> Requires => [ContextElement.Principal];
+    public IReadOnlyList<IContextElement> Requires => [ContextElements.Principal];
 
     /// <inheritdoc />
-    public IReadOnlyList<ContextElement> Contributes => [ContextElement.Claims];
+    public IReadOnlyList<IContextElement> Contributes => [ContextElements.Claims];
 
     /// <inheritdoc />
     /// <remarks>Gathering entitlements proves nothing about who the caller is.</remarks>
@@ -97,7 +97,7 @@ public sealed class BakePermissionsStepType
             {
                 Type = ClaimDefinitions.perm.Name,
                 Value = permission,
-                Source = ClaimSource.Local,
+                Source = ClaimSources.Local,
             })
             .ToList();
 

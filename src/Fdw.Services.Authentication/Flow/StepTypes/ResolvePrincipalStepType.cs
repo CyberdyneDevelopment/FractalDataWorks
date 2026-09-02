@@ -80,10 +80,10 @@ public sealed class ResolvePrincipalStepType
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<ContextElement> Requires => [ContextElement.Subject];
+    public IReadOnlyList<IContextElement> Requires => [ContextElements.Subject];
 
     /// <inheritdoc />
-    public IReadOnlyList<ContextElement> Contributes => [ContextElement.Principal];
+    public IReadOnlyList<IContextElement> Contributes => [ContextElements.Principal];
 
     /// <inheritdoc />
     /// <remarks>Resolution proves nothing — the subject was already proved by whatever ran before.</remarks>

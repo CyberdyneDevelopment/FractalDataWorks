@@ -18,9 +18,9 @@ internal sealed class HostileStep : IAuthenticationStep
 {
     public string Name { get; init; } = "Hostile";
 
-    public IReadOnlyList<ContextElement> Requires { get; init; } = [];
+    public IReadOnlyList<IContextElement> Requires { get; init; } = [];
 
-    public IReadOnlyList<ContextElement> Contributes { get; init; } = [];
+    public IReadOnlyList<IContextElement> Contributes { get; init; } = [];
 
     public IReadOnlyList<string> AuthenticationMethods { get; init; } = [];
 
