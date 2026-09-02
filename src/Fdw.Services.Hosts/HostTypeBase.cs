@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Services.Hosts.Abstractions;
 using Fdw.Services.Abstractions;
@@ -25,8 +25,22 @@ public abstract class HostTypeBase<TService, TConfiguration, TFactory>
     /// <param name="sectionName">The configuration section this option reads.</param>
     /// <param name="displayName">Human-readable name.</param>
     /// <param name="description">What this hosting pipeline is for.</param>
+    /// <remarks>
+    /// The store is named here rather than left to the caller because HostTypes' whole reason for
+    /// reading ServerConfiguration instead of PlatformConfiguration is that a hosting pipeline has
+    /// to exist before the platform store is reachable. That was stated on the collection and never
+    /// wired: the base defaults DataStore to the empty string, so every host option resolved to no
+    /// store at all and read nothing.
+    /// </remarks>
     protected HostTypeBase(string name, string sectionName, string displayName, string description)
-        : base(name, sectionName, displayName, description)
+        : base(name,
+               sectionName,
+               displayName,
+               description,
+               category: "Host",
+               defaultDataStoreName: "ServerConfiguration",
+               defaultPathName: "host",
+               defaultContainerName: name)
     {
     }
 }
