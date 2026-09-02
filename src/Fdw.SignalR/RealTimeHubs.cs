@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Fdw.Collections;
@@ -72,6 +72,13 @@ public abstract partial class RealTimeHubs : TypeCollectionBase<RealTimeHubOptio
     /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
+        // Why: defer is the host claiming this phase to run at a position it chooses.
+        // Stateless, so there is no flag to set - returning is the whole of it.
+        if (defer)
+        {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
         ArgumentNullException.ThrowIfNull(builder);
         var services = builder.Services;
 

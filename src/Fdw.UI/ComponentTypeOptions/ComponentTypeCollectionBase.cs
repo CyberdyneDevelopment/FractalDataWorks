@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Fdw.Collections;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -79,16 +80,35 @@ public abstract class ComponentTypeCollectionBase<TBase> : TypeCollectionBase<TB
     /// <summary>Gets or sets a value indicating whether Initialize is switched off.</summary>
     public bool SkipInitialization { get; set; }
 
+    /// <summary>Tracks each phase as not run, deferred, or run.</summary>
+    /// <remarks>
+    /// Three states rather than a flag per phase because a phase has three positions, not two: it
+    /// has not run, it has been claimed by a host that will run it itself, or it has run. A bool
+    /// cannot hold the middle one, and <c>defer</c> is exactly the middle one.
+    /// </remarks>
+    private PhaseState _configure;
+    private PhaseState _register;
+    private PhaseState _initialize;
+
+    /// <summary>Gets whether Configure has not run, is deferred, or has run.</summary>
+    public PhaseState ConfigureState => _configure;
+
+    /// <summary>Gets whether Register has not run, is deferred, or has run.</summary>
+    public PhaseState RegisterState => _register;
+
+    /// <summary>Gets whether Initialize has not run, is deferred, or has run.</summary>
+    public PhaseState InitializeState => _initialize;
+
     /// <summary>Gets a value indicating whether Configure has run.</summary>
     /// <remarks>A phase runs once, so a chained body cannot re-cycle members an earlier one
-    /// already drove.</remarks>
-    public bool Configured { get; private set; }
+    /// already drove. A deferred phase reads false here: it has been claimed, not run.</remarks>
+    public bool Configured => _configure == PhaseState.Ran;
 
     /// <summary>Gets a value indicating whether Register has run.</summary>
-    public bool Registered { get; private set; }
+    public bool Registered => _register == PhaseState.Ran;
 
     /// <summary>Gets a value indicating whether Initialize has run.</summary>
-    public bool Initialized { get; private set; }
+    public bool Initialized => _initialize == PhaseState.Ran;
 
     /// <summary>Gets the body run during Configure.</summary>
     protected Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>>? ConfigurationMethod { get; private set; }
@@ -269,7 +289,13 @@ public abstract class ComponentTypeCollectionBase<TBase> : TypeCollectionBase<TB
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
-        Configured = true;
+        if (defer)
+        {
+            _configure = PhaseState.Deferred;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        _configure = PhaseState.Ran;
 
         if (ConfigurationMethod is not null)
         {
@@ -304,7 +330,13 @@ public abstract class ComponentTypeCollectionBase<TBase> : TypeCollectionBase<TB
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
-        Registered = true;
+        if (defer)
+        {
+            _register = PhaseState.Deferred;
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        _register = PhaseState.Ran;
 
         if (RegistrationMethod is not null)
         {
@@ -335,7 +367,13 @@ public abstract class ComponentTypeCollectionBase<TBase> : TypeCollectionBase<TB
             return GenericResult<IHost>.Success(host);
         }
 
-        Initialized = true;
+        if (defer)
+        {
+            _initialize = PhaseState.Deferred;
+            return GenericResult<IHost>.Success(host);
+        }
+
+        _initialize = PhaseState.Ran;
 
         if (InitializationMethod is not null)
         {

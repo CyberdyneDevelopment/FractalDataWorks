@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Fdw.Collections;
 using Fdw.Configuration.Abstractions;
@@ -52,6 +52,13 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
+        // Why: defer is the host claiming this phase to run at a position it chooses.
+        // Stateless, so there is no flag to set - returning is the whole of it.
+        if (defer)
+        {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
 
         builder.Services.Configure<List<DataPathConfiguration>>(
             builder.Configuration.GetSection("DataStores:DataPath"));
@@ -81,6 +88,13 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
+        // Why: defer is the host claiming this phase to run at a position it chooses.
+        // Stateless, so there is no flag to set - returning is the whole of it.
+        if (defer)
+        {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
         var services = builder.Services;
 
         services.TryAddSingleton<IDataStoreBuilderSelector, DataStoreTypesBuilderSelector>();
@@ -124,6 +138,13 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
+        // Why: defer is the host claiming this phase to run at a position it chooses.
+        // Stateless, so there is no flag to set - returning is the whole of it.
+        if (defer)
+        {
+            return GenericResult<IHost>.Success(host);
+        }
+
         using var scope = host.Services.CreateScope();
         var provider = scope.ServiceProvider.GetRequiredService<IDataStoreProvider>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<ConfigurationGatewayDataStoreProvider>>();

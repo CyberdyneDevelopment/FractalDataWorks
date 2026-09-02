@@ -1,4 +1,4 @@
-using Fdw.MessageLogging;
+﻿using Fdw.MessageLogging;
 using Fdw.Messages;
 using Microsoft.Extensions.Logging;
 
@@ -55,6 +55,15 @@ public static partial class EndpointRegistrationLog
         Level = LogLevel.Information,
         Message = "[{groupName}] SKIPPED entirely — SkipRegistration is set on the group")]
     public static partial IGenericMessage GroupSkipped(ILogger logger, string groupName);
+
+    /// <summary>Logged when a host claims a group's phase to run itself, later.</summary>
+    /// <remarks>Distinct from SKIPPED: a deferred phase is still going to run, at a position the
+    /// host chose. Reading one as the other turns "runs later" into "never ran" at a glance.</remarks>
+    [MessageLogging(
+        EventId = 91015,
+        Level = LogLevel.Information,
+        Message = "[{groupName}] DEFERRED {phase} — the host claimed this phase and will run it itself")]
+    public static partial IGenericMessage GroupDeferred(ILogger logger, string groupName, string phase);
 
     /// <summary>Logged when the registration chain completes having declared no endpoint at all.</summary>
     [MessageLogging(
