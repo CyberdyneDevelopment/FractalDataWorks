@@ -1,161 +1,106 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Configuration;
-using Fdw.Services;
 using Fdw.Services.Abstractions;
-using Fdw.ServiceTypes;
 using Fdw.Services.TokenManagers.Abstractions;
-using Fdw.ServiceTypes.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using System;
-using System.Linq;
-using Fdw.Results;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Fdw.Results;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
-using Fdw.Services.TokenManagers.Commands;
 
 namespace Fdw.Services.TokenManagers;
 
 /// <summary>
-/// Collection of token manager service types. Structurally copies <c>SchedulerTypes</c> and is
-/// collected by PlatformServices like every other domain — no host registers it by hand. Exactly one
-/// token manager is active per deployment (the enabled <c>auth.TokenManager</c> config row); the
-/// provider resolves it by name.
+/// Registers the token-issuance and -revocation services every deployment needs — a single, hand-written
+/// three-phase registrant, not a <c>[ServiceTypeCollection]</c> dispatch: FDW-672 replaced the token-manager
+/// selection this domain used to dispatch to with the step pipeline, and no <c>[TypeOption]</c> was ever
+/// declared against the old collection. What remains genuinely live — issuance via
+/// <see cref="JwtIssuanceResolver"/> and revocation via <see cref="ITokenRevocationStore"/> — is registered
+/// directly, matching how <c>JwtIssuanceResolver</c> itself already bypasses per-option dispatch.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeCollection(
-    typeof(TokenManagerTypeBase<ITokenManager, ITokenManagerImplementationConfiguration, ITokenManagerFactory<ITokenManager, ITokenManagerImplementationConfiguration>>),
-    typeof(ITokenManagerType),
-    typeof(TokenManagerTypes),
-    ServiceInterface = typeof(ITokenManager),
-    ProviderType = typeof(TokenManagerProvider),
-    ProviderInterface = typeof(ITokenManagerProvider),
-    ServiceCategory = "TokenManager")]
-public partial class TokenManagerTypes : ServiceTypeCollectionBase<
-    TokenManagerTypeBase<ITokenManager, ITokenManagerImplementationConfiguration, ITokenManagerFactory<ITokenManager, ITokenManagerImplementationConfiguration>>,
-    ITokenManagerType>
+[PlatformServiceProvider(ServiceCategory = "TokenManager")]
+public static class TokenManagerTypes
 {
     /// <summary>
-    /// The connection this domain's configuration rows are read from and written to.
+    /// The connection this domain's configuration rows are read from.
     /// </summary>
     public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
 
-    // Configure(), Register(), Initialize() are source-generated.
+    /// <summary>
+    /// No-op — this domain has no pre-Build IOptions binding to perform; <see cref="Register"/> does the
+    /// collection's only real work. Declared only so the <c>[PlatformServiceProvider]</c> three-phase
+    /// shape requirement is satisfied.
+    /// </summary>
+    /// <param name="builder">The host application builder.</param>
+    /// <param name="loggerFactory">Unused.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
+        => GenericResult<IHostApplicationBuilder>.Success(builder);
 
     /// <summary>
-    /// Sets this collection's Register body: the option collect, then this domain's provider.
+    /// Registers issuance (<see cref="ITokenIssuer"/>/<see cref="ISigningCredentialProvider"/> via
+    /// <see cref="JwtIssuanceResolver"/>) and revocation (<see cref="ITokenRevocationStore"/>) — the two
+    /// services this domain provides. One registration for the whole domain, not per-option: a
+    /// deployment mints as exactly one issuer, and a host that had to call an AddXxx of its own is a
+    /// host the next one has to remember to copy.
     /// </summary>
-    /// <remarks>
-    /// The provider is one registration for the whole collection and this declaration already names it,
-    /// so the body that registers it is written here beside the declaration. Setting it as the phase's
-    /// body is what makes it replaceable: an application calling <c>Registration(...)</c> replaces the
-    /// collect and this registration together, which is the correct semantic for a host taking over phase 2.
-    /// </remarks>
-    static TokenManagerTypes()
+    /// <param name="builder">The host application builder.</param>
+    /// <param name="loggerFactory">Optional logger factory for registration logging.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        var collectOptions = RegisterFunc;
-
-        var providerService = typeof(ITokenManagerProvider).ToString();
-
-        Registration((builder, loggerFactory) =>
-        {
-            var log = loggerFactory?.CreateLogger<TokenManagerTypes>() ?? NullLogger<TokenManagerTypes>.Instance;
-
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
-
-            var declaredOptions = Options;
-            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
-
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(TokenManagerTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(TokenManagerTypes), providerService);
-
-            builder.Services.TryAddSingleton<ITokenManagerConfigurationProvider>(sp =>
-                new TokenManagerConfigurationProvider(
-                    sp.GetService<ILogger<TokenManagerConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
-            builder.Services.TryAddSingleton<TokenManagerConfigurationProvider>(
-                sp => (TokenManagerConfigurationProvider)sp.GetRequiredService<ITokenManagerConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<TokenManagerConfiguration, TokenManagerConfigurationCommand>>(
-                sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<TokenManagerConfiguration>>(
-                sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
-
-            builder.Services.TryAddSingleton<JwtTokenManagerConfigurationProvider>(sp =>
-                new JwtTokenManagerConfigurationProvider(
-                    sp.GetService<ILogger<JwtTokenManagerConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
-
-            // The issuer and the key it signs with are one registration for the whole collection,
-            // not per-option: a deployment mints as exactly one issuer, and a host that had to call
-            // an AddXxx of its own is a host the next one has to remember to copy.
-            builder.Services.TryAddSingleton<JwtIssuanceResolver>(sp =>
-                new JwtIssuanceResolver(sp, sp.GetService<ILogger<JwtIssuanceResolver>>()));
-
-            builder.Services.TryAddSingleton<ITokenIssuer>(sp =>
-                new ConfiguredTokenIssuer(sp.GetRequiredService<JwtIssuanceResolver>()));
-
-            builder.Services.TryAddSingleton<ISigningCredentialProvider>(sp =>
-                new ConfiguredSigningCredentialProvider(sp.GetRequiredService<JwtIssuanceResolver>()));
-
-            // AuthenticationService's own registration helper. Its summary says it is safe to call
-            // from every TokenManagers option's registration cascade - but there are no options in
-            // this collection, so nothing ever called it and IAuthenticationService resolved to
-            // nothing. That surfaced as FastEndpoints failing to activate LogoutEndpoint, naming
-            // the endpoint rather than the registration. Called here for the same reason the issuer
-            // is registered here: one registration for the whole collection.
-            AuthenticationService.RegisterDomainServices(builder.Services);
-
-            builder.Services.AddScoped<ITokenManagerProvider>(sp =>
-            {
-                var provider = new TokenManagerProvider(
-                    sp,
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<TokenManagerProvider>()
-                    ?? NullLogger<TokenManagerProvider>.Instance);
-
-                var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<TokenManagerTypes>()
-                    ?? NullLogger<TokenManagerTypes>.Instance;
-                ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(TokenManagerTypes), provider.GetType().Name);
-                try
-                {
-                    if (sp.GetService<ITokenManagerConfigurationProvider>() is { } cfgProvider)
-                    {
-                        var domainResult = provider.Register(cfgProvider);
-                        if (domainResult.IsSuccess)
-                            ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(TokenManagerTypes), provider.GetType().Name, cfgProvider.GetType().Name);
-                        else
-                            ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(TokenManagerTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
-                    }
-                    else
-                    {
-                        ServiceTypeLog.DomainHasNoConfigurationSource(
-                            stLogger,
-                            nameof(TokenManagerTypes),
-                            provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<TokenManagerConfiguration>).ToString());
-                    }
-                }
-                catch (Exception ex)
-                {
-                    ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(TokenManagerTypes));
-                    throw;
-                }
-                return provider;
-            });
-
-            if (declaredOptions.Length == 0)
-                ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(TokenManagerTypes), providerService);
-            else
-                ServiceTypeLog.DomainRegistered(log, nameof(TokenManagerTypes), declaredOptions.Length, optionNames, providerService);
-
+        // Why: defer is the host claiming this phase to run at a position it chooses.
+        // Stateless, so there is no flag to set - returning is the whole of it.
+        if (defer)
             return GenericResult<IHostApplicationBuilder>.Success(builder);
-        });
+
+        builder.Services.TryAddSingleton<ITokenManagerConfigurationProvider>(sp =>
+            new TokenManagerConfigurationProvider(
+                sp.GetService<ILogger<TokenManagerConfigurationProvider>>()!,
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                ConfigurationConnection));
+        builder.Services.TryAddSingleton<TokenManagerConfigurationProvider>(
+            sp => (TokenManagerConfigurationProvider)sp.GetRequiredService<ITokenManagerConfigurationProvider>());
+        builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<TokenManagerConfiguration, Commands.TokenManagerConfigurationCommand>>(
+            sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
+        builder.Services.TryAddSingleton<IServiceConfigurationProvider<TokenManagerConfiguration>>(
+            sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
+
+        builder.Services.TryAddSingleton<JwtTokenManagerConfigurationProvider>(sp =>
+            new JwtTokenManagerConfigurationProvider(
+                sp.GetService<ILogger<JwtTokenManagerConfigurationProvider>>()!,
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                ConfigurationConnection));
+
+        builder.Services.TryAddSingleton<JwtIssuanceResolver>(sp =>
+            new JwtIssuanceResolver(sp, sp.GetService<ILogger<JwtIssuanceResolver>>()));
+
+        builder.Services.TryAddSingleton<ITokenIssuer>(sp =>
+            new ConfiguredTokenIssuer(sp.GetRequiredService<JwtIssuanceResolver>()));
+
+        builder.Services.TryAddSingleton<ISigningCredentialProvider>(sp =>
+            new ConfiguredSigningCredentialProvider(sp.GetRequiredService<JwtIssuanceResolver>()));
+
+        builder.Services.TryAddSingleton<ITokenRevocationStore, TokenRevocationStore>();
+
+        return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
+
+    /// <summary>
+    /// No-op — this domain has no post-Build eager-resolve step; every service is registered directly in
+    /// <see cref="Register"/>. Declared only so the <c>[PlatformServiceProvider]</c> three-phase shape
+    /// requirement is satisfied.
+    /// </summary>
+    /// <param name="host">The built host.</param>
+    /// <param name="loggerFactory">Unused.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
+        => GenericResult<IHost>.Success(host);
 }

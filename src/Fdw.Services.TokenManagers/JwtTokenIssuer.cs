@@ -59,9 +59,16 @@ public sealed class JwtTokenIssuer : ITokenIssuer
         var issuedAt = DateTimeOffset.UtcNow;
         var expiresAt = issuedAt.Add(_configuration.Lifetime);
 
+        var jti = Guid.CreateVersion7();
+
         var claims = new Dictionary<string, object>(StringComparer.Ordinal)
         {
             [ClaimDefinitions.sub.Name] = request.PrincipalId.ToString(),
+
+            // A per-token identifier, distinct from the principal it was issued for: revocation
+            // (LogoutEndpoint -> ITokenRevocationStore) targets one presented token, never every
+            // token a principal happens to hold.
+            [ClaimDefinitions.jti.Name] = jti.ToString(),
 
             // ClaimDefinitions rather than a literal: the RLS path reads the tenant through the
             // same definition, and a token minting "tid" while the session-context builder looks

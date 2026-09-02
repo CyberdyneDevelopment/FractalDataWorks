@@ -40,6 +40,7 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
 {
     private readonly IAuthenticationServiceConfigurationProvider _configuration;
     private readonly ISigningCredentialProvider _credentials;
+    private readonly ITokenRevocationStore _revocations;
     private readonly ILogger _log;
 
     private AuthenticationScheme? _scheme;
@@ -48,14 +49,17 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
     /// <summary>Initializes a new instance of the <see cref="LocalKeyAuthenticationHandler"/> class.</summary>
     /// <param name="configuration">Reads the declared service and dispatches to its implementation.</param>
     /// <param name="credentials">Holds the key this host signs with, which is the key it checks against.</param>
+    /// <param name="revocations">Checked after signature validation — this host's own deny-list.</param>
     /// <param name="logger">The logger for validation outcomes.</param>
     public LocalKeyAuthenticationHandler(
         IAuthenticationServiceConfigurationProvider configuration,
         ISigningCredentialProvider credentials,
+        ITokenRevocationStore revocations,
         ILogger<LocalKeyAuthenticationHandler>? logger = null)
     {
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
+        _revocations = revocations ?? throw new ArgumentNullException(nameof(revocations));
         _log = logger ?? NullLogger<LocalKeyAuthenticationHandler>.Instance;
     }
 
@@ -88,12 +92,42 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
             return AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(
                 _log, ServiceName, validated.Exception?.Message ?? "no reason given")));
 
+        if (await CheckRevocation(validated.ClaimsIdentity, _context.RequestAborted).ConfigureAwait(false) is { } rejected)
+            return rejected;
+
         // The inbound claim map is not applied: JsonWebTokenHandler does not rewrite claim types the
         // way it would, so sub stays sub and roles stays roles.
         AuthenticationValidationLog.TokenAccepted(_log, ServiceName, validated.ClaimsIdentity.Name ?? "(no name)");
 
         return AuthenticateResult.Success(
             new AuthenticationTicket(new ClaimsPrincipal(validated.ClaimsIdentity), _scheme.Name));
+    }
+
+    /// <summary>Rejects a presented token whose <c>jti</c> is missing, unparseable, or on this host's deny-list.</summary>
+    /// <param name="identity">The already signature-validated token's claims.</param>
+    /// <param name="cancellationToken">A token to cancel the check.</param>
+    /// <returns>A failure to return from <see cref="AuthenticateAsync"/>, or <see langword="null"/> to continue.</returns>
+    /// <remarks>
+    /// <c>JwtTokenIssuer</c> mints <c>jti</c> unconditionally, so a token with none or an unparseable
+    /// one did not come from this host's own issuer — fail loud rather than let it through unchecked.
+    /// </remarks>
+    private async Task<AuthenticateResult?> CheckRevocation(ClaimsIdentity identity, CancellationToken cancellationToken)
+    {
+        if (identity.FindFirst(ClaimDefinitions.jti.Name)?.Value is not { Length: > 0 } jtiClaim
+            || !Guid.TryParse(jtiClaim, out var jti))
+        {
+            return AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(
+                _log, ServiceName, "missing or unparseable jti claim")));
+        }
+
+        var revoked = await _revocations.IsRevoked(jti, cancellationToken).ConfigureAwait(false);
+        if (revoked.IsFailure)
+            return AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(
+                _log, ServiceName, revoked.CurrentMessage ?? "revocation check failed")));
+
+        return revoked.Value
+            ? AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(_log, ServiceName, "token revoked")))
+            : null;
     }
 
     /// <summary>Builds what this scheme checks a token against, from the entry it was taken for.</summary>
