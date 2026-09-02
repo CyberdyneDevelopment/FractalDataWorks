@@ -23,9 +23,9 @@ using Fdw.Services.ExternalIdentityProviders.Binding;
 namespace Fdw.Services.ExternalIdentityProviders;
 
 /// <summary>
-/// Collection of external identity provisioner service types. Structurally copies
-/// <see cref="ExternalIdentityProviderTypes"/> and is collected by PlatformServices like every other
-/// domain — no host registers it by hand. Config-selected: a (tenant, external provider) pair binds to
+/// Collection of external identity provisioner service types. Collected by PlatformServices like
+/// every other domain — no host registers it by hand. Config-selected: a (tenant, external provider)
+/// pair binds to
 /// exactly one active <c>sec.ExternalIdentityProvisioner</c> row via
 /// <c>ExternalIdentityProvisionerBindingConfigurationProvider</c>.
 /// </summary>

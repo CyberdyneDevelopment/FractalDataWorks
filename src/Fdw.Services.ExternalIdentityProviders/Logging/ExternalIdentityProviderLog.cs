@@ -8,10 +8,10 @@ using Fdw.Services.ExternalIdentityProviders.Abstractions;
 namespace Fdw.Services.ExternalIdentityProviders.Logging;
 
 /// <summary>
-/// MessageLogging methods for the ExternalIdentityProviders domain: provider resolution
-/// (<see cref="ExternalIdentityProviderResolver"/>) and external token validation (each
-/// <c>IExternalIdentityProvider</c> implementation, e.g. the reference Oidc provider). Every log
-/// message is returned in the result AND logged.
+/// MessageLogging methods for the ExternalIdentityProviders domain: identity binding
+/// (<c>ExternalIdentityBinding</c>) and JIT provisioning (each <c>IExternalIdentityProvisioner</c>
+/// implementation, e.g. <c>ChainedExternalIdentityProvisioner</c>/<c>ClaimMappedProvisioner</c>). Every
+/// log message is returned in the result AND logged.
 /// EventId range: 7457-7466 (see EVENTID-ALLOCATION.md).
 /// </summary>
 [ExcludeFromCodeCoverage(Justification = "MessageLogging partial class - implementation is source-generated")]

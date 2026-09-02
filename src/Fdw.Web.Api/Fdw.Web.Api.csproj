@@ -62,7 +62,6 @@
     <ProjectReference Include="..\Fdw.Services.Authentication.Endpoints\Fdw.Services.Authentication.Endpoints.csproj" />
     <ProjectReference Include="..\Fdw.UI.Themes.Endpoints\Fdw.UI.Themes.Endpoints.csproj" />
     <ProjectReference Include="..\Fdw.Services.Multitenancy.Endpoints\Fdw.Services.Multitenancy.Endpoints.csproj" />
-    <ProjectReference Include="..\Fdw.Services.ExternalIdentityProviders.Endpoints\Fdw.Services.ExternalIdentityProviders.Endpoints.csproj" />
   </ItemGroup>
 
   <ItemGroup>

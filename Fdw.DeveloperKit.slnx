@@ -285,9 +285,6 @@
     <Project Path="src/Fdw.Services.EtlMappers.Pooled/Fdw.Services.EtlMappers.Pooled.csproj" />
     <Project Path="src/Fdw.Services.EtlMappers/Fdw.Services.EtlMappers.csproj" />
     <Project Path="src/Fdw.Services.ExternalIdentityProviders.Abstractions/Fdw.Services.ExternalIdentityProviders.Abstractions.csproj" />
-    <Project Path="src/Fdw.Services.ExternalIdentityProviders.Clients/Fdw.Services.ExternalIdentityProviders.Clients.csproj" />
-    <Project Path="src/Fdw.Services.ExternalIdentityProviders.Endpoints/Fdw.Services.ExternalIdentityProviders.Endpoints.csproj" />
-    <Project Path="src/Fdw.Services.ExternalIdentityProviders.Oidc/Fdw.Services.ExternalIdentityProviders.Oidc.csproj" />
     <Project Path="src/Fdw.Services.ExternalIdentityProviders/Fdw.Services.ExternalIdentityProviders.csproj" />
     <Project Path="src/Fdw.Services.Hosts.Abstractions/Fdw.Services.Hosts.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Hosts/Fdw.Services.Hosts.csproj" />

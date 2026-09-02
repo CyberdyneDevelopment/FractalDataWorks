@@ -7,15 +7,14 @@ using Fdw.Services.ExternalIdentityProviders.Abstractions;
 namespace Fdw.Services.ExternalIdentityProviders;
 
 /// <summary>
-/// Base class for external identity provisioner service type definitions. Structurally copies
-/// <see cref="ExternalIdentityProviderTypeBase{TService, TConfiguration, TFactory}"/> (3-parameter CRTP
-/// over TService/TConfiguration/TFactory), targeting the <c>sec</c> schema — NOT <c>auth</c> — since
+/// Base class for external identity provisioner service type definitions. A 3-parameter CRTP base
+/// over TService/TConfiguration/TFactory, targeting the <c>sec</c> schema — NOT <c>auth</c> — since
 /// provisioners are a security-mechanism selector, not an identity-provider configuration.
 /// </summary>
 /// <remarks>
 /// Lives in the concrete <c>Fdw.Services.ExternalIdentityProviders</c> package (net10.0), not
-/// <c>Fdw.Services.ExternalIdentityProviders.Abstractions</c> (netstandard2.0) — the same placement as
-/// <c>ExternalIdentityProviderTypeBase</c>. This class closes <c>TProvider</c> to
+/// <c>Fdw.Services.ExternalIdentityProviders.Abstractions</c> (netstandard2.0). This class closes
+/// <c>TProvider</c> to
 /// <c>IPlatformServiceProvider&lt;IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration&gt;</c>,
 /// and <see cref="ExternalIdentityProvisionerConfiguration"/> is only available from this package (its
 /// <c>[GenerateMapper]</c>/<c>[ManagedConfiguration]</c> source generators are net10.0-only), so the
