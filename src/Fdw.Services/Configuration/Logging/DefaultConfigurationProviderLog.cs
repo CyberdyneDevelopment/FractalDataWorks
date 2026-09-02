@@ -264,6 +264,17 @@ public static partial class DefaultConfigurationProviderLog
         Message = "CascadeChildSave: no ConfigurationCommand registered for child type '{childTypeName}' on parent '{parentTypeName}' — add a [TypeOption] for this child or remove it from the parent's IEnumerable property")]
     public static partial IGenericMessage NoChildCommandForType(ILogger logger, string parentTypeName, string childTypeName);
 
+    /// <summary>
+    /// Logs that a cascade skipped a child collection item because it does not implement IGenericConfiguration, so the row was never written and no error was raised.
+    /// </summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="parentTypeName">The parent configuration type name being saved.</param>
+    /// <param name="childTypeName">The child type that was skipped.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 61002, Level = LogLevel.Error,
+        Message = "CascadeChildSave: skipped '{childTypeName}' on parent '{parentTypeName}' because it does not implement IGenericConfiguration — the row was NOT written and nothing else will report this; add the interface to the child configuration")]
+    public static partial IGenericMessage ChildSkippedNotConfiguration(ILogger logger, string parentTypeName, string childTypeName);
+
     // ── Typed-body composition (9380-9385) — the read mirror of the typed-body save ──
 
     /// <summary>

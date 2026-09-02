@@ -48,7 +48,8 @@ internal static class UniverseResponseMapper
         Members = config.Members.Select(m => new UniverseMemberDto
         {
             Id = m.Id,
-            UserId = m.UserId,
+            SubjectType = m.SubjectType,
+            SubjectId = m.SubjectId,
             MemberRole = m.MemberRole,
             State = m.State,
             JoinedAt = m.JoinedAt,
