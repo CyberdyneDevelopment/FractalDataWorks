@@ -1,4 +1,4 @@
-<Project>
+﻿<Project>
   <PropertyGroup>
 	  <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!-- Suppress the verbose pruning output -->
@@ -211,7 +211,7 @@
        NuGet normalizes the trailing zero revision away, so the PACKAGE is 1.0.0-rc.1. -->
   <PropertyGroup>
     <VersionPrefix>1.0.1</VersionPrefix>
-    <VersionSuffix>rc.3</VersionSuffix>
+    <VersionSuffix>rc.4</VersionSuffix>
     <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
     <FileVersion>$(VersionPrefix).0</FileVersion>
   </PropertyGroup>
