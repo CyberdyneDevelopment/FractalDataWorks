@@ -15,7 +15,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Fdw.WebMcp.Hosting\Fdw.WebMcp.Hosting.csproj" />
     <ProjectReference Include="..\..\src\Fdw.WebMcp.Abstractions\Fdw.WebMcp.Abstractions.csproj" />
-    <ProjectReference Include="..\..\src\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
   </ItemGroup>
 
 

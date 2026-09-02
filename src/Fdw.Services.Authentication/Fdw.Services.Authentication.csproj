@@ -81,4 +81,11 @@
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <!-- The authentication handlers are internal: they are named by AddScheme and resolved by the
+         framework, never constructed by a consumer. Testing one means constructing it, so the test
+         assembly is granted access rather than widening the package's surface to suit its tests. -->
+    <InternalsVisibleTo Include="Fdw.Services.Authentication.Tests" />
+  </ItemGroup>
 </Project>

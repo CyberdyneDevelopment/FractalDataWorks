@@ -53,7 +53,18 @@ public static class IssuerSchemeSelector
         var logger = context.RequestServices.GetService<ILoggerFactory>()?.CreateLogger(typeof(IssuerSchemeSelector))
             ?? (ILogger)NullLogger.Instance;
 
-        var issuer = ReadIssuer(context.Request.Headers.Authorization.ToString(), context.Request.Path.ToString(), logger);
+        var authorization = context.Request.Headers.Authorization.ToString();
+
+        // An opaque credential is recognised by its prefix, because there is nothing in it to read.
+        // It routes under a well-known issuer through the SAME binding lookup as every other scheme,
+        // rather than short-circuiting to a scheme name: a second routing path would have to be kept
+        // in step with this one, and a host that has not declared the ApiKey entry should fall
+        // through to the unmatched handler exactly as it would for an undeclared issuer.
+        var issuer = authorization.StartsWith(
+            ApiKeyAuthenticationType.CredentialPrefix, StringComparison.OrdinalIgnoreCase)
+                ? OpaqueCredentialIssuerFor(context, logger)
+                : ReadIssuer(authorization, context.Request.Path.ToString(), logger);
+
         if (issuer is null)
         {
             AuthenticationValidationLog.NoReadableBearerToken(logger, context.Request.Path.ToString());
@@ -77,6 +88,12 @@ public static class IssuerSchemeSelector
 
         AuthenticationValidationLog.IssuerRouted(logger, issuer, match.SchemeName, match.ServiceName);
         return match.SchemeName;
+    }
+
+    private static string OpaqueCredentialIssuerFor(HttpContext context, ILogger logger)
+    {
+        AuthenticationValidationLog.OpaqueCredentialRouted(logger, context.Request.Path.ToString());
+        return ApiKeyAuthenticationType.OpaqueCredentialIssuer;
     }
 
     private static string? ReadIssuer(string authorizationHeader, string path, ILogger logger)

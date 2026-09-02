@@ -175,4 +175,34 @@ public static partial class AuthenticationValidationLog
     [MessageLogging(EventId = 71118, Level = LogLevel.Debug,
         Message = "Token for authentication service '{serviceName}' accepted for principal '{subject}'")]
     public static partial IGenericMessage TokenAccepted(ILogger logger, string serviceName, string subject);
+
+    /// <summary>Logged when an opaque credential is routed to the API-key scheme by its prefix.</summary>
+    [MessageLogging(EventId = 71122, Level = LogLevel.Debug,
+        Message = "Opaque credential routed to the API key scheme for path '{path}'")]
+    public static partial IGenericMessage OpaqueCredentialRouted(ILogger logger, string path);
+
+    /// <summary>Logged when an agent key authenticates.</summary>
+    [MessageLogging(EventId = 71123, Level = LogLevel.Information,
+        Message = "Agent key accepted: '{label}' acting as user '{userId}' with {permissionCount} permission(s)")]
+    public static partial IGenericMessage AgentKeyAccepted(ILogger logger, string label, string userId, int permissionCount);
+
+    /// <summary>Logged when a personal access token authenticates.</summary>
+    [MessageLogging(EventId = 71124, Level = LogLevel.Information,
+        Message = "Personal access token accepted for user '{userId}' with {permissionCount} permission(s)")]
+    public static partial IGenericMessage PersonalAccessTokenAccepted(ILogger logger, string userId, int permissionCount);
+
+    /// <summary>Logged when an opaque credential is rejected.</summary>
+    [MessageLogging(EventId = 71125, Level = LogLevel.Warning,
+        Message = "Opaque credential rejected ({kind}): {reason}")]
+    public static partial IGenericMessage OpaqueCredentialRejected(ILogger logger, string kind, string reason);
+
+    /// <summary>Logged when the service a credential kind needs is not registered.</summary>
+    [MessageLogging(EventId = 71126, Level = LogLevel.Error,
+        Message = "{serviceName} is not registered, so a {kind} credential cannot be validated")]
+    public static partial IGenericMessage CredentialServiceNotRegistered(ILogger logger, string serviceName, string kind);
+
+    /// <summary>Logged when permission resolution fails for an authenticated credential.</summary>
+    [MessageLogging(EventId = 71127, Level = LogLevel.Error,
+        Message = "Permission resolution failed for user '{userId}': {reason}. Failing closed.")]
+    public static partial IGenericMessage PermissionResolutionFailed(ILogger logger, string userId, string reason);
 }
