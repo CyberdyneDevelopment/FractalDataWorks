@@ -38,6 +38,34 @@ namespace Fdw.Services.Connections.Http.Abstractions.OptionTypes.HttpProtocolOpt
 /// </remarks>
 public abstract class HttpProtocolBase : TypeOptionBase<int, HttpProtocolBase>, IHttpProtocol
 {
+    /// <summary>Whether this protocol can express a filter in the request it builds.</summary>
+    /// <param name="filter">The filter the command carries.</param>
+    /// <returns><see langword="true"/> when the request will carry it; otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// False by default, which is the safe reading IQueryCapability names: a protocol that has not
+    /// said it expresses a filter is assumed not to, because the alternative is believing a filter
+    /// reached the server when it did not and returning unfiltered rows as a success.
+    ///
+    /// Declared per protocol rather than per connection because the answer differs behind one
+    /// adapter — OData writes $filter, SOAP has nowhere to put one — and only the protocol knows
+    /// the vocabulary of the request it is about to build.
+    /// </remarks>
+    public virtual bool CanExpressFilter(IFilterExpression filter) => false;
+
+    /// <summary>Whether this protocol can express an ordering in the request it builds.</summary>
+    /// <param name="ordering">The ordering the command carries.</param>
+    /// <returns><see langword="true"/> when the request will carry it; otherwise <see langword="false"/>.</returns>
+    public virtual bool CanExpressOrdering(IOrderingExpression ordering) => false;
+
+    /// <summary>Whether this protocol can express a page in the request it builds.</summary>
+    /// <param name="paging">The page the command carries.</param>
+    /// <returns><see langword="true"/> when the request will carry it; otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// Paging is the one that goes wrong most quietly: a protocol that ignores Skip returns the
+    /// first page forever, and every page looks like it worked.
+    /// </remarks>
+    public virtual bool CanExpressPaging(IPagingExpression paging) => false;
+
     /// <summary>
     /// Default JSON serializer options for protocols that use JSON.
     /// </summary>

@@ -717,4 +717,14 @@ public abstract class RestProtocolBase : HttpProtocolBase
     }
 
     #endregion
+
+    /// <inheritdoc />
+    /// <remarks>BuildFilterFromExpression, the ordering builder and the pagination builder all write into the query string, and JsonApi and OData inherit or refine them.</remarks>
+    public override bool CanExpressFilter(IFilterExpression filter) => true;
+
+    /// <inheritdoc />
+    public override bool CanExpressOrdering(IOrderingExpression ordering) => true;
+
+    /// <inheritdoc />
+    public override bool CanExpressPaging(IPagingExpression paging) => true;
 }

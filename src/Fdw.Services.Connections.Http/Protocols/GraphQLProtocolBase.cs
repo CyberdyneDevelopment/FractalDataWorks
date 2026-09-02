@@ -605,6 +605,16 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
     }
 
     #endregion
+
+    /// <inheritdoc />
+    /// <remarks>Filter, ordering and paging become field arguments and query variables on the generated operation.</remarks>
+    public override bool CanExpressFilter(IFilterExpression filter) => true;
+
+    /// <inheritdoc />
+    public override bool CanExpressOrdering(IOrderingExpression ordering) => true;
+
+    /// <inheritdoc />
+    public override bool CanExpressPaging(IPagingExpression paging) => true;
 }
 
 #region GraphQL Types
