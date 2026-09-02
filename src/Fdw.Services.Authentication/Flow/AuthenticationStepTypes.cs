@@ -146,6 +146,7 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
                 sp.GetRequiredService<IAcrPolicy>(),
                 sp.GetRequiredService<ITokenIssuer>(),
                 sp.GetRequiredService<IAuthenticationExecutionStore>(),
+                sp.GetRequiredService<IAuthenticationFlowProvider>(),
                 // The collection IS the registry: a name resolves to the option that declared it.
                 name => AuthenticationStepTypes.ByName(name) as IAuthenticationStep,
                 sp.GetService<ILogger<AuthenticationRunner>>()));

@@ -7,6 +7,7 @@ using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Execution;
 using Fdw.Services.Authentication.Abstractions.Steps;
+using Fdw.Services.Authentication.Flow;
 using Fdw.Services.Results;
 using Fdw.Services.TokenManagers.Abstractions;
 
@@ -83,6 +84,22 @@ internal sealed class RecordingIssuer : ITokenIssuer
             ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15),
         }));
     }
+}
+
+/// <summary>Answers <see cref="Get"/> with the one flow it was built from, by name.</summary>
+internal sealed class StaticFlowProvider : IAuthenticationFlowProvider
+{
+    private readonly AuthenticationFlow _flow;
+
+    public StaticFlowProvider(AuthenticationFlow flow) => _flow = flow;
+
+    public Task<IGenericResult<AuthenticationFlow>> Get(string flowName, CancellationToken cancellationToken = default)
+        => Task.FromResult(string.Equals(flowName, _flow.Name, StringComparison.Ordinal)
+            ? GenericResult<AuthenticationFlow>.Success(_flow)
+            : GenericResult<AuthenticationFlow>.Failure(ServicesResultCodes.ByName("ConfigurationNotFound")));
+
+    public Task<IGenericResult> LoadAndValidate(CancellationToken cancellationToken = default)
+        => Task.FromResult<IGenericResult>(GenericResult.Success());
 }
 
 /// <summary>Single-use by TryRemove, so consuming is atomic rather than check-then-act.</summary>

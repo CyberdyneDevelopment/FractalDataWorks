@@ -29,15 +29,14 @@ internal static partial class RunnerLog
         Message = "A flow must be supplied to run one")]
     internal static partial IGenericMessage FlowMissing(ILogger<AuthenticationRunner> logger);
 
-    /// <summary>A resumed execution belongs to a different flow than the one presented.</summary>
+    /// <summary>A resumed execution names a flow that no longer resolves.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="executionId">The execution.</param>
-    /// <param name="recorded">The flow it was suspended under.</param>
-    /// <param name="presented">The flow it was resumed against.</param>
+    /// <param name="flowName">The flow it was suspended under.</param>
     [MessageLogging(EventId = 91101, Level = LogLevel.Warning,
-        Message = "Execution {executionId} was suspended under flow '{recorded}' and cannot resume as '{presented}'")]
-    internal static partial IGenericMessage ExecutionFlowMismatch(
-        ILogger<AuthenticationRunner> logger, Guid executionId, string recorded, string presented);
+        Message = "Execution {executionId} was suspended under flow '{flowName}', which no longer resolves")]
+    internal static partial IGenericMessage ResumedFlowNotFound(
+        ILogger<AuthenticationRunner> logger, Guid executionId, string flowName);
 
     /// <summary>A flow names a step no registered option answers to.</summary>
     /// <param name="logger">The logger.</param>

@@ -33,11 +33,13 @@ public sealed class AuthenticationRunnerInvariantTests
         Decision = new Decision { Permitted = true, Reason = "test" },
     };
 
-    private static (AuthenticationRunner Runner, RecordingIssuer Issuer, InMemoryExecutions Store) Build(NamedSteps steps)
+    private static (AuthenticationRunner Runner, RecordingIssuer Issuer, InMemoryExecutions Store) Build(
+        NamedSteps steps, AuthenticationFlow? flowForResume = null)
     {
         var issuer = new RecordingIssuer();
         var store = new InMemoryExecutions();
-        return (new AuthenticationRunner(new CountingAcrPolicy(), issuer, store, steps.Lookup),
+        var flows = new StaticFlowProvider(flowForResume ?? Flow());
+        return (new AuthenticationRunner(new CountingAcrPolicy(), issuer, store, flows, steps.Lookup),
                 issuer, store);
     }
 
@@ -164,14 +166,15 @@ public sealed class AuthenticationRunnerInvariantTests
             Behaviour = _ => new StepOutcome.Challenge(new Uri("https://idp.test/authorize"), "unused"),
         };
 
-        var (runner, _, _) = Build(new NamedSteps().Add("suspends", suspends));
+        var flow = Flow("suspends");
+        var (runner, _, _) = Build(new NamedSteps().Add("suspends", suspends), flow);
 
-        var first = await runner.Run(Flow("suspends"), TestContext.Current.CancellationToken);
+        var first = await runner.Run(flow, TestContext.Current.CancellationToken);
         first.IsSuccess.ShouldBeTrue();
         var token = ((FlowResult.Suspended)first.Value!).ResumeToken;
 
-        var resumedOnce = await runner.Resume(Flow("suspends"), token, TestContext.Current.CancellationToken);
-        var resumedTwice = await runner.Resume(Flow("suspends"), token, TestContext.Current.CancellationToken);
+        var resumedOnce = await runner.Resume(token, TestContext.Current.CancellationToken);
+        var resumedTwice = await runner.Resume(token, TestContext.Current.CancellationToken);
 
         // whatever the first resume did, the second must find nothing to consume
         resumedTwice.IsSuccess.ShouldBeFalse();

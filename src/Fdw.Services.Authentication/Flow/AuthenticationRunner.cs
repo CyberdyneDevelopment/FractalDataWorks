@@ -29,6 +29,7 @@ public sealed class AuthenticationRunner
     private readonly IAcrPolicy _acrPolicy;
     private readonly ITokenIssuer _issuer;
     private readonly IAuthenticationExecutionStore _executions;
+    private readonly IAuthenticationFlowProvider _flows;
     private readonly ILogger<AuthenticationRunner> _logger;
 
     // How a name becomes a step. Defaults to the collection, which is the registry — a delegate
@@ -41,6 +42,12 @@ public sealed class AuthenticationRunner
     /// <param name="acrPolicy">Turns proved methods into an assurance level.</param>
     /// <param name="issuer">Mints the token once the terminal check passes.</param>
     /// <param name="executions">Holds a suspended flow between the redirect and the return.</param>
+    /// <param name="flows">
+    /// Resolves the flow a suspended execution belongs to by the name it recorded at suspend time, so
+    /// a caller resuming one need only hold the resume token — never a flow name it would otherwise
+    /// have to carry across the round-trip itself (a query parameter, a route segment, a second
+    /// cookie) purely to hand back to this runner.
+    /// </param>
     /// <param name="step">
     /// How a name becomes a step. Supplied rather than defaulted: the registration hands over the
     /// collection, which is the registry, and a test hands over steps that vary per case — which is
@@ -51,12 +58,14 @@ public sealed class AuthenticationRunner
         IAcrPolicy acrPolicy,
         ITokenIssuer issuer,
         IAuthenticationExecutionStore executions,
+        IAuthenticationFlowProvider flows,
         Func<string, IAuthenticationStep?> step,
         ILogger<AuthenticationRunner>? logger = null)
     {
         _acrPolicy = acrPolicy ?? throw new ArgumentNullException(nameof(acrPolicy));
         _issuer = issuer ?? throw new ArgumentNullException(nameof(issuer));
         _executions = executions ?? throw new ArgumentNullException(nameof(executions));
+        _flows = flows ?? throw new ArgumentNullException(nameof(flows));
         _step = step ?? throw new ArgumentNullException(nameof(step));
         _logger = logger ?? NullLogger<AuthenticationRunner>.Instance;
     }
@@ -71,24 +80,33 @@ public sealed class AuthenticationRunner
             : Execute(flow, new AuthenticationContext(), 0, cancellationToken);
 
     /// <summary>Resumes a suspended flow.</summary>
-    /// <param name="flow">The flow the execution belongs to.</param>
     /// <param name="resumeToken">The token handed out when it suspended.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <remarks>
+    /// The flow itself is resolved from what the execution recorded at suspend time, not supplied by
+    /// the caller — a caller resuming an execution needs only the resume token. Requiring the flow
+    /// too would mean every caller resuming any flow has to carry its name across whatever round-trip
+    /// separates the challenge from the return, which for a provider-driven redirect is a value with
+    /// nowhere neutral to ride: not the query string (reserved for the provider's own code/state) and
+    /// not the URL (the route is fixed once and shared by every flow of that shape).
+    /// </remarks>
     public async Task<IGenericResult<FlowResult>> Resume(
-        AuthenticationFlow flow, string resumeToken, CancellationToken cancellationToken = default)
+        string resumeToken, CancellationToken cancellationToken = default)
     {
         var consumed = await _executions.TryConsume(resumeToken, cancellationToken).ConfigureAwait(false);
         if (consumed.IsFailure)
             return consumed.ToNewResult<FlowResult>();
 
         var record = consumed.Value!;
-        if (!string.Equals(record.FlowName, flow.Name, StringComparison.Ordinal))
+
+        var flow = await _flows.Get(record.FlowName, cancellationToken).ConfigureAwait(false);
+        if (flow.IsFailure || flow.Value is null)
             return GenericResult<FlowResult>.Failure(
-                RunnerLog.ExecutionFlowMismatch(_logger, record.Id, record.FlowName, flow.Name));
+                RunnerLog.ResumedFlowNotFound(_logger, record.Id, record.FlowName));
 
-        RunnerLog.FlowResuming(_logger, flow.Name, record.Id, record.CurrentStepIndex);
+        RunnerLog.FlowResuming(_logger, flow.Value.Name, record.Id, record.CurrentStepIndex);
 
-        return await Execute(flow, record.Context, record.CurrentStepIndex, cancellationToken)
+        return await Execute(flow.Value, record.Context, record.CurrentStepIndex, cancellationToken)
             .ConfigureAwait(false);
     }
 

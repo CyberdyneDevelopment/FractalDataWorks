@@ -92,14 +92,6 @@ public sealed class EndToEndFlowTests
                 }),
             });
 
-        var runner = new AuthenticationRunner(
-            new StandardAcrPolicy(),
-            new JwtTokenIssuer(
-                new JwtTokenIssuerConfiguration { Issuer = "https://fdw.test", Lifetime = TimeSpan.FromMinutes(15) },
-                key),
-            new InMemoryExecutionStore(),
-            steps.Lookup);
-
         var flow = new AuthenticationFlow
         {
             Name = "EntraLogin",
@@ -108,6 +100,15 @@ public sealed class EndToEndFlowTests
             MinimumAcr = StandardAcrPolicy.MultiFactor,
             ExecutionLifetime = TimeSpan.FromMinutes(5),
         };
+
+        var runner = new AuthenticationRunner(
+            new StandardAcrPolicy(),
+            new JwtTokenIssuer(
+                new JwtTokenIssuerConfiguration { Issuer = "https://fdw.test", Lifetime = TimeSpan.FromMinutes(15) },
+                key),
+            new InMemoryExecutionStore(),
+            new StaticFlowProvider(flow),
+            steps.Lookup);
 
         var result = await runner.Run(flow, TestContext.Current.CancellationToken);
 
@@ -165,19 +166,21 @@ public sealed class EndToEndFlowTests
                 }),
             });
 
-        var issuer = new RecordingIssuer();
-        var runner = new AuthenticationRunner(
-            new StandardAcrPolicy(), issuer, new InMemoryExecutionStore(),
-            steps.Lookup);
-
-        var result = await runner.Run(new AuthenticationFlow
+        var flow = new AuthenticationFlow
         {
             Name = "EntraLogin",
             Steps = ["ForeignToken", "ResolvePrincipal", "Authorize"],
             Audience = "reference-api",
             MinimumAcr = StandardAcrPolicy.MultiFactor,
             ExecutionLifetime = TimeSpan.FromMinutes(5),
-        }, TestContext.Current.CancellationToken);
+        };
+
+        var issuer = new RecordingIssuer();
+        var runner = new AuthenticationRunner(
+            new StandardAcrPolicy(), issuer, new InMemoryExecutionStore(),
+            new StaticFlowProvider(flow), steps.Lookup);
+
+        var result = await runner.Run(flow, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
         issuer.IssueCount.ShouldBe(0);
