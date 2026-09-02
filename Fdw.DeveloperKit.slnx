@@ -249,7 +249,6 @@
     <Project Path="src/Fdw.Services.Agents/Fdw.Services.Agents.csproj" />
     <Project Path="src/Fdw.Services.Authentication.Components/Fdw.Services.Authentication.Components.csproj" />
     <Project Path="src/Fdw.Services.Authentication.Endpoints/Fdw.Services.Authentication.Endpoints.csproj" />
-    <Project Path="src/Fdw.Services.Authentication.OpenIddict/Fdw.Services.Authentication.OpenIddict.csproj" />
     <Project Path="src/Fdw.Services.Authentication.UI.Pages/Fdw.Services.Authentication.UI.Pages.csproj" />
     <Project Path="src/Fdw.Services.Authorization.Components/Fdw.Services.Authorization.Components.csproj" />
     <Project Path="src/Fdw.Services.Authorization.Endpoints/Fdw.Services.Authorization.Endpoints.csproj" />

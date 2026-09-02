@@ -168,13 +168,6 @@
     <!-- Scheduling -->
     <PackageVersion Include="Quartz" Version="3.15.0" />
     <PackageVersion Include="Cronos" Version="0.13.0" />
-    <!-- OpenIddict: Apache-2.0, OpenID-certified OAuth 2.0 / OIDC framework -->
-    <PackageVersion Include="OpenIddict.Abstractions" Version="7.5.0" />
-    <PackageVersion Include="OpenIddict.Core" Version="7.5.0" />
-    <PackageVersion Include="OpenIddict.Server.AspNetCore" Version="7.5.0" />
-    <PackageVersion Include="OpenIddict.Validation.AspNetCore" Version="7.5.0" />
-    <PackageVersion Include="OpenIddict.Validation.ServerIntegration" Version="7.5.0" />
-    <PackageVersion Include="OpenIddict.Validation.SystemNetHttp" Version="7.5.0" />
     <!-- Resilience and Retry -->
     <PackageVersion Include="Polly" Version="8.6.6" />
     <PackageVersion Include="Polly.Core" Version="8.6.6" />
