@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Fdw.Configuration;
 using Fdw.Services.Data.Abstractions;
 
@@ -29,4 +29,11 @@ public sealed class DataGatewayConfiguration : IDataGatewayConfiguration
     /// </summary>
     public bool IsEnabled { get; init; } = true;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the gateway caches results.
+    /// </summary>
+    /// <remarks>Was the DataGateway:EnableCache appsettings key. It is read from the server tier,
+    /// because the gateway onto the platform store is the thing being configured and its own
+    /// settings cannot live behind it.</remarks>
+    public bool EnableCache { get; set; }
 }

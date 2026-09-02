@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Abstractions.Health.Monitoring;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
+using Fdw.Services.HealthChecks.Monitoring;
 
 namespace Fdw.Operations.Endpoints.Health;
 
@@ -15,7 +15,7 @@ namespace Fdw.Operations.Endpoints.Health;
 public abstract class GetSystemHealthEndpointBase : EndpointWithoutRequest<SystemHealthSnapshot>
 {
     private readonly IHealthMonitorProvider _monitors;
-    private readonly IOptions<HealthMonitorSelectionOptions> _selection;
+    private readonly HealthMonitorSelectionConfigurationProvider _selection;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -26,7 +26,7 @@ public abstract class GetSystemHealthEndpointBase : EndpointWithoutRequest<Syste
     /// <param name="logger">The logger instance.</param>
     protected GetSystemHealthEndpointBase(
         IHealthMonitorProvider monitors,
-        IOptions<HealthMonitorSelectionOptions> selection,
+        HealthMonitorSelectionConfigurationProvider selection,
         ILogger<GetSystemHealthEndpointBase>? logger)
     {
         _monitors = monitors;
@@ -53,7 +53,7 @@ public abstract class GetSystemHealthEndpointBase : EndpointWithoutRequest<Syste
 
         try
         {
-            var monitorResult = await _monitors.Get(_selection.Value.Name, ct).ConfigureAwait(false);
+            var monitorResult = await _monitors.Get(await SelectedMonitorName(ct).ConfigureAwait(false), ct).ConfigureAwait(false);
 
             if (!monitorResult.IsSuccess || monitorResult.Value is null)
             {
@@ -85,5 +85,19 @@ public abstract class GetSystemHealthEndpointBase : EndpointWithoutRequest<Syste
             AddError("Failed to retrieve system health");
             await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
         }
+    }
+
+    // Why a helper: the monitor rows are shared and the selection is this host's, so the name has
+    // to be read rather than held.
+    private async Task<string> SelectedMonitorName(CancellationToken ct)
+    {
+        var result = await _selection.Get("HealthMonitorSelection", ct).ConfigureAwait(false);
+        if (result.IsFailure || result.Value is null)
+        {
+            throw new InvalidOperationException(
+                "HealthMonitorSelection is not configured. This host does not know which monitor to report to.");
+        }
+
+        return result.Value.MonitorName;
     }
 }

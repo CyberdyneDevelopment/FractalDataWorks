@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -32,6 +32,7 @@ using Fdw.Services.Data.Execution;
 using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Results;
 
+using Fdw.Services.Data.Configuration;
 namespace Fdw.Services.Data;
 
 /// <summary>
@@ -54,7 +55,7 @@ public sealed class DataGatewayService : IDataGateway
 
     private readonly ConnectionConfigurationProvider? _connectionConfigProvider;
     private readonly DataGatewayResultCache? _cache;
-    private readonly IOptions<DataGatewayOptions>? _options;
+    private readonly DataGatewayConfiguration? _options;
 
     private static readonly TimeSpan DefaultCacheDuration = TimeSpan.FromMinutes(5);
 
@@ -87,7 +88,7 @@ public sealed class DataGatewayService : IDataGateway
         IFrameworkAuthorizationService? authorizationService = null,
         IDataStoreProvider? dataStoreProvider = null,
         DataGatewayResultCache? cache = null,
-        IOptions<DataGatewayOptions>? options = null,
+        DataGatewayConfiguration? options = null,
         IAuthenticationContextAccessor? authenticationContextAccessor = null,
         ConnectionConfigurationProvider? connectionConfigProvider = null)
     {
@@ -204,7 +205,7 @@ public sealed class DataGatewayService : IDataGateway
         _cache!.InvalidateByTag(CacheKeyBuilder.TagFor(target));
     }
 
-    private bool CacheEnabled => _cache is not null && _options is not null && _options.Value.EnableCache;
+    private bool CacheEnabled => _cache is not null && _options is not null && _options.EnableCache;
 
     private void ApplyCacheOutcome<T>(
         IDataCommand command,

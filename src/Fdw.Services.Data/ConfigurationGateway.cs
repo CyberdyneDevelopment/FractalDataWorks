@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,7 +57,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     private readonly Lazy<IReadOnlyList<IDataStore>> _dataStores;
 
     private readonly DataGatewayResultCache? _cache;
-    private readonly IOptions<DataGatewayOptions>? _options;
+    private readonly DataGatewayConfiguration? _options;
 
     private readonly IAuthenticationContextAccessor? _authenticationContextAccessor;
 
@@ -89,7 +89,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         ConfigurationSchema schema,
         ILogger<ConfigurationGateway>? logger = null,
         DataGatewayResultCache? cache = null,
-        IOptions<DataGatewayOptions>? options = null,
+        DataGatewayConfiguration? options = null,
         IAuthenticationContextAccessor? authenticationContextAccessor = null)
         : this(connectionName, connectionFactory, secretManager: null, schema, logger, cache, options, authenticationContextAccessor)
     {
@@ -124,7 +124,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         ConfigurationSchema schema,
         ILogger<ConfigurationGateway>? logger = null,
         DataGatewayResultCache? cache = null,
-        IOptions<DataGatewayOptions>? options = null,
+        DataGatewayConfiguration? options = null,
         IAuthenticationContextAccessor? authenticationContextAccessor = null)
     {
         ConnectionName = string.IsNullOrWhiteSpace(connectionName)
@@ -215,7 +215,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         _cache!.InvalidateByTag(CacheKeyBuilder.TagFor(target));
     }
 
-    private bool CacheEnabled => _cache is not null && _options is not null && _options.Value.EnableCache;
+    private bool CacheEnabled => _cache is not null && _options is not null && _options.EnableCache;
 
     private void ApplyCacheOutcome<T>(
         IDataCommand command,

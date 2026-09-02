@@ -83,6 +83,9 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
         });
     }
 
+    /// <summary>The connection this framework's own configuration is read through.</summary>
+    private const string ServerTierConnectionName = "ServerConfiguration";
+
     private static IGenericResult<IConfigurationGateway> Build(
         System.IServiceProvider services,
         string connectionName,
@@ -129,7 +132,11 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
                 schema,
                 services.GetService<ILogger<ConfigurationGateway>>(),
                 services.GetService<DataGatewayResultCache>(),
-                services.GetService<IOptions<DataGatewayOptions>>(),
+                // Why conditional: the gateway onto the server tier is what the configuration is
+                // read through, so asking for that configuration while building it would recurse.
+                string.Equals(connectionName, ServerTierConnectionName, System.StringComparison.Ordinal)
+                    ? null
+                    : services.GetService<DataGatewayConfiguration>(),
                 services.GetService<IAuthenticationContextAccessor>()));
     }
 

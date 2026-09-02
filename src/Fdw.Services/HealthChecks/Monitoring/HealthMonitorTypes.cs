@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Data.Abstractions;
@@ -83,6 +83,12 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILogger<HealthMonitorConfigurationProvider>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     ConfigurationConnection));
+            builder.Services.TryAddSingleton<HealthMonitorSelectionConfigurationProvider>(sp =>
+                new HealthMonitorSelectionConfigurationProvider(
+                    sp.GetService<ILogger<HealthMonitorSelectionConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConfigurationConnection));
+
             builder.Services.TryAddSingleton<IHealthMonitorConfigurationProvider>(
                 sp => sp.GetRequiredService<HealthMonitorConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<HealthMonitorConfiguration>>(
