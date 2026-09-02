@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.Extensions.Configuration;
 using Fdw.Web.Http.Authentication.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,7 +30,6 @@ public static class ApiEndpointRegistration
     /// declared for it, and attaches the bearer-token handler.
     /// </summary>
     /// <param name="services">The service collection to register into.</param>
-    /// <param name="configuration">The host's configuration.</param>
     /// <param name="clientName">The client name — both the named-HttpClient key and the configuration key.</param>
     /// <returns>The same <paramref name="services"/> instance for chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when a required argument is null.</exception>
@@ -63,16 +62,14 @@ public static class ApiEndpointRegistration
     /// </remarks>
     public static IServiceCollection AddApiHttpClient(
         this IServiceCollection services,
-        IConfiguration configuration,
         string clientName)
     {
         if (services is null) throw new ArgumentNullException(nameof(services));
-        if (configuration is null) throw new ArgumentNullException(nameof(configuration));
         if (string.IsNullOrEmpty(clientName)) throw new ArgumentException("A client name is required.", nameof(clientName));
 
         services.AddHttpClient(clientName, (sp, client) =>
         {
-            var declared = ResolveEndpoint(configuration, clientName, sp);
+            var declared = ResolveEndpoint(clientName, sp);
 
             if (string.IsNullOrEmpty(declared))
             {
@@ -93,7 +90,6 @@ public static class ApiEndpointRegistration
     /// <summary>
     /// Resolves the endpoint the host declared for <paramref name="clientName"/>.
     /// </summary>
-    /// <param name="configuration">The host's configuration.</param>
     /// <param name="clientName">The client name.</param>
     /// <param name="services">
     /// The scope resolving this client, used to consult <see cref="IApiEndpointSource"/> when the host
@@ -112,29 +108,15 @@ public static class ApiEndpointRegistration
     /// that would satisfy it. No endpoint is ever invented.
     /// </para>
     /// </remarks>
-    public static string? ResolveEndpoint(IConfiguration configuration, string clientName, IServiceProvider? services = null)
+    public static string? ResolveEndpoint(string clientName, IServiceProvider? services = null)
     {
-        if (configuration is null) throw new ArgumentNullException(nameof(configuration));
         if (string.IsNullOrEmpty(clientName)) throw new ArgumentException("A client name is required.", nameof(clientName));
 
-        // 1. This host's own override for this one client — the most specific thing an operator can write.
-        var declared = configuration[$"ApiClients:{clientName}:BaseUrl"];
-
-        // 2. The configuration store, when the host has one. An API client's endpoint is an HTTP
-        //    connection, so this is the same record the connections admin screen edits.
-        if (string.IsNullOrEmpty(declared) && services is not null)
-        {
-            declared = services.GetService(typeof(IApiEndpointSource)) is IApiEndpointSource source
-                ? source.Resolve(clientName)
-                : null;
-        }
-
-        // 3. This host's endpoint for all its clients.
-        if (string.IsNullOrEmpty(declared))
-        {
-            declared = configuration["ApiClients:BaseUrl"];
-        }
-
-        return declared;
+        // An API client is a service type option, so its endpoint is its own configuration and the
+        // platform loads it when the client is needed. There is nothing for a host to declare in a
+        // file, and nothing here to invent when no row exists.
+        return services?.GetService(typeof(IApiEndpointSource)) is IApiEndpointSource source
+            ? source.Resolve(clientName)
+            : null;
     }
 }

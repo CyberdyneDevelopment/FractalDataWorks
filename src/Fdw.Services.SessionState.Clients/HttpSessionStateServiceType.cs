@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Abstractions;
@@ -36,7 +36,7 @@ public sealed class HttpSessionStateServiceType : SessionStateServiceTypeBase<IG
         Configuration(builder =>
         {
 
-            builder.Services.AddApiHttpClient(builder.Configuration, HttpClientName);
+            builder.Services.AddApiHttpClient(HttpClientName);
     
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });

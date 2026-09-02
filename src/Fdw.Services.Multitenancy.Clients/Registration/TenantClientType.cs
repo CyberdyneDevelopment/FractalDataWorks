@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Http;
 using Fdw.Collections;
 using Fdw.Web.Clients.Abstractions.Registration;
@@ -25,7 +25,7 @@ public sealed class TenantClientType : ApiClientTypeBase<TenantApiClient>
     public TenantClientType() : base("TenantClient", "Tenant API Client") {
         Configuration(builder =>
         {
-            builder.Services.AddApiHttpClient(builder.Configuration, Name);
+            builder.Services.AddApiHttpClient(Name);
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 

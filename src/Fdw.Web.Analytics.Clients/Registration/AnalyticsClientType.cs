@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Http;
 using Fdw.Collections;
 using Fdw.Web.Analytics.Clients.ApiClients;
@@ -28,7 +28,7 @@ public sealed class AnalyticsClientType : ApiClientTypeBase<AnalyticsApiClient>
     public AnalyticsClientType() : base("AnalyticsClient", "Analytics API Client") {
         Configuration(builder =>
         {
-            builder.Services.AddApiHttpClient(builder.Configuration, Name);
+            builder.Services.AddApiHttpClient(Name);
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Http;
 using Fdw.Collections;
 using Fdw.Web.Analytics.Clients.ApiClients;
@@ -26,7 +26,7 @@ public sealed class PromotionClientType : ApiClientTypeBase<PromotionApiClient>
     public PromotionClientType() : base("PromotionClient", "Promotion API Client") {
         Configuration(builder =>
         {
-            builder.Services.AddApiHttpClient(builder.Configuration, Name);
+            builder.Services.AddApiHttpClient(Name);
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 

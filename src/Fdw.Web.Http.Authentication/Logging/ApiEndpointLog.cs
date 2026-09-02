@@ -1,4 +1,4 @@
-using Fdw.MessageLogging;
+﻿using Fdw.MessageLogging;
 using Fdw.Messages;
 using Microsoft.Extensions.Logging;
 
@@ -18,6 +18,6 @@ public static partial class ApiEndpointLog
     [MessageLogging(
         EventId = 60100,
         Level = LogLevel.Error,
-        Message = "No endpoint is declared for API client '{clientName}', so its requests cannot be sent. Declare ONE of: 'ApiClients:{clientName}:BaseUrl' (this host's endpoint for this one client), an HTTP connection named '{clientName}' in the configuration store, or 'ApiClients:BaseUrl' (this host's endpoint for all its API clients).")]
+        Message = "No endpoint is configured for API client '{clientName}', so its requests cannot be sent. Configure the client, or the HTTP connection named '{clientName}', in the configuration store.")]
     public static partial IGenericMessage EndpointNotDeclared(ILogger logger, string clientName);
 }

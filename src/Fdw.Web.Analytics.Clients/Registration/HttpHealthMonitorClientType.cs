@@ -41,7 +41,7 @@ public sealed class HttpHealthMonitorClientType
         Configuration(builder =>
         {
 
-            builder.Services.AddApiHttpClient(builder.Configuration, "HealthMonitorClient");
+            builder.Services.AddApiHttpClient("HealthMonitorClient");
     
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });

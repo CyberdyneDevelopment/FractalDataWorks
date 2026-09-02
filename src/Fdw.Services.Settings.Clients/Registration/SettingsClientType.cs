@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Http;
 using Fdw.Collections;
 using Fdw.Web.Clients.Abstractions.Registration;
@@ -25,7 +25,7 @@ public sealed class SettingsClientType : ApiClientTypeBase<SettingsApiClient>
     public SettingsClientType() : base("SettingsClient", "Settings API Client") {
         Configuration(builder =>
         {
-            builder.Services.AddApiHttpClient(builder.Configuration, Name);
+            builder.Services.AddApiHttpClient(Name);
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Http;
 using Fdw.Collections;
 using Fdw.Services.Pipelines.Clients.Abstractions;
@@ -26,7 +26,7 @@ public sealed class PipelineJobClientType : ApiClientTypeBase<IPipelineJobClient
     public PipelineJobClientType() : base("PipelineJobClient", "Pipeline Job API Client") {
         Configuration(builder =>
         {
-            builder.Services.AddApiHttpClient(builder.Configuration, Name);
+            builder.Services.AddApiHttpClient(Name);
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 

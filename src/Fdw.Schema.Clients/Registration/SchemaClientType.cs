@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Http;
 using Fdw.Collections;
 // ISchemaProvider is in namespace Fdw.Schema.Clients (same as this file)
@@ -26,7 +26,7 @@ public sealed class SchemaClientType : ApiClientTypeBase<SchemaApiClient>
     public SchemaClientType() : base("SchemaClient", "Schema API Client") {
         Configuration(builder =>
         {
-            builder.Services.AddApiHttpClient(builder.Configuration, Name);
+            builder.Services.AddApiHttpClient(Name);
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
