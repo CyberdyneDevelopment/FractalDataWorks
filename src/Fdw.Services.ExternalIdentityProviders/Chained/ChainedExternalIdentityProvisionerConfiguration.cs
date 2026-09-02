@@ -19,7 +19,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// on both this type and <see cref="ChainedProvisionerStepConfiguration"/>.
 /// </summary>
 /// <remarks>
-/// Mirrors <c>OidcExternalIdentityProviderConfiguration</c>'s standalone-typed-body shape and
+/// A standalone typed-body shape, same pattern as
 /// <c>Fdw.Operations.Configuration.EscalationPolicyConfiguration</c>'s ordered-children shape
 /// (<c>Levels</c> there, <see cref="Steps"/> here).
 /// </remarks>

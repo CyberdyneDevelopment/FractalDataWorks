@@ -19,7 +19,8 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// composed automatically by the base class's <c>ComposeChildren</c> cascade.
 /// </summary>
 /// <remarks>
-/// Mirrors <c>OidcExternalIdentityProviderConfigurationProvider</c> from the ExternalIdentityProviders domain.
+/// Same shape as any other typed-body configuration provider in this domain — reads through
+/// <c>IConfigurationGateway</c>, no <c>IConfiguration</c> binding section.
 /// </remarks>
 public class ChainedExternalIdentityProvisionerConfigurationProvider
     : ImplementationConfigurationProvider<

@@ -50,8 +50,14 @@ public sealed partial class ExternalIdentityProvisionerBindingConfiguration : IG
     public Guid? TenantId { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the external identity provider configuration
-    /// (<c>auth.ExternalIdentityProvider.Name</c>) this binding selects a provisioner for.
+    /// Gets or sets the external issuer this binding selects a provisioner for. Matched as a free
+    /// string against the proven subject's own issuer (<c>Subject.Issuer</c>) at resolve time — see
+    /// <see cref="ExternalIdentityProvisionerBindingConfigurationProvider.ResolveProvisionerName"/>,
+    /// which the caller (<c>ResolvePrincipalStepType</c>) invokes with <c>subject.Issuer</c> directly.
+    /// There is no foreign key to any provider-configuration table; this is not tied to
+    /// <c>auth.OidcAuthority</c>/<c>auth.ForeignAuthority</c> existing, being named consistently with
+    /// them, or existing as rows at all — set it to whatever issuer string the proving step's
+    /// <c>Subject</c> will actually carry.
     /// </summary>
     public string ProviderName { get; set; } = string.Empty;
 

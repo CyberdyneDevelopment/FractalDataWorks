@@ -20,7 +20,8 @@ namespace Fdw.Services.ExternalIdentityProviders.Binding;
 /// Configuration provider for ExternalIdentityProvisionerBindingConfiguration rows in
 /// sec.ExternalIdentityProvisionerBinding. Reads through IConfigurationGateway — no IConfiguration
 /// binding section. Adds <see cref="ResolveProvisionerName"/>, the single selector callers (e.g.
-/// <c>OpenIdTokenManager</c>) use to pick a named provisioner for a (tenant, external provider) pair.
+/// <c>ResolvePrincipalStepType</c>) use to pick a named provisioner for a (tenant, external issuer)
+/// pair.
 /// </summary>
 public class ExternalIdentityProvisionerBindingConfigurationProvider
     : ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>
@@ -50,7 +51,7 @@ public class ExternalIdentityProvisionerBindingConfigurationProvider
     /// match for the same pair is an ambiguity and fails loud.
     /// </summary>
     /// <param name="tenantId">The tenant to match exactly, or null for the global binding.</param>
-    /// <param name="providerName">The external identity provider name to match (case-insensitive).</param>
+    /// <param name="providerName">The proven subject's issuer string to match (case-insensitive).</param>
     /// <param name="cancellationToken">Propagated cancellation token.</param>
     public async Task<IGenericResult<string?>> ResolveProvisionerName(
         Guid? tenantId, string providerName, CancellationToken cancellationToken = default)

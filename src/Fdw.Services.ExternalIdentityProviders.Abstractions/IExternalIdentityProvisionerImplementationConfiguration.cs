@@ -9,7 +9,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Abstractions;
 /// directly without inheriting from a concrete header class — the header
 /// (<c>ExternalIdentityProvisionerConfiguration</c>) carries a <c>[NotMapped]
 /// IExternalIdentityProvisionerImplementationConfiguration? Configuration</c> property populated on the read path,
-/// mirroring <c>IExternalIdentityProviderImplementationConfiguration</c>/<c>ExternalIdentityProviderConfiguration</c>.
+/// the domain header for a <c>sec.ExternalIdentityProvisioner</c> row's typed body.
 /// </summary>
 public interface IExternalIdentityProvisionerImplementationConfiguration : IImplementationConfiguration
 {
