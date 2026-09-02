@@ -39,7 +39,7 @@ public abstract class LoggingTypeBase<TService, TConfiguration, TFactory>
                description,
                category: "Logging",
                defaultDataStoreName: "ServerConfiguration",
-               defaultPathName: "logging",
+               defaultPathName: "log",
                defaultContainerName: name)
     {
     }
