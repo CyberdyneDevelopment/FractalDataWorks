@@ -66,7 +66,8 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
         if (implementationConfigurationProvider is not IServiceConfigurationProvider erased)
         {
             return GenericResult.Failure(
-                DefaultConfigurationProviderLog.NoImplementationProvider(_log, name, name));
+                DefaultConfigurationProviderLog.ProviderNotErasable(
+                    _log, name, implementationConfigurationProvider?.GetType().FullName ?? "(null)"));
         }
 
         base.Register(name, erased);
@@ -135,7 +136,7 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
         var serviceOptionType = domainRecord.Value.ServiceOptionType;
         if (string.IsNullOrWhiteSpace(serviceOptionType))
             return GenericResult<TImplementationConfiguration>.Failure(
-                DefaultConfigurationProviderLog.NoImplementationProvider(_log, identifier, "(none)"));
+                DefaultConfigurationProviderLog.RecordHasNoServiceOptionType(_log, identifier));
 
         return _implementations.TryGetValue(serviceOptionType, out var implementation)
             ? await implementation.Get(domainRecord.Value.Id, cancellationToken).ConfigureAwait(false)

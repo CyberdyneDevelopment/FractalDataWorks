@@ -333,6 +333,37 @@ public static partial class DefaultConfigurationProviderLog
     public static partial IGenericMessage NoImplementationProvider(ILogger logger, string name, string serviceOptionType);
 
     /// <summary>
+    /// Logged when a provider offered for registration cannot be erased to the interface the
+    /// registry stores.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="name">The name the provider was being registered under.</param>
+    /// <param name="providerType">The type that was offered.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    /// <remarks>
+    /// Distinct from <see cref="NoImplementationProvider"/> because nothing was looked up: this is a
+    /// failed cast at registration time, and the ServiceOptionType may be registered perfectly well.
+    /// Sharing one message sent readers to check a registry that was not the problem.
+    /// </remarks>
+    [MessageLogging(EventId = 61007, Level = LogLevel.Error,
+        Message = "Provider offered for '{name}' is not an IServiceConfigurationProvider — it is '{providerType}', so it cannot be registered")]
+    public static partial IGenericMessage ProviderNotErasable(ILogger logger, string name, string providerType);
+
+    /// <summary>
+    /// Logged when a composed domain record carries no ServiceOptionType to dispatch on.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="identifier">The name or id the record was read for.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    /// <remarks>
+    /// Also distinct: nothing was looked up here either, because there was nothing to look up with.
+    /// The row itself is incomplete, which is a data problem rather than a registration one.
+    /// </remarks>
+    [MessageLogging(EventId = 61008, Level = LogLevel.Error,
+        Message = "Domain record '{identifier}' carries no ServiceOptionType, so no implementation provider can be chosen for it")]
+    public static partial IGenericMessage RecordHasNoServiceOptionType(ILogger logger, string identifier);
+
+    /// <summary>
     /// Logs that no POCO mapper was found for a header type, so the loaded typed body was left unattached.
     /// </summary>
     /// <param name="logger">The logger to write the event to.</param>
