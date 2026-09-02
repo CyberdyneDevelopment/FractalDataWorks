@@ -1,9 +1,8 @@
 using Microsoft.Extensions.Hosting;
 using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using Fdw.Schema.Clients;
-using Microsoft.Extensions.Configuration;
+using Fdw.Web.Http.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
@@ -11,36 +10,35 @@ using Microsoft.Extensions.Options;
 namespace Fdw.Web.Clients.Abstractions.Tests;
 
 /// <summary>
-/// Tests base-URL resolution for API client types. Every client type registers its OWN named
-/// HttpClient keyed by its client name, so per-client endpoints were always physically possible —
-/// but each call site read the flat <c>ApiClients:BaseUrl</c>, collapsing them onto one URL and
-/// leaving the per-client shape unread. Reference.Api declares
-/// <c>ApiClients:PipelineJobClient:BaseUrl</c> / <c>ApiClients:ScheduleClient:BaseUrl</c> to reach the
-/// ETL and Scheduler hosts and has no flat key, so those clients got no BaseAddress at all.
+/// Where a named API client gets its base address.
 /// </summary>
 /// <remarks>
-/// SchemaClientType is used as a representative concrete option: resolution lives on the shared
-/// ApiClientTypeBase, so exercising one real client type covers the path every client type takes.
+/// An API client is a service type option, so its endpoint is its own configuration and the platform
+/// loads it through <see cref="IApiEndpointSource"/> when the client is resolved. A host declares
+/// nothing in a file, which is why these assert against a registered source rather than against
+/// configuration keys.
+///
+/// The endpoint is read INSIDE the factory's configure delegate, so it is resolved on each
+/// CreateClient(name) rather than at registration — that is what lets a host register the ~35 client
+/// types its package references bring in while declaring endpoints only for the ones it resolves.
 /// </remarks>
 public sealed class ApiClientBaseUrlResolutionTests
 {
     private const string ClientName = "SchemaClient";
 
-    private static IConfiguration Config(params (string Key, string Value)[] entries)
+    private sealed class StubEndpointSource(string? clientName, string? endpoint) : IApiEndpointSource
     {
-        var data = new Dictionary<string, string?>(StringComparer.Ordinal);
-        foreach (var (key, value) in entries) data[key] = value;
-        return new ConfigurationBuilder().AddInMemoryCollection(data).Build();
+        public string? Resolve(string name)
+            => string.Equals(name, clientName, StringComparison.Ordinal) ? endpoint : null;
     }
 
-    private static Uri? ConfiguredBaseAddress(IConfiguration configuration)
+    private static Uri? ConfiguredBaseAddress(IApiEndpointSource? source)
     {
         var builder = Host.CreateApplicationBuilder();
-        builder.Configuration.AddConfiguration(configuration);
+        if (source is not null) builder.Services.AddSingleton(source);
         new SchemaClientType().Configure(builder);
 
         using var provider = builder.Services.BuildServiceProvider();
-
         var options = provider.GetRequiredService<IOptionsMonitor<HttpClientFactoryOptions>>().Get(ClientName);
 
         using var client = new HttpClient();
@@ -51,49 +49,37 @@ public sealed class ApiClientBaseUrlResolutionTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void ConfigureWithOnlyHostWideBaseUrlUsesIt()
+    public void ConfigureUsesTheEndpointTheSourceDeclaresForThisClient()
     {
-        ConfiguredBaseAddress(Config(("ApiClients:BaseUrl", "http://host-wide/")))
-            .ShouldBe(new Uri("http://host-wide/"));
-    }
-
-    // The reference-api case: a per-client entry and NO flat key. Before the fix this registered nothing.
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void ConfigureWithOnlyPerClientBaseUrlUsesIt()
-    {
-        ConfiguredBaseAddress(Config(($"ApiClients:{ClientName}:BaseUrl", "http://per-client/")))
-            .ShouldBe(new Uri("http://per-client/"));
+        ConfiguredBaseAddress(new StubEndpointSource(ClientName, "http://declared/"))
+            .ShouldBe(new Uri("http://declared/"));
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void ConfigureWithBothPrefersThePerClientBaseUrl()
+    public void ConfigureIgnoresAnEndpointDeclaredForAnotherClient()
     {
-        ConfiguredBaseAddress(Config(
-            ("ApiClients:BaseUrl", "http://host-wide/"),
-            ($"ApiClients:{ClientName}:BaseUrl", "http://per-client/")))
-            .ShouldBe(new Uri("http://per-client/"));
+        ConfiguredBaseAddress(new StubEndpointSource("SomeOtherClient", "http://other/"))
+            .ShouldBeNull();
+    }
+
+    // Registration is unconditional and resolution is what makes a client required, so a client
+    // nobody declared an endpoint for registers cleanly and is left with no BaseAddress -- the
+    // absence is reported by name rather than filled in with an invented URL.
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public void ConfigureWithNoEndpointDeclaredLeavesBaseAddressUnset()
+    {
+        ConfiguredBaseAddress(new StubEndpointSource(ClientName, null)).ShouldBeNull();
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void ConfigureIgnoresAnotherClientsPerClientBaseUrl()
+    public void ConfigureWithNoEndpointSourceAtAllLeavesBaseAddressUnset()
     {
-        ConfiguredBaseAddress(Config(
-            ("ApiClients:BaseUrl", "http://host-wide/"),
-            ("ApiClients:SomeOtherClient:BaseUrl", "http://other/")))
-            .ShouldBe(new Uri("http://host-wide/"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void ConfigureWithNoBaseUrlDeclaredLeavesBaseAddressUnset()
-    {
-        ConfiguredBaseAddress(Config()).ShouldBeNull();
+        ConfiguredBaseAddress(source: null).ShouldBeNull();
     }
 }

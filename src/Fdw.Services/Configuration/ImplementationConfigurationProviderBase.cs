@@ -441,11 +441,16 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         if (childMapper == PocoMapperCollection.NotFound)
             return;
 
-        // Why the child's own name: the container a child's rows live in is declared in
-        // configurationSchema.json under that name. Resolving it through a registered command
-        // instead meant a child bound only when someone had also written a command for it, and
-        // silently bound nothing when they had not -- a declaration in the schema was not enough.
-        var childContainerName = descriptor.ChildTypeName;
+        // Why the descriptor's container name and not the child's type name: the container a
+        // child's rows live in is declared in configurationSchema.json under a name the mapper
+        // already carries, and it is the type name minus the Configuration suffix -- rows of
+        // EscalationLevelConfiguration live in EscalationLevel. Naming the container after the
+        // TYPE loaded the first level (the gateway is handed the row type as well) and then
+        // broke the recursion: the nested call looked the owner container up by a name the
+        // schema does not contain, found no keys, and returned without loading the grandchildren.
+        var childContainerName = descriptor.ChildContainerName;
+        if (string.IsNullOrEmpty(childContainerName))
+            return;
 
         if (ChildContainerLacksColumn(childContainerName, fkColumn))
         {

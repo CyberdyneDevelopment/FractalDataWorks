@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
@@ -136,7 +136,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                             ChildHasFkSetter(elem, parentFkName),
                             false,
                             parentFkRowId,
-                            string.Empty));
+                            ResolveChildContainerName(p, StripConfigurationSuffix(elem.Name))));
                     }
                     // Collections never become scalar columns (cannot bind as SQL parameters).
                     continue;
@@ -484,7 +484,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                         public string ChildTypeName => "{{c.ElementShortName}}";
                         public bool IsPropertyCollection => false;
                         public string ChildForeignKeyColumn => "{{c.PhysicalFkColumn}}";
-                        public string ChildContainerName => "";
+                        public string ChildContainerName => "{{c.ChildContainerName}}";
                         public global::System.Collections.IEnumerable? GetCollection(object parent) => (({{parentFqn}})parent).{{c.BoundPropertyName}} as global::System.Collections.IEnumerable;
                         public void SetCollection(object parent, object? collection) => (({{parentFqn}})parent).{{c.BoundPropertyName}} = ({{c.PropertyTypeFqn}})collection!;
                         public void FillDictionary(object parent, global::System.Collections.Generic.IDictionary<string, string?> values) { }
@@ -743,7 +743,15 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
     private const string ColumnAttributeFullName = "System.ComponentModel.DataAnnotations.Schema.ColumnAttribute";
     private const string ChildTableAttributeFullName = "Fdw.Data.ConfigurationChildTableAttribute";
 
-    private static string ResolveChildContainerName(IPropertySymbol prop)
+    // A child's rows live in a container named for the child, minus the Configuration suffix --
+    // EscalationLevelConfiguration rows live in EscalationLevel. [ConfigurationChildTable]
+    // overrides that for a child whose container is named something else.
+    //
+    // Why a name is always produced rather than left empty: every consumer of ChildContainerName
+    // guards on IsNullOrEmpty and SKIPS the child. Emitting empty for the typed-list case meant a
+    // child with no attribute was not a child with a derivable name -- it was a child that
+    // silently did not load, did not save, and did not retire.
+    private static string ResolveChildContainerName(IPropertySymbol prop, string conventionalName = "")
     {
         foreach (var attr in prop.GetAttributes())
         {
@@ -756,8 +764,9 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
             if (attr.ConstructorArguments[0].Value is string name && !string.IsNullOrWhiteSpace(name))
                 return name;
         }
-        return string.Empty;
+        return conventionalName;
     }
+
 
     private static string ResolveColumnName(IPropertySymbol prop)
     {

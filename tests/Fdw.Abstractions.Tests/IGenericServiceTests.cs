@@ -1,4 +1,4 @@
-using Fdw.Abstractions;
+﻿using Fdw.Abstractions;
 using Fdw.Results;
 using Moq;
 using System;
@@ -30,7 +30,7 @@ public class IGenericServiceTests
     {
         // Assert
         var type = typeof(IGenericService);
-        var property = type.GetProperty("Id");
+        var property = InterfaceProperty(type, "Id");
         property.ShouldNotBeNull();
         property!.PropertyType.ShouldBe(typeof(string));
         property.CanRead.ShouldBeTrue();
@@ -43,7 +43,7 @@ public class IGenericServiceTests
     {
         // Assert
         var type = typeof(IGenericService);
-        var property = type.GetProperty("ServiceType");
+        var property = InterfaceProperty(type, "ServiceType");
         property.ShouldNotBeNull();
         property!.PropertyType.ShouldBe(typeof(string));
         property.CanRead.ShouldBeTrue();
@@ -56,7 +56,7 @@ public class IGenericServiceTests
     {
         // Assert
         var type = typeof(IGenericService);
-        var property = type.GetProperty("IsAvailable");
+        var property = InterfaceProperty(type, "IsAvailable");
         property.ShouldNotBeNull();
         property!.PropertyType.ShouldBe(typeof(bool));
         property.CanRead.ShouldBeTrue();
@@ -204,4 +204,15 @@ public class IGenericServiceTests
         // Assert
         isAvailable.ShouldBeFalse();
     }
+
+    // Why the hierarchy is walked rather than Type.GetProperty alone: on an INTERFACE, GetProperty
+    // does not search base interfaces the way it searches base classes. Id, ServiceType and
+    // IsAvailable moved to IPlatformService when it was split out of IGenericService, and these
+    // three assertions have reported them missing ever since -- while every caller still reads them
+    // off an IGenericService, because inheriting a member is having it.
+    private static global::System.Reflection.PropertyInfo? InterfaceProperty(global::System.Type type, string name)
+        => type.GetProperty(name)
+           ?? global::System.Linq.Enumerable.FirstOrDefault(
+                  global::System.Linq.Enumerable.Select(type.GetInterfaces(), i => i.GetProperty(name)),
+                  p => p is not null);
 }
