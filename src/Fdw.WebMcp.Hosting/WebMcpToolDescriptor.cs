@@ -16,4 +16,6 @@ public sealed record WebMcpToolDescriptor(
     string HttpMethod,
     bool ReadOnly,
     Type? RequestType,
-    Type? ResponseType);
+    Type? ResponseType,
+    string? ParentListRoute = null,
+    string? ParentListToolName = null);

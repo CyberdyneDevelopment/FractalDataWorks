@@ -78,6 +78,13 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
                 selected.Value.RequestType?.FullName ?? "none",
                 selected.Value.ResponseType?.FullName ?? "none");
 
+            var unbindable = FirstUnbindableParameter(selected.Value.Route, selected.Value.RequestType);
+            if (unbindable is not null)
+            {
+                WebMcpLog.ToolParameterUnbindable(logger, typeName, selected.Value.Route, unbindable);
+                continue;
+            }
+
             _tools.Add(new WebMcpToolDescriptor(
                 declaration.Name,
                 declaration.Description,
@@ -90,7 +97,101 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
             WebMcpLog.ToolDiscovered(logger, declaration.Name, selected.Value.Route, selected.Value.HttpMethod);
         }
 
+        AttachParentLists(logger);
+
         WebMcpLog.ToolsRegistered(logger, _tools.Count);
+    }
+
+    /// <summary>
+    /// Names the first route parameter the request type cannot supply, if any.
+    /// </summary>
+    /// <param name="route">The resolved route template.</param>
+    /// <param name="requestType">The endpoint's request DTO, or <see langword="null"/> when it has none.</param>
+    /// <returns>The offending parameter name, or <see langword="null"/> when every parameter binds.</returns>
+    /// <remarks>
+    /// A tool whose URL cannot be built is worse than a missing one: the agent gets a 404 it cannot
+    /// distinguish from a genuine empty result, and no amount of retrying will fix it. Refusing it
+    /// here is the same call the registry already makes for a route it cannot resolve at all.
+    /// </remarks>
+    private static string? FirstUnbindableParameter(string route, Type? requestType)
+    {
+        var parameters = WebMcpRouteTemplate.ParameterNames(route);
+        if (parameters.Count == 0)
+        {
+            return null;
+        }
+
+        if (requestType is null)
+        {
+            return parameters[0];
+        }
+
+        foreach (var parameter in parameters)
+        {
+            if (requestType.GetProperty(
+                    parameter,
+                    BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase) is null)
+            {
+                return parameter;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Points each parameterised tool at the tool that lists its valid values.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <remarks>
+    /// Runs as a second pass because the parent is itself a tool, and the first pass is what decides
+    /// which declarations became tools at all.
+    ///
+    /// The parent is the collection the parameter selects from: for <c>/connections/{Name}/health</c>
+    /// that is the GET tool on <c>/connections</c>. Matched against the RESOLVED routes rather than
+    /// by guessing at names, because a resource's list route is frequently computed rather than
+    /// written — CrudListEndpointBase builds <c>/{ResourceName}</c> — so nothing textual is reliable.
+    ///
+    /// A tool with more than one parameter is left alone. Which collection a second parameter selects
+    /// from is not derivable from the route, and naming the wrong one is worse than naming none.
+    /// </remarks>
+    private void AttachParentLists(ILogger logger)
+    {
+        var listToolsByRoute = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var tool in _tools)
+        {
+            if (WebMcpRouteTemplate.ParameterNames(tool.Route).Count == 0
+                && string.Equals(tool.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase))
+            {
+                listToolsByRoute[tool.Route] = tool.Name;
+            }
+        }
+
+        for (var i = 0; i < _tools.Count; i++)
+        {
+            var parameters = WebMcpRouteTemplate.ParameterNames(_tools[i].Route);
+            if (parameters.Count != 1)
+            {
+                continue;
+            }
+
+            var prefix = _tools[i].Route[.._tools[i].Route.IndexOf('{', StringComparison.Ordinal)]
+                .TrimEnd('/');
+
+            if (prefix.Length == 0 || !listToolsByRoute.TryGetValue(prefix, out var parentToolName))
+            {
+                continue;
+            }
+
+            WebMcpLog.ParentListResolved(logger, _tools[i].Name, parameters[0], parentToolName, prefix);
+
+            _tools[i] = _tools[i] with
+            {
+                ParentListRoute = prefix,
+                ParentListToolName = parentToolName,
+            };
+        }
     }
 
     /// <summary>One route the application serves for a given endpoint class.</summary>

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Microsoft.Extensions.Logging;
@@ -59,6 +60,25 @@ public sealed class WebMcpJsGenerator
         sb.AppendLine("    null;");
         sb.AppendLine("  if (!modelContext) return;");
         sb.AppendLine();
+        sb.AppendLine("  // Path parameters travel in the URL, so they are removed from the body a tool sends.");
+        sb.AppendLine("  function strip(input, names) {");
+        sb.AppendLine("    const out = {};");
+        sb.AppendLine("    for (const k of Object.keys(input || {})) if (!names.includes(k)) out[k] = input[k];");
+        sb.AppendLine("    return out;");
+        sb.AppendLine("  }");
+        sb.AppendLine();
+        sb.AppendLine("  // Only values the agent actually supplied are sent: an omitted filter must widen");
+        sb.AppendLine("  // the result, not narrow it to the empty string.");
+        sb.AppendLine("  function query(input, names) {");
+        sb.AppendLine("    const parts = [];");
+        sb.AppendLine("    for (const n of names) {");
+        sb.AppendLine("      const v = (input || {})[n];");
+        sb.AppendLine("      if (v === undefined || v === null || v === \"\") continue;");
+        sb.AppendLine("      parts.push(encodeURIComponent(n) + \"=\" + encodeURIComponent(v));");
+        sb.AppendLine("    }");
+        sb.AppendLine("    return parts.join(\"&\");");
+        sb.AppendLine("  }");
+        sb.AppendLine();
 
         foreach (var tool in _registry.Tools)
         {
@@ -94,10 +114,11 @@ public sealed class WebMcpJsGenerator
 
     private int AppendInputSchema(StringBuilder sb, WebMcpToolDescriptor tool)
     {
-        // GET and DELETE with no request type get an empty schema
-        var needsBody = NeedsRequestBody(tool.HttpMethod);
-
-        if (!needsBody || tool.RequestType is null)
+        // Gated on the request type alone. Gating on the verb, as this did, gave every GET and DELETE
+        // an empty schema even when the endpoint declared a request DTO — so a path parameter had no
+        // field to arrive through and a list tool could not be filtered. "Has a body" and "has inputs"
+        // are different questions.
+        if (tool.RequestType is null)
         {
             sb.AppendLine("    inputSchema: {");
             sb.AppendLine("      type: \"object\",");
@@ -130,8 +151,21 @@ public sealed class WebMcpJsGenerator
 
         sb.AppendLine("      },");
 
-        // All properties are treated as optional — required is empty unless you know better
-        sb.AppendLine("      required: []");
+        // Path parameters are the one set whose requiredness is structural rather than a matter of
+        // validation policy: the URL cannot be built without them. Everything else stays optional and
+        // is the endpoint's own validation to enforce.
+        var pathParameters = WebMcpRouteTemplate.ParameterNames(tool.Route);
+        if (pathParameters.Count == 0)
+        {
+            sb.AppendLine("      required: []");
+        }
+        else
+        {
+            sb.AppendLine(
+                CultureInfo.InvariantCulture,
+                $"      required: [{string.Join(", ", pathParameters.Select(p => JsonString(MatchProperty(tool.RequestType, p))))}]");
+        }
+
         sb.AppendLine("    },");
 
         return properties.Count;
@@ -139,48 +173,175 @@ public sealed class WebMcpJsGenerator
 
     private void AppendExecute(StringBuilder sb, WebMcpToolDescriptor tool)
     {
+        var pathParameters = WebMcpRouteTemplate.ParameterNames(tool.Route);
+        var headers = HeaderLiteral(NeedsRequestBody(tool.HttpMethod));
+        var recoveryHeaders = HeaderLiteral(withBody: false);
+
         sb.AppendLine("    execute: async function(input) {");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"      let url = {UrlExpression(tool, pathParameters)};");
 
-        var clientApiKey = _options?.ClientApiKey;
-        var apiKeyHeader = _options?.ApiKeyHeader ?? "X-Webmcp-Key";
+        if (!NeedsRequestBody(tool.HttpMethod) && tool.RequestType is not null)
+        {
+            AppendQueryString(sb, tool, pathParameters);
+        }
 
+        sb.AppendLine("      const init = {");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"        method: {JsonString(tool.HttpMethod)},");
         if (NeedsRequestBody(tool.HttpMethod))
         {
-            sb.AppendLine(CultureInfo.InvariantCulture, $"      const r = await fetch({JsonString(tool.Route)}, {{");
-            sb.AppendLine(CultureInfo.InvariantCulture, $"        method: {JsonString(tool.HttpMethod)},");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"        headers: {headers},");
 
-            if (!string.IsNullOrEmpty(clientApiKey))
-            {
-                sb.AppendLine(CultureInfo.InvariantCulture, $"        headers: {{ \"Accept\": \"application/json\", \"Content-Type\": \"application/json\", {JsonString(apiKeyHeader)}: {JsonString(clientApiKey)} }},");
-            }
-            else
-            {
-                sb.AppendLine("        headers: { \"Accept\": \"application/json\", \"Content-Type\": \"application/json\" },");
-            }
-
-            sb.AppendLine("        body: JSON.stringify(input)");
-            sb.AppendLine("      });");
+            // Path parameters are stripped from the body: they are already in the URL, and an endpoint
+            // that receives the same value twice can disagree with itself about which one binds.
+            sb.AppendLine(CultureInfo.InvariantCulture,
+                $"        body: JSON.stringify(strip(input, {PathParameterArray(tool, pathParameters)}))");
         }
         else
         {
-            sb.AppendLine(CultureInfo.InvariantCulture, $"      const r = await fetch({JsonString(tool.Route)}, {{");
-            sb.AppendLine(CultureInfo.InvariantCulture, $"        method: {JsonString(tool.HttpMethod)},");
-
-            if (!string.IsNullOrEmpty(clientApiKey))
-            {
-                sb.AppendLine(CultureInfo.InvariantCulture, $"        headers: {{ \"Accept\": \"application/json\", {JsonString(apiKeyHeader)}: {JsonString(clientApiKey)} }}");
-            }
-            else
-            {
-                sb.AppendLine("        headers: { \"Accept\": \"application/json\" }");
-            }
-
-            sb.AppendLine("      });");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"        headers: {headers}");
         }
 
-        sb.AppendLine("      if (!r.ok) return { error: r.status + \" \" + r.statusText };");
+        sb.AppendLine("      };");
+        sb.AppendLine("      const r = await fetch(url, init);");
+        AppendFailureHandling(sb, tool, pathParameters, recoveryHeaders);
         sb.AppendLine("      return await r.json();");
         sb.AppendLine("    }");
+    }
+
+    /// <summary>Emits the JS expression that builds the request URL.</summary>
+    private static string UrlExpression(WebMcpToolDescriptor tool, IReadOnlyList<string> pathParameters)
+    {
+        if (pathParameters.Count == 0)
+        {
+            return JsonString(tool.Route);
+        }
+
+        // Concatenated rather than string-replaced so each value is encoded on the way in. A value
+        // carrying '/' or '?' would otherwise reshape the path it was substituted into.
+        var parts = new List<string>();
+        var remaining = tool.Route;
+
+        foreach (var parameter in pathParameters)
+        {
+            var open = remaining.IndexOf('{', StringComparison.Ordinal);
+            var close = remaining.IndexOf('}', StringComparison.Ordinal);
+            if (open < 0 || close < open)
+            {
+                break;
+            }
+
+            parts.Add(JsonString(remaining[..open]));
+            parts.Add($"encodeURIComponent(input[{JsonString(MatchProperty(tool.RequestType, parameter))}])");
+            remaining = remaining[(close + 1)..];
+        }
+
+        if (remaining.Length > 0)
+        {
+            parts.Add(JsonString(remaining));
+        }
+
+        return string.Join(" + ", parts);
+    }
+
+    /// <summary>Emits the query-string assembly for a verb that carries no body.</summary>
+    private void AppendQueryString(
+        StringBuilder sb,
+        WebMcpToolDescriptor tool,
+        IReadOnlyList<string> pathParameters)
+    {
+        var queryProperties = GetSchemaProperties(tool.RequestType!, tool.Name, _logger)
+            .Select(p => p.Name)
+            .Where(name => !pathParameters.Any(
+                p => string.Equals(MatchProperty(tool.RequestType, p), name, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+        if (queryProperties.Count == 0)
+        {
+            return;
+        }
+
+        // Without this a GET tool could be called but never narrowed — every list tool would return
+        // the unfiltered collection whatever the agent asked for.
+        sb.AppendLine(CultureInfo.InvariantCulture,
+            $"      const q = query(input, [{string.Join(", ", queryProperties.Select(JsonString))}]);");
+        sb.AppendLine("      if (q) url += \"?\" + q;");
+    }
+
+    /// <summary>Emits the non-OK branch, including the valid-values recovery when one is available.</summary>
+    private static void AppendFailureHandling(
+        StringBuilder sb,
+        WebMcpToolDescriptor tool,
+        IReadOnlyList<string> pathParameters,
+        string recoveryHeaders)
+    {
+        if (tool.ParentListRoute is null || pathParameters.Count != 1)
+        {
+            sb.AppendLine("      if (!r.ok) return { error: r.status + \" \" + r.statusText };");
+            return;
+        }
+
+        // A bare 404 is a dead end for an agent: it cannot tell a wrong identifier from an empty
+        // result, and nothing in the response says what a right one would look like. Answering with
+        // the collection the parameter selects from turns that into one more round trip.
+        //
+        // The recovery call reuses these headers, so it runs as the same principal — an agent can
+        // never be handed values it could not have listed itself.
+        var parameterName = MatchProperty(tool.RequestType, pathParameters[0]);
+
+        sb.AppendLine("      if (!r.ok) {");
+        sb.AppendLine("        const failure = { error: r.status + \" \" + r.statusText };");
+        sb.AppendLine("        try {");
+        sb.AppendLine(CultureInfo.InvariantCulture,
+            $"          const alt = await fetch({JsonString(tool.ParentListRoute)}, {{ method: \"GET\", headers: {recoveryHeaders} }});");
+        sb.AppendLine("          if (alt.ok) {");
+        sb.AppendLine("            failure.validValues = await alt.json();");
+        sb.AppendLine(CultureInfo.InvariantCulture,
+            $"            failure.hint = {JsonString($"'{parameterName}' did not match. failure.validValues lists what is available; '{tool.ParentListToolName}' returns the same set.")};");
+        sb.AppendLine("          }");
+        sb.AppendLine("        } catch (e) { /* recovery is best-effort; the original failure still returns */ }");
+        sb.AppendLine("        return failure;");
+        sb.AppendLine("      }");
+    }
+
+    /// <summary>Returns the request property a route parameter binds to, or the parameter name itself.</summary>
+    /// <remarks>
+    /// Route parameters bind case-insensitively but the generated JS reads <c>input</c> by exact key,
+    /// so the schema and the URL must both use the property's own casing or the value silently
+    /// arrives undefined. The registry has already refused any tool where no property matches.
+    /// </remarks>
+    private static string MatchProperty(Type? requestType, string parameter)
+        => requestType?.GetProperty(
+               parameter,
+               BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)?.Name
+           ?? parameter;
+
+    private static string PathParameterArray(WebMcpToolDescriptor tool, IReadOnlyList<string> pathParameters)
+        => "[" + string.Join(", ", pathParameters.Select(p => JsonString(MatchProperty(tool.RequestType, p)))) + "]";
+
+    /// <summary>Builds the header literal for a request.</summary>
+    /// <param name="withBody">Whether the request carries a JSON body.</param>
+    /// <remarks>
+    /// Takes the shape it needs rather than reading the tool's verb, because the recovery call is
+    /// always a GET even on a tool that writes. Reusing a writing tool's headers put
+    /// Content-Type on a bodyless GET.
+    /// </remarks>
+    private string HeaderLiteral(bool withBody)
+    {
+        var apiKeyHeader = _options?.ApiKeyHeader ?? "X-Webmcp-Key";
+        var clientApiKey = _options?.ClientApiKey;
+        var parts = new List<string> { "\"Accept\": \"application/json\"" };
+
+        if (withBody)
+        {
+            parts.Add("\"Content-Type\": \"application/json\"");
+        }
+
+        if (!string.IsNullOrEmpty(clientApiKey))
+        {
+            parts.Add($"{JsonString(apiKeyHeader)}: {JsonString(clientApiKey)}");
+        }
+
+        return "{ " + string.Join(", ", parts) + " }";
     }
 
     // ── Schema derivation ────────────────────────────────────────────────────

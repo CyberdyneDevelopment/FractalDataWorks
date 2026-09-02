@@ -62,6 +62,12 @@ internal static partial class WebMcpLog
     [MessageLogging(EventId = 11031, Level = LogLevel.Debug, Message = "WebMCP client API key injection for header '{headerName}': {injected}")]
     public static partial IGenericMessage ClientKeyInjection(ILogger logger, string headerName, bool injected);
 
+    [MessageLogging(EventId = 61007, Level = LogLevel.Warning, Message = "WebMCP tool skipped (unbindable route parameter): '{typeName}' route '{route}' needs '{parameterName}' and the request type has no such property, so the URL could never be built")]
+    public static partial IGenericMessage ToolParameterUnbindable(ILogger logger, string typeName, string route, string parameterName);
+
+    [MessageLogging(EventId = 11032, Level = LogLevel.Trace, Message = "WebMCP tool '{name}' takes its '{parameterName}' values from '{parentToolName}' ({parentRoute})")]
+    public static partial IGenericMessage ParentListResolved(ILogger logger, string name, string parameterName, string parentToolName, string parentRoute);
+
     [MessageLogging(EventId = 61005, Level = LogLevel.Warning, Message = "WebMCP omitted schema property '{toolName}.{propertyName}' - CLR type '{clrType}' has no JSON Schema mapping, so an agent cannot supply it")]
     public static partial IGenericMessage SchemaPropertySkipped(ILogger logger, string toolName, string propertyName, string clrType);
 }
