@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Fdw.Abstractions;
 using Fdw.Collections;
@@ -48,20 +48,27 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
 
 
     /// <summary>
-    /// Sets this collection's phases: the schema in Configure, the gateways over it in Register.
+    /// Sets this collection's phases: the schema and the gateways over it, both in Register.
     /// </summary>
+    /// <remarks>
+    /// One phase and not two because neither body did anything but write to the container, and a
+    /// service registration is what Register is for. Nor was there an ordering constraint to
+    /// express: <c>Build</c> resolves the schema off the service provider when the gateway is
+    /// resolved, not when it is registered, so the schema only has to be in the container before
+    /// anything asks for a gateway.
+    ///
+    /// What that buys is the caller. This domain is the one a host brings up by hand - it needs a
+    /// gateway before the collect runs, to read its own server configuration - and bringing it up
+    /// is now a single Register call rather than a Configure that must not be forgotten.
+    /// </remarks>
     static ConfigurationGatewayTypes()
     {
         var collectOptions = RegisterFunc;
 
-        Configuration((builder, loggerFactory) =>
-        {
-            builder.Services.TryAddSingleton(ConfigurationSchemaLoader.Load(SchemaFileName));
-            return GenericResult<IHostApplicationBuilder>.Success(builder);
-        });
-
         Registration((builder, loggerFactory) =>
         {
+            builder.Services.TryAddSingleton(ConfigurationSchemaLoader.Load(SchemaFileName));
+
             var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)
                 return registered;
