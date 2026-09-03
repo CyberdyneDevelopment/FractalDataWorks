@@ -15,10 +15,16 @@ namespace Fdw.Services.Notifications.Endpoints;
 /// </summary>
 public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPreferencesRequest, IReadOnlyList<UserNotificationPreferenceDto>>
 {
+    /// <summary>Initializes a new instance of the <see cref="UpdateUserPreferencesEndpointBase"/> class.</summary>
+    protected UpdateUserPreferencesEndpointBase(ILogger<UpdateUserPreferencesEndpointBase> logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>
     /// Gets the logger instance.
     /// </summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -39,8 +45,6 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
     /// <inheritdoc/>
     public override async Task HandleAsync(UpdateUserPreferencesRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
         try
         {
             var userId = req.UserId.ToString("D", CultureInfo.InvariantCulture);
