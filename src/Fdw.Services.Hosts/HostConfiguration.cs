@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
@@ -36,4 +36,24 @@ public partial class HostConfiguration : IHostConfiguration
 
     /// <summary>Gets or sets the configuration of the implementation named by <see cref="ServiceOptionType"/>.</summary>
     public IHostImplementationConfiguration? Configuration { get; set; }
+
+    // Why these five live on the domain header rather than a typed body of their own: a typed body
+    // is chosen by ServiceOptionType and a host runs several options at once (Cors AND SecurityHeaders
+    // AND EmptyBody...), so "the implementation" for a Host row is never singular the way it is for a
+    // Connection. The support contact is not an implementation choice at all -- it describes the host
+    // itself, the same way Description already does.
+    /// <summary>Gets or sets the email address shown to a caller when a request fails.</summary>
+    public string Email { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the phone number shown to a caller when a request fails.</summary>
+    public string? Phone { get; set; }
+
+    /// <summary>Gets or sets the support portal URL shown to a caller when a request fails.</summary>
+    public string? PortalUrl { get; set; }
+
+    /// <summary>Gets or sets the expected response time, in hours, quoted to a caller when a request fails.</summary>
+    public int ExpectedResponseTimeHours { get; set; }
+
+    /// <summary>Gets or sets the instructions shown to a caller when a request fails.</summary>
+    public string Instructions { get; set; } = string.Empty;
 }
