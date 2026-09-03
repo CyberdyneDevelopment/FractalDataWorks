@@ -16,23 +16,23 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class GetRolePermissionsEndpointBase : Endpoint<GetRoleRequest, List<PermissionSummaryDto>>
 {
     /// <summary>Initializes a new instance of the <see cref="GetRolePermissionsEndpointBase"/> class.</summary>
-    protected GetRolePermissionsEndpointBase(ILogger logger)
-    {
-        EndpointLogger = logger;
-    }
-
-    private readonly RoleConfigurationProvider _roleProvider;
+        private readonly RoleConfigurationProvider _roleProvider;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
     protected ILogger EndpointLogger { get; }
 
-    /// <inheritdoc />
-    protected GetRolePermissionsEndpointBase(RoleConfigurationProvider roleProvider)
+    private readonly ITenantContext? _tenantContext;
+
+    /// <summary>Initializes a new instance of the <see cref="GetRolePermissionsEndpointBase"/> class.</summary>
+    protected GetRolePermissionsEndpointBase(ILogger logger, RoleConfigurationProvider roleProvider, ITenantContext? tenantContext = null)
     {
+        EndpointLogger = logger;
         _roleProvider = roleProvider;
+        _tenantContext = tenantContext;
     }
+
 
     /// <summary>
     /// Gets the role configuration provider.
@@ -75,7 +75,7 @@ public abstract class GetRolePermissionsEndpointBase : Endpoint<GetRoleRequest, 
         var rolePermissions = await _roleProvider.GetRolePermissions(role.Id, ct).ConfigureAwait(false);
         var permissions = await _roleProvider.GetPermissions(ct).ConfigureAwait(false);
 
-        var orgPrefix = Resolve<ITenantContext>()?.CurrentTenant?.OrgPrefix;
+        var orgPrefix = _tenantContext?.CurrentTenant?.OrgPrefix;
         var prefix = string.IsNullOrEmpty(orgPrefix) ? null : orgPrefix + ":";
 
         var response = rolePermissions

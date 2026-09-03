@@ -13,23 +13,20 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleSummaryResponse>
 {
     /// <summary>Initializes a new instance of the <see cref="CreateRoleEndpointBase"/> class.</summary>
-    protected CreateRoleEndpointBase(ILogger logger)
-    {
-        EndpointLogger = logger;
-    }
-
-    private readonly RoleConfigurationProvider _roleProvider;
+        private readonly RoleConfigurationProvider _roleProvider;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
     protected ILogger EndpointLogger { get; }
 
-    /// <inheritdoc />
-    protected CreateRoleEndpointBase(RoleConfigurationProvider roleProvider)
+    /// <summary>Initializes a new instance of the <see cref="CreateRoleEndpointBase"/> class.</summary>
+    protected CreateRoleEndpointBase(ILogger logger, RoleConfigurationProvider roleProvider)
     {
+        EndpointLogger = logger;
         _roleProvider = roleProvider;
     }
+
 
     /// <summary>
     /// Gets the role configuration provider.

@@ -11,6 +11,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Clients.Models;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -31,9 +32,8 @@ public abstract class ListFieldMappingTransformsEndpointBase : CrudListEndpointB
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
     /// <inheritdoc />
-    protected ListFieldMappingTransformsEndpointBase(
-        IDataGatewayProvider dataGateways,
-        DataSetConfigurationProvider dataSetProvider)
+    protected ListFieldMappingTransformsEndpointBase(ILogger<ListFieldMappingTransformsEndpointBase> logger, IDataGatewayProvider dataGateways,
+        DataSetConfigurationProvider dataSetProvider) : base(logger)
     {
         DataGateway = dataGateways.ByName("Main");
         _dataSetProvider = dataSetProvider;

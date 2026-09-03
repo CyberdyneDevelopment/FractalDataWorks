@@ -19,7 +19,7 @@ public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<Us
     /// Initializes a new instance of the <see cref="GetUserPreferencesEndpointBase"/> class.
     /// </summary>
     /// <param name="preferenceProvider">The user preference configuration provider.</param>
-    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="logger">The logger.</param>
     protected GetUserPreferencesEndpointBase(
         UserPreferenceConfigurationProvider preferenceProvider,
         ILogger logger)

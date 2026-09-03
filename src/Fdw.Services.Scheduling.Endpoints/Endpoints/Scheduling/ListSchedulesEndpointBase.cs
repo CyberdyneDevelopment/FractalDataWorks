@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -7,6 +7,7 @@ using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Scheduling.Abstractions.Configuration;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Scheduling.Endpoints;
 
@@ -19,7 +20,7 @@ public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSched
     private readonly IServiceConfigurationProvider<ScheduleConfiguration> _provider;
 
     /// <inheritdoc />
-    protected ListSchedulesEndpointBase(IServiceConfigurationProvider<ScheduleConfiguration> provider)
+    protected ListSchedulesEndpointBase(ILogger<ListSchedulesEndpointBase> logger, IServiceConfigurationProvider<ScheduleConfiguration> provider) : base(logger)
     {
         _provider = provider;
     }

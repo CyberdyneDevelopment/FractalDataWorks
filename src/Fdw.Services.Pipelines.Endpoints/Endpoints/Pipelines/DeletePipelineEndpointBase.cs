@@ -1,7 +1,8 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -15,7 +16,7 @@ public abstract class DeletePipelineEndpointBase<TConfig> : CrudDeleteEndpointBa
     private readonly PipelineServiceConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected DeletePipelineEndpointBase(PipelineServiceConfigurationProvider provider)
+    protected DeletePipelineEndpointBase(ILogger<DeletePipelineEndpointBase<TConfig>> logger, PipelineServiceConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }

@@ -23,7 +23,7 @@ public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
     /// </summary>
     /// <param name="userProvider">The user configuration provider.</param>
     /// <param name="credentialService">The user credential service.</param>
-    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="logger">The logger.</param>
     protected ResetPasswordEndpointBase(
         UserConfigurationProvider userProvider,
         IUserCredentialService credentialService,

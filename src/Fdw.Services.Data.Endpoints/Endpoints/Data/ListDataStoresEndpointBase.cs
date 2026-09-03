@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -7,6 +7,7 @@ using Fdw.Results;
 using Fdw.Services.Connections;
 using Fdw.Services.Data;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -19,17 +20,16 @@ public abstract class ListDataStoresEndpointBase : CrudListEndpointBase<DataStor
     private readonly ConnectionConfigurationProvider? _configProvider;
 
     /// <inheritdoc />
-    protected ListDataStoresEndpointBase(
-        DataStoreConfigurationProvider dataStoreProvider,
-        ConnectionConfigurationProvider configProvider)
+    protected ListDataStoresEndpointBase(ILogger<ListDataStoresEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider,
+        ConnectionConfigurationProvider configProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
         _configProvider = configProvider;
     }
 
     /// <inheritdoc />
-    protected ListDataStoresEndpointBase(DataStoreConfigurationProvider dataStoreProvider)
-        : this(dataStoreProvider, null!)
+    protected ListDataStoresEndpointBase(ILogger<ListDataStoresEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider)
+        : this(logger, dataStoreProvider, null!)
     {
     }
 

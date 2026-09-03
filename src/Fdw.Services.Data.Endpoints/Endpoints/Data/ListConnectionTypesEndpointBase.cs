@@ -1,10 +1,11 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -13,6 +14,11 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class ListConnectionTypesEndpointBase : CrudListEndpointBase<ConnectionTypeSummaryDto>
 {
+    /// <summary>Initializes a new instance of the <see cref="ListConnectionTypesEndpointBase"/> class.</summary>
+    protected ListConnectionTypesEndpointBase(ILogger<ListConnectionTypesEndpointBase> logger) : base(logger)
+    {
+    }
+
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "connection-types";
 

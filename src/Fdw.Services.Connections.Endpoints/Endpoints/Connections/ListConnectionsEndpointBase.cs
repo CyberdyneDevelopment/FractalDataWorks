@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Connections.Endpoints;
 
@@ -18,7 +19,7 @@ public abstract class ListConnectionsEndpointBase : CrudListEndpointBase<Connect
     private readonly ConnectionConfigurationProvider _configProvider;
 
     /// <inheritdoc />
-    protected ListConnectionsEndpointBase(ConnectionConfigurationProvider configProvider)
+    protected ListConnectionsEndpointBase(ILogger<ListConnectionsEndpointBase> logger, ConnectionConfigurationProvider configProvider) : base(logger)
     {
         _configProvider = configProvider;
     }

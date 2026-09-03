@@ -16,23 +16,23 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class ListPermissionsEndpointBase : EndpointWithoutRequest<List<PermissionSummaryDto>>
 {
     /// <summary>Initializes a new instance of the <see cref="ListPermissionsEndpointBase"/> class.</summary>
-    protected ListPermissionsEndpointBase(ILogger logger)
-    {
-        EndpointLogger = logger;
-    }
-
-    private readonly RoleConfigurationProvider _roleProvider;
+        private readonly RoleConfigurationProvider _roleProvider;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
     protected ILogger EndpointLogger { get; }
 
-    /// <inheritdoc />
-    protected ListPermissionsEndpointBase(RoleConfigurationProvider roleProvider)
+    private readonly ITenantContext? _tenantContext;
+
+    /// <summary>Initializes a new instance of the <see cref="ListPermissionsEndpointBase"/> class.</summary>
+    protected ListPermissionsEndpointBase(ILogger logger, RoleConfigurationProvider roleProvider, ITenantContext? tenantContext = null)
     {
+        EndpointLogger = logger;
         _roleProvider = roleProvider;
+        _tenantContext = tenantContext;
     }
+
 
     /// <summary>
     /// Gets the role configuration provider.
@@ -65,7 +65,7 @@ public abstract class ListPermissionsEndpointBase : EndpointWithoutRequest<List<
 
         var allPermissions = await _roleProvider.GetPermissions(ct).ConfigureAwait(false);
 
-        var orgPrefix = Resolve<ITenantContext>()?.CurrentTenant?.OrgPrefix;
+        var orgPrefix = _tenantContext?.CurrentTenant?.OrgPrefix;
         var prefix = string.IsNullOrEmpty(orgPrefix) ? null : orgPrefix + ":";
 
         var permissions = allPermissions

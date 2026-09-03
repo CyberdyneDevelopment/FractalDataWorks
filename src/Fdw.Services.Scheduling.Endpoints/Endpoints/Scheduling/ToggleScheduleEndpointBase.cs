@@ -15,18 +15,15 @@ public abstract class ToggleScheduleEndpointBase<TConfig> : Endpoint<ToggleSched
     where TConfig : ScheduleConfiguration
 {
     /// <summary>Initializes a new instance of the <see cref="ToggleScheduleEndpointBase{TConfig}"/> class.</summary>
-    protected ToggleScheduleEndpointBase(ILogger logger)
+        private readonly ScheduleConfigurationProvider _provider;
+
+    /// <summary>Initializes a new instance of the <see cref="ToggleScheduleEndpointBase{TConfig}"/> class.</summary>
+    protected ToggleScheduleEndpointBase(ILogger logger, ScheduleConfigurationProvider provider)
     {
         Logger = logger;
-    }
-
-    private readonly ScheduleConfigurationProvider _provider;
-
-    /// <inheritdoc />
-    protected ToggleScheduleEndpointBase(ScheduleConfigurationProvider provider)
-    {
         _provider = provider;
     }
+
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected virtual string ResourceName => "schedules";

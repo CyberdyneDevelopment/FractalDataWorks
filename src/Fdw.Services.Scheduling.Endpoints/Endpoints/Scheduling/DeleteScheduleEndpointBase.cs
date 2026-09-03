@@ -1,9 +1,10 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Scheduling.Abstractions.Configuration;
 using Fdw.Services.Scheduling.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Scheduling.Endpoints;
 
@@ -17,7 +18,7 @@ public abstract class DeleteScheduleEndpointBase<TConfig> : CrudDeleteEndpointBa
     private readonly ScheduleConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected DeleteScheduleEndpointBase(ScheduleConfigurationProvider provider)
+    protected DeleteScheduleEndpointBase(ILogger<DeleteScheduleEndpointBase<TConfig>> logger, ScheduleConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }

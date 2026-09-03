@@ -14,23 +14,20 @@ namespace Fdw.Services.Users.Endpoints;
 public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
 {
     /// <summary>Initializes a new instance of the <see cref="DeleteUserEndpointBase"/> class.</summary>
-    protected DeleteUserEndpointBase(ILogger logger)
-    {
-        EndpointLogger = logger;
-    }
-
-    private readonly UserConfigurationProvider _userProvider;
+        private readonly UserConfigurationProvider _userProvider;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
     protected ILogger EndpointLogger { get; }
 
-    /// <inheritdoc />
-    protected DeleteUserEndpointBase(UserConfigurationProvider userProvider)
+    /// <summary>Initializes a new instance of the <see cref="DeleteUserEndpointBase"/> class.</summary>
+    protected DeleteUserEndpointBase(ILogger logger, UserConfigurationProvider userProvider)
     {
+        EndpointLogger = logger;
         _userProvider = userProvider;
     }
+
 
     /// <summary>
     /// Gets the user provider.

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Pipelines;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -19,7 +20,7 @@ public abstract class ListPipelinesEndpointBase : CrudListEndpointBase<PipelineS
     private readonly PipelineServiceConfigurationProvider _configProvider;
 
     /// <inheritdoc />
-    protected ListPipelinesEndpointBase(PipelineServiceConfigurationProvider configProvider)
+    protected ListPipelinesEndpointBase(ILogger<ListPipelinesEndpointBase> logger, PipelineServiceConfigurationProvider configProvider) : base(logger)
     {
         _configProvider = configProvider ?? throw new ArgumentNullException(nameof(configProvider));
     }

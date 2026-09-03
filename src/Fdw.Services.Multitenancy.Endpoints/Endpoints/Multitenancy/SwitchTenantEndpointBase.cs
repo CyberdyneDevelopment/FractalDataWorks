@@ -17,23 +17,20 @@ namespace Fdw.Services.Multitenancy.Endpoints;
 public abstract class SwitchTenantEndpointBase : Endpoint<SwitchTenantRequest, SwitchTenantDto>
 {
     /// <summary>Initializes a new instance of the <see cref="SwitchTenantEndpointBase"/> class.</summary>
-    protected SwitchTenantEndpointBase(ILogger logger)
-    {
-        EndpointLogger = logger;
-    }
-
-    private readonly ITenantProvider _tenantProvider;
+        private readonly ITenantProvider _tenantProvider;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
     protected ILogger EndpointLogger { get; }
 
-    /// <inheritdoc />
-    protected SwitchTenantEndpointBase(ITenantProvider tenantProvider)
+    /// <summary>Initializes a new instance of the <see cref="SwitchTenantEndpointBase"/> class.</summary>
+    protected SwitchTenantEndpointBase(ILogger logger, ITenantProvider tenantProvider)
     {
+        EndpointLogger = logger;
         _tenantProvider = tenantProvider;
     }
+
 
     /// <summary>
     /// Gets the tenant provider.

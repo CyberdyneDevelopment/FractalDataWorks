@@ -1,9 +1,10 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -16,7 +17,7 @@ public abstract class GetDataSetEndpointBase : CrudGetEndpointBase<DataSetNameRe
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
     /// <inheritdoc />
-    protected GetDataSetEndpointBase(DataSetConfigurationProvider dataSetProvider)
+    protected GetDataSetEndpointBase(ILogger<GetDataSetEndpointBase> logger, DataSetConfigurationProvider dataSetProvider) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
     }

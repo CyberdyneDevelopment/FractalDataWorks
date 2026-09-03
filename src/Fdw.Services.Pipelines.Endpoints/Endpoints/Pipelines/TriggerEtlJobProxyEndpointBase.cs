@@ -12,25 +12,20 @@ namespace Fdw.Services.Pipelines.Endpoints;
 public abstract class TriggerEtlJobProxyEndpointBase : Endpoint<ProxyTriggerEtlRequest, TriggerPipelineResponse>
 {
     /// <summary>Initializes a new instance of the <see cref="TriggerEtlJobProxyEndpointBase"/> class.</summary>
-    protected TriggerEtlJobProxyEndpointBase(ILogger logger)
-    {
-        EndpointLogger = logger;
-    }
-
-    private readonly IPipelineJobClient _client;
+        private readonly IPipelineJobClient _client;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
     protected ILogger EndpointLogger { get; }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TriggerEtlJobProxyEndpointBase"/> class.
-    /// </summary>
-    protected TriggerEtlJobProxyEndpointBase(IPipelineJobClient client)
+    /// <summary>Initializes a new instance of the <see cref="TriggerEtlJobProxyEndpointBase"/> class.</summary>
+    protected TriggerEtlJobProxyEndpointBase(ILogger logger, IPipelineJobClient client)
     {
+        EndpointLogger = logger;
         _client = client;
     }
+
 
     /// <inheritdoc />
     public override void Configure()

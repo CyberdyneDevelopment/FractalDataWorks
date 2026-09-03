@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,6 +6,7 @@ using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Clients.Models;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -15,6 +16,11 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class ListDataSetTypesEndpointBase : CrudListEndpointBase<DataSetTypeSummaryPayload>
 {
+    /// <summary>Initializes a new instance of the <see cref="ListDataSetTypesEndpointBase"/> class.</summary>
+    protected ListDataSetTypesEndpointBase(ILogger<ListDataSetTypesEndpointBase> logger) : base(logger)
+    {
+    }
+
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "datasets/types";
 

@@ -15,10 +15,13 @@ namespace Fdw.Calculations.Endpoints;
 /// </summary>
 public abstract class ListCalculationTypesEndpointBase : EndpointWithoutRequest<CalculationTypesResponse>
 {
+    private readonly ICalculationCatalogProvider _catalog;
+
     /// <summary>Initializes a new instance of the <see cref="ListCalculationTypesEndpointBase"/> class.</summary>
-    protected ListCalculationTypesEndpointBase(ILogger logger)
+    protected ListCalculationTypesEndpointBase(ILogger logger, ICalculationCatalogProvider catalog)
     {
         EndpointLogger = logger;
+        _catalog = catalog;
     }
 
     /// <summary>
@@ -49,7 +52,7 @@ public abstract class ListCalculationTypesEndpointBase : EndpointWithoutRequest<
         
         CalculationEndpointLog.ListingCalculationTypes(EndpointLogger);
 
-        var catalog = Resolve<ICalculationCatalogProvider>();
+        var catalog = _catalog;
         var result = await catalog.Get(ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {

@@ -24,30 +24,30 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissionsRequest, List<PermissionSummaryDto>>
 {
     /// <summary>Initializes a new instance of the <see cref="SetRolePermissionsEndpointBase"/> class.</summary>
-    protected SetRolePermissionsEndpointBase(ILogger logger)
-    {
-        EndpointLogger = logger;
-    }
-
-    private readonly ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand> _rolePermissionProvider;
+        private readonly ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand> _rolePermissionProvider;
     private readonly RoleConfigurationProvider _roleProvider;
     private readonly ISystemRoleConfiguration _systemRoleConfiguration;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
     protected ILogger EndpointLogger { get; }
 
-    /// <inheritdoc />
-    protected SetRolePermissionsEndpointBase(
-        ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand> rolePermissionProvider,
+    private readonly ITenantContext? _tenantContext;
+
+    /// <summary>Initializes a new instance of the <see cref="SetRolePermissionsEndpointBase"/> class.</summary>
+    protected SetRolePermissionsEndpointBase(ILogger logger, ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand> rolePermissionProvider,
         RoleConfigurationProvider roleProvider,
-        ISystemRoleConfiguration systemRoleConfiguration)
+        ISystemRoleConfiguration systemRoleConfiguration,
+        ITenantContext? tenantContext = null)
     {
+        EndpointLogger = logger;
         _rolePermissionProvider = rolePermissionProvider;
         _roleProvider = roleProvider;
         _systemRoleConfiguration = systemRoleConfiguration;
+        _tenantContext = tenantContext;
     }
+
 
     /// <summary>
     /// Gets the role configuration provider.
@@ -115,7 +115,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
         SetRolePermissionsRequest req,
         IReadOnlyList<PermissionConfiguration> allPermissions)
     {
-        var orgPrefix = Resolve<ITenantContext>()?.CurrentTenant?.OrgPrefix;
+        var orgPrefix = _tenantContext?.CurrentTenant?.OrgPrefix;
         var tenantPrefix = string.IsNullOrEmpty(orgPrefix) ? null : orgPrefix + ":";
         var resolved = new List<PermissionSummaryDto>();
 

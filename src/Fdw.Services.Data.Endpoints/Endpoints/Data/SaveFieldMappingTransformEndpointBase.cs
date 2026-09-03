@@ -10,6 +10,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Clients.Models;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -32,9 +33,8 @@ public abstract class SaveFieldMappingTransformEndpointBase : CrudCreateEndpoint
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
     /// <inheritdoc />
-    protected SaveFieldMappingTransformEndpointBase(
-        IDataGatewayProvider dataGateways,
-        DataSetConfigurationProvider dataSetProvider)
+    protected SaveFieldMappingTransformEndpointBase(ILogger<SaveFieldMappingTransformEndpointBase> logger, IDataGatewayProvider dataGateways,
+        DataSetConfigurationProvider dataSetProvider) : base(logger)
     {
         DataGateway = dataGateways.ByName("Main");
         _dataSetProvider = dataSetProvider;

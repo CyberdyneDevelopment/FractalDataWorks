@@ -46,7 +46,7 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
     /// <summary>Retrieves all annotations for the specified DataSet.</summary>
     public override async Task HandleAsync(DataSetAnnotationRequest req, CancellationToken ct)
     {
-        var dataSetProvider = TryResolve<DataSetConfigurationProvider>();
+        var dataSetProvider = _dataSetProvider;
         if (dataSetProvider is not null && !string.IsNullOrEmpty(req.DataSetName))
         {
             var existsResult = await dataSetProvider.Get(req.DataSetName, ct).ConfigureAwait(false);

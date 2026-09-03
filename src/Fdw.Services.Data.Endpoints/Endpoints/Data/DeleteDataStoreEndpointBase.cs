@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Connections;
@@ -6,6 +6,7 @@ using Fdw.Services.Data;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
 using Fdw.Web.RestEndpoints.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -19,7 +20,7 @@ public abstract class DeleteDataStoreEndpointBase<TConfig> : CrudDeleteEndpointB
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
 
     /// <inheritdoc />
-    protected DeleteDataStoreEndpointBase(DataStoreConfigurationProvider dataStoreProvider)
+    protected DeleteDataStoreEndpointBase(ILogger<DeleteDataStoreEndpointBase<TConfig>> logger, DataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
     }

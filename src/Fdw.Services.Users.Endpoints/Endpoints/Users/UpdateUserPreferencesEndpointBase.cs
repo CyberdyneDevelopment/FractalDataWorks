@@ -20,7 +20,7 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
     /// Initializes a new instance of the <see cref="UpdateUserPreferencesEndpointBase"/> class.
     /// </summary>
     /// <param name="preferenceProvider">The user preference configuration provider.</param>
-    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="logger">The logger.</param>
     protected UpdateUserPreferencesEndpointBase(
         UserPreferenceConfigurationProvider preferenceProvider,
         ILogger logger)

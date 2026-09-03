@@ -30,12 +30,7 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<ReorderFieldMappingTransformsRequest>
 {
     /// <summary>Initializes a new instance of the <see cref="ReorderFieldMappingTransformsEndpointBase"/> class.</summary>
-    protected ReorderFieldMappingTransformsEndpointBase(ILogger logger)
-    {
-        Logger = logger;
-    }
-
-    /// <summary>Gets the data gateway for executing queries and commands.</summary>
+        /// <summary>Gets the data gateway for executing queries and commands.</summary>
     protected IDataGateway DataGateway { get; }
 
     private readonly DataSetConfigurationProvider _dataSetProvider;
@@ -43,14 +38,15 @@ public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<Reord
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
     protected new ILogger Logger { get; }
 
-    /// <inheritdoc />
-    protected ReorderFieldMappingTransformsEndpointBase(
-        IDataGatewayProvider dataGateways,
+    /// <summary>Initializes a new instance of the <see cref="ReorderFieldMappingTransformsEndpointBase"/> class.</summary>
+    protected ReorderFieldMappingTransformsEndpointBase(ILogger logger, IDataGatewayProvider dataGateways,
         DataSetConfigurationProvider dataSetProvider)
     {
+        Logger = logger;
         DataGateway = dataGateways.ByName("Main");
         _dataSetProvider = dataSetProvider;
     }
+
 
     /// <summary>Gets the connection name for configuration database queries.</summary>
     protected virtual string ConfigurationConnectionName => _dataSetProvider.DataStoreName;

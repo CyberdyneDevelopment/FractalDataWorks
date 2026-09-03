@@ -1,4 +1,4 @@
-using Fdw.Services.Data.Clients.Models;
+﻿using Fdw.Services.Data.Clients.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -7,6 +7,7 @@ using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -19,7 +20,7 @@ public abstract class GetDataSetFieldsEndpointBase : CrudGetEndpointBase<DataSet
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
     /// <inheritdoc />
-    protected GetDataSetFieldsEndpointBase(DataSetConfigurationProvider dataSetProvider)
+    protected GetDataSetFieldsEndpointBase(ILogger<GetDataSetFieldsEndpointBase> logger, DataSetConfigurationProvider dataSetProvider) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
     }

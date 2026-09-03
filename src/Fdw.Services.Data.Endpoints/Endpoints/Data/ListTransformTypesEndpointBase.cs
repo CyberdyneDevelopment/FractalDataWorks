@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +9,7 @@ using Fdw.Results;
 using Fdw.Services.Data.Clients.Models;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -19,6 +20,11 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class ListTransformTypesEndpointBase : CrudListEndpointBase<TransformTypePayload>
 {
+    /// <summary>Initializes a new instance of the <see cref="ListTransformTypesEndpointBase"/> class.</summary>
+    protected ListTransformTypesEndpointBase(ILogger<ListTransformTypesEndpointBase> logger) : base(logger)
+    {
+    }
+
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "transform-types";
 

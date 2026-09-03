@@ -25,36 +25,32 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
     where TRequest : CreateUserRequest
 {
     /// <summary>Initializes a new instance of the <see cref="CreateUserEndpointBase{TRequest}"/> class.</summary>
-    protected CreateUserEndpointBase(ILogger logger)
-    {
-        EndpointLogger = logger;
-    }
-
-    private readonly UserConfigurationProvider _userProvider;
+        private readonly UserConfigurationProvider _userProvider;
     private readonly UserTenantConfigurationProvider _tenantProvider;
     private readonly UserRoleConfigurationProvider _userRoleProvider;
     private readonly RoleConfigurationProvider _roleProvider;
     private readonly IUserCredentialService _credentialService;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
     protected ILogger EndpointLogger { get; }
 
-    /// <inheritdoc />
-    protected CreateUserEndpointBase(
-        UserConfigurationProvider userProvider,
+    /// <summary>Initializes a new instance of the <see cref="CreateUserEndpointBase{TRequest}"/> class.</summary>
+    protected CreateUserEndpointBase(ILogger logger, UserConfigurationProvider userProvider,
         UserTenantConfigurationProvider tenantProvider,
         UserRoleConfigurationProvider userRoleProvider,
         RoleConfigurationProvider roleProvider,
         IUserCredentialService credentialService)
     {
+        EndpointLogger = logger;
         _userProvider = userProvider;
         _tenantProvider = tenantProvider;
         _userRoleProvider = userRoleProvider;
         _roleProvider = roleProvider;
         _credentialService = credentialService;
     }
+
 
     /// <summary>
     /// Gets the user provider.

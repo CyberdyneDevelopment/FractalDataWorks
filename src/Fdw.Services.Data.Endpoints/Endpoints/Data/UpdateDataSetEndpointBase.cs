@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,7 +20,7 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
     /// <inheritdoc />
-    protected UpdateDataSetEndpointBase(DataSetConfigurationProvider dataSetProvider)
+    protected UpdateDataSetEndpointBase(ILogger<UpdateDataSetEndpointBase> logger, DataSetConfigurationProvider dataSetProvider) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
     }

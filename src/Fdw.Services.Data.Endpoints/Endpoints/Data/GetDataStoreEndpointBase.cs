@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,6 +6,7 @@ using Fdw.Results;
 using Fdw.Services.Connections;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -18,8 +19,8 @@ public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNa
     private readonly ConnectionConfigurationProvider? _connectionProvider;
 
     /// <inheritdoc />
-    protected GetDataStoreEndpointBase(DataStoreConfigurationProvider dataStoreProvider)
-        : this(dataStoreProvider, null)
+    protected GetDataStoreEndpointBase(ILogger<GetDataStoreEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider)
+        : this(logger, dataStoreProvider, null)
     {
     }
 
@@ -27,11 +28,14 @@ public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNa
     /// Initializes a new instance of the <see cref="GetDataStoreEndpointBase"/> class
     /// with connection resolution support.
     /// </summary>
+    /// <param name="logger">The logger.</param>
     /// <param name="dataStoreProvider">The data store configuration provider.</param>
     /// <param name="connectionProvider">The connection configuration provider for resolving ConnectionName.</param>
     protected GetDataStoreEndpointBase(
+        ILogger<GetDataStoreEndpointBase> logger,
         DataStoreConfigurationProvider dataStoreProvider,
         ConnectionConfigurationProvider? connectionProvider)
+        : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
         _connectionProvider = connectionProvider;

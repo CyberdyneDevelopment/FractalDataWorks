@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -10,6 +10,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
 using Fdw.Web.RestEndpoints.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -24,9 +25,8 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointB
     private readonly ConnectionConfigurationProvider _connectionProvider;
 
     /// <inheritdoc />
-    protected UpdateDataStoreEndpointBase(
-        DataStoreConfigurationProvider dataStoreProvider,
-        ConnectionConfigurationProvider connectionProvider)
+    protected UpdateDataStoreEndpointBase(ILogger<UpdateDataStoreEndpointBase<TConfig>> logger, DataStoreConfigurationProvider dataStoreProvider,
+        ConnectionConfigurationProvider connectionProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
         _connectionProvider = connectionProvider;

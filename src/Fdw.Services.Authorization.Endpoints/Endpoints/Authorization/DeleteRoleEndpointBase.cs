@@ -14,23 +14,20 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
 {
     /// <summary>Initializes a new instance of the <see cref="DeleteRoleEndpointBase"/> class.</summary>
-    protected DeleteRoleEndpointBase(ILogger logger)
-    {
-        EndpointLogger = logger;
-    }
-
-    private readonly RoleConfigurationProvider _roleProvider;
+        private readonly RoleConfigurationProvider _roleProvider;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
     protected ILogger EndpointLogger { get; }
 
-    /// <inheritdoc />
-    protected DeleteRoleEndpointBase(RoleConfigurationProvider roleProvider)
+    /// <summary>Initializes a new instance of the <see cref="DeleteRoleEndpointBase"/> class.</summary>
+    protected DeleteRoleEndpointBase(ILogger logger, RoleConfigurationProvider roleProvider)
     {
+        EndpointLogger = logger;
         _roleProvider = roleProvider;
     }
+
 
     /// <summary>
     /// Gets the role configuration provider.

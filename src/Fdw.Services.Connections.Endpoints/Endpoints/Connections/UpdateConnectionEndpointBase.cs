@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -6,6 +6,7 @@ using Fdw.Services.Abstractions;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Connections.Endpoints;
 
@@ -27,7 +28,7 @@ public abstract class UpdateConnectionEndpointBase<TConfig> : CrudUpdateEndpoint
     private readonly ConnectionConfigurationProvider _connectionProvider;
 
     /// <inheritdoc />
-    protected UpdateConnectionEndpointBase(ConnectionConfigurationProvider connectionProvider)
+    protected UpdateConnectionEndpointBase(ILogger<UpdateConnectionEndpointBase<TConfig>> logger, ConnectionConfigurationProvider connectionProvider) : base(logger)
     {
         _connectionProvider = connectionProvider;
     }

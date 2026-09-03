@@ -28,10 +28,18 @@ namespace Fdw.Web.RestEndpoints.Crud;
 public abstract class CrudListEndpointBase<TSummary> : EndpointWithoutRequest<List<TSummary>>
     where TSummary : class
 {
+    private readonly IETagProvider? _etagProvider;
+    private readonly IEffectiveSettingsProvider? _settingsProvider;
+
     /// <summary>Initializes a new instance of the <see cref="CrudListEndpointBase{TSummary}"/> class.</summary>
-    protected CrudListEndpointBase(ILogger logger)
+    protected CrudListEndpointBase(
+        ILogger logger,
+        IETagProvider? etagProvider = null,
+        IEffectiveSettingsProvider? settingsProvider = null)
     {
         Logger = logger;
+        _etagProvider = etagProvider;
+        _settingsProvider = settingsProvider;
     }
 
     /// <summary>
@@ -130,7 +138,7 @@ public abstract class CrudListEndpointBase<TSummary> : EndpointWithoutRequest<Li
         {
             if (ETagEnabled)
             {
-                var etagProvider = TryResolve<IETagProvider>();
+                var etagProvider = _etagProvider;
                 if (etagProvider is not null)
                 {
                     var etag = await etagProvider.GetETag(ETagContainerName, ETagConnectionName, ct)
@@ -284,7 +292,7 @@ public abstract class CrudListEndpointBase<TSummary> : EndpointWithoutRequest<Li
     /// </summary>
     private int ResolveMaxPaginationSize()
     {
-        var settingsProvider = TryResolve<IEffectiveSettingsProvider>();
+        var settingsProvider = _settingsProvider;
         if (settingsProvider is null)
         {
             return 0;
@@ -323,10 +331,13 @@ public abstract class CrudListEndpointBase<TListRequest, TSummary> : Endpoint<TL
     where TListRequest : notnull, new()
     where TSummary : class
 {
+    private readonly IETagProvider? _etagProvider;
+
     /// <summary>Initializes a new instance of the <see cref="CrudListEndpointBase{TListRequest, TSummary}"/> class.</summary>
-    protected CrudListEndpointBase(ILogger logger)
+    protected CrudListEndpointBase(ILogger logger, IETagProvider? etagProvider = null)
     {
         Logger = logger;
+        _etagProvider = etagProvider;
     }
 
     /// <summary>
@@ -417,7 +428,7 @@ public abstract class CrudListEndpointBase<TListRequest, TSummary> : Endpoint<TL
         {
             if (ETagEnabled)
             {
-                var etagProvider = TryResolve<IETagProvider>();
+                var etagProvider = _etagProvider;
                 if (etagProvider is not null)
                 {
                     var etag = await etagProvider.GetETag(ETagContainerName, ETagConnectionName, ct)

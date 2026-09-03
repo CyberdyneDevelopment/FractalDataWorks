@@ -32,6 +32,7 @@ public abstract class GetConnectionTypeCapabilitiesEndpointBase
     protected GetConnectionTypeCapabilitiesEndpointBase(
         ConnectionConfigurationProvider configProvider,
         ILogger<GetConnectionTypeCapabilitiesEndpointBase> logger)
+        : base(logger)
     {
         _configProvider = configProvider;
         _logger = logger ?? NullLogger<GetConnectionTypeCapabilitiesEndpointBase>.Instance;

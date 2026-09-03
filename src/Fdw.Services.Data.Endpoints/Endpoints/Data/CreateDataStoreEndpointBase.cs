@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using Fdw.Services.Connections.Validation;
@@ -11,6 +11,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -25,9 +26,8 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
     private readonly ConnectionConfigurationProvider _connectionProvider;
 
     /// <inheritdoc />
-    protected CreateDataStoreEndpointBase(
-        DataStoreConfigurationProvider dataStoreProvider,
-        ConnectionConfigurationProvider connectionProvider)
+    protected CreateDataStoreEndpointBase(ILogger<CreateDataStoreEndpointBase<TConfig>> logger, DataStoreConfigurationProvider dataStoreProvider,
+        ConnectionConfigurationProvider connectionProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
         _connectionProvider = connectionProvider;

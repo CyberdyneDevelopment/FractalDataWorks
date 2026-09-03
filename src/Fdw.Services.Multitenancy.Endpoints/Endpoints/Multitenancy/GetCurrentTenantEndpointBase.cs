@@ -17,25 +17,22 @@ namespace Fdw.Services.Multitenancy.Endpoints;
 public abstract class GetCurrentTenantEndpointBase : EndpointWithoutRequest<TenantDto>
 {
     /// <summary>Initializes a new instance of the <see cref="GetCurrentTenantEndpointBase"/> class.</summary>
-    protected GetCurrentTenantEndpointBase(ILogger logger)
-    {
-        EndpointLogger = logger;
-    }
-
-    private readonly ITenantProvider _tenantProvider;
+        private readonly ITenantProvider _tenantProvider;
     private readonly ISystemRoleConfiguration _systemRoleConfiguration;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
     protected ILogger EndpointLogger { get; }
 
-    /// <inheritdoc />
-    protected GetCurrentTenantEndpointBase(ITenantProvider tenantProvider, ISystemRoleConfiguration systemRoleConfiguration)
+    /// <summary>Initializes a new instance of the <see cref="GetCurrentTenantEndpointBase"/> class.</summary>
+    protected GetCurrentTenantEndpointBase(ILogger logger, ITenantProvider tenantProvider, ISystemRoleConfiguration systemRoleConfiguration)
     {
+        EndpointLogger = logger;
         _tenantProvider = tenantProvider;
         _systemRoleConfiguration = systemRoleConfiguration;
     }
+
 
     /// <summary>
     /// Gets the tenant provider.

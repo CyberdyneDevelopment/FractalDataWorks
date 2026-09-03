@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,6 +6,7 @@ using Fdw.Results;
 using Fdw.Services.Etl.Transforms;
 using Fdw.Services.Results;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -19,7 +20,7 @@ public abstract class UpdatePipelineEndpointBase<TConfig> : CrudUpdateEndpointBa
     private readonly PipelineServiceConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected UpdatePipelineEndpointBase(PipelineServiceConfigurationProvider provider)
+    protected UpdatePipelineEndpointBase(ILogger<UpdatePipelineEndpointBase<TConfig>> logger, PipelineServiceConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }

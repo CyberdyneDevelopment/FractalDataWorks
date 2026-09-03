@@ -17,20 +17,15 @@ namespace Fdw.Services.Pipelines.Endpoints;
 public abstract class BulkPipelineStatusEndpointBase : EndpointWithoutRequest<BulkPipelineStatusResponse>
 {
     /// <summary>Initializes a new instance of the <see cref="BulkPipelineStatusEndpointBase"/> class.</summary>
-    protected BulkPipelineStatusEndpointBase(ILogger logger)
+        private readonly IDataGatewayProvider _dataGateways;
+
+    /// <summary>Initializes a new instance of the <see cref="BulkPipelineStatusEndpointBase"/> class.</summary>
+    protected BulkPipelineStatusEndpointBase(ILogger logger, IDataGatewayProvider dataGateways)
     {
         EndpointLogger = logger;
-    }
-
-    private readonly IDataGatewayProvider _dataGateways;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="BulkPipelineStatusEndpointBase"/> class.
-    /// </summary>
-    protected BulkPipelineStatusEndpointBase(IDataGatewayProvider dataGateways)
-    {
         _dataGateways = dataGateways;
     }
+
 
     /// <summary>
     /// Gets the data gateway.
@@ -40,7 +35,7 @@ public abstract class BulkPipelineStatusEndpointBase : EndpointWithoutRequest<Bu
     protected IDataGateway DataGateway => _dataGateways.ByName("Main");
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
     protected ILogger EndpointLogger { get; }
 

@@ -19,7 +19,7 @@ public abstract class ChangePasswordEndpointBase : Endpoint<ChangePasswordReques
     /// <summary>
     /// Initializes a new instance of the <see cref="ChangePasswordEndpointBase"/> class.
     /// </summary>
-    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="logger">The logger.</param>
     protected ChangePasswordEndpointBase(ILogger logger)
     {
         _logger = logger;

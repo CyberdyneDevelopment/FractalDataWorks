@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -9,6 +9,7 @@ using Fdw.Services.Data;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.AspNetCore.Http;
 using Fdw.Services.Connections.Clients.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Connections.Endpoints;
 
@@ -33,9 +34,8 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
     private readonly ISchemaInformationService? _schemaInformationService;
 
     /// <inheritdoc />
-    protected CreateConnectionEndpointBase(
-        ConnectionConfigurationProvider connectionProvider,
-        ISchemaInformationService? schemaInformationService = null)
+    protected CreateConnectionEndpointBase(ILogger<CreateConnectionEndpointBase<TConfig>> logger, ConnectionConfigurationProvider connectionProvider,
+        ISchemaInformationService? schemaInformationService = null) : base(logger)
     {
         _connectionProvider = connectionProvider;
         _schemaInformationService = schemaInformationService;

@@ -36,6 +36,7 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpointBase<PreviewDa
         DataSetConfigurationProvider dataSetProvider,
         IDataGatewayProvider dataGateways,
         ILogger<PreviewDataSetEndpointBase> logger)
+        : base(logger)
     {
         _dataSetProvider = dataSetProvider;
         DataGateway = dataGateways.ByName("Main");

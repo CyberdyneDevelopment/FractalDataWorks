@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,6 +6,7 @@ using Fdw.Results;
 using Fdw.Services.Connections;
 using Fdw.Services.Data;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -17,7 +18,7 @@ public abstract class ListDataStoreContainersEndpointBase : CrudListEndpointBase
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
 
     /// <inheritdoc />
-    protected ListDataStoreContainersEndpointBase(DataStoreConfigurationProvider dataStoreProvider)
+    protected ListDataStoreContainersEndpointBase(ILogger<ListDataStoreContainersEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
     }

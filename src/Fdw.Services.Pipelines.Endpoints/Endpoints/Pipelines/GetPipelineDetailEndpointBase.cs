@@ -19,20 +19,15 @@ namespace Fdw.Services.Pipelines.Endpoints;
 public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameRequest, PipelineDetailResponse>
 {
     /// <summary>Initializes a new instance of the <see cref="GetPipelineDetailEndpointBase"/> class.</summary>
-    protected GetPipelineDetailEndpointBase(ILogger logger)
+        private readonly PipelineServiceConfigurationProvider _pipelineProvider;
+
+    /// <summary>Initializes a new instance of the <see cref="GetPipelineDetailEndpointBase"/> class.</summary>
+    protected GetPipelineDetailEndpointBase(ILogger logger, PipelineServiceConfigurationProvider pipelineProvider)
     {
         EndpointLogger = logger;
-    }
-
-    private readonly PipelineServiceConfigurationProvider _pipelineProvider;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="GetPipelineDetailEndpointBase"/> class.
-    /// </summary>
-    protected GetPipelineDetailEndpointBase(PipelineServiceConfigurationProvider pipelineProvider)
-    {
         _pipelineProvider = pipelineProvider;
     }
+
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
     protected ILogger EndpointLogger { get; }

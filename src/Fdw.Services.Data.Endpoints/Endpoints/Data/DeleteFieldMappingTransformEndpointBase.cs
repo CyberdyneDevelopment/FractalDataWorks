@@ -10,6 +10,7 @@ using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -31,9 +32,8 @@ public abstract class DeleteFieldMappingTransformEndpointBase : CrudDeleteEndpoi
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
     /// <inheritdoc />
-    protected DeleteFieldMappingTransformEndpointBase(
-        IDataGatewayProvider dataGateways,
-        DataSetConfigurationProvider dataSetProvider)
+    protected DeleteFieldMappingTransformEndpointBase(ILogger<DeleteFieldMappingTransformEndpointBase> logger, IDataGatewayProvider dataGateways,
+        DataSetConfigurationProvider dataSetProvider) : base(logger)
     {
         DataGateway = dataGateways.ByName("Main");
         _dataSetProvider = dataSetProvider;

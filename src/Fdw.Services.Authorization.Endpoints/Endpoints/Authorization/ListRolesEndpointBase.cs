@@ -16,23 +16,20 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class ListRolesEndpointBase : EndpointWithoutRequest<PaginatedResponse<RoleSummaryResponse>>
 {
     /// <summary>Initializes a new instance of the <see cref="ListRolesEndpointBase"/> class.</summary>
-    protected ListRolesEndpointBase(ILogger logger)
-    {
-        EndpointLogger = logger;
-    }
-
-    private readonly IAuthorizationProvider _authorizationProvider;
+        private readonly IAuthorizationProvider _authorizationProvider;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
     protected ILogger EndpointLogger { get; }
 
-    /// <inheritdoc />
-    protected ListRolesEndpointBase(IAuthorizationProvider authorizationProvider)
+    /// <summary>Initializes a new instance of the <see cref="ListRolesEndpointBase"/> class.</summary>
+    protected ListRolesEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider)
     {
+        EndpointLogger = logger;
         _authorizationProvider = authorizationProvider;
     }
+
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:read".

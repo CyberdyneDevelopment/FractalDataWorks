@@ -46,10 +46,15 @@ namespace Fdw.Web.RestEndpoints.Base;
 public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, TriggerOperationResponse>
     where TRequest : TriggerOperationRequest, new()
 {
+    private readonly IExecutionTracker _tracker;
+    private readonly IOperationDispatcher? _dispatcher;
+
     /// <summary>Initializes a new instance of the <see cref="TriggerEndpointBase{TRequest}"/> class.</summary>
-    protected TriggerEndpointBase(ILogger logger)
+    protected TriggerEndpointBase(ILogger logger, IExecutionTracker tracker, IOperationDispatcher? dispatcher = null)
     {
         Logger = logger;
+        _tracker = tracker;
+        _dispatcher = dispatcher;
     }
 
     /// <summary>
@@ -132,7 +137,7 @@ public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, Trigger
         
         try
         {
-            var tracker = Resolve<IExecutionTracker>();
+            var tracker = _tracker;
 
             // Validate request name
             if (string.IsNullOrWhiteSpace(req.Name))
@@ -199,7 +204,7 @@ public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, Trigger
             }
 
             // Dispatch if a dispatcher is registered
-            var dispatcher = TryResolve<IOperationDispatcher>();
+            var dispatcher = _dispatcher;
             if (dispatcher is not null)
             {
                 var dispatchResult = await dispatcher.Dispatch(execution, ct).ConfigureAwait(false);

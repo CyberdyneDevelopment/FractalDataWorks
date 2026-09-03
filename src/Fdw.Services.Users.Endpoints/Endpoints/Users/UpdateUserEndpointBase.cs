@@ -15,23 +15,20 @@ public abstract class UpdateUserEndpointBase<TRequest> : Endpoint<TRequest>
     where TRequest : UpdateUserRequest
 {
     /// <summary>Initializes a new instance of the <see cref="UpdateUserEndpointBase{TRequest}"/> class.</summary>
-    protected UpdateUserEndpointBase(ILogger logger)
-    {
-        EndpointLogger = logger;
-    }
-
-    private readonly UserConfigurationProvider _userProvider;
+        private readonly UserConfigurationProvider _userProvider;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
     protected ILogger EndpointLogger { get; }
 
-    /// <inheritdoc />
-    protected UpdateUserEndpointBase(UserConfigurationProvider userProvider)
+    /// <summary>Initializes a new instance of the <see cref="UpdateUserEndpointBase{TRequest}"/> class.</summary>
+    protected UpdateUserEndpointBase(ILogger logger, UserConfigurationProvider userProvider)
     {
+        EndpointLogger = logger;
         _userProvider = userProvider;
     }
+
 
     /// <summary>
     /// Gets the user provider.

@@ -23,10 +23,13 @@ public abstract class CrudGetEndpointBase<TRequest, TDetail> : Endpoint<TRequest
     where TRequest : notnull, new()
     where TDetail : class
 {
+    private readonly IETagProvider? _etagProvider;
+
     /// <summary>Initializes a new instance of the <see cref="CrudGetEndpointBase{TRequest, TDetail}"/> class.</summary>
-    protected CrudGetEndpointBase(ILogger logger)
+    protected CrudGetEndpointBase(ILogger logger, IETagProvider? etagProvider = null)
     {
         Logger = logger;
+        _etagProvider = etagProvider;
     }
 
     /// <summary>
@@ -124,7 +127,7 @@ public abstract class CrudGetEndpointBase<TRequest, TDetail> : Endpoint<TRequest
         {
             if (ETagEnabled)
             {
-                var etagProvider = TryResolve<IETagProvider>();
+                var etagProvider = _etagProvider;
                 if (etagProvider is not null)
                 {
                     var etag = await etagProvider.GetETag(ETagContainerName, ETagConnectionName, ct)

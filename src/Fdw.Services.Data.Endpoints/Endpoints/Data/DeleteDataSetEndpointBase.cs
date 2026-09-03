@@ -1,9 +1,10 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -16,7 +17,7 @@ public abstract class DeleteDataSetEndpointBase : CrudDeleteEndpointBase<DataSet
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
     /// <inheritdoc />
-    protected DeleteDataSetEndpointBase(DataSetConfigurationProvider dataSetProvider)
+    protected DeleteDataSetEndpointBase(ILogger<DeleteDataSetEndpointBase> logger, DataSetConfigurationProvider dataSetProvider) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
     }

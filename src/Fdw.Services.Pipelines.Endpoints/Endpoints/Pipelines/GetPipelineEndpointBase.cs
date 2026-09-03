@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -16,7 +17,7 @@ public abstract class GetPipelineEndpointBase<TConfig> : CrudGetEndpointBase<Pip
     private readonly PipelineServiceConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected GetPipelineEndpointBase(PipelineServiceConfigurationProvider provider)
+    protected GetPipelineEndpointBase(ILogger<GetPipelineEndpointBase<TConfig>> logger, PipelineServiceConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }

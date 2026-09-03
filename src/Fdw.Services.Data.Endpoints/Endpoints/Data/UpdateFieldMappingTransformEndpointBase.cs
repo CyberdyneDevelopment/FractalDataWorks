@@ -12,6 +12,7 @@ using Fdw.Services.Data.Clients.Models;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -34,11 +35,11 @@ public abstract class UpdateFieldMappingTransformEndpointBase
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
     /// <summary>Initializes a new instance of the <see cref="UpdateFieldMappingTransformEndpointBase"/> class.</summary>
+    /// <param name="logger">The logger.</param>
     /// <param name="dataGateways">The gateway used for all reads and writes.</param>
     /// <param name="dataSetProvider">Owns the configuration store's name and path.</param>
-    protected UpdateFieldMappingTransformEndpointBase(
-        IDataGatewayProvider dataGateways,
-        DataSetConfigurationProvider dataSetProvider)
+    protected UpdateFieldMappingTransformEndpointBase(ILogger<UpdateFieldMappingTransformEndpointBase> logger, IDataGatewayProvider dataGateways,
+        DataSetConfigurationProvider dataSetProvider) : base(logger)
     {
         DataGateway = dataGateways.ByName("Main");
         _dataSetProvider = dataSetProvider;

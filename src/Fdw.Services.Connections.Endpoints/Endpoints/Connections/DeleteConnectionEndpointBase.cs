@@ -31,6 +31,7 @@ public abstract class DeleteConnectionEndpointBase : CrudDeleteEndpointBase<Conn
         ConnectionConfigurationProvider connectionProvider,
         IConnectionProvider connectionLookupProvider,
         ILogger<DeleteConnectionEndpointBase>? logger = null)
+        : base(logger ?? NullLogger<DeleteConnectionEndpointBase>.Instance)
     {
         _connectionProvider = connectionProvider;
         _connectionLookupProvider = connectionLookupProvider;

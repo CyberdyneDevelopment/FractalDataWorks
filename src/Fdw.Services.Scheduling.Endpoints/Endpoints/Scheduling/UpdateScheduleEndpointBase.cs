@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Scheduling.Abstractions.Configuration;
 using Fdw.Services.Scheduling.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Scheduling.Endpoints;
 
@@ -18,7 +19,7 @@ public abstract class UpdateScheduleEndpointBase<TConfig> : CrudUpdateEndpointBa
     private readonly ScheduleConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected UpdateScheduleEndpointBase(ScheduleConfigurationProvider provider)
+    protected UpdateScheduleEndpointBase(ILogger<UpdateScheduleEndpointBase<TConfig>> logger, ScheduleConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }

@@ -23,12 +23,7 @@ namespace Fdw.Services.Quality.Endpoints;
 public abstract class ExecuteQualityCheckEndpointBase : Endpoint<QualityRuleIdRequest, QualityCheckResultResponse>
 {
     /// <summary>Initializes a new instance of the <see cref="ExecuteQualityCheckEndpointBase"/> class.</summary>
-    protected ExecuteQualityCheckEndpointBase(ILogger logger)
-    {
-        Logger = logger;
-    }
-
-    private readonly QualityConfigurationProvider _provider;
+        private readonly QualityConfigurationProvider _provider;
     private readonly IDataGatewayProvider _dataGateways;
 
     // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
@@ -36,13 +31,13 @@ public abstract class ExecuteQualityCheckEndpointBase : Endpoint<QualityRuleIdRe
     private IDataGateway Gateway => _dataGateways.ByName("Main");
 
     /// <summary>Initializes a new instance of the <see cref="ExecuteQualityCheckEndpointBase"/> class.</summary>
-    /// <param name="provider">The configuration provider for quality rule lookup.</param>
-    /// <param name="dataGateways">The data gateway for live DataSet queries.</param>
-    protected ExecuteQualityCheckEndpointBase(QualityConfigurationProvider provider, IDataGatewayProvider dataGateways)
+    protected ExecuteQualityCheckEndpointBase(ILogger logger, QualityConfigurationProvider provider, IDataGatewayProvider dataGateways)
     {
+        Logger = logger;
         _provider = provider;
         _dataGateways = dataGateways;
     }
+
 
     /// <summary>Gets the authorization policy required for read operations.</summary>
     protected virtual string ReadPolicy => "datasets:read";

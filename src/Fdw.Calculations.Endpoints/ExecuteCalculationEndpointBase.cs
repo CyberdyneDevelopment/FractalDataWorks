@@ -21,10 +21,18 @@ namespace Fdw.Calculations.Endpoints;
 /// </summary>
 public abstract class ExecuteCalculationEndpointBase : Endpoint<ExecuteCalculationRequest, ExecuteCalculationResponse>
 {
+    private readonly IConfigurationGateway _configurationGateway;
+    private readonly IDataGatewayProvider? _dataGateways;
+
     /// <summary>Initializes a new instance of the <see cref="ExecuteCalculationEndpointBase"/> class.</summary>
-    protected ExecuteCalculationEndpointBase(ILogger logger)
+    protected ExecuteCalculationEndpointBase(
+        ILogger logger,
+        IConfigurationGateway configurationGateway,
+        IDataGatewayProvider? dataGateways = null)
     {
         EndpointLogger = logger;
+        _configurationGateway = configurationGateway;
+        _dataGateways = dataGateways;
     }
 
     /// <summary>
@@ -53,7 +61,7 @@ public abstract class ExecuteCalculationEndpointBase : Endpoint<ExecuteCalculati
     public override async Task HandleAsync(ExecuteCalculationRequest req, CancellationToken ct)
     {
         
-        if (req.DataSetName.Length > 0 && !await DataSetLookup.Exists(Resolve<IConfigurationGateway>(), req.DataSetName, ct).ConfigureAwait(false))
+        if (req.DataSetName.Length > 0 && !await DataSetLookup.Exists(_configurationGateway, req.DataSetName, ct).ConfigureAwait(false))
         {
             await HttpContext.WriteNotFound("DataSet", req.DataSetName, ct).ConfigureAwait(false);
             return;
@@ -109,8 +117,8 @@ public abstract class ExecuteCalculationEndpointBase : Endpoint<ExecuteCalculati
     {
         if (dataSetName.Length == 0 || fieldName.Length == 0) return Array.Empty<decimal>();
 
-        var gateway = TryResolve<IDataGateway>();
-        if (gateway is null) return Array.Empty<decimal>();
+        if (_dataGateways is null) return Array.Empty<decimal>();
+        var gateway = _dataGateways.ByName("Main");
 
         var cmd = new QueryCommand<Dictionary<string, object?>>();
         var dataResult = await gateway.Execute<IEnumerable<Dictionary<string, object?>>>(

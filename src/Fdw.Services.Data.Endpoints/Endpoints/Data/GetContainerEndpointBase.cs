@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -7,6 +7,7 @@ using Fdw.Results;
 using Fdw.Services.Connections;
 using Fdw.Services.Data;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -18,7 +19,7 @@ public abstract class GetContainerEndpointBase : CrudGetEndpointBase<GetContaine
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
 
     /// <inheritdoc />
-    protected GetContainerEndpointBase(DataStoreConfigurationProvider dataStoreProvider)
+    protected GetContainerEndpointBase(ILogger<GetContainerEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
     }

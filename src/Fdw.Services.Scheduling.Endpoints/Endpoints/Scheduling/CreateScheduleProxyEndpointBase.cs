@@ -12,25 +12,20 @@ namespace Fdw.Services.Scheduling.Endpoints;
 public abstract class CreateScheduleProxyEndpointBase : Endpoint<ProxyCreateScheduleRequest, CreateScheduleClientResponse>
 {
     /// <summary>Initializes a new instance of the <see cref="CreateScheduleProxyEndpointBase"/> class.</summary>
-    protected CreateScheduleProxyEndpointBase(ILogger logger)
-    {
-        EndpointLogger = logger;
-    }
-
-    private readonly IScheduleClient _client;
+        private readonly IScheduleClient _client;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
     protected ILogger EndpointLogger { get; }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CreateScheduleProxyEndpointBase"/> class.
-    /// </summary>
-    protected CreateScheduleProxyEndpointBase(IScheduleClient client)
+    /// <summary>Initializes a new instance of the <see cref="CreateScheduleProxyEndpointBase"/> class.</summary>
+    protected CreateScheduleProxyEndpointBase(ILogger logger, IScheduleClient client)
     {
+        EndpointLogger = logger;
         _client = client;
     }
+
 
     /// <inheritdoc />
     public override void Configure()

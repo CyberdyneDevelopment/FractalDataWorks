@@ -21,20 +21,15 @@ namespace Fdw.Services.Pipelines.Endpoints;
 public abstract class GetPipelineHistoryEndpointBase : Endpoint<GetPipelineStatusRequest, List<PipelineExecutionRecord>>
 {
     /// <summary>Initializes a new instance of the <see cref="GetPipelineHistoryEndpointBase"/> class.</summary>
-    protected GetPipelineHistoryEndpointBase(ILogger logger)
+        private readonly IDataGatewayProvider _dataGateways;
+
+    /// <summary>Initializes a new instance of the <see cref="GetPipelineHistoryEndpointBase"/> class.</summary>
+    protected GetPipelineHistoryEndpointBase(ILogger logger, IDataGatewayProvider dataGateways)
     {
         EndpointLogger = logger;
-    }
-
-    private readonly IDataGatewayProvider _dataGateways;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="GetPipelineHistoryEndpointBase"/> class.
-    /// </summary>
-    protected GetPipelineHistoryEndpointBase(IDataGatewayProvider dataGateways)
-    {
         _dataGateways = dataGateways;
     }
+
 
     /// <summary>Gets the data gateway.</summary>
     // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one

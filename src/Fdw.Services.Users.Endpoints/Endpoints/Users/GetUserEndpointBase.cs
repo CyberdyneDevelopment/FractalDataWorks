@@ -16,23 +16,20 @@ namespace Fdw.Services.Users.Endpoints;
 public abstract class GetUserEndpointBase : Endpoint<UserScopedRequest, UserResponse>
 {
     /// <summary>Initializes a new instance of the <see cref="GetUserEndpointBase"/> class.</summary>
-    protected GetUserEndpointBase(ILogger logger)
-    {
-        EndpointLogger = logger;
-    }
-
-    private readonly UserConfigurationProvider _userProvider;
+        private readonly UserConfigurationProvider _userProvider;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
     protected ILogger EndpointLogger { get; }
 
-    /// <inheritdoc />
-    protected GetUserEndpointBase(UserConfigurationProvider userProvider)
+    /// <summary>Initializes a new instance of the <see cref="GetUserEndpointBase"/> class.</summary>
+    protected GetUserEndpointBase(ILogger logger, UserConfigurationProvider userProvider)
     {
+        EndpointLogger = logger;
         _userProvider = userProvider;
     }
+
 
     /// <summary>
     /// Gets the user provider.
