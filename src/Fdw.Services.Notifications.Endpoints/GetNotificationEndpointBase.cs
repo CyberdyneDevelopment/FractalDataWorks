@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Notifications.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Notifications.Endpoints;
 
@@ -15,7 +16,7 @@ public abstract class GetNotificationEndpointBase : CrudGetEndpointBase<Notifica
     private readonly NotificationConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected GetNotificationEndpointBase(NotificationConfigurationProvider provider)
+    protected GetNotificationEndpointBase(ILogger<GetNotificationEndpointBase> logger, NotificationConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }

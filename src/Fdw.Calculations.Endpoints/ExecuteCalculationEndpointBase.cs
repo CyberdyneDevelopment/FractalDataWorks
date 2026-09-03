@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -21,10 +21,16 @@ namespace Fdw.Calculations.Endpoints;
 /// </summary>
 public abstract class ExecuteCalculationEndpointBase : Endpoint<ExecuteCalculationRequest, ExecuteCalculationResponse>
 {
+    /// <summary>Initializes a new instance of the <see cref="ExecuteCalculationEndpointBase"/> class.</summary>
+    protected ExecuteCalculationEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     public override void Configure()
@@ -46,8 +52,7 @@ public abstract class ExecuteCalculationEndpointBase : Endpoint<ExecuteCalculati
     /// <inheritdoc />
     public override async Task HandleAsync(ExecuteCalculationRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         if (req.DataSetName.Length > 0 && !await DataSetLookup.Exists(Resolve<IConfigurationGateway>(), req.DataSetName, ct).ConfigureAwait(false))
         {
             await HttpContext.WriteNotFound("DataSet", req.DataSetName, ct).ConfigureAwait(false);

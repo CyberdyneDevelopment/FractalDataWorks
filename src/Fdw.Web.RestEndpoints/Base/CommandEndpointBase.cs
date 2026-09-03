@@ -5,7 +5,10 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
+using Fdw.Orchestration.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Scheduling.Abstractions;
 using Fdw.Web.RestEndpoints.Logging;
 
 namespace Fdw.Web.RestEndpoints.Base;
@@ -19,6 +22,18 @@ namespace Fdw.Web.RestEndpoints.Base;
 public abstract class CommandEndpointBase<TCommand, TResult> : GenericEndpointBase<TCommand, TResult>
     where TCommand : notnull
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CommandEndpointBase{TCommand, TResult}"/> class.
+    /// </summary>
+    protected CommandEndpointBase(
+        ILogger<GenericEndpointBase<TCommand, TResult>> logger,
+        IDataGatewayProvider dataGateways,
+        IOrchestrationExecutor? executor = null,
+        ISchedulingService? scheduler = null)
+        : base(logger, dataGateways, executor, scheduler)
+    {
+    }
+
     /// <summary>
     /// Configures the command endpoint with authentication, authorization, and rate limiting.
     /// </summary>
@@ -120,6 +135,18 @@ public abstract class CommandEndpointBase<TCommand, TResult> : GenericEndpointBa
 public abstract class CommandEndpointBase<TCommand> : CommandEndpointBase<TCommand, object>
     where TCommand : notnull
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CommandEndpointBase{TCommand}"/> class.
+    /// </summary>
+    protected CommandEndpointBase(
+        ILogger<GenericEndpointBase<TCommand, object>> logger,
+        IDataGatewayProvider dataGateways,
+        IOrchestrationExecutor? executor = null,
+        ISchedulingService? scheduler = null)
+        : base(logger, dataGateways, executor, scheduler)
+    {
+    }
+
     /// <summary>
     /// Executes a void command that returns success/failure without data.
     /// </summary>

@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.Extensions.Logging;
@@ -10,10 +10,16 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 public abstract class EtlWebhookEndpointBase : Endpoint<EtlWebhookRequest, EtlWebhookResponse>
 {
+    /// <summary>Initializes a new instance of the <see cref="EtlWebhookEndpointBase"/> class.</summary>
+    protected EtlWebhookEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     public override void Configure()
@@ -35,8 +41,7 @@ public abstract class EtlWebhookEndpointBase : Endpoint<EtlWebhookRequest, EtlWe
     /// <inheritdoc />
     public override async Task HandleAsync(EtlWebhookRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         if (string.IsNullOrWhiteSpace(req.ExecutionId))
         {
             ProxyEndpointLog.EtlWebhookUnknownExecution(EndpointLogger, req.ExecutionId);

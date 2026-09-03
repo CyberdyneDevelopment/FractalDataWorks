@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.Extensions.Logging;
@@ -13,6 +13,12 @@ namespace Fdw.UI.Themes.Endpoints;
 public abstract class GetDefaultThemeEndpointBase<TDetail> : EndpointWithoutRequest<TDetail>
     where TDetail : class
 {
+    /// <summary>Initializes a new instance of the <see cref="GetDefaultThemeEndpointBase{TDetail}"/> class.</summary>
+    protected GetDefaultThemeEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>Gets the resource name used for routing and policies.</summary>
     protected virtual string ResourceName => "themes";
 
@@ -20,7 +26,7 @@ public abstract class GetDefaultThemeEndpointBase<TDetail> : EndpointWithoutRequ
     protected virtual string ReadPolicy => "configurations:read";
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
@@ -41,8 +47,7 @@ public abstract class GetDefaultThemeEndpointBase<TDetail> : EndpointWithoutRequ
     /// <summary>Returns the current default theme configuration.</summary>
     public override Task HandleAsync(CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var theme = LoadDefaultTheme();
         return Send.OkAsync(theme, ct);
     }

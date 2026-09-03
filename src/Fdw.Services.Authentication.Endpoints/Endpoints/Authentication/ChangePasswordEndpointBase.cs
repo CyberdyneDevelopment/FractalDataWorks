@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -20,9 +20,9 @@ public abstract class ChangePasswordEndpointBase : Endpoint<ChangePasswordReques
     /// Initializes a new instance of the <see cref="ChangePasswordEndpointBase"/> class.
     /// </summary>
     /// <param name="loggerFactory">The logger factory.</param>
-    protected ChangePasswordEndpointBase(ILoggerFactory loggerFactory)
+    protected ChangePasswordEndpointBase(ILogger logger)
     {
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>

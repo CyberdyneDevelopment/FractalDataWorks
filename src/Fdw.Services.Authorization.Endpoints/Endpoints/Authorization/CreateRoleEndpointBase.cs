@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -12,12 +12,18 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleSummaryResponse>
 {
+    /// <summary>Initializes a new instance of the <see cref="CreateRoleEndpointBase"/> class.</summary>
+    protected CreateRoleEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly RoleConfigurationProvider _roleProvider;
 
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     protected CreateRoleEndpointBase(RoleConfigurationProvider roleProvider)
@@ -51,8 +57,7 @@ public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleS
     /// <inheritdoc />
     public override async Task HandleAsync(CreateRoleRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         OnCreatingRole(req.Name);
 
         Guid? parentRoleId = null;

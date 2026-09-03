@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -8,6 +8,7 @@ using Fdw.Services.Settings.Configuration;
 using Fdw.Services.Settings.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Settings.Endpoints;
 
@@ -19,7 +20,7 @@ public abstract class CreateRoleSettingEndpointBase : CrudCreateEndpointBase<Cre
     private readonly SettingsConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected CreateRoleSettingEndpointBase(SettingsConfigurationProvider provider)
+    protected CreateRoleSettingEndpointBase(ILogger<CreateRoleSettingEndpointBase> logger, SettingsConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }

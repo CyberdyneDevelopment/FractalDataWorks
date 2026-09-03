@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -22,9 +22,9 @@ public abstract class LogoutEndpointBase : EndpointWithoutRequest
     /// <summary>
     /// Initializes a new instance of the <see cref="LogoutEndpointBase"/> class.
     /// </summary>
-    protected LogoutEndpointBase(ILoggerFactory loggerFactory)
+    protected LogoutEndpointBase(ILogger logger)
     {
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>

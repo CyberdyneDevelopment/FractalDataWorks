@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -13,11 +13,17 @@ namespace Fdw.UI.Pipelines.Endpoints;
 /// </summary>
 public abstract class GetDesignerTaskTypesEndpointBase : EndpointWithoutRequest<IReadOnlyList<TaskTypeInfo>>
 {
+    /// <summary>Initializes a new instance of the <see cref="GetDesignerTaskTypesEndpointBase"/> class.</summary>
+    protected GetDesignerTaskTypesEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>Gets the authorization policy name for read operations.</summary>
     protected virtual string ReadPolicy => "pipelines:read";
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
@@ -38,8 +44,7 @@ public abstract class GetDesignerTaskTypesEndpointBase : EndpointWithoutRequest<
     /// <summary>Returns all available task types for the designer palette.</summary>
     public override async Task HandleAsync(CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var taskTypes = await LoadTaskTypes(ct).ConfigureAwait(false);
         await Send.OkAsync(taskTypes, ct).ConfigureAwait(false);
     }

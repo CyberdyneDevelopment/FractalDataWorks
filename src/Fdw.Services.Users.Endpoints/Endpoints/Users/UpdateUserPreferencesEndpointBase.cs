@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -23,10 +23,10 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
     /// <param name="loggerFactory">The logger factory.</param>
     protected UpdateUserPreferencesEndpointBase(
         UserPreferenceConfigurationProvider preferenceProvider,
-        ILoggerFactory loggerFactory)
+        ILogger logger)
     {
         _preferenceProvider = preferenceProvider;
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>

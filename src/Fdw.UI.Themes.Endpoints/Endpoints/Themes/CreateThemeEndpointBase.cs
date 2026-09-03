@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
@@ -16,6 +16,12 @@ public abstract class CreateThemeEndpointBase<TRequest, TDetail> : Endpoint<TReq
     where TRequest : notnull, new()
     where TDetail : class
 {
+    /// <summary>Initializes a new instance of the <see cref="CreateThemeEndpointBase{TRequest, TDetail}"/> class.</summary>
+    protected CreateThemeEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>Gets the resource name used for routing and policies.</summary>
     protected virtual string ResourceName => "themes";
 
@@ -23,7 +29,7 @@ public abstract class CreateThemeEndpointBase<TRequest, TDetail> : Endpoint<TReq
     protected virtual string WritePolicy => "configurations:write";
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
@@ -44,8 +50,7 @@ public abstract class CreateThemeEndpointBase<TRequest, TDetail> : Endpoint<TReq
     /// <summary>Creates a new theme after verifying that no theme with the same name exists.</summary>
     public override async Task HandleAsync(TRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var name = GetThemeName(req);
 
         if (ThemeExists(name))

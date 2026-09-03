@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -19,8 +19,9 @@ public abstract class GetExecutionEndpointBase : Endpoint<ExecutionIdRequest, Ex
     /// <summary>
     /// Initializes a new instance of the <see cref="GetExecutionEndpointBase"/> class.
     /// </summary>
-    protected GetExecutionEndpointBase(IExecutionTracker tracker)
+    protected GetExecutionEndpointBase(ILogger logger, IExecutionTracker tracker)
     {
+        EndpointLogger = logger;
         _tracker = tracker;
     }
 
@@ -30,9 +31,9 @@ public abstract class GetExecutionEndpointBase : Endpoint<ExecutionIdRequest, Ex
     protected IExecutionTracker Tracker => _tracker;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -53,8 +54,7 @@ public abstract class GetExecutionEndpointBase : Endpoint<ExecutionIdRequest, Ex
     /// <inheritdoc/>
     public override async Task HandleAsync(ExecutionIdRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         OnFetchingExecution(req.Id);
 
         var result = await _tracker.GetItem(req.Id, ct).ConfigureAwait(false);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -21,6 +21,12 @@ public abstract class CrudCreateEndpointBase<TCreateRequest, TDetail> : Endpoint
     where TCreateRequest : notnull, new()
     where TDetail : class
 {
+    /// <summary>Initializes a new instance of the <see cref="CrudCreateEndpointBase{TCreateRequest, TDetail}"/> class.</summary>
+    protected CrudCreateEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>
     /// Gets the plural resource name used for routing and policy generation.
     /// </summary>
@@ -58,7 +64,7 @@ public abstract class CrudCreateEndpointBase<TCreateRequest, TDetail> : Endpoint
     /// <summary>
     /// Gets the logger instance.
     /// </summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -90,8 +96,7 @@ public abstract class CrudCreateEndpointBase<TCreateRequest, TDetail> : Endpoint
     /// <inheritdoc/>
     public override async Task HandleAsync(TCreateRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         try
         {
             var resourceName = GetResourceName(req);

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +7,7 @@ using Fdw.Services.Abstractions;
 using Fdw.Services.Notifications.Configuration;
 using Fdw.Services.Notifications.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Notifications.Endpoints;
 
@@ -18,7 +19,7 @@ public abstract class ListNotificationRulesEndpointBase : CrudListEndpointBase<N
     private readonly IServiceConfigurationProvider<NotificationRuleConfiguration> _provider;
 
     /// <inheritdoc />
-    protected ListNotificationRulesEndpointBase(IServiceConfigurationProvider<NotificationRuleConfiguration> provider)
+    protected ListNotificationRulesEndpointBase(ILogger<ListNotificationRulesEndpointBase> logger, IServiceConfigurationProvider<NotificationRuleConfiguration> provider) : base(logger)
     {
         _provider = provider;
     }

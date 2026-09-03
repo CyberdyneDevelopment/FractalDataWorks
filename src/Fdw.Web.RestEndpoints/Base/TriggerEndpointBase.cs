@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,6 +46,12 @@ namespace Fdw.Web.RestEndpoints.Base;
 public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, TriggerOperationResponse>
     where TRequest : TriggerOperationRequest, new()
 {
+    /// <summary>Initializes a new instance of the <see cref="TriggerEndpointBase{TRequest}"/> class.</summary>
+    protected TriggerEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>
     /// Gets the plural resource name used for routing and policy generation (e.g., "workflows", "pipelines").
     /// </summary>
@@ -89,7 +95,7 @@ public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, Trigger
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -123,8 +129,7 @@ public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, Trigger
     [ConventionOverride(MaxMethodLines = 70)]
     public override async Task HandleAsync(TRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         try
         {
             var tracker = Resolve<IExecutionTracker>();

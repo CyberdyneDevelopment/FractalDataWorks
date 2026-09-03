@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -19,6 +19,12 @@ namespace Fdw.Web.RestEndpoints.Crud;
 public abstract class CrudDeleteEndpointBase<TRequest> : Endpoint<TRequest, object>
     where TRequest : notnull, new()
 {
+    /// <summary>Initializes a new instance of the <see cref="CrudDeleteEndpointBase{TRequest}"/> class.</summary>
+    protected CrudDeleteEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>
     /// Gets the plural resource name used for routing and policy generation.
     /// </summary>
@@ -56,7 +62,7 @@ public abstract class CrudDeleteEndpointBase<TRequest> : Endpoint<TRequest, obje
     /// <summary>
     /// Gets the logger instance.
     /// </summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -88,8 +94,7 @@ public abstract class CrudDeleteEndpointBase<TRequest> : Endpoint<TRequest, obje
     /// <inheritdoc/>
     public override async Task HandleAsync(TRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         try
         {
             var identifier = GetResourceIdentifier(req);

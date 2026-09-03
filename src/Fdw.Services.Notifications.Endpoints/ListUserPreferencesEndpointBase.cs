@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
@@ -16,10 +16,16 @@ namespace Fdw.Services.Notifications.Endpoints;
 /// </summary>
 public abstract class ListUserPreferencesEndpointBase : Endpoint<UserPreferencesRequest, IReadOnlyList<UserNotificationPreferenceDto>>
 {
+    /// <summary>Initializes a new instance of the <see cref="ListUserPreferencesEndpointBase"/> class.</summary>
+    protected ListUserPreferencesEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>
     /// Gets the logger instance.
     /// </summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -40,8 +46,7 @@ public abstract class ListUserPreferencesEndpointBase : Endpoint<UserPreferences
     /// <inheritdoc/>
     public override async Task HandleAsync(UserPreferencesRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         try
         {
             var userId = req.UserId.ToString("D", CultureInfo.InvariantCulture);

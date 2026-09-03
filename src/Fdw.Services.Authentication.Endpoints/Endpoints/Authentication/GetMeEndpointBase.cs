@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
@@ -29,9 +29,9 @@ public abstract class GetMeEndpointBase<TResponse> : EndpointWithoutRequest<TRes
     /// <summary>
     /// Initializes a new instance of the <see cref="GetMeEndpointBase{TResponse}"/> class.
     /// </summary>
-    protected GetMeEndpointBase(ILoggerFactory loggerFactory)
+    protected GetMeEndpointBase(ILogger logger)
     {
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>

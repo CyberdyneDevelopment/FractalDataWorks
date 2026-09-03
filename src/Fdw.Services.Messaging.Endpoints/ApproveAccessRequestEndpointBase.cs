@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,13 +21,13 @@ public abstract class ApproveAccessRequestEndpointBase : Endpoint<ReviewAccessRe
     /// Initializes a new instance of the <see cref="ApproveAccessRequestEndpointBase"/> class.
     /// </summary>
     /// <param name="accessRequestService">The access request service.</param>
-    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="logger">The logger.</param>
     protected ApproveAccessRequestEndpointBase(
         IAccessRequestService accessRequestService,
-        ILoggerFactory loggerFactory)
+        ILogger logger)
     {
         _accessRequestService = accessRequestService;
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>

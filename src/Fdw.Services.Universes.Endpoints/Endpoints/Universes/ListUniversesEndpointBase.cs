@@ -1,10 +1,11 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Universes.Results;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Universes.Endpoints;
 
@@ -14,7 +15,7 @@ public abstract class ListUniversesEndpointBase : CrudListEndpointBase<UniverseS
     private readonly IUniverseConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected ListUniversesEndpointBase(IUniverseConfigurationProvider provider)
+    protected ListUniversesEndpointBase(ILogger<ListUniversesEndpointBase> logger, IUniverseConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }

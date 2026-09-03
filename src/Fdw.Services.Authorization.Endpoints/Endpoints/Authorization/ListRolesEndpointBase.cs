@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -15,12 +15,18 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class ListRolesEndpointBase : EndpointWithoutRequest<PaginatedResponse<RoleSummaryResponse>>
 {
+    /// <summary>Initializes a new instance of the <see cref="ListRolesEndpointBase"/> class.</summary>
+    protected ListRolesEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly IAuthorizationProvider _authorizationProvider;
 
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     protected ListRolesEndpointBase(IAuthorizationProvider authorizationProvider)
@@ -49,8 +55,7 @@ public abstract class ListRolesEndpointBase : EndpointWithoutRequest<PaginatedRe
     /// <inheritdoc />
     public override async Task HandleAsync(CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var allRoles = await _authorizationProvider.GetAllRoles(ct).ConfigureAwait(false);
         var roles = allRoles
             .Select(MapToSummary)

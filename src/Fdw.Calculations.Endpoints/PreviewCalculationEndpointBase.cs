@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Threading;
@@ -16,10 +16,16 @@ namespace Fdw.Calculations.Endpoints;
 /// </summary>
 public abstract class PreviewCalculationEndpointBase : Endpoint<PreviewCalculationRequest, PreviewCalculationResponse>
 {
+    /// <summary>Initializes a new instance of the <see cref="PreviewCalculationEndpointBase"/> class.</summary>
+    protected PreviewCalculationEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     public override void Configure()
@@ -41,8 +47,7 @@ public abstract class PreviewCalculationEndpointBase : Endpoint<PreviewCalculati
     /// <inheritdoc />
     public override async Task HandleAsync(PreviewCalculationRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var calculationType = CalculationTypes.ByName(req.CalculationType);
         if (calculationType.Id == 0)
         {

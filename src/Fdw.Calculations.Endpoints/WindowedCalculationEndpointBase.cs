@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,10 +15,16 @@ namespace Fdw.Calculations.Endpoints;
 /// </summary>
 public abstract class WindowedCalculationEndpointBase : Endpoint<WindowedCalculationRequest, WindowedCalculationResponse>
 {
+    /// <summary>Initializes a new instance of the <see cref="WindowedCalculationEndpointBase"/> class.</summary>
+    protected WindowedCalculationEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     public override void Configure()
@@ -40,8 +46,7 @@ public abstract class WindowedCalculationEndpointBase : Endpoint<WindowedCalcula
     /// <inheritdoc />
     public override async Task HandleAsync(WindowedCalculationRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         if (string.IsNullOrWhiteSpace(req.WindowFunction))
         {
             CalculationEndpointLog.ValidationFailed(EndpointLogger, "WindowFunction is required");

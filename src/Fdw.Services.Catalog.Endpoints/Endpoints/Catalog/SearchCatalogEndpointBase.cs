@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -11,11 +11,17 @@ namespace Fdw.Services.Catalog.Endpoints;
 /// <summary>Endpoint that searches the catalog using free-text queries, entity type filters, and tags.</summary>
 public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest, List<CatalogEntryDto>>
 {
+    /// <summary>Initializes a new instance of the <see cref="SearchCatalogEndpointBase"/> class.</summary>
+    protected SearchCatalogEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>Gets the authorization policy required for read operations.</summary>
     protected virtual string ReadPolicy => "datastores:read";
 
     /// <summary>Gets the logger instance for this endpoint.</summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
@@ -32,8 +38,7 @@ public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest,
     /// <summary>Executes a catalog search using the provided criteria and returns matching entries.</summary>
     public override async Task HandleAsync(CatalogSearchRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var results = await PerformSearch(req, ct).ConfigureAwait(false);
         await Send.OkAsync(results.ToList(), ct).ConfigureAwait(false);
     }

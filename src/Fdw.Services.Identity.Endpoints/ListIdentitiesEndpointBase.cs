@@ -1,10 +1,11 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Identity.Endpoints;
 
@@ -16,6 +17,11 @@ namespace Fdw.Services.Identity.Endpoints;
 /// </remarks>
 public abstract class ListIdentitiesEndpointBase : CrudListEndpointBase<IdentitySummaryResponse>
 {
+    /// <summary>Initializes a new instance of the <see cref="ListIdentitiesEndpointBase"/> class.</summary>
+    protected ListIdentitiesEndpointBase(ILogger<ListIdentitiesEndpointBase> logger) : base(logger)
+    {
+    }
+
     /// <summary>Gets the configuration provider identities are read through.</summary>
     protected abstract IServiceConfigurationProvider<IdentityServiceConfiguration> Identities { get; }
 

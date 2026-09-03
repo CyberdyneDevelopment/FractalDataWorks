@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.Extensions.Logging;
@@ -10,6 +10,12 @@ namespace Fdw.UI.Themes.Endpoints;
 /// </summary>
 public abstract class SetDefaultThemeEndpointBase : Endpoint<SetDefaultThemeRequest>
 {
+    /// <summary>Initializes a new instance of the <see cref="SetDefaultThemeEndpointBase"/> class.</summary>
+    protected SetDefaultThemeEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>Gets the resource name used for routing and policies.</summary>
     protected virtual string ResourceName => "themes";
 
@@ -17,7 +23,7 @@ public abstract class SetDefaultThemeEndpointBase : Endpoint<SetDefaultThemeRequ
     protected virtual string WritePolicy => "configurations:write";
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
@@ -38,8 +44,7 @@ public abstract class SetDefaultThemeEndpointBase : Endpoint<SetDefaultThemeRequ
     /// <summary>Sets the specified theme as the system default, returning 204 on success or 404 if not found.</summary>
     public override async Task HandleAsync(SetDefaultThemeRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         if (!ThemeExists(req.Name))
         {
             await Send.NotFoundAsync(ct).ConfigureAwait(false);

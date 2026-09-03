@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Configuration;
 using Fdw.Results;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Operations.Endpoints.ConfigurationMetadata;
 
@@ -14,6 +15,11 @@ namespace Fdw.Operations.Endpoints.ConfigurationMetadata;
 /// </summary>
 public abstract class GetChildConfigurationTypesEndpointBase : CrudListEndpointBase<GetChildTypesRequest, ConfigurationTypeSummaryDto>
 {
+    /// <summary>Initializes a new instance of the <see cref="GetChildConfigurationTypesEndpointBase"/> class.</summary>
+    protected GetChildConfigurationTypesEndpointBase(ILogger<GetChildConfigurationTypesEndpointBase> logger) : base(logger)
+    {
+    }
+
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "configuration-types";
 

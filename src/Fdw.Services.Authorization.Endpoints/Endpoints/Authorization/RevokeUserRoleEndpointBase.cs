@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -20,6 +20,12 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, UserRolesResponse>
 {
+    /// <summary>Initializes a new instance of the <see cref="RevokeUserRoleEndpointBase"/> class.</summary>
+    protected RevokeUserRoleEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly RoleConfigurationProvider _roleProvider;
     private readonly UserRoleConfigurationProvider _userRoleProvider;
 
@@ -28,7 +34,7 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     protected RevokeUserRoleEndpointBase(
@@ -72,8 +78,7 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
     /// <inheritdoc />
     public override async Task HandleAsync(RevokeRoleRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var userResult = await _userProvider.ResolveUser(req.IdOrName, ct).ConfigureAwait(false);
         if (!userResult.IsSuccess || userResult.Value is null)
         {

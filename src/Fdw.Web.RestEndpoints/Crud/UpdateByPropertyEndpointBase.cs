@@ -2,6 +2,7 @@ using System;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Fdw.Results;
 
 namespace Fdw.Web.RestEndpoints.Crud;
@@ -19,6 +20,11 @@ public abstract class UpdateByPropertyEndpointBase<TBody, TResource, TKey>
     where TResource : class
     where TKey : notnull
 {
+    /// <summary>Initializes a new instance of the <see cref="UpdateByPropertyEndpointBase{TBody, TResource, TKey}"/> class.</summary>
+    protected UpdateByPropertyEndpointBase(ILogger<UpdateByPropertyEndpointBase<TBody, TResource, TKey>> logger) : base(logger)
+    {
+    }
+
     /// <summary>Expression selecting the key property of <typeparamref name="TResource"/>.</summary>
     protected abstract Expression<Func<TResource, TKey>> KeySelector { get; }
 

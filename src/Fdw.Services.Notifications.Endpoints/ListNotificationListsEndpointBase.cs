@@ -1,9 +1,10 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Notifications.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Notifications.Endpoints;
 
@@ -12,6 +13,11 @@ namespace Fdw.Services.Notifications.Endpoints;
 /// </summary>
 public abstract class ListNotificationListsEndpointBase : CrudListEndpointBase<NotificationListSummaryDto>
 {
+    /// <summary>Initializes a new instance of the <see cref="ListNotificationListsEndpointBase"/> class.</summary>
+    protected ListNotificationListsEndpointBase(ILogger<ListNotificationListsEndpointBase> logger) : base(logger)
+    {
+    }
+
     /// <inheritdoc />
     protected override string ResourceName => "notifications/lists";
 

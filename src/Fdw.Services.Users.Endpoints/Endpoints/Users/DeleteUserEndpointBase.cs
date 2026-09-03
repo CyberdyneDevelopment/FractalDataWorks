@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -13,12 +13,18 @@ namespace Fdw.Services.Users.Endpoints;
 /// </summary>
 public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
 {
+    /// <summary>Initializes a new instance of the <see cref="DeleteUserEndpointBase"/> class.</summary>
+    protected DeleteUserEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly UserConfigurationProvider _userProvider;
 
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     protected DeleteUserEndpointBase(UserConfigurationProvider userProvider)
@@ -53,8 +59,7 @@ public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
     /// <inheritdoc />
     public override async Task HandleAsync(UserScopedRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var lookup = await _userProvider.ResolveUser(req.IdOrName, ct).ConfigureAwait(false);
         if (!lookup.IsSuccess || lookup.Value is null)
         {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -27,11 +27,11 @@ public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
     protected ResetPasswordEndpointBase(
         UserConfigurationProvider userProvider,
         IUserCredentialService credentialService,
-        ILoggerFactory loggerFactory)
+        ILogger logger)
     {
         _userProvider = userProvider;
         _credentialService = credentialService;
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>

@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Data.Abstractions.Visualization;
@@ -13,16 +13,17 @@ public abstract class ComputeStatSetEndpointBase : Endpoint<StatSetRequest, Stat
 {
     private readonly IStatSetService _statSetService;
 
-    /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+/// <summary>
+    /// Gets the logger instance.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ComputeStatSetEndpointBase"/> class.
     /// </summary>
-    protected ComputeStatSetEndpointBase(IStatSetService statSetService)
+    protected ComputeStatSetEndpointBase(ILogger logger, IStatSetService statSetService)
     {
+        EndpointLogger = logger;
         _statSetService = statSetService;
     }
 
@@ -46,8 +47,7 @@ public abstract class ComputeStatSetEndpointBase : Endpoint<StatSetRequest, Stat
     /// <inheritdoc />
     public override async Task HandleAsync(StatSetRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         CalculationEndpointLog.ExecutingCalculation(EndpointLogger, "statset", "ComputeStatSet");
 
         var result = await _statSetService.ComputeStatSet(req, ct).ConfigureAwait(false);

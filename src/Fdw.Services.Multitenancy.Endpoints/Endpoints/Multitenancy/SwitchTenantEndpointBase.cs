@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
@@ -16,12 +16,18 @@ namespace Fdw.Services.Multitenancy.Endpoints;
 /// </summary>
 public abstract class SwitchTenantEndpointBase : Endpoint<SwitchTenantRequest, SwitchTenantDto>
 {
+    /// <summary>Initializes a new instance of the <see cref="SwitchTenantEndpointBase"/> class.</summary>
+    protected SwitchTenantEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly ITenantProvider _tenantProvider;
 
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     protected SwitchTenantEndpointBase(ITenantProvider tenantProvider)
@@ -49,8 +55,7 @@ public abstract class SwitchTenantEndpointBase : Endpoint<SwitchTenantRequest, S
     /// <inheritdoc />
     public override async Task HandleAsync(SwitchTenantRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))
         {

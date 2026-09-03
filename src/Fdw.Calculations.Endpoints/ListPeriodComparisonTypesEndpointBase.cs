@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Calculations.Abstractions.PeriodComparisonTypeOptions;
@@ -12,10 +12,16 @@ namespace Fdw.Calculations.Endpoints;
 /// </summary>
 public abstract class ListPeriodComparisonTypesEndpointBase : EndpointWithoutRequest<PeriodComparisonTypesResponse>
 {
+    /// <summary>Initializes a new instance of the <see cref="ListPeriodComparisonTypesEndpointBase"/> class.</summary>
+    protected ListPeriodComparisonTypesEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     public override void Configure()
@@ -37,8 +43,7 @@ public abstract class ListPeriodComparisonTypesEndpointBase : EndpointWithoutReq
     /// <inheritdoc />
     public override Task HandleAsync(CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         CalculationEndpointLog.ListingPeriodComparisonTypes(EndpointLogger);
 
         var types = PeriodComparisonTypes.All();

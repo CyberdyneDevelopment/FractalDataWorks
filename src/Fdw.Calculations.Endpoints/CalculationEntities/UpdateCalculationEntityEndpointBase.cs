@@ -1,4 +1,5 @@
-using Fdw.Web.RestEndpoints.Crud;
+﻿using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Calculations.Endpoints.CalculationEntities;
 
@@ -8,6 +9,11 @@ namespace Fdw.Calculations.Endpoints.CalculationEntities;
 /// </summary>
 public abstract class UpdateCalculationEntityEndpointBase : CrudUpdateEndpointBase<UpdateCalculationEntityRequest, CalculationEntityDetailDto>
 {
+    /// <summary>Initializes a new instance of the <see cref="UpdateCalculationEntityEndpointBase"/> class.</summary>
+    protected UpdateCalculationEntityEndpointBase(ILogger<UpdateCalculationEntityEndpointBase> logger) : base(logger)
+    {
+    }
+
     /// <inheritdoc/>
     protected override string ResourceName => "calculation-entities";
 

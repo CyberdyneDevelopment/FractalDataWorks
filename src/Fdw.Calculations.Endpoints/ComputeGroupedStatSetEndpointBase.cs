@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Data.Abstractions.Visualization;
@@ -13,16 +13,17 @@ public abstract class ComputeGroupedStatSetEndpointBase : Endpoint<GroupedStatSe
 {
     private readonly IStatSetService _statSetService;
 
-    /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+/// <summary>
+    /// Gets the logger instance.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ComputeGroupedStatSetEndpointBase"/> class.
     /// </summary>
-    protected ComputeGroupedStatSetEndpointBase(IStatSetService statSetService)
+    protected ComputeGroupedStatSetEndpointBase(ILogger logger, IStatSetService statSetService)
     {
+        EndpointLogger = logger;
         _statSetService = statSetService;
     }
 
@@ -46,8 +47,7 @@ public abstract class ComputeGroupedStatSetEndpointBase : Endpoint<GroupedStatSe
     /// <inheritdoc />
     public override async Task HandleAsync(GroupedStatSetRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         CalculationEndpointLog.ExecutingCalculation(EndpointLogger, "statset-grouped", "ComputeGroupedStatSet");
 
         var result = await _statSetService.ComputeGroupedStatSet(req, ct).ConfigureAwait(false);

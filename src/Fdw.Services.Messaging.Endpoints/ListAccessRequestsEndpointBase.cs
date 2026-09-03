@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading;
@@ -23,13 +23,13 @@ public abstract class ListAccessRequestsEndpointBase : EndpointWithoutRequest<IR
     /// Initializes a new instance of the <see cref="ListAccessRequestsEndpointBase"/> class.
     /// </summary>
     /// <param name="accessRequestService">The access request service.</param>
-    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="logger">The logger.</param>
     protected ListAccessRequestsEndpointBase(
         IAccessRequestService accessRequestService,
-        ILoggerFactory loggerFactory)
+        ILogger logger)
     {
         _accessRequestService = accessRequestService;
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>

@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Scheduling.Abstractions.Configuration;
@@ -14,6 +14,12 @@ namespace Fdw.Services.Scheduling.Endpoints;
 public abstract class ToggleScheduleEndpointBase<TConfig> : Endpoint<ToggleScheduleRequest, ScheduleDetailDto>
     where TConfig : ScheduleConfiguration
 {
+    /// <summary>Initializes a new instance of the <see cref="ToggleScheduleEndpointBase{TConfig}"/> class.</summary>
+    protected ToggleScheduleEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     private readonly ScheduleConfigurationProvider _provider;
 
     /// <inheritdoc />
@@ -29,7 +35,7 @@ public abstract class ToggleScheduleEndpointBase<TConfig> : Endpoint<ToggleSched
     protected virtual string WritePolicy => $"{ResourceName}:write";
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
@@ -50,8 +56,7 @@ public abstract class ToggleScheduleEndpointBase<TConfig> : Endpoint<ToggleSched
     /// <summary>Toggles the schedule's enabled status after verifying existence.</summary>
     public override async Task HandleAsync(ToggleScheduleRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var existingResult = await _provider.Get(req.Name, ct).ConfigureAwait(false);
 
         if (!existingResult.IsSuccess || existingResult.Value == null)

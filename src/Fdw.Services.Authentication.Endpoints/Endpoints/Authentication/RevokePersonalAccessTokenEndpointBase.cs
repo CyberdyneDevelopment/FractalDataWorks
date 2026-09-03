@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -23,9 +23,9 @@ public abstract class RevokePersonalAccessTokenEndpointBase
     /// <summary>
     /// Initializes a new instance of the <see cref="RevokePersonalAccessTokenEndpointBase"/> class.
     /// </summary>
-    protected RevokePersonalAccessTokenEndpointBase(ILoggerFactory loggerFactory)
+    protected RevokePersonalAccessTokenEndpointBase(ILogger logger)
     {
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>Gets the logger.</summary>

@@ -1,7 +1,8 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Universes.Endpoints;
 
@@ -11,7 +12,7 @@ public abstract class GetUniverseEndpointBase : CrudGetEndpointBase<UniverseName
     private readonly IUniverseConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected GetUniverseEndpointBase(IUniverseConfigurationProvider provider)
+    protected GetUniverseEndpointBase(ILogger<GetUniverseEndpointBase> logger, IUniverseConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }

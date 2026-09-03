@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -28,9 +28,9 @@ public abstract class ListPersonalAccessTokensEndpointBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ListPersonalAccessTokensEndpointBase"/> class.
     /// </summary>
-    protected ListPersonalAccessTokensEndpointBase(ILoggerFactory loggerFactory)
+    protected ListPersonalAccessTokensEndpointBase(ILogger logger)
     {
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>Gets the logger.</summary>

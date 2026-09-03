@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Settings.Configuration;
 using Fdw.Services.Settings.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Settings.Endpoints;
 
@@ -16,7 +17,7 @@ public abstract class GetServerSettingEndpointBase : CrudGetEndpointBase<Setting
     private readonly SettingsConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected GetServerSettingEndpointBase(SettingsConfigurationProvider provider)
+    protected GetServerSettingEndpointBase(ILogger<GetServerSettingEndpointBase> logger, SettingsConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }

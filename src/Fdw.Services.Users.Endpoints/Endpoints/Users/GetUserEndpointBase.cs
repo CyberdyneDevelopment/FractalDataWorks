@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -15,12 +15,18 @@ namespace Fdw.Services.Users.Endpoints;
 /// </summary>
 public abstract class GetUserEndpointBase : Endpoint<UserScopedRequest, UserResponse>
 {
+    /// <summary>Initializes a new instance of the <see cref="GetUserEndpointBase"/> class.</summary>
+    protected GetUserEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly UserConfigurationProvider _userProvider;
 
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     protected GetUserEndpointBase(UserConfigurationProvider userProvider)
@@ -55,8 +61,7 @@ public abstract class GetUserEndpointBase : Endpoint<UserScopedRequest, UserResp
     /// <inheritdoc />
     public override async Task HandleAsync(UserScopedRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var result = await _userProvider.ResolveUser(req.IdOrName, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess || result.Value is null)

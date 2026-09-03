@@ -1,10 +1,11 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Identity.Abstractions;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Identity.Endpoints;
 
@@ -18,6 +19,11 @@ namespace Fdw.Services.Identity.Endpoints;
 /// </remarks>
 public abstract class ListIdentityMechanismsEndpointBase : CrudListEndpointBase<IdentityMechanismDto>
 {
+    /// <summary>Initializes a new instance of the <see cref="ListIdentityMechanismsEndpointBase"/> class.</summary>
+    protected ListIdentityMechanismsEndpointBase(ILogger<ListIdentityMechanismsEndpointBase> logger) : base(logger)
+    {
+    }
+
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "identity-mechanisms";
 

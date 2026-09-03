@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading;
@@ -22,13 +22,13 @@ public abstract class ListMessagesEndpointBase : Endpoint<ListMessagesRequest, I
     /// Initializes a new instance of the <see cref="ListMessagesEndpointBase"/> class.
     /// </summary>
     /// <param name="messageService">The message service.</param>
-    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="logger">The logger.</param>
     protected ListMessagesEndpointBase(
         IMessageService messageService,
-        ILoggerFactory loggerFactory)
+        ILogger logger)
     {
         _messageService = messageService;
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>

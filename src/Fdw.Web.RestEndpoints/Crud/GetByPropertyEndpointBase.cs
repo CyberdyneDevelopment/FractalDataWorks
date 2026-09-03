@@ -2,6 +2,7 @@ using System;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Fdw.Results;
 
 namespace Fdw.Web.RestEndpoints.Crud;
@@ -24,6 +25,11 @@ public abstract class GetByPropertyEndpointBase<TResource, TKey>
     where TResource : class
     where TKey : notnull
 {
+    /// <summary>Initializes a new instance of the <see cref="GetByPropertyEndpointBase{TResource, TKey}"/> class.</summary>
+    protected GetByPropertyEndpointBase(ILogger<GetByPropertyEndpointBase<TResource, TKey>> logger) : base(logger)
+    {
+    }
+
     /// <summary>
     /// Gets the expression selecting the key property of <typeparamref name="TResource"/>.
     /// Used by ETag infrastructure and logging for stable identity.

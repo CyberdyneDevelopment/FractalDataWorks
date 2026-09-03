@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -12,12 +12,18 @@ namespace Fdw.Services.Scheduling.Endpoints;
 /// </summary>
 public abstract class GetSchedulesProxyEndpointBase : EndpointWithoutRequest<IReadOnlyList<ScheduleInfoDto>>
 {
+    /// <summary>Initializes a new instance of the <see cref="GetSchedulesProxyEndpointBase"/> class.</summary>
+    protected GetSchedulesProxyEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly IScheduleClient _client;
 
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GetSchedulesProxyEndpointBase"/> class.
@@ -47,8 +53,7 @@ public abstract class GetSchedulesProxyEndpointBase : EndpointWithoutRequest<IRe
     /// <inheritdoc />
     public override async Task HandleAsync(CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         ScheduleProxyEndpointLog.ProxyRequest(EndpointLogger, "GET", "Scheduler", "schedules");
 
         var result = await _client.List(ct).ConfigureAwait(false);

@@ -1,10 +1,11 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.SecretManagers.Endpoints;
 
@@ -13,6 +14,11 @@ namespace Fdw.Services.SecretManagers.Endpoints;
 /// </summary>
 public abstract class ListSecretManagerTypesEndpointBase : CrudListEndpointBase<SecretManagerTypeDto>
 {
+    /// <summary>Initializes a new instance of the <see cref="ListSecretManagerTypesEndpointBase"/> class.</summary>
+    protected ListSecretManagerTypesEndpointBase(ILogger<ListSecretManagerTypesEndpointBase> logger) : base(logger)
+    {
+    }
+
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "secret-manager-types";
 

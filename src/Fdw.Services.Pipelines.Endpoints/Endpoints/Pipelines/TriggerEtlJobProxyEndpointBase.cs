@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Pipelines.Clients.Abstractions;
@@ -11,12 +11,18 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 public abstract class TriggerEtlJobProxyEndpointBase : Endpoint<ProxyTriggerEtlRequest, TriggerPipelineResponse>
 {
+    /// <summary>Initializes a new instance of the <see cref="TriggerEtlJobProxyEndpointBase"/> class.</summary>
+    protected TriggerEtlJobProxyEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly IPipelineJobClient _client;
 
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TriggerEtlJobProxyEndpointBase"/> class.
@@ -46,8 +52,7 @@ public abstract class TriggerEtlJobProxyEndpointBase : Endpoint<ProxyTriggerEtlR
     /// <inheritdoc />
     public override async Task HandleAsync(ProxyTriggerEtlRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         ProxyEndpointLog.ProxyRequest(EndpointLogger, "POST", "Etl", "etl/trigger");
 
         var request = new TriggerPipelineRequest

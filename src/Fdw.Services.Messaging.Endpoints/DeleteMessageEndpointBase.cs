@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -22,10 +22,10 @@ public abstract class DeleteMessageEndpointBase : Endpoint<MessageIdRequest>
     /// </summary>
     protected DeleteMessageEndpointBase(
         IMessageService messageService,
-        ILoggerFactory loggerFactory)
+        ILogger logger)
     {
         _messageService = messageService;
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>Gets the message service.</summary>

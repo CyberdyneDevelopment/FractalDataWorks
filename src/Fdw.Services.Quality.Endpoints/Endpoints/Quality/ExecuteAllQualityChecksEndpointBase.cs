@@ -21,6 +21,12 @@ namespace Fdw.Services.Quality.Endpoints;
 /// <summary>Endpoint that executes all enabled quality checks for a specified DataSet.</summary>
 public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQueryRequest, List<QualityCheckResultResponse>>
 {
+    /// <summary>Initializes a new instance of the <see cref="ExecuteAllQualityChecksEndpointBase"/> class.</summary>
+    protected ExecuteAllQualityChecksEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     private readonly QualityConfigurationProvider _provider;
     private readonly IDataGatewayProvider _dataGateways;
 
@@ -41,7 +47,7 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
     protected virtual string ReadPolicy => "datasets:read";
 
     /// <summary>Gets the logger instance for this endpoint.</summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
@@ -58,8 +64,7 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
     /// <summary>Fetches all enabled quality rules for the DataSet, queries the data, and executes each rule.</summary>
     public override async Task HandleAsync(DataSetQueryRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         if (string.IsNullOrWhiteSpace(req.DataSetName))
         {
             HttpContext.Response.StatusCode = 400;

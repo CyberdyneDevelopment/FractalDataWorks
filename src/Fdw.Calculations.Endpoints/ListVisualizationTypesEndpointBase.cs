@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,10 +13,16 @@ namespace Fdw.Calculations.Endpoints;
 /// </summary>
 public abstract class ListVisualizationTypesEndpointBase : EndpointWithoutRequest<VisualizationTypeListResponse>
 {
+    /// <summary>Initializes a new instance of the <see cref="ListVisualizationTypesEndpointBase"/> class.</summary>
+    protected ListVisualizationTypesEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     public override void Configure()
@@ -38,8 +44,7 @@ public abstract class ListVisualizationTypesEndpointBase : EndpointWithoutReques
     /// <inheritdoc />
     public override Task HandleAsync(CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         CalculationEndpointLog.ListingCalculationTypes(EndpointLogger);
 
         var types = VisualizationTypes.All()

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -20,8 +20,9 @@ public abstract class PauseExecutionEndpointBase : Endpoint<ExecutionStateReques
     /// <summary>
     /// Initializes a new instance of the <see cref="PauseExecutionEndpointBase"/> class.
     /// </summary>
-    protected PauseExecutionEndpointBase(IExecutionTracker tracker)
+    protected PauseExecutionEndpointBase(ILogger logger, IExecutionTracker tracker)
     {
+        EndpointLogger = logger;
         _tracker = tracker;
     }
 
@@ -31,9 +32,9 @@ public abstract class PauseExecutionEndpointBase : Endpoint<ExecutionStateReques
     protected IExecutionTracker Tracker => _tracker;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -54,8 +55,7 @@ public abstract class PauseExecutionEndpointBase : Endpoint<ExecutionStateReques
     /// <inheritdoc/>
     public override async Task HandleAsync(ExecutionStateRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         OnPausingExecution(req.Id);
 
         // Get current execution

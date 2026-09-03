@@ -29,13 +29,19 @@ namespace Fdw.Services.Data.Endpoints;
 /// </remarks>
 public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<ReorderFieldMappingTransformsRequest>
 {
+    /// <summary>Initializes a new instance of the <see cref="ReorderFieldMappingTransformsEndpointBase"/> class.</summary>
+    protected ReorderFieldMappingTransformsEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>Gets the data gateway for executing queries and commands.</summary>
     protected IDataGateway DataGateway { get; }
 
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <inheritdoc />
     protected ReorderFieldMappingTransformsEndpointBase(
@@ -86,8 +92,7 @@ public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<Reord
     /// <inheritdoc/>
     public override async Task HandleAsync(ReorderFieldMappingTransformsRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         try
         {
             var result = await ReorderTransforms(req.FieldMappingId, req.TransformIds, ct).ConfigureAwait(false);

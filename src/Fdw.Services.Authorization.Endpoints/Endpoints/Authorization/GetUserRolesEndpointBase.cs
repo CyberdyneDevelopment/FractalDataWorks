@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -17,6 +17,12 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, UserRolesResponse>
 {
+    /// <summary>Initializes a new instance of the <see cref="GetUserRolesEndpointBase"/> class.</summary>
+    protected GetUserRolesEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly RoleConfigurationProvider _roleProvider;
     private readonly UserRoleConfigurationProvider _userRoleProvider;
 
@@ -25,7 +31,7 @@ public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, U
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     protected GetUserRolesEndpointBase(
@@ -69,8 +75,7 @@ public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, U
     /// <inheritdoc />
     public override async Task HandleAsync(GetUserRolesRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         try
         {
             var userResult = await _userProvider.ResolveUser(req.IdOrName, ct).ConfigureAwait(false);

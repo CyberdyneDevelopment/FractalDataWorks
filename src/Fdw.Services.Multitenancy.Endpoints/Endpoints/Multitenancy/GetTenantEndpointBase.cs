@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -17,13 +17,19 @@ namespace Fdw.Services.Multitenancy.Endpoints;
 /// </summary>
 public abstract class GetTenantEndpointBase : Endpoint<GetTenantRequest, TenantDto>
 {
+    /// <summary>Initializes a new instance of the <see cref="GetTenantEndpointBase"/> class.</summary>
+    protected GetTenantEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly ITenantProvider _tenantProvider;
     private readonly ISystemRoleConfiguration _systemRoleConfiguration;
 
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     protected GetTenantEndpointBase(ITenantProvider tenantProvider, ISystemRoleConfiguration systemRoleConfiguration)
@@ -52,8 +58,7 @@ public abstract class GetTenantEndpointBase : Endpoint<GetTenantRequest, TenantD
     /// <inheritdoc />
     public override async Task HandleAsync(GetTenantRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         IGenericResult<ITenant> tenantResult;
         if (Guid.TryParse(req.Name, out var parsedId))
         {

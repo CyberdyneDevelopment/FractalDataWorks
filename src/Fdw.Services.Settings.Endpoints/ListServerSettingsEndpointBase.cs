@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +7,7 @@ using Fdw.Services.Abstractions;
 using Fdw.Services.Settings.Configuration;
 using Fdw.Services.Settings.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Settings.Endpoints;
 
@@ -18,7 +19,7 @@ public abstract class ListServerSettingsEndpointBase : CrudListEndpointBase<Serv
     private readonly IServiceConfigurationProvider<ServerSettingConfiguration> _provider;
 
     /// <inheritdoc />
-    protected ListServerSettingsEndpointBase(IServiceConfigurationProvider<ServerSettingConfiguration> provider)
+    protected ListServerSettingsEndpointBase(ILogger<ListServerSettingsEndpointBase> logger, IServiceConfigurationProvider<ServerSettingConfiguration> provider) : base(logger)
     {
         _provider = provider;
     }

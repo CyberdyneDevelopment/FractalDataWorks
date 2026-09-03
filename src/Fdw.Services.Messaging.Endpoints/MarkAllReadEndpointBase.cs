@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,13 +20,13 @@ public abstract class MarkAllReadEndpointBase : EndpointWithoutRequest
     /// Initializes a new instance of the <see cref="MarkAllReadEndpointBase"/> class.
     /// </summary>
     /// <param name="messageService">The message service.</param>
-    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="logger">The logger.</param>
     protected MarkAllReadEndpointBase(
         IMessageService messageService,
-        ILoggerFactory loggerFactory)
+        ILogger logger)
     {
         _messageService = messageService;
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>

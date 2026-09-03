@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Services.Data;
 using Fdw.Services.Quality;
 using Fdw.Services.Quality.Configuration;
 using Microsoft.AspNetCore.Http;
@@ -14,12 +15,17 @@ namespace Fdw.Services.Catalog.Endpoints;
 public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnotationRequest, List<DataSetAnnotationPayload>>
 {
     private readonly QualityConfigurationProvider _provider;
+    private readonly DataSetConfigurationProvider? _dataSetProvider;
 
     /// <summary>Initializes a new instance of the <see cref="ListDataSetAnnotationsEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected ListDataSetAnnotationsEndpointBase(QualityConfigurationProvider provider)
+    /// <param name="dataSetProvider">Optional. Used to confirm the named DataSet exists.</param>
+    protected ListDataSetAnnotationsEndpointBase(
+        QualityConfigurationProvider provider,
+        DataSetConfigurationProvider? dataSetProvider = null)
     {
         _provider = provider;
+        _dataSetProvider = dataSetProvider;
     }
 
     /// <summary>Gets the authorization policy required for read operations.</summary>
@@ -40,7 +46,7 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
     /// <summary>Retrieves all annotations for the specified DataSet.</summary>
     public override async Task HandleAsync(DataSetAnnotationRequest req, CancellationToken ct)
     {
-        var dataSetProvider = TryResolve<Fdw.Services.Data.DataSetConfigurationProvider>();
+        var dataSetProvider = TryResolve<DataSetConfigurationProvider>();
         if (dataSetProvider is not null && !string.IsNullOrEmpty(req.DataSetName))
         {
             var existsResult = await dataSetProvider.Get(req.DataSetName, ct).ConfigureAwait(false);

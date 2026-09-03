@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -7,6 +7,7 @@ using Fdw.Results;
 using Fdw.Services.Settings.Configuration;
 using Fdw.Services.Settings.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Settings.Endpoints;
 
@@ -18,7 +19,7 @@ public abstract class UpdateRoleSettingEndpointBase : CrudUpdateEndpointBase<Upd
     private readonly SettingsConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected UpdateRoleSettingEndpointBase(SettingsConfigurationProvider provider)
+    protected UpdateRoleSettingEndpointBase(ILogger<UpdateRoleSettingEndpointBase> logger, SettingsConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }

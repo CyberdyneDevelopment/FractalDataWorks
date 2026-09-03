@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading;
@@ -15,12 +15,18 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class GetRolePermissionsEndpointBase : Endpoint<GetRoleRequest, List<PermissionSummaryDto>>
 {
+    /// <summary>Initializes a new instance of the <see cref="GetRolePermissionsEndpointBase"/> class.</summary>
+    protected GetRolePermissionsEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly RoleConfigurationProvider _roleProvider;
 
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     protected GetRolePermissionsEndpointBase(RoleConfigurationProvider roleProvider)
@@ -54,8 +60,7 @@ public abstract class GetRolePermissionsEndpointBase : Endpoint<GetRoleRequest, 
     /// <inheritdoc />
     public override async Task HandleAsync(GetRoleRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         AuthorizationEndpointLog.GettingRolePermissions(EndpointLogger, req.Name);
 
         var role = Guid.TryParse(req.Name, out var roleId)

@@ -1,10 +1,21 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Web.RestEndpoints.Base;
 using Fdw.Web.RestEndpoints.Pagination;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Web.RestEndpoints.Tests.Base;
+
+// A stub rather than the real provider: these fixtures are about query pagination, not about how
+// a gateway is supplied. Never exercised.
+file sealed class StubGatewayProvider : IDataGatewayProvider
+{
+    public IDataGateway ByName(string name) => throw new NotSupportedException("Not exercised by these tests.");
+}
 
 // Test implementation for QueryEndpointBase with custom request
 public class TestQueryEndpoint : QueryEndpointBase<TestPagedRequest, TestQueryResult>
@@ -17,6 +28,7 @@ public class TestQueryEndpoint : QueryEndpointBase<TestPagedRequest, TestQueryRe
         System.Func<TestPagedRequest, CancellationToken, Task<IGenericResult<PagedResponse<TestQueryResult>>>> executeFunc,
         int? defaultPageSize = null,
         int? maxPageSize = null)
+        : base(NullLogger<GenericEndpointBase<TestPagedRequest, PagedResponse<TestQueryResult>>>.Instance, new StubGatewayProvider())
     {
         _executeFunc = executeFunc;
         _defaultPageSize = defaultPageSize;
@@ -46,6 +58,7 @@ public class TestSimpleQueryEndpoint : QueryEndpointBase<TestQueryResult>
 
     public TestSimpleQueryEndpoint(
         System.Func<PagedRequest, CancellationToken, Task<IGenericResult<PagedResponse<TestQueryResult>>>> executeFunc)
+        : base(NullLogger<GenericEndpointBase<PagedRequest, PagedResponse<TestQueryResult>>>.Instance, new StubGatewayProvider())
     {
         _executeFunc = executeFunc;
     }

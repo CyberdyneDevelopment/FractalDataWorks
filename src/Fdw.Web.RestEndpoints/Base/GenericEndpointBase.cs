@@ -24,37 +24,48 @@ namespace Fdw.Web.RestEndpoints.Base;
 public abstract class GenericEndpointBase<TRequest, TResponse> : Endpoint<TRequest, TResponse>
     where TRequest : notnull
 {
+    private readonly IDataGatewayProvider _dataGateways;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GenericEndpointBase{TRequest, TResponse}"/> class.
+    /// </summary>
+    protected GenericEndpointBase(
+        ILogger<GenericEndpointBase<TRequest, TResponse>> logger,
+        IDataGatewayProvider dataGateways,
+        IOrchestrationExecutor? executor = null,
+        ISchedulingService? scheduler = null)
+    {
+        Logger = logger;
+        _dataGateways = dataGateways;
+        Executor = executor;
+        Scheduler = scheduler;
+    }
+
     /// <summary>
     /// Gets the logger instance for this endpoint.
     /// </summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <summary>
-    /// Gets the data provider for database operations.
+    /// Gets the data gateway for database operations.
     /// </summary>
-    protected IDataGateway DataGateway { get; private set; } = null!;
+    protected IDataGateway DataGateway => _dataGateways.ByName("Main");
 
     /// <summary>
     /// Gets the orchestration executor for running orchestrations. Null if not registered.
     /// </summary>
-    protected IOrchestrationExecutor? Executor { get; private set; }
+    protected IOrchestrationExecutor? Executor { get; }
 
     /// <summary>
     /// Gets the scheduling service for scheduling tasks. Null if not registered.
     /// </summary>
-    protected ISchedulingService? Scheduler { get; private set; }
+    protected ISchedulingService? Scheduler { get; }
 
     /// <summary>
     /// Handles the HTTP request with authentication, authorization, and Fdw result patterns.
     /// </summary>
     public override async Task HandleAsync(TRequest req, CancellationToken ct)
     {
-        // Resolve services using FastEndpoints' DI integration
-        Logger = Resolve<ILogger<GenericEndpointBase<TRequest, TResponse>>>();
-        DataGateway = Resolve<IDataGateway>();
-        Executor = TryResolve<IOrchestrationExecutor>();
-        Scheduler = TryResolve<ISchedulingService>();
-
         try
         {
             // Check authorization if required
@@ -157,4 +168,15 @@ public abstract class GenericEndpointBase<TRequest, TResponse> : Endpoint<TReque
 /// <typeparam name="TResponse">The response type.</typeparam>
 public abstract class GenericEndpointBase<TResponse> : GenericEndpointBase<EmptyRequest, TResponse>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GenericEndpointBase{TResponse}"/> class.
+    /// </summary>
+    protected GenericEndpointBase(
+        ILogger<GenericEndpointBase<EmptyRequest, TResponse>> logger,
+        IDataGatewayProvider dataGateways,
+        IOrchestrationExecutor? executor = null,
+        ISchedulingService? scheduler = null)
+        : base(logger, dataGateways, executor, scheduler)
+    {
+    }
 }

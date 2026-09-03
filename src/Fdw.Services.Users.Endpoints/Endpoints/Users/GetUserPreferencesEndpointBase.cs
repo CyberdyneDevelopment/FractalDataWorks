@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -22,10 +22,10 @@ public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<Us
     /// <param name="loggerFactory">The logger factory.</param>
     protected GetUserPreferencesEndpointBase(
         UserPreferenceConfigurationProvider preferenceProvider,
-        ILoggerFactory loggerFactory)
+        ILogger logger)
     {
         _preferenceProvider = preferenceProvider;
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>

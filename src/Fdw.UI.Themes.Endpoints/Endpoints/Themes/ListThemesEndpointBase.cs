@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +16,12 @@ namespace Fdw.UI.Themes.Endpoints;
 public abstract class ListThemesEndpointBase<TSummary> : EndpointWithoutRequest<PaginatedResponse<TSummary>>
     where TSummary : class
 {
+    /// <summary>Initializes a new instance of the <see cref="ListThemesEndpointBase{TSummary}"/> class.</summary>
+    protected ListThemesEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>Gets the resource name used for routing and policies.</summary>
     protected virtual string ResourceName => "themes";
 
@@ -23,7 +29,7 @@ public abstract class ListThemesEndpointBase<TSummary> : EndpointWithoutRequest<
     protected virtual string ReadPolicy => "configurations:read";
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
@@ -44,8 +50,7 @@ public abstract class ListThemesEndpointBase<TSummary> : EndpointWithoutRequest<
     /// <summary>Returns a list of all available themes.</summary>
     public override Task HandleAsync(CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var items = LoadThemes();
         var list = items.ToList();
         return Send.OkAsync(PaginatedResponse<TSummary>.Create(list, 0, list.Count, list.Count), ct);

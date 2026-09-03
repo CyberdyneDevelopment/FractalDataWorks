@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -19,13 +19,13 @@ public abstract class GetMessageEndpointBase : Endpoint<MessageIdRequest, Messag
     /// Initializes a new instance of the <see cref="GetMessageEndpointBase"/> class.
     /// </summary>
     /// <param name="messageService">The message service.</param>
-    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="logger">The logger.</param>
     protected GetMessageEndpointBase(
         IMessageService messageService,
-        ILoggerFactory loggerFactory)
+        ILogger logger)
     {
         _messageService = messageService;
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>

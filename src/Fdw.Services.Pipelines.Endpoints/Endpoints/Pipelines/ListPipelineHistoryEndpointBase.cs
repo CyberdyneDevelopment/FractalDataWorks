@@ -21,6 +21,12 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 public abstract class ListPipelineHistoryEndpointBase : Endpoint<ListPipelineHistoryRequest, PaginatedResponse<PipelineExecutionRecord>>
 {
+    /// <summary>Initializes a new instance of the <see cref="ListPipelineHistoryEndpointBase"/> class.</summary>
+    protected ListPipelineHistoryEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly IDataGatewayProvider _dataGateways;
 
     /// <summary>
@@ -37,7 +43,7 @@ public abstract class ListPipelineHistoryEndpointBase : Endpoint<ListPipelineHis
     protected IDataGateway DataGateway => _dataGateways.ByName("Main");
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -59,8 +65,7 @@ public abstract class ListPipelineHistoryEndpointBase : Endpoint<ListPipelineHis
     /// <inheritdoc/>
     public override async Task HandleAsync(ListPipelineHistoryRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         // Fails here as well as in the Registration phase: registration proves it for a real host,
         // and this proves it for anything that reaches the endpoint without having run registration.
         if (string.IsNullOrWhiteSpace(PipelineServiceTypes.OperationalConnection))

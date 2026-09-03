@@ -21,6 +21,12 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 public abstract class GetPipelineExecutionEndpointBase : Endpoint<GetPipelineExecutionRequest, PipelineExecutionRecord?>
 {
+    /// <summary>Initializes a new instance of the <see cref="GetPipelineExecutionEndpointBase"/> class.</summary>
+    protected GetPipelineExecutionEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly IDataGatewayProvider _dataGateways;
 
     /// <summary>
@@ -37,7 +43,7 @@ public abstract class GetPipelineExecutionEndpointBase : Endpoint<GetPipelineExe
     protected IDataGateway DataGateway => _dataGateways.ByName("Main");
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -58,8 +64,7 @@ public abstract class GetPipelineExecutionEndpointBase : Endpoint<GetPipelineExe
     /// <inheritdoc/>
     public override async Task HandleAsync(GetPipelineExecutionRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         // Fails here as well as in the Registration phase: registration proves it for a real host,
         // and this proves it for anything that reaches the endpoint without having run registration.
         if (string.IsNullOrWhiteSpace(PipelineServiceTypes.OperationalConnection))

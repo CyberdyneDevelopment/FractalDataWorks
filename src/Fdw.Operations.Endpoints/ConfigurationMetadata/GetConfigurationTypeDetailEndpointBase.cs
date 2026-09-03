@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Operations.Endpoints.ConfigurationMetadata;
 
@@ -20,8 +21,8 @@ public abstract class GetConfigurationTypeDetailEndpointBase : CrudGetEndpointBa
 {
     private readonly IConfigurationContainerLookup _containerLookup;
 
-    /// <summary>Initializes a new instance of the endpoint.</summary>
-    protected GetConfigurationTypeDetailEndpointBase(IConfigurationContainerLookup containerLookup)
+/// <summary>Initializes a new instance of the endpoint.</summary>
+    protected GetConfigurationTypeDetailEndpointBase(ILogger<GetConfigurationTypeDetailEndpointBase> logger, IConfigurationContainerLookup containerLookup) : base(logger)
     {
         _containerLookup = containerLookup;
     }

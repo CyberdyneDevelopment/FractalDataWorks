@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Configuration;
@@ -16,10 +16,16 @@ namespace Fdw.Services.Connections.Endpoints;
 public abstract class TestConnectionConfigEndpointBase<TConfiguration> : Endpoint<CreateConnectionRequest, TestConnectionResponse>
     where TConfiguration : class, IGenericConfiguration
 {
+    /// <summary>Initializes a new instance of the <see cref="TestConnectionConfigEndpointBase{TConfiguration}"/> class.</summary>
+    protected TestConnectionConfigEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     public override void Configure()
@@ -52,8 +58,7 @@ public abstract class TestConnectionConfigEndpointBase<TConfiguration> : Endpoin
     /// <inheritdoc />
     public override async Task HandleAsync(CreateConnectionRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var name = req.Name ?? "Untitled";
         ConnectionEndpointLog.TestingConnectionConfig(EndpointLogger, name);
 

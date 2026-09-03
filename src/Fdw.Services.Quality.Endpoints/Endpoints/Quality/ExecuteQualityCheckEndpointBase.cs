@@ -22,6 +22,12 @@ namespace Fdw.Services.Quality.Endpoints;
 /// <summary>Endpoint that executes a single quality check by rule identifier.</summary>
 public abstract class ExecuteQualityCheckEndpointBase : Endpoint<QualityRuleIdRequest, QualityCheckResultResponse>
 {
+    /// <summary>Initializes a new instance of the <see cref="ExecuteQualityCheckEndpointBase"/> class.</summary>
+    protected ExecuteQualityCheckEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     private readonly QualityConfigurationProvider _provider;
     private readonly IDataGatewayProvider _dataGateways;
 
@@ -42,7 +48,7 @@ public abstract class ExecuteQualityCheckEndpointBase : Endpoint<QualityRuleIdRe
     protected virtual string ReadPolicy => "datasets:read";
 
     /// <summary>Gets the logger instance for this endpoint.</summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
@@ -59,8 +65,7 @@ public abstract class ExecuteQualityCheckEndpointBase : Endpoint<QualityRuleIdRe
     /// <summary>Fetches the quality rule, queries the associated DataSet, and executes the check. Returns Skipped if the rule is disabled, or 404 if the rule is not found.</summary>
     public override async Task HandleAsync(QualityRuleIdRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var ruleResult = await _provider.GetQualityRule(req.Id, ct).ConfigureAwait(false);
 
         if (!ruleResult.IsSuccess)

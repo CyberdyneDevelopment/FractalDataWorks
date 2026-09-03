@@ -1,9 +1,10 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Operations.Endpoints.TypeCollections;
 
@@ -14,6 +15,11 @@ namespace Fdw.Operations.Endpoints.TypeCollections;
 public abstract class ListTypeCollectionValuesEndpointBase
     : CrudListEndpointBase<GetTypeCollectionValuesRequest, TypeCollectionValueSummaryDto>
 {
+    /// <summary>Initializes a new instance of the <see cref="ListTypeCollectionValuesEndpointBase"/> class.</summary>
+    protected ListTypeCollectionValuesEndpointBase(ILogger<ListTypeCollectionValuesEndpointBase> logger) : base(logger)
+    {
+    }
+
     /// <inheritdoc/>
     protected override string ResourceName => "type-collections";
 

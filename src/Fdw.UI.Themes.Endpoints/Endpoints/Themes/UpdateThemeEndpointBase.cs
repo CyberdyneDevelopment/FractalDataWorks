@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.Extensions.Logging;
@@ -15,6 +15,12 @@ public abstract class UpdateThemeEndpointBase<TRequest, TDetail> : Endpoint<TReq
     where TRequest : notnull, new()
     where TDetail : class
 {
+    /// <summary>Initializes a new instance of the <see cref="UpdateThemeEndpointBase{TRequest, TDetail}"/> class.</summary>
+    protected UpdateThemeEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>Gets the resource name used for routing and policies.</summary>
     protected virtual string ResourceName => "themes";
 
@@ -22,7 +28,7 @@ public abstract class UpdateThemeEndpointBase<TRequest, TDetail> : Endpoint<TReq
     protected virtual string WritePolicy => "configurations:write";
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
@@ -43,8 +49,7 @@ public abstract class UpdateThemeEndpointBase<TRequest, TDetail> : Endpoint<TReq
     /// <summary>Updates the theme identified by name, returning the updated configuration or 404 if not found.</summary>
     public override async Task HandleAsync(TRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var name = GetThemeName(req);
 
         var existing = FindTheme(name);

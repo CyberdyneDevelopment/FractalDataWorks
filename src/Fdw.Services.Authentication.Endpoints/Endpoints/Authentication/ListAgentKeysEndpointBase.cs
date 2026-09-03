@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -26,9 +26,9 @@ public abstract class ListAgentKeysEndpointBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ListAgentKeysEndpointBase"/> class.
     /// </summary>
-    protected ListAgentKeysEndpointBase(ILoggerFactory loggerFactory)
+    protected ListAgentKeysEndpointBase(ILogger logger)
     {
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>Gets the logger.</summary>

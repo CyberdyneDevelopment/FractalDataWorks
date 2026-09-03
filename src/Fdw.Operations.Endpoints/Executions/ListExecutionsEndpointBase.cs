@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -25,8 +25,9 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
     /// <summary>
     /// Initializes a new instance of the <see cref="ListExecutionsEndpointBase"/> class.
     /// </summary>
-    protected ListExecutionsEndpointBase(IExecutionTracker tracker)
+    protected ListExecutionsEndpointBase(ILogger logger, IExecutionTracker tracker)
     {
+        EndpointLogger = logger;
         _tracker = tracker;
     }
 
@@ -36,9 +37,9 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
     protected IExecutionTracker Tracker => _tracker;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -60,8 +61,7 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
     /// <inheritdoc/>
     public override async Task HandleAsync(ListExecutionsRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         OnListingExecutions(req.ValidatedPage, req.ValidatedPageSize);
 
         // If correlation ID is provided, use the specialized query

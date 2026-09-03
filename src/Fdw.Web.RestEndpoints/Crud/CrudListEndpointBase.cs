@@ -28,6 +28,12 @@ namespace Fdw.Web.RestEndpoints.Crud;
 public abstract class CrudListEndpointBase<TSummary> : EndpointWithoutRequest<List<TSummary>>
     where TSummary : class
 {
+    /// <summary>Initializes a new instance of the <see cref="CrudListEndpointBase{TSummary}"/> class.</summary>
+    protected CrudListEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>
     /// Gets the plural resource name used for routing and policy generation (e.g., "connections", "datastores").
     /// </summary>
@@ -85,9 +91,9 @@ public abstract class CrudListEndpointBase<TSummary> : EndpointWithoutRequest<Li
     protected virtual string ETagConnectionName => "Default";
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -120,8 +126,6 @@ public abstract class CrudListEndpointBase<TSummary> : EndpointWithoutRequest<Li
     /// <inheritdoc/>
     public override async Task HandleAsync(CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
         try
         {
             if (ETagEnabled)
@@ -319,6 +323,12 @@ public abstract class CrudListEndpointBase<TListRequest, TSummary> : Endpoint<TL
     where TListRequest : notnull, new()
     where TSummary : class
 {
+    /// <summary>Initializes a new instance of the <see cref="CrudListEndpointBase{TListRequest, TSummary}"/> class.</summary>
+    protected CrudListEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>
     /// Gets the plural resource name used for routing and policy generation.
     /// </summary>
@@ -371,7 +381,7 @@ public abstract class CrudListEndpointBase<TListRequest, TSummary> : Endpoint<TL
     /// <summary>
     /// Gets the logger instance.
     /// </summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -403,8 +413,6 @@ public abstract class CrudListEndpointBase<TListRequest, TSummary> : Endpoint<TL
     /// <inheritdoc/>
     public override async Task HandleAsync(TListRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
         try
         {
             if (ETagEnabled)

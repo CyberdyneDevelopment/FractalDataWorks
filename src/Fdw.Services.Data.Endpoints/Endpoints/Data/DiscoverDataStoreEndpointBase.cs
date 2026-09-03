@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Data.DataStores.Abstractions;
@@ -20,10 +20,10 @@ public abstract class DiscoverDataStoreEndpointBase : Endpoint<DiscoverDataStore
     /// <inheritdoc />
     protected DiscoverDataStoreEndpointBase(
         IDataStoreProvider dataStoreProvider,
-        ILoggerFactory loggerFactory)
+        ILogger logger)
     {
         _dataStoreProvider = dataStoreProvider;
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

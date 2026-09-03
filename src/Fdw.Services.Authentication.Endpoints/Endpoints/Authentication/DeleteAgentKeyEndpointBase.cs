@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -23,9 +23,9 @@ public abstract class DeleteAgentKeyEndpointBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DeleteAgentKeyEndpointBase"/> class.
     /// </summary>
-    protected DeleteAgentKeyEndpointBase(ILoggerFactory loggerFactory)
+    protected DeleteAgentKeyEndpointBase(ILogger logger)
     {
-        _logger = loggerFactory.CreateLogger(GetType());
+        _logger = logger;
     }
 
     /// <summary>Gets the logger.</summary>

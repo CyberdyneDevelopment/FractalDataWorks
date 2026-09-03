@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -23,6 +23,12 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissionsRequest, List<PermissionSummaryDto>>
 {
+    /// <summary>Initializes a new instance of the <see cref="SetRolePermissionsEndpointBase"/> class.</summary>
+    protected SetRolePermissionsEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand> _rolePermissionProvider;
     private readonly RoleConfigurationProvider _roleProvider;
     private readonly ISystemRoleConfiguration _systemRoleConfiguration;
@@ -30,7 +36,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     protected SetRolePermissionsEndpointBase(
@@ -69,8 +75,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
     /// <inheritdoc />
     public override async Task HandleAsync(SetRolePermissionsRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         AuthorizationEndpointLog.SettingRolePermissions(EndpointLogger, req.Name);
 
         if (_systemRoleConfiguration.IsSystemRole(req.Name))

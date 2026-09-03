@@ -1,8 +1,9 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Universes.Results;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Universes.Endpoints;
 
@@ -12,7 +13,7 @@ public abstract class DeleteUniverseEndpointBase : CrudDeleteEndpointBase<Univer
     private readonly IUniverseConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected DeleteUniverseEndpointBase(IUniverseConfigurationProvider provider)
+    protected DeleteUniverseEndpointBase(ILogger<DeleteUniverseEndpointBase> logger, IUniverseConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }

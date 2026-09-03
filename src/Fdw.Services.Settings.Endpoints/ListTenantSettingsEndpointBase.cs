@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +7,7 @@ using Fdw.Services.Abstractions;
 using Fdw.Services.Settings.Configuration;
 using Fdw.Services.Settings.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Settings.Endpoints;
 
@@ -18,7 +19,7 @@ public abstract class ListTenantSettingsEndpointBase : CrudListEndpointBase<Tena
     private readonly IServiceConfigurationProvider<TenantSettingConfiguration> _provider;
 
     /// <inheritdoc />
-    protected ListTenantSettingsEndpointBase(IServiceConfigurationProvider<TenantSettingConfiguration> provider)
+    protected ListTenantSettingsEndpointBase(ILogger<ListTenantSettingsEndpointBase> logger, IServiceConfigurationProvider<TenantSettingConfiguration> provider) : base(logger)
     {
         _provider = provider;
     }

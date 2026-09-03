@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,6 +24,12 @@ namespace Fdw.Services.Users.Endpoints;
 public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, UserResponse>
     where TRequest : CreateUserRequest
 {
+    /// <summary>Initializes a new instance of the <see cref="CreateUserEndpointBase{TRequest}"/> class.</summary>
+    protected CreateUserEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly UserConfigurationProvider _userProvider;
     private readonly UserTenantConfigurationProvider _tenantProvider;
     private readonly UserRoleConfigurationProvider _userRoleProvider;
@@ -33,7 +39,7 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     protected CreateUserEndpointBase(
@@ -91,8 +97,7 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
     /// <inheritdoc />
     public override async Task HandleAsync(TRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         OnCreatingUser(req.Username);
 
         var result = await Create(req, ct).ConfigureAwait(false);

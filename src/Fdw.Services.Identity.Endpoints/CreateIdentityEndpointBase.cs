@@ -6,6 +6,7 @@ using Fdw.Services.Abstractions;
 using Fdw.Services.Identity.Abstractions;
 using Fdw.Services.Identity.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Identity.Endpoints;
 
@@ -24,6 +25,11 @@ public abstract class CreateIdentityEndpointBase<TConfig, TRequest>
     where TConfig : class, IIdentityServiceImplementationConfiguration
     where TRequest : CreateIdentityRequest, new()
 {
+    /// <summary>Initializes a new instance of the <see cref="CreateIdentityEndpointBase{TConfig, TRequest}"/> class.</summary>
+    protected CreateIdentityEndpointBase(ILogger<CreateIdentityEndpointBase<TConfig, TRequest>> logger) : base(logger)
+    {
+    }
+
     /// <summary>Gets the provider that reads and writes identity configuration.</summary>
     protected abstract IServiceConfigurationProvider<IdentityServiceConfiguration> Identities { get; }
 

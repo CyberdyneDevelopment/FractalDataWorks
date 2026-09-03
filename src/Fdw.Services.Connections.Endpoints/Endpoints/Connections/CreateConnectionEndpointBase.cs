@@ -30,11 +30,15 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
     where TConfig : class, IConnectionImplementationConfiguration
 {
     private readonly ConnectionConfigurationProvider _connectionProvider;
+    private readonly ISchemaInformationService? _schemaInformationService;
 
     /// <inheritdoc />
-    protected CreateConnectionEndpointBase(ConnectionConfigurationProvider connectionProvider)
+    protected CreateConnectionEndpointBase(
+        ConnectionConfigurationProvider connectionProvider,
+        ISchemaInformationService? schemaInformationService = null)
     {
         _connectionProvider = connectionProvider;
+        _schemaInformationService = schemaInformationService;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -77,7 +81,7 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
         var detail = MapToDetail(connection, typedBody, connectionId);
 
         // Fire schema discovery if ISchemaInformationService is registered (optional dependency).
-        var schemaService = TryResolve<ISchemaInformationService>();
+        var schemaService = _schemaInformationService;
         if (schemaService != null)
         {
             var schemaResult = await schemaService.GetSchema(request.Name, ct).ConfigureAwait(false);

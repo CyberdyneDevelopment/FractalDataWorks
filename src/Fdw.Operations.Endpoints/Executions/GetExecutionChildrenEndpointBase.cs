@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -21,8 +21,9 @@ public abstract class GetExecutionChildrenEndpointBase : Endpoint<ExecutionIdReq
     /// <summary>
     /// Initializes a new instance of the <see cref="GetExecutionChildrenEndpointBase"/> class.
     /// </summary>
-    protected GetExecutionChildrenEndpointBase(IExecutionTracker tracker)
+    protected GetExecutionChildrenEndpointBase(ILogger logger, IExecutionTracker tracker)
     {
+        EndpointLogger = logger;
         _tracker = tracker;
     }
 
@@ -32,9 +33,9 @@ public abstract class GetExecutionChildrenEndpointBase : Endpoint<ExecutionIdReq
     protected IExecutionTracker Tracker => _tracker;
 
     /// <summary>
-    /// Gets the logger instance. Resolved during HandleAsync.
+    /// Gets the logger instance.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -55,8 +56,7 @@ public abstract class GetExecutionChildrenEndpointBase : Endpoint<ExecutionIdReq
     /// <inheritdoc/>
     public override async Task HandleAsync(ExecutionIdRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         OnFetchingChildren(req.Id);
 
         // First verify the execution exists

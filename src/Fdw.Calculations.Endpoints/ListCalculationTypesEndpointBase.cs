@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Calculations.Abstractions.CalculationSources;
@@ -15,10 +15,16 @@ namespace Fdw.Calculations.Endpoints;
 /// </summary>
 public abstract class ListCalculationTypesEndpointBase : EndpointWithoutRequest<CalculationTypesResponse>
 {
+    /// <summary>Initializes a new instance of the <see cref="ListCalculationTypesEndpointBase"/> class.</summary>
+    protected ListCalculationTypesEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     public override void Configure()
@@ -40,8 +46,7 @@ public abstract class ListCalculationTypesEndpointBase : EndpointWithoutRequest<
     /// <inheritdoc />
     public override async Task HandleAsync(CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         CalculationEndpointLog.ListingCalculationTypes(EndpointLogger);
 
         var catalog = Resolve<ICalculationCatalogProvider>();

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -13,12 +13,18 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
 {
+    /// <summary>Initializes a new instance of the <see cref="DeleteRoleEndpointBase"/> class.</summary>
+    protected DeleteRoleEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly RoleConfigurationProvider _roleProvider;
 
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
     /// </summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc />
     protected DeleteRoleEndpointBase(RoleConfigurationProvider roleProvider)
@@ -52,8 +58,7 @@ public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
     /// <inheritdoc />
     public override async Task HandleAsync(GetRoleRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var existing = await _roleProvider.GetRole(req.Name, ct).ConfigureAwait(false);
 
         if (existing is null)

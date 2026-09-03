@@ -23,6 +23,14 @@ namespace Fdw.Services.Scheduling.Endpoints;
 /// </remarks>
 public abstract class ListScheduleTypesEndpointBase : EndpointWithoutRequest<List<ScheduleTypeSummary>>
 {
+    private readonly ILogger _logger;
+
+    /// <summary>Initializes a new instance of the <see cref="ListScheduleTypesEndpointBase"/> class.</summary>
+    protected ListScheduleTypesEndpointBase(ILogger logger)
+    {
+        _logger = logger;
+    }
+
     /// <inheritdoc/>
     public override void Configure()
     {
@@ -42,9 +50,7 @@ public abstract class ListScheduleTypesEndpointBase : EndpointWithoutRequest<Lis
     /// <inheritdoc/>
     public override Task HandleAsync(CancellationToken ct)
     {
-        var endpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
-        ScheduleEndpointLog.ListingScheduleTypes(endpointLogger);
+        ScheduleEndpointLog.ListingScheduleTypes(_logger);
 
         var all = TriggerTypes.All();
         var dtos = new List<ScheduleTypeSummary>(all.Count);
@@ -60,7 +66,7 @@ public abstract class ListScheduleTypesEndpointBase : EndpointWithoutRequest<Lis
             });
         }
 
-        ScheduleEndpointLog.ListedScheduleTypes(endpointLogger, dtos.Count);
+        ScheduleEndpointLog.ListedScheduleTypes(_logger, dtos.Count);
 
         return Send.OkAsync(dtos, ct);
     }

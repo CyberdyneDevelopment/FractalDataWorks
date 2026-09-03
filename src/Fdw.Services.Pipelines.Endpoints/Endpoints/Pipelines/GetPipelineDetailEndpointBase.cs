@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -18,6 +18,12 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameRequest, PipelineDetailResponse>
 {
+    /// <summary>Initializes a new instance of the <see cref="GetPipelineDetailEndpointBase"/> class.</summary>
+    protected GetPipelineDetailEndpointBase(ILogger logger)
+    {
+        EndpointLogger = logger;
+    }
+
     private readonly PipelineServiceConfigurationProvider _pipelineProvider;
 
     /// <summary>
@@ -29,7 +35,7 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
     }
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
-    protected ILogger EndpointLogger { get; private set; } = null!;
+    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -50,8 +56,7 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
     /// <inheritdoc/>
     public override async Task HandleAsync(PipelineNameRequest req, CancellationToken ct)
     {
-        EndpointLogger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         OnFetchingPipeline(req.Name);
 
         var result = await _pipelineProvider.Get(req.Name, ct).ConfigureAwait(false);

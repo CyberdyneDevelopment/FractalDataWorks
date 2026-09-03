@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
@@ -14,6 +14,12 @@ namespace Fdw.UI.Themes.Endpoints;
 public abstract class GetThemeEndpointBase<TDetail> : Endpoint<ThemeNameRequest, TDetail>
     where TDetail : class
 {
+    /// <summary>Initializes a new instance of the <see cref="GetThemeEndpointBase{TDetail}"/> class.</summary>
+    protected GetThemeEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>Gets the resource name used for routing and policies.</summary>
     protected virtual string ResourceName => "themes";
 
@@ -21,7 +27,7 @@ public abstract class GetThemeEndpointBase<TDetail> : Endpoint<ThemeNameRequest,
     protected virtual string ReadPolicy => "configurations:read";
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
@@ -42,8 +48,7 @@ public abstract class GetThemeEndpointBase<TDetail> : Endpoint<ThemeNameRequest,
     /// <summary>Retrieves a theme by name, returning its configuration or 404 if not found.</summary>
     public override async Task HandleAsync(ThemeNameRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
+        
         var theme = FindTheme(req.Name);
         if (theme == null)
         {
