@@ -324,6 +324,7 @@
     <Project Path="src/Fdw.Services.Scheduling.Endpoints/Fdw.Services.Scheduling.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.Components/Fdw.Services.SecretManagers.Components.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.Endpoints/Fdw.Services.SecretManagers.Endpoints.csproj" />
+    <Project Path="src/Fdw.Services.SessionState.Clients.Registration/Fdw.Services.SessionState.Clients.Registration.csproj" />
     <Project Path="src/Fdw.Services.SessionState.Clients/Fdw.Services.SessionState.Clients.csproj" />
     <Project Path="src/Fdw.Services.SessionState.UI.Pages/Fdw.Services.SessionState.UI.Pages.csproj" />
     <Project Path="src/Fdw.Services.Settings.Components/Fdw.Services.Settings.Components.csproj" />
