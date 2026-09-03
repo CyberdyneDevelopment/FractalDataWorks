@@ -101,6 +101,16 @@ public sealed class MainDataGatewayServiceTypeOption : DataGatewayTypeBase<IGene
 
             builder.Services.AddScoped<IDataGateway>(sp => sp.GetRequiredService<LimitEnforcementDataGateway>());
 
+            // Why scoped and not singleton: IDataGateway is scoped, and a provider constructed with
+            // it directly is safe ONLY if the provider shares that lifetime -- a singleton provider
+            // holding a scoped gateway from its own constructor is the exact captive dependency this
+            // provider exists to prevent, one layer removed. Scoped-depends-on-scoped needs no
+            // deferral: both are resolved together, within whichever scope asked.
+            builder.Services.TryAddScoped<IDataGatewayProvider>(sp =>
+                new MainDataGatewayProvider(
+                    sp.GetRequiredService<IDataGateway>(),
+                    sp.GetService<ILogger<MainDataGatewayProvider>>()));
+
             builder.Services.AddHostedService(sp =>
                 new DailyLimitResetJob(
                     sp.GetRequiredService<ConnectionLimitCounterStore>(),

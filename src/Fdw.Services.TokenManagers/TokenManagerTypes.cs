@@ -87,7 +87,11 @@ public static class TokenManagerTypes
         builder.Services.TryAddSingleton<ISigningCredentialProvider>(sp =>
             new ConfiguredSigningCredentialProvider(sp.GetRequiredService<JwtIssuanceResolver>()));
 
-        builder.Services.TryAddSingleton<ITokenRevocationStore, TokenRevocationStore>();
+        // Scoped, not singleton: the store holds no state of its own, reads and writes AuthDb on every
+        // call through IDataGatewayProvider, and that provider is scoped -- matching IDataGateway's own
+        // lifetime. Its only consumer, LocalKeyAuthenticationHandler, is itself per-request under
+        // ASP.NET's authentication-handler convention, so scoped costs nothing here.
+        builder.Services.TryAddScoped<ITokenRevocationStore, TokenRevocationStore>();
 
         return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
