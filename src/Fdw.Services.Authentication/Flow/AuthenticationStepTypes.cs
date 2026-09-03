@@ -13,6 +13,7 @@ using Fdw.Services.Authentication.Execution;
 using Fdw.Services.Authentication.Steps;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.SecretProtection.Abstractions;
 using Fdw.Services.TokenManagers.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -73,8 +74,15 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddScoped<ITenantResolver, UserTenantResolver>();
             builder.Services.TryAddScoped<IIssuanceEligibility, UserAccountEligibility>();
 
+            // Database-backed: correct behind a load balancer, where InMemoryExecutionStore is not
+            // (a caller can return to a different instance than the one that suspended them).
+            // InMemoryExecutionStore remains available for tests and single-process hosts, but is no
+            // longer the default a deployment gets.
             builder.Services.TryAddSingleton<IAuthenticationExecutionStore>(sp =>
-                new InMemoryExecutionStore(sp.GetService<ILogger<InMemoryExecutionStore>>()));
+                new DatabaseExecutionStore(
+                    sp.GetRequiredService<IDataGatewayProvider>(),
+                    sp.GetRequiredService<ISecretProtector>(),
+                    sp.GetService<ILogger<DatabaseExecutionStore>>()));
 
             builder.Services.TryAddSingleton<IAuthorizationRequestStore>(sp =>
                 new InMemoryAuthorizationRequestStore(
