@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Fdw.Results;
 
-namespace Fdw.Services.SessionState.Clients;
+namespace Fdw.Services.SessionState.Clients.Registration;
 
 /// <summary>
 /// HTTP client session state service type that registers <see cref="HttpSessionStateService"/>

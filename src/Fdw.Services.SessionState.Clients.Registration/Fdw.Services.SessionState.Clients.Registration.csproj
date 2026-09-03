@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.Services.SessionState.Clients.Registration</RootNamespace>
+    <PackageId>Fdw.Services.SessionState.Clients.Registration</PackageId>
+    <Title>Fdw Session State API Client Registration</Title>
+    <Description>The session-state HTTP client's [ServiceTypeOption] only. References the
+    implementation, so referencing THIS package brings the implementation with it and registers
+    the option.</Description>
+    <PackageTags>session-state;clients;blazor</PackageTags>
+  </PropertyGroup>
+
+  <!-- Why the implementation and not the reverse: referencing the implementation gets you
+       HttpSessionStateService with no registration; referencing this package gets you the
+       registration as well. Registration is opt-in, so a library can depend on the implementation
+       without silently attaching it as the SessionState option in its consumer's collection. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Services.SessionState.Clients\Fdw.Services.SessionState.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.Services.SessionState\Fdw.Services.SessionState.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>
