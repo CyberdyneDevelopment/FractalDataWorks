@@ -16,7 +16,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Fdw.Web.RestEndpoints\Fdw.Web.RestEndpoints.csproj" />
-    <ProjectReference Include="..\Fdw.Web.Calculations.Clients\Fdw.Web.Calculations.Clients.csproj" />
     <ProjectReference Include="..\Fdw.Calculations.Abstractions\Fdw.Calculations.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
@@ -28,6 +27,7 @@
     <ProjectReference Include="..\Fdw.Calculations\Fdw.Calculations.csproj" />
     <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Validation.FastEndpoints\Fdw.Validation.FastEndpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Web.Calculations.Clients.Abstractions\Fdw.Web.Calculations.Clients.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

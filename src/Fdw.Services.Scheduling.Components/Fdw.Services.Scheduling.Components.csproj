@@ -34,10 +34,9 @@
     <ProjectReference Include="..\Fdw.Web.Clients\Fdw.Web.Clients.csproj" />
     <ProjectReference Include="..\Fdw.Web.Http.Authentication\Fdw.Web.Http.Authentication.csproj" />
     <ProjectReference Include="..\Fdw.UI.Components\Fdw.UI.Components.csproj" />
-    <ProjectReference Include="..\Fdw.Operations.Clients\Fdw.Operations.Clients.csproj" />
     <ProjectReference Include="..\Fdw.Services.Pipelines.Abstractions\Fdw.Services.Pipelines.Abstractions.csproj" />
-    <ProjectReference Include="..\Fdw.Services.Scheduling.Clients\Fdw.Services.Scheduling.Clients.csproj" />
     <ProjectReference Include="..\Fdw.UI\Fdw.UI.csproj" />
+    <ProjectReference Include="..\Fdw.Operations.Abstractions\Fdw.Operations.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
