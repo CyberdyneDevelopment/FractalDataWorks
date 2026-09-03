@@ -6,9 +6,9 @@ namespace Fdw.Services.Data.Commands;
 
 /// <summary>ConfigurationCommands TypeOption for the data gateway's typed body.</summary>
 [TypeOption(typeof(ConfigurationCommands), "MainDataGateway")]
-public sealed class DataGatewayImplementationConfigurationCommand
-    : ConfigurationCommandBase<DataGatewayImplementationConfiguration>
+public sealed class MainDataGatewayConfigurationCommand
+    : ConfigurationCommandBase<MainDataGatewayConfiguration>
 {
     /// <inheritdoc/>
-    public DataGatewayImplementationConfigurationCommand() : base("MainDataGateway") { }
+    public MainDataGatewayConfigurationCommand() : base("MainDataGateway") { }
 }

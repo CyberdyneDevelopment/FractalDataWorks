@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -22,15 +22,19 @@ namespace Fdw.Services.Quality.Endpoints;
 public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQueryRequest, List<QualityCheckResultResponse>>
 {
     private readonly QualityConfigurationProvider _provider;
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
 
     /// <summary>Initializes a new instance of the <see cref="ExecuteAllQualityChecksEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality rule lookup.</param>
-    /// <param name="dataGateway">The data gateway for live DataSet queries.</param>
-    protected ExecuteAllQualityChecksEndpointBase(QualityConfigurationProvider provider, IDataGateway dataGateway)
+    /// <param name="dataGateways">The data gateway for live DataSet queries.</param>
+    protected ExecuteAllQualityChecksEndpointBase(QualityConfigurationProvider provider, IDataGatewayProvider dataGateways)
     {
         _provider = provider;
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
     }
 
     /// <summary>Gets the authorization policy required for read operations.</summary>
@@ -87,7 +91,7 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
 
         var dataCommand = new QueryCommand<Dictionary<string, object>>();
 
-        var dataResult = await _dataGateway.Execute<IEnumerable<Dictionary<string, object>>>(
+        var dataResult = await Gateway.Execute<IEnumerable<Dictionary<string, object>>>(
             dataCommand, new DataStoreTarget(ResolveDataConnectionName(req.DataSetName), null, req.DataSetName), ct).ConfigureAwait(false);
 
         var data = dataResult.IsSuccess ? dataResult.Value?.ToList() ?? [] : [];

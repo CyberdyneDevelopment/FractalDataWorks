@@ -1,6 +1,4 @@
-using Fdw.Results;
-
-namespace Fdw.Services.Data.Abstractions;
+﻿namespace Fdw.Services.Data.Abstractions;
 
 /// <summary>
 /// Supplies the data gateway, resolved on the first ask rather than at construction.
@@ -13,10 +11,18 @@ namespace Fdw.Services.Data.Abstractions;
 ///
 /// It is the data-plane counterpart of <see cref="IConfigurationGatewayProvider"/>, and exists for
 /// the same reason: services take providers, only providers take gateways.
+///
+/// Named by lookup rather than a bare property so the shape matches every other provider's --
+/// domain.Register(Name, implementation) elsewhere routes by the same ServiceOptionType a caller
+/// asks for here. This framework ships one implementation, named "Main"; a caller names it rather
+/// than the provider assuming it, so a second implementation is a routing change here, not a
+/// reshaped interface.
 /// </remarks>
 public interface IDataGatewayProvider
 {
-    /// <summary>Gets the data gateway.</summary>
-    /// <returns>The gateway, or a failure naming why none could be supplied.</returns>
-    IGenericResult<IDataGateway> Get();
+    /// <summary>Gets the data gateway registered under the given name.</summary>
+    /// <param name="name">The implementation's <c>ServiceOptionType</c> -- "Main" for the one this
+    /// framework ships.</param>
+    /// <returns>The gateway, or throws when none is registered under that name.</returns>
+    IDataGateway ByName(string name);
 }

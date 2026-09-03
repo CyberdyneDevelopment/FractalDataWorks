@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Logging;
 
-/// <summary>MessageLogging for <see cref="DataGatewayProvider"/>.</summary>
+/// <summary>MessageLogging for <see cref="MainDataGatewayProvider"/>.</summary>
 public static partial class DataGatewayProviderLog
 {
     /// <summary>Nothing registered a way to reach the gateway.</summary>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -32,7 +32,11 @@ namespace Fdw.Schema.Endpoints;
 /// </remarks>
 public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappingsRequest, List<FieldMappingResponsePayload>>
 {
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
     private readonly DataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<SaveSourceMappingsEndpointBase> _logger;
 
@@ -40,11 +44,11 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
     /// Initializes a new instance of the <see cref="SaveSourceMappingsEndpointBase"/> class.
     /// </summary>
     protected SaveSourceMappingsEndpointBase(
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         DataSetConfigurationProvider dataSetProvider,
         ILogger<SaveSourceMappingsEndpointBase> logger)
     {
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
         _dataSetProvider = dataSetProvider;
         _logger = logger ?? NullLogger<SaveSourceMappingsEndpointBase>.Instance;
     }
@@ -169,7 +173,7 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
         };
 
         var fieldMappingTarget = new DataStoreTarget(_dataSetProvider.DataStoreName, _dataSetProvider.PathName, "DataSetFieldMapping");
-        var existingResult = await _dataGateway.Execute<IEnumerable<FieldMappingDbRecord>>(existingCommand, fieldMappingTarget, ct).ConfigureAwait(false);
+        var existingResult = await Gateway.Execute<IEnumerable<FieldMappingDbRecord>>(existingCommand, fieldMappingTarget, ct).ConfigureAwait(false);
         if (existingResult.IsFailure)
         {
             return existingResult;
@@ -195,7 +199,7 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
                 }
             };
 
-            var retire = await _dataGateway.Execute<int>(updateCommand, fieldMappingTarget, ct).ConfigureAwait(false);
+            var retire = await Gateway.Execute<int>(updateCommand, fieldMappingTarget, ct).ConfigureAwait(false);
             if (retire.IsFailure)
             {
                 return retire;
@@ -230,7 +234,7 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
             var insertCommand = new InsertCommand<FieldMappingDbRecord>(newMapping);
 
             var fieldMappingTarget = new DataStoreTarget(_dataSetProvider.DataStoreName, _dataSetProvider.PathName, "DataSetFieldMapping");
-            var insertResult = await _dataGateway.Execute<int>(insertCommand, fieldMappingTarget, ct).ConfigureAwait(false);
+            var insertResult = await Gateway.Execute<int>(insertCommand, fieldMappingTarget, ct).ConfigureAwait(false);
 
             if (insertResult.IsFailure)
             {

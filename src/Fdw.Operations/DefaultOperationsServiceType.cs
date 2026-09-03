@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
@@ -61,7 +61,7 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
             builder.Services.TryAddScoped<IExecutionTracker>(sp =>
             {
                 var lf = sp.GetRequiredService<ILoggerFactory>();
-                var gatewayProvider = sp.GetRequiredService<IDataGateway>();
+                var gatewayProvider = sp.GetRequiredService<IDataGatewayProvider>();
                 var notificationProvider = sp.GetService<INotificationServiceProvider>();
                 var ruleProvider = sp.GetService<IServiceConfigurationProvider<NotificationRuleConfiguration>>();
                 return new ExecutionTrackingService(gatewayProvider, lf, OperationsServiceTypes.OperationalConnection, notificationProvider, ruleProvider);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -10,6 +10,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Messaging.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Services.Data;
 namespace Fdw.Services.Messaging.Tests;
 
 /// <summary>
@@ -19,6 +20,13 @@ namespace Fdw.Services.Messaging.Tests;
 /// </summary>
 public sealed class AccessRequestServiceTests
 {
+    // A stub rather than the real provider: this fixture is about what the service does with a
+    // gateway, not about how one is supplied.
+    private sealed class StubGatewayProvider(IDataGateway gateway) : IDataGatewayProvider
+    {
+        public IDataGateway ByName(string name) => gateway;
+    }
+
     private sealed record Fixture(AccessRequestService Service, Mock<IDataGateway> Gateway, Mock<IMessageService> MessageService);
 
     private static Fixture CreateService()
@@ -33,7 +41,7 @@ public sealed class AccessRequestServiceTests
                 new MessagingConfiguration { Name = "Messaging", DataStoreName = "OpsDb", PathName = "msg" }));
 
         var service = new AccessRequestService(
-            NullLogger<AccessRequestService>.Instance, gateway.Object, messaging.Object, messageService.Object);
+            NullLogger<AccessRequestService>.Instance, new StubGatewayProvider(gateway.Object), messaging.Object, messageService.Object);
         return new Fixture(service, gateway, messageService);
     }
 

@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using Fdw.MessageLogging;
 using Fdw.Messages;
 using Microsoft.Extensions.Logging;
 
+using Fdw.Services.Data.Abstractions;
 namespace Fdw.Services.Configuration.Logging;
 
 /// <summary>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -12,6 +12,7 @@ using Fdw.Services.Messaging.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Services.Data;
 namespace Fdw.Services.Messaging.Tests;
 
 /// <summary>
@@ -21,6 +22,13 @@ namespace Fdw.Services.Messaging.Tests;
 /// </summary>
 public sealed class MessageServiceTests
 {
+    // A stub rather than the real provider: this fixture is about what the service does with a
+    // gateway, not about how one is supplied.
+    private sealed class StubGatewayProvider(IDataGateway gateway) : IDataGatewayProvider
+    {
+        public IDataGateway ByName(string name) => gateway;
+    }
+
     private sealed record Fixture(
         MessageService Service,
         Mock<IDataGateway> Gateway,
@@ -46,7 +54,7 @@ public sealed class MessageServiceTests
                 new MessagingConfiguration { Name = "Messaging", DataStoreName = "OpsDb", PathName = "msg" }));
 
         var service = new MessageService(
-            NullLogger<MessageService>.Instance, gateway.Object, messaging.Object, hubContext.Object);
+            NullLogger<MessageService>.Instance, new StubGatewayProvider(gateway.Object), messaging.Object, hubContext.Object);
         return new Fixture(service, gateway, client, groups);
     }
 

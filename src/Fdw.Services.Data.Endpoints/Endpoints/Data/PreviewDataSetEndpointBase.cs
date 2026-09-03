@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,11 +34,11 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpointBase<PreviewDa
     /// <inheritdoc />
     protected PreviewDataSetEndpointBase(
         DataSetConfigurationProvider dataSetProvider,
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         ILogger<PreviewDataSetEndpointBase> logger)
     {
         _dataSetProvider = dataSetProvider;
-        DataGateway = dataGateway;
+        DataGateway = dataGateways.ByName("Main");
         Logger = logger ?? NullLogger<PreviewDataSetEndpointBase>.Instance;
     }
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -16,20 +16,22 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 public abstract class BulkPipelineStatusEndpointBase : EndpointWithoutRequest<BulkPipelineStatusResponse>
 {
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BulkPipelineStatusEndpointBase"/> class.
     /// </summary>
-    protected BulkPipelineStatusEndpointBase(IDataGateway dataGateway)
+    protected BulkPipelineStatusEndpointBase(IDataGatewayProvider dataGateways)
     {
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
     }
 
     /// <summary>
     /// Gets the data gateway.
     /// </summary>
-    protected IDataGateway DataGateway => _dataGateway;
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    protected IDataGateway DataGateway => _dataGateways.ByName("Main");
 
     /// <summary>
     /// Gets the logger instance. Resolved during HandleAsync.
@@ -65,7 +67,7 @@ public abstract class BulkPipelineStatusEndpointBase : EndpointWithoutRequest<Bu
         {
             var command = new QueryCommand<PipelineStatusRecord>();
 
-            var result = await _dataGateway.Execute<IEnumerable<PipelineStatusRecord>>(
+            var result = await DataGateway.Execute<IEnumerable<PipelineStatusRecord>>(
                 command, new DataStoreTarget("PlatformConfiguration", "etl", "Pipeline"), ct).ConfigureAwait(false);
             if (result.IsSuccess && result.Value != null)
             {

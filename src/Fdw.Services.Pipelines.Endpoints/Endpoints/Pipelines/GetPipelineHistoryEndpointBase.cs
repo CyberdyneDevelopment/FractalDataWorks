@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -20,18 +20,20 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 public abstract class GetPipelineHistoryEndpointBase : Endpoint<GetPipelineStatusRequest, List<PipelineExecutionRecord>>
 {
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GetPipelineHistoryEndpointBase"/> class.
     /// </summary>
-    protected GetPipelineHistoryEndpointBase(IDataGateway dataGateway)
+    protected GetPipelineHistoryEndpointBase(IDataGatewayProvider dataGateways)
     {
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
     }
 
     /// <summary>Gets the data gateway.</summary>
-    protected IDataGateway DataGateway => _dataGateway;
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    protected IDataGateway DataGateway => _dataGateways.ByName("Main");
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
     protected ILogger EndpointLogger { get; private set; } = null!;
@@ -86,7 +88,7 @@ public abstract class GetPipelineHistoryEndpointBase : Endpoint<GetPipelineStatu
             }
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<PipelineExecutionDbRecord>>(
+        var result = await DataGateway.Execute<IEnumerable<PipelineExecutionDbRecord>>(
             command, new DataStoreTarget(PipelineServiceTypes.OperationalConnection, "etl", "PipelineExecution"), ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)

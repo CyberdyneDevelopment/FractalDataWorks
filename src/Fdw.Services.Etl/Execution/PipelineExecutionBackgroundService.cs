@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Extensions;
@@ -85,7 +85,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             var executionTracker = scope.ServiceProvider.GetRequiredService<IExecutionTracker>();
             var pipelineProvider = scope.ServiceProvider
                 .GetRequiredService<IEtlPipelineProvider>();
-            var dataGateway = scope.ServiceProvider.GetRequiredService<IDataGateway>();
+            var dataGateways = scope.ServiceProvider.GetRequiredService<IDataGatewayProvider>();
             var broadcaster = scope.ServiceProvider.GetRequiredService<IPipelineStatusBroadcaster>();
 
             var orgId = await ResolveOwningOrg(scope.ServiceProvider, request, stoppingToken).ConfigureAwait(false);
@@ -93,7 +93,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             try
             {
                 await TransitionToRunning(executionTracker, broadcaster, request, orgId, _logger, stoppingToken).ConfigureAwait(false);
-                await RunPipeline(executionTracker, pipelineProvider, dataGateway, broadcaster, request, orgId, stoppingToken).ConfigureAwait(false);
+                await RunPipeline(executionTracker, pipelineProvider, dataGateways, broadcaster, request, orgId, stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
@@ -103,7 +103,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             catch (Exception ex)
             {
                 EtlLog.ExecutionExceptionInBackground(_logger, ex, request.PipelineName, request.ExecutionId);
-                await CompleteWithMetrics(dataGateway, executionTracker, broadcaster, _completionSignaler, _logger,
+                await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
                     request.ExecutionId, request.PipelineName, orgId,
                     false, "Exception", ex.Message, 0, 0, 0, 0).ConfigureAwait(false);
             }
@@ -191,7 +191,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
     private async Task RunPipeline(
         IExecutionTracker executionTracker,
         IEtlPipelineProvider pipelineProvider,
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         IPipelineStatusBroadcaster broadcaster,
         PipelineExecutionRequest request,
         Guid? orgId,
@@ -203,7 +203,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         {
             var errorMsg = pipelineResult.CurrentMessage ?? $"Pipeline '{request.PipelineName}' not found";
             EtlLog.ExecutionFailedInBackground(_logger, request.PipelineName, request.ExecutionId, errorMsg);
-            await CompleteWithMetrics(dataGateway, executionTracker, broadcaster, _completionSignaler, _logger,
+            await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
                 request.ExecutionId, request.PipelineName, orgId,
                 false, "PipelineNotFound", errorMsg, 0, 0, 0, 0).ConfigureAwait(false);
             return;
@@ -216,7 +216,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         {
             var metrics = executeResult.Value!;
 
-            await CompleteWithMetrics(dataGateway, executionTracker, broadcaster, _completionSignaler, _logger,
+            await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
                 request.ExecutionId, request.PipelineName, orgId,
                 true, "Success", null,
                 metrics.RecordsExtracted,
@@ -231,7 +231,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             EtlLog.ExecutionFailedInBackground(_logger, request.PipelineName, request.ExecutionId, errorMsg);
 
             // Metrics may be partially populated even on failure; treat as 0 when absent.
-            await CompleteWithMetrics(dataGateway, executionTracker, broadcaster, _completionSignaler, _logger,
+            await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
                 request.ExecutionId, request.PipelineName, orgId,
                 false, "ExecutionFailed", errorMsg, 0, 0, 0, 0).ConfigureAwait(false);
         }
@@ -261,7 +261,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
     }
 
     private static async Task CompleteWithMetrics(
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         IExecutionTracker executionTracker,
         IPipelineStatusBroadcaster broadcaster,
         IExecutionCompletionSignaler? completionSignaler,
@@ -306,7 +306,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             .Where("Id", executionId)
             .Value(updateRecord);
 
-        var updateResult = await dataGateway.Execute<int>(updateCommand, CancellationToken.None).ConfigureAwait(false);
+        var updateResult = await dataGateways.ByName("Main").Execute<int>(updateCommand, CancellationToken.None).ConfigureAwait(false);
         if (!updateResult.IsSuccess)
         {
             EtlLog.MetricsUpdateFailed(logger, executionId, updateResult.CurrentMessage);

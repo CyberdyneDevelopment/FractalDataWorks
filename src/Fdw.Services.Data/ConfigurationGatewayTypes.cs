@@ -146,7 +146,7 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
                 // read through, so asking for that configuration while building it would recurse.
                 string.Equals(connectionName, ServerTierConnectionName, System.StringComparison.Ordinal)
                     ? null
-                    : services.GetService<DataGatewayImplementationConfiguration>(),
+                    : services.GetService<MainDataGatewayConfiguration>(),
                 services.GetService<IAuthenticationContextAccessor>()));
     }
 

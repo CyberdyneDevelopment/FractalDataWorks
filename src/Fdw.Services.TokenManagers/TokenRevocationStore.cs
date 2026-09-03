@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -25,15 +25,19 @@ internal sealed class TokenRevocationStore : ITokenRevocationStore
     private const string PathName = "auth";
     private const string ContainerName = "RevokedAccessToken";
 
-    private readonly IDataGateway _gateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="TokenRevocationStore"/> class.</summary>
-    /// <param name="gateway">The gateway AuthDb is reached through.</param>
+    /// <param name="dataGateways">Supplies the gateway AuthDb is reached through.</param>
     /// <param name="logger">The logger.</param>
-    public TokenRevocationStore(IDataGateway gateway, ILogger<TokenRevocationStore>? logger = null)
+    public TokenRevocationStore(IDataGatewayProvider dataGateways, ILogger<TokenRevocationStore>? logger = null)
     {
-        _gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
+        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
         _logger = logger ?? NullLogger<TokenRevocationStore>.Instance;
     }
 
@@ -46,7 +50,7 @@ internal sealed class TokenRevocationStore : ITokenRevocationStore
             .Path(PathName)
             .Value(new RevokedAccessTokenEntry { Jti = jti, ExpiresAt = expiresAt });
 
-        var result = await _gateway.Execute<int>(call, cancellationToken).ConfigureAwait(false);
+        var result = await Gateway.Execute<int>(call, cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)
             return GenericResult.Failure(
                 RevocationLog.RevokeFailed(_logger, jti, result.CurrentMessage ?? "write failed"));
@@ -62,7 +66,7 @@ internal sealed class TokenRevocationStore : ITokenRevocationStore
             .Where(r => r.Jti).Equal(jti)
             .Build();
 
-        var result = await _gateway.Execute<IEnumerable<RevokedAccessTokenEntry>>(call, cancellationToken)
+        var result = await Gateway.Execute<IEnumerable<RevokedAccessTokenEntry>>(call, cancellationToken)
             .ConfigureAwait(false);
 
         if (result.IsFailure)

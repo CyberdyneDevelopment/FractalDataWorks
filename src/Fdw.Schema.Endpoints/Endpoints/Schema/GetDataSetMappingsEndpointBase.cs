@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Fdw.Results;
 using Fdw.Services.Data.Clients.Models;
 using System;
@@ -27,17 +27,21 @@ namespace Fdw.Schema.Endpoints;
 /// </summary>
 public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsRequest, List<FieldMappingResponsePayload>>
 {
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
     private readonly ILogger<GetDataSetMappingsEndpointBase> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GetDataSetMappingsEndpointBase"/> class.
     /// </summary>
-    /// <param name="dataGateway">The data gateway for database operations.</param>
+    /// <param name="dataGateways">The data gateway for database operations.</param>
     /// <param name="logger">The logger instance.</param>
-    protected GetDataSetMappingsEndpointBase(IDataGateway dataGateway, ILogger<GetDataSetMappingsEndpointBase> logger)
+    protected GetDataSetMappingsEndpointBase(IDataGatewayProvider dataGateways, ILogger<GetDataSetMappingsEndpointBase> logger)
     {
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
         _logger = logger;
     }
 
@@ -124,7 +128,7 @@ public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsReque
             }
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<DataSetRecord>>(
+        var result = await Gateway.Execute<IEnumerable<DataSetRecord>>(
             command, new DataStoreTarget("PlatformConfiguration", "data", "DataSet"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
@@ -150,7 +154,7 @@ public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsReque
             }
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
+        var result = await Gateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
             command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetSource"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
@@ -189,7 +193,7 @@ public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsReque
             }
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<FieldMappingDbRecord>>(
+        var result = await Gateway.Execute<IEnumerable<FieldMappingDbRecord>>(
             command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetFieldMapping"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {

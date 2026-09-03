@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -15,15 +15,15 @@ namespace Fdw.Calculations.Endpoints.CalculationEntities;
 public abstract class ExecuteCalculationEntityEndpointBase : Endpoint<ExecuteCalculationEntityRequest, ExecuteCalculationEntityResponse>
 {
     private readonly ICalculationEntityService _service;
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ExecuteCalculationEntityEndpointBase"/>.
     /// </summary>
-    protected ExecuteCalculationEntityEndpointBase(ICalculationEntityService service, IDataGateway dataGateway)
+    protected ExecuteCalculationEntityEndpointBase(ICalculationEntityService service, IDataGatewayProvider dataGateways)
     {
         _service = service;
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
     }
 
     /// <inheritdoc/>
@@ -79,5 +79,5 @@ public abstract class ExecuteCalculationEntityEndpointBase : Endpoint<ExecuteCal
     /// <summary>
     /// Creates the execution context for the calculation. Override to provide custom context.
     /// </summary>
-    protected virtual ICalculationContext CreateExecutionContext() => new CalculationContext(_dataGateway);
+    protected virtual ICalculationContext CreateExecutionContext() => new CalculationContext(_dataGateways);
 }

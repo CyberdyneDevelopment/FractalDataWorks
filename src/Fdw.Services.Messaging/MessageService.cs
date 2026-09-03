@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -31,7 +31,11 @@ public sealed class MessageService : IMessageService
     private const string RecipientContainer = "MessageRecipient";
 
     private readonly ILogger<MessageService> _logger;
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
     private readonly IMessagingConfigurationProvider _messaging;
     private readonly IHubContext<MessageHub, IMessageHubClient> _hubContext;
 
@@ -39,17 +43,17 @@ public sealed class MessageService : IMessageService
     /// Initializes a new instance of the <see cref="MessageService"/> class.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
-    /// <param name="dataGateway">The data gateway for message data access.</param>
+    /// <param name="dataGateways">The data gateway for message data access.</param>
     /// <param name="messaging">Resolves where this deployment keeps its messages.</param>
     /// <param name="hubContext">The strongly-typed SignalR hub context for real-time message push.</param>
     public MessageService(
         ILogger<MessageService> logger,
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         IMessagingConfigurationProvider messaging,
         IHubContext<MessageHub, IMessageHubClient> hubContext)
     {
         _logger = logger ?? NullLogger<MessageService>.Instance;
-        _dataGateway = dataGateway ?? throw new ArgumentNullException(nameof(dataGateway));
+        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
         _messaging = messaging ?? throw new ArgumentNullException(nameof(messaging));
         _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
     }
@@ -97,7 +101,7 @@ public sealed class MessageService : IMessageService
                 .DataStore(location.Value.DataStoreName).Path(location.Value.PathName)
                 .Value(BuildInsertRecord(request, messageId, now));
 
-            var insertResult = await _dataGateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
+            var insertResult = await Gateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
 
             if (!insertResult.IsSuccess)
             {
@@ -166,7 +170,7 @@ public sealed class MessageService : IMessageService
                 cursor = cursorResult.Value;
             }
 
-            var result = await _dataGateway
+            var result = await Gateway
                 .Execute<IEnumerable<MessagePayload>>(BuildWindow(builder, query, cursor), cancellationToken)
                 .ConfigureAwait(false);
 
@@ -220,7 +224,7 @@ public sealed class MessageService : IMessageService
                 .Where(m => m.Id).Equal(messageId)
                 .Build();
 
-            var result = await _dataGateway.Execute<IEnumerable<MessagePayload>>(command, cancellationToken)
+            var result = await Gateway.Execute<IEnumerable<MessagePayload>>(command, cancellationToken)
                 .ConfigureAwait(false);
 
             if (!result.IsSuccess)
@@ -265,7 +269,7 @@ public sealed class MessageService : IMessageService
                 .Where(m => m.ReadAt).IsNull()
                 .Build();
 
-            var result = await _dataGateway.Execute<IEnumerable<MessagePayload>>(command, cancellationToken)
+            var result = await Gateway.Execute<IEnumerable<MessagePayload>>(command, cancellationToken)
                 .ConfigureAwait(false);
 
             if (!result.IsSuccess)
@@ -311,7 +315,7 @@ public sealed class MessageService : IMessageService
                     ModifiedAt = DateTime.UtcNow
                 });
 
-            var result = await _dataGateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
+            var result = await Gateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {
@@ -356,7 +360,7 @@ public sealed class MessageService : IMessageService
                     ModifiedAt = DateTime.UtcNow
                 });
 
-            var result = await _dataGateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
+            var result = await Gateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {
@@ -404,7 +408,7 @@ public sealed class MessageService : IMessageService
                     ModifiedAt = DateTime.UtcNow
                 });
 
-            var result = await _dataGateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
+            var result = await Gateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {
@@ -449,7 +453,7 @@ public sealed class MessageService : IMessageService
                     ModifiedAt = DateTime.UtcNow
                 });
 
-            var result = await _dataGateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
+            var result = await Gateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {
@@ -496,7 +500,7 @@ public sealed class MessageService : IMessageService
                     ModifiedAt = now
                 });
 
-            var result = await _dataGateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
+            var result = await Gateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {
@@ -586,7 +590,7 @@ public sealed class MessageService : IMessageService
             .DataStore(location.DataStoreName).Path(location.PathName)
             .Value(recipientRecord);
 
-        var recipientResult = await _dataGateway.Execute<int>(recipientCommand, cancellationToken).ConfigureAwait(false);
+        var recipientResult = await Gateway.Execute<int>(recipientCommand, cancellationToken).ConfigureAwait(false);
         if (!recipientResult.IsSuccess)
         {
             MessagingLog.MessageUpdateFailed(

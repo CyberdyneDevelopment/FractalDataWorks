@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -32,16 +32,20 @@ public sealed class ConnectionHealthService : IConnectionHealthService
     private const string Container = "ConnectionHealthCheck";
 
     private readonly ILogger<ConnectionHealthService> _logger;
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionHealthService"/> class.
     /// </summary>
-    /// <param name="dataGateway">The data gateway for health check history persistence.</param>
+    /// <param name="dataGateways">The data gateway for health check history persistence.</param>
     /// <param name="logger">Optional logger; falls back to <see cref="NullLogger{T}"/>.</param>
-    public ConnectionHealthService(IDataGateway dataGateway, ILogger<ConnectionHealthService>? logger = null)
+    public ConnectionHealthService(IDataGatewayProvider dataGateways, ILogger<ConnectionHealthService>? logger = null)
     {
-        _dataGateway = dataGateway ?? throw new ArgumentNullException(nameof(dataGateway));
+        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
         _logger = logger ?? NullLogger<ConnectionHealthService>.Instance;
     }
 
@@ -72,7 +76,7 @@ public sealed class ConnectionHealthService : IConnectionHealthService
                 .DataStore(DataStoreName).Path(PathName)
                 .Value(insertRecord);
 
-            var insertResult = await _dataGateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
+            var insertResult = await Gateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
 
             if (!insertResult.IsSuccess)
             {
@@ -108,7 +112,7 @@ public sealed class ConnectionHealthService : IConnectionHealthService
                 .Where(r => r.ConnectionId).Equal(connectionId)
                 .Build();
 
-            var result = await _dataGateway.Execute<IEnumerable<ConnectionHealthCheckRecord>>(command, cancellationToken)
+            var result = await Gateway.Execute<IEnumerable<ConnectionHealthCheckRecord>>(command, cancellationToken)
                 .ConfigureAwait(false);
 
             if (!result.IsSuccess)

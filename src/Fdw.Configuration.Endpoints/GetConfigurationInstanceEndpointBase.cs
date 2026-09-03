@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -20,17 +20,21 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
     private static readonly HashSet<string> SystemFields = new(StringComparer.OrdinalIgnoreCase)
         { "Id", "Name", "Type", "ServiceType", "CreatedAt", "ModifiedAt" };
 
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
     private readonly IConfigurationContainerLookup _containerLookup;
     private readonly ILogger<GetConfigurationInstanceEndpointBase> _logger;
 
     /// <summary>Initializes a new instance of the endpoint.</summary>
     protected GetConfigurationInstanceEndpointBase(
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         IConfigurationContainerLookup containerLookup,
         ILogger<GetConfigurationInstanceEndpointBase> logger)
     {
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
         _containerLookup = containerLookup;
         _logger = logger;
     }
@@ -96,7 +100,7 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
 
             try
             {
-                var result = await _dataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, ct)
+                var result = await Gateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, ct)
                     .ConfigureAwait(false);
 
                 if (!result.IsSuccess || result.Value?.Any() != true)

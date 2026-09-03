@@ -20,7 +20,7 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
 {
     private readonly ILogger<StreamingPipelineFactory> _logger;
     private readonly ILoggerFactory _loggerFactory;
-    private readonly IDataGateway? _dataGateway;
+    private readonly IDataGatewayProvider? _dataGateways;
     private readonly IConnectionProvider? _connectionProvider;
 
     /// <summary>
@@ -28,17 +28,17 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
     /// </summary>
     /// <param name="logger">The logger for factory operations.</param>
     /// <param name="loggerFactory">The logger factory for creating pipeline loggers.</param>
-    /// <param name="dataGateway">The data gateway for pipeline execution (optional for backward compatibility).</param>
+    /// <param name="dataGateways">The data gateway for pipeline execution (optional for backward compatibility).</param>
     /// <param name="connectionProvider">The connection provider for transforms (optional), injected lazily.</param>
     public StreamingPipelineFactory(
         ILogger<StreamingPipelineFactory> logger,
         ILoggerFactory loggerFactory,
-        IDataGateway? dataGateway = null,
+        IDataGatewayProvider? dataGateways = null,
         IConnectionProvider? connectionProvider = null)
     {
         _logger = logger;
         _loggerFactory = loggerFactory;
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
         _connectionProvider = connectionProvider;
     }
 
@@ -53,7 +53,7 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
             var pipeline = new StreamingPipeline(
                 configuration,
                 pipelineLogger,
-                _dataGateway,
+                _dataGateways,
                 calculationEngine: null,
                 _connectionProvider);
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -34,7 +34,11 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     private const string ContainerNameExecutionItem = "ExecutionItem";
     private const string ContainerNameExecutionEvent = "ExecutionEvent";
 
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
     private readonly ILogger _logger;
     private readonly string? _dataStoreName;
     private readonly INotificationServiceProvider? _notificationProvider;
@@ -43,7 +47,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     /// <summary>
     /// Initializes a new instance of the <see cref="ExecutionTrackingService"/> class.
     /// </summary>
-    /// <param name="dataGateway">The data gateway for persistence.</param>
+    /// <param name="dataGateways">The data gateway for persistence.</param>
     /// <param name="loggerFactory">Logger factory.</param>
     /// <param name="dataStoreName">
     /// The store the tracker reads and writes, or null when the host has not named one. Null is
@@ -54,13 +58,13 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     /// <param name="notificationProvider">Optional notification service provider. When null, notification emission is skipped.</param>
     /// <param name="notificationRuleProvider">Optional notification rule configuration provider. When null, notification emission is skipped.</param>
     public ExecutionTrackingService(
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         ILoggerFactory loggerFactory,
         string? dataStoreName,
         INotificationServiceProvider? notificationProvider = null,
         IServiceConfigurationProvider<NotificationRuleConfiguration>? notificationRuleProvider = null)
     {
-        _dataGateway = dataGateway ?? throw new ArgumentNullException(nameof(dataGateway));
+        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
         _logger = loggerFactory?.CreateLogger<ExecutionTrackingService>()
             ?? throw new ArgumentNullException(nameof(loggerFactory));
         _dataStoreName = dataStoreName;
@@ -339,7 +343,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
             }
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<ExecutionEvent>>(
+        var result = await Gateway.Execute<IEnumerable<ExecutionEvent>>(
             queryCommand, TargetFor(ContainerNameExecutionEvent), cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
@@ -386,7 +390,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
             }
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<ExecutionItem>>(
+        var result = await Gateway.Execute<IEnumerable<ExecutionItem>>(
             queryCommand, TargetFor(ContainerNameExecutionItem), cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
@@ -433,7 +437,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
             }
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<ExecutionItem>>(
+        var result = await Gateway.Execute<IEnumerable<ExecutionItem>>(
             queryCommand, TargetFor(ContainerNameExecutionItem), cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
@@ -492,7 +496,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
             Filter = filter
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<ExecutionItem>>(
+        var result = await Gateway.Execute<IEnumerable<ExecutionItem>>(
             queryCommand, TargetFor(ContainerNameExecutionItem), cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
             return result.ToNewResult<IPagedResponse<IExecutionItem>>();
@@ -595,7 +599,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         ExecutionItem poco,
         CancellationToken cancellationToken)
     {
-        var insertResult = await _dataGateway.Execute<int>(
+        var insertResult = await Gateway.Execute<int>(
             new InsertCommand<ExecutionItem>(poco),
             TargetFor(ContainerNameExecutionItem),
             cancellationToken).ConfigureAwait(false);
@@ -650,7 +654,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         Guid executionItemId,
         CancellationToken cancellationToken)
     {
-        var updateResult = await _dataGateway.Execute<int>(
+        var updateResult = await Gateway.Execute<int>(
             new UpdateCommand<ExecutionItem>(item)
             {
                 Filter = new FilterExpression
@@ -691,7 +695,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
             }
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<ExecutionItem>>(
+        var result = await Gateway.Execute<IEnumerable<ExecutionItem>>(
             queryCommand, TargetFor(ContainerNameExecutionItem), cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
@@ -735,7 +739,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
             Paging = new PagingExpression { Skip = 0, Take = 1 }
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<ExecutionEvent>>(
+        var result = await Gateway.Execute<IEnumerable<ExecutionEvent>>(
             queryCommand, TargetFor(ContainerNameExecutionEvent), cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
@@ -971,7 +975,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
             data,
             actor);
 
-        var insertResult = await _dataGateway.Execute<int>(
+        var insertResult = await Gateway.Execute<int>(
             new InsertCommand<ExecutionEvent>(eventPoco),
             TargetFor(ContainerNameExecutionEvent),
             cancellationToken).ConfigureAwait(false);

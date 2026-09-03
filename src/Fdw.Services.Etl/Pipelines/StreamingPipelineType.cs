@@ -118,7 +118,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             builder.Services.AddScoped<IStreamingPipelineFactory>(sp => new StreamingPipelineFactory(
                 sp.GetRequiredService<ILogger<StreamingPipelineFactory>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
-                sp.GetService<IDataGateway>(),
+                sp.GetService<IDataGatewayProvider>(),
                 sp.GetService<IConnectionProvider>()));
 
             builder.Services.AddSingleton(sp => new ImplementationConfigurationProviderBase<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>(

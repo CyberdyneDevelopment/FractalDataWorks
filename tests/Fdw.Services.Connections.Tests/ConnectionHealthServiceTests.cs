@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -10,6 +10,7 @@ using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Services.Data;
 namespace Fdw.Services.Connections.Tests;
 
 /// <summary>
@@ -23,7 +24,7 @@ public sealed class ConnectionHealthServiceTests
     private static Fixture CreateService()
     {
         var gateway = new Mock<IDataGateway>(MockBehavior.Loose);
-        var service = new ConnectionHealthService(gateway.Object, NullLogger<ConnectionHealthService>.Instance);
+        var service = new ConnectionHealthService(new MainDataGatewayProvider(gateway.Object), NullLogger<ConnectionHealthService>.Instance);
         return new Fixture(service, gateway);
     }
 

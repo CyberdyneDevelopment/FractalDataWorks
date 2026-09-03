@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -22,7 +22,11 @@ namespace Fdw.Web.Search.Endpoints;
 /// </summary>
 public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchResponse>
 {
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
     private readonly ConnectionConfigurationProvider _configProvider;
     private readonly ILogger<SearchEndpointBase> _logger;
 
@@ -30,11 +34,11 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
     /// Initializes a new instance of the <see cref="SearchEndpointBase"/> class.
     /// </summary>
     protected SearchEndpointBase(
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         ConnectionConfigurationProvider configProvider,
         ILogger<SearchEndpointBase> logger)
     {
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
         _configProvider = configProvider;
         _logger = logger;
     }
@@ -137,7 +141,7 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
         {
             var command = DataQuery.From<SearchablePipelineRecord>("PlatformConfiguration", "pipe", "Pipeline").Build();
 
-            var dbResult = await _dataGateway.Execute<IEnumerable<SearchablePipelineRecord>>(command, ct).ConfigureAwait(false);
+            var dbResult = await Gateway.Execute<IEnumerable<SearchablePipelineRecord>>(command, ct).ConfigureAwait(false);
             if (dbResult.IsSuccess && dbResult.Value != null)
             {
                 var dbMatches = dbResult.Value
@@ -210,7 +214,7 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
         {
             var command = DataQuery.From<SearchableDataSetRecord>("PlatformConfiguration", "data", "DataSet").Build();
 
-            var dbResult = await _dataGateway.Execute<IEnumerable<SearchableDataSetRecord>>(command, ct).ConfigureAwait(false);
+            var dbResult = await Gateway.Execute<IEnumerable<SearchableDataSetRecord>>(command, ct).ConfigureAwait(false);
             if (dbResult.IsSuccess && dbResult.Value != null)
             {
                 results = dbResult.Value
@@ -252,7 +256,7 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
                 .Where("IsDeleted", false)
                 .Build();
 
-            var dbResult = await _dataGateway.Execute<IEnumerable<SearchableScheduleRecord>>(command, ct).ConfigureAwait(false);
+            var dbResult = await Gateway.Execute<IEnumerable<SearchableScheduleRecord>>(command, ct).ConfigureAwait(false);
             if (dbResult.IsSuccess && dbResult.Value != null)
             {
                 results = dbResult.Value

@@ -7,7 +7,7 @@ namespace Fdw.Services.Data;
 /// <summary>
 /// Configuration for the DataGateway service.
 /// </summary>
-public sealed class DataGatewayImplementationConfiguration : IDataGatewayImplementationConfiguration
+public sealed class MainDataGatewayConfiguration : IDataGatewayImplementationConfiguration
 {
     /// <inheritdoc/>
     public Guid Id { get; set; } = Guid.CreateVersion7();

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -34,7 +34,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 {
     private readonly BatchCopyPipelineConfiguration _configuration;
     private readonly ILogger<BatchCopyPipeline> _logger;
-    private readonly IDataGateway? _dataGateway;
+    private readonly IDataGatewayProvider? _dataGateways;
     private readonly object? _calculationEngine;
     private readonly IConnectionProvider? _connectionProvider;
     private readonly IDataStoreProvider? _dataStoreProvider;
@@ -46,7 +46,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     /// </summary>
     /// <param name="configuration">The pipeline configuration.</param>
     /// <param name="logger">The logger instance.</param>
-    /// <param name="dataGateway">The data gateway for executing commands.</param>
+    /// <param name="dataGateways">The data gateway for executing commands.</param>
     /// <param name="calculationEngine">The calculation engine for transforms (optional).</param>
     /// <param name="connectionProvider">The connection provider for feature-detecting write capabilities (optional).</param>
     /// <param name="dataStoreProvider">The data store provider for resolving container metadata (optional; required for HTTP record writer path).</param>
@@ -54,7 +54,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     public BatchCopyPipeline(
         BatchCopyPipelineConfiguration configuration,
         ILogger<BatchCopyPipeline> logger,
-        IDataGateway? dataGateway = null,
+        IDataGatewayProvider? dataGateways = null,
         object? calculationEngine = null,
         IConnectionProvider? connectionProvider = null,
         IDataStoreProvider? dataStoreProvider = null,
@@ -63,7 +63,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     {
         _configuration = configuration;
         _logger = logger;
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
         _calculationEngine = calculationEngine;
         _connectionProvider = connectionProvider;
         _dataStoreProvider = dataStoreProvider;
@@ -105,7 +105,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         {
             EtlLog.ExecutionStarted(_logger, Name, executionId);
 
-            if (_dataGateway == null)
+            if (_dataGateways == null)
             {
                 return GenericResult<IEtlPipelineExecutionResult>.Failure(
                     EtlLog.ExecutionFailed(_logger, Name, executionId, "DataGateway is required for pipeline execution"));
@@ -115,7 +115,18 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
                 ? Math.Min(_configuration.BatchSize, options.MaxRowsPerSource)
                 : _configuration.BatchSize;
 
-            var phaseResult = await ExecutePhases(_dataGateway, options, effectiveBatchSize, result, cancellationToken).ConfigureAwait(false);
+            IDataGateway gateway;
+            try
+            {
+                gateway = _dataGateways.ByName("Main");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return GenericResult<IEtlPipelineExecutionResult>.Failure(
+                    EtlLog.ExecutionFailed(_logger, Name, executionId, ex.Message));
+            }
+
+            var phaseResult = await ExecutePhases(gateway, options, effectiveBatchSize, result, cancellationToken).ConfigureAwait(false);
             if (!phaseResult.IsSuccess)
             {
                 return phaseResult;
@@ -149,13 +160,13 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     }
 
     private async Task<IGenericResult<IEtlPipelineExecutionResult>> ExecutePhases(
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         PipelineExecutionOptions options,
         int effectiveBatchSize,
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
     {
-        var extractResult = await ExtractRecords(dataGateway, effectiveBatchSize, result, cancellationToken).ConfigureAwait(false);
+        var extractResult = await ExtractRecords(gateway, effectiveBatchSize, result, cancellationToken).ConfigureAwait(false);
         if (!extractResult.IsSuccess)
         {
             result.Complete();
@@ -164,7 +175,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 
         var records = extractResult.Value!;
 
-        var transformResult = await TransformRecords(dataGateway, records, result, cancellationToken).ConfigureAwait(false);
+        var transformResult = await TransformRecords(gateway, records, result, cancellationToken).ConfigureAwait(false);
         if (!transformResult.IsSuccess)
         {
             result.Complete();
@@ -181,7 +192,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
             return GenericResult<IEtlPipelineExecutionResult>.Success(result);
         }
 
-        var loadResult = await LoadRecords(dataGateway, transformedRecords, result, cancellationToken).ConfigureAwait(false);
+        var loadResult = await LoadRecords(gateway, transformedRecords, result, cancellationToken).ConfigureAwait(false);
         if (!loadResult.IsSuccess)
         {
             result.Complete();
@@ -193,7 +204,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     }
 
     private async Task<IGenericResult<List<IDictionary<string, object?>>>> ExtractRecords(
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         int effectiveBatchSize,
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
@@ -224,14 +235,14 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
                 if (string.Equals(_configuration.SourceKind.Name, "DataSet", StringComparison.Ordinal))
                 {
                     // ELT path: resolve via dataset dispatch (carries store→path→container + RecordSelector).
-                    batchResult = await ExtractBatchFromDataSet(dataGateway, skip, effectiveBatchSize, cancellationToken).ConfigureAwait(false);
+                    batchResult = await ExtractBatchFromDataSet(gateway, skip, effectiveBatchSize, cancellationToken).ConfigureAwait(false);
                 }
                 else if (string.Equals(_configuration.SourceKind.Name, "Connection", StringComparison.Ordinal))
                 {
                     // ETL path: read directly from the physical connection + container. B3 HTTP branch
                     // will add its own logic inside ExtractBatchFromConnection when the HTTP connection
                     // type is detected. This method is the single extension point for connection-based reads.
-                    batchResult = await ExtractBatchFromConnection(dataGateway, skip, effectiveBatchSize, cancellationToken).ConfigureAwait(false);
+                    batchResult = await ExtractBatchFromConnection(gateway, skip, effectiveBatchSize, cancellationToken).ConfigureAwait(false);
                 }
                 else
                 {
@@ -275,7 +286,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     // ELT path: source is a pre-defined logical DataSet — resolved through the DataSet dispatch,
     // the same read path the dataset-query endpoint uses. Connection is taken from the DataSet source.
     private async Task<IGenericResult<List<IDictionary<string, object?>>>> ExtractBatchFromDataSet(
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         int skip,
         int effectiveBatchSize,
         CancellationToken cancellationToken)
@@ -296,7 +307,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
             }
         };
 
-        var queryResult = await dataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(
+        var queryResult = await gateway.Execute<IEnumerable<Dictionary<string, object?>>>(
             queryCommand, new DataSetTarget(_configuration.SourceDataSet), cancellationToken).ConfigureAwait(false);
 
         if (!queryResult.IsSuccess)
@@ -315,7 +326,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     // once the HTTP connection type is available (connection-type detection stays below the
     // connection layer — no switch on connection type here; the gateway routes accordingly).
     private async Task<IGenericResult<List<IDictionary<string, object?>>>> ExtractBatchFromConnection(
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         int skip,
         int effectiveBatchSize,
         CancellationToken cancellationToken)
@@ -343,7 +354,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
             }
         };
 
-        var queryResult = await dataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(
+        var queryResult = await gateway.Execute<IEnumerable<Dictionary<string, object?>>>(
             queryCommand,
             new DataStoreTarget(_configuration.SourceConnectionName, null, _configuration.SourceContainerPath!),
             cancellationToken).ConfigureAwait(false);
@@ -360,7 +371,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     }
 
     private async Task<IGenericResult<List<IDictionary<string, object?>>>> TransformRecords(
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         List<IDictionary<string, object?>> records,
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
@@ -393,7 +404,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
                 variables: new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase),
                 calculationEngine: _calculationEngine,
                 connectionProvider: _connectionProvider,
-                dataGateway: dataGateway);
+                dataGateway: gateway);
 
             var loopResult = await TransformStepFold(
                 records, orderedTransforms, transformContext, result, cancellationToken).ConfigureAwait(false);
@@ -473,7 +484,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     }
 
     private async Task<IGenericResult> LoadRecords(
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         List<IDictionary<string, object?>> records,
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
@@ -505,7 +516,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
                 // ELT path: write via DataSet dispatch (carries store→path→container address).
                 if (_configuration.TruncateBeforeLoad)
                 {
-                    var truncateResult = await TruncateDataSet(dataGateway, cancellationToken).ConfigureAwait(false);
+                    var truncateResult = await TruncateDataSet(gateway, cancellationToken).ConfigureAwait(false);
                     if (!truncateResult.IsSuccess)
                     {
                         loadStopwatch.Stop();
@@ -513,7 +524,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
                     }
                 }
 
-                var totalLoaded = await LoadToDataSet(dataGateway, records, result, cancellationToken).ConfigureAwait(false);
+                var totalLoaded = await LoadToDataSet(gateway, records, result, cancellationToken).ConfigureAwait(false);
                 if (!totalLoaded.IsSuccess)
                 {
                     loadStopwatch.Stop();
@@ -531,7 +542,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
                 // ETL path: write directly to the physical connection + container.
                 if (_configuration.TruncateBeforeLoad)
                 {
-                    var truncateResult = await TruncateConnection(dataGateway, cancellationToken).ConfigureAwait(false);
+                    var truncateResult = await TruncateConnection(gateway, cancellationToken).ConfigureAwait(false);
                     if (!truncateResult.IsSuccess)
                     {
                         loadStopwatch.Stop();
@@ -539,7 +550,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
                     }
                 }
 
-                var totalLoaded = await LoadToConnection(dataGateway, records, result, cancellationToken).ConfigureAwait(false);
+                var totalLoaded = await LoadToConnection(gateway, records, result, cancellationToken).ConfigureAwait(false);
                 if (!totalLoaded.IsSuccess)
                 {
                     loadStopwatch.Stop();
@@ -569,7 +580,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     // ELT path: destination is a single-source DataSet sink. Truncate is forwarded through the DataSet
     // dispatch which carries the full store→path→container address.
     private async Task<IGenericResult> TruncateDataSet(
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_configuration.DestinationDataSet))
@@ -578,7 +589,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
                 EtlLog.LoadFailed(_logger, Name, "DestinationDataSet is required when DestinationKind is DataSet"));
         }
 
-        var truncateResult = await dataGateway.Execute<int>(
+        var truncateResult = await gateway.Execute<int>(
             new TruncateCommand(), new DataSetTarget(_configuration.DestinationDataSet), cancellationToken).ConfigureAwait(false);
         if (!truncateResult.IsSuccess)
         {
@@ -591,7 +602,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 
     // ELT path: bulk insert via DataSet dispatch.
     private async Task<IGenericResult<int>> LoadToDataSet(
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         List<IDictionary<string, object?>> records,
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
@@ -613,7 +624,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var insertResult = await dataGateway.Execute<int>(
+            var insertResult = await gateway.Execute<int>(
                 new BulkInsertCommand<IDictionary<string, object?>>(batch),
                 new DataSetTarget(_configuration.DestinationDataSet),
                 cancellationToken).ConfigureAwait(false);
@@ -639,7 +650,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 
     // ETL path: truncate directly on the physical connection + container.
     private async Task<IGenericResult> TruncateConnection(
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_configuration.DestinationConnectionName))
@@ -656,7 +667,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 
         EtlLog.LoadingToConnection(_logger, Name, _configuration.DestinationConnectionName, _configuration.DestinationContainerPath!);
 
-        var truncateResult = await dataGateway.Execute<int>(
+        var truncateResult = await gateway.Execute<int>(
             new TruncateCommand(),
             new DataStoreTarget(_configuration.DestinationConnectionName, null, _configuration.DestinationContainerPath!),
             cancellationToken).ConfigureAwait(false);
@@ -676,7 +687,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     //   fallthrough                  → BulkInsertCommand (SQL/tabular connections)
     // Fail loud if neither capability is present (NO FALLBACKS).
     private async Task<IGenericResult<int>> LoadToConnection(
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         List<IDictionary<string, object?>> records,
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
@@ -723,7 +734,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var insertResult = await dataGateway.Execute<int>(
+            var insertResult = await gateway.Execute<int>(
                 new BulkInsertCommand<IDictionary<string, object?>>(batch),
                 new DataStoreTarget(_configuration.DestinationConnectionName, null, _configuration.DestinationContainerPath!),
                 cancellationToken).ConfigureAwait(false);

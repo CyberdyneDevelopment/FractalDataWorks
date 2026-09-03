@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +19,7 @@ using Moq;
 using Shouldly;
 using Xunit;
 
+using Fdw.Services.Data;
 namespace Fdw.Operations.Tests.Execution;
 
 /// <summary>
@@ -142,7 +143,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
                 new Mock<INotificationResult>().Object));
 
         var sut = new ExecutionTrackingService(
-            _mockGateway.Object,
+            new MainDataGatewayProvider(_mockGateway.Object),
             LoggerFactory,
             "OpsDb",
             _mockNotificationProvider.Object,
@@ -187,7 +188,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
                 new List<NotificationRuleConfiguration> { rule }));
 
         var sut = new ExecutionTrackingService(
-            _mockGateway.Object,
+            new MainDataGatewayProvider(_mockGateway.Object),
             LoggerFactory,
             "OpsDb",
             _mockNotificationProvider.Object,
@@ -231,7 +232,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
                 new List<NotificationRuleConfiguration> { disabledRule }));
 
         var sut = new ExecutionTrackingService(
-            _mockGateway.Object,
+            new MainDataGatewayProvider(_mockGateway.Object),
             LoggerFactory,
             "OpsDb",
             _mockNotificationProvider.Object,
@@ -277,7 +278,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
                 new List<NotificationRuleConfiguration> { scopedRule }));
 
         var sut = new ExecutionTrackingService(
-            _mockGateway.Object,
+            new MainDataGatewayProvider(_mockGateway.Object),
             LoggerFactory,
             "OpsDb",
             _mockNotificationProvider.Object,
@@ -308,7 +309,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
         SetupGatewayForComplete(item);
 
         var sut = new ExecutionTrackingService(
-            _mockGateway.Object,
+            new MainDataGatewayProvider(_mockGateway.Object),
             LoggerFactory,
             "OpsDb",
             notificationProvider: null,
@@ -352,7 +353,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
             .ReturnsAsync(GenericResult<IPlatformNotification>.Success(_mockNotificationSvc.Object));
 
         var sut = new ExecutionTrackingService(
-            _mockGateway.Object,
+            new MainDataGatewayProvider(_mockGateway.Object),
             LoggerFactory,
             "OpsDb",
             _mockNotificationProvider.Object,
@@ -397,7 +398,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
             .ReturnsAsync(GenericResult<INotificationResult>.Failure(new GenericMessage("Send failed")));
 
         var sut = new ExecutionTrackingService(
-            _mockGateway.Object,
+            new MainDataGatewayProvider(_mockGateway.Object),
             LoggerFactory,
             "OpsDb",
             _mockNotificationProvider.Object,

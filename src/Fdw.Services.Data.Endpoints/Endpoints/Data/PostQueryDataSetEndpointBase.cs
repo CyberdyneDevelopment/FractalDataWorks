@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -26,7 +26,7 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class PostQueryDataSetEndpointBase : Endpoint<PostQueryDataSetRequest, DataSetQueryResponse>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
 
     /// <summary>Gets the logger.</summary>
     protected new ILogger<PostQueryDataSetEndpointBase> Logger { get; }
@@ -34,11 +34,11 @@ public abstract class PostQueryDataSetEndpointBase : Endpoint<PostQueryDataSetRe
     /// <inheritdoc cref="PostQueryDataSetEndpointBase"/>
     protected PostQueryDataSetEndpointBase(
         DataSetConfigurationProvider dataSetProvider,
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         ILogger<PostQueryDataSetEndpointBase> logger)
     {
         _dataSetProvider = dataSetProvider;
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
         Logger = logger ?? NullLogger<PostQueryDataSetEndpointBase>.Instance;
     }
 
@@ -136,7 +136,7 @@ public abstract class PostQueryDataSetEndpointBase : Endpoint<PostQueryDataSetRe
             Filter = BuildFilter(appliedFilters)
         };
 
-        var queryResult = await _dataGateway
+        var queryResult = await _dataGateways.ByName("Main")
             .Execute<IEnumerable<IDataRow>>(
                 command,
                 new DataStoreTarget(primarySource.DataStoreName, primarySource.PathValue, primarySource.ContainerName),

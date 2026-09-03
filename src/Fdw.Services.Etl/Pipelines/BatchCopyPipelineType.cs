@@ -117,7 +117,7 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
             builder.Services.AddScoped<IBatchCopyPipelineFactory>(sp => new BatchCopyPipelineFactory(
                 sp.GetRequiredService<ILogger<BatchCopyPipelineFactory>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
-                sp.GetService<IDataGateway>(),
+                sp.GetService<IDataGatewayProvider>(),
                 sp.GetService<IConnectionProvider>(),
                 sp.GetService<IDataStoreProvider>()));
 

@@ -25,12 +25,12 @@ namespace Fdw.Services.Data;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [ServiceTypeOption(typeof(DataGatewayServiceTypes), "Main")]
-public sealed class DataGatewayServiceType : DataGatewayTypeBase<IGenericService, IDataGatewayFactory>
+public sealed class MainDataGatewayServiceTypeOption : DataGatewayTypeBase<IGenericService, IDataGatewayFactory>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="DataGatewayServiceType"/> class.
+    /// Initializes a new instance of the <see cref="MainDataGatewayServiceTypeOption"/> class.
     /// </summary>
-    public DataGatewayServiceType()
+    public MainDataGatewayServiceTypeOption()
         : base(
             "Main",
             "DataGateway:Main",
@@ -43,15 +43,15 @@ public sealed class DataGatewayServiceType : DataGatewayTypeBase<IGenericService
         Initialization((host, loggerFactory) =>
         {
             host.Services.GetRequiredService<IDataGatewayConfigurationProvider>()
-                .Register(Name, host.Services.GetRequiredService<DataGatewayImplementationConfigurationProvider>());
+                .Register(Name, host.Services.GetRequiredService<MainDataGatewayConfigurationProvider>());
             return GenericResult<IHost>.Success(host);
         });
 
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<DataGatewayImplementationConfigurationProvider>(sp =>
-                new DataGatewayImplementationConfigurationProvider(
-                    sp.GetService<ILogger<DataGatewayImplementationConfigurationProvider>>(),
+            builder.Services.TryAddSingleton<MainDataGatewayConfigurationProvider>(sp =>
+                new MainDataGatewayConfigurationProvider(
+                    sp.GetService<ILogger<MainDataGatewayConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataGatewayServiceTypes.ConfigurationConnection));
 

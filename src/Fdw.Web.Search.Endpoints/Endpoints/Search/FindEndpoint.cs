@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -18,17 +18,21 @@ namespace Fdw.Web.Search.Endpoints;
 /// </summary>
 public class FindEndpoint : Endpoint<FindRequest, FindResponse>
 {
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
     private readonly ILogger<FindEndpoint> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FindEndpoint"/> class.
     /// </summary>
     public FindEndpoint(
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         ILogger<FindEndpoint>? logger = null)
     {
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
         _logger = logger ?? NullLogger<FindEndpoint>.Instance;
     }
 
@@ -74,7 +78,7 @@ public class FindEndpoint : Endpoint<FindRequest, FindResponse>
         };
 
         FindEndpointLog.DispatchingFindCommand(_logger, req.ContainerName);
-        var result = await _dataGateway.Execute<IEnumerable<FindResult<Dictionary<string, object?>>>>(
+        var result = await Gateway.Execute<IEnumerable<FindResult<Dictionary<string, object?>>>>(
                 command, new DataStoreTarget(req.DataStoreName, req.PathName, req.ContainerName), ct)
             .ConfigureAwait(false);
 

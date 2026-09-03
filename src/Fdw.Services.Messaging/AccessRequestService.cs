@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -26,7 +26,11 @@ public sealed class AccessRequestService : IAccessRequestService
     private const string AccessRequestContainer = "AccessRequest";
 
     private readonly ILogger<AccessRequestService> _logger;
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
     private readonly IMessagingConfigurationProvider _messaging;
     private readonly IMessageService _messageService;
 
@@ -34,17 +38,17 @@ public sealed class AccessRequestService : IAccessRequestService
     /// Initializes a new instance of the <see cref="AccessRequestService"/> class.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
-    /// <param name="dataGateway">The data gateway for access request data access.</param>
+    /// <param name="dataGateways">The data gateway for access request data access.</param>
     /// <param name="messaging">Resolves where this deployment keeps its messaging data.</param>
     /// <param name="messageService">The message service for creating associated messages.</param>
     public AccessRequestService(
         ILogger<AccessRequestService> logger,
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         IMessagingConfigurationProvider messaging,
         IMessageService messageService)
     {
         _logger = logger ?? NullLogger<AccessRequestService>.Instance;
-        _dataGateway = dataGateway ?? throw new ArgumentNullException(nameof(dataGateway));
+        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
         _messaging = messaging ?? throw new ArgumentNullException(nameof(messaging));
         _messageService = messageService ?? throw new ArgumentNullException(nameof(messageService));
     }
@@ -122,7 +126,7 @@ public sealed class AccessRequestService : IAccessRequestService
                 .DataStore(location.Value.DataStoreName).Path(location.Value.PathName)
                 .Value(insertRecord);
 
-            var insertResult = await _dataGateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
+            var insertResult = await Gateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
 
             if (!insertResult.IsSuccess)
             {
@@ -188,7 +192,7 @@ public sealed class AccessRequestService : IAccessRequestService
                     ModifiedAt = now
                 });
 
-            var result = await _dataGateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
+            var result = await Gateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {
@@ -245,7 +249,7 @@ public sealed class AccessRequestService : IAccessRequestService
                     ModifiedAt = now
                 });
 
-            var result = await _dataGateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
+            var result = await Gateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {
@@ -289,7 +293,7 @@ public sealed class AccessRequestService : IAccessRequestService
 
             var command = builder.Build();
 
-            var result = await _dataGateway.Execute<IEnumerable<AccessRequestPayload>>(command, cancellationToken)
+            var result = await Gateway.Execute<IEnumerable<AccessRequestPayload>>(command, cancellationToken)
                 .ConfigureAwait(false);
 
             if (!result.IsSuccess)
@@ -334,7 +338,7 @@ public sealed class AccessRequestService : IAccessRequestService
                 .Where(m => m.MessageType).Equal("AccessRequest")
                 .Build();
 
-            var messageResult = await _dataGateway.Execute<IEnumerable<MessagePayload>>(messageCommand, cancellationToken)
+            var messageResult = await Gateway.Execute<IEnumerable<MessagePayload>>(messageCommand, cancellationToken)
                 .ConfigureAwait(false);
 
             if (!messageResult.IsSuccess)
@@ -356,7 +360,7 @@ public sealed class AccessRequestService : IAccessRequestService
                     .Where(r => r.MessageId).Equal(messageId)
                     .Build();
 
-                var arResult = await _dataGateway.Execute<IEnumerable<AccessRequestPayload>>(arCommand, cancellationToken)
+                var arResult = await Gateway.Execute<IEnumerable<AccessRequestPayload>>(arCommand, cancellationToken)
                     .ConfigureAwait(false);
 
                 if (!arResult.IsSuccess)

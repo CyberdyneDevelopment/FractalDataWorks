@@ -56,7 +56,7 @@ public sealed class DataGatewayService : IDataGateway
 
     private readonly ConnectionConfigurationProvider? _connectionConfigProvider;
     private readonly DataGatewayResultCache? _cache;
-    private readonly DataGatewayImplementationConfiguration? _options;
+    private readonly MainDataGatewayConfiguration? _options;
 
     private static readonly TimeSpan DefaultCacheDuration = TimeSpan.FromMinutes(5);
 
@@ -89,7 +89,7 @@ public sealed class DataGatewayService : IDataGateway
         IFrameworkAuthorizationService? authorizationService = null,
         IDataStoreProvider? dataStoreProvider = null,
         DataGatewayResultCache? cache = null,
-        DataGatewayImplementationConfiguration? options = null,
+        MainDataGatewayConfiguration? options = null,
         IAuthenticationContextAccessor? authenticationContextAccessor = null,
         ConnectionConfigurationProvider? connectionConfigProvider = null)
     {

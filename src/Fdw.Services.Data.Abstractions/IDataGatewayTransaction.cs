@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Results;
@@ -16,7 +16,7 @@ namespace Fdw.Services.Data.Abstractions;
 /// <para>
 /// Typical usage — authz change + security stamp bump:
 /// <code>
-/// await using var txn = await _gateway.BeginTransaction("AuthDb", ct);
+/// await using var txn = await Gateway.BeginTransaction("AuthDb", ct);
 /// if (!txn.IsSuccess) return ...; // fail clean — nothing was written
 /// var scope = txn.Value!;
 ///
@@ -32,7 +32,7 @@ namespace Fdw.Services.Data.Abstractions;
 /// <para>
 /// ETL multi-write usage:
 /// <code>
-/// await using var txn = await _gateway.BeginTransaction("OpsDb", ct);
+/// await using var txn = await Gateway.BeginTransaction("OpsDb", ct);
 /// var scope = txn.Value!;
 ///
 /// await scope.Execute&lt;int&gt;(insertExecutionCommand, executionTarget, ct);

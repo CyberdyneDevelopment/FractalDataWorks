@@ -58,7 +58,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     private readonly Lazy<IReadOnlyList<IDataStore>> _dataStores;
 
     private readonly DataGatewayResultCache? _cache;
-    private readonly DataGatewayImplementationConfiguration? _options;
+    private readonly MainDataGatewayConfiguration? _options;
 
     private readonly IAuthenticationContextAccessor? _authenticationContextAccessor;
 
@@ -90,7 +90,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         ConfigurationSchema schema,
         ILogger<ConfigurationGateway>? logger = null,
         DataGatewayResultCache? cache = null,
-        DataGatewayImplementationConfiguration? options = null,
+        MainDataGatewayConfiguration? options = null,
         IAuthenticationContextAccessor? authenticationContextAccessor = null)
         : this(connectionName, connectionFactory, secretManager: null, schema, logger, cache, options, authenticationContextAccessor)
     {
@@ -125,7 +125,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         ConfigurationSchema schema,
         ILogger<ConfigurationGateway>? logger = null,
         DataGatewayResultCache? cache = null,
-        DataGatewayImplementationConfiguration? options = null,
+        MainDataGatewayConfiguration? options = null,
         IAuthenticationContextAccessor? authenticationContextAccessor = null)
     {
         ConnectionName = string.IsNullOrWhiteSpace(connectionName)

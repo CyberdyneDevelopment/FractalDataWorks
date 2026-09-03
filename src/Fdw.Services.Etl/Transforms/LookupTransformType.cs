@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -122,11 +122,11 @@ public sealed class LookupTransformType : TransformTypeBase
 
         var groups = config.Lookups.GroupBy(CacheKey, StringComparer.Ordinal).ToList();
 
-        if (context.DataGateway is IDataGateway dataGateway)
+        if (context.DataGateway is IDataGateway gateway)
         {
             foreach (var group in groups)
             {
-                await PreloadGroup(dataGateway, group.Key, group.First(), inputList, context, config.Name, cancellationToken).ConfigureAwait(false);
+                await PreloadGroup(gateway, group.Key, group.First(), inputList, context, config.Name, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -192,7 +192,7 @@ public sealed class LookupTransformType : TransformTypeBase
         $"{lookup.LookupConnectionName}:{lookup.LookupDataSet}:{lookup.LookupKeyField}:{lookup.SourceKeyField}";
 
     private static async Task PreloadGroup(
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         string cacheKey,
         PipelineTransformLookupConfiguration sample,
         List<IDictionary<string, object?>> inputList,
@@ -213,7 +213,7 @@ public sealed class LookupTransformType : TransformTypeBase
             return;
         }
 
-        var batchResult = await PerformBatchLookup(dataGateway, sample, keysToLookup!, cancellationToken).ConfigureAwait(false);
+        var batchResult = await PerformBatchLookup(gateway, sample, keysToLookup!, cancellationToken).ConfigureAwait(false);
         if (batchResult.IsSuccess && batchResult.Value != null)
         {
             foreach (var kvp in batchResult.Value)
@@ -230,7 +230,7 @@ public sealed class LookupTransformType : TransformTypeBase
     }
 
     private static async Task<IGenericResult<Dictionary<string, IReadOnlyDictionary<string, object?>>>> PerformBatchLookup(
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         PipelineTransformLookupConfiguration lookup,
         List<string> keyValues,
         CancellationToken cancellationToken)
@@ -250,7 +250,7 @@ public sealed class LookupTransformType : TransformTypeBase
                 }
             };
 
-            var result = await dataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(
+            var result = await gateway.Execute<IEnumerable<Dictionary<string, object?>>>(
                 queryCommand, new DataStoreTarget(lookup.LookupConnectionName, null, lookup.LookupDataSet), cancellationToken).ConfigureAwait(false);
 
             if (!result.IsSuccess)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -31,7 +31,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
 {
     private readonly StreamingPipelineConfiguration _configuration;
     private readonly ILogger<StreamingPipeline> _logger;
-    private readonly IDataGateway? _dataGateway;
+    private readonly IDataGatewayProvider? _dataGateways;
     private readonly object? _calculationEngine;
     private readonly IConnectionProvider? _connectionProvider;
     private readonly IPipelineTestController? _testController;
@@ -45,7 +45,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
     public StreamingPipeline(
         StreamingPipelineConfiguration configuration,
         ILogger<StreamingPipeline> logger,
-        IDataGateway? dataGateway = null,
+        IDataGatewayProvider? dataGateways = null,
         object? calculationEngine = null,
         IConnectionProvider? connectionProvider = null,
         IPipelineTestController? testController = null,
@@ -55,7 +55,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
     {
         _configuration = configuration;
         _logger = logger;
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
         _calculationEngine = calculationEngine;
         _connectionProvider = connectionProvider;
         _testController = testController;
@@ -128,20 +128,29 @@ public sealed class StreamingPipeline : EtlPipelineBase
     {
         EtlLog.ExecutionStarted(_logger, Name, executionId);
 
-        if (_dataGateway == null)
+        if (_dataGateways == null)
         {
             return GenericResult<IEtlPipelineExecutionResult>.Failure(
                 EtlLog.ExecutionFailed(_logger, Name, executionId, "DataGateway is required for pipeline execution"));
         }
 
-        var dataGateway = _dataGateway;
+        IDataGateway gateway;
+        try
+        {
+            gateway = _dataGateways.ByName("Main");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return GenericResult<IEtlPipelineExecutionResult>.Failure(
+                EtlLog.ExecutionFailed(_logger, Name, executionId, ex.Message));
+        }
         var transformContext = new TransformContext(
             executionId: executionId,
             logger: _logger,
             variables: new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase),
             calculationEngine: _calculationEngine,
             connectionProvider: _connectionProvider,
-            dataGateway: dataGateway);
+            dataGateway: gateway);
 
         PipelineTestExecutionState? testState = null;
         if (options.IsTestMode && _testController != null)
@@ -162,7 +171,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
 
         var counters = await ProcessStream(
             executionId, options, effectiveTake, testState,
-            dataGateway, transformContext, stopwatch, result, cancellationToken).ConfigureAwait(false);
+            gateway, transformContext, stopwatch, result, cancellationToken).ConfigureAwait(false);
 
         if (!counters.IsSuccess)
         {
@@ -186,7 +195,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
         PipelineExecutionOptions options,
         int effectiveTake,
         PipelineTestExecutionState? testState,
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         TransformContext transformContext,
         Stopwatch stopwatch,
         EtlPipelineExecutionResult result,
@@ -208,7 +217,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
 
             var iterationStopwatch = Stopwatch.StartNew();
 
-            var extractResult = await ExtractAndBuffer(effectiveTake, dataGateway, buffer, cancellationToken).ConfigureAwait(false);
+            var extractResult = await ExtractAndBuffer(effectiveTake, gateway, buffer, cancellationToken).ConfigureAwait(false);
             if (!extractResult.IsSuccess) return extractResult;
 
             totalExtracted += extractResult.Value.Extracted;
@@ -218,7 +227,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
             if (ShouldFlushBuffer(buffer.Count, windowStart) && buffer.Count > 0)
             {
                 var flushResult = await RunFlushCycle(
-                    executionId, options, dataGateway, buffer, transformContext, cancellationToken).ConfigureAwait(false);
+                    executionId, options, gateway, buffer, transformContext, cancellationToken).ConfigureAwait(false);
 
                 if (!flushResult.IsSuccess) return flushResult;
 
@@ -270,7 +279,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
     private async Task<IGenericResult<(int Transformed, int Loaded, int Failed, bool SkipIteration)>> RunFlushCycle(
         Guid executionId,
         PipelineExecutionOptions options,
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         List<IDictionary<string, object?>> buffer,
         TransformContext transformContext,
         CancellationToken cancellationToken)
@@ -279,7 +288,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
             _inspector?.RecordTaskHeld(executionId, _configuration.Id, buffer.Count);
 
         var flushOutcome = await ProcessFlush(
-            executionId, options, dataGateway, buffer, transformContext, cancellationToken).ConfigureAwait(false);
+            executionId, options, gateway, buffer, transformContext, cancellationToken).ConfigureAwait(false);
 
         if (options.IsTestMode && _inspector != null)
         {
@@ -320,11 +329,11 @@ public sealed class StreamingPipeline : EtlPipelineBase
 
     private async Task<IGenericResult<(int Extracted, int Failed)>> ExtractAndBuffer(
         int effectiveTake,
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         List<IDictionary<string, object?>> buffer,
         CancellationToken cancellationToken)
     {
-        var extractResult = await ExtractBatch(effectiveTake, dataGateway, cancellationToken).ConfigureAwait(false);
+        var extractResult = await ExtractBatch(effectiveTake, gateway, cancellationToken).ConfigureAwait(false);
         if (!extractResult.IsSuccess)
         {
             if (!_configuration.ContinueOnError)
@@ -350,12 +359,12 @@ public sealed class StreamingPipeline : EtlPipelineBase
     private async Task<IGenericResult<(int Transformed, int Loaded, int Failed, bool SkipIteration)>> ProcessFlush(
         Guid executionId,
         PipelineExecutionOptions options,
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         List<IDictionary<string, object?>> buffer,
         TransformContext transformContext,
         CancellationToken cancellationToken)
     {
-        var flushResult = await FlushAndLoad(executionId, options, dataGateway, buffer, transformContext, cancellationToken).ConfigureAwait(false);
+        var flushResult = await FlushAndLoad(executionId, options, gateway, buffer, transformContext, cancellationToken).ConfigureAwait(false);
 
         if (flushResult.IsTransformFailed)
         {
@@ -392,7 +401,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
     private async Task<FlushResult> FlushAndLoad(
         Guid executionId,
         PipelineExecutionOptions options,
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         List<IDictionary<string, object?>> buffer,
         TransformContext transformContext,
         CancellationToken cancellationToken)
@@ -409,7 +418,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
             return FlushResult.Succeeded(transformedRecords.Count, transformedRecords.Count);
         }
 
-        var loadResult = await LoadRecordsBatch(dataGateway, transformedRecords, cancellationToken).ConfigureAwait(false);
+        var loadResult = await LoadRecordsBatch(gateway, transformedRecords, cancellationToken).ConfigureAwait(false);
         if (!loadResult.IsSuccess)
             return FlushResult.LoadFailed(transformedRecords.Count, loadResult.Messages);
 
@@ -465,7 +474,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
 
     private async Task<IGenericResult<List<IDictionary<string, object?>>>> ExtractBatch(
         int effectiveTake,
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         CancellationToken cancellationToken)
     {
         EtlLog.ExtractStarted(_logger, Name);
@@ -482,7 +491,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
                 }
             };
 
-            var queryResult = await dataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(
+            var queryResult = await gateway.Execute<IEnumerable<Dictionary<string, object?>>>(
                 queryCommand, new DataSetTarget(_configuration.SourceDataSet), cancellationToken).ConfigureAwait(false);
             extractStopwatch.Stop();
 
@@ -643,7 +652,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
     }
 
     private async Task<IGenericResult<int>> LoadRecordsBatch(
-        IDataGateway dataGateway,
+        IDataGateway gateway,
         List<IDictionary<string, object?>> records,
         CancellationToken cancellationToken)
     {
@@ -661,7 +670,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
 
             var insertCommand = new BulkInsertCommand<IDictionary<string, object?>>(records);
 
-            var insertResult = await dataGateway.Execute<int>(
+            var insertResult = await gateway.Execute<int>(
                 insertCommand, new DataSetTarget(_configuration.DestinationDataSet), cancellationToken).ConfigureAwait(false);
             loadStopwatch.Stop();
 

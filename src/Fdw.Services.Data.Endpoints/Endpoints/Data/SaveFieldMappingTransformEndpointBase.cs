@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,10 +33,10 @@ public abstract class SaveFieldMappingTransformEndpointBase : CrudCreateEndpoint
 
     /// <inheritdoc />
     protected SaveFieldMappingTransformEndpointBase(
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         DataSetConfigurationProvider dataSetProvider)
     {
-        DataGateway = dataGateway;
+        DataGateway = dataGateways.ByName("Main");
         _dataSetProvider = dataSetProvider;
     }
 

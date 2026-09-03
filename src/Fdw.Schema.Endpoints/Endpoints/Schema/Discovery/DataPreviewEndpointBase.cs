@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -21,24 +21,26 @@ namespace Fdw.Schema.Endpoints.Discovery;
 /// </summary>
 public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, DataPreviewResponse>
 {
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
     private readonly ILogger<DataPreviewEndpointBase> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DataPreviewEndpointBase"/> class.
     /// </summary>
-    /// <param name="dataGateway">The data gateway for database operations.</param>
+    /// <param name="dataGateways">The data gateway for database operations.</param>
     /// <param name="logger">The logger instance.</param>
-    protected DataPreviewEndpointBase(IDataGateway dataGateway, ILogger<DataPreviewEndpointBase>? logger = null)
+    protected DataPreviewEndpointBase(IDataGatewayProvider dataGateways, ILogger<DataPreviewEndpointBase>? logger = null)
     {
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
         _logger = logger ?? NullLogger<DataPreviewEndpointBase>.Instance;
     }
 
     /// <summary>
     /// Gets the data gateway instance for use by derived classes.
     /// </summary>
-    protected IDataGateway DataGateway => _dataGateway;
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    protected IDataGateway DataGateway => _dataGateways.ByName("Main");
 
     /// <summary>
     /// Gets the route for this endpoint. Default is "/data/preview".
@@ -164,7 +166,7 @@ public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, Dat
             Projection = projection
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, new DataSetTarget(dataSetName), ct).ConfigureAwait(false);
+        var result = await DataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, new DataSetTarget(dataSetName), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             SchemaEndpointLog.SchemaOperationFailed(_logger, new InvalidOperationException(result.CurrentMessage ?? "Gateway returned failure"), "preview", dataSetName);
@@ -215,7 +217,7 @@ public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, Dat
         };
         var containerIdentifier = $"{dataStoreName}/{pathName}/{containerName}";
 
-        var result = await _dataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, new DataStoreTarget(dataStoreName, pathName, containerName), ct).ConfigureAwait(false);
+        var result = await DataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, new DataStoreTarget(dataStoreName, pathName, containerName), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             SchemaEndpointLog.SchemaOperationFailed(_logger, new InvalidOperationException(result.CurrentMessage ?? "Gateway returned failure"), "preview", containerIdentifier);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Operations.Execution;
@@ -8,6 +8,7 @@ using Moq;
 using Shouldly;
 using Xunit;
 
+using Fdw.Services.Data;
 namespace Fdw.Operations.Tests.Execution;
 
 /// <summary>
@@ -23,7 +24,7 @@ namespace Fdw.Operations.Tests.Execution;
 public sealed class ExecutionTrackingServiceUnnamedStoreTests
 {
     private static ExecutionTrackingService WithNoStore() =>
-        new(new Mock<IDataGateway>(MockBehavior.Strict).Object, NullLoggerFactory.Instance, dataStoreName: null);
+        new(new MainDataGatewayProvider(new Mock<IDataGateway>(MockBehavior.Strict).Object), NullLoggerFactory.Instance, dataStoreName: null);
 
     [Fact]
     [Trait("Priority", "P1")]

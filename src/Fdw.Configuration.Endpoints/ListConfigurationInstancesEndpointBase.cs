@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -17,17 +17,21 @@ namespace Fdw.Configuration.Endpoints;
 /// </summary>
 public abstract class ListConfigurationInstancesEndpointBase : Endpoint<ListConfigurationInstancesRequest, List<ConfigurationInstanceSummaryResponse>>
 {
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
     private readonly IConfigurationContainerLookup _containerLookup;
     private readonly ILogger<ListConfigurationInstancesEndpointBase> _logger;
 
     /// <summary>Initializes a new instance of the endpoint.</summary>
     protected ListConfigurationInstancesEndpointBase(
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         IConfigurationContainerLookup containerLookup,
         ILogger<ListConfigurationInstancesEndpointBase> logger)
     {
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
         _containerLookup = containerLookup;
         _logger = logger;
     }
@@ -91,7 +95,7 @@ public abstract class ListConfigurationInstancesEndpointBase : Endpoint<ListConf
                 var command = DataQuery.From<ConfigurationRecord>("PlatformConfiguration", container.Parent.Name, container.Name)
                     .Build();
 
-                var result = await _dataGateway.Execute<IEnumerable<ConfigurationRecord>>(command, ct)
+                var result = await Gateway.Execute<IEnumerable<ConfigurationRecord>>(command, ct)
                     .ConfigureAwait(false);
 
                 if (result.IsSuccess && result.Value != null)

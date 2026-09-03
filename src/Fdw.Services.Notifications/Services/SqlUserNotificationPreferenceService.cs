@@ -49,11 +49,7 @@ public sealed class SqlUserNotificationPreferenceService : IUserNotificationPref
 
     // Why this throws rather than returning a result: every caller below is mid-query and has no
     // branch for "there is no gateway". The provider names the reason, which a Lazy could not.
-    private IDataGateway Gateway => _dataGateways.Get() is { IsSuccess: true, Value: not null } gateway
-        ? gateway.Value
-        : throw new InvalidOperationException(
-            _dataGateways.Get().CurrentMessage?.ToString()
-            ?? "No data gateway is available to read notification preferences.");
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
 
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<NotificationPreference>>> GetPreferences(

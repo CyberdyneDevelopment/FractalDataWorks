@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
@@ -15,6 +15,7 @@ using Moq;
 using Shouldly;
 using Xunit;
 
+using Fdw.Services.Data;
 namespace Fdw.Commands.Data.Tests;
 
 /// <summary>
@@ -38,7 +39,7 @@ public sealed class FederatedQueryIntegrationTests
 
         _executor = new FederatedExecutor(
             _mockLogger.Object,
-            _mockDataGateway.Object,
+            new MainDataGatewayProvider(_mockDataGateway.Object),
             _resultMerger,
             _queryOptimizer);
     }

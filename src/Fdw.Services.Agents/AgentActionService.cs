@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -21,15 +21,19 @@ namespace Fdw.Services.Agents;
 [ExcludeFromCodeCoverage]
 public sealed class AgentActionService : IAgentActionService
 {
-    private readonly IDataGateway _gateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
     private readonly ILogger<AgentActionService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentActionService"/> class.
     /// </summary>
-    public AgentActionService(IDataGateway gateway, ILogger<AgentActionService>? logger)
+    public AgentActionService(IDataGatewayProvider dataGateways, ILogger<AgentActionService>? logger)
     {
-        _gateway = gateway;
+        _dataGateways = dataGateways;
         _logger = logger ?? NullLogger<AgentActionService>.Instance;
     }
 
@@ -48,7 +52,7 @@ public sealed class AgentActionService : IAgentActionService
         }
 
         var command = builder.OrderByDescending("RequestedAt").Build();
-        var result = await _gateway.Execute<IEnumerable<AgentActionRecord>>(command, cancellationToken)
+        var result = await Gateway.Execute<IEnumerable<AgentActionRecord>>(command, cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)
@@ -73,7 +77,7 @@ public sealed class AgentActionService : IAgentActionService
             .Where("Id", actionId)
             .Build();
 
-        var result = await _gateway.Execute<IEnumerable<AgentActionRecord>>(command, cancellationToken)
+        var result = await Gateway.Execute<IEnumerable<AgentActionRecord>>(command, cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)
@@ -143,7 +147,7 @@ public sealed class AgentActionService : IAgentActionService
             .Where("Id", actionId)
             .Value(existing);
 
-        var result = await _gateway.Execute<int>(updateCommand, cancellationToken).ConfigureAwait(false);
+        var result = await Gateway.Execute<int>(updateCommand, cancellationToken).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

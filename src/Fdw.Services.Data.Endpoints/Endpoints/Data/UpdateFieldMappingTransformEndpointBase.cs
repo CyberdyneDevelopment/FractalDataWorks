@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -34,13 +34,13 @@ public abstract class UpdateFieldMappingTransformEndpointBase
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
     /// <summary>Initializes a new instance of the <see cref="UpdateFieldMappingTransformEndpointBase"/> class.</summary>
-    /// <param name="dataGateway">The gateway used for all reads and writes.</param>
+    /// <param name="dataGateways">The gateway used for all reads and writes.</param>
     /// <param name="dataSetProvider">Owns the configuration store's name and path.</param>
     protected UpdateFieldMappingTransformEndpointBase(
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         DataSetConfigurationProvider dataSetProvider)
     {
-        DataGateway = dataGateway;
+        DataGateway = dataGateways.ByName("Main");
         _dataSetProvider = dataSetProvider;
     }
 

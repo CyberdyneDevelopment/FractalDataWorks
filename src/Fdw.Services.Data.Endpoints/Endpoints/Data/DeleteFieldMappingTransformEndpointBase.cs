@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -32,10 +32,10 @@ public abstract class DeleteFieldMappingTransformEndpointBase : CrudDeleteEndpoi
 
     /// <inheritdoc />
     protected DeleteFieldMappingTransformEndpointBase(
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         DataSetConfigurationProvider dataSetProvider)
     {
-        DataGateway = dataGateway;
+        DataGateway = dataGateways.ByName("Main");
         _dataSetProvider = dataSetProvider;
     }
 

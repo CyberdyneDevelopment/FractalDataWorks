@@ -1,4 +1,4 @@
-using Fdw.Services.Data.Clients.Models;
+﻿using Fdw.Services.Data.Clients.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,17 +22,21 @@ namespace Fdw.Schema.Endpoints;
 /// </summary>
 public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRequest, MappingValidationResponse>
 {
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
     private readonly ILogger<ValidateMappingsEndpointBase> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ValidateMappingsEndpointBase"/> class.
     /// </summary>
-    /// <param name="dataGateway">The data gateway for database operations.</param>
+    /// <param name="dataGateways">The data gateway for database operations.</param>
     /// <param name="logger">The logger instance.</param>
-    protected ValidateMappingsEndpointBase(IDataGateway dataGateway, ILogger<ValidateMappingsEndpointBase> logger)
+    protected ValidateMappingsEndpointBase(IDataGatewayProvider dataGateways, ILogger<ValidateMappingsEndpointBase> logger)
     {
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
         _logger = logger;
     }
 
@@ -108,7 +112,7 @@ public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRe
             }
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<DataSetRecord>>(
+        var result = await Gateway.Execute<IEnumerable<DataSetRecord>>(
             command, new DataStoreTarget("PlatformConfiguration", "data", "DataSet"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
@@ -134,7 +138,7 @@ public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRe
             }
         };
 
-        var result = await _dataGateway.Execute<IEnumerable<DataSetFieldPayload>>(
+        var result = await Gateway.Execute<IEnumerable<DataSetFieldPayload>>(
             command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetField"), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {

@@ -71,7 +71,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     // gateway, not about how one is supplied.
     private sealed class StubGatewayProvider(IDataGateway gateway) : IDataGatewayProvider
     {
-        public IGenericResult<IDataGateway> Get() => GenericResult<IDataGateway>.Success(gateway);
+        public IDataGateway ByName(string name) => gateway;
     }
 
     private static IDataGatewayProvider GatewayProviderFor(IDataGateway gateway) =>

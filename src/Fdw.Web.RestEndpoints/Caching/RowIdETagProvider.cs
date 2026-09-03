@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
@@ -21,17 +21,21 @@ namespace Fdw.Web.RestEndpoints.Caching;
 /// </summary>
 public sealed class RowIdETagProvider : IETagProvider
 {
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
     private readonly ILogger<RowIdETagProvider> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <c>RowIdETagProvider</c> class.
     /// </summary>
-    /// <param name="dataGateway">The data gateway for executing queries.</param>
+    /// <param name="dataGateways">The data gateway for executing queries.</param>
     /// <param name="logger">Optional logger for trace-level diagnostics.</param>
-    public RowIdETagProvider(IDataGateway dataGateway, ILogger<RowIdETagProvider>? logger)
+    public RowIdETagProvider(IDataGatewayProvider dataGateways, ILogger<RowIdETagProvider>? logger)
     {
-        _dataGateway = dataGateway ?? throw new ArgumentNullException(nameof(dataGateway));
+        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
         _logger = logger ?? NullLogger<RowIdETagProvider>.Instance;
     }
 
@@ -62,7 +66,7 @@ public sealed class RowIdETagProvider : IETagProvider
                 Paging = new PagingExpression { Skip = 0, Take = 1 }
             };
 
-            var result = await _dataGateway.Execute<System.Collections.Generic.IEnumerable<RowIdProjection>>(
+            var result = await Gateway.Execute<System.Collections.Generic.IEnumerable<RowIdProjection>>(
                     command, new DataStoreTarget(connectionName, null, containerName), ct)
                 .ConfigureAwait(false);
 

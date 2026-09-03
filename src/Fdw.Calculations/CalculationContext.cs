@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
@@ -24,19 +24,19 @@ public sealed class CalculationContext : ICalculationContext
     /// <summary>
     /// Initializes a new instance of the <see cref="CalculationContext"/> class.
     /// </summary>
-    /// <param name="dataGateway">The data gateway for accessing data sources.</param>
+    /// <param name="dataGateways">The data gateway for accessing data sources.</param>
     /// <param name="parameters">Optional parameters for the calculation.</param>
     /// <param name="services">Optional service provider for dependency resolution.</param>
     /// <param name="logger">Optional logger for this execution.</param>
     /// <param name="cancellationToken">Optional cancellation token.</param>
     public CalculationContext(
-        IDataGateway dataGateway,
+        IDataGatewayProvider dataGateways,
         IReadOnlyDictionary<string, object?>? parameters = null,
         IServiceProvider? services = null,
         ILogger<CalculationContext>? logger = null,
         CancellationToken cancellationToken = default)
     {
-        DataGateway = dataGateway ?? throw new ArgumentNullException(nameof(dataGateway));
+        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
         ExecutionId = Guid.NewGuid();
         StartTime = DateTimeOffset.UtcNow;
         Parameters = parameters ?? new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
@@ -53,7 +53,12 @@ public sealed class CalculationContext : ICalculationContext
     public DateTimeOffset StartTime { get; }
 
     /// <inheritdoc/>
-    public IDataGateway DataGateway { get; }
+    private readonly IDataGatewayProvider _dataGateways;
+
+    /// <summary>Gets the gateway this calculation reads and writes through.</summary>
+    /// <remarks>Resolved per use: the gateway is scoped and a context is not, so holding one
+    /// would be a captive dependency.</remarks>
+    public IDataGateway DataGateway => _dataGateways.ByName("Main");
 
     /// <inheritdoc/>
     public IReadOnlyDictionary<string, object?> Parameters { get; }

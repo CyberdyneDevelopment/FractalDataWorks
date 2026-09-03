@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -20,19 +20,23 @@ namespace Fdw.Services.Data.Visualization;
 public sealed class StatSetService : IStatSetService
 {
     private readonly ILogger<StatSetService> _logger;
-    private readonly IDataGateway _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StatSetService"/> class.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
-    /// <param name="dataGateway">The data gateway for executing queries.</param>
+    /// <param name="dataGateways">The data gateway for executing queries.</param>
     public StatSetService(
         ILogger<StatSetService>? logger,
-        IDataGateway dataGateway)
+        IDataGatewayProvider dataGateways)
     {
         _logger = logger ?? NullLogger<StatSetService>.Instance;
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
     }
 
     /// <inheritdoc/>
@@ -48,7 +52,7 @@ public sealed class StatSetService : IStatSetService
 
         var query = DataQuery.From<IEnumerable<Dictionary<string, object?>>>(request.DataStoreName!, request.PathName!, request.ContainerName).Build();
 
-        var queryResult = await _dataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(query, cancellationToken).ConfigureAwait(false);
+        var queryResult = await Gateway.Execute<IEnumerable<Dictionary<string, object?>>>(query, cancellationToken).ConfigureAwait(false);
 
         if (!queryResult.IsSuccess)
         {
@@ -100,7 +104,7 @@ public sealed class StatSetService : IStatSetService
 
         var query = DataQuery.From<IEnumerable<Dictionary<string, object?>>>(request.DataStoreName!, request.PathName!, request.ContainerName).Build();
 
-        var queryResult = await _dataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(query, cancellationToken).ConfigureAwait(false);
+        var queryResult = await Gateway.Execute<IEnumerable<Dictionary<string, object?>>>(query, cancellationToken).ConfigureAwait(false);
 
         if (!queryResult.IsSuccess)
         {
