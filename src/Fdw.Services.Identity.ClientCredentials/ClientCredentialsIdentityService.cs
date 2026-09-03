@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,7 +26,7 @@ public sealed class ClientCredentialsIdentityService
     : IdentityServiceBase<ClientCredentialsConfiguration, ClientCredentialsIdentityService>
 {
     private readonly OAuth2TokenEndpointClient _tokenEndpoint;
-    private readonly Lazy<ISecretManagerProvider> _secretManagers;
+    private readonly ISecretManagerProvider _secretManagers;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientCredentialsIdentityService"/> class.
@@ -40,7 +40,7 @@ public sealed class ClientCredentialsIdentityService
         ILogger<ClientCredentialsIdentityService>? logger,
         ClientCredentialsConfiguration configuration,
         OAuth2TokenEndpointClient tokenEndpoint,
-        Lazy<ISecretManagerProvider> secretManagers)
+        ISecretManagerProvider secretManagers)
         : base(logger, configuration)
     {
         _tokenEndpoint = tokenEndpoint ?? throw new ArgumentNullException(nameof(tokenEndpoint));
@@ -70,7 +70,7 @@ public sealed class ClientCredentialsIdentityService
 
         IdentityLog.AcquiringToken(Logger, Name, "ClientCredentials", request.Audience);
 
-        var secretManager = await _secretManagers.Value.Get(secretManagerName, cancellationToken).ConfigureAwait(false);
+        var secretManager = await _secretManagers.Get(secretManagerName, cancellationToken).ConfigureAwait(false);
         if (!secretManager.IsSuccess || secretManager.Value is null)
             return secretManager.ToNewResult<IssuedIdentityToken>();
 

@@ -45,7 +45,7 @@ public static partial class DefaultConfigurationProviderLog
     /// <param name="typeName">The configuration type name the gateway is being resolved for.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11002, Level = LogLevel.Trace,
-        Message = "Gateway resolving for {typeName} via Lazy<IDataGateway>")]
+        Message = "Gateway resolving for {typeName} via IDataGatewayProvider")]
     public static partial IGenericMessage GatewayResolving(ILogger logger, string typeName);
 
     // ── Debug (9363) ──
@@ -143,7 +143,7 @@ public static partial class DefaultConfigurationProviderLog
     /// <param name="error">The error message describing the resolution failure.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 61000, Level = LogLevel.Error,
-        Message = "Lazy<IDataGateway> resolution failed for {typeName}: {error}")]
+        Message = "Data gateway could not be supplied for {typeName}: {error}")]
     public static partial IGenericMessage GatewayResolutionFailed(ILogger logger, string typeName, string error);
 
     /// <summary>

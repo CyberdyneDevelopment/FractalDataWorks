@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.Extensions.Logging;
 using Fdw.Abstractions;
 using Fdw.Configuration;
@@ -21,7 +21,7 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
     private readonly ILogger<StreamingPipelineFactory> _logger;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IDataGateway? _dataGateway;
-    private readonly Lazy<IConnectionProvider>? _connectionProvider;
+    private readonly IConnectionProvider? _connectionProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StreamingPipelineFactory"/> class.
@@ -34,7 +34,7 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
         ILogger<StreamingPipelineFactory> logger,
         ILoggerFactory loggerFactory,
         IDataGateway? dataGateway = null,
-        Lazy<IConnectionProvider>? connectionProvider = null)
+        IConnectionProvider? connectionProvider = null)
     {
         _logger = logger;
         _loggerFactory = loggerFactory;
@@ -55,7 +55,7 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
                 pipelineLogger,
                 _dataGateway,
                 calculationEngine: null,
-                _connectionProvider?.Value);
+                _connectionProvider);
 
             EtlLog.PipelineConfigurationLoaded(_logger, configuration.Name, "Streaming");
             return GenericResult<IEtlPipeline>.Success(pipeline);

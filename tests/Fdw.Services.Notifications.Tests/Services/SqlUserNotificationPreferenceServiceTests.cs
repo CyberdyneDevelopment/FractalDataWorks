@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -67,8 +67,18 @@ public sealed class SqlUserNotificationPreferenceServiceTests
             .ReturnsAsync(result);
     }
 
+    // A stub rather than the real provider: this fixture is about what the service does with a
+    // gateway, not about how one is supplied.
+    private sealed class StubGatewayProvider(IDataGateway gateway) : IDataGatewayProvider
+    {
+        public IGenericResult<IDataGateway> Get() => GenericResult<IDataGateway>.Success(gateway);
+    }
+
+    private static IDataGatewayProvider GatewayProviderFor(IDataGateway gateway) =>
+        new StubGatewayProvider(gateway);
+
     private static SqlUserNotificationPreferenceService CreateService(Mock<IDataGateway> gateway) =>
-        new(new Lazy<IDataGateway>(gateway.Object), NullLogger<SqlUserNotificationPreferenceService>.Instance);
+        new(GatewayProviderFor(gateway.Object), NullLogger<SqlUserNotificationPreferenceService>.Instance);
 
     // ──────────────────────────────────────────── Constructor ───────────────────────────────────────────
 
@@ -91,7 +101,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
         var gateway = new Mock<IDataGateway>();
 
         // Act
-        var sut = new SqlUserNotificationPreferenceService(new Lazy<IDataGateway>(gateway.Object), null);
+        var sut = new SqlUserNotificationPreferenceService(GatewayProviderFor(gateway.Object), null);
 
         // Assert
         sut.ShouldNotBeNull();

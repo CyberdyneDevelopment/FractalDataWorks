@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -27,7 +27,7 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
     private readonly IPermissionConfigurationProvider _permissionProvider;
     private readonly IRolePermissionConfigurationProvider _rolePermissionProvider;
     private readonly UserRoleConfigurationProvider _userRoleProvider;
-    private readonly Lazy<IOrgAccessProvider> _orgAccessProvider;
+    private readonly IOrgAccessProvider _orgAccessProvider;
     private readonly ILogger<EffectivePermissionResolver> _logger;
 
     /// <summary>
@@ -39,14 +39,14 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
         IRolePermissionConfigurationProvider rolePermissionProvider,
         UserRoleConfigurationProvider userRoleProvider,
         ILogger<EffectivePermissionResolver>? logger,
-        Lazy<IOrgAccessProvider>? orgAccessProvider = null)
+        IOrgAccessProvider? orgAccessProvider = null)
     {
         _roleProvider = roleProvider ?? throw new ArgumentNullException(nameof(roleProvider));
         _permissionProvider = permissionProvider ?? throw new ArgumentNullException(nameof(permissionProvider));
         _rolePermissionProvider = rolePermissionProvider ?? throw new ArgumentNullException(nameof(rolePermissionProvider));
         _userRoleProvider = userRoleProvider ?? throw new ArgumentNullException(nameof(userRoleProvider));
         _logger = logger ?? NullLogger<EffectivePermissionResolver>.Instance;
-        _orgAccessProvider = orgAccessProvider ?? new Lazy<IOrgAccessProvider>(() => NullOrgAccessProvider.Instance);
+        _orgAccessProvider = orgAccessProvider ?? NullOrgAccessProvider.Instance;
     }
 
     /// <inheritdoc />
@@ -205,7 +205,7 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
             return 0;
         }
 
-        var orgGrantsResult = await _orgAccessProvider.Value.Get(
+        var orgGrantsResult = await _orgAccessProvider.Get(
             userIdGuid, currentTenantId.Value, orgId.Value, cancellationToken)
             .ConfigureAwait(false);
 

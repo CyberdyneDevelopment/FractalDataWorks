@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,7 +38,7 @@ namespace Fdw.Services.Data;
 /// </remarks>
 public class DataStoreConfigurationProvider : ImplementationConfigurationProviderBase<DataStoreConfiguration, DataStoreConfigurationCommand>
 {
-    private readonly Lazy<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>> _containerProvider;
+    private readonly ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand> _containerProvider;
 
     private readonly ILogger<DataStoreConfigurationProvider> _logger;
 
@@ -46,7 +46,7 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
     public DataStoreConfigurationProvider(
         ILogger<DataStoreConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
-        Lazy<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>> containerProvider,
+        ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand> containerProvider,
         string dataStoreName,
         string pathName = "data")
         : base(logger ?? NullLogger<DataStoreConfigurationProvider>.Instance,
@@ -90,7 +90,7 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
 
         container.DataPathId = path.Id;
 
-        var saveResult = await _containerProvider.Value.Save(container, ct).ConfigureAwait(false);
+        var saveResult = await _containerProvider.Save(container, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
             return saveResult.ToNewResult<DataContainerConfiguration>();
 

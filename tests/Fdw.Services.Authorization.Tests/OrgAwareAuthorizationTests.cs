@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -227,7 +227,7 @@ public sealed class OrgAwareAuthorizationTests
             rolePermProviderMock.Object,
             userRoleProviderMock.Object,
             NullLogger<EffectivePermissionResolver>.Instance,
-            new Lazy<IOrgAccessProvider>(() => orgAccessMock.Object));
+            orgAccessMock.Object);
     }
 
     private static Mock<ImplementationConfigurationProviderBase<TConfig, TCommand>> MockProvider<TConfig, TCommand>(

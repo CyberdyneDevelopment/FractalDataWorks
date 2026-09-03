@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -119,8 +119,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
                 sp.GetRequiredService<ILogger<StreamingPipelineFactory>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetService<IDataGateway>(),
-                new Lazy<IConnectionProvider>(
-                    () => sp.GetService<IConnectionProvider>()!)));
+                sp.GetService<IConnectionProvider>()));
 
             builder.Services.AddSingleton(sp => new ImplementationConfigurationProviderBase<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>(
                 sp.GetRequiredService<ILoggerFactory>().CreateLogger<ImplementationConfigurationProviderBase<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>>(),

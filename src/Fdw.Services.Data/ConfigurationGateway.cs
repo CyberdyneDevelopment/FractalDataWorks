@@ -26,6 +26,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
+using Fdw.Abstractions;
 namespace Fdw.Services.Data;
 
 /// <summary>
@@ -57,7 +58,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     private readonly Lazy<IReadOnlyList<IDataStore>> _dataStores;
 
     private readonly DataGatewayResultCache? _cache;
-    private readonly DataGatewayConfiguration? _options;
+    private readonly DataGatewayImplementationConfiguration? _options;
 
     private readonly IAuthenticationContextAccessor? _authenticationContextAccessor;
 
@@ -89,7 +90,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         ConfigurationSchema schema,
         ILogger<ConfigurationGateway>? logger = null,
         DataGatewayResultCache? cache = null,
-        DataGatewayConfiguration? options = null,
+        DataGatewayImplementationConfiguration? options = null,
         IAuthenticationContextAccessor? authenticationContextAccessor = null)
         : this(connectionName, connectionFactory, secretManager: null, schema, logger, cache, options, authenticationContextAccessor)
     {
@@ -124,7 +125,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         ConfigurationSchema schema,
         ILogger<ConfigurationGateway>? logger = null,
         DataGatewayResultCache? cache = null,
-        DataGatewayConfiguration? options = null,
+        DataGatewayImplementationConfiguration? options = null,
         IAuthenticationContextAccessor? authenticationContextAccessor = null)
     {
         ConnectionName = string.IsNullOrWhiteSpace(connectionName)
@@ -659,5 +660,22 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         return GenericResult<IDataContainer>.Failure(
             ConfigurationGatewayLog.ResolveContainerNotFoundInAnyPath(_logger, target.Container, dataStoreName));
     }
+
+    // Why these are explicit and refuse: a data gateway routes a command to a connection using an
+    // address the caller supplies alongside it. IGenericService's command surface carries no address,
+    // so there is no honest answer -- it fails loud rather than guessing a store.
+    string IPlatformService.Id => "ConfigurationGateway";
+
+    string IPlatformService.ServiceType => "DataGateway";
+
+    bool IPlatformService.IsAvailable => true;
+
+    Task<IGenericResult<T>> IGenericService.Execute<T>(IGenericCommand command, CancellationToken cancellationToken)
+        => Task.FromResult(GenericResult<T>.Failure(
+            DataGatewayProviderLog.CommandCarriesNoAddress(_logger)));
+
+    Task<IGenericResult> IGenericService.Execute(IGenericCommand command, CancellationToken cancellationToken)
+        => Task.FromResult<IGenericResult>(GenericResult.Failure(
+            DataGatewayProviderLog.CommandCarriesNoAddress(_logger)));
 
 }

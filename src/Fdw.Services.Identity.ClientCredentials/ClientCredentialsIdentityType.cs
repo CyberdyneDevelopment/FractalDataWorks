@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using Fdw.Collections;
@@ -41,10 +41,7 @@ public sealed class ClientCredentialsIdentityType
                 .Register(Name, sp => new ClientCredentialsIdentityFactory(
                     sp.GetService<ILoggerFactory>(),
                     sp.GetRequiredService<IHttpClientFactory>().CreateClient(IdentityHttpClient.Name),
-                    sp.GetRequiredService<Lazy<ISecretManagerProvider>>()));
-
-            builder.Services.TryAddScoped(sp => new Lazy<ISecretManagerProvider>(
-                sp.GetRequiredService<ISecretManagerProvider>));
+                    sp.GetRequiredService<ISecretManagerProvider>()));
 
             // The typed body provider, so the header provider can compose the aggregate. Registration
             // only makes it resolvable; Initialization is where it is handed over, because the header

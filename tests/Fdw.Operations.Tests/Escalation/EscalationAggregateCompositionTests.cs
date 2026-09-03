@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -20,6 +20,7 @@ using Shouldly;
 using Xunit;
 using Fdw.Services.Data;
 
+using Fdw.Abstractions;
 namespace Fdw.Operations.Tests.Escalation;
 
 /// <summary>
@@ -262,6 +263,20 @@ public sealed class EscalationAggregateCompositionTests
             key.Setup(k => k.ReferencedContainer).Returns((IDataContainer?)null);
             return key.Object;
         }
+
+        // The fixture addresses every call; a gateway's generic command surface carries no address,
+        // so nothing here routes one and reaching these would be the test lying about the seam.
+        string IPlatformService.Id => "AggregateGateway";
+
+        string IPlatformService.ServiceType => "DataGateway";
+
+        bool IPlatformService.IsAvailable => true;
+
+        Task<IGenericResult<T>> IGenericService.Execute<T>(IGenericCommand command, CancellationToken cancellationToken)
+            => throw new NotSupportedException("This fixture routes by target, never by a bare command.");
+
+        Task<IGenericResult> IGenericService.Execute(IGenericCommand command, CancellationToken cancellationToken)
+            => throw new NotSupportedException("This fixture routes by target, never by a bare command.");
     }
 
     private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)

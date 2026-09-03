@@ -19,38 +19,50 @@ using Fdw.Services.Data.Commands;
 namespace Fdw.Services.Data;
 
 /// <summary>
-/// Default DataGateway service type that registers <see cref="IDataGateway"/>,
+/// The data gateway implementation this framework ships. Registers <see cref="IDataGateway"/>,
 /// <see cref="IDataStoreProvider"/>, and <see cref="ISchemaInformationService"/>
 /// with the dependency injection container.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(DataGatewayTypes), "Default")]
-public sealed class DefaultDataGatewayServiceType : DataGatewayTypeBase<IGenericService, IDataGatewayFactory>
+[ServiceTypeOption(typeof(DataGatewayServiceTypes), "Main")]
+public sealed class DataGatewayServiceType : DataGatewayTypeBase<IGenericService, IDataGatewayFactory>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="DefaultDataGatewayServiceType"/> class.
+    /// Initializes a new instance of the <see cref="DataGatewayServiceType"/> class.
     /// </summary>
-    public DefaultDataGatewayServiceType()
+    public DataGatewayServiceType()
         : base(
-            "Default",
-            "DataGateway:Default",
-            "Default DataGateway",
-            "Default DataGateway with DataStoreProvider, SchemaInformation, and DataSetResolver")
+            "Main",
+            "DataGateway:Main",
+            "Main DataGateway",
+            "The data gateway this framework ships, with DataStoreProvider, SchemaInformation and DataSetResolver")
     {
+        // Initialize, because both providers have to be resolvable: the option is the only thing
+        // that knows which implementation it is, and the domain provider dispatches by the name
+        // registered here. Without it the domain record names a kind the registry never heard of.
+        Initialization((host, loggerFactory) =>
+        {
+            host.Services.GetRequiredService<IDataGatewayConfigurationProvider>()
+                .Register(Name, host.Services.GetRequiredService<DataGatewayImplementationConfigurationProvider>());
+            return GenericResult<IHost>.Success(host);
+        });
+
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<DataGatewayConfigurationProvider>(sp =>
-                new DataGatewayConfigurationProvider(
-                    sp.GetService<ILogger<DataGatewayConfigurationProvider>>(),
+            builder.Services.TryAddSingleton<DataGatewayImplementationConfigurationProvider>(sp =>
+                new DataGatewayImplementationConfigurationProvider(
+                    sp.GetService<ILogger<DataGatewayImplementationConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    "ServerConfiguration"));
+                    DataGatewayServiceTypes.ConfigurationConnection));
 
-            // Why resolved rather than injected: the gateway takes its settings as a value and a DI
-            // factory cannot await the read.
+
+            // Why the domain provider and not the implementation one: the domain record says which
+            // implementation this host runs, and routing to it is the domain provider's job. Reading
+            // the implementation directly would name one in code and make the record decorative.
             builder.Services.TryAddSingleton(sp =>
             {
 #pragma warning disable VSTHRD002
-                var result = sp.GetRequiredService<DataGatewayConfigurationProvider>()
+                var result = sp.GetRequiredService<IDataGatewayConfigurationProvider>()
                     .Get("DataGateway").GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
                 if (result.IsFailure || result.Value is null)
@@ -63,7 +75,6 @@ public sealed class DefaultDataGatewayServiceType : DataGatewayTypeBase<IGeneric
             });
 
 
-            builder.Services.TryAddSingleton(sp => new Lazy<IDataSetConfigurationProvider>(() => sp.GetRequiredService<IDataSetConfigurationProvider>()));
             builder.Services.TryAddSingleton<IDataGateway, DataGatewayService>();
             builder.Services.TryAddScoped<ISchemaInformationService, SchemaInformationService>();
 

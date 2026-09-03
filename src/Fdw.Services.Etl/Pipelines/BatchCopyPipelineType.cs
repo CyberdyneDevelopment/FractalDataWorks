@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -118,8 +118,7 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
                 sp.GetRequiredService<ILogger<BatchCopyPipelineFactory>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetService<IDataGateway>(),
-                new Lazy<IConnectionProvider>(
-                    () => sp.GetService<IConnectionProvider>()!),
+                sp.GetService<IConnectionProvider>(),
                 sp.GetService<IDataStoreProvider>()));
 
             builder.Services.AddSingleton(sp => new ImplementationConfigurationProviderBase<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>(

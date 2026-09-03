@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -19,6 +19,7 @@ using Shouldly;
 using Xunit;
 using Fdw.Services.Data;
 
+using Fdw.Abstractions;
 namespace Fdw.Services.Tests.Configuration;
 
 /// <summary>
@@ -285,6 +286,20 @@ public sealed class RecursiveCascadeSaveTests
 
         public Task<IGenericResult<IDataGatewayTransaction>> BeginTransaction(string connectionName, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<IDataGatewayTransaction>.Failure(new GenericMessage("Transactions not supported in test double")));
+
+        // The fixture addresses every call; a gateway's generic command surface carries no address,
+        // so nothing here routes one and reaching these would be the test lying about the seam.
+        string IPlatformService.Id => "RecordingGateway";
+
+        string IPlatformService.ServiceType => "DataGateway";
+
+        bool IPlatformService.IsAvailable => true;
+
+        Task<IGenericResult<T>> IGenericService.Execute<T>(IGenericCommand command, CancellationToken cancellationToken)
+            => throw new NotSupportedException("This fixture routes by target, never by a bare command.");
+
+        Task<IGenericResult> IGenericService.Execute(IGenericCommand command, CancellationToken cancellationToken)
+            => throw new NotSupportedException("This fixture routes by target, never by a bare command.");
     }
 
     /// <summary>
@@ -340,6 +355,20 @@ public sealed class RecursiveCascadeSaveTests
 
         public Task<IGenericResult<IDataGatewayTransaction>> BeginTransaction(string connectionName, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<IDataGatewayTransaction>.Failure(new GenericMessage("Transactions not supported in test double")));
+
+        // The fixture addresses every call; a gateway's generic command surface carries no address,
+        // so nothing here routes one and reaching these would be the test lying about the seam.
+        string IPlatformService.Id => "HeaderReturningGateway";
+
+        string IPlatformService.ServiceType => "DataGateway";
+
+        bool IPlatformService.IsAvailable => true;
+
+        Task<IGenericResult<T>> IGenericService.Execute<T>(IGenericCommand command, CancellationToken cancellationToken)
+            => throw new NotSupportedException("This fixture routes by target, never by a bare command.");
+
+        Task<IGenericResult> IGenericService.Execute(IGenericCommand command, CancellationToken cancellationToken)
+            => throw new NotSupportedException("This fixture routes by target, never by a bare command.");
     }
 
     private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)

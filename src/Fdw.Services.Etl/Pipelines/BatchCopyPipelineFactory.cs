@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.Extensions.Logging;
 using Fdw.Abstractions;
 using Fdw.Configuration;
@@ -23,7 +23,7 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
     private readonly ILogger<BatchCopyPipelineFactory> _logger;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IDataGateway? _dataGateway;
-    private readonly Lazy<IConnectionProvider>? _connectionProvider;
+    private readonly IConnectionProvider? _connectionProvider;
     private readonly IDataStoreProvider? _dataStoreProvider;
 
     /// <summary>
@@ -38,7 +38,7 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
         ILogger<BatchCopyPipelineFactory> logger,
         ILoggerFactory loggerFactory,
         IDataGateway? dataGateway = null,
-        Lazy<IConnectionProvider>? connectionProvider = null,
+        IConnectionProvider? connectionProvider = null,
         IDataStoreProvider? dataStoreProvider = null)
     {
         _logger = logger;
@@ -61,7 +61,7 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
                 pipelineLogger,
                 _dataGateway,
                 calculationEngine: null,
-                _connectionProvider?.Value,
+                _connectionProvider,
                 _dataStoreProvider);
 
             EtlLog.PipelineConfigurationLoaded(_logger, configuration.Name, "BatchCopy");

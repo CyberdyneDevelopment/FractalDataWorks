@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
@@ -13,6 +13,8 @@ using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Abstractions;
+using Fdw.Services.Data.Logging;
 namespace Fdw.Services.Data.Limits;
 
 /// <summary>
@@ -304,6 +306,23 @@ internal sealed class LimitEnforcementDataGateway : IDataGateway
                 _counters.IncrementQueryCount(limit.ConnectionConfigurationId);
         }
     }
+
+    // Why these are explicit and refuse: a data gateway routes a command to a connection using an
+    // address the caller supplies alongside it. IGenericService's command surface carries no address,
+    // so there is no honest answer -- it fails loud rather than guessing a store.
+    string IPlatformService.Id => "LimitEnforcementDataGateway";
+
+    string IPlatformService.ServiceType => "DataGateway";
+
+    bool IPlatformService.IsAvailable => true;
+
+    Task<IGenericResult<T>> IGenericService.Execute<T>(IGenericCommand command, CancellationToken cancellationToken)
+        => Task.FromResult(GenericResult<T>.Failure(
+            DataGatewayProviderLog.CommandCarriesNoAddress(_logger)));
+
+    Task<IGenericResult> IGenericService.Execute(IGenericCommand command, CancellationToken cancellationToken)
+        => Task.FromResult<IGenericResult>(GenericResult.Failure(
+            DataGatewayProviderLog.CommandCarriesNoAddress(_logger)));
 
     /// <inheritdoc/>
     public void InvalidateCachedResults(DataStoreTarget target) => _inner.InvalidateCachedResults(target);

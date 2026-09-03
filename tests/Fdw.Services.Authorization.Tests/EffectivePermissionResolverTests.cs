@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -83,7 +83,7 @@ public sealed class EffectivePermissionResolverTests
     private static IEffectivePermissionResolver BuildResolverWithAssignments(
         IEnumerable<UserRoleConfiguration> userAssignments,
         IReadOnlyList<TenantOrgAccessConfiguration>? orgGrants = null,
-        Lazy<IOrgAccessProvider>? orgAccessProvider = null)
+        IOrgAccessProvider? orgAccessProvider = null)
     {
         var roleProvider     = MockCatalog<IRoleConfigurationProvider, RoleConfiguration>(AllRoles);
         var permProvider     = MockCatalog<IPermissionConfigurationProvider, PermissionConfiguration>(AllPermissions);
@@ -96,7 +96,7 @@ public sealed class EffectivePermissionResolverTests
             orgMock
                 .Setup(p => p.Get(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Success(orgGrants));
-            orgAccessProvider = new Lazy<IOrgAccessProvider>(() => orgMock.Object);
+            orgAccessProvider = orgMock.Object;
         }
 
         return new EffectivePermissionResolver(
@@ -114,7 +114,7 @@ public sealed class EffectivePermissionResolverTests
     /// </summary>
     private static IEffectivePermissionResolver BuildResolver(
         IReadOnlyList<TenantOrgAccessConfiguration>? orgGrants = null,
-        Lazy<IOrgAccessProvider>? orgAccessProvider = null,
+        IOrgAccessProvider? orgAccessProvider = null,
         string userId = "1",
         bool includeGlobalRole = true,
         bool includeTenantRole = true)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Fdw.Abstractions;
@@ -72,8 +72,7 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                 new DataStoreConfigurationProvider(
                     sp.GetService<ILogger<DataStoreConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    new Lazy<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>(
-                        () => sp.GetRequiredService<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>()),
+                    sp.GetRequiredService<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>(),
                     DataStoreTypes.ConfigurationConnection, "data"));
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataStoreConfiguration, DataStoreConfigurationCommand>>(
                 sp => sp.GetRequiredService<DataStoreConfigurationProvider>());

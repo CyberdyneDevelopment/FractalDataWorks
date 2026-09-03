@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -31,23 +31,29 @@ public sealed class SqlUserNotificationPreferenceService : IUserNotificationPref
     private const string ContainerName = "UserNotificationPreference";
     private const string SystemActor = "system";
 
-    private readonly Lazy<IDataGateway> _dataGateway;
+    private readonly IDataGatewayProvider _dataGateways;
     private readonly ILogger<SqlUserNotificationPreferenceService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SqlUserNotificationPreferenceService"/> class.
     /// </summary>
     public SqlUserNotificationPreferenceService(
-        Lazy<IDataGateway> dataGateway,
+        IDataGatewayProvider dataGateways,
         ILogger<SqlUserNotificationPreferenceService>? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(dataGateway);
+        ArgumentNullException.ThrowIfNull(dataGateways);
 
-        _dataGateway = dataGateway;
+        _dataGateways = dataGateways;
         _logger = logger ?? NullLogger<SqlUserNotificationPreferenceService>.Instance;
     }
 
-    private IDataGateway Gateway => _dataGateway.Value;
+    // Why this throws rather than returning a result: every caller below is mid-query and has no
+    // branch for "there is no gateway". The provider names the reason, which a Lazy could not.
+    private IDataGateway Gateway => _dataGateways.Get() is { IsSuccess: true, Value: not null } gateway
+        ? gateway.Value
+        : throw new InvalidOperationException(
+            _dataGateways.Get().CurrentMessage?.ToString()
+            ?? "No data gateway is available to read notification preferences.");
 
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<NotificationPreference>>> GetPreferences(

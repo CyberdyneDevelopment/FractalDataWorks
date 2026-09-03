@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -36,7 +36,7 @@ public sealed class DefaultAuthorizationService : IFrameworkAuthorizationService
         ILogger<DefaultAuthorizationService>? logger,
         Lazy<ITenantContext>? tenantContext = null,
         Lazy<IOrgContext>? orgContext = null,
-        Lazy<IOrgAccessProvider>? orgAccessProvider = null)
+        IOrgAccessProvider? orgAccessProvider = null)
     {
         ArgumentNullException.ThrowIfNull(roleProvider);
         ArgumentNullException.ThrowIfNull(permissionProvider);

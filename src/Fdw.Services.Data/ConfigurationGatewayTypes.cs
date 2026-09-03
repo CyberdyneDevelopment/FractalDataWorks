@@ -14,6 +14,7 @@ using Fdw.Services.Data.Logging;
 using Fdw.Services.SecretManagers;
 using Fdw.Services.SecretManagers.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using Fdw.Hosting.Abstractions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -26,7 +27,7 @@ namespace Fdw.Services.Data;
 /// configuration itself.
 /// </summary>
 /// <remarks>
-/// Separate from <see cref="DataGatewayTypes"/> because the two answer different questions. A data
+/// Separate from <see cref="DataGatewayServiceTypes"/> because the two answer different questions. A data
 /// gateway reaches a DataStore that configuration describes; a configuration gateway reaches the
 /// store configuration lives in, and is bound from <c>configurationSchema.json</c> before any row is
 /// readable. One collection could carry only one of those.
@@ -45,7 +46,6 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
     /// The schema file declaring the connections this app opens before any configuration is readable.
     /// </summary>
     public static string SchemaFileName { get; set; } = "configurationSchema.json";
-
 
     /// <summary>
     /// Sets this collection's phases: the schema and the gateways over it, both in Register.
@@ -78,6 +78,16 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
                     connectionName => Build(sp, connectionName, loggerFactory),
                     sp.GetService<ILogger<ConfigurationGatewayProvider>>()));
 
+            // Why here and not in each host: a provider that decides which connection configuration
+            // is read through is this collection's own concern, and every host wrote the same line.
+            //
+            // Why TryAdd: this is the answer when nothing else has one. A multitenancy option
+            // registers its own tenant-aware provider, and because that runs after this and adds
+            // rather than tries, it wins -- which is the precedence that was inverted while each
+            // host registered the default LAST, after PlatformServices.Register had already put the
+            // tenant-aware one in. Configuration then always resolved through the default
+            // connection, never the tenant's, and nothing said so.
+            builder.Services.TryAddSingleton<IConfigurationConnectionNameProvider, DefaultConfigurationConnectionNameProvider>();
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
@@ -136,7 +146,7 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
                 // read through, so asking for that configuration while building it would recurse.
                 string.Equals(connectionName, ServerTierConnectionName, System.StringComparison.Ordinal)
                     ? null
-                    : services.GetService<DataGatewayConfiguration>(),
+                    : services.GetService<DataGatewayImplementationConfiguration>(),
                 services.GetService<IAuthenticationContextAccessor>()));
     }
 

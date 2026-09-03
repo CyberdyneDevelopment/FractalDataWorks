@@ -20,7 +20,7 @@ public sealed class DataSetQueryDocumentProcessor : IDocumentProcessor
 
     /// <summary>
     /// Sets the service provider for resolving IDataSetConfigurationProvider at document generation time.
-    /// Must be called after app.Build() and DataGatewayTypes.Initialize().
+    /// Must be called after app.Build() and DataGatewayServiceTypes.Initialize().
     /// </summary>
     public void Initialize(IServiceProvider serviceProvider)
     {

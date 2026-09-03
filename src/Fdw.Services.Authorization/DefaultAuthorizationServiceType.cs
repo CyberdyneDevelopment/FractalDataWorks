@@ -61,7 +61,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     sp.GetRequiredService<IRolePermissionConfigurationProvider>(),
                     sp.GetRequiredService<UserRoleConfigurationProvider>(),
                     sp.GetService<ILoggerFactory>()?.CreateLogger<EffectivePermissionResolver>(),
-                    new Lazy<IOrgAccessProvider>(() => sp.GetRequiredService<IOrgAccessProvider>())));
+                    sp.GetRequiredService<IOrgAccessProvider>()));
 
             builder.Services.TryAddSingleton<IRolePermissionResolver>(sp =>
                 new RolePermissionResolver(

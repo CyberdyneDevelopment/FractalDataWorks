@@ -7,7 +7,7 @@ namespace Fdw.Services.Data;
 /// <summary>
 /// Configuration for the DataGateway service.
 /// </summary>
-public sealed class DataGatewayConfiguration : IDataGatewayConfiguration
+public sealed class DataGatewayImplementationConfiguration : IDataGatewayImplementationConfiguration
 {
     /// <inheritdoc/>
     public Guid Id { get; set; } = Guid.CreateVersion7();
@@ -23,6 +23,9 @@ public sealed class DataGatewayConfiguration : IDataGatewayConfiguration
 
     /// <inheritdoc/>
     public string? ServiceOptionType { get; set; }
+
+    /// <summary>Gets or sets the domain record this implementation belongs to.</summary>
+    public Guid DataGatewayId { get; set; }
 
     /// <summary>
     /// Gets a value indicating whether the DataGateway is enabled.

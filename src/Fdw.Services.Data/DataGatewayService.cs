@@ -33,6 +33,7 @@ using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Results;
 
 using Fdw.Services.Data.Configuration;
+using Fdw.Abstractions;
 namespace Fdw.Services.Data;
 
 /// <summary>
@@ -45,7 +46,7 @@ public sealed class DataGatewayService : IDataGateway
 {
     private readonly ILogger<DataGatewayService> _logger;
     private readonly IDataConnectionProvider _connectionProvider;
-    private readonly Lazy<IDataSetConfigurationProvider> _dataSetProvider;
+    private readonly IDataSetConfigurationProvider _dataSetProvider;
     private readonly DataStoreConfigurationProvider _dataStoreConfigProvider;
     private readonly IDataStoreProvider? _dataStoreProvider;
     private readonly PredicatePushdownAnalyzer _predicatePushdown;
@@ -55,7 +56,7 @@ public sealed class DataGatewayService : IDataGateway
 
     private readonly ConnectionConfigurationProvider? _connectionConfigProvider;
     private readonly DataGatewayResultCache? _cache;
-    private readonly DataGatewayConfiguration? _options;
+    private readonly DataGatewayImplementationConfiguration? _options;
 
     private static readonly TimeSpan DefaultCacheDuration = TimeSpan.FromMinutes(5);
 
@@ -83,12 +84,12 @@ public sealed class DataGatewayService : IDataGateway
     public DataGatewayService(
         ILoggerFactory? loggerFactory,
         IDataConnectionProvider connectionProvider,
-        Lazy<IDataSetConfigurationProvider> dataSetProvider,
+        IDataSetConfigurationProvider dataSetProvider,
         DataStoreConfigurationProvider dataStoreConfigProvider,
         IFrameworkAuthorizationService? authorizationService = null,
         IDataStoreProvider? dataStoreProvider = null,
         DataGatewayResultCache? cache = null,
-        DataGatewayConfiguration? options = null,
+        DataGatewayImplementationConfiguration? options = null,
         IAuthenticationContextAccessor? authenticationContextAccessor = null,
         ConnectionConfigurationProvider? connectionConfigProvider = null)
     {
@@ -380,7 +381,7 @@ public sealed class DataGatewayService : IDataGateway
     /// <inheritdoc/>
     public async Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
     {
-        var cfgResult = await _dataSetProvider.Value.Get(target.DataSet, cancellationToken).ConfigureAwait(false);
+        var cfgResult = await _dataSetProvider.Get(target.DataSet, cancellationToken).ConfigureAwait(false);
         if (!cfgResult.IsSuccess)
             return cfgResult.ToNewResult<T>();
         if (cfgResult.Value is null)
@@ -432,5 +433,22 @@ public sealed class DataGatewayService : IDataGateway
 
         return GenericResult<IDataContainer>.Success(containerResult.Value);
     }
+
+    // Why these are explicit and refuse: a data gateway routes a command to a connection using an
+    // address the caller supplies alongside it. IGenericService's command surface carries no address,
+    // so there is no honest answer -- it fails loud rather than guessing a store.
+    string IPlatformService.Id => "DataGateway";
+
+    string IPlatformService.ServiceType => "DataGateway";
+
+    bool IPlatformService.IsAvailable => true;
+
+    Task<IGenericResult<T>> IGenericService.Execute<T>(IGenericCommand command, CancellationToken cancellationToken)
+        => Task.FromResult(GenericResult<T>.Failure(
+            DataGatewayProviderLog.CommandCarriesNoAddress(_logger)));
+
+    Task<IGenericResult> IGenericService.Execute(IGenericCommand command, CancellationToken cancellationToken)
+        => Task.FromResult<IGenericResult>(GenericResult.Failure(
+            DataGatewayProviderLog.CommandCarriesNoAddress(_logger)));
 
 }

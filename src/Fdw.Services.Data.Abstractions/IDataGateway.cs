@@ -1,9 +1,11 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
 using Fdw.Data.RowSources.Abstractions;
 using Fdw.Results;
+
+using Fdw.Abstractions;
 
 namespace Fdw.Services.Data.Abstractions;
 
@@ -12,7 +14,7 @@ namespace Fdw.Services.Data.Abstractions;
 /// Addressing (DataStore, Path, Container) is supplied via <see cref="DataStoreTarget"/> or
 /// <see cref="DataSetTarget"/> — never on the command itself.
 /// </summary>
-public interface IDataGateway
+public interface IDataGateway : IGenericService
 {
     /// <summary>
     /// Executes a data command against an explicitly identified container within a DataStore.
