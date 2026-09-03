@@ -13,9 +13,8 @@ namespace Fdw.Services.Connections.Abstractions;
 /// and LimitType. Each subtype has its own child table for its specific fields.
 ///
 /// Virtual enforcement properties expose limit values in a connection-type-agnostic
-/// way so that <c>LimitEnforcementDataGateway</c> in Services.Data can operate
-/// exclusively through the base class — keeping MsSql/Http types invisible above
-/// the connection layer.
+/// way so that <c>DataGatewayService</c> in Services.Data can operate exclusively
+/// through the base class — keeping MsSql/Http types invisible above the connection layer.
 /// </summary>
 [ExcludeFromCodeCoverage]
 public class ConnectionLimitConfiguration : IGenericConfiguration

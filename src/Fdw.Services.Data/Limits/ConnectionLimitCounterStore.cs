@@ -16,7 +16,7 @@ namespace Fdw.Services.Data.Limits;
 /// - On process restart, in-memory counters are reloaded from the DB row, so budget
 ///   already consumed in the current day is not forgotten.
 /// </summary>
-internal sealed class ConnectionLimitCounterStore
+public sealed class ConnectionLimitCounterStore
 {
     private readonly ConcurrentDictionary<Guid, CounterEntry> _counters = new();
 

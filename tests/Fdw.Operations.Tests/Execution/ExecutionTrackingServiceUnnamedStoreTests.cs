@@ -23,8 +23,15 @@ namespace Fdw.Operations.Tests.Execution;
 /// </remarks>
 public sealed class ExecutionTrackingServiceUnnamedStoreTests
 {
+    // A stub rather than the real provider: this fixture is about what the service does with a
+    // gateway, not about how one is supplied.
+    private sealed class StubGatewayProvider(IDataGateway gateway) : IDataGatewayProvider
+    {
+        public IDataGateway ByName(string name) => gateway;
+    }
+
     private static ExecutionTrackingService WithNoStore() =>
-        new(new MainDataGatewayProvider(new Mock<IDataGateway>(MockBehavior.Strict).Object), NullLoggerFactory.Instance, dataStoreName: null);
+        new(new StubGatewayProvider(new Mock<IDataGateway>(MockBehavior.Strict).Object), NullLoggerFactory.Instance, dataStoreName: null);
 
     [Fact]
     [Trait("Priority", "P1")]

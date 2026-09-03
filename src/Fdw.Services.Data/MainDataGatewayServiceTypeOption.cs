@@ -75,41 +75,23 @@ public sealed class MainDataGatewayServiceTypeOption : DataGatewayTypeBase<IGene
             });
 
 
-            builder.Services.TryAddSingleton<IDataGateway, DataGatewayService>();
             builder.Services.TryAddScoped<ISchemaInformationService, SchemaInformationService>();
 
             builder.Services.AddMemoryCache();
 
-            builder.Services.TryAddScoped<DataGatewayService>();
-
             builder.Services.TryAddSingleton<DataGatewayResultCache>();
             builder.Services.AddSingleton<ICacheInvalidator>(sp => sp.GetRequiredService<DataGatewayResultCache>());
-
-            var existing = builder.Services.FirstOrDefault(d => d.ServiceType == typeof(IDataGateway));
-            if (existing != null)
-                builder.Services.Remove(existing);
 
             builder.Services.TryAddSingleton<IConnectionLimitResolver, PassThroughConnectionLimitResolver>();
             builder.Services.TryAddSingleton<ConnectionLimitCounterStore>();
 
-            builder.Services.AddScoped<LimitEnforcementDataGateway>(sp =>
-                new LimitEnforcementDataGateway(
-                    sp.GetRequiredService<DataGatewayService>(),
-                    sp.GetRequiredService<IConnectionLimitResolver>(),
-                    sp.GetRequiredService<ConnectionLimitCounterStore>(),
-                    sp.GetService<ILoggerFactory>()));
+            // Why a factory and not a scoped IDataGateway registration: Create() builds a brand new
+            // gateway on every call, so nothing here is ever captured across a scope boundary. The
+            // factory is singleton -- it holds only the other singleton-safe pieces a gateway is
+            // built from -- and MainDataGatewayProvider, also singleton, simply calls it on every ask.
+            builder.Services.TryAddSingleton<IDataGatewayFactory, DataGatewayFactory>();
 
-            builder.Services.AddScoped<IDataGateway>(sp => sp.GetRequiredService<LimitEnforcementDataGateway>());
-
-            // Why scoped and not singleton: IDataGateway is scoped, and a provider constructed with
-            // it directly is safe ONLY if the provider shares that lifetime -- a singleton provider
-            // holding a scoped gateway from its own constructor is the exact captive dependency this
-            // provider exists to prevent, one layer removed. Scoped-depends-on-scoped needs no
-            // deferral: both are resolved together, within whichever scope asked.
-            builder.Services.TryAddScoped<IDataGatewayProvider>(sp =>
-                new MainDataGatewayProvider(
-                    sp.GetRequiredService<IDataGateway>(),
-                    sp.GetService<ILogger<MainDataGatewayProvider>>()));
+            builder.Services.TryAddSingleton<IDataGatewayProvider, MainDataGatewayProvider>();
 
             builder.Services.AddHostedService(sp =>
                 new DailyLimitResetJob(

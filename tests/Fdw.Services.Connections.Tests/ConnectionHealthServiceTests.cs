@@ -19,12 +19,19 @@ namespace Fdw.Services.Connections.Tests;
 /// </summary>
 public sealed class ConnectionHealthServiceTests
 {
+    // A stub rather than the real provider: this fixture is about what the service does with a
+    // gateway, not about how one is supplied.
+    private sealed class StubGatewayProvider(IDataGateway gateway) : IDataGatewayProvider
+    {
+        public IDataGateway ByName(string name) => gateway;
+    }
+
     private sealed record Fixture(ConnectionHealthService Service, Mock<IDataGateway> Gateway);
 
     private static Fixture CreateService()
     {
         var gateway = new Mock<IDataGateway>(MockBehavior.Loose);
-        var service = new ConnectionHealthService(new MainDataGatewayProvider(gateway.Object), NullLogger<ConnectionHealthService>.Instance);
+        var service = new ConnectionHealthService(new StubGatewayProvider(gateway.Object), NullLogger<ConnectionHealthService>.Instance);
         return new Fixture(service, gateway);
     }
 

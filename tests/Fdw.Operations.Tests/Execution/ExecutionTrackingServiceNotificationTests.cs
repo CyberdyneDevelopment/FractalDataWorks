@@ -27,6 +27,13 @@ namespace Fdw.Operations.Tests.Execution;
 /// </summary>
 public sealed class ExecutionTrackingServiceNotificationTests
 {
+    // A stub rather than the real provider: these fixtures are about what the service does with a
+    // gateway, not about how one is supplied.
+    private sealed class StubGatewayProvider(IDataGateway gateway) : IDataGatewayProvider
+    {
+        public IDataGateway ByName(string name) => gateway;
+    }
+
     private readonly Mock<IDataGateway> _mockGateway;
     private readonly Mock<INotificationServiceProvider> _mockNotificationProvider;
     private readonly Mock<IServiceConfigurationProvider<NotificationRuleConfiguration>> _mockRuleProvider;
@@ -143,7 +150,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
                 new Mock<INotificationResult>().Object));
 
         var sut = new ExecutionTrackingService(
-            new MainDataGatewayProvider(_mockGateway.Object),
+            new StubGatewayProvider(_mockGateway.Object),
             LoggerFactory,
             "OpsDb",
             _mockNotificationProvider.Object,
@@ -188,7 +195,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
                 new List<NotificationRuleConfiguration> { rule }));
 
         var sut = new ExecutionTrackingService(
-            new MainDataGatewayProvider(_mockGateway.Object),
+            new StubGatewayProvider(_mockGateway.Object),
             LoggerFactory,
             "OpsDb",
             _mockNotificationProvider.Object,
@@ -232,7 +239,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
                 new List<NotificationRuleConfiguration> { disabledRule }));
 
         var sut = new ExecutionTrackingService(
-            new MainDataGatewayProvider(_mockGateway.Object),
+            new StubGatewayProvider(_mockGateway.Object),
             LoggerFactory,
             "OpsDb",
             _mockNotificationProvider.Object,
@@ -278,7 +285,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
                 new List<NotificationRuleConfiguration> { scopedRule }));
 
         var sut = new ExecutionTrackingService(
-            new MainDataGatewayProvider(_mockGateway.Object),
+            new StubGatewayProvider(_mockGateway.Object),
             LoggerFactory,
             "OpsDb",
             _mockNotificationProvider.Object,
@@ -309,7 +316,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
         SetupGatewayForComplete(item);
 
         var sut = new ExecutionTrackingService(
-            new MainDataGatewayProvider(_mockGateway.Object),
+            new StubGatewayProvider(_mockGateway.Object),
             LoggerFactory,
             "OpsDb",
             notificationProvider: null,
@@ -353,7 +360,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
             .ReturnsAsync(GenericResult<IPlatformNotification>.Success(_mockNotificationSvc.Object));
 
         var sut = new ExecutionTrackingService(
-            new MainDataGatewayProvider(_mockGateway.Object),
+            new StubGatewayProvider(_mockGateway.Object),
             LoggerFactory,
             "OpsDb",
             _mockNotificationProvider.Object,
@@ -398,7 +405,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
             .ReturnsAsync(GenericResult<INotificationResult>.Failure(new GenericMessage("Send failed")));
 
         var sut = new ExecutionTrackingService(
-            new MainDataGatewayProvider(_mockGateway.Object),
+            new StubGatewayProvider(_mockGateway.Object),
             LoggerFactory,
             "OpsDb",
             _mockNotificationProvider.Object,

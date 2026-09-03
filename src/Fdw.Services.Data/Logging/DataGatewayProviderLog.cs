@@ -21,4 +21,12 @@ public static partial class DataGatewayProviderLog
         Message = "A data gateway routes by DataStoreTarget or DataSetTarget. A bare command carries "
                 + "no address, so there is nothing to route it to.")]
     public static partial IGenericMessage CommandCarriesNoAddress(ILogger logger);
+
+    /// <summary>The factory was asked to build a gateway from configuration that is not its own.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="actualType">The configuration type that arrived instead.</param>
+    /// <returns>The logged message.</returns>
+    [MessageLogging(EventId = 61035, Level = LogLevel.Error,
+        Message = "DataGatewayFactory builds a gateway from MainDataGatewayConfiguration; {actualType} is not that.")]
+    public static partial IGenericMessage ConfigurationTypeMismatch(ILogger logger, string actualType);
 }
