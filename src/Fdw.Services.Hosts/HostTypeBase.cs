@@ -40,7 +40,7 @@ public abstract class HostTypeBase<TService, TConfiguration, TFactory>
                description,
                category: "Host",
                defaultDataStoreName: "ServerConfiguration",
-               defaultPathName: "host",
+               defaultPathName: "hst",
                defaultContainerName: name)
     {
     }

@@ -8,7 +8,11 @@ using Fdw.ServiceTypes;
 
 using System.Linq;
 using Fdw.Results;
+using Fdw.Services.Data.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Hosts;
 
 /// <summary>
@@ -42,6 +46,32 @@ public partial class HostTypes : ServiceTypeCollectionBase<
     /// </remarks>
     static HostTypes()
     {
+        // Why this replaces the base's default rather than appending onto it: this class owns its own
+        // phase body (the STC001 analyzer enforces that distinction), so the cascade every option's
+        // Register() runs as part of has to be reproduced here explicitly, the same way
+        // ReferenceEndpoints.Endpoints loops its Groups. What's added at the end is the one thing no
+        // option owns: the domain provider itself.
+        Registration((builder, loggerFactory) =>
+        {
+            foreach (var option in Options)
+            {
+                var result = option.Register(builder, loggerFactory);
+                if (result.IsFailure)
+                {
+                    return result;
+                }
+            }
+
+            builder.Services.TryAddSingleton<HostConfigurationProvider>(sp =>
+                new HostConfigurationProvider(
+                    sp.GetService<ILogger<HostConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
+            builder.Services.TryAddSingleton<IHostConfigurationProvider>(
+                sp => sp.GetRequiredService<HostConfigurationProvider>());
+
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+
         Initialization((host, loggerFactory) =>
         {
             foreach (var option in Options.OrderBy(o => (o as IHostPipelinePosition)?.PipelinePosition ?? int.MaxValue))

@@ -29,10 +29,10 @@ public class HostConfigurationProvider
     /// <param name="dataStoreName">The datastore this reads through — the server tier.</param>
     /// <param name="pathName">The path holding the hosting tables.</param>
     public HostConfigurationProvider(
-        ILogger<HostConfigurationProvider> logger,
+        ILogger<HostConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName = "ServerConfiguration",
-        string pathName = "host")
+        string pathName = "hst")
         : base(logger ?? NullLogger<HostConfigurationProvider>.Instance,
                gatewayProvider,
                dataStoreName, pathName)

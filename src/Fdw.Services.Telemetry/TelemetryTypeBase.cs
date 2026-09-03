@@ -38,7 +38,7 @@ public abstract class TelemetryTypeBase<TService, TConfiguration, TFactory>
                // The container is the domain's, not the option's -- every telemetry
                // implementation writes host.Telemetry, so it is not derived from the name.
                defaultDataStoreName: "ServerConfiguration",
-               defaultPathName: "host",
+               defaultPathName: "hst",
                defaultContainerName: "Telemetry")
     {
     }
