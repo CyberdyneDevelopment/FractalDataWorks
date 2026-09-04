@@ -539,8 +539,10 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         if (!containerResult.IsSuccess || containerResult.Value is null)
             return false;
 
-        var fields = containerResult.Value.Schema?.Fields;
-        if (fields is null || fields.Count == 0)
+        // Why: .Schema forces IField projection, which no current connection-type builder
+        // populates (SQL included) -- .Nodes gives the field names this check actually needs.
+        var fields = containerResult.Value.Nodes;
+        if (fields.Count == 0)
             return false;
 
         for (var i = 0; i < fields.Count; i++)
