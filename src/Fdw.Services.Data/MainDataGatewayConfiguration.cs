@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
+using Fdw.Data;
 using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Data;
@@ -7,10 +9,15 @@ namespace Fdw.Services.Data;
 /// <summary>
 /// Configuration for the DataGateway service.
 /// </summary>
-public sealed class MainDataGatewayConfiguration : IDataGatewayImplementationConfiguration
+[ExcludeFromCodeCoverage]
+[GenerateMapper]
+[ManagedConfiguration(ServiceCategory = "DataGateway", ServiceType = "Main")]
+public partial class MainDataGatewayConfiguration : IDataGatewayImplementationConfiguration
 {
+    // Why no generated default: the store assigns identity. A value minted here reaches Get(id) as a
+    // real-looking id matching no row, and the miss reads as a data problem rather than an unsaved record.
     /// <inheritdoc/>
-    public Guid Id { get; set; } = Guid.CreateVersion7();
+    public Guid Id { get; set; }
 
     /// <inheritdoc/>
     public string Name { get; set; } = string.Empty;
@@ -30,7 +37,7 @@ public sealed class MainDataGatewayConfiguration : IDataGatewayImplementationCon
     /// <summary>
     /// Gets a value indicating whether the DataGateway is enabled.
     /// </summary>
-    public bool IsEnabled { get; init; } = true;
+    public bool IsEnabled { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether the gateway caches results.
