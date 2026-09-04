@@ -35,6 +35,8 @@ public partial class DataGatewayServiceTypes : ServiceTypeCollectionBase<
 
     static DataGatewayServiceTypes()
     {
+        var collectOptions = RegisterFunc;
+
         // Domain-level, in the collection: the connection name is a value and the rest comes from
         // DI, which is why it is a factory delegate. It has to exist before an option can register
         // into it, which is why this runs ahead of the option collect.
@@ -48,6 +50,10 @@ public partial class DataGatewayServiceTypes : ServiceTypeCollectionBase<
 
             builder.Services.TryAddSingleton<IDataGatewayConfigurationProvider>(
                 sp => sp.GetRequiredService<DataGatewayDomainConfigurationProvider>());
+
+            var registered = collectOptions(builder, loggerFactory);
+            if (registered.IsFailure)
+                return registered;
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
