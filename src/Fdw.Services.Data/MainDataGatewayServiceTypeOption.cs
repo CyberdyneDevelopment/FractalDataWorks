@@ -59,7 +59,12 @@ public sealed class MainDataGatewayServiceTypeOption : DataGatewayTypeBase<IGene
             // Why the domain provider and not the implementation one: the domain record says which
             // implementation this host runs, and routing to it is the domain provider's job. Reading
             // the implementation directly would name one in code and make the record decorative.
-            builder.Services.TryAddSingleton(sp =>
+            //
+            // Why registered under the CONCRETE type: Get() returns IDataGatewayImplementationConfiguration,
+            // and TryAddSingleton(Func<IServiceProvider,T>) infers T from that interface -- MainDataGatewayProvider's
+            // constructor takes the concrete MainDataGatewayConfiguration, which was never registered as
+            // itself, so DI could never resolve it. Explicit <MainDataGatewayConfiguration> fixes that.
+            builder.Services.TryAddSingleton<MainDataGatewayConfiguration>(sp =>
             {
 #pragma warning disable VSTHRD002
                 var result = sp.GetRequiredService<IDataGatewayConfigurationProvider>()
@@ -71,7 +76,13 @@ public sealed class MainDataGatewayServiceTypeOption : DataGatewayTypeBase<IGene
                         "DataGateway is not configured on the server tier. Whether the gateway caches is configuration, not a default.");
                 }
 
-                return result.Value;
+                if (result.Value is not MainDataGatewayConfiguration configuration)
+                {
+                    throw new InvalidOperationException(
+                        $"DataGateway's configured implementation is '{result.Value.GetType().Name}', not MainDataGatewayConfiguration.");
+                }
+
+                return configuration;
             });
 
 
