@@ -69,9 +69,16 @@ public sealed class MainDataGatewayServiceTypeOption : DataGatewayTypeBase<IGene
             // Register-phase GenericResult instead.
             using var built = builder.Services.BuildServiceProvider();
 
+            var domainProvider = built.GetRequiredService<IDataGatewayConfigurationProvider>();
+
+            // The domain compose needs "Main" registered against ITS OWN instance of the domain
+            // provider before it can dispatch to it -- Initialization does the same call against the
+            // real host later, for the real request-serving container. This one only lives as long
+            // as `built`.
+            domainProvider.Register(Name, built.GetRequiredService<MainDataGatewayConfigurationProvider>());
+
 #pragma warning disable VSTHRD002
-            var result = built.GetRequiredService<IDataGatewayConfigurationProvider>()
-                .Get("DataGateway").GetAwaiter().GetResult();
+            var result = domainProvider.Get("DataGateway").GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
 
             if (result.IsFailure || result.Value is null)
