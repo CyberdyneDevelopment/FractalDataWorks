@@ -157,7 +157,7 @@ public sealed class MsSqlSessionContextCachePartitionTests
         MsSqlSessionContextTypes.For(null).MaxCacheDuration(null).ShouldBe(TimeSpan.MaxValue);
     }
 
-    private static IAuthenticationContext Principal(
+    private static StubAuthenticationContext Principal(
         Guid userId,
         Guid? tenantId = null,
         bool isCrossTenant = false,

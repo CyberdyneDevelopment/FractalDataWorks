@@ -9,7 +9,7 @@ namespace Fdw.Data.PostgreSql.Tests;
 
 public sealed class PlPgSqlDialectTests
 {
-    private readonly ISqlDialect _sut = PlPgSqlDialect.Instance;
+    private readonly PlPgSqlDialect _sut = PlPgSqlDialect.Instance;
 
     [Fact]
     [Trait("Priority", "P0")]

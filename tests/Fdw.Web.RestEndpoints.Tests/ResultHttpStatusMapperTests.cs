@@ -29,7 +29,7 @@ public class ResultHttpStatusMapperTests
     private const int InternalCode = 90001;     // category 9 -> 500
     private const int LegacyCode = 3012;        // < 10000, uncategorized -> default 500
 
-    private static HttpContext CreateHttpContext(string traceId = "test-trace-123")
+    private static DefaultHttpContext CreateHttpContext(string traceId = "test-trace-123")
     {
         var context = new DefaultHttpContext();
         context.TraceIdentifier = traceId;

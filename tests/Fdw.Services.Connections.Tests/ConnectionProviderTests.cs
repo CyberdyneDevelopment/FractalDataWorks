@@ -858,6 +858,9 @@ public class ConnectionProviderTests
                 It.IsAny<CancellationToken>()),
             Times.Exactly(2));
     }
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "CoreFramework")]
     public async Task GetWithPermanentlyStaleConnectionFailsInsteadOfRecursing()
     {
         // Arrange - a connection that is stale the moment it is built. The old implementation

@@ -17,7 +17,7 @@ namespace Fdw.Services.Connections.Tests;
 /// </remarks>
 public sealed class RecordRowMatcherOperatorTests
 {
-    private static IReadOnlyDictionary<string, object?> Row(params (string Key, object? Value)[] fields)
+    private static Dictionary<string, object?> Row(params (string Key, object? Value)[] fields)
     {
         var row = new Dictionary<string, object?>(StringComparer.Ordinal);
         foreach (var (key, value) in fields) row[key] = value;

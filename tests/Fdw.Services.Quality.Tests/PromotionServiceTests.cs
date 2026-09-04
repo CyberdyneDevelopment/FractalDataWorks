@@ -433,7 +433,7 @@ public sealed class PromotionServiceTests
         result.Messages.ShouldContain(m => m.Code == "QUALITY-91001");
     }
 
-    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+    private static AnyConnectionGateways GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 
     private sealed class AnyConnectionGateways : IConfigurationGatewayProvider

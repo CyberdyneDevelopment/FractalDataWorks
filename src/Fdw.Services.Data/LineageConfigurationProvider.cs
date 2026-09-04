@@ -130,8 +130,8 @@ public class LineageConfigurationProvider
     /// </summary>
     /// <param name="dataSetId">The DataSet whose lineage is read.</param>
     /// <param name="direction">
-    /// <see cref="LineageClosureDirection.Downstream"/> filters on AncestorId, returning everything
-    /// downstream of <paramref name="dataSetId"/>; <see cref="LineageClosureDirection.Upstream"/>
+    /// <see cref="LineageClosureDirections.Downstream"/> filters on AncestorId, returning everything
+    /// downstream of <paramref name="dataSetId"/>; <see cref="LineageClosureDirections.Upstream"/>
     /// filters on DescendantId, returning everything upstream of it.
     /// </param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
@@ -142,16 +142,12 @@ public class LineageConfigurationProvider
     /// </remarks>
     public virtual async Task<IReadOnlyList<DataSetLineageClosureRow>> ReadLineageClosure(
         Guid dataSetId,
-        LineageClosureDirection direction,
+        LineageClosureDirectionBase direction,
         CancellationToken cancellationToken = default)
     {
         var gateway = _gatewayProvider.Get(DataStoreName);
         if (gateway.IsFailure || gateway.Value is not { } resolved)
             return [];
-
-        var propertyName = direction == LineageClosureDirection.Downstream
-            ? nameof(DataSetLineageClosureRow.AncestorId)
-            : nameof(DataSetLineageClosureRow.DescendantId);
 
         var command = new QueryCommand<DataSetLineageClosureRow>
         {
@@ -159,7 +155,7 @@ public class LineageConfigurationProvider
             {
                 Root = new FilterCondition
                 {
-                    PropertyName = propertyName,
+                    PropertyName = direction.ClosureIdPropertyName,
                     Operator = FilterOperators.ByName("Equal"),
                     Value = dataSetId,
                 },

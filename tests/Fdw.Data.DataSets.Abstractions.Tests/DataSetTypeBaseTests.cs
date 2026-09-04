@@ -44,7 +44,7 @@ public class DataSetTypeBaseTests
             => Task.FromResult(GenericResult<T>.Success(default!));
     }
 
-    private static IReadOnlyCollection<IDataField> CreateTestFields()
+    private static List<IDataField> CreateTestFields()
     {
         return new List<IDataField>
         {

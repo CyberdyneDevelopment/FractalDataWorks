@@ -77,7 +77,7 @@ public class ContractParityTests
     private static object[] Pair(Type client, Type server, string[]? ignoreClient = null)
         => new object[] { client, server, ignoreClient ?? Array.Empty<string>() };
 
-    private static IReadOnlyList<(string PropertyName, string JsonName)> JsonNames(Type type)
+    private static List<(string PropertyName, string JsonName)> JsonNames(Type type)
         => type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.CanRead && p.CanWrite)
             .Select(p => (

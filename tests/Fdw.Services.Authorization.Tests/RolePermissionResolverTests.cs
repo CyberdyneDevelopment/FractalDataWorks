@@ -127,7 +127,7 @@ public sealed class RolePermissionResolverTests
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("unreachable");
     }
 
-    private static IRolePermissionResolver Build(
+    private static RolePermissionResolver Build(
         IReadOnlyList<RolePermissionConfiguration>? rolePermissions = null)
         => new RolePermissionResolver(
             MockCatalog<IRoleConfigurationProvider, RoleConfiguration>(Roles).Object,

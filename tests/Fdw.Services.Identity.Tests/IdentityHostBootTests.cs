@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Fdw.ServiceTypes;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Data.Abstractions;
@@ -52,7 +53,7 @@ public sealed class IdentityHostBootTests
     [Theory]
     [InlineData("ClientCredentials")]
     [InlineData("JwtAssertion")]
-    public void EachMechanismRegistersItsFactoryWithTheDomainProvider(string mechanism)
+    public async Task EachMechanismRegistersItsFactoryWithTheDomainProvider(string mechanism)
     {
         // This is the assertion that proves the option attached AND its Register body ran: the
         // provider's factory registry is populated per mechanism only by that option's own
@@ -75,9 +76,9 @@ public sealed class IdentityHostBootTests
 
         // A configuration naming a registered mechanism must not fail with "no factory registered".
         // It fails for want of a typed body instead, which is the next gate and a different message.
-        var built = provider.Get(
+        var built = await provider.Get(
             new IdentityServiceConfiguration { Name = "probe", ServiceOptionType = mechanism },
-            TestContext.Current.CancellationToken).GetAwaiter().GetResult();
+            TestContext.Current.CancellationToken);
 
         built.IsFailure.ShouldBeTrue();
         built.CurrentMessage!.ShouldNotContain("NoFactoryRegistered");

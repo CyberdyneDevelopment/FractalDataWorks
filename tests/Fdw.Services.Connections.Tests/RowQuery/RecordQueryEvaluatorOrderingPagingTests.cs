@@ -25,11 +25,11 @@ public sealed class RecordQueryEvaluatorOrderingPagingTests
     private static readonly IDataContainer Container =
         ContainerStub.Build("teams", ("team", false), ("wins", true), ("coach", true));
 
-    private static IReadOnlyDictionary<string, object?> Row(string team, object? wins, string? coach = null) =>
+    private static Dictionary<string, object?> Row(string team, object? wins, string? coach = null) =>
         new Dictionary<string, object?>(StringComparer.Ordinal)
         { ["team"] = team, ["wins"] = wins, ["coach"] = coach };
 
-    private static IOrderingExpression By(string field, bool ascending = true) =>
+    private static OrderingExpression By(string field, bool ascending = true) =>
         new OrderingExpression
         {
             OrderedFields = new IOrderedField[]

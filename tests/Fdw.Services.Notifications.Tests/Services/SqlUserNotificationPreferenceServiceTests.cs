@@ -74,8 +74,8 @@ public sealed class SqlUserNotificationPreferenceServiceTests
         public IDataGateway ByName(string name) => gateway;
     }
 
-    private static IDataGatewayProvider GatewayProviderFor(IDataGateway gateway) =>
-        new StubGatewayProvider(gateway);
+    private static StubGatewayProvider GatewayProviderFor(IDataGateway gateway) =>
+        new(gateway);
 
     private static SqlUserNotificationPreferenceService CreateService(Mock<IDataGateway> gateway) =>
         new(GatewayProviderFor(gateway.Object), NullLogger<SqlUserNotificationPreferenceService>.Instance);

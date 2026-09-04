@@ -62,7 +62,7 @@ public sealed class IssuerSchemeSelectorTests
         => IssuerSchemeSelector.Select(Request("Bearer " + Segment("{}") + "." + Segment("{\"sub\":\"x\"}") + ".sig"))
             .ShouldBe(UnmatchedIssuerHandler.SchemeName);
 
-    private static HttpContext Request(string? authorization)
+    private static DefaultHttpContext Request(string? authorization)
     {
         var services = new ServiceCollection();
         // Through the registry, as Initialize fills it: the entries these bindings come from are

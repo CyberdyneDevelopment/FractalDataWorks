@@ -283,7 +283,12 @@
     }
     private void DeleteSelected() { if (_selected != null) { _connections.RemoveAll(c => c.From == _selected.Id || c.To == _selected.Id); _nodes.Remove(_selected); _selected = null; } }
     private void StartConnect(Node n) { _connSrc = n; _isConnecting = true; }
-    private string GetNodeColor(string t) => t switch { "Source" => "#22c55e", "Output" => "#eab308", _ => "#ef4444" };
+    private string GetNodeColor(string t) => t switch
+    {
+        "Source" => StatusColors.Green.TokenReference,
+        "Output" => StatusColors.Yellow.TokenReference,
+        _ => StatusColors.Red.TokenReference,
+    };
 
     private TaskPayload NodeToTaskDto(Node n) => new()
     {

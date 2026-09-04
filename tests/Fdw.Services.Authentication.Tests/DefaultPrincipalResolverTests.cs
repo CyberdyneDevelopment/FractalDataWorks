@@ -27,7 +27,7 @@ namespace Fdw.Services.Authentication.Tests;
 /// </summary>
 public sealed class DefaultPrincipalResolverTests
 {
-    private static IConfigurationGatewayProvider NullGateway() => new ConfigurationGatewayProvider();
+    private static ConfigurationGatewayProvider NullGateway() => new();
 
     private static Mock<UserTenantConfigurationProvider> CreateTenantProviderMock() => new(
         MockBehavior.Strict,

@@ -34,7 +34,7 @@ public sealed class SkipRegistrationTests
         public override IEnumerable<IEndpointTypeOption> Members { get; } = members;
     }
 
-    private static IHostApplicationBuilder NewBuilder() => Host.CreateApplicationBuilder();
+    private static HostApplicationBuilder NewBuilder() => Host.CreateApplicationBuilder();
 
     /// <summary>An option not skipped puts its endpoint in the container.</summary>
     [Fact]

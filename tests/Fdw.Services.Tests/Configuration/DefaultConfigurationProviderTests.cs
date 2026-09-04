@@ -131,7 +131,7 @@ public class DefaultConfigurationProviderTests
     // ComposeAggregate hook (FDW-558 behavior-preservation regression)
     // ========================================================================
 
-    private static IReadOnlyList<IDataStore> BuildOwnerKeyTree(string containerName)
+    private static List<IDataStore> BuildOwnerKeyTree(string containerName)
     {
         var physicalField = new Mock<IDataField>();
         physicalField.Setup(f => f.Name).Returns("RowId");
@@ -245,7 +245,7 @@ public class DefaultConfigurationProviderTests
         result.Value!.Name.ShouldBe("Admin");
     }
 
-    private static IReadOnlyList<IDataStore> BuildSelfReferencingKeyTree(string containerName)
+    private static List<IDataStore> BuildSelfReferencingKeyTree(string containerName)
     {
         var physicalField = new Mock<IDataField>();
         physicalField.Setup(f => f.Name).Returns("RowId");
@@ -594,7 +594,7 @@ public class DefaultConfigurationProviderTests
         public TestContainerFieldCommand() : base("TestContainerField") { }
     }
 
-    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+    private static AnyConnectionGateways GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 
     private sealed class AnyConnectionGateways : IConfigurationGatewayProvider

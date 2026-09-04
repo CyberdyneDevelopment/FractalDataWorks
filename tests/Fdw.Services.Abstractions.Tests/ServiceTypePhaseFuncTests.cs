@@ -60,7 +60,7 @@ public class ServiceTypePhaseFuncTests
         }
     }
 
-    private static IHostApplicationBuilder NewBuilder() => Host.CreateApplicationBuilder();
+    private static HostApplicationBuilder NewBuilder() => Host.CreateApplicationBuilder();
 
     [Fact]
     [Trait("Priority", "P1")]

@@ -379,5 +379,5 @@ public sealed class PlatformServicesTests : IDisposable
 
     private static IHost EmptyHost() => Host.CreateApplicationBuilder().Build();
 
-    private static IHostApplicationBuilder EmptyHostApplicationBuilder() => Host.CreateApplicationBuilder();
+    private static HostApplicationBuilder EmptyHostApplicationBuilder() => Host.CreateApplicationBuilder();
 }

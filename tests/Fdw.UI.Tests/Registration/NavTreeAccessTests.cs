@@ -37,8 +37,8 @@ public sealed class NavTreeAccessTests
     private static readonly Func<string, bool> HoldsConnectionsRead =
         p => string.Equals(p, "connections:read", StringComparison.Ordinal);
 
-    private static IPage Visible(string name, IPageAccess access) =>
-        new TestPage(name, access, new NavItem(name, "database", null, 0));
+    private static TestPage Visible(string name, IPageAccess access) =>
+        new(name, access, new NavItem(name, "database", null, 0));
 
     private static IPage[] ThreePages() =>
     [

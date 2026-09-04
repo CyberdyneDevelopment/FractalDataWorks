@@ -63,8 +63,8 @@ public sealed class LocalKeyTakeSchemeTests
             .ShouldBe(LocalKeyAuthenticationType.SchemePrefix + "FdwAuthority");
     }
 
-    private static IAuthenticationServiceConfiguration Entry(string? name, string? authority)
-        => new AuthenticationServiceConfiguration
+    private static AuthenticationServiceConfiguration Entry(string? name, string? authority)
+        => new()
         {
             Name = name ?? string.Empty,
             ServiceOptionType = "LocalKey",
@@ -72,7 +72,7 @@ public sealed class LocalKeyTakeSchemeTests
             Authority = authority,
         };
 
-    private static IServiceProvider Services() => new ServiceCollection().BuildServiceProvider();
+    private static ServiceProvider Services() => new ServiceCollection().BuildServiceProvider();
 
     private sealed class RecordingSchemeProvider : IAuthenticationSchemeProvider
     {

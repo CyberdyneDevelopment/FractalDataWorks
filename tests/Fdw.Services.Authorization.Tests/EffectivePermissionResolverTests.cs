@@ -80,7 +80,7 @@ public sealed class EffectivePermissionResolverTests
     /// Builds a resolver backed by the FULL catalog (AllRoles / AllPermissions / AllRolePermissions),
     /// with user role assignments determined by <paramref name="userAssignments"/>.
     /// </summary>
-    private static IEffectivePermissionResolver BuildResolverWithAssignments(
+    private static EffectivePermissionResolver BuildResolverWithAssignments(
         IEnumerable<UserRoleConfiguration> userAssignments,
         IReadOnlyList<TenantOrgAccessConfiguration>? orgGrants = null,
         IOrgAccessProvider? orgAccessProvider = null)
@@ -112,7 +112,7 @@ public sealed class EffectivePermissionResolverTests
     /// Builds a resolver backed by the simple TWO-ROLE catalog (GlobalRole + TenantRole only),
     /// with user assigned to BOTH roles. Used by pre-FDW-532 smoke tests.
     /// </summary>
-    private static IEffectivePermissionResolver BuildResolver(
+    private static EffectivePermissionResolver BuildResolver(
         IReadOnlyList<TenantOrgAccessConfiguration>? orgGrants = null,
         IOrgAccessProvider? orgAccessProvider = null,
         string userId = "1",

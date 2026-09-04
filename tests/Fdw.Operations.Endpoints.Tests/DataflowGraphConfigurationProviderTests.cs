@@ -32,7 +32,7 @@ public class DataflowGraphConfigurationProviderTests
 
     // Why the double answers for any connection: these tests exercise what the provider does with its
     // gateway, not which one it selects.
-    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+    private static AnyConnectionGateways GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 
     private sealed class AnyConnectionGateways : IConfigurationGatewayProvider

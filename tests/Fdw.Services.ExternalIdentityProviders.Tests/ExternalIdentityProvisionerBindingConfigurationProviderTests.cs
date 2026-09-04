@@ -122,7 +122,7 @@ public sealed class ExternalIdentityProvisionerBindingConfigurationProviderTests
         result.IsSuccess.ShouldBeFalse();
     }
 
-    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+    private static AnyConnectionGateways GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 
     private sealed class AnyConnectionGateways : IConfigurationGatewayProvider

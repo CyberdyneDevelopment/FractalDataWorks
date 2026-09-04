@@ -284,7 +284,7 @@ public class RowMappingContextBaseTests
         result.FieldCount.ShouldBe(0);
     }
 
-    private static RowMappingContextBase CreateContext(int[] ordinals, string[] names, IDataTypeConverter?[] converters)
+    private static TestRowMappingContext CreateContext(int[] ordinals, string[] names, IDataTypeConverter?[] converters)
     {
         // Use the static Create method path by constructing via reflection since
         // DefaultRowMappingContext is internal. Instead, we test via the Create factory.

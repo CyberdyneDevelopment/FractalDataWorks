@@ -46,7 +46,7 @@ public class UserCredentialServiceTests
             "PlatformConfiguration",
             "usr");
 
-    private static IConfigurationGatewayProvider GatewayProviderOn(string connectionName)
+    private static ConfigurationGatewayProvider GatewayProviderOn(string connectionName)
     {
         var gateways = new ConfigurationGatewayProvider();
         gateways.Register(Mock.Of<IConfigurationGateway>(g => g.ConnectionName == connectionName));

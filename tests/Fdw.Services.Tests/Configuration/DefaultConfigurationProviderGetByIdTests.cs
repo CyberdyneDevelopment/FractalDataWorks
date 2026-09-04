@@ -320,7 +320,7 @@ public class DefaultConfigurationProviderGetByIdTests
             => throw new NotSupportedException("This fixture routes by target, never by a bare command.");
     }
 
-    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+    private static AnyConnectionGateways GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 
     private sealed class AnyConnectionGateways : IConfigurationGatewayProvider

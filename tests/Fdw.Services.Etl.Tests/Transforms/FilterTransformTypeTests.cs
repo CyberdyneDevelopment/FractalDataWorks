@@ -154,7 +154,7 @@ public sealed class FilterTransformTypeTests
         result.Value.ShouldBeSameAs(input);
     }
 
-    private static Fdw.Messages.IGenericMessage EvaluatorFailureMessage() =>
+    private static Fdw.Messages.GenericMessage EvaluatorFailureMessage() =>
         Fdw.Messages.GenericMessage.Create(Fdw.Messages.MessageSeverity.Error, "evaluator exploded", null, null);
 
     // ── TransformBatch: pass-through / empty / cancellation ─────────────────────────────

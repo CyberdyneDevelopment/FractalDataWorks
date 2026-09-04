@@ -27,7 +27,7 @@ public sealed class MsSqlContainerTests
     private static IGenericResult<IReadOnlyList<ReferencingKeyBinding>> NoReferencingKeys()
         => GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success([]);
 
-    private static IReadOnlyDictionary<string, object> NoMetadata()
+    private static Dictionary<string, object> NoMetadata()
         => new Dictionary<string, object>(System.StringComparer.Ordinal);
 
     private static MsSqlTableContainer CreateTable(string name = "Customers")
