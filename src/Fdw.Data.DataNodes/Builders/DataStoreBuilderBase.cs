@@ -180,7 +180,14 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
     /// </summary>
     /// <param name="fieldCfg">The field configuration row.</param>
     /// <returns>The transport-specific <see cref="IDataField"/> child node.</returns>
-    protected abstract IDataField BuildField(DataContainerFieldConfiguration fieldCfg);
+    /// <remarks>
+    /// Default builds a transport-agnostic <see cref="DataField"/>, which also implements
+    /// <see cref="IField"/> so <c>container.Schema</c> works uniformly across every transport.
+    /// Override only when the transport has a real native-type system to resolve, the way
+    /// MsSqlDataStoreBuilder does (precision/scale/collation, identity/computed detection).
+    /// </remarks>
+    protected virtual IDataField BuildField(DataContainerFieldConfiguration fieldCfg)
+        => new DataField(fieldCfg.Name, fieldCfg.Description, explicitType: null, fieldCfg.Ordinal, fieldCfg.IsNullable, fieldCfg.DataType);
 
     /// <summary>
     /// Builds one container node for this transport from its configuration, with its fields, keys,

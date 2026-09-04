@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections;
-using Fdw.Services.Data.DataNodes;
 using Fdw.Services.Data.Logging;
 using Microsoft.Extensions.Logging;
 
@@ -39,10 +38,6 @@ public sealed class GenericDataStoreBuilder : DataStoreBuilderBase
     {
         _defaultResponseFormat = defaultResponseFormat;
     }
-
-    /// <inheritdoc />
-    protected override IDataField BuildField(DataContainerFieldConfiguration fieldCfg)
-        => new DataField(fieldCfg.Name, fieldCfg.Description, explicitType: null, fieldCfg.Ordinal, fieldCfg.IsNullable);
 
     /// <inheritdoc />
     protected override IDataContainer BuildContainer(
