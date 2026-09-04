@@ -23,28 +23,32 @@ public sealed class DataField : IDataField, IField
     private static readonly IPropertyRole AttributeRole = PropertyRoles.ByName("Attribute");
     private readonly SimpleFieldType _fieldType;
 
-    /// <inheritdoc />
+    /// <summary>Gets the field name.</summary>
     public string Name { get; }
 
-    /// <inheritdoc />
+    /// <summary>Gets the optional human-readable description.</summary>
     public string? Description { get; }
 
-    /// <inheritdoc />
+    /// <summary>Gets the explicitly declared abstract type. Always <see langword="null"/> here — a
+    /// transport with no native-type system has nothing to declare beyond the schema's type name.</summary>
     public IDataType? ExplicitType { get; }
 
-    /// <inheritdoc />
+    /// <summary>Gets the binding to a source node. Always <see langword="null"/> — a field built by
+    /// this generic path is never query-bound.</summary>
     public IFieldBinding? Binding => null;
 
-    /// <inheritdoc />
+    /// <summary>Gets the zero-based ordinal position of this field within its parent container.</summary>
     public int Ordinal { get; }
 
-    /// <inheritdoc />
+    /// <summary>Gets whether this field accepts <see langword="null"/> values.</summary>
     public bool IsNullable { get; }
 
-    /// <inheritdoc />
+    /// <summary>Gets the child nodes of this field. Always empty — a field is a leaf.</summary>
     public IReadOnlyList<IDataNode> Nodes => [];
 
-    /// <inheritdoc />
+    /// <summary>A field has no children, so this always fails.</summary>
+    /// <param name="name">The child name that was looked up.</param>
+    /// <returns>A failure result naming this field and the requested child.</returns>
     public IGenericResult<IDataNode> Node(string name) =>
         GenericResult<IDataNode>.Failure(
             DataStoreLoaderLog.LeafFieldHasNoChild(NullLogger.Instance, Name, name));
