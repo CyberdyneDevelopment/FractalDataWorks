@@ -457,7 +457,9 @@ public class ConnectionProviderTests
         _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
 
         // Act - Use explicit IConnectionProvider interface
+#pragma warning disable CA1859 // deliberately uses the explicit interface
         IConnectionProvider connectionProvider = _provider;
+#pragma warning restore CA1859
         var result = await connectionProvider.Get("TestConnection");
 
         // Assert

@@ -230,7 +230,9 @@ public class IResiliencyPolicyTests
     public void InterfacePropertiesAreAccessibleThroughInterface()
     {
         // Arrange
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IResiliencyPolicy policy = new DatabaseResiliencyPolicy();
+#pragma warning restore CA1859
 
         // Act & Assert
         policy.MaxRetries.ShouldBe(3);

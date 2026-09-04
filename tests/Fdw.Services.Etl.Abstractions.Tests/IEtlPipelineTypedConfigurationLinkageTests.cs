@@ -46,7 +46,9 @@ public class IEtlPipelineTypedConfigurationLinkageTests
             SinkDataSetId = Guid.NewGuid()
         };
 
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IEtlPipelineTypedConfiguration engine = concrete;
+#pragma warning restore CA1859
 
         engine.IsEnabled.ShouldBeTrue();
         engine.SourceConnectionName.ShouldBe(concrete.SourceConnectionName);
@@ -73,7 +75,9 @@ public class IEtlPipelineTypedConfigurationLinkageTests
             SinkDataSetId = Guid.NewGuid()
         };
 
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IEtlPipelineTypedConfiguration engine = concrete;
+#pragma warning restore CA1859
 
         engine.IsEnabled.ShouldBeFalse();
         engine.SourceConnectionName.ShouldBe(concrete.SourceConnectionName);

@@ -336,7 +336,9 @@ public sealed class SecretManagerCommandBaseCoverageTests
     public void GetVersionsBaseInterfaceWithParametersCreatesNewCommand()
     {
         // Arrange - use the base interface method (goes through CreateCopyWithParameters)
+#pragma warning disable CA1859 // deliberately uses the base interface method
         ISecretManagerCommand cmd = GetSecretManagerVersionsCommand.Create("vault", "key");
+#pragma warning restore CA1859
         var newParams = new Dictionary<string, object?> { ["custom"] = "value" };
 
         // Act
@@ -353,7 +355,9 @@ public sealed class SecretManagerCommandBaseCoverageTests
     public void GetVersionsBaseInterfaceWithMetadataCreatesNewCommand()
     {
         // Arrange - use the base interface method (goes through CreateCopyWithMetadata)
+#pragma warning disable CA1859 // deliberately uses the base interface method
         ISecretManagerCommand cmd = GetSecretManagerVersionsCommand.Create("vault", "key");
+#pragma warning restore CA1859
         var newMeta = new Dictionary<string, object> { ["source"] = "test" };
 
         // Act
@@ -428,7 +432,9 @@ public sealed class SecretManagerCommandBaseCoverageTests
     public void GetCertificateBaseInterfaceWithParametersCreatesNewCommand()
     {
         // Arrange - use the base ISecretManagerCommand interface
+#pragma warning disable CA1859 // deliberately uses the base interface method
         ISecretManagerCommand cmd = GetCertificateManagerCommand.Latest("vault", "cert");
+#pragma warning restore CA1859
         var newParams = new Dictionary<string, object?> { ["custom"] = "value" };
 
         // Act
@@ -445,7 +451,9 @@ public sealed class SecretManagerCommandBaseCoverageTests
     public void GetCertificateBaseInterfaceWithMetadataCreatesNewCommand()
     {
         // Arrange - use the base ISecretManagerCommand interface
+#pragma warning disable CA1859 // deliberately uses the base interface method
         ISecretManagerCommand cmd = GetCertificateManagerCommand.Latest("vault", "cert");
+#pragma warning restore CA1859
         var newMeta = new Dictionary<string, object> { ["source"] = "test" };
 
         // Act

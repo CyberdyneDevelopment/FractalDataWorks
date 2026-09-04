@@ -199,6 +199,7 @@ public class DataSetConfigurationTests
         var aggregateId = Guid.NewGuid();
 
         // Act
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IGenericConfiguration aggregate = new DataSetAggregateDefinition
         {
             Id = aggregateId,
@@ -208,6 +209,7 @@ public class DataSetConfigurationTests
             AggregateFunctionName = "COUNT",
             InputFieldName = "Id"
         };
+#pragma warning restore CA1859
 
         // Assert
         aggregate.Id.ShouldBe(aggregateId);
