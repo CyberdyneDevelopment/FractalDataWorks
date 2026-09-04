@@ -6,6 +6,7 @@ using Fdw.Results;
 using Fdw.Services;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Logging.Abstractions;
 using Fdw.ServiceTypes;
 using Fdw.ServiceTypes.Logging;
