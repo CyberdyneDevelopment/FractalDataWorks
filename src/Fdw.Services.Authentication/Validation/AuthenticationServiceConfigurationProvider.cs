@@ -58,7 +58,7 @@ public class AuthenticationServiceConfigurationProvider
     public Task<IGenericResult<AuthenticationServiceConfiguration>> GetHeader(
         string name,
         CancellationToken cancellationToken = default)
-        => GetHeaderByName(name, cancellationToken);
+        => GetDomainByName(name, cancellationToken);
 
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<IAuthenticationServiceConfiguration>>> GetHeaders(

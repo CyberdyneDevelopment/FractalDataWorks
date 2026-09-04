@@ -452,11 +452,11 @@ public static partial class DefaultConfigurationProviderLog
         Message = "KVP child '{childContainerName}' saved {count} entries for owner {ownerTypeName}")]
     public static partial IGenericMessage KvpChildSaved(ILogger logger, string ownerTypeName, string childContainerName, int count);
 
-    // ── Error (9388) — typed-body name lookup guard ──
+    // ── Error (9388) — implementation name lookup guard ──
 
     /// <summary>
-    /// Logs that a name-based lookup was called on a typed-body table that has a parent FK and
-    /// therefore no Name column. The caller must resolve by parent Id (Get(Guid)) instead.
+    /// Logs that a name-based lookup was called on an implementation table that has a domain
+    /// parent join and therefore no Name column. The caller must resolve by parent Id (Get(Guid)) instead.
     /// </summary>
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="typeName">The configuration type name that cannot be resolved by name.</param>
@@ -464,8 +464,8 @@ public static partial class DefaultConfigurationProviderLog
     /// <param name="name">The name value that was supplied to the failed lookup.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 31003, Level = LogLevel.Error,
-        Message = "Typed-body table '{tableName}' (for {typeName}) cannot be resolved by name '{name}' — it has a parent FK and no Name column; resolve by parent Id (Get(Guid)).")]
-    public static partial IGenericMessage TypedBodyNotResolvableByName(ILogger logger, string typeName, string tableName, string name);
+        Message = "Implementation table '{tableName}' (for {typeName}) cannot be resolved by name '{name}' — it has a domain parent join and no Name column; resolve by parent Id (Get(Guid)).")]
+    public static partial IGenericMessage ImplementationNotResolvableByName(ILogger logger, string typeName, string tableName, string name);
 
     /// <summary>
     /// Logs when a record handed to the type-erased Save is not this provider's configuration type.

@@ -49,7 +49,7 @@ public sealed class MessagingConfigurationProvider
     public async Task<IGenericResult<IMessagingConfiguration>> GetHeader(
         string name, CancellationToken cancellationToken = default)
     {
-        var header = await GetHeaderByName(name, cancellationToken).ConfigureAwait(false);
+        var header = await GetDomainByName(name, cancellationToken).ConfigureAwait(false);
         return header.IsSuccess && header.Value is not null
             ? GenericResult<IMessagingConfiguration>.Success(header.Value)
             : header.ToNewResult<IMessagingConfiguration>();

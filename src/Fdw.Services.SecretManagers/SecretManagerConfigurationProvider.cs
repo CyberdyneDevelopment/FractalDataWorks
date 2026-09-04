@@ -63,7 +63,7 @@ public class SecretManagerConfigurationProvider
     /// plugin-removed types).
     /// </summary>
     public Task<IGenericResult<SecretManagerConfiguration>> GetHeader(string name, CancellationToken ct = default)
-        => GetHeaderByName(name, ct);
+        => GetDomainByName(name, ct);
 
     /// <inheritdoc />
     protected override SecretManagerConfiguration Compose<T>(

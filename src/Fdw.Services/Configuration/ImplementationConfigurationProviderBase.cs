@@ -146,7 +146,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// <inheritdoc/>
     public virtual async Task<IGenericResult<TConfig>> Get(string name, CancellationToken ct = default)
     {
-        var headerResult = await GetHeaderByName(name, null, ct).ConfigureAwait(false);
+        var headerResult = await GetDomainByName(name, null, ct).ConfigureAwait(false);
         if (!headerResult.IsSuccess || headerResult.Value is null) return headerResult;
         return await ComposeAggregate(headerResult.Value, null, ct).ConfigureAwait(false);
     }
@@ -167,7 +167,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// </remarks>
     public virtual async Task<IGenericResult<TConfig>> GetAsOf(string name, DateTimeOffset asOf, CancellationToken ct = default)
     {
-        var headerResult = await GetHeaderByName(name, asOf, ct).ConfigureAwait(false);
+        var headerResult = await GetDomainByName(name, asOf, ct).ConfigureAwait(false);
         if (!headerResult.IsSuccess || headerResult.Value is null) return headerResult;
         return await ComposeAggregate(headerResult.Value, asOf, ct).ConfigureAwait(false);
     }
@@ -213,8 +213,8 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// had to push ct along — silently breaking every positional caller and every domain provider
     /// that subclasses this. The current-version read keeps its exact shape.
     /// </remarks>
-    protected Task<IGenericResult<TConfig>> GetHeaderByName(string name, CancellationToken ct = default)
-        => GetHeaderByName(name, null, ct);
+    protected Task<IGenericResult<TConfig>> GetDomainByName(string name, CancellationToken ct = default)
+        => GetDomainByName(name, null, ct);
 
     /// <summary>
     /// Reads the header row by name, optionally as of a past instant.
@@ -223,13 +223,13 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// <param name="asOf">The instant to read as of, or null for the current version.</param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The header row, or a failure.</returns>
-    protected async Task<IGenericResult<TConfig>> GetHeaderByName(string name, DateTimeOffset? asOf, CancellationToken ct = default)
+    protected async Task<IGenericResult<TConfig>> GetDomainByName(string name, DateTimeOffset? asOf, CancellationToken ct = default)
     {
         var parentJoin = ResolveParentJoin();
         if (parentJoin.IsFailure) return parentJoin.ToNewResult<TConfig>();
         if (parentJoin.Value!.HasParent)
             return GenericResult<TConfig>.Failure(
-                DefaultConfigurationProviderLog.TypedBodyNotResolvableByName(
+                DefaultConfigurationProviderLog.ImplementationNotResolvableByName(
                     _logger, typeof(TConfig).Name, Commands().TableName, name));
 
         var cmd = Commands().Get(DataStoreName, PathName, name, asOf);
