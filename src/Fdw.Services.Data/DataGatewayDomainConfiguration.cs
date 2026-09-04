@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
+using Fdw.Data;
 using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Data;
@@ -12,10 +14,15 @@ namespace Fdw.Services.Data;
 /// reached through <see cref="Configuration"/> — a field the factory needs but that sits up here
 /// would arrive empty on the implementation configuration and the service would fail to construct.
 /// </remarks>
-public sealed class DataGatewayDomainConfiguration : IDataGatewayConfiguration
+[ExcludeFromCodeCoverage]
+[GenerateMapper]
+[ManagedConfiguration(ServiceCategory = "DataGateway")]
+public partial class DataGatewayDomainConfiguration : IDataGatewayConfiguration
 {
+    // Why no generated default: the store assigns identity. A value minted here reaches Get(id) as a
+    // real-looking id matching no row, and the miss reads as a data problem rather than an unsaved record.
     /// <summary>Gets or sets the identifier assigned by the store.</summary>
-    public Guid Id { get; set; } = Guid.CreateVersion7();
+    public Guid Id { get; set; }
 
     /// <summary>Gets or sets the name of this configuration row.</summary>
     public string Name { get; set; } = string.Empty;
