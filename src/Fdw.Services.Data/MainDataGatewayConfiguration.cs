@@ -37,7 +37,7 @@ public partial class MainDataGatewayConfiguration : IDataGatewayImplementationCo
     /// <summary>
     /// Gets a value indicating whether the DataGateway is enabled.
     /// </summary>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the gateway caches results.
