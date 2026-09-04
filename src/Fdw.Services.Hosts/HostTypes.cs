@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.Hosts;
 
 /// <summary>
@@ -68,6 +69,14 @@ public partial class HostTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<IConfigurationGatewayProvider>()));
             builder.Services.TryAddSingleton<IHostConfigurationProvider>(
                 sp => sp.GetRequiredService<HostConfigurationProvider>());
+
+            // Declared as this collection's ProviderType/ProviderInterface but never itself wired --
+            // those two attribute properties are metadata only, nothing generates a registration from
+            // them (see TelemetryTypes/LoggingTypes for the same gap).
+            builder.Services.TryAddSingleton<IHostServiceProvider>(sp =>
+                new HostServiceProvider(
+                    sp,
+                    sp.GetService<ILogger<HostServiceProvider>>() ?? NullLogger<HostServiceProvider>.Instance));
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

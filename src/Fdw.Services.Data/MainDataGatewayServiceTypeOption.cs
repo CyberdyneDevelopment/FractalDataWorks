@@ -12,7 +12,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Data.Logging;
 
 using Fdw.Services.Data.Configuration;
 using Fdw.Services.Data.Commands;
@@ -60,30 +62,32 @@ public sealed class MainDataGatewayServiceTypeOption : DataGatewayTypeBase<IGene
             // implementation this host runs, and routing to it is the domain provider's job. Reading
             // the implementation directly would name one in code and make the record decorative.
             //
-            // Why registered under the CONCRETE type: Get() returns IDataGatewayImplementationConfiguration,
-            // and TryAddSingleton(Func<IServiceProvider,T>) infers T from that interface -- MainDataGatewayProvider's
-            // constructor takes the concrete MainDataGatewayConfiguration, which was never registered as
-            // itself, so DI could never resolve it. Explicit <MainDataGatewayConfiguration> fixes that.
-            builder.Services.TryAddSingleton<MainDataGatewayConfiguration>(sp =>
-            {
+            // Why resolved eagerly here rather than lazily inside a DI factory: a factory delegate has
+            // no GenericResult channel back to the platform, only throw -- which this codebase doesn't
+            // do. Reading it now, from a snapshot of what's registered so far (same pattern as
+            // SerilogLoggingType/OpenTelemetryType), lets a bad row fail loud through the ordinary
+            // Register-phase GenericResult instead.
+            using var built = builder.Services.BuildServiceProvider();
+
 #pragma warning disable VSTHRD002
-                var result = sp.GetRequiredService<IDataGatewayConfigurationProvider>()
-                    .Get("DataGateway").GetAwaiter().GetResult();
+            var result = built.GetRequiredService<IDataGatewayConfigurationProvider>()
+                .Get("DataGateway").GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
-                if (result.IsFailure || result.Value is null)
-                {
-                    throw new InvalidOperationException(
-                        "DataGateway is not configured on the server tier. Whether the gateway caches is configuration, not a default.");
-                }
 
-                if (result.Value is not MainDataGatewayConfiguration configuration)
-                {
-                    throw new InvalidOperationException(
-                        $"DataGateway's configured implementation is '{result.Value.GetType().Name}', not MainDataGatewayConfiguration.");
-                }
+            if (result.IsFailure || result.Value is null)
+            {
+                return result.ToNewResult<IHostApplicationBuilder>();
+            }
 
-                return configuration;
-            });
+            if (result.Value is not MainDataGatewayConfiguration configuration)
+            {
+                var log = loggerFactory?.CreateLogger<MainDataGatewayServiceTypeOption>()
+                    ?? NullLogger<MainDataGatewayServiceTypeOption>.Instance;
+                return GenericResult<IHostApplicationBuilder>.Failure(
+                    DataGatewayProviderLog.ConfigurationTypeMismatch(log, result.Value.GetType().Name));
+            }
+
+            builder.Services.AddSingleton(configuration);
 
 
             builder.Services.TryAddScoped<ISchemaInformationService, SchemaInformationService>();
