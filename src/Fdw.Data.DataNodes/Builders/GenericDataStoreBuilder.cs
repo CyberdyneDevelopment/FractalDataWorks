@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections;
+using Fdw.Services.Data.DataNodes;
 using Fdw.Services.Data.Logging;
 using Microsoft.Extensions.Logging;
 
