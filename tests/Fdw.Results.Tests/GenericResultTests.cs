@@ -53,7 +53,9 @@ public class GenericResultTests
     public void Success_WithIGenericMessage_CreatesSuccessResultWithMessage()
     {
         // Arrange
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IGenericMessage message = new GenericMessage("Success message");
+#pragma warning restore CA1859
 
         // Act
         var result = GenericResult.Success(message);
@@ -253,7 +255,9 @@ public class GenericResultTests
     public void Failure_WithIGenericMessage_CreatesFailureResultWithMessage()
     {
         // Arrange
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IGenericMessage message = new GenericMessage("Failure message");
+#pragma warning restore CA1859
 
         // Act
         var result = GenericResult.Failure(message);
@@ -446,7 +450,9 @@ public class GenericResultTests
     {
         // Arrange
         const double value = 3.14;
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IGenericMessage message = new GenericMessage("Pi calculated");
+#pragma warning restore CA1859
 
         // Act
         var result = GenericResult<double>.Success(value, message);
@@ -561,7 +567,9 @@ public class GenericResultTests
     public void GenericOfT_Failure_WithIGenericMessage_CreatesFailureResult()
     {
         // Arrange
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IGenericMessage message = new GenericMessage("Error occurred");
+#pragma warning restore CA1859
 
         // Act
         var result = GenericResult<string>.Failure(message);

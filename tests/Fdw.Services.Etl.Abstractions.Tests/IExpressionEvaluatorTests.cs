@@ -189,7 +189,9 @@ public class IExpressionEvaluatorTests
             _shouldFail = shouldFail;
         }
 
+#pragma warning disable CA1859 // explicit interface implementation parameter, cannot narrow
         public IGenericResult<T> Evaluate<T>(string expression, IReadOnlyDictionary<string, object?> variables)
+#pragma warning restore CA1859
         {
             if (_shouldFail)
             {

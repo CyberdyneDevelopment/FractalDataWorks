@@ -71,8 +71,10 @@ public class FormatDrivenResolutionTests
             new Dictionary<string, object?> { ["Id"] = "2", ["Name"] = "Bob" },
         };
 
+#pragma warning disable CA1859 // never touching a concrete reader/writer type
         IRecordWriterType writerType = new DelimitedRowWriterType();
         IRecordSourceType readerType = new DelimitedRowSourceType();
+#pragma warning restore CA1859
 
         var sb = new StringBuilder();
 

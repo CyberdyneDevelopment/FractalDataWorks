@@ -49,7 +49,9 @@ public sealed class ContractImplementationTests
             MaxRows = 50
         };
 
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IDataPreviewRequest contract = dto;
+#pragma warning restore CA1859
 
         contract.DataSetName.ShouldBe("Sales");
         contract.DataStoreName.ShouldBe("ProdDb");
@@ -88,7 +90,9 @@ public sealed class ContractImplementationTests
             Role = "Display"
         };
 
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IColumnSchema contract = dto;
+#pragma warning restore CA1859
 
         contract.Name.ShouldBe("ProductName");
         contract.DataType.ShouldBe("varchar");
@@ -126,7 +130,9 @@ public sealed class ContractImplementationTests
             IsKey = false
         };
 
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IFieldDiscovery contract = dto;
+#pragma warning restore CA1859
 
         contract.Name.ShouldBe("Timestamp");
         contract.DataType.ShouldBe("datetime2");
@@ -206,7 +212,9 @@ public sealed class ContractImplementationTests
             MaxRows = 25
         };
 
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IDataPreviewRequest contract = dto;
+#pragma warning restore CA1859
 
         contract.DataSetName.ShouldBe("Inventory");
         contract.DataStoreName.ShouldBe("WarehouseDb");
@@ -295,7 +303,9 @@ public sealed class ContractImplementationTests
             Ordinal = 5
         };
 
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IDataSetField contract = dto;
+#pragma warning restore CA1859
 
         contract.Id.ShouldBe(id);
         contract.Name.ShouldBe("Revenue");
@@ -347,7 +357,9 @@ public sealed class ContractImplementationTests
             Ordinal = 10
         };
 
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IDataSetField contract = dto;
+#pragma warning restore CA1859
 
         contract.Id.ShouldBe(id);
         contract.Name.ShouldBe("Score");
@@ -395,7 +407,9 @@ public sealed class ContractImplementationTests
             LastExecuted = lastExec
         };
 
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         ICalculationTypeStats contract = dto;
+#pragma warning restore CA1859
 
         contract.CalculationType.ShouldBe("Aggregate");
         contract.ExecutionCount.ShouldBe(500L);
@@ -418,7 +432,9 @@ public sealed class ContractImplementationTests
             LastExecuted = null
         };
 
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         ICalculationTypeStats contract = dto;
+#pragma warning restore CA1859
 
         contract.LastExecuted.ShouldBeNull();
     }
@@ -450,7 +466,9 @@ public sealed class ContractImplementationTests
             Description = "Live production environment"
         };
 
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IEnvironmentInfo contract = dto;
+#pragma warning restore CA1859
 
         contract.Id.ShouldBe(id);
         contract.Name.ShouldBe("Production");
@@ -489,7 +507,9 @@ public sealed class ContractImplementationTests
             LastExecuted = lastExec
         };
 
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         ICalculationTypeStats contract = dto;
+#pragma warning restore CA1859
 
         contract.CalculationType.ShouldBe("Prediction");
         contract.ExecutionCount.ShouldBe(1200L);
@@ -528,7 +548,9 @@ public sealed class ContractImplementationTests
             Description = "Pre-production staging environment"
         };
 
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IEnvironmentInfo contract = dto;
+#pragma warning restore CA1859
 
         contract.Id.ShouldBe(id);
         contract.Name.ShouldBe("Staging");
