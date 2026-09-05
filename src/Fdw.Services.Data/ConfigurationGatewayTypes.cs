@@ -85,22 +85,23 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILogger<ConfigurationGatewayProvider>>()));
 
             // Endpoint bases take IConfigurationGateway directly rather than the provider -- this is
-            // the bare, unnamed instance for ConfigurationConnection. Get() builds and memoizes on
-            // first ask, so this doesn't duplicate the gateway a named lookup already produces for
-            // the same connection.
-            builder.Services.TryAddScoped(sp =>
+            // the bare, unnamed instance for ConfigurationConnection. Resolved now, from a snapshot,
+            // rather than lazily inside a DI factory: a factory delegate has no GenericResult channel,
+            // only throw, and this codebase fails loud through GenericResult instead. Get() memoizes,
+            // so this doesn't duplicate the gateway a named lookup later produces for the same
+            // connection -- it just builds it here instead of at first ask.
+            using var built = builder.Services.BuildServiceProvider();
+            var bareGateway = built.GetRequiredService<IConfigurationGatewayProvider>().Get(ConfigurationConnection);
+            if (bareGateway.IsFailure || bareGateway.Value is null)
             {
-                var result = sp.GetRequiredService<IConfigurationGatewayProvider>().Get(ConfigurationConnection);
-                if (result.IsFailure || result.Value is null)
-                {
-                    var log = sp.GetService<ILogger<ConfigurationGatewayTypes>>()
-                        ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationGatewayTypes>.Instance;
-                    throw new System.InvalidOperationException(
-                        ConfigurationGatewayProviderLog.BareGatewayUnavailable(
-                            log, ConfigurationConnection, result.CurrentMessage ?? string.Empty).Message);
-                }
-                return result.Value;
-            });
+                var log = loggerFactory?.CreateLogger<ConfigurationGatewayTypes>()
+                    ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationGatewayTypes>.Instance;
+                return GenericResult<IHostApplicationBuilder>.Failure(
+                    ConfigurationGatewayProviderLog.BareGatewayUnavailable(
+                        log, ConfigurationConnection, bareGateway.CurrentMessage ?? string.Empty));
+            }
+
+            builder.Services.TryAddScoped(_ => bareGateway.Value);
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
