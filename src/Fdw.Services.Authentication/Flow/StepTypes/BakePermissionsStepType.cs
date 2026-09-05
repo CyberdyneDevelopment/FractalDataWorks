@@ -80,10 +80,10 @@ public sealed class BakePermissionsStepType
         var principal = context.Principal!;
 
         var isGlobalTenant = false;
-        if (principal.TenantId.HasValue)
+        if (principal.TenantId != Guid.Empty)
         {
             var tenantResult = await _tenantProvider!
-                .GetTenant(principal.TenantId.Value, cancellationToken)
+                .GetTenant(principal.TenantId, cancellationToken)
                 .ConfigureAwait(false);
             isGlobalTenant = tenantResult.IsSuccess && tenantResult.Value is { IsGlobal: true };
         }
