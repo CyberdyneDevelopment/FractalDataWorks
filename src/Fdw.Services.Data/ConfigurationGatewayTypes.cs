@@ -89,6 +89,20 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
             // connection, never the tenant's, and nothing said so.
             builder.Services.TryAddSingleton<IConfigurationConnectionNameProvider, DefaultConfigurationConnectionNameProvider>();
 
+            // Endpoint bases take IConfigurationGateway directly rather than the provider -- this is
+            // the bare, unnamed instance for the connection IConfigurationConnectionNameProvider
+            // names. Get() builds and memoizes on first ask, so this doesn't duplicate the gateway
+            // the named lookup above already produces for the same connection.
+            builder.Services.TryAddScoped(sp =>
+            {
+                var name = sp.GetRequiredService<IConfigurationConnectionNameProvider>().ConnectionName;
+                var result = sp.GetRequiredService<IConfigurationGatewayProvider>().Get(name);
+                if (result.IsFailure || result.Value is null)
+                    throw new InvalidOperationException(
+                        $"No configuration gateway available for connection '{name}': {result.CurrentMessage}");
+                return result.Value;
+            });
+
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
     }
