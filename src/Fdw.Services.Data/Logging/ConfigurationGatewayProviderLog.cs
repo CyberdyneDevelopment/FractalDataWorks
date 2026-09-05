@@ -106,4 +106,12 @@ public static partial class ConfigurationGatewayProviderLog
         Message = "configurationSchema.json declares secret manager '{secretManagerName}' with no Configuration body, and its factory has nothing to build from")]
     public static partial IGenericMessage SecretManagerDeclaresNoBody(ILogger logger, string secretManagerName);
 
+    /// <summary>The bare, unnamed IConfigurationGateway an endpoint injects directly could not be built.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="connectionName">The connection <c>ConfigurationConnection</c> named.</param>
+    /// <param name="reason">The underlying failure's message.</param>
+    [MessageLogging(EventId = 61036, Level = LogLevel.Error,
+        Message = "No configuration gateway available for connection '{connectionName}': {reason}")]
+    public static partial IGenericMessage BareGatewayUnavailable(ILogger logger, string connectionName, string reason);
+
 }

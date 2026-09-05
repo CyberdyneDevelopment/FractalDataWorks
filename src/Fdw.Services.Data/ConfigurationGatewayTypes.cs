@@ -92,8 +92,13 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
             {
                 var result = sp.GetRequiredService<IConfigurationGatewayProvider>().Get(ConfigurationConnection);
                 if (result.IsFailure || result.Value is null)
+                {
+                    var log = sp.GetService<ILogger<ConfigurationGatewayTypes>>()
+                        ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationGatewayTypes>.Instance;
                     throw new System.InvalidOperationException(
-                        $"No configuration gateway available for connection '{ConfigurationConnection}': {result.CurrentMessage}");
+                        ConfigurationGatewayProviderLog.BareGatewayUnavailable(
+                            log, ConfigurationConnection, result.CurrentMessage ?? string.Empty).Message);
+                }
                 return result.Value;
             });
 
