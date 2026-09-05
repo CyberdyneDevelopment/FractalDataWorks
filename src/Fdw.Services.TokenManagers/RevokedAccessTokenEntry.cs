@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using Fdw.Data;
 
 namespace Fdw.Services.TokenManagers;
 
@@ -8,6 +9,7 @@ namespace Fdw.Services.TokenManagers;
 /// keyed by the <c>jti</c> claim it was minted with.
 /// </summary>
 [ExcludeFromCodeCoverage]
+[GenerateMapper]
 public sealed class RevokedAccessTokenEntry
 {
     /// <summary>Gets or sets the revoked token's <c>jti</c> claim.</summary>
