@@ -382,6 +382,14 @@ public static partial class MsSqlConnectionLogger
     public static partial IGenericMessage UnhandledSqlError(ILogger logger, Exception ex, string commandText, int errorNumber, string errorMessage);
 
     /// <summary>
+    /// Logs when the target database is unavailable to this login (errors 4060, 4064) --
+    /// the database does not exist, was dropped and recreated, or the login has no user
+    /// mapped in it (distinct from error 18456, a server-level authentication failure).
+    /// </summary>
+    [MessageLogging(EventId = 71022, Level = LogLevel.Error, Message = "SQL database unavailable to this login on '{commandText}'")]
+    public static partial IGenericMessage SqlDatabaseUnavailable(ILogger logger, Exception ex, string commandText);
+
+    /// <summary>
     /// Logs when a connection is stale (disposed) and needs to be recreated from the provider.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
