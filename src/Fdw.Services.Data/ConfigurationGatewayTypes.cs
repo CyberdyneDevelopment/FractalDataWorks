@@ -14,7 +14,6 @@ using Fdw.Services.Data.Logging;
 using Fdw.Services.SecretManagers;
 using Fdw.Services.SecretManagers.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
-using Fdw.Hosting.Abstractions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -48,6 +47,13 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
     public static string SchemaFileName { get; set; } = "configurationSchema.json";
 
     /// <summary>
+    /// The connection an endpoint's bare, unnamed <see cref="IConfigurationGateway"/> resolves
+    /// through. Settable by a host the same way every other domain's <c>ConfigurationConnection</c>
+    /// is.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
+    /// <summary>
     /// Sets this collection's phases: the schema and the gateways over it, both in Register.
     /// </summary>
     /// <remarks>
@@ -78,28 +84,16 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
                     connectionName => Build(sp, connectionName, loggerFactory),
                     sp.GetService<ILogger<ConfigurationGatewayProvider>>()));
 
-            // Why here and not in each host: a provider that decides which connection configuration
-            // is read through is this collection's own concern, and every host wrote the same line.
-            //
-            // Why TryAdd: this is the answer when nothing else has one. A multitenancy option
-            // registers its own tenant-aware provider, and because that runs after this and adds
-            // rather than tries, it wins -- which is the precedence that was inverted while each
-            // host registered the default LAST, after PlatformServices.Register had already put the
-            // tenant-aware one in. Configuration then always resolved through the default
-            // connection, never the tenant's, and nothing said so.
-            builder.Services.TryAddSingleton<IConfigurationConnectionNameProvider, DefaultConfigurationConnectionNameProvider>();
-
             // Endpoint bases take IConfigurationGateway directly rather than the provider -- this is
-            // the bare, unnamed instance for the connection IConfigurationConnectionNameProvider
-            // names. Get() builds and memoizes on first ask, so this doesn't duplicate the gateway
-            // the named lookup above already produces for the same connection.
+            // the bare, unnamed instance for ConfigurationConnection. Get() builds and memoizes on
+            // first ask, so this doesn't duplicate the gateway a named lookup already produces for
+            // the same connection.
             builder.Services.TryAddScoped(sp =>
             {
-                var name = sp.GetRequiredService<IConfigurationConnectionNameProvider>().ConnectionName;
-                var result = sp.GetRequiredService<IConfigurationGatewayProvider>().Get(name);
+                var result = sp.GetRequiredService<IConfigurationGatewayProvider>().Get(ConfigurationConnection);
                 if (result.IsFailure || result.Value is null)
-                    throw new InvalidOperationException(
-                        $"No configuration gateway available for connection '{name}': {result.CurrentMessage}");
+                    throw new System.InvalidOperationException(
+                        $"No configuration gateway available for connection '{ConfigurationConnection}': {result.CurrentMessage}");
                 return result.Value;
             });
 
