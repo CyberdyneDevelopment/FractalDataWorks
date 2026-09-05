@@ -165,6 +165,9 @@ public sealed class PermissionFilterDocumentProcessor : IDocumentProcessor
     /// </remarks>
     private static string? GetRequiredPolicy(OpenApiOperation operation)
     {
+        if (operation.Security is null)
+            return null;
+
         foreach (var securityRequirement in operation.Security)
         {
             foreach (var (schemeName, _) in securityRequirement)
