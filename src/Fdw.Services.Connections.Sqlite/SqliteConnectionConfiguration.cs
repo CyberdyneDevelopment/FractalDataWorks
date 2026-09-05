@@ -34,11 +34,12 @@ public partial class SqliteConnectionConfiguration : IConnectionImplementationCo
     /// </summary>
     public Guid ConnectionId { get; set; }
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — identified by ConnectionId */ }
-    }
+    // Why: this implementation configuration is identified by ConnectionId, not name -- the name
+    // comes from the domain configuration (ConnectionConfiguration.Name) and is never persisted here.
+    // The factory copies it onto this property before constructing the connection, purely so the
+    // runtime instance (and anything reading Configuration.Name, e.g. ServiceBase.Name) has it for
+    // logging.
+    string IGenericConfiguration.Name { get; set; } = string.Empty;
 
     string IGenericConfiguration.SectionName => "Connections";
     string IGenericConfiguration.ServiceType => "Connection";
