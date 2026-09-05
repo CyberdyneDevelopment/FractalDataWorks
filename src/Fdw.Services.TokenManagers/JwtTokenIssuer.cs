@@ -52,11 +52,10 @@ public sealed class JwtTokenIssuer : ITokenIssuer
         if (string.IsNullOrWhiteSpace(request.Audience))
             return GenericResult<IssuedToken>.Failure(IssuerLog.AudienceMissing(_logger));
 
-        // Fdw.Services.Authentication.Validation.IssuerName.Read normalises a declared authority the
-        // same way (Uri.AbsoluteUri) before it becomes what a validating scheme is bound to -- a bare
-        // origin like https://host always canonicalises to https://host/. This has to mint the exact
-        // same normalised form, or a token's iss can never match what the validation side declared,
-        // regardless of whether the configured strings happen to agree character-for-character.
+        // Validated, never rewritten (see Fdw.Services.Authentication.Validation.IssuerName.Read):
+        // the validation side compares against auth.JwtTokenManager.Issuer exactly as configured, so
+        // minting anything other than that exact string -- including a Uri-canonicalised form --
+        // guarantees a mismatch.
         if (!Uri.TryCreate(_configuration.Issuer, UriKind.Absolute, out var issuerUri)
             || (issuerUri.Scheme != Uri.UriSchemeHttps && issuerUri.Scheme != Uri.UriSchemeHttp))
         {
@@ -117,7 +116,7 @@ public sealed class JwtTokenIssuer : ITokenIssuer
         }
         .CreateToken(new SecurityTokenDescriptor
         {
-            Issuer = issuerUri.AbsoluteUri,
+            Issuer = _configuration.Issuer,
             Audience = request.Audience,
             Claims = claims,
             IssuedAt = issuedAt.UtcDateTime,
