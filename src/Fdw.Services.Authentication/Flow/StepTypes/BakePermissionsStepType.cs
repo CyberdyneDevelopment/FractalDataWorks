@@ -13,6 +13,7 @@ using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Logging;
 using Fdw.Services.Authorization.Abstractions;
+using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -36,6 +37,7 @@ public sealed class BakePermissionsStepType
     // Captured when the host is built: an option is created by its module initializer, which needs
     // a parameterless constructor, so what it needs arrives where a live container exists.
     private IEffectivePermissionResolver? _permissions;
+    private ITenantProvider? _tenantProvider;
     private ILogger _logger = NullLogger<BakePermissionsStepType>.Instance;
 
     /// <summary>Initializes a new instance of the <see cref="BakePermissionsStepType"/> class.</summary>
@@ -48,6 +50,7 @@ public sealed class BakePermissionsStepType
         Initialization((host, loggerFactory) =>
         {
             _permissions = host.Services.GetRequiredService<IEffectivePermissionResolver>();
+            _tenantProvider = host.Services.GetRequiredService<ITenantProvider>();
             _logger = loggerFactory?.CreateLogger<BakePermissionsStepType>()
                 ?? NullLogger<BakePermissionsStepType>.Instance;
 
@@ -76,12 +79,21 @@ public sealed class BakePermissionsStepType
 
         var principal = context.Principal!;
 
+        var isGlobalTenant = false;
+        if (principal.TenantId.HasValue)
+        {
+            var tenantResult = await _tenantProvider!
+                .GetTenant(principal.TenantId.Value, cancellationToken)
+                .ConfigureAwait(false);
+            isGlobalTenant = tenantResult.IsSuccess && tenantResult.Value is { IsGlobal: true };
+        }
+
         var resolved = await _permissions
             .Resolve(
                 principal.Id.ToString(),
                 principal.TenantId,
                 orgId: null,
-                isGlobalTenant: false,
+                isGlobalTenant,
                 cancellationToken)
             .ConfigureAwait(false);
 

@@ -27,6 +27,7 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
     private const string ViewAllTenantsPermission = "tenants:view-all";
     private readonly UserTenantConfigurationProvider _userTenantProvider;
     private readonly IOrganizationProvider _organizationProvider;
+    private readonly ITenantProvider _tenantProvider;
     private readonly IEffectivePermissionResolver _permissionResolver;
     private readonly UserRoleConfigurationProvider _userRoleProvider;
     private readonly RoleConfigurationProvider _roleProvider;
@@ -37,6 +38,7 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
     /// </summary>
     /// <param name="userTenantProvider">Resolves the user's tenant memberships and default tenant.</param>
     /// <param name="organizationProvider">Resolves and validates org context within a tenant.</param>
+    /// <param name="tenantProvider">Resolves a tenant's own record, including whether it is the global tenant.</param>
     /// <param name="permissionResolver">Resolves the effective (baked) permission set for the user.</param>
     /// <param name="userRoleProvider">Loads the user's role assignments.</param>
     /// <param name="roleProvider">Resolves role names from role ids.</param>
@@ -44,6 +46,7 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
     public DefaultPrincipalResolver(
         UserTenantConfigurationProvider userTenantProvider,
         IOrganizationProvider organizationProvider,
+        ITenantProvider tenantProvider,
         IEffectivePermissionResolver permissionResolver,
         UserRoleConfigurationProvider userRoleProvider,
         RoleConfigurationProvider roleProvider,
@@ -51,15 +54,23 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
     {
         ArgumentNullException.ThrowIfNull(userTenantProvider);
         ArgumentNullException.ThrowIfNull(organizationProvider);
+        ArgumentNullException.ThrowIfNull(tenantProvider);
         ArgumentNullException.ThrowIfNull(permissionResolver);
         ArgumentNullException.ThrowIfNull(userRoleProvider);
         ArgumentNullException.ThrowIfNull(roleProvider);
         _userTenantProvider = userTenantProvider;
         _organizationProvider = organizationProvider;
+        _tenantProvider = tenantProvider;
         _permissionResolver = permissionResolver;
         _userRoleProvider = userRoleProvider;
         _roleProvider = roleProvider;
         _logger = logger ?? NullLogger<DefaultPrincipalResolver>.Instance;
+    }
+
+    private async Task<bool> IsGlobalTenant(Guid tenantId, CancellationToken cancellationToken)
+    {
+        var result = await _tenantProvider.GetTenant(tenantId, cancellationToken).ConfigureAwait(false);
+        return result.IsSuccess && result.Value is { IsGlobal: true };
     }
 
     /// <inheritdoc />
@@ -156,8 +167,10 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
         PrincipalResolverLog.PrincipalResolveStarted(
             _logger, userIdStr, resolvedTenantId.ToString(), resolvedOrgId?.ToString() ?? string.Empty);
 
+        var isGlobalTenant = await IsGlobalTenant(resolvedTenantId, cancellationToken).ConfigureAwait(false);
+
         var permResult = await _permissionResolver.Resolve(
-            userIdStr, resolvedTenantId, resolvedOrgId, isGlobalTenant: false, cancellationToken).ConfigureAwait(false);
+            userIdStr, resolvedTenantId, resolvedOrgId, isGlobalTenant, cancellationToken).ConfigureAwait(false);
 
         if (!permResult.IsSuccess)
             return GenericResult<ClaimsPrincipal>.Failure(
@@ -256,8 +269,10 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
 
         PrincipalResolverLog.ResolveDefaultTenantTrace(_logger, userIdStr, defaultResult.Value.Value.ToString());
 
+        var isGlobalTenant = await IsGlobalTenant(defaultResult.Value.Value, cancellationToken).ConfigureAwait(false);
+
         var permResult = await _permissionResolver.Resolve(
-            userIdStr, defaultResult.Value.Value, orgId: null, isGlobalTenant: false, cancellationToken).ConfigureAwait(false);
+            userIdStr, defaultResult.Value.Value, orgId: null, isGlobalTenant, cancellationToken).ConfigureAwait(false);
 
         if (!permResult.IsSuccess)
             return GenericResult<ClaimsPrincipal>.Failure(
