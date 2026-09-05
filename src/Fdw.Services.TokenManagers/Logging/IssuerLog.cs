@@ -73,6 +73,14 @@ internal static partial class IssuerLog
         Message = "A token cannot be issued without an audience")]
     internal static partial IGenericMessage AudienceMissing(ILogger<JwtTokenIssuer> logger);
 
+    /// <summary>The configured issuer is not an absolute http(s) URI, so it cannot be normalised
+    /// into the form the validation side declares (see IssuerName.Read).</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="issuer">What was configured.</param>
+    [MessageLogging(EventId = 91195, Level = LogLevel.Critical,
+        Message = "Token manager's Issuer '{issuer}' is not an absolute http(s) URI, so it cannot be minted")]
+    internal static partial IGenericMessage IssuerNotAbsolute(ILogger<JwtTokenIssuer> logger, string issuer);
+
     /// <summary>The issuance configuration was resolved.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="name">The token manager row's name.</param>
