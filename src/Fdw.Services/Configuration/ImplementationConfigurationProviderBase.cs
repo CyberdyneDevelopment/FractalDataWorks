@@ -706,6 +706,18 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Why each row is cascaded here too: <see cref="Get(string,CancellationToken)"/> and
+    /// <see cref="Get(Guid,CancellationToken)"/> both compose their child collections via
+    /// <see cref="ComposeChildren"/> before returning -- this bulk overload was the only one that
+    /// didn't, returning bare header rows with every typed-list child (e.g. CorsConfiguration.Origins)
+    /// left at its empty default. A caller with no name/id to filter by -- a provider whose
+    /// implementation has a parent and so cannot use <see cref="Get(string,CancellationToken)"/> (see
+    /// <see cref="GetDomainByName(string,CancellationToken)"/>'s HasParent check) -- had no way to get
+    /// a fully composed row at all except this one, so the gap was silent: no exception, no log, just
+    /// an empty collection that
+    /// looked like "no rows configured" instead of "rows never loaded".
+    /// </remarks>
     public virtual async Task<IGenericResult<IReadOnlyList<TConfig>>> Get(CancellationToken ct = default)
     {
         var cmd = Commands().List(DataStoreName, PathName);
@@ -714,7 +726,16 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
 
         var result = await gateway.Value!.Execute<IEnumerable<TConfig>>(cmd, Target, ct).ConfigureAwait(false);
         if (!result.IsSuccess) return result.ToNewResult<IReadOnlyList<TConfig>>();
-        return GenericResult<IReadOnlyList<TConfig>>.Success(result.Value?.ToList() ?? []);
+
+        var rows = result.Value?.ToList() ?? [];
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var composed = await ComposeChildren(rows[i], null, ct).ConfigureAwait(false);
+            if (!composed.IsSuccess) return composed.ToNewResult<IReadOnlyList<TConfig>>();
+            rows[i] = composed.Value!;
+        }
+
+        return GenericResult<IReadOnlyList<TConfig>>.Success(rows);
     }
 
     /// <summary>Persists a configuration record and its whole child tree.</summary>
