@@ -27,37 +27,19 @@ public sealed class MsSqlQueryTranslatorTests
         IField[]? fields = null)
     {
         var dbPath = new DatabasePath(database, schema, name);
-        var effectiveFields = fields ?? new[] { CreateField("Id").Object };
         var containerSchema = new Mock<IContainerSchema>();
-        containerSchema.Setup(s => s.Fields).Returns(effectiveFields);
-        containerSchema.Setup(s => s.GetProjectableFields()).Returns(effectiveFields);
+        containerSchema.Setup(s => s.Fields).Returns(fields ?? new[] { CreateField("Id").Object });
+        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? new[] { CreateField("Id").Object });
 
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns(name);
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
         container.Setup(c => c.Schema).Returns(containerSchema.Object);
-        // A built container carries its fields as child Nodes; Schema is a projection over them that
-        // no connection-type builder populates, so a fixture that sets only Schema is not reachable.
-        container.Setup(c => c.Nodes).Returns(NodesFor(effectiveFields));
         container.Setup(c => c.ReferencingKeys)
             .Returns(GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success([]));
         container.Setup(c => c.Keys).Returns(new List<IContainerKey>());
 
         return container;
-    }
-
-    /// <summary>The field children a built container exposes as nodes, named as the translator reads them.</summary>
-    private static List<IDataNode> NodesFor(IField[] fields)
-    {
-        var nodes = new List<IDataNode>(fields.Length);
-        foreach (var field in fields)
-        {
-            var node = new Mock<IDataNode>();
-            node.Setup(n => n.Name).Returns(field.Name);
-            nodes.Add(node.Object);
-        }
-
-        return nodes;
     }
 
     private static Mock<IField> CreateField(
@@ -472,7 +454,6 @@ public sealed class MsSqlQueryTranslatorTests
         container.Setup(c => c.Name).Returns("Customers");
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
         container.Setup(c => c.Schema).Returns(containerSchema.Object);
-        container.Setup(c => c.Nodes).Returns(NodesFor(fields));
         container.Setup(c => c.ReferencingKeys)
             .Returns(GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success([]));
         container.Setup(c => c.Keys).Returns(new List<IContainerKey>());

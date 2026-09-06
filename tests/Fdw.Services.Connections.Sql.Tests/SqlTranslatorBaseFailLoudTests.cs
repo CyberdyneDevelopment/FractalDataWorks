@@ -84,13 +84,9 @@ public sealed class SqlTranslatorBaseFailLoudTests
         schema.Setup(s => s.Fields).Returns([idField.Object]);
         schema.Setup(s => s.GetProjectableFields()).Returns([idField.Object]);
 
-        var idNode = new Mock<IDataNode>();
-        idNode.Setup(n => n.Name).Returns("Id");
-
         var container = new Mock<IDataContainer>();
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
         container.Setup(c => c.Schema).Returns(schema.Object);
-        container.Setup(c => c.Nodes).Returns(new List<IDataNode> { idNode.Object });
         container.Setup(c => c.ReferencingKeys)
             .Returns(GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success([]));
         container.Setup(c => c.Keys).Returns(new List<IContainerKey>());

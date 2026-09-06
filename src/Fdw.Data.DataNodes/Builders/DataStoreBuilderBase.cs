@@ -95,7 +95,6 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
         if (!validation.IsSuccess)
             return Task.FromResult(validation.ToNewResult<IDataStore>());
 
-
         // Pass 1: build the field list per container and index the containers by name so the FK
         // resolution can follow ReferencedContainerName → referenced container config + fields.
         var built = new Dictionary<string, BuiltContainer>(StringComparer.Ordinal);
@@ -295,11 +294,12 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
         var result = new List<IContainerKeyField>(keyCfg.KeyFields.Count);
         foreach (var kfCfg in keyCfg.KeyFields.OrderBy(kf => kf.Ordinal))
         {
-            var fieldName = ResolveKeyFieldName(kfCfg, owner.Config);
-            if (fieldName is null || !localFieldsByName.TryGetValue(fieldName, out var localField))
+            if (kfCfg.Name is null)
+                continue;
+
+            if (!localFieldsByName.TryGetValue(kfCfg.Name, out var localField))
             {
-                DataStoreLoaderLog.BuilderKeyFieldNotFound(
-                    _logger, DescribeKeyField(kfCfg), keyCfg.Name, owner.Config.Name);
+                DataStoreLoaderLog.BuilderKeyFieldNotFound(_logger, kfCfg.Name, keyCfg.Name, owner.Config.Name);
                 continue;
             }
 
@@ -307,41 +307,6 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
         }
 
         return result;
-    }
-
-    // A key field names its field one of two ways depending on where the container was declared.
-    // A shipped configurationSchema.json spells the name out; a container described by data.* rows
-    // carries DataContainerFieldId instead, because the row references the field rather than naming
-    // it. Follow the reference when it is there, and take the spelled name when it is not. Matching
-    // only on the name silently produced no key fields at all for every database-described store,
-    // since that column does not exist on data.DataContainerKeyField.
-    private static string? ResolveKeyFieldName(
-        DataContainerKeyFieldConfiguration keyFieldCfg,
-        DataContainerConfiguration containerCfg)
-    {
-        if (keyFieldCfg.DataContainerFieldId != Guid.Empty)
-        {
-            foreach (var field in containerCfg.Fields)
-            {
-                if (field.Id == keyFieldCfg.DataContainerFieldId)
-                    return field.Name;
-            }
-
-            return null;
-        }
-
-        return string.IsNullOrEmpty(keyFieldCfg.Name) ? null : keyFieldCfg.Name;
-    }
-
-    /// <summary>Names a key field by whichever identifier it actually carries, for the failure message.</summary>
-    private static string DescribeKeyField(DataContainerKeyFieldConfiguration keyFieldCfg)
-    {
-        if (!string.IsNullOrEmpty(keyFieldCfg.Name))
-            return keyFieldCfg.Name;
-
-        return keyFieldCfg.DataContainerFieldId != Guid.Empty
-            ? $"field id {keyFieldCfg.DataContainerFieldId}"
-            : "no name and no field id";
     }
 
     private IDataField? ResolveReferencedField(

@@ -1,5 +1,4 @@
 using System;
-using Fdw.Collections.Attributes;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Configuration;
@@ -41,11 +40,6 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     public string Category => "ConfigurationCommand";
 
     /// <inheritdoc />
-    /// <remarks>
-    /// Unique: one configuration type is stored in exactly one container, so a second command
-    /// claiming the same type is a registration failure naming both, not a list to take the first of.
-    /// </remarks>
-    [TypeLookup("ByType")]
     public Type ConfigType => typeof(TConfig);
 
     /// <inheritdoc />

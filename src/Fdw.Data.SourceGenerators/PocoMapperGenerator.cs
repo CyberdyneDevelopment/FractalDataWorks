@@ -128,10 +128,6 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                     var elem = GetEnumerableElementType(p.Type);
                     if (hasPublicSetter && elem != null && ImplementsGenericConfiguration(elem))
                     {
-                        // The conventional container and FK, which are correct for most children and
-                        // are the only declaration a child without a ConfigurationCommand has. Where
-                        // a command exists it names the container authoritatively and overrides these
-                        // at load time -- see ImplementationConfigurationProviderBase.ResolveChildBinding.
                         children.Add(new ChildInfo(ChildKind.TypedList, p.Name,
                             p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                             elem.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
@@ -747,11 +743,14 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
     private const string ColumnAttributeFullName = "System.ComponentModel.DataAnnotations.Schema.ColumnAttribute";
     private const string ChildTableAttributeFullName = "Fdw.Data.ConfigurationChildTableAttribute";
 
-    // A child's container: [ConfigurationChildTable] when declared, else the conventional name the
-    // caller supplies. A KVP child passes none, because a key/value property has no child type to
-    // name a container after and one owner may bind several, so it must be declared or it does not
-    // load. A typed-list child passes the type name minus its Configuration suffix, which is right
-    // for most children and is the only declaration one without a ConfigurationCommand has.
+    // A child's rows live in a container named for the child, minus the Configuration suffix --
+    // EscalationLevelConfiguration rows live in EscalationLevel. [ConfigurationChildTable]
+    // overrides that for a child whose container is named something else.
+    //
+    // Why a name is always produced rather than left empty: every consumer of ChildContainerName
+    // guards on IsNullOrEmpty and SKIPS the child. Emitting empty for the typed-list case meant a
+    // child with no attribute was not a child with a derivable name -- it was a child that
+    // silently did not load, did not save, and did not retire.
     private static string ResolveChildContainerName(IPropertySymbol prop, string conventionalName = "")
     {
         foreach (var attr in prop.GetAttributes())

@@ -276,41 +276,6 @@ public static partial class DefaultConfigurationProviderLog
         Message = "CascadeChildSave: skipped '{childTypeName}' on parent '{parentTypeName}' because it does not implement IGenericConfiguration — the row was NOT written and nothing else will report this; add the interface to the child configuration")]
     public static partial IGenericMessage ChildSkippedNotConfiguration(ILogger logger, string parentTypeName, string childTypeName);
 
-    // ── Typed-list child binding (61009-61013) — each fact named with the declaration that supplies it ──
-
-    /// <summary>
-    /// Logs that a property-collection child declares no container, so the cascade does not know which table holds its key/value rows.
-    /// </summary>
-    /// <param name="logger">The logger to write the event to.</param>
-    /// <param name="boundPropertyName">The owner property bound to this child.</param>
-    /// <param name="ownerTypeName">The owner configuration type name.</param>
-    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61012, Level = LogLevel.Error,
-        Message = "CascadeChildLoad: property-collection child '{boundPropertyName}' on '{ownerTypeName}' declares no container — add [ConfigurationChildTable(\"<container>\")] to the property; a key/value child has no configuration type to read one from")]
-    public static partial IGenericMessage KvpChildContainerNotDeclared(ILogger logger, string boundPropertyName, string ownerTypeName);
-
-    /// <summary>
-    /// Logs that a declared cascade child type has no generated POCO mapper, so its rows cannot be materialized.
-    /// </summary>
-    /// <param name="logger">The logger to write the event to.</param>
-    /// <param name="boundPropertyName">The owner property bound to this child.</param>
-    /// <param name="childTypeName">The child type with no mapper.</param>
-    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61013, Level = LogLevel.Error,
-        Message = "CascadeChildLoad: child type '{childTypeName}' bound to '{boundPropertyName}' has no generated mapper — add [GenerateMapper] to the child configuration")]
-    public static partial IGenericMessage NoMapperForChildType(ILogger logger, string boundPropertyName, string childTypeName);
-
-    /// <summary>
-    /// Logs that a row carries no logical identity, so nothing can be joined to it and its children are not loaded.
-    /// </summary>
-    /// <param name="logger">The logger to write the event to.</param>
-    /// <param name="configTypeName">The configuration type being composed.</param>
-    /// <param name="ownerContainerName">The container the row came from.</param>
-    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 11039, Level = LogLevel.Debug,
-        Message = "CascadeChildLoad: a '{ownerContainerName}' row while composing '{configTypeName}' carries no Id, so its children were not loaded")]
-    public static partial IGenericMessage CascadeSkippedNoOwnerIdentity(ILogger logger, string configTypeName, string ownerContainerName);
-
     // ── Typed-body composition (9380-9385) — the read mirror of the typed-body save ──
 
     /// <summary>
@@ -458,6 +423,19 @@ public static partial class DefaultConfigurationProviderLog
         Message = "Failed to load typed body for {typeName} '{name}' (discriminator '{serviceOptionType}')")]
     public static partial IGenericMessage TypedBodyLoadFailed(ILogger logger, Exception exception, string typeName, string name, string serviceOptionType);
 
+    // ── Child composition (9387) — the read mirror of the child-collection save ──
+
+    /// <summary>
+    /// Logs that an inbound FK binding has no matching child descriptor on the owner mapper, so it is skipped.
+    /// </summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="keyName">The FK key name of the skipped inbound binding.</param>
+    /// <param name="childContainerName">The child container that declares the inbound FK.</param>
+    /// <param name="ownerTypeName">The owner configuration type name being composed.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 11012, Level = LogLevel.Debug,
+        Message = "Child composition: FK key '{keyName}' from child container '{childContainerName}' has no descriptor on {ownerTypeName} — skipped (typed-body or cross-cutting FK)")]
+    public static partial IGenericMessage ChildBindingSkippedNoDescriptor(ILogger logger, string keyName, string childContainerName, string ownerTypeName);
 
     // ── Trace (9389) — KVP property-collection child save (FDW-547) ──
 

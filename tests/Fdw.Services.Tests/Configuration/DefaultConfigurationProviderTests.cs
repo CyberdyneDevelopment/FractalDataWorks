@@ -155,36 +155,12 @@ public class DefaultConfigurationProviderTests
         container.Setup(c => c.Name).Returns(containerName);
         container.Setup(c => c.Keys).Returns(new List<IContainerKey> { physicalKey.Object, logicalKey.Object });
 
-        // The child container and its declared inbound FK. The cascade reads the join column from
-        // here rather than deriving it, so a tree with no inbound key has no loadable children.
-        var childContainer = new Mock<IDataContainer>();
-        childContainer.Setup(c => c.Name).Returns(containerName + "Field");
-
-        var fkField = new Mock<IDataField>();
-        fkField.Setup(f => f.Name).Returns(containerName + "RowId");
-        var fkKeyField = new Mock<IContainerKeyField>();
-        fkKeyField.Setup(k => k.LocalField).Returns(fkField.Object);
-        var foreignKey = new Mock<IContainerKey>();
-        foreignKey.Setup(k => k.KeyType).Returns(KeyTypes.Foreign);
-        foreignKey.Setup(k => k.KeyFields).Returns(new List<IContainerKeyField> { fkKeyField.Object });
-        foreignKey.Setup(k => k.ReferencedContainer).Returns(container.Object);
-
-        container.Setup(c => c.ReferencingKeys).Returns(
-            GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success(
-                new List<ReferencingKeyBinding> { new(foreignKey.Object, childContainer.Object) }));
-        childContainer.Setup(c => c.ReferencingKeys).Returns(
-            GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success(new List<ReferencingKeyBinding>()));
-
         var path = new Mock<IDataNodePath>();
         path.Setup(p => p.Name).Returns("data");
-        path.Setup(p => p.Containers).Returns(new List<IDataContainer> { container.Object, childContainer.Object });
-        path.Setup(p => p.Container(It.Is<string>(n => string.Equals(n, containerName + "Field", StringComparison.Ordinal))))
-            .Returns(GenericResult<IDataContainer>.Success(childContainer.Object));
+        path.Setup(p => p.Containers).Returns(new List<IDataContainer> { container.Object });
         path.Setup(p => p.Container(It.Is<string>(n => string.Equals(n, containerName, StringComparison.Ordinal))))
             .Returns(GenericResult<IDataContainer>.Success(container.Object));
-        path.Setup(p => p.Container(It.Is<string>(n =>
-                !string.Equals(n, containerName, StringComparison.Ordinal)
-                && !string.Equals(n, containerName + "Field", StringComparison.Ordinal))))
+        path.Setup(p => p.Container(It.Is<string>(n => !string.Equals(n, containerName, StringComparison.Ordinal))))
             .Returns(GenericResult<IDataContainer>.Failure(new GenericMessage("container not found")));
 
         var store = new Mock<IDataStore>();
@@ -304,40 +280,12 @@ public class DefaultConfigurationProviderTests
         container.Setup(c => c.Name).Returns(containerName);
         container.Setup(c => c.Keys).Returns(new List<IContainerKey> { physicalKey.Object, logicalKey.Object, foreignKey.Object });
 
-        // Inbound keys carry both the self reference and the field child, so the resolver has to pick
-        // the one whose owning container matches the child's declared container rather than the first.
-        var childContainer = new Mock<IDataContainer>();
-        childContainer.Setup(c => c.Name).Returns(containerName + "Field");
-
-        var childFkField = new Mock<IDataField>();
-        childFkField.Setup(f => f.Name).Returns(containerName + "RowId");
-        var childFkKeyField = new Mock<IContainerKeyField>();
-        childFkKeyField.Setup(k => k.LocalField).Returns(childFkField.Object);
-        var childForeignKey = new Mock<IContainerKey>();
-        childForeignKey.Setup(k => k.KeyType).Returns(KeyTypes.Foreign);
-        childForeignKey.Setup(k => k.KeyFields).Returns(new List<IContainerKeyField> { childFkKeyField.Object });
-        childForeignKey.Setup(k => k.ReferencedContainer).Returns(container.Object);
-
-        container.Setup(c => c.ReferencingKeys).Returns(
-            GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success(
-                new List<ReferencingKeyBinding>
-                {
-                    new(foreignKey.Object, container.Object),
-                    new(childForeignKey.Object, childContainer.Object),
-                }));
-        childContainer.Setup(c => c.ReferencingKeys).Returns(
-            GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success(new List<ReferencingKeyBinding>()));
-
         var path = new Mock<IDataNodePath>();
         path.Setup(p => p.Name).Returns("data");
-        path.Setup(p => p.Containers).Returns(new List<IDataContainer> { container.Object, childContainer.Object });
-        path.Setup(p => p.Container(It.Is<string>(n => string.Equals(n, containerName + "Field", StringComparison.Ordinal))))
-            .Returns(GenericResult<IDataContainer>.Success(childContainer.Object));
+        path.Setup(p => p.Containers).Returns(new List<IDataContainer> { container.Object });
         path.Setup(p => p.Container(It.Is<string>(n => string.Equals(n, containerName, StringComparison.Ordinal))))
             .Returns(GenericResult<IDataContainer>.Success(container.Object));
-        path.Setup(p => p.Container(It.Is<string>(n =>
-                !string.Equals(n, containerName, StringComparison.Ordinal)
-                && !string.Equals(n, containerName + "Field", StringComparison.Ordinal))))
+        path.Setup(p => p.Container(It.Is<string>(n => !string.Equals(n, containerName, StringComparison.Ordinal))))
             .Returns(GenericResult<IDataContainer>.Failure(new GenericMessage("container not found")));
 
         var store = new Mock<IDataStore>();

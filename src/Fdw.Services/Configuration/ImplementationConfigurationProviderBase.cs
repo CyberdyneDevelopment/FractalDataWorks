@@ -355,181 +355,66 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         if (mapper == PocoMapperCollection.NotFound)
             return GenericResult<TConfig>.Success(header);
 
-        var loaded = await LoadChildrenInto(header, mapper, Commands().TableName, asOf, ct).ConfigureAwait(false);
-        return loaded.IsSuccess
-            ? GenericResult<TConfig>.Success(header)
-            : loaded.ToNewResult<TConfig>();
+        await LoadChildrenInto(header, mapper, Commands().TableName, asOf, ct).ConfigureAwait(false);
+        return GenericResult<TConfig>.Success(header);
     }
 
-    // Once a descriptor exists the generator has DECLARED the property to be a cascade child, so a
-    // failure to fetch it is a wiring defect and the aggregate returned would be quietly wrong —
-    // those fail the load. Conditions where no child relationship was declared at all (no mapper, so
-    // no descriptors; a row with no identity to join on) are logged and skipped.
-    private async Task<IGenericResult> LoadChildrenInto(object ownerRow, IPocoMapper ownerMapper, string ownerContainerName, DateTimeOffset? asOf, CancellationToken ct)
+    private async Task LoadChildrenInto(object ownerRow, IPocoMapper ownerMapper, string ownerContainerName, DateTimeOffset? asOf, CancellationToken ct)
     {
         var descriptors = ownerMapper.CascadeChildren;
         if (descriptors.Count == 0)
-            return GenericResult.Success();
+            return;
 
         if (!ownerMapper.MapToParameters(ownerRow).TryGetValue("Id", out var idObj) ||
             idObj is not Guid ownerId || ownerId == Guid.Empty)
-        {
-            DefaultConfigurationProviderLog.CascadeSkippedNoOwnerIdentity(
-                _logger, typeof(TConfig).Name, ownerContainerName);
-            return GenericResult.Success();
-        }
+            return;
 
         var keys = ResolveOwnerKeyColumns(ownerContainerName);
         if (keys is null)
         {
-            return GenericResult.Failure(
-                DefaultConfigurationProviderLog.NoSuitableKeyForContainer(_logger, typeof(TConfig).Name, ownerContainerName));
+            DefaultConfigurationProviderLog.NoSuitableKeyForContainer(_logger, typeof(TConfig).Name, ownerContainerName);
+            return;
         }
 
         for (var i = 0; i < descriptors.Count; i++)
-        {
-            var child = await LoadChild(ownerRow, ownerContainerName, keys.Value.Physical, keys.Value.Logical, ownerId, descriptors[i], asOf, ct).ConfigureAwait(false);
-            if (!child.IsSuccess) return child;
-        }
-
-        return GenericResult.Success();
+            await LoadChild(ownerRow, ownerContainerName, keys.Value.Physical, keys.Value.Logical, ownerId, descriptors[i], asOf, ct).ConfigureAwait(false);
     }
 
-    private async Task<IGenericResult> LoadChild(object ownerRow, string ownerContainer, string ownerPhysicalCol, string ownerLogicalCol, Guid ownerId, IChildCascadeDescriptor descriptor, DateTimeOffset? asOf, CancellationToken ct)
-        => descriptor.IsPropertyCollection
-            ? await LoadKvpChild(ownerRow, descriptor, ownerContainer, ownerPhysicalCol, ownerLogicalCol, ownerId, asOf, ct).ConfigureAwait(false)
-            : await LoadTypedListChild(ownerRow, descriptor, ownerContainer, ownerPhysicalCol, ownerLogicalCol, ownerId, asOf, ct).ConfigureAwait(false);
-
-    /// <summary>Where a typed-list child's rows live, and the column that joins them to this owner.</summary>
-    private readonly record struct ChildBinding(string ContainerName, string ForeignKeyColumn);
-
-    // Both facts have two possible declarations, and the more specific one wins.
-    //
-    // Container: a ConfigurationCommand names it authoritatively, because that is the declaration the
-    // write path already saves through — using it is what stops an aggregate writing its children to
-    // one container and reading them from another. Not every child has a command, though: a host or
-    // CORS child is read-only configuration that was never given one, and for those the generator's
-    // conventional name is the only declaration there is, and it is correct.
-    //
-    // Join column: the owner container's declared inbound key is the schema's own statement of the
-    // relationship. A store whose schema does not carry inbound keys leaves the generator's
-    // {Owner}RowId convention, which is what every container used before the keys were available.
-    //
-    // Failing only when NEITHER declaration yields anything keeps a rename loud without making a
-    // command mandatory for the majority of children that never needed one.
-    private IGenericResult<ChildBinding> ResolveChildBinding(IChildCascadeDescriptor descriptor, string ownerContainerName)
+    private async Task LoadChild(object ownerRow, string ownerContainer, string ownerPhysicalCol, string ownerLogicalCol, Guid ownerId, IChildCascadeDescriptor descriptor, DateTimeOffset? asOf, CancellationToken ct)
     {
-        var command = ConfigurationCommands.ByType(descriptor.ChildType);
-        var childContainerName = command is not null
-            && command != ConfigurationCommands.NotFound
-            && !string.IsNullOrEmpty(command.ContainerName)
-                ? command.ContainerName
-                : descriptor.ChildContainerName;
+        var fkColumn = descriptor.ChildForeignKeyColumn;
+        if (string.IsNullOrEmpty(fkColumn))
+            return;
 
-        if (string.IsNullOrEmpty(childContainerName))
-        {
-            return GenericResult<ChildBinding>.Failure(
-                DefaultConfigurationProviderLog.NoChildCommandForType(
-                    _logger, typeof(TConfig).Name, descriptor.ChildTypeName));
-        }
-
-        var ownerContainer = ResolveContainer(ownerContainerName);
-        if (!ownerContainer.IsSuccess || ownerContainer.Value is null)
-            return ownerContainer.ToNewResult<ChildBinding>();
-
-        return GenericResult<ChildBinding>.Success(
-            new ChildBinding(
-                childContainerName,
-                DeclaredJoinColumn(ownerContainer.Value, childContainerName) ?? descriptor.ChildForeignKeyColumn));
+        if (descriptor.IsPropertyCollection)
+            await LoadKvpChild(ownerRow, descriptor, ownerContainer, ownerPhysicalCol, ownerLogicalCol, ownerId, fkColumn, asOf, ct).ConfigureAwait(false);
+        else
+            await LoadTypedListChild(ownerRow, descriptor, ownerContainer, ownerPhysicalCol, ownerLogicalCol, ownerId, fkColumn, asOf, ct).ConfigureAwait(false);
     }
 
-    /// <summary>The join column the owner's schema declares for this child, or null when it declares none.</summary>
-    private static string? DeclaredJoinColumn(IDataContainer ownerContainer, string childContainerName)
-    {
-        var inbound = ownerContainer.ReferencingKeys;
-        if (inbound is null || !inbound.IsSuccess || inbound.Value is null)
-            return null;
-
-        string? fkColumn = null;
-        for (var i = 0; i < inbound.Value.Count; i++)
-        {
-            var localField = InboundKeyFieldFor(inbound.Value[i], childContainerName);
-            if (localField is null) continue;
-
-            // More than one inbound key from the same container is ambiguous, so declare nothing and
-            // let the conventional column stand rather than pick one of them arbitrarily.
-            if (fkColumn is not null) return null;
-
-            fkColumn = localField;
-        }
-
-        return fkColumn;
-    }
-
-    /// <summary>The local column of an inbound key, when that key belongs to the child container.</summary>
-    private static string? InboundKeyFieldFor(ReferencingKeyBinding? binding, string childContainerName)
-    {
-        if (binding?.Owner is null || binding.Key?.KeyFields is null) return null;
-        if (!string.Equals(binding.Owner.Name, childContainerName, StringComparison.Ordinal)) return null;
-        if (binding.Key.KeyFields.Count == 0) return null;
-
-        return binding.Key.KeyFields[0].LocalField?.Name;
-    }
-
-    private IGenericResult<IDataContainer> ResolveContainer(string containerName)
-    {
-        var gateway = Gateway();
-        if (gateway.IsFailure) return gateway.ToNewResult<IDataContainer>();
-
-        var stores = gateway.Value!.DataStores;
-        for (var i = 0; i < stores.Count; i++)
-        {
-            if (!string.Equals(stores[i].Name, DataStoreName, StringComparison.Ordinal)) continue;
-
-            var path = stores[i].Path(PathName);
-            if (!path.IsSuccess || path.Value is null) break;
-
-            var container = path.Value.Container(containerName);
-            if (container.IsSuccess && container.Value is not null)
-                return GenericResult<IDataContainer>.Success(container.Value);
-
-            break;
-        }
-
-        return GenericResult<IDataContainer>.Failure(
-            DefaultConfigurationProviderLog.ContainerNotFoundInStore(
-                _logger, typeof(TConfig).Name, containerName, DataStoreName));
-    }
-
-    private async Task<IGenericResult> LoadKvpChild(
+    private async Task LoadKvpChild(
         object ownerRow,
         IChildCascadeDescriptor descriptor,
         string ownerContainer,
         string ownerPhysicalCol,
         string ownerLogicalCol,
         Guid ownerId,
+        string fkColumn,
         DateTimeOffset? asOf,
         CancellationToken ct)
     {
-        // A key/value child has no configuration type, so its container and join column stay declared
-        // rather than resolved: [ConfigurationChildTable] on the property, {Owner}RowId by convention.
-        var childContainerName = descriptor.ChildContainerName;
-        var fkColumn = descriptor.ChildForeignKeyColumn;
-        if (string.IsNullOrEmpty(childContainerName) || string.IsNullOrEmpty(fkColumn))
-        {
-            return GenericResult.Failure(
-                DefaultConfigurationProviderLog.KvpChildContainerNotDeclared(
-                    _logger, descriptor.BoundPropertyName, ownerRow.GetType().Name));
-        }
+        if (string.IsNullOrEmpty(descriptor.ChildContainerName))
+            return;
 
-        var cmd = BuildChildJoinQuery(childContainerName, fkColumn, ownerContainer, ownerPhysicalCol, ownerLogicalCol, ownerId, asOf);
-        var target = new DataStoreTarget(DataStoreName, PathName, childContainerName);
+        var cmd = BuildChildJoinQuery(descriptor.ChildContainerName, fkColumn, ownerContainer, ownerPhysicalCol, ownerLogicalCol, ownerId, asOf);
+        var target = new DataStoreTarget(DataStoreName, PathName, descriptor.ChildContainerName);
         var gateway = Gateway();
-        if (gateway.IsFailure) return gateway;
+        if (gateway.IsFailure)
+            return;
 
         var kvpResult = await gateway.Value!.Execute<IEnumerable<KeyValueRow>>(cmd, target, ct).ConfigureAwait(false);
-        if (!kvpResult.IsSuccess) return kvpResult;
-        if (kvpResult.Value is null) return GenericResult.Success();
+        if (!kvpResult.IsSuccess || kvpResult.Value is null)
+            return;
 
         var values = new Dictionary<string, string?>(StringComparer.Ordinal);
         foreach (var kvp in kvpResult.Value)
@@ -539,38 +424,50 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         }
 
         descriptor.FillDictionary(ownerRow, values);
-        return GenericResult.Success();
     }
 
-    private async Task<IGenericResult> LoadTypedListChild(
+    private async Task LoadTypedListChild(
         object ownerRow,
         IChildCascadeDescriptor descriptor,
         string ownerContainer,
         string ownerPhysicalCol,
         string ownerLogicalCol,
         Guid ownerId,
+        string fkColumn,
         DateTimeOffset? asOf,
         CancellationToken ct)
     {
         var childMapper = PocoMapperCollection.ByName(descriptor.ChildTypeName);
         if (childMapper == PocoMapperCollection.NotFound)
+            return;
+
+        // Why the descriptor's container name and not the child's type name: the container a
+        // child's rows live in is declared in configurationSchema.json under a name the mapper
+        // already carries, and it is the type name minus the Configuration suffix -- rows of
+        // EscalationLevelConfiguration live in EscalationLevel. Naming the container after the
+        // TYPE loaded the first level (the gateway is handed the row type as well) and then
+        // broke the recursion: the nested call looked the owner container up by a name the
+        // schema does not contain, found no keys, and returned without loading the grandchildren.
+        var childContainerName = descriptor.ChildContainerName;
+        if (string.IsNullOrEmpty(childContainerName))
+            return;
+
+        if (ChildContainerLacksColumn(childContainerName, fkColumn))
         {
-            return GenericResult.Failure(
-                DefaultConfigurationProviderLog.NoMapperForChildType(
-                    _logger, descriptor.BoundPropertyName, descriptor.ChildTypeName));
+            DefaultConfigurationProviderLog.ChildBindingSkippedNoDescriptor(
+                _logger, descriptor.BoundPropertyName, descriptor.ChildTypeName, ownerRow.GetType().Name);
+            return;
         }
 
-        var binding = ResolveChildBinding(descriptor, ownerContainer);
-        if (!binding.IsSuccess) return binding;
-
-        var cmd = BuildChildJoinQuery(binding.Value.ContainerName, binding.Value.ForeignKeyColumn, ownerContainer, ownerPhysicalCol, ownerLogicalCol, ownerId, asOf);
-        var target = new DataStoreTarget(DataStoreName, PathName, binding.Value.ContainerName);
+        var cmd = BuildChildJoinQuery(childContainerName, fkColumn, ownerContainer, ownerPhysicalCol, ownerLogicalCol, ownerId, asOf);
+        var target = new DataStoreTarget(DataStoreName, PathName, childContainerName);
         var gateway = Gateway();
-        if (gateway.IsFailure) return gateway;
+        if (gateway.IsFailure)
+            return;
 
         var rowsResult = await gateway.Value!.Execute(cmd, target, descriptor.ChildType, ct).ConfigureAwait(false);
-        if (!rowsResult.IsSuccess) return rowsResult;
-        if (rowsResult.Value is null) return GenericResult.Success();
+        if (!rowsResult.IsSuccess || rowsResult.Value is null)
+            return;
 
         var typedList = childMapper.CreateList();
         foreach (var item in rowsResult.Value)
@@ -578,16 +475,11 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
 
         descriptor.SetCollection(ownerRow, typedList);
 
-        // The container the child's own children hang off is the one its rows actually came from.
         foreach (var item in typedList)
         {
-            if (item is null) continue;
-
-            var nested = await LoadChildrenInto(item, childMapper, binding.Value.ContainerName, asOf, ct).ConfigureAwait(false);
-            if (!nested.IsSuccess) return nested;
+            if (item is not null)
+                await LoadChildrenInto(item, childMapper, childContainerName, asOf, ct).ConfigureAwait(false);
         }
-
-        return GenericResult.Success();
     }
 
     private IDataCommand BuildChildJoinQuery(
@@ -615,6 +507,50 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
             .Where(string.Concat(ownerContainer, ".IsDeleted"), false)
             .Where(string.Concat(ownerContainer, ".", ownerLogicalCol), ownerId)
             .Build().Command;
+    }
+
+    private bool ChildContainerLacksColumn(string childContainerName, string fkColumn)
+    {
+        if (string.IsNullOrEmpty(fkColumn))
+            return false;
+
+        var gateway = Gateway();
+        if (gateway.IsFailure)
+            return false;
+
+        var stores = gateway.Value!.DataStores;
+        IDataStore? store = null;
+        for (var i = 0; i < stores.Count; i++)
+        {
+            if (string.Equals(stores[i].Name, DataStoreName, StringComparison.Ordinal))
+            {
+                store = stores[i];
+                break;
+            }
+        }
+        if (store is null)
+            return false;
+
+        var pathResult = store.Path(PathName);
+        if (!pathResult.IsSuccess || pathResult.Value is null)
+            return false;
+
+        var containerResult = pathResult.Value.Container(childContainerName);
+        if (!containerResult.IsSuccess || containerResult.Value is null)
+            return false;
+
+        // Why: .Schema forces IField projection, which no current connection-type builder
+        // populates (SQL included) -- .Nodes gives the field names this check actually needs.
+        var fields = containerResult.Value.Nodes;
+        if (fields.Count == 0)
+            return false;
+
+        for (var i = 0; i < fields.Count; i++)
+        {
+            if (string.Equals(fields[i].Name, fkColumn, StringComparison.Ordinal))
+                return false;
+        }
+        return true;
     }
 
     private (string Physical, string Logical)? ResolveOwnerKeyColumns(string containerName)
@@ -896,8 +832,8 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
                     _logger, typeof(TChild).Name, id.ToString()));
         }
 
-        var command = ConfigurationCommands.ByType(typeof(TChild));
-        if (command == ConfigurationCommands.NotFound)
+        var command = ConfigurationCommands.All().FirstOrDefault(c => c.ConfigType == typeof(TChild));
+        if (command is null)
         {
             return GenericResult.Failure(
                 DefaultConfigurationProviderLog.NoChildCommandForType(
@@ -1061,8 +997,8 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     private async Task<IGenericResult> SaveOneChild(IGenericConfiguration childCfg, CancellationToken ct)
     {
         var childType = childCfg.GetType();
-        var command = ConfigurationCommands.ByType(childType);
-        if (command == ConfigurationCommands.NotFound)
+        var command = ConfigurationCommands.All().FirstOrDefault(c => c.ConfigType == childType);
+        if (command is null)
         {
             return GenericResult.Failure(
                 DefaultConfigurationProviderLog.NoChildCommandForType(
