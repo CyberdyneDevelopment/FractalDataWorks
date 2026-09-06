@@ -302,7 +302,10 @@ public sealed class AggregateWriteCascadeTests
         /// </summary>
         public TestBodyConfiguration? BodyHeader { get; set; }
 
-        public IReadOnlyList<IDataStore> DataStores { get; } = [];
+        // Composing an aggregate reads the owner's keys and its children's declared inbound keys, so a
+        // gateway with no schema cannot compose and the delete cascade fails rather than silently
+        // retiring a parent whose children it never found.
+        public IReadOnlyList<IDataStore> DataStores { get; } = BuildTestBodyTree();
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, CancellationToken cancellationToken = default)
             => Execute<T>(command, default(DataStoreTarget)!, cancellationToken);
@@ -347,6 +350,91 @@ public sealed class AggregateWriteCascadeTests
 
         public Task<IGenericResult<IEnumerable<object>>> Execute(IDataCommand command, DataStoreTarget target, Type rowType, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<IEnumerable<object>>.Success(Array.Empty<object>()));
+
+        /// <summary>
+        /// The schema the whole TestRoot -> TestBody -> TestOp -> TestMap fixture needs to compose:
+        /// every container's own keys, plus the inbound foreign key each child declares on its owner.
+        /// </summary>
+        private static IReadOnlyList<IDataStore> BuildTestBodyTree()
+        {
+            var root = ContainerWithKeys("TestRoot");
+            var body = ContainerWithKeys("TestBody");
+            var op = ContainerWithKeys("TestOp");
+            var map = ContainerWithKeys("TestMap");
+
+            Inbound(root);
+            Inbound(body, (ForeignKeyOn("TestBodyRowId"), op.Object));
+            Inbound(op, (ForeignKeyOn("TestOpRowId"), map.Object));
+            Inbound(map);
+
+            var containers = new List<Mock<IDataContainer>> { root, body, op, map };
+
+            var path = new Mock<IDataNodePath>();
+            path.Setup(p => p.Name).Returns("pipe");
+            path.Setup(p => p.Containers).Returns(containers.ConvertAll(c => c.Object));
+            foreach (var c in containers)
+            {
+                var name = c.Object.Name;
+                path.Setup(p => p.Container(It.Is<string>(n => string.Equals(n, name, StringComparison.Ordinal))))
+                    .Returns(GenericResult<IDataContainer>.Success(c.Object));
+            }
+
+            var store = new Mock<IDataStore>();
+            store.Setup(s => s.Name).Returns("PlatformConfiguration");
+            store.Setup(s => s.Paths).Returns(new List<IDataNodePath> { path.Object });
+            store.Setup(s => s.Path(It.Is<string>(n => string.Equals(n, "pipe", StringComparison.Ordinal))))
+                .Returns(GenericResult<IDataNodePath>.Success(path.Object));
+
+            return [store.Object];
+        }
+
+        private static void Inbound(Mock<IDataContainer> owner, params (IContainerKey Key, IDataContainer Child)[] children)
+        {
+            var bindings = new List<ReferencingKeyBinding>();
+            foreach (var (key, child) in children)
+                bindings.Add(new ReferencingKeyBinding(key, child));
+
+            owner.Setup(c => c.ReferencingKeys)
+                .Returns(GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success(bindings));
+        }
+
+        private static Mock<IDataContainer> ContainerWithKeys(string name)
+        {
+            var container = new Mock<IDataContainer>();
+            container.Setup(c => c.Name).Returns(name);
+            container.Setup(c => c.Keys).Returns(new List<IContainerKey>
+            {
+                KeyOf(KeyTypes.Physical, "RowId"),
+                KeyOf(KeyTypes.Logical, "Id"),
+            });
+            return container;
+        }
+
+        private static IContainerKey KeyOf(KeyTypeBase keyType, string fieldName)
+        {
+            var key = new Mock<IContainerKey>();
+            key.Setup(k => k.KeyType).Returns(keyType);
+            key.Setup(k => k.KeyFields).Returns(new List<IContainerKeyField> { KeyFieldOf(fieldName) });
+            key.Setup(k => k.ReferencedContainer).Returns((IDataContainer?)null);
+            return key.Object;
+        }
+
+        private static IContainerKey ForeignKeyOn(string fieldName)
+        {
+            var key = new Mock<IContainerKey>();
+            key.Setup(k => k.KeyType).Returns(KeyTypes.Foreign);
+            key.Setup(k => k.KeyFields).Returns(new List<IContainerKeyField> { KeyFieldOf(fieldName) });
+            return key.Object;
+        }
+
+        private static IContainerKeyField KeyFieldOf(string fieldName)
+        {
+            var field = new Mock<IDataField>();
+            field.Setup(f => f.Name).Returns(fieldName);
+            var keyField = new Mock<IContainerKeyField>();
+            keyField.Setup(k => k.LocalField).Returns(field.Object);
+            return keyField.Object;
+        }
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<T>.Failure(new GenericMessage("DataSet routing not supported in RecordingGateway test double")));

@@ -38,10 +38,16 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         containerSchema.Setup(s => s.Fields).Returns(new[] { mockField.Object });
         containerSchema.Setup(s => s.GetProjectableFields()).Returns(new[] { mockField.Object });
 
+        // A built container carries its fields as child Nodes; Schema is a projection over them that no
+        // connection-type builder populates, so a fixture that sets only Schema is not reachable.
+        var fieldNode = new Mock<IDataNode>();
+        fieldNode.Setup(n => n.Name).Returns("Id");
+
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns(name);
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
         container.Setup(c => c.Schema).Returns(containerSchema.Object);
+        container.Setup(c => c.Nodes).Returns(new List<IDataNode> { fieldNode.Object });
         container.Setup(c => c.ReferencingKeys)
             .Returns(GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success([]));
         container.Setup(c => c.Keys).Returns(new List<IContainerKey>());
@@ -315,11 +321,15 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         containerSchema.Setup(s => s.Fields).Returns(new[] { fields.Object });
         containerSchema.Setup(s => s.GetProjectableFields()).Returns(new[] { fields.Object });
 
+        var fieldNode = new Mock<IDataNode>();
+        fieldNode.Setup(n => n.Name).Returns("Id");
+
         var dbPath = new DatabasePath("", "dbo", "Test");
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns("Test");
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
         container.Setup(c => c.Schema).Returns(containerSchema.Object);
+        container.Setup(c => c.Nodes).Returns(new List<IDataNode> { fieldNode.Object });
         container.Setup(c => c.ReferencingKeys)
             .Returns(GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success([]));
         container.Setup(c => c.Keys).Returns(new List<IContainerKey>());

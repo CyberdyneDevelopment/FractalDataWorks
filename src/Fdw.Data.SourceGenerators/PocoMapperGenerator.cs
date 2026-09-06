@@ -128,6 +128,10 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                     var elem = GetEnumerableElementType(p.Type);
                     if (hasPublicSetter && elem != null && ImplementsGenericConfiguration(elem))
                     {
+                        // Empty container and FK: both are database facts the generator can only guess
+                        // at from the type name. Resolved at load time from the child's
+                        // ConfigurationCommand and the owner container's declared inbound keys --
+                        // see ImplementationConfigurationProviderBase.ResolveChildBinding.
                         children.Add(new ChildInfo(ChildKind.TypedList, p.Name,
                             p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                             elem.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
@@ -135,8 +139,8 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                             parentFkName,
                             ChildHasFkSetter(elem, parentFkName),
                             false,
-                            parentFkRowId,
-                            ResolveChildContainerName(p, StripConfigurationSuffix(elem.Name))));
+                            string.Empty,
+                            string.Empty));
                     }
                     // Collections never become scalar columns (cannot bind as SQL parameters).
                     continue;
@@ -743,15 +747,10 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
     private const string ColumnAttributeFullName = "System.ComponentModel.DataAnnotations.Schema.ColumnAttribute";
     private const string ChildTableAttributeFullName = "Fdw.Data.ConfigurationChildTableAttribute";
 
-    // A child's rows live in a container named for the child, minus the Configuration suffix --
-    // EscalationLevelConfiguration rows live in EscalationLevel. [ConfigurationChildTable]
-    // overrides that for a child whose container is named something else.
-    //
-    // Why a name is always produced rather than left empty: every consumer of ChildContainerName
-    // guards on IsNullOrEmpty and SKIPS the child. Emitting empty for the typed-list case meant a
-    // child with no attribute was not a child with a derivable name -- it was a child that
-    // silently did not load, did not save, and did not retire.
-    private static string ResolveChildContainerName(IPropertySymbol prop, string conventionalName = "")
+    // The declared container for a PROPERTY-COLLECTION (KVP) child, from [ConfigurationChildTable].
+    // A KVP property has no child configuration type to read a container off, and one owner may bind
+    // several, so this one genuinely has to be declared. Typed-list children do not call this.
+    private static string ResolveChildContainerName(IPropertySymbol prop)
     {
         foreach (var attr in prop.GetAttributes())
         {
@@ -764,7 +763,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
             if (attr.ConstructorArguments[0].Value is string name && !string.IsNullOrWhiteSpace(name))
                 return name;
         }
-        return conventionalName;
+        return string.Empty;
     }
 
 
