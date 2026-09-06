@@ -126,9 +126,6 @@ public sealed partial class OrchestrationNodeConfiguration : IGenericConfigurati
     public IList<OrchestrationNodeConfiguration> Children { get; set; } = [];
 
     /// <summary>Gets or sets the pipeline memberships for this node (only meaningful when NodeTypeId = Step).</summary>
-    // Why: rows live in pipe.OrchestrationNodePipeline; the derived name
-    // (OrchestrationNodePipelineMembership) is not a container in the schema.
-    [ConfigurationChildTable("OrchestrationNodePipeline")]
     public IList<OrchestrationNodePipelineMembershipConfiguration> PipelineMemberships { get; set; } = [];
 
     /// <summary>Gets or sets the pipeline prerequisites for this node (only meaningful when NodeTypeId = Step).</summary>
