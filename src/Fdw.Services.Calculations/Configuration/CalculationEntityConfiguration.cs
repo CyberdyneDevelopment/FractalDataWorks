@@ -76,6 +76,9 @@ public partial class CalculationEntityConfiguration : IGenericConfiguration
     /// Gets or sets the input declarations. Composed from calc.CalculationEntityInput on read; cascade-saved on insert.
     /// </summary>
 #pragma warning disable MA0016
+    // Why: rows live in calc.CalculationEntityInput; the type has no Configuration suffix to strip, so
+    // the derived name (CalculationEntityInputRecord) is not a container in the schema.
+    [ConfigurationChildTable("CalculationEntityInput")]
     public List<CalculationEntityInputRecord> Inputs { get; set; } = [];
 
     /// <summary>

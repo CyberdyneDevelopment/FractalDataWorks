@@ -157,6 +157,8 @@ public partial class DataSetConfiguration : IGenericConfiguration
     /// Gets or sets the field definitions that define the schema of this dataset.
     /// </summary>
     /// <value>A collection of field configuration objects describing the structure of records.</value>
+    // Why: rows live in data.DataSetField; the derived name (DataField) is not a container in the schema.
+    [ConfigurationChildTable("DataSetField")]
     public IList<DataFieldConfiguration> Fields { get; set; } = new List<DataFieldConfiguration>();
 
     /// <summary>
@@ -228,6 +230,9 @@ public partial class DataSetConfiguration : IGenericConfiguration
     /// Aggregates to avoid N×4 child queries on grid renders.
     /// </para>
     /// </remarks>
+    // Why: rows live in data.DataSetAggregate; the type has no Configuration suffix to strip, so the
+    // derived name (DataSetAggregateDefinition) is not a container in the schema.
+    [ConfigurationChildTable("DataSetAggregate")]
     public IList<DataSetAggregateDefinition> Aggregates { get; set; } = new List<DataSetAggregateDefinition>();
 
     /// <summary>
