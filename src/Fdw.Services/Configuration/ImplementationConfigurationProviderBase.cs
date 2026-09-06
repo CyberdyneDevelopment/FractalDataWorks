@@ -403,16 +403,30 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// <summary>Where a typed-list child's rows live, and the column that joins them to this owner.</summary>
     private readonly record struct ChildBinding(string ContainerName, string ForeignKeyColumn);
 
-    // Each fact comes from the component that declares it: the container from the child type's own
-    // ConfigurationCommand — the same declaration SaveChild and DeleteChild write through, so an
-    // aggregate can no longer write its children to one container and read them from another — and
-    // the join column from the owner container's declared inbound keys. Nothing is derived from a
-    // type name, so a container renamed on the database side fails here instead of silently
-    // resolving to a container that does not exist.
+    // Both facts have two possible declarations, and the more specific one wins.
+    //
+    // Container: a ConfigurationCommand names it authoritatively, because that is the declaration the
+    // write path already saves through — using it is what stops an aggregate writing its children to
+    // one container and reading them from another. Not every child has a command, though: a host or
+    // CORS child is read-only configuration that was never given one, and for those the generator's
+    // conventional name is the only declaration there is, and it is correct.
+    //
+    // Join column: the owner container's declared inbound key is the schema's own statement of the
+    // relationship. A store whose schema does not carry inbound keys leaves the generator's
+    // {Owner}RowId convention, which is what every container used before the keys were available.
+    //
+    // Failing only when NEITHER declaration yields anything keeps a rename loud without making a
+    // command mandatory for the majority of children that never needed one.
     private IGenericResult<ChildBinding> ResolveChildBinding(IChildCascadeDescriptor descriptor, string ownerContainerName)
     {
         var command = ConfigurationCommands.ByType(descriptor.ChildType);
-        if (command is null || command == ConfigurationCommands.NotFound || string.IsNullOrEmpty(command.ContainerName))
+        var childContainerName = command is not null
+            && command != ConfigurationCommands.NotFound
+            && !string.IsNullOrEmpty(command.ContainerName)
+                ? command.ContainerName
+                : descriptor.ChildContainerName;
+
+        if (string.IsNullOrEmpty(childContainerName))
         {
             return GenericResult<ChildBinding>.Failure(
                 DefaultConfigurationProviderLog.NoChildCommandForType(
@@ -423,56 +437,33 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         if (!ownerContainer.IsSuccess || ownerContainer.Value is null)
             return ownerContainer.ToNewResult<ChildBinding>();
 
-        return ResolveJoinColumn(descriptor, ownerContainer.Value, ownerContainerName, command.ContainerName);
+        return GenericResult<ChildBinding>.Success(
+            new ChildBinding(
+                childContainerName,
+                DeclaredJoinColumn(ownerContainer.Value, childContainerName) ?? descriptor.ChildForeignKeyColumn));
     }
 
-    private IGenericResult<ChildBinding> ResolveJoinColumn(
-        IChildCascadeDescriptor descriptor,
-        IDataContainer ownerContainer,
-        string ownerContainerName,
-        string childContainerName)
+    /// <summary>The join column the owner's schema declares for this child, or null when it declares none.</summary>
+    private static string? DeclaredJoinColumn(IDataContainer ownerContainer, string childContainerName)
     {
         var inbound = ownerContainer.ReferencingKeys;
-        if (inbound is null)
-        {
-            return GenericResult<ChildBinding>.Failure(
-                DefaultConfigurationProviderLog.InboundKeysUnavailable(
-                    _logger, typeof(TConfig).Name, ownerContainerName, null));
-        }
-
-        if (!inbound.IsSuccess || inbound.Value is null)
-        {
-            return GenericResult<ChildBinding>.Failure(
-                DefaultConfigurationProviderLog.InboundKeysUnavailable(
-                    _logger, typeof(TConfig).Name, ownerContainerName, inbound.CurrentMessage));
-        }
+        if (inbound is null || !inbound.IsSuccess || inbound.Value is null)
+            return null;
 
         string? fkColumn = null;
-        var matches = 0;
         for (var i = 0; i < inbound.Value.Count; i++)
         {
             var localField = InboundKeyFieldFor(inbound.Value[i], childContainerName);
             if (localField is null) continue;
 
-            matches++;
-            fkColumn ??= localField;
+            // More than one inbound key from the same container is ambiguous, so declare nothing and
+            // let the conventional column stand rather than pick one of them arbitrarily.
+            if (fkColumn is not null) return null;
+
+            fkColumn = localField;
         }
 
-        if (matches == 0)
-        {
-            return GenericResult<ChildBinding>.Failure(
-                DefaultConfigurationProviderLog.NoInboundKeyForChild(
-                    _logger, descriptor.BoundPropertyName, childContainerName, ownerContainerName));
-        }
-
-        if (matches > 1)
-        {
-            return GenericResult<ChildBinding>.Failure(
-                DefaultConfigurationProviderLog.AmbiguousInboundKeyForChild(
-                    _logger, descriptor.BoundPropertyName, childContainerName, ownerContainerName, matches));
-        }
-
-        return GenericResult<ChildBinding>.Success(new ChildBinding(childContainerName, fkColumn!));
+        return fkColumn;
     }
 
     /// <summary>The local column of an inbound key, when that key belongs to the child container.</summary>

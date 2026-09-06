@@ -279,43 +279,6 @@ public static partial class DefaultConfigurationProviderLog
     // ── Typed-list child binding (61009-61013) — each fact named with the declaration that supplies it ──
 
     /// <summary>
-    /// Logs that the schema declares no foreign key from a child container back to its owner, so the cascade has no column to join on.
-    /// </summary>
-    /// <param name="logger">The logger to write the event to.</param>
-    /// <param name="boundPropertyName">The owner property bound to this child.</param>
-    /// <param name="childContainerName">The child container named by the child type's command.</param>
-    /// <param name="ownerContainerName">The owner container the child should reference.</param>
-    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61009, Level = LogLevel.Error,
-        Message = "CascadeChildLoad: container '{childContainerName}' declares no foreign key to '{ownerContainerName}', so child '{boundPropertyName}' cannot be joined — add the foreign key to the child table's DDL and regenerate configurationSchema.json, or correct the container name on the child's ConfigurationCommand")]
-    public static partial IGenericMessage NoInboundKeyForChild(ILogger logger, string boundPropertyName, string childContainerName, string ownerContainerName);
-
-    /// <summary>
-    /// Logs that a child container declares more than one foreign key to the same owner, so the cascade cannot choose which one binds this child.
-    /// </summary>
-    /// <param name="logger">The logger to write the event to.</param>
-    /// <param name="boundPropertyName">The owner property bound to this child.</param>
-    /// <param name="childContainerName">The child container declaring the keys.</param>
-    /// <param name="ownerContainerName">The owner container referenced more than once.</param>
-    /// <param name="keyCount">How many foreign keys point at the owner.</param>
-    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61010, Level = LogLevel.Error,
-        Message = "CascadeChildLoad: container '{childContainerName}' declares {keyCount} foreign keys to '{ownerContainerName}', so child '{boundPropertyName}' cannot pick one — the cascade will not guess; give the child its own container or extend the descriptor to name the key")]
-    public static partial IGenericMessage AmbiguousInboundKeyForChild(ILogger logger, string boundPropertyName, string childContainerName, string ownerContainerName, int keyCount);
-
-    /// <summary>
-    /// Logs that the inbound foreign-key set for an owner container could not be computed, so no child of it can be bound.
-    /// </summary>
-    /// <param name="logger">The logger to write the event to.</param>
-    /// <param name="configTypeName">The configuration type being composed.</param>
-    /// <param name="ownerContainerName">The owner container whose inbound keys are unavailable.</param>
-    /// <param name="error">The reason the key set is unavailable.</param>
-    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61011, Level = LogLevel.Error,
-        Message = "CascadeChildLoad: inbound keys for container '{ownerContainerName}' are unavailable while composing '{configTypeName}': {error}")]
-    public static partial IGenericMessage InboundKeysUnavailable(ILogger logger, string configTypeName, string ownerContainerName, string? error);
-
-    /// <summary>
     /// Logs that a property-collection child declares no container, so the cascade does not know which table holds its key/value rows.
     /// </summary>
     /// <param name="logger">The logger to write the event to.</param>
@@ -347,17 +310,6 @@ public static partial class DefaultConfigurationProviderLog
     [MessageLogging(EventId = 11039, Level = LogLevel.Debug,
         Message = "CascadeChildLoad: a '{ownerContainerName}' row while composing '{configTypeName}' carries no Id, so its children were not loaded")]
     public static partial IGenericMessage CascadeSkippedNoOwnerIdentity(ILogger logger, string configTypeName, string ownerContainerName);
-
-    /// <summary>
-    /// Logs every declared typed-list cascade child that no configuration command can resolve, found by the startup check rather than one at a time on load.
-    /// </summary>
-    /// <param name="logger">The logger to write the event to.</param>
-    /// <param name="count">How many children cannot be resolved.</param>
-    /// <param name="children">The unresolved children, each as owner property and child type.</param>
-    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61014, Level = LogLevel.Critical,
-        Message = "CascadeBinding: {count} declared cascade child(ren) have no ConfigurationCommand and cannot be loaded or saved — add a [TypeOption(typeof(ConfigurationCommands), \"<container>\")] command for each: {children}")]
-    public static partial IGenericMessage CascadeChildrenWithoutCommands(ILogger logger, int count, string children);
 
     // ── Typed-body composition (9380-9385) — the read mirror of the typed-body save ──
 
@@ -506,19 +458,6 @@ public static partial class DefaultConfigurationProviderLog
         Message = "Failed to load typed body for {typeName} '{name}' (discriminator '{serviceOptionType}')")]
     public static partial IGenericMessage TypedBodyLoadFailed(ILogger logger, Exception exception, string typeName, string name, string serviceOptionType);
 
-    // ── Child composition (9387) — the read mirror of the child-collection save ──
-
-    /// <summary>
-    /// Logs that an inbound FK binding has no matching child descriptor on the owner mapper, so it is skipped.
-    /// </summary>
-    /// <param name="logger">The logger to write the event to.</param>
-    /// <param name="keyName">The FK key name of the skipped inbound binding.</param>
-    /// <param name="childContainerName">The child container that declares the inbound FK.</param>
-    /// <param name="ownerTypeName">The owner configuration type name being composed.</param>
-    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 11012, Level = LogLevel.Debug,
-        Message = "Child composition: FK key '{keyName}' from child container '{childContainerName}' has no descriptor on {ownerTypeName} — skipped (typed-body or cross-cutting FK)")]
-    public static partial IGenericMessage ChildBindingSkippedNoDescriptor(ILogger logger, string keyName, string childContainerName, string ownerTypeName);
 
     // ── Trace (9389) — KVP property-collection child save (FDW-547) ──
 

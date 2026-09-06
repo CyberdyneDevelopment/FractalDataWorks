@@ -102,12 +102,12 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
                 return Task.FromResult(GenericResult<SqlCommand>.Failure(
                     MsSqlTranslatorLog.ContainerNotDataContainer(NullLogger<MsSqlQueryTranslator>.Instance, container.Name)));
 
-            // Why dataContainer.Nodes, not container.Schema.Fields: Schema.Fields is never populated
-            // by any connection-type builder (SQL included) -- Nodes is the field list a built
-            // container's field children actually land on (see ChildContainerLacksColumn in
-            // ImplementationConfigurationProviderBase for the same substitution). Reading Schema.Fields
-            // here made every no-projection query fail with NoFieldsToProject, for every container,
-            // regardless of whether it actually had declared fields.
+            // Nodes rather than Schema.Fields: DataContainer.Schema projects the same field list on
+            // every access and throws if a field does not implement IField, so reading Nodes avoids a
+            // per-translate allocation and that throw. It does NOT change whether the guard below
+            // fires -- Nodes and Schema.Fields are the same collection, so a container with no fields
+            // still fails NoFieldsToProject, which is the correct outcome for a query with no
+            // projection over a container whose fields were never loaded.
             List<string>? containerFieldNames = null;
             var schemaFields = dataContainer.Nodes;
             if (schemaFields.Count > 0)
