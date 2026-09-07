@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Fdw.Web.Endpoints.Contracts;
 
 namespace Fdw.Services.Universes.Endpoints;
@@ -10,6 +10,12 @@ namespace Fdw.Services.Universes.Endpoints;
 /// </remarks>
 public class UniverseSummaryResponse : ResourceSummary
 {
+    // No MemberCount/ResourceCount: both were taken from the aggregate's child collections, which
+    // the list path does not load, so they reported a confident 0 for a populated universe rather
+    // than disagreeing with the map. No ModifiedAt: ModifyDate is NOT NULL with a default and is
+    // stamped at insert, so a never-modified universe would report a modification, and no screen
+    // renders a modified date at all. A field that can only be drawn dishonestly is not sent.
+
     /// <summary>Gets or sets the durable logical identity.</summary>
     public Guid Id { get; set; }
 
@@ -18,6 +24,13 @@ public class UniverseSummaryResponse : ResourceSummary
 
     /// <summary>Gets or sets the optional description.</summary>
     public string? Description { get; set; }
+
+    /// <summary>Gets or sets the one-line statement of what this universe is for.</summary>
+    /// <remarks>
+    /// Null when nobody has written one. Left null rather than emptied so a client can draw the
+    /// absence -- "no purpose recorded" -- instead of an empty line that looks like a rendering bug.
+    /// </remarks>
+    public string? Purpose { get; set; }
 
     /// <summary>Gets or sets the lifecycle status.</summary>
     public string Status { get; set; } = string.Empty;
@@ -31,15 +44,6 @@ public class UniverseSummaryResponse : ResourceSummary
     /// <summary>Gets or sets the owning user.</summary>
     public Guid OwnerUserId { get; set; }
 
-    /// <summary>Gets or sets how many members the project has.</summary>
-    public int MemberCount { get; set; }
-
-    /// <summary>Gets or sets how many resources are attached.</summary>
-    public int ResourceCount { get; set; }
-
     /// <summary>Gets or sets when the project was created.</summary>
     public DateTimeOffset CreatedAt { get; set; }
-
-    /// <summary>Gets or sets when the project was last modified.</summary>
-    public DateTimeOffset ModifiedAt { get; set; }
 }

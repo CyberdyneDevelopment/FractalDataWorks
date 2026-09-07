@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 
 namespace Fdw.Services.Universes.Endpoints;
 
@@ -19,16 +19,13 @@ internal static class UniverseResponseMapper
         Name = config.Name,
         DisplayName = config.DisplayName,
         Description = config.Description,
+        Purpose = config.Purpose,
         Status = config.Status,
         Visibility = config.Visibility,
         JoinPolicy = config.JoinPolicy,
         OwnerUserId = config.OwnerUserId,
-        MemberCount = config.Members.Count,
-        ResourceCount = config.Resources.Count,
         CreatedAt = config.CreateDate,
-        ModifiedAt = config.ModifyDate,
     };
-
     /// <summary>Projects a configuration onto its detail shape, children included.</summary>
     /// <param name="config">The universe configuration.</param>
     internal static UniverseDetailResponse ToDetail(UniverseConfiguration config) => new()

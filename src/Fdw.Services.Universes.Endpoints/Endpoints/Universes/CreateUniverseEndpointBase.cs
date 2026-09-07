@@ -2,6 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Universes.Results;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
 
@@ -13,9 +15,16 @@ public abstract class CreateUniverseEndpointBase : CrudCreateEndpointBase<Create
     private readonly IUniverseConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected CreateUniverseEndpointBase(ILogger<CreateUniverseEndpointBase> logger, IUniverseConfigurationProvider provider) : base(logger)
+    private readonly IAuthenticationContextAccessor _authContext;
+
+    /// <inheritdoc />
+    protected CreateUniverseEndpointBase(
+        ILogger<CreateUniverseEndpointBase> logger,
+        IUniverseConfigurationProvider provider,
+        IAuthenticationContextAccessor authContext) : base(logger)
     {
         _provider = provider;
+        _authContext = authContext;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -62,9 +71,30 @@ public abstract class CreateUniverseEndpointBase : CrudCreateEndpointBase<Create
 
         // Why Guid.CreateVersion7: the database has no DEFAULT on Id and never mints one. A
         // time-ordered id also keeps insert order and sort order the same thing.
+        // Why this refuses rather than defaulting: OwnerUserId is a Guid and NOT NULL, so an
+        // unresolved caller lands on Guid.Empty, stores cleanly, and reads back as an owner nobody
+        // can resolve. Ownership is also what universes:write is to be scoped by (FDW-725), so a
+        // universe created with no real owner is one nobody can edit once that lands -- including
+        // whoever created it. There are two ways to have no owner and neither is defaultable: no
+        // authentication context at all, and a UserId that is not a Guid.
+        if (_authContext.Current is not { } caller)
+        {
+            return GenericResult<UniverseDetailResponse>.Failure(
+                UniversesResultCodes.ByName("UniverseOwnerUnresolved"), Logger,
+                ResultDetails.Create("name", request.Name, "reason", "no authentication context"));
+        }
+
+        if (!Guid.TryParse(caller.UserId, out var ownerUserId))
+        {
+            return GenericResult<UniverseDetailResponse>.Failure(
+                UniversesResultCodes.ByName("UniverseOwnerUnresolved"), Logger,
+                ResultDetails.Create("name", request.Name, "reason", "UserId is not a Guid"));
+        }
+
         var config = new UniverseConfiguration
         {
             Id = Guid.CreateVersion7(),
+            OwnerUserId = ownerUserId,
             Name = request.Name,
             DisplayName = request.DisplayName,
             Description = request.Description,
