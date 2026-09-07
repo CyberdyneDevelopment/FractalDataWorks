@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -54,8 +54,14 @@ public class UserRoleConfigurationProvider : ImplementationConfigurationProvider
         if (!allResult.IsSuccess || allResult.Value is null)
             return allResult.ToNewResult<IReadOnlyList<UserRoleConfiguration>>();
 
+        // Why IsCurrent and IsDeleted are tested here and not only by the caller: three callers
+        // share this method -- EffectivePermissionResolver, DefaultPrincipalResolver's role-claim
+        // bake at login, and the user-roles endpoint -- and none of them filtered, so a revoked
+        // assignment kept its permissions, kept appearing in the API, and kept being written into
+        // the token. Fail-closed belongs at the read that every one of them goes through.
         var filtered = allResult.Value
-            .Where(ur => string.Equals(ur.UserId, userId, StringComparison.OrdinalIgnoreCase))
+            .Where(ur => string.Equals(ur.UserId, userId, StringComparison.OrdinalIgnoreCase)
+                         && ur.IsCurrent && !ur.IsDeleted)
             .ToList();
 
         UserRoleConfigurationProviderLog.UserRolesForUserLoaded(_logger, filtered.Count, userId);

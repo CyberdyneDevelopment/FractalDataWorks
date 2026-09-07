@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
@@ -73,5 +73,19 @@ public partial class UserRoleConfiguration : IGenericConfiguration
     /// Gets or sets when this role assignment expires (null for permanent).
     /// </summary>
     public DateTimeOffset? ExpiresAt { get; set; }
+
+    /// <summary>Gets or sets whether this is the live version of the assignment.</summary>
+    /// <remarks>
+    /// Configuration writes are versioned rather than destructive: a delete sets IsCurrent = 0 on
+    /// the existing row and inserts a copy with IsDeleted = 1. So a revoked assignment is still a
+    /// row, and a read that does not test this returns access that was taken away.
+    ///
+    /// The container has always declared IsCurrent and IsDeleted; this type did not carry them, so
+    /// no caller could filter on them even by hand. See FDW-732.
+    /// </remarks>
+    public bool IsCurrent { get; set; } = true;
+
+    /// <summary>Gets or sets whether the assignment has been revoked.</summary>
+    public bool IsDeleted { get; set; }
 
 }
