@@ -149,15 +149,17 @@ public abstract class GetDataflowGraphEndpointBase : EndpointWithoutRequest<Data
         {
             nodes.Add(new DataflowNodeDto
             {
-                Id = $"datastore_{store.ConfigurationId}",
-                Label = store.DataStoreTypeName ?? store.StoreType,
+                Id = $"datastore_{store.Id}",
+                Label = store.Name,
                 NodeType = "datastore",
-                Category = store.StoreType,
+                Category = store.ServiceOptionType ?? "",
+                // location and translatorType are gone rather than defaulted: data.DataStore
+                // carries neither, and where a store lives is the connection's business now.
+                // Emitting "" for them would report an empty location as fact.
                 Metadata = new Dictionary<string, object>(StringComparer.Ordinal)
                 {
-                    ["storeType"] = store.StoreType,
-                    ["location"] = store.Location,
-                    ["translatorType"] = store.TranslatorType
+                    ["storeType"] = store.ServiceOptionType ?? "",
+                    ["description"] = store.Description ?? ""
                 }
             });
         }
@@ -216,14 +218,14 @@ public abstract class GetDataflowGraphEndpointBase : EndpointWithoutRequest<Data
             if (!string.IsNullOrEmpty(source.DataStoreName))
             {
                 var dataStore = dataStores.FirstOrDefault(ds =>
-                    string.Equals(ds.DataStoreTypeName, source.DataStoreName, StringComparison.OrdinalIgnoreCase));
+                    string.Equals(ds.Name, source.DataStoreName, StringComparison.OrdinalIgnoreCase));
                 if (dataStore != null)
                 {
                     edges.Add(new DataflowEdgeDto
                     {
-                        Id = $"edge_src_{source.Id}_store_{dataStore.ConfigurationId}",
+                        Id = $"edge_src_{source.Id}_store_{dataStore.Id}",
                         Source = sourceNodeId,
-                        Target = $"datastore_{dataStore.ConfigurationId}",
+                        Target = $"datastore_{dataStore.Id}",
                         RelationType = "stored_in",
                         Metadata = new Dictionary<string, object>(StringComparer.Ordinal)
                     });
