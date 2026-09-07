@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 using Fdw.Results;
 
@@ -24,7 +24,12 @@ public sealed class UniverseOwnerUnresolvedCode : UniversesResultCodeBase
 {
     /// <summary>Initializes a new instance of the <see cref="UniverseOwnerUnresolvedCode"/> class.</summary>
     public UniverseOwnerUnresolvedCode()
-        : base(90000, "UniverseOwnerUnresolved",
+        // 90001, not a second 90000: UniversesResultCodes declares ById unique, so two codes
+        // sharing a number make the whole collection throw on first lookup -- which took every
+        // universe write down, not just this code's own path. Ids increment within their
+        // category band (see HttpResultCodes 71000-71005); the band carries the meaning and the
+        // sequence keeps them distinct.
+        : base(90001, "UniverseOwnerUnresolved",
             ResultSeverities.ByName("Error"),
             "Universe '{name}' cannot be created: the calling user could not be resolved ({reason})",
             isRetryable: false)
