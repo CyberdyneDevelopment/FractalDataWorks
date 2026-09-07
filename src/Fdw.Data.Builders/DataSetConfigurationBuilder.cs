@@ -30,7 +30,7 @@ public sealed class DataSetConfigurationBuilder
     private string _version = "1.0";
     private string _category = "Dataset";
     private string? _recordTypeName;
-    private readonly List<DataFieldConfiguration> _fields = new();
+    private readonly List<DataSetFieldConfiguration> _fields = new();
     private readonly List<string> _keyFields = new();
     private readonly List<DataSetSourceConfiguration> _sources = new();
     private CachingConfiguration? _caching;
@@ -141,7 +141,7 @@ public sealed class DataSetConfigurationBuilder
     /// </summary>
     /// <param name="field">The field configuration to add.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataSetConfigurationBuilder AddField(DataFieldConfiguration field)
+    public DataSetConfigurationBuilder AddField(DataSetFieldConfiguration field)
     {
         if (field != null)
         {
@@ -157,13 +157,13 @@ public sealed class DataSetConfigurationBuilder
     /// <summary>
     /// Adds a field using a builder function.
     /// </summary>
-    /// <param name="builderFunc">A function that configures a <see cref="DataFieldConfigurationBuilder"/> and returns the result.</param>
+    /// <param name="builderFunc">A function that configures a <see cref="DataSetFieldConfigurationBuilder"/> and returns the result.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataSetConfigurationBuilder AddField(Func<DataFieldConfigurationBuilder, IGenericResult<DataFieldConfiguration>> builderFunc)
+    public DataSetConfigurationBuilder AddField(Func<DataSetFieldConfigurationBuilder, IGenericResult<DataSetFieldConfiguration>> builderFunc)
     {
         if (builderFunc != null)
         {
-            var builder = new DataFieldConfigurationBuilder();
+            var builder = new DataSetFieldConfigurationBuilder();
             var result = builderFunc(builder);
             if (result.IsSuccess && result.Value != null)
             {
@@ -183,7 +183,7 @@ public sealed class DataSetConfigurationBuilder
     /// <returns>This builder instance for method chaining.</returns>
     public DataSetConfigurationBuilder AddField(string name, string typeName, bool isKey = false, bool isRequired = false)
     {
-        var field = new DataFieldConfiguration
+        var field = new DataSetFieldConfiguration
         {
             Name = name,
             TypeName = typeName,
@@ -198,7 +198,7 @@ public sealed class DataSetConfigurationBuilder
     /// </summary>
     /// <param name="fields">The field configurations to add.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataSetConfigurationBuilder AddFields(IEnumerable<DataFieldConfiguration> fields)
+    public DataSetConfigurationBuilder AddFields(IEnumerable<DataSetFieldConfiguration> fields)
     {
         if (fields != null)
         {
@@ -224,7 +224,7 @@ public sealed class DataSetConfigurationBuilder
         Func<IDataRow, object> calculator,
         string? description = null)
     {
-        var field = new DataFieldConfiguration
+        var field = new DataSetFieldConfiguration
         {
             Name = name,
             TypeName = type.FullName ?? type.Name,
@@ -389,7 +389,7 @@ public sealed class DataSetConfigurationBuilder
             Version = _version,
             Category = _category,
             RecordTypeName = recordTypeName,
-            Fields = new List<DataFieldConfiguration>(_fields),
+            Fields = new List<DataSetFieldConfiguration>(_fields),
             KeyFields = _keyFields
                 .Select((name, i) => new DataSetKeyFieldConfiguration
                 {

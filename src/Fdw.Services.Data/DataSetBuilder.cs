@@ -7,7 +7,7 @@ using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Runtime;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using DataFieldConfiguration = Fdw.Data.DataSets.Abstractions.DataFieldConfiguration;
+using DataSetFieldConfiguration = Fdw.Data.DataSets.Abstractions.DataSetFieldConfiguration;
 using DataSetCompositionTypes = Fdw.Data.Abstractions.DataSetCompositionTypes;
 using DataSetConfiguration = Fdw.Data.DataSets.Abstractions.DataSetConfiguration;
 using DataSetSourceConfiguration = Fdw.Data.DataSets.Abstractions.DataSetSourceConfiguration;

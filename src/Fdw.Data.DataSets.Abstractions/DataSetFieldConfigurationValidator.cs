@@ -7,14 +7,14 @@ using FluentValidation;
 namespace Fdw.Data.DataSets.Abstractions;
 
 /// <summary>
-/// Validator for DataFieldConfiguration instances.
+/// Validator for DataSetFieldConfiguration instances.
 /// </summary>
-public sealed class DataFieldConfigurationValidator : AbstractValidator<DataFieldConfiguration>
+public sealed class DataSetFieldConfigurationValidator : AbstractValidator<DataSetFieldConfiguration>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="DataFieldConfigurationValidator"/> class.
+    /// Initializes a new instance of the <see cref="DataSetFieldConfigurationValidator"/> class.
     /// </summary>
-    public DataFieldConfigurationValidator()
+    public DataSetFieldConfigurationValidator()
     {
         RuleFor(x => x.Name)
             .NotEmpty()

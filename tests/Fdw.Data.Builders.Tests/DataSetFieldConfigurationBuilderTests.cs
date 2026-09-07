@@ -5,10 +5,10 @@ using Xunit;
 
 namespace Fdw.Data.Builders.Tests;
 
-public sealed class DataFieldConfigurationBuilderTests
+public sealed class DataSetFieldConfigurationBuilderTests
 {
-    private static DataFieldConfigurationBuilder CreateValidBuilder() =>
-        new DataFieldConfigurationBuilder()
+    private static DataSetFieldConfigurationBuilder CreateValidBuilder() =>
+        new DataSetFieldConfigurationBuilder()
             .WithName("CustomerId")
             .WithType<int>();
 
@@ -29,7 +29,7 @@ public sealed class DataFieldConfigurationBuilderTests
     [Trait("Category", "DataIntegrity")]
     public void BuildFailsWithoutName()
     {
-        var result = new DataFieldConfigurationBuilder()
+        var result = new DataSetFieldConfigurationBuilder()
             .WithType<int>()
             .Build();
 
@@ -41,7 +41,7 @@ public sealed class DataFieldConfigurationBuilderTests
     [Trait("Category", "DataIntegrity")]
     public void BuildFailsWithWhitespaceName()
     {
-        var result = new DataFieldConfigurationBuilder()
+        var result = new DataSetFieldConfigurationBuilder()
             .WithName("  ")
             .WithType<int>()
             .Build();
@@ -54,7 +54,7 @@ public sealed class DataFieldConfigurationBuilderTests
     [Trait("Category", "DataIntegrity")]
     public void BuildFailsWithoutType()
     {
-        var result = new DataFieldConfigurationBuilder()
+        var result = new DataSetFieldConfigurationBuilder()
             .WithName("CustomerId")
             .Build();
 
@@ -66,7 +66,7 @@ public sealed class DataFieldConfigurationBuilderTests
     [Trait("Category", "DataIntegrity")]
     public void WithTypeGenericSetsTypeName()
     {
-        var result = new DataFieldConfigurationBuilder()
+        var result = new DataSetFieldConfigurationBuilder()
             .WithName("Name")
             .WithType<string>()
             .Build();
@@ -80,7 +80,7 @@ public sealed class DataFieldConfigurationBuilderTests
     [Trait("Category", "DataIntegrity")]
     public void WithTypeInstanceSetsTypeName()
     {
-        var result = new DataFieldConfigurationBuilder()
+        var result = new DataSetFieldConfigurationBuilder()
             .WithName("Name")
             .WithType(typeof(decimal))
             .Build();
@@ -95,7 +95,7 @@ public sealed class DataFieldConfigurationBuilderTests
     public void WithTypeInstanceThrowsForNull()
     {
         Should.Throw<ArgumentNullException>(() =>
-            new DataFieldConfigurationBuilder().WithType(null!));
+            new DataSetFieldConfigurationBuilder().WithType(null!));
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public sealed class DataFieldConfigurationBuilderTests
     [Trait("Category", "DataIntegrity")]
     public void WithTypeNameSetsTypeName()
     {
-        var result = new DataFieldConfigurationBuilder()
+        var result = new DataSetFieldConfigurationBuilder()
             .WithName("Name")
             .WithTypeName("System.String")
             .Build();
@@ -324,7 +324,7 @@ public sealed class DataFieldConfigurationBuilderTests
     [Trait("Category", "DataIntegrity")]
     public void BuildSetsAllConfiguredProperties()
     {
-        var result = new DataFieldConfigurationBuilder()
+        var result = new DataSetFieldConfigurationBuilder()
             .WithName("Amount")
             .WithType<decimal>()
             .WithDescription("Transaction amount")

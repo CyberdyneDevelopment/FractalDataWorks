@@ -9,7 +9,7 @@ using Fdw.Schema.Properties;
 namespace Fdw.Data.DataSets.Abstractions;
 
 /// <summary>
-/// Adapter that converts a <see cref="DataFieldConfiguration"/> to <see cref="IFieldDefinition"/>.
+/// Adapter that converts a <see cref="DataSetFieldConfiguration"/> to <see cref="IFieldDefinition"/>.
 /// </summary>
 /// <remarks>
 /// This adapter bridges configuration objects (used for IOptions binding) to schema interfaces
@@ -18,7 +18,7 @@ namespace Fdw.Data.DataSets.Abstractions;
 [ExcludeFromCodeCoverage]
 public sealed class DataFieldToFieldDefinitionAdapter : IFieldDefinition
 {
-    private readonly DataFieldConfiguration _config;
+    private readonly DataSetFieldConfiguration _config;
     private readonly IPropertyRole _role;
     private readonly Type _clrType;
 
@@ -28,7 +28,7 @@ public sealed class DataFieldToFieldDefinitionAdapter : IFieldDefinition
     /// <param name="config">The field configuration to adapt.</param>
     /// <param name="roleProvider">Optional function to resolve role by name. If null, defaults to AttributeRole.</param>
     public DataFieldToFieldDefinitionAdapter(
-        DataFieldConfiguration config,
+        DataSetFieldConfiguration config,
         Func<string?, IPropertyRole>? roleProvider = null)
     {
         _config = config;
@@ -91,7 +91,7 @@ public sealed class DataFieldToFieldDefinitionAdapter : IFieldDefinition
 
     /// <inheritdoc/>
     /// <remarks>
-    /// DataFieldConfiguration doesn't have explicit source mapping - returns null.
+    /// DataSetFieldConfiguration doesn't have explicit source mapping - returns null.
     /// </remarks>
     public string? SourceMapping => null;
 
@@ -103,13 +103,13 @@ public sealed class DataFieldToFieldDefinitionAdapter : IFieldDefinition
 
     /// <inheritdoc/>
     /// <remarks>
-    /// DataFieldConfiguration doesn't have transformer info - returns null.
+    /// DataSetFieldConfiguration doesn't have transformer info - returns null.
     /// </remarks>
     public string? Transformer => null;
 
     /// <inheritdoc/>
     /// <remarks>
-    /// DataFieldConfiguration doesn't have format info - returns null.
+    /// DataSetFieldConfiguration doesn't have format info - returns null.
     /// </remarks>
     public string? Format => null;
 

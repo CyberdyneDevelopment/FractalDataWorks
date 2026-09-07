@@ -37,7 +37,7 @@ public sealed class DataSetConfigurationValidator : AbstractValidator<DataSetCon
             .WithMessage("At least one field must be defined");
 
         RuleForEach(x => x.Fields)
-            .SetValidator(new DataFieldConfigurationValidator());
+            .SetValidator(new DataSetFieldConfigurationValidator());
 
         RuleFor(x => x.KeyFields)
             .NotEmpty()

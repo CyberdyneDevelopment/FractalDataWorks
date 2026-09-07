@@ -273,7 +273,7 @@ public sealed class DataSetConfigurationBuilderTests
     [Trait("Category", "DataIntegrity")]
     public void AddFieldWithConfigurationAddsField()
     {
-        var field = new DataFieldConfiguration
+        var field = new DataSetFieldConfiguration
         {
             Name = "Email",
             TypeName = "System.String",
@@ -294,7 +294,7 @@ public sealed class DataSetConfigurationBuilderTests
     public void AddFieldNullIsIgnored()
     {
         var result = CreateValidBuilder()
-            .AddField((DataFieldConfiguration)null!)
+            .AddField((DataSetFieldConfiguration)null!)
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -306,7 +306,7 @@ public sealed class DataSetConfigurationBuilderTests
     [Trait("Category", "DataIntegrity")]
     public void AddFieldWithKeyAutoAddsToKeyFields()
     {
-        var field = new DataFieldConfiguration
+        var field = new DataSetFieldConfiguration
         {
             Name = "CompanyId",
             TypeName = "System.Int32",
@@ -340,7 +340,7 @@ public sealed class DataSetConfigurationBuilderTests
     public void AddFieldWithBuilderFuncNullIsIgnored()
     {
         var result = CreateValidBuilder()
-            .AddField((Func<DataFieldConfigurationBuilder, IGenericResult<DataFieldConfiguration>>)null!)
+            .AddField((Func<DataSetFieldConfigurationBuilder, IGenericResult<DataSetFieldConfiguration>>)null!)
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -354,8 +354,8 @@ public sealed class DataSetConfigurationBuilderTests
     {
         var fields = new[]
         {
-            new DataFieldConfiguration { Name = "Email", TypeName = "System.String" },
-            new DataFieldConfiguration { Name = "Phone", TypeName = "System.String" }
+            new DataSetFieldConfiguration { Name = "Email", TypeName = "System.String" },
+            new DataSetFieldConfiguration { Name = "Phone", TypeName = "System.String" }
         };
 
         var result = CreateValidBuilder()

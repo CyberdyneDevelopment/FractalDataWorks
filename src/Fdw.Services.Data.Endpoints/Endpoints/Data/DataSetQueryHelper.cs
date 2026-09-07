@@ -170,7 +170,7 @@ internal static class DataSetQueryHelper
         ModifiedOnBehalfOf = config.ModifyOnBehalfOf
     };
 
-    internal static DataSetFieldPayload MapToFieldDto(DataFieldConfiguration field) => new()
+    internal static DataSetFieldPayload MapToFieldDto(DataSetFieldConfiguration field) => new()
     {
         Name = field.Name,
         DataType = field.TypeName,
@@ -202,7 +202,7 @@ internal static class DataSetQueryHelper
         IsActive = source.IsCurrent && !source.IsDeleted
     };
 
-    internal static DataSetAggregateDto MapToAggregateDto(DataSetAggregateDefinition aggregate) => new()
+    internal static DataSetAggregateDto MapToAggregateDto(DataSetAggregateConfiguration aggregate) => new()
     {
         Id = aggregate.Id,
         AggregateColumnName = aggregate.AggregateColumnName,
@@ -221,8 +221,8 @@ internal static class DataSetQueryHelper
     // ========================================================================
 
     /// <summary>Maps composed field requests onto the cascade child collection.</summary>
-    internal static List<DataFieldConfiguration> MapFields(IList<CreateDataSetFieldRequest> fields) =>
-        fields.Select(f => new DataFieldConfiguration
+    internal static List<DataSetFieldConfiguration> MapFields(IList<CreateDataSetFieldRequest> fields) =>
+        fields.Select(f => new DataSetFieldConfiguration
         {
             Name = f.Name,
             Description = f.Description,
@@ -310,8 +310,8 @@ internal static class DataSetQueryHelper
 
     /// <summary>Maps composed aggregate requests onto the cascade child collection.</summary>
     /// <remarks>Callers must run <see cref="ValidateAggregates"/> first — this method never validates.</remarks>
-    internal static List<DataSetAggregateDefinition> MapAggregates(IList<CreateDataSetAggregateRequest> aggregates) =>
-        aggregates.Select(a => new DataSetAggregateDefinition
+    internal static List<DataSetAggregateConfiguration> MapAggregates(IList<CreateDataSetAggregateRequest> aggregates) =>
+        aggregates.Select(a => new DataSetAggregateConfiguration
         {
             AggregateColumnName = a.AggregateColumnName,
             GroupByFieldNames = a.GroupByFieldNames,

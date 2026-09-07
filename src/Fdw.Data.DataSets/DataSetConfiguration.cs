@@ -157,7 +157,7 @@ public partial class DataSetConfiguration : IGenericConfiguration
     /// Gets or sets the field definitions that define the schema of this dataset.
     /// </summary>
     /// <value>A collection of field configuration objects describing the structure of records.</value>
-    public IList<DataFieldConfiguration> Fields { get; set; } = new List<DataFieldConfiguration>();
+    public IList<DataSetFieldConfiguration> Fields { get; set; } = new List<DataSetFieldConfiguration>();
 
     /// <summary>
     /// Gets the IDs of the source configurations for this DataSet, derived from <see cref="Sources"/>.
@@ -228,7 +228,7 @@ public partial class DataSetConfiguration : IGenericConfiguration
     /// Aggregates to avoid N×4 child queries on grid renders.
     /// </para>
     /// </remarks>
-    public IList<DataSetAggregateDefinition> Aggregates { get; set; } = new List<DataSetAggregateDefinition>();
+    public IList<DataSetAggregateConfiguration> Aggregates { get; set; } = new List<DataSetAggregateConfiguration>();
 
     /// <summary>
     /// Gets or sets whether this is the current active version of the record.

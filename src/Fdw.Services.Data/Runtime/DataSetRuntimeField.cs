@@ -4,12 +4,12 @@ using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using DataFieldConfiguration = Fdw.Data.DataSets.Abstractions.DataFieldConfiguration;
+using DataSetFieldConfiguration = Fdw.Data.DataSets.Abstractions.DataSetFieldConfiguration;
 
 namespace Fdw.Services.Data.Runtime;
 
 /// <summary>
-/// Runtime implementation of <see cref="IDataField"/> built from a <see cref="DataFieldConfiguration"/> record.
+/// Runtime implementation of <see cref="IDataField"/> built from a <see cref="DataSetFieldConfiguration"/> record.
 /// </summary>
 internal sealed class DataSetRuntimeField : IDataField
 {
@@ -17,7 +17,7 @@ internal sealed class DataSetRuntimeField : IDataField
     /// Initializes a new instance of <see cref="DataSetRuntimeField"/> from a field configuration record.
     /// </summary>
     /// <param name="config">The field configuration record.</param>
-    public DataSetRuntimeField(DataFieldConfiguration config)
+    public DataSetRuntimeField(DataSetFieldConfiguration config)
     {
         ArgumentNullException.ThrowIfNull(config);
         Name = config.Name;

@@ -285,7 +285,7 @@ public sealed class DataSetQueryDocumentProcessor : IDocumentProcessor
         return description;
     }
 
-    private static string BuildFieldParameterDescription(DataFieldConfiguration field)
+    private static string BuildFieldParameterDescription(DataSetFieldConfiguration field)
     {
         var parts = new List<string> { $"Type: {field.TypeName}" };
         if (field.IsKey) parts.Add("Primary Key");

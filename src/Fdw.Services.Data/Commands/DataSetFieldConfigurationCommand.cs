@@ -7,8 +7,8 @@ namespace Fdw.Services.Data.Commands;
 /// <summary>ConfigurationCommands TypeOption for the DataSet field child configuration.</summary>
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(ConfigurationCommands), "DataSetField")]
-public sealed class DataFieldConfigurationCommand : ConfigurationCommandBase<DataFieldConfiguration>
+public sealed class DataSetFieldConfigurationCommand : ConfigurationCommandBase<DataSetFieldConfiguration>
 {
     /// <inheritdoc/>
-    public DataFieldConfigurationCommand() : base("DataSetField") { }
+    public DataSetFieldConfigurationCommand() : base("DataSetField") { }
 }

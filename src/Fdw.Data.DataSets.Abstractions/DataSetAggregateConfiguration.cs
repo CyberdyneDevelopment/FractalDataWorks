@@ -11,7 +11,7 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <c>DataSetAggregateDefinition</c> stores group-by and measure definitions at the dataset level,
+/// <c>DataSetAggregateConfiguration</c> stores group-by and measure definitions at the dataset level,
 /// enabling reuse of aggregation logic across queries without repeating it in transformation
 /// configurations.  For example, a "sales by state" dataset can carry two definitions:
 /// <list type="bullet">
@@ -34,7 +34,7 @@ namespace Fdw.Data.DataSets.Abstractions;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "DataSetAggregate")]
-public sealed partial class DataSetAggregateDefinition : IGenericConfiguration
+public sealed partial class DataSetAggregateConfiguration : IGenericConfiguration
 {
     /// <summary>Gets or sets the unique identifier for this aggregate definition.</summary>
     public Guid Id { get; set; }

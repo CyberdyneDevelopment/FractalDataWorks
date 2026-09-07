@@ -162,7 +162,7 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
     {
         DataSetConfigurationProviderLog.GetFieldsTrace(_logger, dataSetId);
 
-        var command = new QueryCommandBuilder<DataFieldConfiguration>(DataStoreName, PathName, FieldContainer)
+        var command = new QueryCommandBuilder<DataSetFieldConfiguration>(DataStoreName, PathName, FieldContainer)
             .Where("DataSetId", dataSetId)
             .Where("IsCurrent", true)
             .Where("IsDeleted", false)
@@ -172,7 +172,7 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
         var gateway = Gateway();
         if (gateway.IsFailure) return gateway.ToNewResult<IReadOnlyList<DataSetFieldDefinition>>();
 
-        var result = await gateway.Value!.Execute<IEnumerable<DataFieldConfiguration>>(command, cancellationToken)
+        var result = await gateway.Value!.Execute<IEnumerable<DataSetFieldConfiguration>>(command, cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)
@@ -213,12 +213,12 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
         DataSetConfigurationProviderLog.SaveFieldsTrace(_logger, dataSetId, fields.Count);
 
         // Version-on-write step 1: retire existing current field rows
-        var retireCommand = CmdBuilders.Update.In<DataFieldConfiguration>(FieldContainer)
+        var retireCommand = CmdBuilders.Update.In<DataSetFieldConfiguration>(FieldContainer)
             .DataStore(DataStoreName).Path(PathName)
             .Where("DataSetId", dataSetId)
             .Where("IsCurrent", true)
             .Where("IsDeleted", false)
-            .Value(new DataFieldConfiguration { DataSetId = dataSetId, IsCurrent = false });
+            .Value(new DataSetFieldConfiguration { DataSetId = dataSetId, IsCurrent = false });
 
         var gatewayForSave = Gateway();
         if (gatewayForSave.IsFailure) return gatewayForSave;
@@ -241,7 +241,7 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
 
         foreach (var f in fields)
         {
-            var record = new DataFieldConfiguration
+            var record = new DataSetFieldConfiguration
             {
                 Id = Guid.CreateVersion7(),
                 DataSetId = dataSetId,
@@ -254,7 +254,7 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
                 IsDeleted = false
             };
             var insertResult = await gatewayForSave.Value!.Execute<int>(
-                new ConfigurationSaveCommand<DataFieldConfiguration>(record),
+                new ConfigurationSaveCommand<DataSetFieldConfiguration>(record),
                 new DataStoreTarget(DataStoreName, PathName, FieldContainer), cancellationToken)
                 .ConfigureAwait(false);
             if (!insertResult.IsSuccess)

@@ -5,9 +5,9 @@ using FluentValidation.TestHelper;
 
 namespace Fdw.Data.DataSets.Abstractions.Tests;
 
-public sealed class DataFieldConfigurationValidatorTests
+public sealed class DataSetFieldConfigurationValidatorTests
 {
-    private readonly DataFieldConfigurationValidator _validator = new();
+    private readonly DataSetFieldConfigurationValidator _validator = new();
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -15,7 +15,7 @@ public sealed class DataFieldConfigurationValidatorTests
     public void ValidateFailsWhenNameIsEmpty()
     {
         // Arrange
-        var config = new DataFieldConfiguration { Name = string.Empty, TypeName = "System.String" };
+        var config = new DataSetFieldConfiguration { Name = string.Empty, TypeName = "System.String" };
 
         // Act
         var result = _validator.TestValidate(config);
@@ -30,7 +30,7 @@ public sealed class DataFieldConfigurationValidatorTests
     public void ValidateFailsWhenNameExceeds50Characters()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = new string('A', 51),
             TypeName = "System.String"
@@ -50,7 +50,7 @@ public sealed class DataFieldConfigurationValidatorTests
     public void ValidatePassesWithValidName()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "ValidFieldName",
             TypeName = "System.String"
@@ -69,7 +69,7 @@ public sealed class DataFieldConfigurationValidatorTests
     public void ValidateFailsWhenTypeNameIsEmpty()
     {
         // Arrange
-        var config = new DataFieldConfiguration { Name = "Field1", TypeName = string.Empty };
+        var config = new DataSetFieldConfiguration { Name = "Field1", TypeName = string.Empty };
 
         // Act
         var result = _validator.TestValidate(config);
@@ -93,7 +93,7 @@ public sealed class DataFieldConfigurationValidatorTests
     public void ValidatePassesWithFullyQualifiedCommonTypeName(string typeName)
     {
         // Arrange
-        var config = new DataFieldConfiguration { Name = "Field1", TypeName = typeName };
+        var config = new DataSetFieldConfiguration { Name = "Field1", TypeName = typeName };
 
         // Act
         var result = _validator.TestValidate(config);
@@ -117,7 +117,7 @@ public sealed class DataFieldConfigurationValidatorTests
     public void ValidatePassesWithShortCommonTypeName(string typeName)
     {
         // Arrange
-        var config = new DataFieldConfiguration { Name = "Field1", TypeName = typeName };
+        var config = new DataSetFieldConfiguration { Name = "Field1", TypeName = typeName };
 
         // Act
         var result = _validator.TestValidate(config);
@@ -135,7 +135,7 @@ public sealed class DataFieldConfigurationValidatorTests
     public void ValidatePassesWithQualifiedTypeName(string typeName)
     {
         // Arrange
-        var config = new DataFieldConfiguration { Name = "Field1", TypeName = typeName };
+        var config = new DataSetFieldConfiguration { Name = "Field1", TypeName = typeName };
 
         // Act
         var result = _validator.TestValidate(config);
@@ -153,7 +153,7 @@ public sealed class DataFieldConfigurationValidatorTests
     public void ValidateFailsWithInvalidTypeName(string typeName)
     {
         // Arrange
-        var config = new DataFieldConfiguration { Name = "Field1", TypeName = typeName };
+        var config = new DataSetFieldConfiguration { Name = "Field1", TypeName = typeName };
 
         // Act
         var result = _validator.TestValidate(config);
@@ -169,7 +169,7 @@ public sealed class DataFieldConfigurationValidatorTests
     public void ValidatePassesWhenMaxLengthIsNull()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "Field1",
             TypeName = "System.String",
@@ -189,7 +189,7 @@ public sealed class DataFieldConfigurationValidatorTests
     public void ValidateFailsWhenMaxLengthIsZero()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "Field1",
             TypeName = "System.String",
@@ -210,7 +210,7 @@ public sealed class DataFieldConfigurationValidatorTests
     public void ValidateFailsWhenMaxLengthIsNegative()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "Field1",
             TypeName = "System.String",
@@ -234,7 +234,7 @@ public sealed class DataFieldConfigurationValidatorTests
     public void ValidatePassesWhenMaxLengthIsPositive(int maxLength)
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "Field1",
             TypeName = "System.String",
@@ -254,7 +254,7 @@ public sealed class DataFieldConfigurationValidatorTests
     public void ValidatePassesWithAllValidProperties()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "CustomerId",
             Description = "Customer identifier",
@@ -279,7 +279,7 @@ public sealed class DataFieldConfigurationValidatorTests
     public void ValidateReturnsMultipleErrorsForMultipleInvalidProperties()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = string.Empty,
             TypeName = "invalid type",

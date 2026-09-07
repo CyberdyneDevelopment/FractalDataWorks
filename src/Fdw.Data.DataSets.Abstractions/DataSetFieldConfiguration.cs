@@ -11,7 +11,7 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
-public sealed partial class DataFieldConfiguration : IGenericConfiguration
+public sealed partial class DataSetFieldConfiguration : IGenericConfiguration
 {
     /// <summary>Gets the configuration section name (computed; not a persisted column).</summary>
     public string SectionName => "DataSetFields";
@@ -55,9 +55,19 @@ public sealed partial class DataFieldConfiguration : IGenericConfiguration
     public bool IsKey { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the field allows null values.
+    /// </summary>
+    public bool IsNullable { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets a value indicating whether this field is required (non-nullable).
     /// </summary>
     public bool IsRequired { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the platform supplies this field rather than the user.
+    /// </summary>
+    public bool IsSystemProvided { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether this field can be used for indexing/searching.
@@ -155,9 +165,9 @@ public sealed partial class DataFieldConfiguration : IGenericConfiguration
     /// Creates a clone of this field configuration.
     /// </summary>
     /// <returns>A cloned instance of the field configuration.</returns>
-    public DataFieldConfiguration Clone()
+    public DataSetFieldConfiguration Clone()
     {
-        return new DataFieldConfiguration
+        return new DataSetFieldConfiguration
         {
             Id = Id,
             Name = Name,

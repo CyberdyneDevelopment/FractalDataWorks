@@ -99,7 +99,7 @@ public class DataSetConfigurationTests
     public void Fields_CanBePopulated()
     {
         // Arrange
-        var field = new DataFieldConfiguration { Name = "Id", TypeName = "System.Int32" };
+        var field = new DataSetFieldConfiguration { Name = "Id", TypeName = "System.Int32" };
         var config = new DataSetConfiguration();
 
         // Act
@@ -174,7 +174,7 @@ public class DataSetConfigurationTests
         var config = new DataSetConfiguration();
 
         // Act
-        config.Aggregates.Add(new DataSetAggregateDefinition
+        config.Aggregates.Add(new DataSetAggregateConfiguration
         {
             AggregateColumnName = "TotalSales",
             GroupByFieldNames = "State",
@@ -200,7 +200,7 @@ public class DataSetConfigurationTests
 
         // Act
 #pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
-        IGenericConfiguration aggregate = new DataSetAggregateDefinition
+        IGenericConfiguration aggregate = new DataSetAggregateConfiguration
         {
             Id = aggregateId,
             DataSetId = dataSetId,
@@ -214,9 +214,9 @@ public class DataSetConfigurationTests
         // Assert
         aggregate.Id.ShouldBe(aggregateId);
         aggregate.ServiceType.ShouldBe("DataSet");
-        ((DataSetAggregateDefinition)aggregate).DataSetId.ShouldBe(dataSetId);
-        ((DataSetAggregateDefinition)aggregate).IsCurrent.ShouldBeTrue();
-        ((DataSetAggregateDefinition)aggregate).IsDeleted.ShouldBeFalse();
+        ((DataSetAggregateConfiguration)aggregate).DataSetId.ShouldBe(dataSetId);
+        ((DataSetAggregateConfiguration)aggregate).IsCurrent.ShouldBeTrue();
+        ((DataSetAggregateConfiguration)aggregate).IsDeleted.ShouldBeFalse();
     }
 
     [Fact]
@@ -263,7 +263,7 @@ public class DataSetConfigurationTests
             Caching = new CachingConfiguration { Enabled = true }
         };
 
-        config.Fields.Add(new DataFieldConfiguration { Name = "Id", TypeName = "System.Int32" });
+        config.Fields.Add(new DataSetFieldConfiguration { Name = "Id", TypeName = "System.Int32" });
         config.KeyFields.Add(new DataSetKeyFieldConfiguration { KeyName = "Id", KeyType = "Surrogate", Ordinal = 0 });
         config.Sources.Add(new DataSetSourceConfiguration { Id = Guid.NewGuid() });
 

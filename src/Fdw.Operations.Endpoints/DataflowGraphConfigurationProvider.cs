@@ -95,7 +95,7 @@ public class DataflowGraphConfigurationProvider
                 DataflowGraphConfigurationProviderLog.GatewayUnavailable(_logger, DataStoreName));
 
         var result = await gateway.Execute<IEnumerable<DataStoreRecord>>(
-                command, new DataStoreTarget(DataStoreName, DataPath, "DataStoreConfiguration"), cancellationToken)
+                command, new DataStoreTarget(DataStoreName, DataPath, "DataStore"), cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)

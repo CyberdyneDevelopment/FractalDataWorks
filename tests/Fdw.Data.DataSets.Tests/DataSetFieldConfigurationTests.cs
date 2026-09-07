@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Fdw.Data.DataSets.Tests;
 
-public class DataFieldConfigurationTests
+public class DataSetFieldConfigurationTests
 {
     [Fact]
     [Trait("Priority", "P1")]
@@ -12,7 +12,7 @@ public class DataFieldConfigurationTests
     public void DefaultValues_AreSetCorrectly()
     {
         // Arrange & Act
-        var config = new DataFieldConfiguration();
+        var config = new DataSetFieldConfiguration();
 
         // Assert
         config.Name.ShouldBe(string.Empty);
@@ -31,7 +31,7 @@ public class DataFieldConfigurationTests
     public void Properties_CanBeSet()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
             Description = "Test Description",
@@ -60,7 +60,7 @@ public class DataFieldConfigurationTests
     public void Clone_CreatesExactCopy()
     {
         // Arrange
-        var original = new DataFieldConfiguration
+        var original = new DataSetFieldConfiguration
         {
             Name = "TestField",
             Description = "Test Description",
@@ -93,7 +93,7 @@ public class DataFieldConfigurationTests
     public void Clone_ModifyingClone_DoesNotAffectOriginal()
     {
         // Arrange
-        var original = new DataFieldConfiguration
+        var original = new DataSetFieldConfiguration
         {
             Name = "Original",
             Description = "Original Description"
@@ -115,7 +115,7 @@ public class DataFieldConfigurationTests
     public void Clone_WithNullValues_ClonesCorrectly()
     {
         // Arrange
-        var original = new DataFieldConfiguration
+        var original = new DataSetFieldConfiguration
         {
             Name = "TestField",
             Description = null,

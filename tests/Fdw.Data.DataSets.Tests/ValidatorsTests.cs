@@ -6,13 +6,13 @@ using Xunit;
 
 namespace Fdw.Data.DataSets.Tests;
 
-public class DataFieldConfigurationValidatorTests
+public class DataSetFieldConfigurationValidatorTests
 {
-    private readonly DataFieldConfigurationValidator _validator;
+    private readonly DataSetFieldConfigurationValidator _validator;
 
-    public DataFieldConfigurationValidatorTests()
+    public DataSetFieldConfigurationValidatorTests()
     {
-        _validator = new DataFieldConfigurationValidator();
+        _validator = new DataSetFieldConfigurationValidator();
     }
 
     [Fact]
@@ -21,7 +21,7 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithValidConfiguration_PassesValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
             TypeName = "System.String"
@@ -40,7 +40,7 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithEmptyName_FailsValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "",
             TypeName = "System.String"
@@ -60,7 +60,7 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithNameTooLong_FailsValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = new string('a', 51),
             TypeName = "System.String"
@@ -80,7 +80,7 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithEmptyTypeName_FailsValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
             TypeName = ""
@@ -100,7 +100,7 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithInvalidTypeName_FailsValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
             TypeName = "Invalid Type Name"
@@ -127,7 +127,7 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithValidTypeName_PassesValidation(string typeName)
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
             TypeName = typeName
@@ -146,7 +146,7 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithNegativeMaxLength_FailsValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
             TypeName = "System.String",
@@ -167,7 +167,7 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithZeroMaxLength_FailsValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
             TypeName = "System.String",
@@ -187,7 +187,7 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithValidMaxLength_PassesValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
             TypeName = "System.String",
@@ -207,7 +207,7 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithNullMaxLength_PassesValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
             TypeName = "System.String",
@@ -242,7 +242,7 @@ public class DataSetConfigurationValidatorTests
             Name = "TestDataSet",
             Description = "Test Description",
             RecordTypeName = "My.Type",
-            Fields = { new DataFieldConfiguration { Name = "Id", TypeName = "System.Int32" } },
+            Fields = { new DataSetFieldConfiguration { Name = "Id", TypeName = "System.Int32" } },
             KeyFields = { new DataSetKeyFieldConfiguration { KeyName = "Id", KeyType = "Surrogate", Ordinal = 0 } }
         };
 
@@ -411,7 +411,7 @@ public class DataSetConfigurationValidatorTests
             Name = "Test",
             Description = "Test",
             RecordTypeName = "My.Type",
-            Fields = { new DataFieldConfiguration { Name = "Id", TypeName = "System.Int32" } }
+            Fields = { new DataSetFieldConfiguration { Name = "Id", TypeName = "System.Int32" } }
         };
 
         // Act
@@ -432,7 +432,7 @@ public class DataSetConfigurationValidatorTests
             Name = "Test",
             Description = "Test",
             RecordTypeName = "My.Type",
-            Fields = { new DataFieldConfiguration { Name = "Name", TypeName = "System.String" } },
+            Fields = { new DataSetFieldConfiguration { Name = "Name", TypeName = "System.String" } },
             KeyFields = { new DataSetKeyFieldConfiguration { KeyName = "Id", KeyType = "Surrogate", Ordinal = 0 } }
         };
 
@@ -454,7 +454,7 @@ public class DataSetConfigurationValidatorTests
             Name = "Test",
             Description = "Test",
             RecordTypeName = "My.Type",
-            Fields = { new DataFieldConfiguration { Name = "", TypeName = "System.String" } },
+            Fields = { new DataSetFieldConfiguration { Name = "", TypeName = "System.String" } },
             KeyFields = { new DataSetKeyFieldConfiguration { KeyName = "Id", KeyType = "Surrogate", Ordinal = 0 } }
         };
 

@@ -17,8 +17,8 @@ public sealed class DataSetConfigurationValidatorTests
             RecordTypeName = "TestNamespace.TestRecord",
             Fields =
             [
-                new DataFieldConfiguration { Name = "Id", TypeName = "int" },
-                new DataFieldConfiguration { Name = "Name", TypeName = "string" }
+                new DataSetFieldConfiguration { Name = "Id", TypeName = "int" },
+                new DataSetFieldConfiguration { Name = "Name", TypeName = "string" }
             ],
             KeyFields = [new DataSetKeyFieldConfiguration { KeyName = "Id", KeyType = "Surrogate", Ordinal = 0 }]
         };
@@ -250,7 +250,7 @@ public sealed class DataSetConfigurationValidatorTests
     {
         // Arrange
         var config = CreateValidConfiguration();
-        config.Fields = [new DataFieldConfiguration { Name = "Id", TypeName = "int" }];
+        config.Fields = [new DataSetFieldConfiguration { Name = "Id", TypeName = "int" }];
         config.KeyFields = [new DataSetKeyFieldConfiguration { KeyName = "id", KeyType = "Surrogate", Ordinal = 0 }];
 
         // Act
@@ -292,9 +292,9 @@ public sealed class DataSetConfigurationValidatorTests
         var config = CreateValidConfiguration();
         config.Fields =
         [
-            new DataFieldConfiguration { Name = "TenantId", TypeName = "int" },
-            new DataFieldConfiguration { Name = "RecordId", TypeName = "int" },
-            new DataFieldConfiguration { Name = "Name", TypeName = "string" }
+            new DataSetFieldConfiguration { Name = "TenantId", TypeName = "int" },
+            new DataSetFieldConfiguration { Name = "RecordId", TypeName = "int" },
+            new DataSetFieldConfiguration { Name = "Name", TypeName = "string" }
         ];
         config.KeyFields =
         [
@@ -316,7 +316,7 @@ public sealed class DataSetConfigurationValidatorTests
     {
         // Arrange
         var config = CreateValidConfiguration();
-        config.Fields = [new DataFieldConfiguration { Name = "Id", TypeName = "int" }];
+        config.Fields = [new DataSetFieldConfiguration { Name = "Id", TypeName = "int" }];
         config.KeyFields =
         [
             new DataSetKeyFieldConfiguration { KeyName = "Id", KeyType = "Surrogate", Ordinal = 0 },

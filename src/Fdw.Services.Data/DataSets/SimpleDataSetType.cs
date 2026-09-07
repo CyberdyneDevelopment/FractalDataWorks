@@ -129,7 +129,7 @@ public sealed class SimpleDataSetType : DataSetTypeBase
     /// pushed down to SQL.
     /// </summary>
     private static (bool HasError, IAggregationExpression? Aggregation, IGenericResult<T>? ErrorResult) BuildAggregation<T>(
-        DataSetExecutionContext ctx, IEnumerable<DataSetAggregateDefinition> defs)
+        DataSetExecutionContext ctx, IEnumerable<DataSetAggregateConfiguration> defs)
     {
         var groupBy = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

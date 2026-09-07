@@ -80,14 +80,14 @@ internal static class DataSetExecutionHelpers
     }
 
     /// <summary>
-    /// Applies calculated fields (expressions/calculators defined on DataFieldConfiguration) to each
+    /// Applies calculated fields (expressions/calculators defined on DataSetFieldConfiguration) to each
     /// row in the result. Only operates on row-enumerable T values; non-collection types return a
     /// failure result.
     /// </summary>
     internal static IGenericResult<T> ApplyCalculatedFields<T>(
         DataSetExecutionContext ctx,
         IGenericResult<T> sourceResult,
-        List<DataFieldConfiguration> calculatedFields,
+        List<DataSetFieldConfiguration> calculatedFields,
         string dataSetName)
     {
         if (!sourceResult.IsSuccess || sourceResult.Value == null)
@@ -107,7 +107,7 @@ internal static class DataSetExecutionHelpers
     internal static List<Dictionary<string, object?>>? ProcessRowsWithCalculatedFields(
         DataSetExecutionContext ctx,
         System.Collections.IEnumerable enumerable,
-        List<DataFieldConfiguration> calculatedFields,
+        List<DataSetFieldConfiguration> calculatedFields,
         string dataSetName,
         out int rowCount)
     {

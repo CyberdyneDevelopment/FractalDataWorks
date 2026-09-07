@@ -6,13 +6,13 @@ using Fdw.Data.Builders.Results;
 namespace Fdw.Data.Builders;
 
 /// <summary>
-/// Provides a fluent builder API for constructing <see cref="DataFieldConfiguration"/> instances.
+/// Provides a fluent builder API for constructing <see cref="DataSetFieldConfiguration"/> instances.
 /// </summary>
 /// <remarks>
 /// This builder implements a fluent interface for creating field configurations with validation.
 /// It ensures all required properties are set before building the configuration instance.
 /// </remarks>
-public sealed class DataFieldConfigurationBuilder
+public sealed class DataSetFieldConfigurationBuilder
 {
     private string? _name;
     private string? _description;
@@ -28,7 +28,7 @@ public sealed class DataFieldConfigurationBuilder
     /// </summary>
     /// <param name="name">The name of the field.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataFieldConfigurationBuilder WithName(string name)
+    public DataSetFieldConfigurationBuilder WithName(string name)
     {
         _name = name;
         return this;
@@ -39,7 +39,7 @@ public sealed class DataFieldConfigurationBuilder
     /// </summary>
     /// <param name="description">A human-readable description of the field purpose.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataFieldConfigurationBuilder WithDescription(string? description)
+    public DataSetFieldConfigurationBuilder WithDescription(string? description)
     {
         _description = description;
         return this;
@@ -50,7 +50,7 @@ public sealed class DataFieldConfigurationBuilder
     /// </summary>
     /// <typeparam name="T">The .NET type of the field.</typeparam>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataFieldConfigurationBuilder WithType<T>()
+    public DataSetFieldConfigurationBuilder WithType<T>()
     {
         _typeName = typeof(T).FullName ?? typeof(T).Name;
         return this;
@@ -61,7 +61,7 @@ public sealed class DataFieldConfigurationBuilder
     /// </summary>
     /// <param name="type">The .NET type of the field.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataFieldConfigurationBuilder WithType(Type type)
+    public DataSetFieldConfigurationBuilder WithType(Type type)
     {
         if (type == null)
         {
@@ -76,7 +76,7 @@ public sealed class DataFieldConfigurationBuilder
     /// </summary>
     /// <param name="typeName">The fully qualified .NET type name.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataFieldConfigurationBuilder WithTypeName(string typeName)
+    public DataSetFieldConfigurationBuilder WithTypeName(string typeName)
     {
         _typeName = typeName;
         return this;
@@ -89,7 +89,7 @@ public sealed class DataFieldConfigurationBuilder
     /// <remarks>
     /// Key fields are automatically marked as required.
     /// </remarks>
-    public DataFieldConfigurationBuilder AsKey()
+    public DataSetFieldConfigurationBuilder AsKey()
     {
         _isKey = true;
         _isRequired = true;
@@ -100,7 +100,7 @@ public sealed class DataFieldConfigurationBuilder
     /// Marks the field as required (non-nullable).
     /// </summary>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataFieldConfigurationBuilder AsRequired()
+    public DataSetFieldConfigurationBuilder AsRequired()
     {
         _isRequired = true;
         return this;
@@ -113,7 +113,7 @@ public sealed class DataFieldConfigurationBuilder
     /// <remarks>
     /// Key fields cannot be optional and will remain required.
     /// </remarks>
-    public DataFieldConfigurationBuilder AsOptional()
+    public DataSetFieldConfigurationBuilder AsOptional()
     {
         if (!_isKey)
         {
@@ -126,7 +126,7 @@ public sealed class DataFieldConfigurationBuilder
     /// Marks the field as indexed for searching and filtering.
     /// </summary>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataFieldConfigurationBuilder AsIndexed()
+    public DataSetFieldConfigurationBuilder AsIndexed()
     {
         _isIndexed = true;
         return this;
@@ -137,7 +137,7 @@ public sealed class DataFieldConfigurationBuilder
     /// </summary>
     /// <param name="maxLength">The maximum allowed length for string values.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataFieldConfigurationBuilder WithMaxLength(int maxLength)
+    public DataSetFieldConfigurationBuilder WithMaxLength(int maxLength)
     {
         _maxLength = maxLength;
         return this;
@@ -148,7 +148,7 @@ public sealed class DataFieldConfigurationBuilder
     /// </summary>
     /// <param name="defaultValue">The default value as a string representation.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataFieldConfigurationBuilder WithDefaultValue(string? defaultValue)
+    public DataSetFieldConfigurationBuilder WithDefaultValue(string? defaultValue)
     {
         _defaultValue = defaultValue;
         return this;
@@ -159,39 +159,39 @@ public sealed class DataFieldConfigurationBuilder
     /// </summary>
     /// <param name="defaultValue">The default value which will be converted to string.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataFieldConfigurationBuilder WithDefaultValue(object? defaultValue)
+    public DataSetFieldConfigurationBuilder WithDefaultValue(object? defaultValue)
     {
         _defaultValue = defaultValue?.ToString();
         return this;
     }
 
     /// <summary>
-    /// Builds a <see cref="DataFieldConfiguration"/> instance from the configured values.
+    /// Builds a <see cref="DataSetFieldConfiguration"/> instance from the configured values.
     /// </summary>
     /// <returns>
-    /// A result containing the constructed <see cref="DataFieldConfiguration"/> if validation succeeds,
+    /// A result containing the constructed <see cref="DataSetFieldConfiguration"/> if validation succeeds,
     /// or a failure result with error details if validation fails.
     /// </returns>
-    public IGenericResult<DataFieldConfiguration> Build()
+    public IGenericResult<DataSetFieldConfiguration> Build()
     {
         if (string.IsNullOrWhiteSpace(_name))
         {
-            return GenericResult<DataFieldConfiguration>.Failure(BuilderResultCodes.ByName("FieldNameRequired"));
+            return GenericResult<DataSetFieldConfiguration>.Failure(BuilderResultCodes.ByName("FieldNameRequired"));
         }
 
         if (string.IsNullOrWhiteSpace(_typeName))
         {
-            return GenericResult<DataFieldConfiguration>.Failure(BuilderResultCodes.ByName("FieldTypeRequired"));
+            return GenericResult<DataSetFieldConfiguration>.Failure(BuilderResultCodes.ByName("FieldTypeRequired"));
         }
 
         if (_maxLength.HasValue && _maxLength.Value <= 0)
         {
-            return GenericResult<DataFieldConfiguration>.Failure(
+            return GenericResult<DataSetFieldConfiguration>.Failure(
                 BuilderResultCodes.ByName("FieldInvalidMaxLength"),
                 ResultDetails.Create().With("FieldName", _name));
         }
 
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = _name,
             Description = _description,
@@ -203,14 +203,14 @@ public sealed class DataFieldConfigurationBuilder
             DefaultValue = _defaultValue
         };
 
-        return GenericResult<DataFieldConfiguration>.Success(config);
+        return GenericResult<DataSetFieldConfiguration>.Success(config);
     }
 
     /// <summary>
     /// Resets the builder to its initial state, clearing all configured values.
     /// </summary>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataFieldConfigurationBuilder Reset()
+    public DataSetFieldConfigurationBuilder Reset()
     {
         _name = null;
         _description = null;
