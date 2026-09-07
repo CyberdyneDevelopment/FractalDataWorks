@@ -730,7 +730,13 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         var rows = result.Value?.ToList() ?? [];
         for (var i = 0; i < rows.Count; i++)
         {
-            var composed = await ComposeChildren(rows[i], null, ct).ConfigureAwait(false);
+            // ComposeAggregate, not ComposeChildren: this composed the child cascade and skipped the
+            // implementation entirely, so every row came back with a null typed body while Get(name)
+            // and Get(id) -- which both call ComposeAggregate -- returned the same row fully composed.
+            // The failure is silent by construction, because ComposeTypedBody is where the logging
+            // for this lives and it was never reached: no LoadingTypedBody, no NoImplementationProvider,
+            // nothing to distinguish "this domain has no implementation" from "nobody composed it".
+            var composed = await ComposeAggregate(rows[i], null, ct).ConfigureAwait(false);
             if (!composed.IsSuccess) return composed.ToNewResult<IReadOnlyList<TConfig>>();
             rows[i] = composed.Value!;
         }
