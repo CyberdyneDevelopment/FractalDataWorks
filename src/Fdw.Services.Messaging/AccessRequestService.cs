@@ -59,8 +59,17 @@ public sealed class AccessRequestService : IAccessRequestService
         CancellationToken cancellationToken)
     {
         var header = await _messaging.GetHeader(MessagingServiceName, cancellationToken).ConfigureAwait(false);
-        if (!header.IsSuccess || header.Value is null)
+        if (!header.IsSuccess)
             return header.ToNewResult<(string, string)>();
+
+        // Success with no value is its own state, not a failure to convert. Folding it into the
+        // branch above called ToNewResult on a SUCCESSFUL result, which throws "Cannot convert a
+        // successful result without providing a value" -- so a missing Messaging row surfaced as a
+        // complaint about result plumbing and said nothing about the row.
+        if (header.Value is null)
+            return GenericResult<(string, string)>.Failure(
+                MessagingLog.LocationNotConfigured(
+                    _logger, $"no Messaging row named '{MessagingServiceName}' exists"));
 
         if (string.IsNullOrWhiteSpace(header.Value.DataStoreName) || string.IsNullOrWhiteSpace(header.Value.PathName))
         {

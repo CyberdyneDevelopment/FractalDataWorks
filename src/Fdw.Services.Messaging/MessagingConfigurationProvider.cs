@@ -7,6 +7,7 @@ using Fdw.Services.Messaging.Abstractions;
 using Fdw.Services.Messaging.Commands;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Messaging.Logging;
 
 namespace Fdw.Services.Messaging;
 
@@ -42,17 +43,26 @@ public sealed class MessagingConfigurationProvider
                gatewayProvider,
                dataStoreName,
                pathName)
-    {
-    }
+        => _log = logger ?? NullLogger<MessagingConfigurationProvider>.Instance;
+
+    // The bases hold their loggers privately, so GetHeader keeps its own reference rather than
+    // reaching for one it cannot see.
+    private readonly ILogger _log;
 
     /// <inheritdoc />
     public async Task<IGenericResult<IMessagingConfiguration>> GetHeader(
         string name, CancellationToken cancellationToken = default)
     {
         var header = await GetDomainByName(name, cancellationToken).ConfigureAwait(false);
-        return header.IsSuccess && header.Value is not null
+        if (!header.IsSuccess)
+            return header.ToNewResult<IMessagingConfiguration>();
+
+        // Same split as the callers': a successful read that found no row is not a failed read, and
+        // converting it as one throws instead of reporting which row is missing.
+        return header.Value is not null
             ? GenericResult<IMessagingConfiguration>.Success(header.Value)
-            : header.ToNewResult<IMessagingConfiguration>();
+            : GenericResult<IMessagingConfiguration>.Failure(
+                MessagingLog.LocationNotConfigured(_log, $"no Messaging row named '{name}' exists"));
     }
 
     /// <inheritdoc />
