@@ -730,24 +730,12 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         var rows = result.Value?.ToList() ?? [];
         for (var i = 0; i < rows.Count; i++)
         {
-            // ComposeAggregate, not ComposeChildren: this composed the child cascade and skipped the
-            // implementation entirely, so every row came back with a null typed body while Get(name)
-            // and Get(id) -- which both call ComposeAggregate -- returned the same row fully composed.
-            // The failure is silent by construction, because ComposeTypedBody is where the logging
-            // for this lives and it was never reached: no LoadingTypedBody, no NoImplementationProvider,
-            // nothing to distinguish "this domain has no implementation" from "nobody composed it".
-            //
-            // A row that will not compose is kept rather than failing the list, because asking for ONE
-            // thing and asking for ALL things are different questions. Every host reads the same shared
-            // conn.Connection rows but ships a different set of connection implementations, so a row
-            // naming a kind this host does not carry is normal and permanent -- RoslynWorkspaceLocal is
-            // one today. Failing the list made /api/v1/connections a 500 for every caller because one
-            // sample connector out of thirteen named an implementation nobody ships. Nothing is
-            // invented here and nothing is hidden: ComposeTypedBody has already logged the row and its
-            // discriminator at Error before returning, so the row arrives uncomposed and said so.
-            var composed = await ComposeAggregate(rows[i], null, ct).ConfigureAwait(false);
-            if (composed.IsSuccess && composed.Value is not null)
-                rows[i] = composed.Value;
+            // Header-only by design: composing here would issue one implementation read and one
+            // child-cascade read PER ROW, turning every list endpoint into N+1 queries. Callers that
+            // need a composed aggregate ask for the one they want by name or id, both of which compose.
+            var composed = await ComposeChildren(rows[i], null, ct).ConfigureAwait(false);
+            if (!composed.IsSuccess) return composed.ToNewResult<IReadOnlyList<TConfig>>();
+            rows[i] = composed.Value!;
         }
 
         return GenericResult<IReadOnlyList<TConfig>>.Success(rows);
