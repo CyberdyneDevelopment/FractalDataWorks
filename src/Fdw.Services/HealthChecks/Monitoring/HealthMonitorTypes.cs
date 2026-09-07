@@ -62,11 +62,21 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
     /// <remarks>
-    /// Which monitor a host runs is per-host rather than shared across hosts, so this domain defaults
-    /// to <c>ServerConfiguration</c> — the store for boot-time and near-static server values — where a
-    /// domain whose rows are shared defaults to <c>PlatformConfiguration</c>.
+    /// The monitors themselves are shared across hosts, so they live in
+    /// <c>PlatformConfiguration</c>. Which one a given host reports to is per-host and lives in
+    /// <c>ServerConfiguration</c> — see <see cref="SelectionConnection"/>. The two are separate
+    /// because they answer different questions, and reading the selection from this store found
+    /// nothing: the container is not declared there, so every /health/system call returned 500 with
+    /// "HealthMonitorSelection is not configured".
     /// </remarks>
     public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
+    /// <summary>Gets or sets the store the per-host monitor selection is read from.</summary>
+    /// <remarks>
+    /// <c>ServerConfiguration</c>, the store for boot-time and near-static server values, alongside
+    /// the other per-host settings such as Cors and the host record itself.
+    /// </remarks>
+    public static string SelectionConnection { get; set; } = "ServerConfiguration";
 
     static HealthMonitorTypes()
     {
@@ -87,7 +97,7 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
                 new HealthMonitorSelectionConfigurationProvider(
                     sp.GetService<ILogger<HealthMonitorSelectionConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
+                    SelectionConnection));
 
             builder.Services.TryAddSingleton<IHealthMonitorConfigurationProvider>(
                 sp => sp.GetRequiredService<HealthMonitorConfigurationProvider>());
