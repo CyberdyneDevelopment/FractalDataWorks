@@ -122,13 +122,25 @@ public abstract class GetServiceThroughputEndpointBase : Endpoint<ServiceThrough
     // to be read rather than held.
     private async Task<string> SelectedMonitorName(CancellationToken ct)
     {
-        var result = await _selection.Get("HealthMonitorSelection", ct).ConfigureAwait(false);
+        // The parameterless read, not Get(name): HealthMonitorSelection declares RowId, Id,
+        // MonitorName, IsCurrent and IsDeleted, and no Name -- so passing the container name as a
+        // row name filtered on a column that does not exist. The absent Name is correct: this is
+        // an implementation row, identified by its reference to its domain rather than by a name
+        // of its own. See GetSystemHealthEndpointBase, which carries the same method.
+        var result = await _selection.Get(ct).ConfigureAwait(false);
         if (result.IsFailure || result.Value is null)
         {
             throw new InvalidOperationException(
-                "HealthMonitorSelection is not configured. This host does not know which monitor to report to.");
+                "HealthMonitorSelection could not be read. This host does not know which monitor to report to.");
         }
 
-        return result.Value.MonitorName;
+        if (result.Value.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"HealthMonitorSelection must hold exactly one current row; found {result.Value.Count}. "
+                + "This host does not know which monitor to report to.");
+        }
+
+        return result.Value[0].MonitorName;
     }
 }

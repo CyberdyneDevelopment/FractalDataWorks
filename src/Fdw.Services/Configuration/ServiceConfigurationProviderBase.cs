@@ -130,8 +130,18 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
         string identifier,
         CancellationToken cancellationToken)
     {
-        if (!domainRecord.IsSuccess || domainRecord.Value is null)
+        if (!domainRecord.IsSuccess)
             return domainRecord.ToNewResult<TImplementationConfiguration>();
+
+        // Success with no value is its own state, not a failed read. Folding it into the branch
+        // above called ToNewResult on a SUCCESSFUL result, which THROWS -- and this runs inside
+        // AddHttpClient's configure delegate during endpoint construction, so the throw escaped
+        // through MapFastEndpoints and took down endpoint mapping for the whole host rather than
+        // failing one lookup. The caller wants "no row of that name" as an answer it can act on.
+        if (domainRecord.Value is null)
+            return GenericResult<TImplementationConfiguration>.Failure(
+                DefaultConfigurationProviderLog.ConfigurationNotFound(
+                    _log, typeof(TDomainConfiguration).Name, identifier));
 
         var serviceOptionType = domainRecord.Value.ServiceOptionType;
         if (string.IsNullOrWhiteSpace(serviceOptionType))
