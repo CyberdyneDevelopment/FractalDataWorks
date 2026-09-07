@@ -31,4 +31,34 @@ internal static class IssuerName
             ? GenericResult<string>.Success(authority!)
             : GenericResult<string>.Failure(
                 AuthenticationValidationLog.AuthorityNotAbsolute(log, serviceName, authority ?? string.Empty));
+
+    /// <summary>Whether two issuer strings name the same issuer, ignoring a trailing slash on either.</summary>
+    /// <param name="left">One issuer string.</param>
+    /// <param name="right">The other.</param>
+    /// <returns><see langword="true"/> when they name the same issuer.</returns>
+    /// <remarks>
+    /// The value is still never rewritten — a token keeps whatever the minter put in it and a binding
+    /// keeps whatever was declared. What changes is that the two are compared as issuers rather than
+    /// as bytes. The minter reads <c>auth.JwtTokenManager.Issuer</c> and the validator reads the
+    /// declared <c>Authority</c>; each is free to carry or omit the trailing slash, and nothing makes
+    /// them agree. Comparing ordinally turned that into 401 on every authenticated route twice in one
+    /// day, from opposite directions — once with the slash on the declared side, once on the token
+    /// side. Aligning the two strings fixes one direction and leaves the other live.
+    /// </remarks>
+    public static bool Matches(string? left, string? right)
+        => string.Equals(Canonical(left), Canonical(right), StringComparison.Ordinal);
+
+    /// <summary>Both spellings of an issuer, so an ordinal comparison performed elsewhere accepts either.</summary>
+    /// <param name="issuer">The issuer as declared.</param>
+    /// <returns>The issuer with and without its trailing slash.</returns>
+    /// <remarks>
+    /// For <c>TokenValidationParameters.ValidIssuers</c>, whose comparison is inside the JWT handler
+    /// and ordinal. Supplying both spellings is how <see cref="Matches"/> is expressed to a comparison
+    /// this code does not perform itself.
+    /// </remarks>
+    public static string[] Spellings(string issuer)
+        => [Canonical(issuer), Canonical(issuer) + "/"];
+
+    private static string Canonical(string? issuer)
+        => issuer is null ? string.Empty : issuer.TrimEnd('/');
 }

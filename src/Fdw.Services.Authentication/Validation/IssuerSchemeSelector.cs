@@ -76,8 +76,7 @@ public static class IssuerSchemeSelector
         // be service registrations made while it was still being described.
         var bindings = context.RequestServices.GetRequiredService<AuthenticationSchemeBindings>().All;
 
-        var match = bindings.FirstOrDefault(
-            b => string.Equals(b.Issuer, issuer, StringComparison.Ordinal));
+        var match = bindings.FirstOrDefault(b => IssuerName.Matches(b.Issuer, issuer));
 
         if (match is null)
         {

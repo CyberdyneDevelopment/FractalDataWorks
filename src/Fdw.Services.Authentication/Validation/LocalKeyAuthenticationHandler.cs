@@ -182,7 +182,10 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
         return GenericResult<TokenValidationParameters>.Success(new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = issuer.Value,
+
+            // Both spellings — see JwtBearerAuthenticationHandler. The comparison is the JWT
+            // handler's and ordinal, so the issuer is expressed in both forms rather than rewritten.
+            ValidIssuers = IssuerName.Spellings(issuer.Value),
             ValidateAudience = true,
             ValidAudience = body.Audience,
             ValidateLifetime = true,

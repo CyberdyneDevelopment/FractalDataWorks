@@ -175,7 +175,11 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
         return GenericResult<TokenValidationParameters>.Success(new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = issuer.Value,
+
+            // Both spellings, because this comparison happens inside the JWT handler and is ordinal.
+            // The minter and this validator read the issuer from different rows and neither is
+            // obliged to carry a trailing slash; matching on bytes 401d every route twice in one day.
+            ValidIssuers = IssuerName.Spellings(issuer.Value),
             ValidateAudience = true,
             ValidAudience = body.Audience,
             ValidateLifetime = true,
