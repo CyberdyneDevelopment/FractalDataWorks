@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
@@ -143,6 +143,32 @@ public sealed partial class DataSetFieldConfiguration : IGenericConfiguration
     /// Gets or sets whether this field participates as a join key for cross-source joins.
     /// </summary>
     public bool IsJoinKey { get; set; }
+
+    /// <summary>Gets or sets the container field this field is bound to, or null when unbound.</summary>
+    /// <remarks>
+    /// The single nullable FK IS the binding model: a field with a value here is backed by something
+    /// real, and a field without one is sketched. Nullable rather than defaulted because "not bound
+    /// yet" is the normal state of a field somebody has only named, and it has to stay expressible.
+    /// </remarks>
+    public Guid? BoundContainerFieldId { get; set; }
+
+    /// <summary>Gets or sets the physical key of the bound container field.</summary>
+    public int? BoundContainerFieldRowId { get; set; }
+
+    /// <summary>Gets or sets how the binding was established — Direct, Cast, ValueMap or Adopted.</summary>
+    /// <remarks>
+    /// Describes the KIND of binding, never whether one exists: all four values mean bound. A rollup
+    /// that treats Cast as less bound than Direct is answering a different question.
+    /// </remarks>
+    public string? BindingKind { get; set; }
+
+    /// <summary>Gets or sets how confident the binding match is, 0-100.</summary>
+    /// <remarks>
+    /// Describes how the match was made, not whether it holds. Bound-with-low-confidence is still
+    /// bound, so this must not fold into a bound/unbound rollup — a data set would otherwise degrade
+    /// because a column was matched by name rather than by type, which is a different fact.
+    /// </remarks>
+    public byte? BindingConfidence { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the configured calculation that computes this field's value.
