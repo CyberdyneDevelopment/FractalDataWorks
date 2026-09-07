@@ -34,6 +34,7 @@
     <ProjectReference Include="..\Fdw.Services.Data\Fdw.Services.Data.csproj" />
     <ProjectReference Include="..\Fdw.Commands.Data.Fluency\Fdw.Commands.Data.Fluency.csproj" />
     <ProjectReference Include="..\Fdw.Validation\Fdw.Validation.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Universes.Abstractions\Fdw.Services.Universes.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -28,6 +28,7 @@
     <ProjectReference Include="..\Fdw.Services\Fdw.Services.csproj" />
     <ProjectReference Include="..\Fdw.Validation\Fdw.Validation.csproj" />
     <ProjectReference Include="..\Fdw.Types.Abstractions\Fdw.Types.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Universes.Abstractions\Fdw.Services.Universes.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

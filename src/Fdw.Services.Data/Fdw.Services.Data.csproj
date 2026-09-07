@@ -36,6 +36,7 @@
     <ProjectReference Include="..\Fdw.Data.DataNodes\Fdw.Data.DataNodes.csproj" />
     <ProjectReference Include="..\Fdw.Aegis.Configuration\Fdw.Aegis.Configuration.csproj" />
     <ProjectReference Include="..\Fdw.Hosting.Abstractions\Fdw.Hosting.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Universes.Abstractions\Fdw.Services.Universes.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
