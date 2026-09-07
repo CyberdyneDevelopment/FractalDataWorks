@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Fdw.Configuration;
 using Fdw.Data;
 
@@ -52,6 +52,18 @@ public sealed partial class UniverseResourceConfiguration : IGenericConfiguratio
 
     /// <summary>Gets or sets who attached it.</summary>
     public Guid AddedByUserId { get; set; }
+
+    /// <summary>Gets or sets the x coordinate this resource was placed at on the map.</summary>
+    /// <remarks>
+    /// Null means never placed, and the client lays the node out itself. Deliberately nullable
+    /// rather than defaulting to 0: every unplaced node would stack at the origin and be
+    /// indistinguishable from nodes a person had deliberately dragged there.
+    /// </remarks>
+    public decimal? X { get; set; }
+
+    /// <summary>Gets or sets the y coordinate this resource was placed at on the map.</summary>
+    /// <remarks>Null means never placed — see <see cref="X"/>.</remarks>
+    public decimal? Y { get; set; }
 
     /// <summary>Gets or sets the optional tenant scope.</summary>
     public Guid? TenantId { get; set; }
