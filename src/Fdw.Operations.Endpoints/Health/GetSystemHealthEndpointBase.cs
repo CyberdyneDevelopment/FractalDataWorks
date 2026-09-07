@@ -91,13 +91,29 @@ public abstract class GetSystemHealthEndpointBase : EndpointWithoutRequest<Syste
     // to be read rather than held.
     private async Task<string> SelectedMonitorName(CancellationToken ct)
     {
-        var result = await _selection.Get("HealthMonitorSelection", ct).ConfigureAwait(false);
+        // The parameterless read, not Get(name): HealthMonitorSelection declares RowId, Id,
+        // MonitorName, IsCurrent and IsDeleted, and no Name -- so passing the container name as a
+        // row name filtered on a column that does not exist, and every call 500d with
+        // "Filter references column 'Name', which container 'HealthMonitorSelection' does not
+        // declare as a field". The absent Name is correct: this is an implementation row,
+        // identified by its reference to its domain rather than by a name of its own.
+        var result = await _selection.Get(ct).ConfigureAwait(false);
         if (result.IsFailure || result.Value is null)
         {
             throw new InvalidOperationException(
-                "HealthMonitorSelection is not configured. This host does not know which monitor to report to.");
+                "HealthMonitorSelection could not be read. This host does not know which monitor to report to.");
         }
 
-        return result.Value.MonitorName;
+        // Exactly one, refusing both zero and more than one, as OidcAuthorityReader does for the
+        // same reason: which monitor this host reports to is the decision this row exists to
+        // record, so picking by order would make it depend on read order.
+        if (result.Value.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"HealthMonitorSelection must hold exactly one current row; found {result.Value.Count}. "
+                + "This host does not know which monitor to report to.");
+        }
+
+        return result.Value[0].MonitorName;
     }
 }
