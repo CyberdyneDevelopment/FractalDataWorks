@@ -736,9 +736,18 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
             // The failure is silent by construction, because ComposeTypedBody is where the logging
             // for this lives and it was never reached: no LoadingTypedBody, no NoImplementationProvider,
             // nothing to distinguish "this domain has no implementation" from "nobody composed it".
+            //
+            // A row that will not compose is kept rather than failing the list, because asking for ONE
+            // thing and asking for ALL things are different questions. Every host reads the same shared
+            // conn.Connection rows but ships a different set of connection implementations, so a row
+            // naming a kind this host does not carry is normal and permanent -- RoslynWorkspaceLocal is
+            // one today. Failing the list made /api/v1/connections a 500 for every caller because one
+            // sample connector out of thirteen named an implementation nobody ships. Nothing is
+            // invented here and nothing is hidden: ComposeTypedBody has already logged the row and its
+            // discriminator at Error before returning, so the row arrives uncomposed and said so.
             var composed = await ComposeAggregate(rows[i], null, ct).ConfigureAwait(false);
-            if (!composed.IsSuccess) return composed.ToNewResult<IReadOnlyList<TConfig>>();
-            rows[i] = composed.Value!;
+            if (composed.IsSuccess && composed.Value is not null)
+                rows[i] = composed.Value;
         }
 
         return GenericResult<IReadOnlyList<TConfig>>.Success(rows);
