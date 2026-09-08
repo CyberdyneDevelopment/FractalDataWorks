@@ -89,6 +89,6 @@ public sealed class DenySessionContext() : MsSqlSessionContextBase(3, "Deny")
             logger,
             cancellationToken).ConfigureAwait(false);
 
-        MsSqlConnectionLogger.TraceNoAccessPrincipalContextSet(logger);
+        MsSqlConnectionLogger.NoAccessPrincipalContextSet(logger);
     }
 }
