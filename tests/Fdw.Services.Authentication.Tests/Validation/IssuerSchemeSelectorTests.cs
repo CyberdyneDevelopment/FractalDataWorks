@@ -33,12 +33,17 @@ public sealed class IssuerSchemeSelectorTests
         => IssuerSchemeSelector.Select(Request(TokenFor("https://stranger.example/")))
             .ShouldBe(UnmatchedIssuerHandler.SchemeName);
 
-    // Issuers are compared as strings, per OIDC. A trailing slash is a different issuer, which is
-    // why the declaration is normalised on the way in rather than loosely matched here.
+    // A trailing slash does not make a different issuer here. The minter reads
+    // auth.JwtTokenManager.Issuer and the validator reads the declared Authority; each is free to
+    // carry or omit the slash and nothing makes them agree, so comparing ordinally produced 401 on
+    // every authenticated route twice in one day - once with the slash on the declared side, once
+    // on the token side. Neither string is rewritten; the two are compared as issuers rather than
+    // as bytes, and IssuerName.Spellings carries the same decision into ValidIssuers so the scheme
+    // this selects then accepts the token it was selected for.
     [Fact]
-    public void Select_does_not_treat_a_differently_slashed_issuer_as_a_match()
+    public void Select_routes_a_differently_slashed_issuer_to_the_same_scheme()
         => IssuerSchemeSelector.Select(Request(TokenFor("https://internal-proj.example")))
-            .ShouldBe(UnmatchedIssuerHandler.SchemeName);
+            .ShouldBe("OpenIddict.Validation.AspNetCore");
 
     [Fact]
     public void Select_rejects_a_request_with_no_authorization_header()
