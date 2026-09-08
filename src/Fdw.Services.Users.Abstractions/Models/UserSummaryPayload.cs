@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace Fdw.Services.Users.Clients.Models;
 
@@ -27,11 +26,6 @@ public sealed class UserSummaryPayload
     /// Gets or sets a value indicating whether the user is active.
     /// </summary>
     public bool IsActive { get; set; }
-
-    /// <summary>
-    /// Gets or sets the list of roles assigned to the user.
-    /// </summary>
-    public IReadOnlyList<string> Roles { get; set; } = Array.Empty<string>();
 
     /// <summary>
     /// Gets or sets the date and time when the user was created.

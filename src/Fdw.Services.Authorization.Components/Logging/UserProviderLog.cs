@@ -72,4 +72,9 @@ public static partial class UserProviderLog
     [MessageLogging(EventId = 71024, Level = LogLevel.Error,
         Message = "UserProvider: Failed to reset the password for a user")]
     public static partial IGenericMessage ResetPasswordException(ILogger logger, Exception exception);
+
+    /// <summary>Role assignments could not be read, so no user's roles can be shown.</summary>
+    [MessageLogging(EventId = 71026, Level = LogLevel.Error,
+        Message = "Role assignments could not be read; the users list cannot show roles")]
+    public static partial IGenericMessage RolesLoadFailed(ILogger logger);
 }

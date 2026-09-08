@@ -6,6 +6,7 @@ using Fdw.Services.Users;
 using Fdw.Services.Users.Configuration;
 using Fdw.Services.Users.Models;
 using Fdw.Web.RestEndpoints.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Users.Endpoints;
@@ -60,9 +61,16 @@ public abstract class ListUsersEndpointBase : EndpointWithoutRequest<PaginatedRe
         
         var result = await _userProvider.GetAllUsers(ct).ConfigureAwait(false);
 
+        // Why this refuses instead of answering: "the user store could not be read" and "this
+        // deployment has no users" are opposite facts, and a 200 carrying an empty page says the
+        // second when only the first is true. A caller cannot tell them apart, so the screen shows
+        // an empty Users tab and nobody goes looking for the failure.
         if (!result.IsSuccess || result.Value is null)
         {
-            await Send.OkAsync(PaginatedResponse<UserResponse>.Create([], 0, 0, 0), ct).ConfigureAwait(false);
+            UserEndpointLog.UserStoreUnreadable(EndpointLogger, result.CurrentMessage ?? "no value returned");
+            await Send.ResponseAsync(
+                PaginatedResponse<UserResponse>.Create([], 0, 0, 0),
+                StatusCodes.Status500InternalServerError, ct).ConfigureAwait(false);
             return;
         }
 

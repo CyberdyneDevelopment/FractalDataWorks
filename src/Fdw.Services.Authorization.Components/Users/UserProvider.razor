@@ -8,6 +8,8 @@
 @using System.Collections.Generic
 @using System.Linq
 @using Fdw.Results
+@using Fdw.Services.Authorization.Clients
+@using Fdw.Services.Authorization.Clients.Models
 @using Fdw.Services.Users.Clients
 @using Fdw.Services.Users.Clients.Models
 @using Fdw.UI.Components.Logging
@@ -26,6 +28,7 @@
     [Inject] private ILoggerFactory? LoggerFactory { get; set; }
 
     private UserApiClient? _userApi;
+    private RoleApiClient? _roleApi;
     [Inject] private ILogger<UserProvider>? LoggerParam { get; set; }
 
     private ILogger<UserProvider> _logger = NullLogger<UserProvider>.Instance;
@@ -33,6 +36,7 @@
     // ── State ──────────────────────────────────────────────────────────────────
 
     private IReadOnlyList<UserSummaryPayload> _users = [];
+    private IReadOnlyDictionary<Guid, IReadOnlyList<string>> _rolesByUser = new Dictionary<Guid, IReadOnlyList<string>>();
     private bool _isLoading;
     private IGenericResult? _lastResult;
     private string _searchString = string.Empty;
@@ -44,6 +48,7 @@
     protected override void OnInitialized()
     {
         _userApi = new UserApiClient(HttpClientFactory.CreateClient("UserClient"), LoggerFactory?.CreateLogger<UserApiClient>()!);
+        _roleApi = new RoleApiClient(HttpClientFactory.CreateClient("RoleClient"), LoggerFactory?.CreateLogger<RoleApiClient>()!);
         _logger = LoggerParam ?? NullLogger<UserProvider>.Instance;
         RebuildContext();
     }
@@ -72,6 +77,23 @@
             if (result.IsSuccess)
             {
                 _users = result.Value?.ToList() ?? [];
+
+                // Roles come from the authorization domain, not off the user row: a user row
+                // stores role ids and cannot name them. One read for the whole page rather than
+                // one per row.
+                var roles = await _roleApi!.GetAllUserRoles(cancellationToken);
+                if (roles.IsSuccess && roles.Value is not null)
+                {
+                    _rolesByUser = roles.Value.Items.ToDictionary(i => i.UserId, i => i.Roles);
+                }
+                else
+                {
+                    // Why this surfaces rather than leaving the map empty: an empty map draws
+                    // every user with no roles, which is a claim about them rather than about the
+                    // read. That is the defect this replaced.
+                    _rolesByUser = new Dictionary<Guid, IReadOnlyList<string>>();
+                    _lastResult = GenericResult.Failure(UserProviderLog.RolesLoadFailed(_logger));
+                }
             }
             else
             {
@@ -302,6 +324,7 @@
             LastResult = _lastResult,
             SearchString = _searchString,
             FilteredUsers = GetFilteredUsers(),
+            RolesByUser = _rolesByUser,
             OnLoadUsers = () => LoadUsers(),
             OnSearchChanged = search => OnSearchChanged(search),
             OnCreateUser = request => CreateUser(request),

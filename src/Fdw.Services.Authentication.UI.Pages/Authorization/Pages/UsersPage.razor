@@ -72,7 +72,7 @@
                                                 </td>
                                                 <td class="mut">
                                                     <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                                                        @foreach (var role in user.Roles)
+                                                        @foreach (var role in ctx.RolesFor(user.Id))
                                                         {
                                                             <span class="tpill">@role</span>
                                                         }
@@ -83,7 +83,7 @@
                                                 </td>
                                                 <td class="mut">
                                                     <div class="actions u-jc-end">
-                                                        <button @onclick="() => EditUser(user)" class="btn btn-ghost btn-sm">
+                                                        <button @onclick="() => EditUser(user, ctx.RolesFor(user.Id))" class="btn btn-ghost btn-sm">
                                                             <Icon Name="EditAlt" />
                                                         </button>
                                                         <button @onclick="() => ShowResetForm(user)" class="btn btn-ghost btn-sm" title="Reset password">
@@ -268,15 +268,18 @@
         _showForm = true;
     }
 
-    private void EditUser(UserSummaryPayload user)
+    // Roles arrive from the caller rather than off the user row, because the user row does not
+    // carry them. Seeding the form from an always-empty array showed every existing role
+    // unticked, so the form said the user held none while they held several.
+    private void EditUser(UserSummaryPayload user, IReadOnlyList<string> roles)
     {
         _editingUser = user;
         _formUsername = user.Username;
         _formPassword = "";
         _formEmail = user.Email;
         _formIsActive = user.IsActive;
-        _initialRoles = user.Roles.ToList();
-        _selectedRoles = new HashSet<string>(user.Roles, StringComparer.OrdinalIgnoreCase);
+        _initialRoles = roles.ToList();
+        _selectedRoles = new HashSet<string>(roles, StringComparer.OrdinalIgnoreCase);
         _formError = null;
         _showForm = true;
     }

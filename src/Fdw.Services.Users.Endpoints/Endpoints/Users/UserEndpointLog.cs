@@ -44,6 +44,15 @@ public static partial class UserEndpointLog
         string userId);
 
     /// <summary>
+    /// Logs when the user store could not be read at all.
+    /// </summary>
+    [MessageLogging(EventId = 91003, Level = LogLevel.Error,
+        Message = "The user store could not be read, so no user list can be produced: {reason}")]
+    public static partial IGenericMessage UserStoreUnreadable(
+        ILogger logger,
+        string reason);
+
+    /// <summary>
     /// Logs when a role required during user creation is not found.
     /// </summary>
     [MessageLogging(EventId = 31000, Level = LogLevel.Error,

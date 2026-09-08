@@ -108,4 +108,18 @@ public static partial class AuthorizationEndpointLog
     [MessageLogging(EventId = 71002, Level = LogLevel.Error,
         Message = "Rollback after a failed role change for '{context}' did not succeed: {reason}")]
     public static partial IGenericMessage RollbackFailed(ILogger logger, string context, string? reason);
+
+    /// <summary>
+    /// Logs when the role assignments could not be read for the whole-store listing.
+    /// </summary>
+    [MessageLogging(EventId = 71003, Level = LogLevel.Error,
+        Message = "Role assignments could not be read, so no user-role listing can be produced: {reason}")]
+    public static partial IGenericMessage UserRoleAssignmentsUnreadable(ILogger logger, string reason);
+
+    /// <summary>
+    /// Logs a completed whole-store listing of role assignments.
+    /// </summary>
+    [MessageLogging(EventId = 11009, Level = LogLevel.Information,
+        Message = "Listed role assignments for {userCount} user(s) across {roleCount} role(s)")]
+    public static partial IGenericMessage UserRoleAssignmentsListed(ILogger logger, int userCount, int roleCount);
 }

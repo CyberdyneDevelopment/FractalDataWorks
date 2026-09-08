@@ -29,13 +29,14 @@ public sealed class UsersPageContentTests : IDisposable
         return _ctx.Render<UsersPage>();
     }
 
-    private static UserSummaryPayload User(string username = "alice", bool active = true, string[]? roles = null) => new()
+    // Roles are not on the user row. They arrive on the context, keyed by user id, because the
+    // users list stores role ids and cannot name them -- see FDW-740.
+    private static UserSummaryPayload User(string username = "alice", bool active = true) => new()
     {
         Id = Guid.NewGuid(),
         Username = username,
         Email = $"{username}@example.com",
         IsActive = active,
-        Roles = roles ?? ["Admin"],
         CreatedAt = DateTime.UtcNow,
     };
 
@@ -53,6 +54,31 @@ public sealed class UsersPageContentTests : IDisposable
         var cut = Render(new UserContext { IsLoading = true });
         cut.FindAll(".badge.b-run").Count.ShouldBeGreaterThan(0);
         cut.Markup.ShouldContain("Loading");
+    }
+
+    [Fact]
+    [Trait("Priority", "P2")]
+    public void RolesRenderFromTheContextRatherThanTheUserRow()
+    {
+        var user = User("alice");
+        var cut = Render(new UserContext
+        {
+            FilteredUsers = [user],
+            RolesByUser = new Dictionary<Guid, IReadOnlyList<string>> { [user.Id] = ["Admin", "Viewer"] },
+        });
+
+        cut.Markup.ShouldContain("Admin");
+        cut.Markup.ShouldContain("Viewer");
+    }
+
+    // A user the assignments read did not mention holds no roles. The page must draw that as no
+    // pills rather than inventing one, which is the direction the old always-empty array failed in.
+    [Fact]
+    [Trait("Priority", "P2")]
+    public void AUserWithNoAssignmentsRendersNoRolePills()
+    {
+        var cut = Render(new UserContext { FilteredUsers = [User("alice")] });
+        cut.FindAll(".tpill").Count.ShouldBe(0);
     }
 
     [Fact]

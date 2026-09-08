@@ -18,6 +18,18 @@ public sealed class UserContext : ProviderContextBase
 
     public IReadOnlyList<UserSummaryPayload> FilteredUsers { get; init; } = [];
 
+    /// <summary>
+    /// Role names by user id, read from the authorization domain rather than off the user row.
+    /// A user holding no roles is absent, so an empty answer and a missing key say the same thing.
+    /// </summary>
+    public IReadOnlyDictionary<Guid, IReadOnlyList<string>> RolesByUser { get; init; } =
+        new Dictionary<Guid, IReadOnlyList<string>>();
+
+    /// <summary>Gets the role names held by <paramref name="userId"/>, empty when they hold none.</summary>
+    /// <param name="userId">The user.</param>
+    public IReadOnlyList<string> RolesFor(Guid userId)
+        => RolesByUser.TryGetValue(userId, out var roles) ? roles : [];
+
     // ── Callbacks ──────────────────────────────────────────────────────────────
 
     public Func<Task> OnLoadUsers { get; init; } = () => Task.CompletedTask;

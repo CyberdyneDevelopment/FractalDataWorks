@@ -125,14 +125,20 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
             return;
         }
 
-        await Send.ResponseAsync(MapToResponse(loadResult.Value, req.Roles), 201, ct).ConfigureAwait(false);
+        await Send.ResponseAsync(MapToResponse(loadResult.Value), 201, ct).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Maps a user entity (plus the requested roles, which the store may not yet expose) to a UserResponse.
+    /// Maps the created user, as re-read from the store, to a UserResponse.
     /// Override for app-specific mapping.
     /// </summary>
-    protected virtual UserResponse MapToResponse(IUser user, IList<string> requestedRoles)
+    /// <remarks>
+    /// This took the requested roles and echoed them back, on the argument that the store may not
+    /// yet expose them. That reports what was asked for as though it were what happened: a role
+    /// assignment that failed still appeared in the 201. The response now carries only what was
+    /// re-read, and roles are answered by the route that owns them.
+    /// </remarks>
+    protected virtual UserResponse MapToResponse(IUser user)
         => new()
         {
             Id = user.Id,
@@ -141,7 +147,6 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
             DisplayName = user.Username,
             Email = user.Email,
             IsActive = user.IsActive,
-            Roles = requestedRoles,
             CreatedAt = user.CreatedAt,
             CreatedBy = HttpContext.User.Identity?.Name ?? "system",
             LastLoginAt = user.LastLoginAt

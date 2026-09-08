@@ -711,7 +711,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
 
         page.AddColumn(ListColumnDefinition.Create(ColumnName, "Username"));
         page.AddColumn(ListColumnDefinition.Create(ColumnEmail, "Email"));
-        page.AddColumn(ListColumnDefinition.Create(ColumnRoles, "Roles"));
         page.AddColumn(ListColumnDefinition.Create(ColumnActive, "Active"));
 
         var lastLoginColumn = ListColumnDefinition.Create(ColumnLastLogin, "Last Login");
@@ -723,7 +722,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
             var row = new ListRowModel { Id = user.Username };
             row.SetValue(ColumnName, user.Username);
             row.SetValue(ColumnEmail, user.Email);
-            row.SetValue(ColumnRoles, string.Join(", ", user.Roles));
             row.SetValue(ColumnActive, DescribeEnabled(user.IsActive));
             row.SetValue(
                 ColumnLastLogin,

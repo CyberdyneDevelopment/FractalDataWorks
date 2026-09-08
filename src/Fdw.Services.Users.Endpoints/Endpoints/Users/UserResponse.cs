@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Fdw.Web.Endpoints.Contracts;
 
 namespace Fdw.Services.Users.Endpoints;
@@ -23,11 +22,6 @@ public class UserResponse : ResourceDetail
     /// Gets or sets whether the user is active.
     /// </summary>
     public bool IsActive { get; set; }
-
-    /// <summary>
-    /// Gets or sets the user's roles.
-    /// </summary>
-    public IList<string> Roles { get; set; } = [];
 
     /// <summary>
     /// Gets or sets when the user was created.
