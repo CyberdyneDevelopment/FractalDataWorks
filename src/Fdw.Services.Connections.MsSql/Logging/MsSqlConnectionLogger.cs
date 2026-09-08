@@ -448,13 +448,20 @@ public static partial class MsSqlConnectionLogger
     public static partial IGenericMessage TraceSystemBypassConnectionUsed(ILogger logger);
 
     /// <summary>
-    /// Traces when SESSION_CONTEXT('UserId') is set to the reserved deny-everywhere
-    /// NoAccessPrincipalId — no established, Guid-identified, or system-elevated context was
-    /// available for this connection, so it is denied tenant-scoped visibility (sees only
-    /// shared/system rows).
+    /// Reports that this connection opened with SESSION_CONTEXT('UserId') set to the reserved
+    /// NoAccessPrincipalId, because no system-elevated or Guid-identified context was available.
     /// </summary>
-    [MessageLogging(EventId = 11067, Level = LogLevel.Trace, Message = "Set SESSION_CONTEXT UserId to the reserved NoAccessPrincipalId (deny-everywhere) on pooled connection")]
-    public static partial IGenericMessage TraceNoAccessPrincipalContextSet(ILogger logger);
+    /// <remarks>
+    /// Why Warning: this is the one connection state that fails silently. The deny principal defeats
+    /// <c>fn_TenantFilter</c>'s Mode 1 system bypass (which requires <c>UserId IS NULL</c>, not a
+    /// deny sentinel) and reaches only the shared-row branch, so every read on it succeeds and
+    /// returns a PARTIAL result — every tenant-scoped and every restricted row silently absent. A
+    /// caller cannot tell that from "those rows do not exist", which sends the next person hunting a
+    /// seed or mapper bug. Either something forgot to elevate, or a genuinely anonymous caller is
+    /// reading; both are worth seeing, and neither is visible at Trace, which production filters out.
+    /// </remarks>
+    [MessageLogging(EventId = 11067, Level = LogLevel.Warning, Message = "Connection opened as the deny principal (no authentication context): reads on it return only shared rows, with tenant-scoped and restricted rows silently absent")]
+    public static partial IGenericMessage NoAccessPrincipalContextSet(ILogger logger);
 
     /// <summary>
     /// Logs when setting tenant SESSION_CONTEXT fails.
