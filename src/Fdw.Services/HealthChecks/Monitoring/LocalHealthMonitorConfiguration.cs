@@ -1,4 +1,5 @@
 using System;
+using Fdw.Data;
 using Fdw.Services.Abstractions.Health.Monitoring;
 
 namespace Fdw.Services.HealthChecks.Monitoring;
@@ -6,6 +7,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// <summary>
 /// The local health monitor's own configuration.
 /// </summary>
+[GenerateMapper]
 public sealed partial class LocalHealthMonitorConfiguration : IHealthMonitorImplementationConfiguration
 {
     /// <inheritdoc/>

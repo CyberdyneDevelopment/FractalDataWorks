@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Services.Abstractions.Health.Monitoring;
+using Fdw.Data;
 
 namespace Fdw.Services.HealthChecks.Monitoring;
 
@@ -20,6 +21,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// No property carries a value default (NO FALLBACKS) — the seeded row supplies every value.
 /// </para>
 /// </remarks>
+[GenerateMapper]
 [ExcludeFromCodeCoverage]
 [ManagedConfiguration(ServiceCategory = "HealthMonitor",
     ServiceType = "HealthMonitor",
