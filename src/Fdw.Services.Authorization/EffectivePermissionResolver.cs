@@ -96,8 +96,7 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
         }
 
         var orgCount = await ApplyOrgTier(
-            userId, tenantId, orgId, allPermissions, allRolePermissions,
-            roleNameToId, permissions, cancellationToken).ConfigureAwait(false);
+            userId, tenantId, orgId, permissions, cancellationToken).ConfigureAwait(false);
 
         AuthorizationLog.ThreeTierPermissionsResolved(_logger, globalCount, tenantCount, orgCount, permissions.Count, userId);
 
@@ -187,9 +186,6 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
         string userId,
         Guid? currentTenantId,
         Guid? orgId,
-        IReadOnlyList<PermissionConfiguration> allPermissions,
-        IReadOnlyList<RolePermissionConfiguration> allRolePermissions,
-        Dictionary<string, Guid> roleNameToId,
         HashSet<string> permissions,
         CancellationToken cancellationToken)
     {
@@ -215,37 +211,27 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
         var orgPermCount = 0;
         foreach (var grant in orgGrantsResult.Value)
         {
-            orgPermCount += ApplyOrgGrant(grant, allPermissions, allRolePermissions, roleNameToId, permissions);
+            orgPermCount += ApplyOrgGrant(grant, permissions);
         }
         return orgPermCount;
     }
 
+    /// <summary>Adds the permission an org-tier grant confers.</summary>
+    /// <remarks>
+    /// A grant's RoleName is not read. It is descriptive on this table -- it records why the
+    /// access was granted, and the RLS predicate that consumes these rows tests their existence
+    /// rather than either name. The values seeded into it (PlatformAdmin, TenantMember) are not
+    /// in the role catalogue and never were, so the lookup that used to sit here missed for
+    /// every row and contributed nothing, silently, while PermissionName carried the tier.
+    /// Restoring it means deciding those role names are real and seeding them; until then a
+    /// lookup that cannot succeed is worse than no lookup, because it reads as one that works.
+    /// </remarks>
     private static int ApplyOrgGrant(
         TenantOrgAccessConfiguration grant,
-        IReadOnlyList<PermissionConfiguration> allPermissions,
-        IReadOnlyList<RolePermissionConfiguration> allRolePermissions,
-        Dictionary<string, Guid> roleNameToId,
         HashSet<string> permissions)
-    {
-        var added = 0;
-
-        if (!string.IsNullOrEmpty(grant.PermissionName) && permissions.Add(grant.PermissionName))
-            added++;
-
-        if (!string.IsNullOrEmpty(grant.RoleName)
-            && roleNameToId.TryGetValue(grant.RoleName, out var orgRoleId))
-        {
-            var orgRolePerms = allRolePermissions.Where(rp => rp.RoleId == orgRoleId).ToList();
-            for (var i = 0; i < orgRolePerms.Count; i++)
-            {
-                var permConfig = FindPermission(allPermissions, orgRolePerms[i].PermissionId);
-                if (permConfig is not null && permissions.Add(permConfig.Name))
-                    added++;
-            }
-        }
-
-        return added;
-    }
+        => !string.IsNullOrEmpty(grant.PermissionName) && permissions.Add(grant.PermissionName)
+            ? 1
+            : 0;
 
     private static bool RoleContributesToTenant(RoleConfiguration? roleDef, Guid? currentTenantId, bool isGlobalTenant)
         => isGlobalTenant
