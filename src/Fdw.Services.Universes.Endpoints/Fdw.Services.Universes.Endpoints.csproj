@@ -14,6 +14,7 @@
     <ProjectReference Include="..\Fdw.Web.RestEndpoints\Fdw.Web.RestEndpoints.csproj" />
     <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
     <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Users\Fdw.Services.Users.csproj" />
   </ItemGroup>
 
 </Project>
