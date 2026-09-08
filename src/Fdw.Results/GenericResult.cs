@@ -399,8 +399,23 @@ public class GenericResult : IGenericResult
     /// <inheritdoc/>
     public IGenericResult<TNew> ToNewResult<TNew>()
     {
+        // A success reaching here is a real state, not a misuse of the API. Every caller writes
+        // `x.IsSuccess && x.Value is not null ? Success(x.Value) : x.ToNewResult<TNew>()`, meaning
+        // "propagate the failure" -- and a read that SUCCEEDS and finds nothing takes the else
+        // branch. Throwing there reported the caller's syntax while saying nothing about the event,
+        // which is a provider returning success with no value; and because several of those callers
+        // sit inside endpoint construction and DI factories, the exception escaped as a 500 or took
+        // endpoint mapping down with it. A sweep found 37 sites able to reach this.
+        //
+        // So it converts rather than throws: the absent value is reported as a failure naming both
+        // types. Nothing is invented -- there is no value to invent -- and the absence stays loud,
+        // which is the whole point of not returning a bare default here.
         if (IsSuccess)
-            throw new InvalidOperationException("Cannot convert a successful result without providing a value. Use ToNewResult<TNew>(TNew value) instead.");
+        {
+            return GenericResult<TNew>.Failure(new GenericMessage(
+                $"A successful {GetType().Name} carried no value, so it cannot be converted to "
+                + $"{typeof(TNew).Name}. The operation reported success and returned nothing."));
+        }
 
         return GenericResult<TNew>.FromResult(this);
     }

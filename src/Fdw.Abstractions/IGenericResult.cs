@@ -88,7 +88,10 @@ public interface IGenericResult
     /// </summary>
     /// <typeparam name="TNew">The type of the new result value.</typeparam>
     /// <returns>A failure result of type <typeparamref name="TNew"/> with the same code, chain, and messages.</returns>
-    /// <exception cref="System.InvalidOperationException">Thrown when called on a successful result.</exception>
+    /// <remarks>Called on a SUCCESSFUL result -- which happens whenever a read succeeds and finds
+    /// nothing -- this returns a failure naming both types rather than throwing. The absent value
+    /// is the event worth reporting, and several callers sit where an exception would escape into
+    /// endpoint construction.</remarks>
     IGenericResult<TNew> ToNewResult<TNew>();
 }
 

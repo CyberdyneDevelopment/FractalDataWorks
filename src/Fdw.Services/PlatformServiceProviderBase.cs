@@ -33,7 +33,6 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
 {
     private readonly ILogger<PlatformServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>> _logger;
     private readonly Dictionary<string, IServiceFactory<TService>> _factories = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, IServiceConfigurationProvider> _configurationProviders = new(StringComparer.OrdinalIgnoreCase);
     private IDomainConfigurationProvider<TConfiguration>? _domainConfigurationProvider;
 
     /// <summary>Gets the registered service factories keyed by service option type.</summary>
@@ -43,8 +42,6 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     protected IDomainConfigurationProvider<TConfiguration>? DomainConfigurationProvider => _domainConfigurationProvider;
 
     private static readonly Dictionary<string, Func<IServiceProvider, IServiceFactory<TService>>> _registered
-        = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Dictionary<string, IServiceConfigurationProvider> _registeredConfigurationProviders
         = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
@@ -102,52 +99,9 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
                 _logger, providerType, _factories.Count, string.Join(", ", _factories.Keys));
         }
 
-        foreach (var registration in _registeredConfigurationProviders)
-        {
-            _configurationProviders[registration.Key] = registration.Value;
-            ServiceLogger.ProviderConfigurationRegistered(_logger, registration.Key);
-        }
     }
 
     // ── Registration ────────────────────────────────────────────────────────
-
-    private static IServiceConfigurationProvider Erase<TConcrete>(IServiceConfigurationProvider<TConcrete> provider)
-        where TConcrete : class, TConfiguration
-        => provider as IServiceConfigurationProvider ?? new ErasedConfigurationProvider<TConcrete>(provider);
-
-    private sealed class ErasedConfigurationProvider<TConcrete> : IServiceConfigurationProvider
-        where TConcrete : class, TConfiguration
-    {
-        private readonly IServiceConfigurationProvider<TConcrete> _inner;
-
-        public ErasedConfigurationProvider(IServiceConfigurationProvider<TConcrete> inner) => _inner = inner;
-
-        public async Task<IGenericResult<IGenericConfiguration>> Get(Guid id, CancellationToken ct = default)
-            => Widen(await _inner.Get(id, ct).ConfigureAwait(false));
-
-        public async Task<IGenericResult<IGenericConfiguration>> Get(string name, CancellationToken ct = default)
-            => Widen(await _inner.Get(name, ct).ConfigureAwait(false));
-
-        public async Task<IGenericResult> Save(IGenericConfiguration record, CancellationToken ct = default)
-        {
-            if (record is not TConcrete typed)
-            {
-                return GenericResult.Failure(
-                    ServicesResultCodes.ByName("InvalidConfigurationType"),
-                    ResultDetails.Create("ExpectedType", typeof(TConcrete).Name,
-                                         "ActualType", record?.GetType().Name ?? "(null)"));
-            }
-
-            return await _inner.Save(typed, ct).ConfigureAwait(false);
-        }
-
-        public Task<IGenericResult> Delete(Guid id, CancellationToken ct = default) => _inner.Delete(id, ct);
-
-        private static IGenericResult<IGenericConfiguration> Widen(IGenericResult<TConcrete> result)
-            => result.IsSuccess && result.Value is not null
-                ? GenericResult<IGenericConfiguration>.Success(result.Value)
-                : result.ToNewResult<IGenericConfiguration>();
-    }
 
     /// <inheritdoc />
     public IGenericResult Register(string serviceOptionType, IServiceFactory<TService> factory)
