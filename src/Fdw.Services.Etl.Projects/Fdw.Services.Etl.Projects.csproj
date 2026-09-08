@@ -48,7 +48,7 @@
 
   <ItemGroup>
     <!-- Why: lets Fdw.Services.Etl.Projects.Tests unit-test
-         OrchestrationNodeOrchestratorBackgroundService's internal EstablishWorkAuthenticationContext
+         OrchestrationNodeOrchestratorBackgroundService's internal EstablishSystemAuthenticationContext
          seam directly, without standing up the full node-orchestration dependency graph. -->
     <InternalsVisibleTo Include="Fdw.Services.Etl.Projects.Tests" />
   </ItemGroup>

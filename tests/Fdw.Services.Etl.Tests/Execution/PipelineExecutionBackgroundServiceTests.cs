@@ -9,10 +9,10 @@ using Moq;
 namespace Fdw.Services.Etl.Tests.Execution;
 
 /// <summary>
-/// Tests for <see cref="PipelineExecutionBackgroundService.EstablishWorkAuthenticationContext"/> —
-/// the tenant-isolation seam that stamps a background execution's per-run DI scope with a
-/// <see cref="WorkAuthenticationContext"/> carrying the execution's TenantId, so RLS SESSION_CONTEXT is
-/// set for connections created within that scope.
+/// Tests for <see cref="PipelineExecutionBackgroundService.EstablishSystemAuthenticationContext"/> —
+/// the seam that stamps a background execution's per-run DI scope with an authentication context,
+/// so connections created within that scope resolve a SESSION_CONTEXT rather than the
+/// deny-everywhere principal. Elevated rather than tenant-scoped by decision (FDW-767).
 /// </summary>
 public sealed class PipelineExecutionBackgroundServiceTests
 {
@@ -31,29 +31,28 @@ public sealed class PipelineExecutionBackgroundServiceTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public void ScopeExposesAuthenticationContextWithMatchingTenantId()
+    public void ScopeIsElevatedToTheSystemContext()
     {
         // Arrange
         var services = new ServiceCollection();
         services.AddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
         var provider = services.BuildServiceProvider();
-        var tenantId = Guid.NewGuid();
-        var request = CreateRequest(tenantId);
+        var request = CreateRequest(Guid.NewGuid());
         var sut = CreateSut();
 
         // Act
-        sut.EstablishWorkAuthenticationContext(provider, request);
+        sut.EstablishSystemAuthenticationContext(provider, request);
 
         // Assert
         var accessor = provider.GetRequiredService<IAuthenticationContextAccessor>();
         accessor.Current.ShouldNotBeNull();
-        accessor.Current!.ActiveTenantId.ShouldBe(tenantId);
+        accessor.Current!.IsSystemContext.ShouldBeTrue();
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public void DoesNothingWhenRequestHasNoTenantId()
+    public void ElevatesEvenWhenRequestHasNoTenantId()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -63,10 +62,13 @@ public sealed class PipelineExecutionBackgroundServiceTests
         var sut = CreateSut();
 
         // Act
-        sut.EstablishWorkAuthenticationContext(provider, request);
+        sut.EstablishSystemAuthenticationContext(provider, request);
 
-        // Assert
-        provider.GetRequiredService<IAuthenticationContextAccessor>().Current.ShouldBeNull();
+        // Assert — a tenant-less execution must NOT be left on the deny principal: system
+        // elevation does not consult TenantId, so its absence is not a reason to skip elevating.
+        var accessor = provider.GetRequiredService<IAuthenticationContextAccessor>();
+        accessor.Current.ShouldNotBeNull();
+        accessor.Current!.IsSystemContext.ShouldBeTrue();
     }
 
     [Fact]
@@ -86,7 +88,7 @@ public sealed class PipelineExecutionBackgroundServiceTests
         var sut = CreateSut();
 
         // Act
-        sut.EstablishWorkAuthenticationContext(provider, request);
+        sut.EstablishSystemAuthenticationContext(provider, request);
 
         // Assert
         accessor.Current.ShouldBeSameAs(existing);
@@ -105,6 +107,6 @@ public sealed class PipelineExecutionBackgroundServiceTests
         var sut = CreateSut();
 
         // Act / Assert — no accessor registered (Connections.MsSql not loaded) must be a safe no-op.
-        Should.NotThrow(() => sut.EstablishWorkAuthenticationContext(provider, request));
+        Should.NotThrow(() => sut.EstablishSystemAuthenticationContext(provider, request));
     }
 }

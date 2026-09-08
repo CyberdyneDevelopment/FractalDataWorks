@@ -27,6 +27,15 @@ namespace Fdw.Services.Authentication.Abstractions.Security;
 /// protects HTTP requests also protects background work — subject to the UserId caveat below.
 /// </para>
 /// <para>
+/// <b>NOT CONSTRUCTED IN PRODUCTION AS OF FDW-767 (2026-09-08).</b> Both background execution
+/// paths — <c>PipelineExecutionBackgroundService</c> and
+/// <c>OrchestrationNodeOrchestratorBackgroundService</c> — now establish a
+/// <see cref="SystemAuthenticationContext"/> instead, precisely because of the caveat below: this
+/// type resolved to the deny-everywhere principal and read a silent partial result. That elevation
+/// is a deliberate temporary decision, and this type is what a proper fix returns to once a
+/// background run has a real Guid principal to run as. It remains referenced by tests.
+/// </para>
+/// <para>
 /// <b>UserId caveat — OPEN SUB-PROBLEM (flagged, not silently patched):</b>
 /// <c>MsSqlConnection.BuildSessionContextPlan</c> resolves <c>UserId</c> to the reserved
 /// deny-everywhere <see cref="AuthConstants.NoAccessPrincipalId"/> principal whenever

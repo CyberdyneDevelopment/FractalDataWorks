@@ -8,7 +8,7 @@ namespace Fdw.Services.Etl.Projects.Tests.Execution;
 
 /// <summary>
 /// Tests for
-/// <see cref="OrchestrationNodeOrchestratorBackgroundService.EstablishWorkAuthenticationContext"/> —
+/// <see cref="OrchestrationNodeOrchestratorBackgroundService.EstablishSystemAuthenticationContext"/> —
 /// mirrors <c>PipelineExecutionBackgroundServiceTests</c> for the node-orchestration execution path.
 /// </summary>
 public sealed class OrchestrationNodeOrchestratorBackgroundServiceTests
@@ -27,29 +27,28 @@ public sealed class OrchestrationNodeOrchestratorBackgroundServiceTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public void ScopeExposesAuthenticationContextWithMatchingTenantId()
+    public void ScopeIsElevatedToTheSystemContext()
     {
         // Arrange
         var services = new ServiceCollection();
         services.AddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
         var provider = services.BuildServiceProvider();
-        var tenantId = Guid.NewGuid();
-        var request = CreateRequest(tenantId);
+        var request = CreateRequest(Guid.NewGuid());
         var sut = CreateSut();
 
         // Act
-        sut.EstablishWorkAuthenticationContext(provider, request);
+        sut.EstablishSystemAuthenticationContext(provider, request);
 
         // Assert
         var accessor = provider.GetRequiredService<IAuthenticationContextAccessor>();
         accessor.Current.ShouldNotBeNull();
-        accessor.Current!.ActiveTenantId.ShouldBe(tenantId);
+        accessor.Current!.IsSystemContext.ShouldBeTrue();
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public void DoesNothingWhenRequestHasNoTenantId()
+    public void ElevatesEvenWhenRequestHasNoTenantId()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -59,9 +58,12 @@ public sealed class OrchestrationNodeOrchestratorBackgroundServiceTests
         var sut = CreateSut();
 
         // Act
-        sut.EstablishWorkAuthenticationContext(provider, request);
+        sut.EstablishSystemAuthenticationContext(provider, request);
 
-        // Assert
-        provider.GetRequiredService<IAuthenticationContextAccessor>().Current.ShouldBeNull();
+        // Assert — a tenant-less execution must NOT be left on the deny principal: system
+        // elevation does not consult TenantId, so its absence is not a reason to skip elevating.
+        var accessor = provider.GetRequiredService<IAuthenticationContextAccessor>();
+        accessor.Current.ShouldNotBeNull();
+        accessor.Current!.IsSystemContext.ShouldBeTrue();
     }
 }

@@ -1080,16 +1080,20 @@ public static partial class EtlLog
         string name);
 
     /// <summary>
-    /// Logs when a per-execution WorkAuthenticationContext is established on the background
-    /// execution's DI scope, carrying the execution's TenantId for RLS SESSION_CONTEXT.
+    /// Logs that a background execution's DI scope was elevated to the system authentication
+    /// context, which reads across every tenant.
     /// </summary>
+    /// <remarks>
+    /// The tenant is reported for diagnostics only — under system elevation it is NOT enforced, so
+    /// this line says which tenant the run BELONGS to, never which rows it can reach. See FDW-767.
+    /// </remarks>
     [MessageLogging(
         EventId = 11057,
         Level = LogLevel.Information,
-        Message = "WorkAuthenticationContext established for execution {executionId} with TenantId {tenantId}")]
-    public static partial IGenericMessage WorkAuthenticationContextEstablished(
+        Message = "Execution {executionId} (tenant {tenantId}) elevated to the system authentication context; reads are not tenant-scoped")]
+    public static partial IGenericMessage ExecutionElevatedToSystemContext(
         ILogger logger,
         Guid executionId,
-        Guid tenantId);
+        Guid? tenantId);
 
 }

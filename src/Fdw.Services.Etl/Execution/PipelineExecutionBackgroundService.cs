@@ -80,7 +80,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         {
             EtlLog.ExecutionScopeCreated(_logger, request.ExecutionId);
 
-            EstablishWorkAuthenticationContext(scope.ServiceProvider, request);
+            EstablishSystemAuthenticationContext(scope.ServiceProvider, request);
 
             var executionTracker = scope.ServiceProvider.GetRequiredService<IExecutionTracker>();
             var pipelineProvider = scope.ServiceProvider
@@ -110,21 +110,27 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         }
     }
 
-    internal void EstablishWorkAuthenticationContext(IServiceProvider services, PipelineExecutionRequest request)
+    // Why SYSTEM elevation and not the execution's own tenant: a background run has no
+    // ClaimsPrincipal, and WorkAuthenticationContext -- the type built for this -- defaults its
+    // UserId to the literal "system", which is not a parseable Guid, so it resolves to the
+    // deny-everywhere principal and its ActiveTenantId is discarded. The run then reads only
+    // shared rows and silently sees a partial result. Elevating is a deliberate, temporary
+    // decision (FDW-767): a background execution consequently sees EVERY tenant's rows, so RLS
+    // is not a backstop for a schedule-to-tenant routing bug in this path. Revisit by giving the
+    // run a real Guid principal -- the schedule's owner, or a per-tenant service principal.
+    //
+    // Why no TenantId guard: system elevation does not consult TenantId, and returning early
+    // without it would leave a tenant-less execution on the deny principal -- half the bug.
+    internal void EstablishSystemAuthenticationContext(IServiceProvider services, PipelineExecutionRequest request)
     {
-        if (!request.TenantId.HasValue)
-        {
-            return;
-        }
-
         var accessor = services.GetService<IAuthenticationContextAccessor>();
         if (accessor is null || accessor.Current is not null)
         {
             return;
         }
 
-        accessor.Current = new WorkAuthenticationContext(request.TenantId.Value);
-        EtlLog.WorkAuthenticationContextEstablished(_logger, request.ExecutionId, request.TenantId.Value);
+        accessor.Current = new SystemAuthenticationContext();
+        EtlLog.ExecutionElevatedToSystemContext(_logger, request.ExecutionId, request.TenantId);
     }
 
     private static async Task<Guid?> ResolveOwningOrg(

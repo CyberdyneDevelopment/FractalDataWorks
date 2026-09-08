@@ -47,7 +47,7 @@
 
   <ItemGroup>
     <!-- Why: lets Fdw.Services.Etl.Tests unit-test PipelineExecutionBackgroundService's internal
-         EstablishWorkAuthenticationContext seam directly, without standing up the full pipeline
+         EstablishSystemAuthenticationContext seam directly, without standing up the full pipeline
          execution dependency graph (IExecutionTracker, IDataGateway, etc.). -->
     <InternalsVisibleTo Include="Fdw.Services.Etl.Tests" />
   </ItemGroup>
