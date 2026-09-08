@@ -70,7 +70,7 @@ internal sealed class ClaimMappedProvisionerFactory
     /// <inheritdoc />
     public IGenericResult<IExternalIdentityProvisioner> Create(
         IExternalIdentityProvisionerImplementationConfiguration configuration,
-        IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration> provisionerProvider)
+        IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration> provisionerProvider)
         // No siblings to delegate to, so the provider argument is unused — the overload exists only
         // to satisfy the interface every provisioner factory implements.
         => Create(configuration);

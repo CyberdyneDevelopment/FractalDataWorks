@@ -11,6 +11,6 @@ namespace Fdw.Services.Data.Abstractions;
 /// ask for one by domain rather than by closed generic.
 /// </remarks>
 public interface IDataGatewayConfigurationProvider
-    : IDomainConfigurationProvider<IDataGatewayConfiguration, IDataGatewayImplementationConfiguration>
+    : IDomainConfigurationProvider<IDataGatewayImplementationConfiguration>
 {
 }

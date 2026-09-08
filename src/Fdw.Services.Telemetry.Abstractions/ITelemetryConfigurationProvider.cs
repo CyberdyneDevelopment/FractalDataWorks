@@ -11,6 +11,6 @@ namespace Fdw.Services.Telemetry.Abstractions;
 /// its configuration lives in the file-backed server tier declared in <c>configurationSchema.json</c>.
 /// </remarks>
 public interface ITelemetryConfigurationProvider
-    : IDomainConfigurationProvider<ITelemetryConfiguration, ITelemetryImplementationConfiguration>
+    : IDomainConfigurationProvider<ITelemetryImplementationConfiguration>
 {
 }

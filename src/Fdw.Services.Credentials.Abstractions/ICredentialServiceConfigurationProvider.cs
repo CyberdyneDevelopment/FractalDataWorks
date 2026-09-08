@@ -6,6 +6,6 @@ namespace Fdw.Services.Credentials.Abstractions;
 /// Resolves configured credential services and routes each to the implementation provider that owns it.
 /// </summary>
 public interface ICredentialServiceConfigurationProvider
-    : IDomainConfigurationProvider<ICredentialServiceConfiguration, ICredentialServiceImplementationConfiguration>
+    : IDomainConfigurationProvider<ICredentialServiceImplementationConfiguration>
 {
 }

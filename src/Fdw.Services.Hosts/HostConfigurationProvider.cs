@@ -19,7 +19,6 @@ namespace Fdw.Services.Hosts;
 public class HostConfigurationProvider
     : ServiceConfigurationProviderBase<
           HostConfiguration,
-          IHostConfiguration,
           IHostImplementationConfiguration,
           HostConfigurationCommand>,
       IHostConfigurationProvider

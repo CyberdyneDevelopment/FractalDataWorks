@@ -116,7 +116,7 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
             // is both, but a consumer resolving IPlatformServiceProvider<ISecretManager, …> — which is
             // what the generic call sites ask for — got nothing back, because only the domain name was
             // registered. Two names for one instance, and only one of them findable.
-            builder.Services.AddScoped<IPlatformServiceProvider<ISecretManager, ISecretManagerConfiguration, ISecretManagerImplementationConfiguration>>(
+            builder.Services.AddScoped<IPlatformServiceProvider<ISecretManager, ISecretManagerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ISecretManagerProvider>());
 
             builder.Services.AddScoped<ISecretManagerProvider>(sp =>

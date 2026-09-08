@@ -6,6 +6,6 @@ namespace Fdw.Services.Logging.Abstractions;
 /// Resolves logging services by configuration name or id.
 /// </summary>
 public interface ILoggingServiceProvider
-    : IPlatformServiceProvider<ILoggingService, ILoggingConfiguration, ILoggingImplementationConfiguration>
+    : IPlatformServiceProvider<ILoggingService, ILoggingImplementationConfiguration>
 {
 }

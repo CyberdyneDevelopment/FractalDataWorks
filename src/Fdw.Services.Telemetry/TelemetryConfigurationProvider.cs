@@ -19,7 +19,6 @@ namespace Fdw.Services.Telemetry;
 public class TelemetryConfigurationProvider
     : ServiceConfigurationProviderBase<
           TelemetryConfiguration,
-          ITelemetryConfiguration,
           ITelemetryImplementationConfiguration,
           TelemetryConfigurationCommand>,
       ITelemetryConfigurationProvider

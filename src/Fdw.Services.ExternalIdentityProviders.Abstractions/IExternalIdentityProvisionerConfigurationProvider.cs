@@ -7,6 +7,6 @@ namespace Fdw.Services.ExternalIdentityProviders.Abstractions;
 /// that owns it.
 /// </summary>
 public interface IExternalIdentityProvisionerConfigurationProvider
-    : IDomainConfigurationProvider<IExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration>
+    : IDomainConfigurationProvider<IExternalIdentityProvisionerImplementationConfiguration>
 {
 }

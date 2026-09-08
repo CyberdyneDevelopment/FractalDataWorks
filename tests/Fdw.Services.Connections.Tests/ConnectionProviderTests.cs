@@ -163,37 +163,37 @@ public class ConnectionProviderTests
 
 
         // ── IDomainConfigurationProvider ────────────────────────────────────
-        // The domain record goes back whole. Unwrapping .Configuration here is what the provider
-        // under test then had to re-derive a ServiceOptionType from, off a row that has no such column.
-        async Task<IGenericResult<IConnectionConfiguration>> IDomainConfigurationProvider<IConnectionConfiguration>.Get(
+        async Task<IGenericResult<IDomainConfiguration>> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Get(
             string name, CancellationToken ct)
         {
+            // The domain record goes back whole; the provider under test reads the discriminator off it.
             var result = await Get(name, ct).ConfigureAwait(false);
             return result.IsSuccess && result.Value is { } record
-                ? GenericResult<IConnectionConfiguration>.Success(record)
-                : GenericResult<IConnectionConfiguration>.Failure();
+                ? GenericResult<IDomainConfiguration>.Success(record)
+                : GenericResult<IDomainConfiguration>.Failure();
         }
 
-        async Task<IGenericResult<IConnectionConfiguration>> IDomainConfigurationProvider<IConnectionConfiguration>.Get(
+        async Task<IGenericResult<IDomainConfiguration>> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Get(
             Guid id, CancellationToken ct)
         {
+            // The domain record goes back whole; the provider under test reads the discriminator off it.
             var result = await Get(id, ct).ConfigureAwait(false);
             return result.IsSuccess && result.Value is { } record
-                ? GenericResult<IConnectionConfiguration>.Success(record)
-                : GenericResult<IConnectionConfiguration>.Failure();
+                ? GenericResult<IDomainConfiguration>.Success(record)
+                : GenericResult<IDomainConfiguration>.Failure();
         }
 
-        Task<IGenericResult> IDomainConfigurationProvider<IConnectionConfiguration>.Save<T>(
+        Task<IGenericResult> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Save<T>(
             string serviceOptionType, string name, T implementationConfiguration, CancellationToken ct)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
 
-        Task<IGenericResult> IDomainConfigurationProvider<IConnectionConfiguration>.Delete(Guid id, CancellationToken ct)
+        Task<IGenericResult> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Delete(Guid id, CancellationToken ct)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
 
-        Task<IGenericResult> IDomainConfigurationProvider<IConnectionConfiguration>.Delete(string name, CancellationToken ct)
+        Task<IGenericResult> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Delete(string name, CancellationToken ct)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
 
-        IGenericResult IImplementationProviderRegistry<IConnectionImplementationConfiguration>.Register<T>(
+        IGenericResult IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Register<T>(
             string name, T implementationConfigurationProvider) => GenericResult.Success();
 }
 

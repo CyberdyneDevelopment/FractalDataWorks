@@ -11,7 +11,6 @@ namespace Fdw.Services.Data;
 public class DataGatewayDomainConfigurationProvider
     : ServiceConfigurationProviderBase<
           DataGatewayDomainConfiguration,
-          IDataGatewayConfiguration,
           IDataGatewayImplementationConfiguration,
           DataGatewayDomainConfigurationCommand>,
       IDataGatewayConfigurationProvider

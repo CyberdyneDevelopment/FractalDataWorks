@@ -36,7 +36,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
     typeof(ExternalIdentityProvisionerTypes),
     ServiceInterface = typeof(IExternalIdentityProvisioner),
     ProviderType = typeof(ExternalIdentityProvisionerServiceProvider),
-    ProviderInterface = typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration>),
+    ProviderInterface = typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>),
     ServiceCategory = "ExternalIdentityProvisioner")]
 public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBase<
     ExternalIdentityProvisionerTypeBase<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration, IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>,
@@ -62,7 +62,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
     {
         var collectOptions = RegisterFunc;
 
-        var providerService = typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration>).ToString();
+        var providerService = typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -102,7 +102,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProvisionerConfiguration>>(
                 sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
 
-            builder.Services.AddScoped<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration>>(sp =>
+            builder.Services.AddScoped<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(sp =>
             {
                 var provider = new ExternalIdentityProvisionerServiceProvider(
                     sp,
@@ -147,7 +147,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
             // reached through the closed generic never sees.
             builder.Services.TryAddScoped<IExternalIdentityProvisionerServiceProvider>(sp =>
                 (IExternalIdentityProvisionerServiceProvider)sp.GetRequiredService<
-                    IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration>>());
+                    IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>());
 
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(ExternalIdentityProvisionerTypes), providerService);

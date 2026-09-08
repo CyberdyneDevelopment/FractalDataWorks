@@ -12,6 +12,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
 
+using Fdw.Configuration;
+using Fdw.Services.Connections;
+
 namespace Fdw.Web.Clients.Abstractions.Tests;
 
 /// <summary>
@@ -33,29 +36,29 @@ public sealed class ApiClientBaseUrlResolutionTests
     /// <summary>Answers for one connection name and nothing else.</summary>
     private sealed class StubConnections(string? connectionName, string? baseUrl) : IConnectionConfigurationProvider
     {
-        // The stub answers with a domain record carrying the implementation, which is what the
-        // provider now returns -- the caller reads BaseUrl off .Configuration.
-        public Task<IGenericResult<IConnectionConfiguration>> Get(
+        // Answers with the domain record carrying the implementation, which is what the provider
+        // returns now -- the caller reads BaseUrl off the implementation.
+        public Task<IGenericResult<IDomainConfiguration>> Get(
             string name, CancellationToken cancellationToken = default)
             => Task.FromResult(
                 string.Equals(name, connectionName, StringComparison.Ordinal) && baseUrl is not null
-                    ? GenericResult<IConnectionConfiguration>.Success(
+                    ? GenericResult<IDomainConfiguration>.Success(
                         new ConnectionConfiguration
                         {
                             Name = name,
                             ServiceOptionType = "Http",
                             Configuration = new HttpConnectionConfiguration { BaseUrl = baseUrl },
                         })
-                    : GenericResult<IConnectionConfiguration>.Success(default!));
+                    : GenericResult<IDomainConfiguration>.Success(default!));
 
-        public Task<IGenericResult<IConnectionConfiguration>> Get(
+        public Task<IGenericResult<IDomainConfiguration>> Get(
             Guid id, CancellationToken cancellationToken = default)
             => Get(string.Empty, cancellationToken);
 
         public Task<IGenericResult> Save<T>(
             string serviceOptionType, string name, T implementationConfiguration,
             CancellationToken cancellationToken = default)
-            where T : IImplementationConfiguration
+            where T : IConnectionImplementationConfiguration
             => Task.FromResult(GenericResult.Success());
 
         public Task<IGenericResult> Delete(Guid id, CancellationToken cancellationToken = default)

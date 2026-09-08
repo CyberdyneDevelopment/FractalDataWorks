@@ -21,9 +21,8 @@ namespace Fdw.Services.Credentials;
 public sealed class CredentialServiceProvider
     : PlatformServiceProviderBase<
           ICredentialService,
-          ICredentialServiceConfiguration,
           ICredentialServiceImplementationConfiguration,
-          ICredentialServiceFactory<ICredentialService, ICredentialServiceConfiguration>,
+          ICredentialServiceFactory<ICredentialService, ICredentialServiceImplementationConfiguration>,
           ICredentialServiceConfigurationProvider>,
       ICredentialServiceProvider
 {

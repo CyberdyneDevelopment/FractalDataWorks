@@ -15,7 +15,7 @@ namespace Fdw.Services.Authentication.Abstractions;
 /// both are spelled <c>IServiceConfigurationProvider&lt;T&gt;</c>, and nothing catches the swap.
 /// </remarks>
 public interface IAuthenticationServiceConfigurationProvider
-    : IDomainConfigurationProvider<IAuthenticationServiceConfiguration, IAuthenticationServiceImplementationConfiguration>
+    : IDomainConfigurationProvider<IAuthenticationServiceImplementationConfiguration>
 {
     /// <summary>Reads the declared services, without dispatching to their implementations.</summary>
     /// <param name="cancellationToken">A token to cancel the operation.</param>

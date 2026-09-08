@@ -13,9 +13,8 @@ namespace Fdw.Services.Etl;
 public sealed class EtlPipelineProvider
     : PlatformServiceProviderBase<
           IEtlPipeline,
-          IPipelineConfiguration,
           IPipelineImplementationConfiguration,
-          IEtlPipelineFactory<IEtlPipeline, IPipelineConfiguration>,
+          IEtlPipelineFactory<IEtlPipeline, IPipelineImplementationConfiguration>,
           IPipelineConfigurationProvider>,
       IEtlPipelineProvider
 {

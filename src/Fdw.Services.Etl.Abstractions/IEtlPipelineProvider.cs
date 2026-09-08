@@ -7,6 +7,6 @@ namespace Fdw.Services.Etl.Abstractions;
 /// Resolves ETL pipelines by configuration name or id.
 /// </summary>
 public interface IEtlPipelineProvider
-    : IPlatformServiceProvider<IEtlPipeline, IPipelineConfiguration, IPipelineImplementationConfiguration>
+    : IPlatformServiceProvider<IEtlPipeline, IPipelineImplementationConfiguration>
 {
 }

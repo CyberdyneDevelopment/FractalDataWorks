@@ -27,9 +27,8 @@ namespace Fdw.Services.DataVault;
 public sealed class DataVaultProvider
     : PlatformServiceProviderBase<
           IDataVault,
-          IDataVaultConfiguration,
           IDataVaultImplementationConfiguration,
-          IDataVaultFactory<IDataVault, IDataVaultConfiguration>,
+          IDataVaultFactory<IDataVault, IDataVaultImplementationConfiguration>,
           IDataVaultConfigurationProvider>,
       IDataVaultProvider
 {

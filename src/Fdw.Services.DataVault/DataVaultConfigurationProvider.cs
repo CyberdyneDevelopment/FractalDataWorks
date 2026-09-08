@@ -23,7 +23,6 @@ namespace Fdw.Services.DataVault;
 public class DataVaultConfigurationProvider
     : ServiceConfigurationProviderBase<
           DataVaultConfiguration,
-          IDataVaultConfiguration,
           IDataVaultImplementationConfiguration,
           DataVaultConfigurationCommand>,
       IDataVaultConfigurationProvider

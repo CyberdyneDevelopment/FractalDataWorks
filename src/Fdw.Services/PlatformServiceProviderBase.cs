@@ -22,26 +22,24 @@ namespace Fdw.Services;
 /// </summary>
 /// <typeparam name="TService">The service this provider resolves.</typeparam>
 /// <typeparam name="TConfiguration">The configuration that service binds to.</typeparam>
-/// <typeparam name="TImplementationConfiguration">The domain's implementation configuration contract.</typeparam>
 /// <typeparam name="TFactory">The factory that builds the service.</typeparam>
 /// <typeparam name="TConfigurationProvider">The provider that supplies the typed configuration.</typeparam>
-public abstract class PlatformServiceProviderBase<TService, TConfiguration, TImplementationConfiguration, TFactory, TConfigurationProvider>
-    : IPlatformServiceProvider<TService, TConfiguration, TImplementationConfiguration, TFactory, TConfigurationProvider>
+public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>
+    : IPlatformServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
     where TService : IGenericService
-    where TConfiguration : class, IDomainConfiguration
-    where TImplementationConfiguration : class, IImplementationConfiguration
+    where TConfiguration : class, IImplementationConfiguration
     where TFactory : IServiceFactory<TService>
-    where TConfigurationProvider : IDomainConfigurationProvider<TConfiguration, TImplementationConfiguration>
+    where TConfigurationProvider : IDomainConfigurationProvider<TConfiguration>
 {
-    private readonly ILogger<PlatformServiceProviderBase<TService, TConfiguration, TImplementationConfiguration, TFactory, TConfigurationProvider>> _logger;
+    private readonly ILogger<PlatformServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>> _logger;
     private readonly Dictionary<string, IServiceFactory<TService>> _factories = new(StringComparer.OrdinalIgnoreCase);
-    private IDomainConfigurationProvider<TConfiguration, TImplementationConfiguration>? _domainConfigurationProvider;
+    private IDomainConfigurationProvider<TConfiguration>? _domainConfigurationProvider;
 
     /// <summary>Gets the registered service factories keyed by service option type.</summary>
     protected IDictionary<string, IServiceFactory<TService>> Factories => _factories;
 
     /// <summary>Gets the domain's parent configuration provider.</summary>
-    protected IDomainConfigurationProvider<TConfiguration, TImplementationConfiguration>? DomainConfigurationProvider => _domainConfigurationProvider;
+    protected IDomainConfigurationProvider<TConfiguration>? DomainConfigurationProvider => _domainConfigurationProvider;
 
     private static readonly Dictionary<string, Func<IServiceProvider, IServiceFactory<TService>>> _registered
         = new(StringComparer.OrdinalIgnoreCase);
@@ -61,13 +59,13 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TImp
 
     /// <summary>
     /// Initializes a new instance of the
-    /// <see cref="PlatformServiceProviderBase{TService, TConfiguration, TImplementationConfiguration, TFactory, TConfigurationProvider}"/> class.
+    /// <see cref="PlatformServiceProviderBase{TService, TConfiguration, TFactory, TConfigurationProvider}"/> class.
     /// </summary>
     /// <param name="services">The scope's container, used to resolve the registered factories.</param>
     /// <param name="logger">The logger for this provider.</param>
     protected PlatformServiceProviderBase(
         IServiceProvider services,
-        ILogger<PlatformServiceProviderBase<TService, TConfiguration, TImplementationConfiguration, TFactory, TConfigurationProvider>> logger)
+        ILogger<PlatformServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>> logger)
     {
         _logger = logger;
 
@@ -114,7 +112,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TImp
         return GenericResult.Success();
     }
     /// <inheritdoc />
-    public IGenericResult Register(IDomainConfigurationProvider<TConfiguration, TImplementationConfiguration> domainConfigurationProvider)
+    public IGenericResult Register(IDomainConfigurationProvider<TConfiguration> domainConfigurationProvider)
     {
         _domainConfigurationProvider = domainConfigurationProvider;
         ServiceLogger.DomainConfigurationProviderRegistered(_logger);
@@ -143,7 +141,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TImp
 
     private async Task<IGenericResult<TService>> Resolve(
         string identifier,
-        Func<CancellationToken, Task<IGenericResult<TConfiguration>>> get,
+        Func<CancellationToken, Task<IGenericResult<IDomainConfiguration>>> get,
         CancellationToken cancellationToken)
     {
         ServiceLogger.GettingServiceByName(_logger, identifier);
@@ -169,12 +167,12 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TImp
     }
 
     private async Task<IGenericResult<TService>> CreateFrom(
-        TConfiguration configuration, string identifier, CancellationToken cancellationToken)
+        IDomainConfiguration configuration, string identifier, CancellationToken cancellationToken)
     {
-        // Read once, from the row that owns the field. The domain row carries the discriminator;
-        // the implementation table has no such column, because the discriminator is what selected
-        // that table. Reading it back off the implementation asked an object a question it cannot
-        // answer, and every implementation-shaped container answered the same way: empty.
+        // Read once, off the row that owns the field. The implementation table has no
+        // ServiceOptionType column -- the discriminator is what selected that table -- so reading it
+        // back off the implementation asked an object a question it cannot answer, and every
+        // implementation-shaped container answered the same way: empty.
         var serviceOptionType = configuration.ServiceOptionType;
         if (string.IsNullOrEmpty(serviceOptionType))
         {
@@ -197,8 +195,8 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TImp
 
         ServiceLogger.FactoryLookupSucceeded(_logger, serviceOptionType);
 
-        // The factory builds from the implementation, not the domain row: it needs the settings,
-        // and the row it came from has already done its one job by naming which factory to use.
+        // The factory builds from the implementation. The domain row has done its one job by naming
+        // which factory to use.
         if (configuration.ImplementationConfiguration is not { } implementation)
             return GenericResult<TService>.Failure(
                 ServicesResultCodes.ByName("ConfigurationNotFound"),
@@ -264,7 +262,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TImp
                                      "ActualType", configuration?.GetType().Name ?? "(null)")));
 
     /// <inheritdoc />
-    public virtual Task<IGenericResult<TService>> Get(TConfiguration configuration, CancellationToken cancellationToken = default)
+    public virtual Task<IGenericResult<TService>> Get(IDomainConfiguration configuration, CancellationToken cancellationToken = default)
         => configuration is null
             ? Task.FromResult(GenericResult<TService>.Failure(
                 ServicesResultCodes.ByName("ConfigurationRequired"),

@@ -6,6 +6,6 @@ namespace Fdw.Services.Scheduling.Abstractions;
 /// Resolves configured schedulers and routes each to the implementation provider that owns it.
 /// </summary>
 public interface ISchedulerConfigurationProvider
-    : IDomainConfigurationProvider<ISchedulerConfiguration, ISchedulerImplementationConfiguration>
+    : IDomainConfigurationProvider<ISchedulerImplementationConfiguration>
 {
 }

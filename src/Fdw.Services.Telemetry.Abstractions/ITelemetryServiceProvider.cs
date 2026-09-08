@@ -6,6 +6,6 @@ namespace Fdw.Services.Telemetry.Abstractions;
 /// Resolves telemetry services by configuration name or id.
 /// </summary>
 public interface ITelemetryServiceProvider
-    : IPlatformServiceProvider<ITelemetryService, ITelemetryConfiguration, ITelemetryImplementationConfiguration>
+    : IPlatformServiceProvider<ITelemetryService, ITelemetryImplementationConfiguration>
 {
 }

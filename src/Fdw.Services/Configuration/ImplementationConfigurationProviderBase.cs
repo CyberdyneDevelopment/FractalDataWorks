@@ -187,17 +187,16 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// </summary>
     /// <param name="header">The already-loaded header row to compose.</param>
     /// <param name="asOf">
-    /// The instant to compose as of — the implementation and children belonging to the version in
-    /// force then — or null for the current ones.
+    /// The instant to compose as of — the typed body and children belonging to the version in force
+    /// then — or null for the current ones.
     /// </param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The composed aggregate, or the first failing step's result.</returns>
     protected async Task<IGenericResult<TConfig>> ComposeAggregate(TConfig header, DateTimeOffset? asOf, CancellationToken ct)
     {
-        // The domain row names which implementation it is. That name selects the implementation's own
+        // The domain row names which implementation it is; that name selects the implementation's own
         // configuration provider, which reads its row by joining back to this one on the foreign key.
-        // The discriminator is read once, here, off the row that carries it -- the implementation
-        // table has no such column, because the discriminator is what chose that table.
+        // The discriminator is read once, here, off the row that carries it.
         if (!ImplementationProviders.IsEmpty)
         {
             if (string.IsNullOrEmpty(header.ServiceOptionType))
@@ -216,12 +215,12 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
                 DefaultConfigurationProviderLog.LoadingTypedBody(
                     _logger, typeof(TConfig).Name, header.Name, header.ServiceOptionType);
 
-                var implementationResult = await implementationProvider.Get(header.Id, ct).ConfigureAwait(false);
-                if (!implementationResult.IsSuccess)
+                var implementation = await implementationProvider.Get(header.Id, ct).ConfigureAwait(false);
+                if (!implementation.IsSuccess)
                 {
                     return GenericResult<TConfig>.Failure(
                         DefaultConfigurationProviderLog.TypedBodyLoadFailed(
-                            _logger, new InvalidOperationException(implementationResult.CurrentMessage),
+                            _logger, new InvalidOperationException(implementation.CurrentMessage),
                             typeof(TConfig).Name, header.Name, header.ServiceOptionType));
                 }
 
@@ -232,7 +231,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
                 }
                 else
                 {
-                    implementationMapper.SetTypedBody(header, implementationResult.Value);
+                    implementationMapper.SetTypedBody(header, implementation.Value);
                     DefaultConfigurationProviderLog.TypedBodyLoaded(
                         _logger, typeof(TConfig).Name, header.Name, header.ServiceOptionType);
                 }

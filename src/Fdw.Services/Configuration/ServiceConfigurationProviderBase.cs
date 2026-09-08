@@ -17,11 +17,6 @@ namespace Fdw.Services.Configuration;
 /// member is, and hands the request to that implementation's provider.
 /// </summary>
 /// <typeparam name="TDomainConfiguration">The domain record.</typeparam>
-/// <typeparam name="TDomainContract">
-/// The domain's configuration contract — the interface consumers name, which
-/// <typeparamref name="TDomainConfiguration"/> implements. It exists because the abstractions package
-/// cannot see the concrete record and the concrete record is what this provider reads.
-/// </typeparam>
 /// <typeparam name="TImplementationConfiguration">The domain's implementation configuration contract.</typeparam>
 /// <typeparam name="TCommand">The domain record's configuration command.</typeparam>
 /// <remarks>
@@ -30,11 +25,10 @@ namespace Fdw.Services.Configuration;
 /// reads and writes in the same connection as the domain it belongs to — which the foreign key already
 /// required, being declared on the domain row's <c>RowId</c>.
 /// </remarks>
-public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TDomainContract, TImplementationConfiguration, TCommand>
+public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TImplementationConfiguration, TCommand>
     : ImplementationConfigurationProviderBase<TDomainConfiguration, TCommand>,
-      IDomainConfigurationProvider<TDomainContract, TImplementationConfiguration>
-    where TDomainConfiguration : class, TDomainContract
-    where TDomainContract : class, IDomainConfiguration
+      IDomainConfigurationProvider<TImplementationConfiguration>
+    where TDomainConfiguration : class, IDomainConfiguration
     where TImplementationConfiguration : IImplementationConfiguration
     where TCommand : ConfigurationCommandBase<TDomainConfiguration>
 {
@@ -43,7 +37,7 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TDo
 
     /// <summary>
     /// Initializes a new instance of the
-    /// <see cref="ServiceConfigurationProviderBase{TDomainConfiguration, TDomainContract, TImplementationConfiguration, TCommand}"/> class.
+    /// <see cref="ServiceConfigurationProviderBase{TDomainConfiguration, TImplementationConfiguration, TCommand}"/> class.
     /// </summary>
     /// <param name="logger">The logger for this provider.</param>
     /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
@@ -73,29 +67,27 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TDo
     }
 
     /// <inheritdoc />
-    async Task<IGenericResult<TDomainContract>> IDomainConfigurationProvider<TDomainContract, TImplementationConfiguration>.Get(
+    async Task<IGenericResult<IDomainConfiguration>> IDomainConfigurationProvider<TImplementationConfiguration>.Get(
         string name, CancellationToken cancellationToken)
     {
-        // ToNewResult throws on a SUCCESSFUL result, so the success path widens explicitly.
         var record = await Get(name, cancellationToken).ConfigureAwait(false);
-        return record.IsSuccess && record.Value is { } value
-            ? GenericResult<TDomainContract>.Success(value)
-            : record.ToNewResult<TDomainContract>();
+        return record.IsSuccess && record.Value is { } domain
+            ? GenericResult<IDomainConfiguration>.Success(domain)
+            : record.ToNewResult<IDomainConfiguration>();
     }
 
     /// <inheritdoc />
-    async Task<IGenericResult<TDomainContract>> IDomainConfigurationProvider<TDomainContract, TImplementationConfiguration>.Get(
+    async Task<IGenericResult<IDomainConfiguration>> IDomainConfigurationProvider<TImplementationConfiguration>.Get(
         Guid id, CancellationToken cancellationToken)
     {
-        // ToNewResult throws on a SUCCESSFUL result, so the success path widens explicitly.
         var record = await Get(id, cancellationToken).ConfigureAwait(false);
-        return record.IsSuccess && record.Value is { } value
-            ? GenericResult<TDomainContract>.Success(value)
-            : record.ToNewResult<TDomainContract>();
+        return record.IsSuccess && record.Value is { } domain
+            ? GenericResult<IDomainConfiguration>.Success(domain)
+            : record.ToNewResult<IDomainConfiguration>();
     }
 
     /// <inheritdoc />
-    async Task<IGenericResult> IDomainConfigurationProvider<TDomainContract, TImplementationConfiguration>.Save<T>(
+    async Task<IGenericResult> IDomainConfigurationProvider<TImplementationConfiguration>.Save<T>(
         string serviceOptionType, string name, T implementationConfiguration, CancellationToken cancellationToken)
     {
         if (!ImplementationProviders.TryGetValue(serviceOptionType, out _))
@@ -104,17 +96,7 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TDo
                 DefaultConfigurationProviderLog.NoImplementationProvider(_log, name, serviceOptionType));
         }
 
-        // The interface cannot name this domain's implementation contract, so the caller's value is
-        // widened to IImplementationConfiguration there and narrowed back here. A mismatch is a
-        // caller handing one domain's implementation to another's provider — fail rather than throw.
-        if (implementationConfiguration is not TImplementationConfiguration typed)
-        {
-            return GenericResult.Failure(
-                DefaultConfigurationProviderLog.ProviderNotErasable(
-                    _log, name, implementationConfiguration?.GetType().FullName ?? "(null)"));
-        }
-
-        return await Save(Compose(serviceOptionType, name, typed), cancellationToken)
+        return await Save(Compose(serviceOptionType, name, implementationConfiguration), cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -129,11 +111,11 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TDo
         where T : TImplementationConfiguration;
 
     /// <inheritdoc />
-    Task<IGenericResult> IDomainConfigurationProvider<TDomainContract, TImplementationConfiguration>.Delete(
+    Task<IGenericResult> IDomainConfigurationProvider<TImplementationConfiguration>.Delete(
         Guid id, CancellationToken cancellationToken) => Delete(id, cancellationToken);
 
     /// <inheritdoc />
-    Task<IGenericResult> IDomainConfigurationProvider<TDomainContract, TImplementationConfiguration>.Delete(
+    Task<IGenericResult> IDomainConfigurationProvider<TImplementationConfiguration>.Delete(
         string name, CancellationToken cancellationToken) => Delete(name, cancellationToken);
 
 }

@@ -4,6 +4,7 @@ namespace Fdw.Configuration;
 /// A domain configuration — one configured member of a service domain, naming which implementation it
 /// is and holding that implementation's own configuration.
 /// </summary>
+/// <typeparam name="TImplementationConfiguration">The domain's implementation configuration contract.</typeparam>
 /// <remarks>
 /// Every service domain has one of these and N implementations of it. The implementation is
 /// <b>held</b> — never inherited — so a domain that ships one implementation today can take a second

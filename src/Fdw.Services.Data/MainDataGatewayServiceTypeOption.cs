@@ -19,6 +19,8 @@ using Fdw.Services.Data.Logging;
 
 using Fdw.Services.Data.Configuration;
 using Fdw.Services.Data.Commands;
+using Fdw.Configuration;
+
 namespace Fdw.Services.Data;
 
 /// <summary>
@@ -83,7 +85,7 @@ public sealed class MainDataGatewayServiceTypeOption : DataGatewayTypeBase<IGene
             // covered this read at all. The accessor resolved from `built` is a different instance
             // than the running host's, which does not matter: AuthenticationContextAccessor's backing
             // AsyncLocal is static, so every instance reads and writes the one ambient slot.
-            IGenericResult<IDataGatewayConfiguration> result;
+            IGenericResult<IDomainConfiguration> result;
             using (new SystemAuthenticationContextScope(
                 built.GetRequiredService<IAuthenticationContextAccessor>()))
             {
@@ -97,15 +99,14 @@ public sealed class MainDataGatewayServiceTypeOption : DataGatewayTypeBase<IGene
                 return result.ToNewResult<IHostApplicationBuilder>();
             }
 
-            // The domain record carries the implementation; the settings this option needs are on
-            // the implementation, so it is read off the record rather than in place of it.
-            if (result.Value.Configuration is not MainDataGatewayConfiguration configuration)
+            // The settings live on the implementation; the domain record carries it.
+            if (result.Value.ImplementationConfiguration is not MainDataGatewayConfiguration configuration)
             {
                 var log = loggerFactory?.CreateLogger<MainDataGatewayServiceTypeOption>()
                     ?? NullLogger<MainDataGatewayServiceTypeOption>.Instance;
                 return GenericResult<IHostApplicationBuilder>.Failure(
                     DataGatewayProviderLog.ConfigurationTypeMismatch(
-                        log, result.Value.Configuration?.GetType().Name ?? "(no implementation)"));
+                        log, result.Value.ImplementationConfiguration?.GetType().Name ?? "(no implementation)"));
             }
 
             builder.Services.AddSingleton(configuration);

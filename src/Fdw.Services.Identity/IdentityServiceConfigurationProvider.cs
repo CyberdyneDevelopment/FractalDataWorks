@@ -18,7 +18,6 @@ namespace Fdw.Services.Identity;
 public class IdentityServiceConfigurationProvider
     : ServiceConfigurationProviderBase<
           IdentityServiceConfiguration,
-          IIdentityServiceConfiguration,
           IIdentityServiceImplementationConfiguration,
           IdentityServiceConfigurationCommand>,
       IIdentityServiceConfigurationProvider

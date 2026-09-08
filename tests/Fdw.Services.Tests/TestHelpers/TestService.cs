@@ -50,9 +50,8 @@ public sealed class TestConfiguration : IImplementationConfiguration, IDomainCon
     public string? ServiceOptionType { get; set; } = "Default";
     public string? Description { get; init; }
 
-    // This double stands in for both halves of the split, so it is its own implementation. The
-    // factory receives exactly the object it received before the provider was typed on the domain
-    // record -- an identity, not a default.
+    // No domain/implementation split in this double: it is its own implementation, so the factory
+    // receives exactly the object it received before.
     IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => this;
 }
 

@@ -20,7 +20,6 @@ namespace Fdw.Services.Connections;
 public class ConnectionConfigurationProvider
     : ServiceConfigurationProviderBase<
           ConnectionConfiguration,
-          IConnectionConfiguration,
           IConnectionImplementationConfiguration,
           ConnectionConfigurationCommand>,
       IConnectionConfigurationProvider

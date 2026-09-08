@@ -126,52 +126,52 @@ public sealed class DeclaredSecretManagerConfigurationProvider
     // ── IDomainConfigurationProvider ────────────────────────────────────────
 
     /// <inheritdoc />
-    async Task<IGenericResult<ISecretManagerConfiguration>> IDomainConfigurationProvider<ISecretManagerConfiguration>.Get(
+    async Task<IGenericResult<IDomainConfiguration>> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Get(
         string name, CancellationToken cancellationToken)
     {
-        // The record goes back whole. Unwrapping .Configuration here is what left the caller
-        // holding an object with no ServiceOptionType to select a factory by.
+        // The record goes back whole. Unwrapping .Configuration here left the caller holding an
+        // object with no ServiceOptionType to select a factory by.
         var result = await Get(name, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess && result.Value is { } record
-            ? GenericResult<ISecretManagerConfiguration>.Success(record)
-            : result.ToNewResult<ISecretManagerConfiguration>();
+            ? GenericResult<IDomainConfiguration>.Success(record)
+            : result.ToNewResult<IDomainConfiguration>();
     }
 
     /// <inheritdoc />
-    async Task<IGenericResult<ISecretManagerConfiguration>> IDomainConfigurationProvider<ISecretManagerConfiguration>.Get(
+    async Task<IGenericResult<IDomainConfiguration>> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Get(
         Guid id, CancellationToken cancellationToken)
     {
-        // The record goes back whole. Unwrapping .Configuration here is what left the caller
-        // holding an object with no ServiceOptionType to select a factory by.
+        // The record goes back whole. Unwrapping .Configuration here left the caller holding an
+        // object with no ServiceOptionType to select a factory by.
         var result = await Get(id, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess && result.Value is { } record
-            ? GenericResult<ISecretManagerConfiguration>.Success(record)
-            : result.ToNewResult<ISecretManagerConfiguration>();
+            ? GenericResult<IDomainConfiguration>.Success(record)
+            : result.ToNewResult<IDomainConfiguration>();
     }
 
     /// <inheritdoc />
-    Task<IGenericResult> IDomainConfigurationProvider<ISecretManagerConfiguration>.Save<T>(
+    Task<IGenericResult> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Save<T>(
         string serviceOptionType, string name, T implementationConfiguration, CancellationToken cancellationToken)
         => Task.FromResult<IGenericResult>(GenericResult.Failure(
             AegisResultCodes.ByName("SecretResolutionFailed"),
             ResultDetails.Create("Operation", "Save")));
 
     /// <inheritdoc />
-    Task<IGenericResult> IDomainConfigurationProvider<ISecretManagerConfiguration>.Delete(
+    Task<IGenericResult> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Delete(
         Guid id, CancellationToken cancellationToken)
         => Task.FromResult<IGenericResult>(GenericResult.Failure(
             AegisResultCodes.ByName("SecretResolutionFailed"),
             ResultDetails.Create("Operation", "Delete")));
 
     /// <inheritdoc />
-    Task<IGenericResult> IDomainConfigurationProvider<ISecretManagerConfiguration>.Delete(
+    Task<IGenericResult> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Delete(
         string name, CancellationToken cancellationToken)
         => Task.FromResult<IGenericResult>(GenericResult.Failure(
             AegisResultCodes.ByName("SecretResolutionFailed"),
             ResultDetails.Create("Operation", "Delete")));
 
     /// <inheritdoc />
-    IGenericResult IDomainConfigurationProvider<ISecretManagerConfiguration, ISecretManagerImplementationConfiguration>.Register<T>(
+    IGenericResult IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Register<T>(
         string name, T implementationConfigurationProvider)
         => GenericResult.Failure(
             AegisResultCodes.ByName("SecretResolutionFailed"),

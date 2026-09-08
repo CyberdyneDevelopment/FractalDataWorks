@@ -7,6 +7,6 @@ namespace Fdw.Services.SecretManagers.Abstractions;
 /// Replaces the generic <see cref="IPlatformServiceProvider"/> usage with a proper domain-specific interface,
 /// eliminating the need for casting when resolving secret managers.
 /// </summary>
-public interface ISecretManagerProvider : IPlatformServiceProvider<ISecretManager, ISecretManagerConfiguration, ISecretManagerImplementationConfiguration>
+public interface ISecretManagerProvider : IPlatformServiceProvider<ISecretManager, ISecretManagerImplementationConfiguration>
 {
 }

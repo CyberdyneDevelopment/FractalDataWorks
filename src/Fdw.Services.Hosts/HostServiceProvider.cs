@@ -12,9 +12,8 @@ namespace Fdw.Services.Hosts;
 public sealed class HostServiceProvider
     : PlatformServiceProviderBase<
         IHostService,
-        IHostConfiguration,
         IHostImplementationConfiguration,
-        IHostFactory<IHostService, IHostConfiguration>,
+        IHostFactory<IHostService, IHostImplementationConfiguration>,
         IHostConfigurationProvider>,
       IHostServiceProvider
 {

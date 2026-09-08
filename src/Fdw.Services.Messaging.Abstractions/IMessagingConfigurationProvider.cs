@@ -14,7 +14,7 @@ namespace Fdw.Services.Messaging.Abstractions;
 /// are spelled <c>IDomainConfigurationProvider&lt;T&gt;</c>, and nothing catches the swap.
 /// </remarks>
 public interface IMessagingConfigurationProvider
-    : IDomainConfigurationProvider<IMessagingConfiguration, IMessagingImplementationConfiguration>
+    : IDomainConfigurationProvider<IMessagingImplementationConfiguration>
 {
     /// <summary>Reads a configured messaging service's domain row, without dispatching.</summary>
     /// <param name="name">The declared service name.</param>

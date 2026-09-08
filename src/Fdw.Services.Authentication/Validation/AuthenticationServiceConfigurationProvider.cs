@@ -27,7 +27,6 @@ namespace Fdw.Services.Authentication.Validation;
 public class AuthenticationServiceConfigurationProvider
     : ServiceConfigurationProviderBase<
           AuthenticationServiceConfiguration,
-          IAuthenticationServiceConfiguration,
           IAuthenticationServiceImplementationConfiguration,
           AuthenticationServiceConfigurationCommand>,
       IAuthenticationServiceConfigurationProvider

@@ -55,20 +55,17 @@ public interface IPlatformServiceProvider<TService> : IPlatformServiceProvider
 /// Use this for providers that participate in the ServiceType registration pattern.
 /// </summary>
 /// <typeparam name="TService">The type of service this provider manages.</typeparam>
-/// <typeparam name="TConfiguration">The domain configuration type for this service domain.</typeparam>
-/// <typeparam name="TImplementationConfiguration">The domain's implementation configuration contract.</typeparam>
-public interface IPlatformServiceProvider<TService, TConfiguration, TImplementationConfiguration>
-    : IPlatformServiceProvider<TService>
+/// <typeparam name="TConfiguration">The configuration type for this service domain.</typeparam>
+public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformServiceProvider<TService>
     where TService : IGenericService
-    where TConfiguration : IDomainConfiguration
-    where TImplementationConfiguration : IImplementationConfiguration
+    where TConfiguration : IImplementationConfiguration
 {
     /// <summary>
     /// Gets a service instance built from the supplied strongly-typed configuration.
     /// No name/id lookup is performed — the configuration's
     /// <see cref="IGenericConfiguration.ServiceOptionType"/> selects the factory directly.
     /// </summary>
-    Task<IGenericResult<TService>> Get(TConfiguration configuration, CancellationToken cancellationToken = default);
+    Task<IGenericResult<TService>> Get(IDomainConfiguration configuration, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Registers a factory for a service option type.
@@ -81,7 +78,7 @@ public interface IPlatformServiceProvider<TService, TConfiguration, TImplementat
     /// <see cref="IGenericConfiguration.ServiceOptionType"/>.
     /// </summary>
     /// <param name="domainConfigurationProvider">The parent configuration provider.</param>
-    IGenericResult Register(IDomainConfigurationProvider<TConfiguration, TImplementationConfiguration> domainConfigurationProvider);
+    IGenericResult Register(IDomainConfigurationProvider<TConfiguration> domainConfigurationProvider);
 
 }
 
@@ -89,16 +86,14 @@ public interface IPlatformServiceProvider<TService, TConfiguration, TImplementat
 /// Full service provider interface with specific factory and configuration provider type constraints.
 /// </summary>
 /// <typeparam name="TService">The type of service this provider manages.</typeparam>
-/// <typeparam name="TConfiguration">The domain configuration type for this service domain.</typeparam>
-/// <typeparam name="TImplementationConfiguration">The domain's implementation configuration contract.</typeparam>
+/// <typeparam name="TConfiguration">The configuration type for this service domain.</typeparam>
 /// <typeparam name="TFactory">The factory type for creating service instances.</typeparam>
 /// <typeparam name="TConfigurationProvider">The configuration provider type.</typeparam>
-public interface IPlatformServiceProvider<TService, TConfiguration, TImplementationConfiguration, TFactory, TConfigurationProvider>
-    : IPlatformServiceProvider<TService, TConfiguration, TImplementationConfiguration>
+public interface IPlatformServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
+    : IPlatformServiceProvider<TService, TConfiguration>
     where TService : IGenericService
-    where TConfiguration : IDomainConfiguration
-    where TImplementationConfiguration : IImplementationConfiguration
+    where TConfiguration : IImplementationConfiguration
     where TFactory : IServiceFactory<TService>
-    where TConfigurationProvider : IDomainConfigurationProvider<TConfiguration, TImplementationConfiguration>
+    where TConfigurationProvider : IDomainConfigurationProvider<TConfiguration>
 {
 }

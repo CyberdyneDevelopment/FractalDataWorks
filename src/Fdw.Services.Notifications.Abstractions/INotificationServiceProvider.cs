@@ -13,6 +13,6 @@ namespace Fdw.Services.Notifications.Abstractions;
 /// typed-configuration overloads stay reachable through it.
 /// </remarks>
 public interface INotificationServiceProvider
-    : IPlatformServiceProvider<IPlatformNotification, INotificationConfiguration, INotificationImplementationConfiguration>
+    : IPlatformServiceProvider<IPlatformNotification, INotificationImplementationConfiguration>
 {
 }

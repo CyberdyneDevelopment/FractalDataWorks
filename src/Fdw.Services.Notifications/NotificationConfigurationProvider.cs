@@ -25,7 +25,6 @@ namespace Fdw.Services.Notifications;
 public class NotificationConfigurationProvider
     : ServiceConfigurationProviderBase<
           NotificationConfiguration,
-          INotificationConfiguration,
           INotificationImplementationConfiguration,
           NotificationConfigurationCommand>,
       INotificationConfigurationProvider
