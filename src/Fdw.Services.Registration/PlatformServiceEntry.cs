@@ -47,9 +47,6 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// <summary>Gets a value indicating whether the phase has run.</summary>
     public bool Registered => _register == PhaseState.Ran;
 
-    /// <summary>
-    /// Whether this domain is excluded from the <see cref="PlatformServices"/> collects
-    /// (<see cref="PlatformServices.Configure"/>/<see cref="PlatformServices.Register"/>/
     // ── Phase-delegate replacements (author-curated variant selection; the keyset stays frozen) ─────────
     private Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>>? _configurationMethod;
     private Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>>? _registrationMethod;
@@ -113,11 +110,15 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// initialize it manually, in whatever order matters, before a later
     /// <see cref="PlatformServices.Initialize"/> collect skips anything already done.
     /// </summary>
-    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool defer = false)
+    /// <param name="force">
+    /// Run even if this phase is <see cref="PhaseState.Deferred"/> or has already
+    /// <see cref="PhaseState.Ran"/>. Overrides <paramref name="defer"/>.
+    /// </param>
+    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool defer = false, bool force = false)
     {
-        if (_initialize == PhaseState.Ran) return GenericResult<IHost>.Success(host);
+        if (!force && _initialize == PhaseState.Ran) return GenericResult<IHost>.Success(host);
 
-        if (defer)
+        if (defer && !force)
         {
             _initialize = PhaseState.Deferred;
             return GenericResult<IHost>.Success(host);
@@ -139,11 +140,15 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// <see cref="Initialize"/> — a host that configures a domain early, to put it ahead of the others,
     /// is not configured a second time by the later <see cref="PlatformServices.Configure"/> pass.
     /// </summary>
-    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool defer = false)
+    /// <param name="force">
+    /// Run even if this phase is <see cref="PhaseState.Deferred"/> or has already
+    /// <see cref="PhaseState.Ran"/>. Overrides <paramref name="defer"/>.
+    /// </param>
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool defer = false, bool force = false)
     {
-        if (_configure == PhaseState.Ran) return GenericResult<IHostApplicationBuilder>.Success(builder);
+        if (!force && _configure == PhaseState.Ran) return GenericResult<IHostApplicationBuilder>.Success(builder);
 
-        if (defer)
+        if (defer && !force)
         {
             _configure = PhaseState.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
@@ -165,11 +170,15 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// registers a domain explicitly and is then collected by <see cref="PlatformServices.Register"/>
     /// (or vice versa) does not double-register the domain's services.
     /// </summary>
-    public IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool defer = false)
+    /// <param name="force">
+    /// Run even if this phase is <see cref="PhaseState.Deferred"/> or has already
+    /// <see cref="PhaseState.Ran"/>. Overrides <paramref name="defer"/>.
+    /// </param>
+    public IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool defer = false, bool force = false)
     {
-        if (_register == PhaseState.Ran) return GenericResult<IHostApplicationBuilder>.Success(builder);
+        if (!force && _register == PhaseState.Ran) return GenericResult<IHostApplicationBuilder>.Success(builder);
 
-        if (defer)
+        if (defer && !force)
         {
             _register = PhaseState.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
