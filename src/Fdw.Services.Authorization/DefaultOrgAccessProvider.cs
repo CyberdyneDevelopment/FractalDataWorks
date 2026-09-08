@@ -48,4 +48,10 @@ public sealed class DefaultOrgAccessProvider : IOrgAccessProvider
         AuthorizationLog.OrgAccessGrantsLoaded(_logger, result.Value!.Count, userId, orgId);
         return result;
     }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>> Get(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+        => await _provider.Get(userId, cancellationToken).ConfigureAwait(false);
 }

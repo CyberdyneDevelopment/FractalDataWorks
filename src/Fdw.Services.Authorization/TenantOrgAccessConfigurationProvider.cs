@@ -89,4 +89,49 @@ public class TenantOrgAccessConfigurationProvider
         TenantOrgAccessConfigurationProviderLog.GetLoaded(_logger, userId, orgId, grants.Count);
         return GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Success(grants);
     }
+
+    /// <summary>
+    /// Queries every org-tier access grant held by a user, across all tenants and orgs.
+    /// </summary>
+    /// <param name="userId">The user identifier (matches the <c>sub</c> claim in the JWT).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>All grant rows for the user, or a failure result.</returns>
+    /// <remarks>
+    /// Why this is not RLS-filtered down to the active tenant: no security policy attaches a
+    /// predicate to <c>tenant.*</c>. It cannot — <c>security.fn_TenantFilter</c> itself reads
+    /// <c>tenant.TenantOrgAccess</c> to decide every other table's visibility, so a policy on it
+    /// would be circular under SCHEMABINDING. That is what makes enumerating a user's memberships
+    /// answerable at all; the same query against a tenant-scoped table would silently return only
+    /// the active tenant and read as "this user belongs to one tenant".
+    /// </remarks>
+    public virtual async Task<IGenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>> Get(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        TenantOrgAccessConfigurationProviderLog.GetByUserTrace(_logger, userId);
+
+        var command = Query.From<TenantOrgAccessConfiguration>(DataStoreName, PathName, ContainerName)
+            .Where("UserId", userId)
+            .Build();
+
+        var gateway = Gateway();
+        if (gateway.IsFailure || gateway.Value is not { } resolved)
+            return GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Failure(
+                TenantOrgAccessConfigurationProviderLog.GetByUserFailed(_logger, userId,
+                    new InvalidOperationException(gateway.CurrentMessage)));
+
+        var result = await resolved.Execute<IEnumerable<TenantOrgAccessConfiguration>>(command, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!result.IsSuccess)
+        {
+            return GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Failure(
+                TenantOrgAccessConfigurationProviderLog.GetByUserFailed(_logger, userId,
+                    new InvalidOperationException(result.CurrentMessage)));
+        }
+
+        var grants = result.Value?.ToList() ?? [];
+        TenantOrgAccessConfigurationProviderLog.GetByUserLoaded(_logger, userId, grants.Count);
+        return GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Success(grants);
+    }
 }
