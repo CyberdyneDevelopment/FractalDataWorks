@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using Fdw.Results;
 using Fdw.Results.Abstractions;
 
@@ -25,7 +25,14 @@ public abstract class UniversesResultCodeBase : ResultCodeBase
         IResultSeverity severity,
         string messageTemplate,
         bool isRetryable = false)
-        : base(number, name, severity, "Universes", messageTemplate, isRetryable)
+        // messageTemplate BEFORE prefix. ResultCodeBase takes (number, name, severity,
+        // messageTemplate, prefix, isRetryable) and builds Code = $"{prefix}-{number}",
+        // Domain = prefix, MessageTemplate = messageTemplate. Reversed, every universe error
+        // reported its whole message template as its code ("Universe '{name}' rejected: ...
+        // -20001") and carried the literal string "Universes" as its message, so the real text
+        // never reached the client and its placeholders had nothing to substitute into.
+        // Both parameters are string and adjacent, so the swap compiled and stayed silent.
+        : base(number, name, severity, messageTemplate, "Universes", isRetryable)
     {
     }
 }
